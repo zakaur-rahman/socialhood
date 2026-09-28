@@ -442,7 +442,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Complete Whatsapp Signup */
+        /**
+         * Complete Whatsapp Signup
+         * @description Finish Embedded Signup: store the number and subscribe to its webhooks. 409
+         *     account_in_use when the number is connected to another workspace.
+         */
         post: operations["complete_whatsapp_signup"];
         delete?: never;
         options?: never;

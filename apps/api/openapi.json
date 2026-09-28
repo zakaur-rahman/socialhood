@@ -4956,6 +4956,7 @@
     },
     "/v1/w/{wid}/social-accounts/whatsapp/embedded-signup": {
       "post": {
+        "description": "Finish Embedded Signup: store the number and subscribe to its webhooks. 409\naccount_in_use when the number is connected to another workspace.",
         "operationId": "complete_whatsapp_signup",
         "parameters": [
           {
@@ -5014,8 +5015,7 @@
         "summary": "Complete Whatsapp Signup",
         "tags": [
           "whatsapp"
-        ],
-        "x-pending": "T3.12"
+        ]
       }
     },
     "/v1/w/{wid}/social-accounts/{account_id}": {
@@ -5280,8 +5280,7 @@
         "summary": "List Whatsapp Templates",
         "tags": [
           "whatsapp"
-        ],
-        "x-pending": "T3.12"
+        ]
       }
     },
     "/v1/workspaces": {

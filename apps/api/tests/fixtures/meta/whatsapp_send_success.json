@@ -1,0 +1,15 @@
+{
+  "messaging_product": "whatsapp",
+  "contacts": [
+    {
+      "input": "919812345678",
+      "wa_id": "919812345678"
+    }
+  ],
+  "messages": [
+    {
+      "id": "wamid.OUTBOUND000000000000000000000000000000001",
+      "message_status": "accepted"
+    }
+  ]
+}

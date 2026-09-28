@@ -1,0 +1,103 @@
+{
+  "data": [
+    {
+      "name": "order_update",
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "id": "594425479261596",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "TEXT",
+          "text": "Order update"
+        },
+        {
+          "type": "BODY",
+          "text": "Hi {{1}}, your order {{2}} is on its way.",
+          "example": {
+            "body_text": [
+              [
+                "Priya",
+                "1042"
+              ]
+            ]
+          }
+        },
+        {
+          "type": "FOOTER",
+          "text": "Maple Bakery"
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "QUICK_REPLY",
+              "text": "Thanks"
+            },
+            {
+              "type": "URL",
+              "text": "Our menu",
+              "url": "https://maple.example/menu"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "order_update",
+      "language": "hi",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "id": "594425479261597",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "नमस्ते {{1}}, आपका ऑर्डर {{2}} रस्ते में है।"
+        }
+      ]
+    },
+    {
+      "name": "diwali_offer",
+      "language": "en",
+      "status": "PENDING",
+      "category": "MARKETING",
+      "id": "594425479261598",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "20% off this Diwali"
+        }
+      ]
+    },
+    {
+      "name": "new_arrivals",
+      "language": "en",
+      "status": "APPROVED",
+      "category": "MARKETING",
+      "id": "594425479261599",
+      "components": [
+        {
+          "type": "HEADER",
+          "format": "IMAGE",
+          "example": {
+            "header_handle": [
+              "4::aW1hZ2U="
+            ]
+          }
+        },
+        {
+          "type": "BODY",
+          "text": "New cakes are in, {{1}}!"
+        }
+      ]
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFIUkJ",
+      "after": "QVFIUlpage2"
+    },
+    "next": "https://graph.facebook.com/v25.0/102290129340398/message_templates?after=QVFIUlpage2"
+  }
+}
