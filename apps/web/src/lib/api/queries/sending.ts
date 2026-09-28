@@ -120,8 +120,12 @@ export function useSendReply(wid: string, conversationId: string) {
           status: "failed",
           error: {
             code: apiError.code,
-            // "internal" shows the request id; everything else shows the API's detail.
-            message: apiError.code === "internal" ? (apiError.requestId ?? "") : (apiError.detail ?? ""),
+            // "internal" shows the request id; everything else shows the API's reason, which for a
+            // validation error is the first field's message.
+            message:
+              apiError.code === "internal"
+                ? (apiError.requestId ?? "")
+                : (apiError.detail ?? apiError.errors[0]?.message ?? ""),
           },
         });
       }

@@ -90,6 +90,10 @@ describe("send failures (§4.7 error codes)", () => {
     expect(sendFailure({ code: "platform_rejected", message: "Message too long" }, ig).message).toBe(
       "Instagram rejected this: Message too long",
     );
+    // The server's stored reason already has the sentence: not doubled.
+    expect(sendFailure({ code: "platform_rejected", message: "Instagram rejected this: Upload failed" }, ig).message).toBe(
+      "Instagram rejected this: Upload failed",
+    );
     expect(sendFailure({ code: "internal", requestId: "01REQ" }, ig).message).toBe(
       "Something went wrong on our side. Try again. If it keeps happening, email support@socialhood.com with code 01REQ.",
     );

@@ -196,6 +196,7 @@ async def register(
         return existing
     resource = await _lookup(cloudinary, public_id, resource_type)
     check_limits(resource, purpose)
+    await _check_delivery(cloudinary, resource)
     asset = MediaAsset(
         public_id=public_id,
         resource_type=resource.resource_type,
@@ -221,6 +222,27 @@ async def register(
         return existing
     await session.commit()
     return asset
+
+
+# Cloudinary blocks delivery of PDF and ZIP files on new accounts; platforms then fail to fetch
+# them ("upload failed"). Checked once per registration so the cause is named, not guessed.
+BLOCKABLE_FORMATS = frozenset({"pdf", "zip"})
+PDF_DELIVERY_BLOCKED = (
+    'Our file storage refuses to deliver PDF files. An admin needs to turn on "Allow delivery of '
+    'PDF and ZIP files" in Cloudinary (Settings, Security).'
+)
+
+
+async def _check_delivery(cloudinary: Cloudinary, resource: StoredResource) -> None:
+    if file_format(resource.format, resource.public_id) not in BLOCKABLE_FORMATS:
+        return
+    try:
+        response = await cloudinary.http.head(resource.secure_url)
+    except Exception:
+        return  # can't tell; the send reports any failure
+    if response.status_code in (401, 403):
+        log.warning("media_delivery_blocked", public_id=resource.public_id)
+        raise ApiError("service_unavailable", PDF_DELIVERY_BLOCKED)
 
 
 async def _lookup(

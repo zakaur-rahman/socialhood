@@ -229,3 +229,19 @@ async def test_documents_for_messages_have_their_own_limit(
     response = await register(client, headers, wid, public_id, "raw")
     assert response.status_code == 415
     assert response.json()["detail"] == "Documents can be up to 100 MB."
+
+
+@pytest.mark.parametrize(("status", "expected"), [(401, 503), (200, 201)])
+async def test_a_pdf_the_storage_will_not_deliver_is_refused_with_the_fix(
+    client: httpx.AsyncClient, clerk: Clerk, status: int, expected: int
+) -> None:
+    """Cloudinary blocks PDF delivery on new accounts; platforms then can't fetch the file."""
+    headers, wid = await owner(client, clerk)
+    public_id = f"ws/{wid}/message/brochure.pdf"
+    body = resource(public_id, resource_type="raw", format=None)
+    clerk.router.get(f"{RESOURCES}/raw/upload/{public_id}").respond(200, json=body)
+    clerk.router.head(body["secure_url"]).respond(status)
+    response = await register(client, headers, wid, public_id, "raw")
+    assert response.status_code == expected, response.text
+    if expected == 503:
+        assert "Allow delivery of PDF and ZIP files" in response.json()["detail"]

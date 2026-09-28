@@ -107,6 +107,26 @@ describe("ThreadView: optimistic send (TR-FE-05)", () => {
     expect(screen.queryByText("Hello?")).not.toBeInTheDocument();
   });
 
+  it("shows the field's reason when the API finds the request invalid", async () => {
+    const invalid = () =>
+      new Response(
+        JSON.stringify({
+          type: "about:blank",
+          title: "validation_error",
+          status: 422,
+          code: "validation_error",
+          errors: [{ field: "text", message: "Instagram messages can be up to 1,000 bytes; this one is 1,200." }],
+        }),
+        { status: 422, headers: { "Content-Type": "application/problem+json" } },
+      );
+    renderWithApi(<ThreadView key="c1" conversationId="c1" />, { handlers: handlers(invalid) });
+    await screen.findByText("Do you ship to Dubai?");
+    await replyWith("Hello?");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Instagram messages can be up to 1,000 bytes; this one is 1,200.",
+    );
+  });
+
   it("shows the queued bubble at once, then the server's copy", async () => {
     let release: () => void = () => {};
     renderWithApi(<ThreadView key="c1" conversationId="c1" />, {

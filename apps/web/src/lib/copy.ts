@@ -103,8 +103,12 @@ export function sendFailure(
       return { message: `${name} is limiting messages from this account. Try again in a few minutes.`, retry: true };
     case "platform_unavailable":
       return { message: `${name} didn't respond.`, retry: true };
-    case "platform_rejected":
-      return { message: detail ? `${name} rejected this: ${detail}` : `${name} rejected this.`, retry: false };
+    case "platform_rejected": {
+      // A failed send stored by the server already carries the whole sentence.
+      const prefix = `${name} rejected this`;
+      if (detail?.startsWith(prefix)) return { message: detail, retry: false };
+      return { message: detail ? `${prefix}: ${detail}` : `${prefix}.`, retry: false };
+    }
     case "delivery_unknown":
       return {
         message: `We couldn't confirm this was delivered. Check the chat in ${name} before retrying.`,
