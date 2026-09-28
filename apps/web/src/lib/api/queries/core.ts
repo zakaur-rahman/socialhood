@@ -2,8 +2,8 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { toApiError } from "./errors";
-import { useApi } from "./provider";
+import { toApiError } from "../errors";
+import { useApi } from "../provider";
 import type {
   Me,
   NotificationList,
@@ -13,33 +13,9 @@ import type {
   Workspace,
   WorkspacePatch,
   WorkspaceSummary,
-} from "./types";
-
-/** Query keys (TR-FE-03): everything workspace-scoped starts with ["w", workspaceId]. */
-export const keys = {
-  me: ["me"] as const,
-  workspaces: ["workspaces"] as const,
-  workspace: (wid: string) => ["w", wid, "workspace"] as const,
-  overview: (wid: string, range: "7d" | "30d") => ["w", wid, "overview", range] as const,
-  accounts: (wid: string) => ["w", wid, "social-accounts"] as const,
-  notifications: (wid: string) => ["w", wid, "notifications"] as const,
-};
-
-type Result<T> = { data?: T; error?: unknown; response: Response };
-
-/** Return the data of an openapi-fetch call, or throw an ApiError (problem+json or network). */
-export async function unwrap<T>(call: Promise<Result<T>>): Promise<T> {
-  let result: Result<T>;
-  try {
-    result = await call;
-  } catch (error) {
-    throw toApiError(error);
-  }
-  if (result.error !== undefined || result.data === undefined) {
-    throw toApiError(result.error, result.response.status);
-  }
-  return result.data;
-}
+} from "../types";
+import { keys } from "./keys";
+import { unwrap } from "./unwrap";
 
 export function useMe() {
   const api = useApi();
@@ -89,10 +65,11 @@ export function useUpdateWorkspace(wid: string) {
 
 // ---- connected accounts (FR-CON-01…06)
 
-export function useSocialAccounts(wid: string) {
+export function useSocialAccounts(wid: string, enabled = true) {
   const api = useApi();
   return useQuery<SocialAccount[]>({
     queryKey: keys.accounts(wid),
+    enabled,
     queryFn: async () =>
       (await unwrap(api.GET("/v1/w/{wid}/social-accounts", { params: { path: { wid } } }))).items,
   });

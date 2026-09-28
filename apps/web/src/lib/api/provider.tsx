@@ -15,6 +15,14 @@ function shouldRetry(failureCount: number, error: unknown): boolean {
   return failureCount < 2;
 }
 
+export function makeQueryClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: shouldRetry, refetchOnWindowFocus: false, staleTime: 30_000 },
+    },
+  });
+}
+
 /** One API client and one query cache per tab (TR-FE-02). */
 export function ApiProvider({ children }: { children: ReactNode }) {
   const { getToken } = useAuth();
@@ -29,14 +37,24 @@ export function ApiProvider({ children }: { children: ReactNode }) {
       }),
     [getToken],
   );
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: { retry: shouldRetry, refetchOnWindowFocus: false, staleTime: 30_000 },
-        },
-      }),
+  const [queryClient] = useState(makeQueryClient);
+  return (
+    <ApiClientProvider api={api} queryClient={queryClient}>
+      {children}
+    </ApiClientProvider>
   );
+}
+
+/** The providers without Clerk: ApiProvider uses it, and tests pass a client with a fake fetch. */
+export function ApiClientProvider({
+  api,
+  queryClient,
+  children,
+}: {
+  api: Api;
+  queryClient: QueryClient;
+  children: ReactNode;
+}) {
   return (
     <ApiContext.Provider value={api}>
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>

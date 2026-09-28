@@ -1,0 +1,345 @@
+"use client";
+
+import { useQueryClient } from "@tanstack/react-query";
+import type { Route } from "next";
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { toast } from "sonner";
+
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { EmptyState } from "@/components/states/EmptyState";
+import { ErrorState } from "@/components/states/ErrorState";
+import { Button } from "@/components/ui/button";
+import {
+  useConversations,
+  useMarkUnread,
+  useScheduledMessages,
+  useSocialAccounts,
+  useUpdateConversation,
+} from "@/lib/api/queries";
+import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
+import type { Conversation, InboxView, Platform, SocialAccount } from "@/lib/api/types";
+import { emptyStates, errorMessage, inboxFilterEmpty } from "@/lib/copy";
+import { useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
+import { cn } from "@/lib/utils";
+import { useCurrentWorkspace } from "@/lib/workspace";
+
+import { ConversationList, RowSkeletons } from "./ConversationList";
+import { DetailsPanel } from "./DetailsPanel";
+import { InboxUiProvider, useInboxLayout, type InboxLayout, type InboxUi } from "./inbox-context";
+import { ListHeader, VIEWS, type InboxTab } from "./ListHeader";
+import { PlatformStrip, type PlatformChoice } from "./PlatformStrip";
+import { ScheduledList } from "./ScheduledList";
+import { useInboxShortcuts } from "./use-inbox-shortcuts";
+
+const PLATFORM_ORDER: Platform[] = ["instagram", "whatsapp"];
+
+/** Accounts that can still hold conversations. */
+function liveAccounts(accounts: SocialAccount[]): SocialAccount[] {
+  return accounts.filter((account) => account.status !== "disconnected");
+}
+
+const LIST_WIDTH: Record<InboxLayout, string> = {
+  wide: "w-[320px]",
+  desktop: "w-[320px]",
+  tablet: "w-[300px]",
+  phone: "w-full",
+};
+
+/**
+ * The inbox (UX-INB-01…03): list pane, thread pane (the route's page) and the details panel,
+ * laid out for the four widths. Filters live here, so switching conversations keeps the list.
+ */
+export function InboxShell({ children }: { children: ReactNode }) {
+  const workspace = useCurrentWorkspace();
+  const accounts = useSocialAccounts(workspace.id);
+
+  if (accounts.isPending) return <InboxFrame><RowSkeletons /></InboxFrame>;
+  if (accounts.isError) {
+    return (
+      <InboxFrame>
+        <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />
+      </InboxFrame>
+    );
+  }
+  const live = liveAccounts(accounts.data);
+  if (live.length === 0) {
+    return (
+      <InboxFrame>
+        <EmptyState
+          className="h-full"
+          title={emptyStates.connections.title}
+          body={emptyStates.connections.body}
+          action={
+            <Button asChild className="bg-brand-gradient text-white">
+              <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect an account</Link>
+            </Button>
+          }
+        />
+      </InboxFrame>
+    );
+  }
+  return <Inbox accounts={live}>{children}</Inbox>;
+}
+
+/** The inbox fills the height, inset like the sidebar, left corners rounded (UX-SH-03). */
+function InboxFrame({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={cn(
+        "flex h-[calc(100dvh-56px)] overflow-hidden bg-panel md:mt-4 md:ml-4 md:h-[calc(100dvh-32px)] md:rounded-l-xl md:border md:border-r-0 md:border-line",
+        className,
+      )}
+      data-testid="inbox"
+    >
+      {children}
+    </div>
+  );
+}
+
+function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: ReactNode }) {
+  const workspace = useCurrentWorkspace();
+  const wid = workspace.id;
+  const slug = workspace.slug;
+  const router = useRouter();
+  const params = useParams<{ id?: string }>();
+  const selectedId = params.id ?? null;
+  const layout = useInboxLayout();
+  const now = useNow();
+
+  // ---- filters (FR-INB-01)
+  const platforms = useMemo(
+    () => PLATFORM_ORDER.filter((p) => accounts.some((account) => account.platform === p)),
+    [accounts],
+  );
+  const [storedPlatform, setStoredPlatform] = useStoredString<PlatformChoice>(`socialhood:inbox-platform:${wid}`, "all");
+  const platform: PlatformChoice = platforms.includes(storedPlatform as Platform) ? (storedPlatform as Platform) : "all";
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [view, setView] = useState<InboxView>("all");
+  const [q, setQ] = useState("");
+  const [tab, setTab] = useState<InboxTab>("chats");
+  const platformAccounts = platform === "all" ? [] : accounts.filter((account) => account.platform === platform);
+  const effectiveAccountId = platformAccounts.some((account) => account.id === accountId) ? accountId : null;
+
+  const filters: ConversationFilters = {
+    view,
+    platform: platform === "all" ? null : platform,
+    accountId: effectiveAccountId,
+    q,
+  };
+  const conversations = useConversations(wid, filters);
+  const items = useMemo(() => conversations.data?.pages.flatMap((page) => page.items) ?? [], [conversations.data]);
+  const scheduled = useScheduledMessages(wid);
+  const scheduledCount =
+    scheduled.data?.pages.reduce((sum, page) => sum + page.items.filter((s) => s.status === "scheduled").length, 0) ?? 0;
+
+  // ---- details panel: inline and remembered at ≥ 1280 px, a sheet below
+  const [inlineDetails, setInlineDetails] = useStoredFlag("socialhood:inbox-details", true);
+  const [sheetDetails, setSheetDetails] = useState(false);
+  const detailsOpen = layout === "wide" ? inlineDetails : sheetDetails;
+  const toggleDetails = useCallback(() => {
+    if (layout === "wide") setInlineDetails(!inlineDetails);
+    else setSheetDetails((open) => !open);
+  }, [layout, inlineDetails, setInlineDetails]);
+  const closeDetails = useCallback(() => {
+    if (layout === "wide") setInlineDetails(false);
+    else setSheetDetails(false);
+  }, [layout, setInlineDetails]);
+
+  // ---- actions shared by the thread header, the menu and the shortcuts
+  const queryClient = useQueryClient();
+  const update = useUpdateConversation(wid);
+  const unread = useMarkUnread(wid);
+  const [manualUnreadId, setManualUnreadId] = useState<string | null>(null);
+  const [previousSelected, setPreviousSelected] = useState(selectedId);
+  if (previousSelected !== selectedId) {
+    // Opening a conversation again marks it read again.
+    setPreviousSelected(selectedId);
+    setManualUnreadId(null);
+  }
+
+  const open = useCallback((id: string | null) => {
+    router.push((id ? `/w/${slug}/inbox/${id}` : `/w/${slug}/inbox`) as Route);
+  }, [router, slug]);
+
+  const archive = useCallback(
+    (id: string, archived: boolean) => {
+      const index = items.findIndex((item) => item.id === id);
+      update.mutate(
+        { id, patch: { status: archived ? "archived" : "open" } },
+        {
+          onSuccess: () => {
+            toast.success(archived ? "Conversation archived" : "Conversation moved to the inbox", {
+              action: { label: "Undo", onClick: () => update.mutate({ id, patch: { status: archived ? "open" : "archived" } }) },
+            });
+          },
+          onError: (error) => toast.error(errorMessage(error)),
+        },
+      );
+      // Archiving the open conversation moves on to the next one, as mail apps do.
+      if (archived && id === selectedId && view !== "archived") {
+        const next = items[index + 1] ?? items[index - 1];
+        open(next && next.id !== id ? next.id : null);
+      }
+    },
+    [items, open, selectedId, update, view],
+  );
+
+  const markUnread = useCallback(
+    (id: string) => {
+      setManualUnreadId(id);
+      unread.mutate(id, { onError: (error) => toast.error(errorMessage(error)) });
+    },
+    [unread],
+  );
+
+  const searchRef = useRef<HTMLInputElement>(null);
+  useInboxShortcuts({
+    move: (step) => {
+      const index = selectedId ? items.findIndex((item) => item.id === selectedId) : -1;
+      const next = index === -1 ? (step === 1 ? 0 : -1) : index + step;
+      if (next >= 0 && next < items.length) open(items[next].id);
+      if (next >= items.length - 3 && conversations.hasNextPage && !conversations.isFetchingNextPage) {
+        void conversations.fetchNextPage();
+      }
+    },
+    focusSearch: () => {
+      setTab("chats");
+      requestAnimationFrame(() => searchRef.current?.focus());
+    },
+    archive: () => {
+      if (!selectedId) return;
+      const status =
+        queryClient.getQueryData<Conversation>(keys.conversation(wid, selectedId))?.status ??
+        items.find((item) => item.id === selectedId)?.status;
+      archive(selectedId, status !== "archived");
+    },
+    markUnread: () => {
+      if (selectedId) markUnread(selectedId);
+    },
+    escape: () => {
+      if (detailsOpen) closeDetails();
+      else if (layout === "phone" && selectedId) open(null);
+    },
+  });
+
+  const ui: InboxUi = {
+    layout,
+    slug,
+    selectedId,
+    detailsOpen,
+    toggleDetails,
+    closeDetails,
+    setTab,
+    manualUnreadId,
+    markUnread,
+    archive,
+  };
+
+  const showList = layout !== "phone" || !selectedId;
+  const showThread = layout !== "phone" || Boolean(selectedId);
+  const viewLabel = VIEWS.find((option) => option.value === view)?.label ?? view;
+  const filtered = view !== "all" || q.trim() !== "";
+
+  return (
+    <InboxUiProvider value={ui}>
+      <InboxFrame>
+        {showList ? (
+          <section
+            aria-label="Conversation list"
+            data-pane="list"
+            className={cn("flex shrink-0 flex-col border-r border-line bg-panel", LIST_WIDTH[layout], layout === "phone" && "border-r-0")}
+          >
+            <PlatformStrip
+              platforms={platforms}
+              value={platform}
+              onChange={(choice) => {
+                setStoredPlatform(choice);
+                setAccountId(null);
+              }}
+              showLabels={layout === "wide"}
+            />
+            <ListHeader
+              tab={tab}
+              onTabChange={setTab}
+              scheduledCount={scheduledCount}
+              view={view}
+              onViewChange={setView}
+              search={q}
+              onSearchChange={setQ}
+              searchRef={searchRef}
+              accounts={platformAccounts}
+              accountId={effectiveAccountId}
+              onAccountChange={setAccountId}
+            />
+            {tab === "scheduled" ? (
+              <ScheduledList onOpen={(id) => open(id)} now={now} />
+            ) : conversations.isPending ? (
+              <RowSkeletons />
+            ) : conversations.isError ? (
+              <ErrorState error={conversations.error} onRetry={() => void conversations.refetch()} />
+            ) : items.length === 0 ? (
+              filtered ? (
+                <EmptyState
+                  {...inboxFilterEmpty(q.trim() || viewLabel)}
+                  action={
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => {
+                        setView("all");
+                        setQ("");
+                      }}
+                    >
+                      Show all
+                    </Button>
+                  }
+                />
+              ) : (
+                <EmptyState {...emptyStates.inboxNoConversations} />
+              )
+            ) : (
+              <ConversationList
+                // A new filter is a new list: scroll to the top, forget what was announced.
+                key={JSON.stringify(filters)}
+                items={items}
+                slug={slug}
+                selectedId={selectedId}
+                now={now}
+                hasNextPage={conversations.hasNextPage}
+                isFetchingNextPage={conversations.isFetchingNextPage}
+                fetchNextPage={() => void conversations.fetchNextPage()}
+              />
+            )}
+          </section>
+        ) : null}
+
+        {showThread ? (
+          <section aria-label="Conversation" data-pane="thread" className="flex min-w-0 flex-1 flex-col bg-canvas">
+            {children}
+          </section>
+        ) : null}
+
+        {selectedId && detailsOpen && layout === "wide" ? (
+          <aside aria-label="Details" data-pane="details" className="w-[300px] shrink-0 overflow-y-auto border-l border-line bg-panel">
+            <DetailsPanel conversationId={selectedId} />
+          </aside>
+        ) : null}
+      </InboxFrame>
+
+      {layout !== "wide" ? (
+        <Sheet open={Boolean(selectedId) && detailsOpen} onOpenChange={(value) => (value ? undefined : closeDetails())}>
+          <SheetContent
+            side="right"
+            data-pane="details"
+            className={cn("gap-0 border-line bg-panel p-0", layout === "phone" ? "w-full sm:max-w-full" : "w-[300px] sm:max-w-[300px]")}
+          >
+            <SheetTitle className="sr-only">Details</SheetTitle>
+            {selectedId ? <DetailsPanel conversationId={selectedId} /> : null}
+          </SheetContent>
+        </Sheet>
+      ) : null}
+    </InboxUiProvider>
+  );
+}

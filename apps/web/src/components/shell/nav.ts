@@ -34,7 +34,7 @@ function route(path: string): Route {
 }
 
 /** A page built in a later phase: the link exists before the page does. */
-function later(path: string, phase: "P2" | "P3" | "P4" | "P5" | "P6" | "P7" | "P8"): Route {
+function later(path: string, phase: "P4" | "P5" | "P6" | "P7" | "P8"): Route {
   void phase; // documents where the page arrives
   return route(path);
 }
@@ -42,7 +42,7 @@ function later(path: string, phase: "P2" | "P3" | "P4" | "P5" | "P6" | "P7" | "P
 // §3.1: Home, Inbox, Comments, Automations, Schedule, Knowledge. Agents see the first three.
 export const PRIMARY_NAV: readonly NavItem[] = [
   { key: "home", label: "Home", icon: House, segment: "home", roles: EVERYONE, href: (s) => route(`/w/${s}/home`) },
-  { key: "inbox", label: "Inbox", icon: Inbox, segment: "inbox", roles: EVERYONE, href: (s) => later(`/w/${s}/inbox`, "P3") },
+  { key: "inbox", label: "Inbox", icon: Inbox, segment: "inbox", roles: EVERYONE, href: (s) => route(`/w/${s}/inbox`) },
   { key: "comments", label: "Comments", icon: MessageSquare, segment: "comments", roles: EVERYONE, href: (s) => later(`/w/${s}/comments`, "P6") },
   { key: "automations", label: "Automations", icon: Zap, segment: "automations", roles: ADMINS, href: (s) => later(`/w/${s}/automations`, "P4") },
   { key: "schedule", label: "Schedule", icon: CalendarDays, segment: "schedule", roles: ADMINS, href: (s) => later(`/w/${s}/schedule`, "P7") },

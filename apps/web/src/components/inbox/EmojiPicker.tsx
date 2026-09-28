@@ -1,0 +1,123 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+import { cn } from "@/lib/utils";
+
+/**
+ * A small emoji picker, loaded only when the composer's emoji button is first used
+ * (TR-FE-08). Business replies need a few hundred common emoji, not the full Unicode set, so
+ * this ships its own list styled with the tokens instead of a third-party picker.
+ */
+const GROUPS: { name: string; emoji: [string, string][] }[] = [
+  {
+    name: "Smileys",
+    emoji: [
+      ["😀", "grin smile happy"], ["😃", "smile happy"], ["😄", "smile laugh"], ["😁", "grin beam"],
+      ["😆", "laugh"], ["😅", "sweat laugh"], ["😂", "joy tears laugh"], ["🤣", "rofl laugh"],
+      ["😊", "blush smile"], ["😇", "angel innocent"], ["🙂", "slight smile"], ["😉", "wink"],
+      ["😍", "love heart eyes"], ["🥰", "love hearts"], ["😘", "kiss"], ["😋", "yum tasty"],
+      ["😎", "cool sunglasses"], ["🤩", "star struck wow"], ["🥳", "party celebrate"], ["🤗", "hug"],
+      ["🤔", "think hmm"], ["😐", "neutral"], ["🙄", "eye roll"], ["😏", "smirk"],
+      ["😌", "relieved"], ["😴", "sleep"], ["😮", "wow surprised"], ["😲", "astonished"],
+      ["🥺", "pleading please"], ["😢", "cry sad"], ["😭", "sob cry"], ["😤", "huff"],
+      ["😡", "angry"], ["🤯", "mind blown"], ["😳", "flushed"], ["🤭", "oops giggle"],
+      ["🤫", "shush quiet"], ["🙃", "upside down"], ["😬", "grimace"], ["🤝", "handshake deal"],
+    ],
+  },
+  {
+    name: "Gestures",
+    emoji: [
+      ["👍", "thumbs up yes ok"], ["👎", "thumbs down no"], ["👌", "ok perfect"], ["✌️", "peace victory"],
+      ["🤞", "fingers crossed luck"], ["🙏", "thanks please pray"], ["👏", "clap applause"], ["🙌", "raised hands yay"],
+      ["👋", "wave hello bye"], ["🤙", "call me"], ["💪", "strong muscle"], ["👉", "point right"],
+      ["👈", "point left"], ["👆", "point up"], ["👇", "point down"], ["✋", "hand stop"],
+      ["🫶", "heart hands love"], ["🤲", "palms"], ["✍️", "writing"], ["👀", "eyes look"],
+    ],
+  },
+  {
+    name: "Hearts",
+    emoji: [
+      ["❤️", "red heart love"], ["🧡", "orange heart"], ["💛", "yellow heart"], ["💚", "green heart"],
+      ["💙", "blue heart"], ["💜", "purple heart"], ["🖤", "black heart"], ["🤍", "white heart"],
+      ["💕", "two hearts"], ["💖", "sparkling heart"], ["💯", "hundred perfect"], ["✨", "sparkles"],
+      ["⭐", "star"], ["🌟", "glowing star"], ["🔥", "fire hot lit"], ["🎉", "party tada celebrate"],
+    ],
+  },
+  {
+    name: "Shopping",
+    emoji: [
+      ["🛍️", "shopping bags"], ["🛒", "cart"], ["💳", "card payment"], ["💰", "money bag"],
+      ["💸", "money"], ["🏷️", "tag price label"], ["🎁", "gift present"], ["📦", "package box parcel"],
+      ["🚚", "delivery truck shipping"], ["✈️", "plane flight"], ["📍", "location pin"], ["🏠", "home house"],
+      ["🕒", "clock time"], ["📅", "calendar date"], ["📞", "phone call"], ["📧", "email"],
+      ["✅", "check done yes"], ["❌", "cross no"], ["⚠️", "warning"], ["ℹ️", "info"],
+      ["👗", "dress"], ["👕", "shirt tshirt"], ["👟", "shoe sneaker"], ["💄", "lipstick makeup"],
+      ["💍", "ring jewellery"], ["⌚", "watch"], ["📱", "phone mobile"], ["💻", "laptop"],
+    ],
+  },
+  {
+    name: "Food",
+    emoji: [
+      ["☕", "coffee"], ["🍵", "tea"], ["🍰", "cake"], ["🎂", "birthday cake"], ["🍪", "cookie"],
+      ["🍕", "pizza"], ["🍔", "burger"], ["🍟", "fries"], ["🥗", "salad"], ["🍜", "noodles"],
+      ["🍫", "chocolate"], ["🍩", "donut"], ["🍓", "strawberry"], ["🥭", "mango"], ["🍷", "wine"],
+    ],
+  },
+];
+
+export default function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
+  const [query, setQuery] = useState("");
+  const results = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return null;
+    return GROUPS.flatMap((group) => group.emoji).filter(([, words]) => words.includes(q));
+  }, [query]);
+
+  const button = ([emoji, words]: [string, string]) => (
+    <button
+      key={emoji}
+      type="button"
+      onClick={() => onPick(emoji)}
+      aria-label={words.split(" ")[0]}
+      title={words.split(" ")[0]}
+      className="grid size-8 place-items-center rounded-md text-lg hover:bg-white/10"
+    >
+      {emoji}
+    </button>
+  );
+
+  return (
+    <div className="flex w-72 flex-col gap-2">
+      <label htmlFor="emoji-search" className="sr-only">
+        Search emoji
+      </label>
+      <input
+        id="emoji-search"
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search emoji"
+        autoFocus
+        className="w-full rounded-lg border border-line bg-field px-3 py-1.5 text-sm outline-none focus:bg-raised"
+      />
+      <div className="max-h-64 overflow-y-auto">
+        {results ? (
+          results.length ? (
+            <div className="grid grid-cols-8 gap-0.5">{results.map(button)}</div>
+          ) : (
+            <p className="px-1 py-4 text-center text-xs text-fg-secondary">No emoji match &quot;{query}&quot;.</p>
+          )
+        ) : (
+          GROUPS.map((group) => (
+            <section key={group.name} aria-label={group.name} className="mb-2">
+              <h3 className={cn("mb-1 px-1 text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase")}>
+                {group.name}
+              </h3>
+              <div className="grid grid-cols-8 gap-0.5">{group.emoji.map(button)}</div>
+            </section>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

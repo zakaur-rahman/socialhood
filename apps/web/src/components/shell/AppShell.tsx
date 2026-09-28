@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 
 import type { Route } from "next";
 
-import { useMe, useSocialAccounts } from "@/lib/api/queries";
+import { useInboxCounts, useMe, useSocialAccounts } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { reconnectBanner } from "@/lib/copy";
 import { useMediaQuery, useStoredFlag } from "@/lib/use-browser-state";
@@ -16,19 +16,23 @@ import { AppSidebar } from "./AppSidebar";
 import { BannerSlot, type Banner } from "./BannerSlot";
 import { MobileNav } from "./MobileNav";
 import { NotificationsButton } from "./NotificationsButton";
-import { pageTitle } from "./nav";
+import { activeSegment, pageTitle } from "./nav";
 
 /**
- * The signed-in frame: sidebar on desktop (collapsed below 1024 px, remembered per browser
- * above it), top bar and drawer on phones (UX-SH-01…04).
+ * The signed-in frame: sidebar on desktop (collapsed below 1024 px, 1280 px in the inbox;
+ * remembered per browser above it), top bar and drawer on phones (UX-SH-01…04). The Inbox
+ * item carries the unread count (FR-INB-04), kept fresh by real-time events.
  */
 export function AppShell({ children, banners = [] }: { children: ReactNode; banners?: Banner[] }) {
   const workspace = useCurrentWorkspace();
   const me = useMe();
   const accounts = useSocialAccounts(workspace.id);
   const allBanners = [...accountBanners(accounts.data ?? [], workspace.slug), ...banners];
+  const counts = useInboxCounts(workspace.id);
   const pathname = usePathname();
-  const wide = useMediaQuery("(min-width: 1024px)");
+  // UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there.
+  const inbox = activeSegment(pathname, workspace.slug) === "inbox";
+  const wide = useMediaQuery(inbox ? "(min-width: 1280px)" : "(min-width: 1024px)");
   const [collapsedPreference, setCollapsedPreference] = useStoredFlag("socialhood:sidebar-collapsed");
   const collapsed = !wide || collapsedPreference;
 
@@ -36,6 +40,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
     workspace,
     userName: me.data?.name ?? null,
     account: <UserButton />,
+    unreadCount: counts.data?.unread ?? 0,
   };
 
   return (

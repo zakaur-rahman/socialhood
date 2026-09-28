@@ -6,6 +6,7 @@ import { Suspense, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 import { AccountCard } from "@/components/connections/AccountCard";
+import { ConnectWhatsAppButton, useWhatsAppConnect } from "@/components/connections/ConnectWhatsAppButton";
 import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
 import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -27,7 +28,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 const SANDBOX_TOOLS = process.env.NODE_ENV !== "production";
 
-/** UX-SCR-07 Connections, F-03 (connect), F-05 (reconnect), FR-CON-06 (disconnect). */
+/** UX-SCR-07 Connections, F-03 (connect Instagram), F-04 (connect WhatsApp), F-05 (reconnect), FR-CON-06 (disconnect). */
 export default function ConnectionsPage() {
   return (
     <Suspense fallback={<PageSkeleton rows={2} />}>
@@ -46,6 +47,7 @@ function Connections() {
   const resubscribe = useResubscribeAccount(wid);
   const disconnect = useDisconnectAccount(wid);
   const sandbox = useCreateSandboxAccount(wid);
+  const whatsapp = useWhatsAppConnect(wid);
 
   const startConnect = useCallback(() => {
     connect.mutate(undefined, {
@@ -81,9 +83,7 @@ function Connections() {
           Add sandbox account
         </Button>
       ) : null}
-      <Button variant="secondary" disabled title="WhatsApp connections are coming soon">
-        Connect WhatsApp
-      </Button>
+      <ConnectWhatsAppButton wid={wid} />
       <Button className="bg-brand-gradient text-white" disabled={connect.isPending} onClick={startConnect}>
         <InstagramGlyph className="size-4" />
         {connect.isPending ? "Opening Instagram…" : "Connect Instagram"}
@@ -120,14 +120,14 @@ function Connections() {
               canManage={canManage}
               busy={{
                 saving: update.isPending && update.variables?.id === account.id,
-                reconnecting: connect.isPending,
+                reconnecting: account.platform === "whatsapp" ? whatsapp.busy : connect.isPending,
                 retrying: resubscribe.isPending && resubscribe.variables === account.id,
                 disconnecting: disconnect.isPending && disconnect.variables?.id === account.id,
               }}
               actions={{
                 onChange: (patch) =>
                   update.mutate({ id: account.id, patch }, { onError: (error) => toast.error(errorMessage(error)) }),
-                onReconnect: startConnect,
+                onReconnect: account.platform === "whatsapp" ? whatsapp.connect : startConnect,
                 onRetrySubscribe: () =>
                   resubscribe.mutate(account.id, {
                     onSuccess: (saved) =>

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CONNECT_ERRORS, connectResult, reconnectBanner } from "./copy";
+import { CONNECT_ERRORS, connectResult, reconnectBanner, sendFailure, whatsappConnected } from "./copy";
 import { relativeTime } from "./time";
 
 function result(query: string, username?: string) {
@@ -54,6 +54,61 @@ describe("reconnect banner (F-05)", () => {
   it("names the account", () => {
     expect(reconnectBanner("maple.bakery")).toBe("Reconnect @maple.bakery to keep receiving messages");
     expect(reconnectBanner(null)).toBe("Reconnect your Instagram account to keep receiving messages");
+  });
+});
+
+describe("send failures (§4.7 error codes)", () => {
+  const ig = { platform: "instagram" as const, handle: "maple.bakery" };
+  const wa = { platform: "whatsapp" as const, handle: "Maple Bakery" };
+
+  it.each([
+    ["reply_window_closed", ig, "Instagram allows replies for 24 hours after the customer's last message.", false],
+    [
+      "reply_window_closed",
+      wa,
+      "WhatsApp allows free-form replies for 24 hours after the customer's last message. Send an approved template instead.",
+      false,
+    ],
+    ["account_needs_reconnect", ig, "@maple.bakery needs reconnecting before you can send from it.", false],
+    ["recipient_unavailable", ig, "This person can't receive messages right now.", false],
+    ["platform_rate_limited", ig, "Instagram is limiting messages from this account. Try again in a few minutes.", true],
+    ["platform_unavailable", ig, "Instagram didn't respond.", true],
+    ["delivery_unknown", ig, "We couldn't confirm this was delivered. Check the chat in Instagram before retrying.", true],
+    ["network", ig, "You're offline. Reconnect to send messages.", true],
+  ] as const)("%s shows its copy", (code, context, message, retry) => {
+    const failure = sendFailure({ code }, context);
+    expect(failure.message).toBe(message);
+    expect(failure.retry).toBe(retry);
+  });
+
+  it("offers the template picker on WhatsApp and Reconnect for a broken account", () => {
+    expect(sendFailure({ code: "reply_window_closed" }, wa).chooseTemplate).toBe(true);
+    expect(sendFailure({ code: "account_needs_reconnect" }, ig).reconnect).toBe(true);
+  });
+
+  it("quotes the platform's reason and the request id", () => {
+    expect(sendFailure({ code: "platform_rejected", message: "Message too long" }, ig).message).toBe(
+      "Instagram rejected this: Message too long",
+    );
+    expect(sendFailure({ code: "internal", requestId: "01REQ" }, ig).message).toBe(
+      "Something went wrong on our side. Try again. If it keeps happening, email support@socialhood.com with code 01REQ.",
+    );
+    expect(sendFailure({ code: "capability_unavailable", message: "Missing permission" }, ig).message).toBe(
+      "@maple.bakery didn't give Social Hood permission for this. Reconnect to allow it.",
+    );
+    expect(sendFailure({ code: "capability_unavailable" }, wa).message).toBe("WhatsApp doesn't support this.");
+  });
+
+  it("falls back to the API's detail for limits and validation", () => {
+    expect(sendFailure({ code: "quota_exceeded", message: "Your plan includes 1,000 messages." }, ig).message).toBe(
+      "Your plan includes 1,000 messages.",
+    );
+  });
+});
+
+describe("WhatsApp connected toast (F-04)", () => {
+  it("names the number", () => {
+    expect(whatsappConnected("Maple Bakery", "+91 98765 43210")).toBe("WhatsApp connected: Maple Bakery (+91 98765 43210)");
   });
 });
 
