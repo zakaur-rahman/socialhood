@@ -101,10 +101,53 @@ class InstagramAdapter:
     async def send_message(
         self, acct: SocialAccount, recipient_ref: str, message: OutboundMessage
     ) -> SendResult:
-        raise NotImplementedError("T3.6")
+        """One Send API call: text, or one attachment by URL (Instagram has no templates).
+
+        Human Agent replies carry ``messaging_type: MESSAGE_TAG`` and ``tag: HUMAN_AGENT``
+        (TR-PL-04). A failure after the request went out is ``delivery_unknown`` (TR-JOB-05).
+        """
+        from socialhood.platforms.outcome import for_write
+
+        content: dict[str, object]
+        if message.attachment is not None:
+            content = {
+                "attachment": {
+                    "type": message.attachment.type,
+                    "payload": {"url": message.attachment.url},
+                }
+            }
+        elif message.text:
+            content = {"text": message.text}
+        else:
+            raise PlatformError(
+                "platform_rejected", message="Instagram messages need text or one attachment"
+            )
+        payload: dict[str, object] = {"recipient": {"id": recipient_ref}, "message": content}
+        if message.human_agent:
+            payload["messaging_type"] = "MESSAGE_TAG"
+            payload["tag"] = "HUMAN_AGENT"
+        try:
+            body = await self.http.request(
+                "POST",
+                self._graph("me/messages"),
+                endpoint="me.messages",
+                token=self._token(acct),
+                json=payload,
+            )
+        except PlatformError as error:
+            raise for_write(error) from error.__cause__
+        mid = body.get("message_id") if isinstance(body, dict) else None
+        return SendResult(str(mid) if mid else None)
 
     async def mark_read(self, acct: SocialAccount, recipient_ref: str) -> None:
-        raise NotImplementedError("T3.6")
+        """Show the customer their messages were seen (sender action ``mark_seen``)."""
+        await self.http.request(
+            "POST",
+            self._graph("me/messages"),
+            endpoint="me.messages.mark_seen",
+            token=self._token(acct),
+            json={"recipient": {"id": recipient_ref}, "sender_action": "mark_seen"},
+        )
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
         from socialhood.platforms.instagram import reads
