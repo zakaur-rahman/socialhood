@@ -1267,6 +1267,10 @@ export interface components {
              * Format: uuid
              */
             client_id: string;
+            /** Sticker */
+            sticker?: "like_heart" | null;
+            /** Sticker Asset Id */
+            sticker_asset_id?: string | null;
             /** Suggestion Id */
             suggestion_id?: string | null;
             template?: components["schemas"]["TemplateSend"] | null;

@@ -139,7 +139,11 @@ async def test_an_asset_outside_the_workspace_folder_is_rejected(
         ("video", {"format": "mp4", "bytes": 101 * MB}, "Videos can be up to 100 MB."),
         ("video", {"format": "mov", "duration": 90.5}, "Videos can be up to 90 seconds."),
         ("video", {"format": "avi"}, None),
-        ("raw", {"format": None, "bytes": 21 * MB}, "Documents can be up to 20 MB."),
+        (
+            "raw",
+            {"format": None},
+            "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 90 seconds.",
+        ),
     ],
 )
 async def test_files_over_the_limits_are_unsupported_media(
@@ -171,6 +175,9 @@ async def test_files_over_the_limits_are_unsupported_media(
         ("video", {"format": "mp4", "duration": 90.0, "bytes": 100 * MB}, ""),
         ("raw", {"format": None, "bytes": 20 * MB}, ".pdf"),
         ("image", {"format": "pdf", "bytes": 2 * MB}, ""),
+        ("raw", {"format": None, "bytes": 100 * MB}, ".docx"),  # WhatsApp documents
+        ("video", {"format": "m4a", "bytes": 3 * MB, "duration": 600.0}, ""),  # audio
+        ("video", {"format": "webm", "bytes": 20 * MB, "duration": 180.0}, ""),  # DM video
     ],
 )
 async def test_files_within_the_limits_are_accepted(
@@ -209,3 +216,16 @@ async def test_a_cloudinary_outage_is_503(client: httpx.AsyncClient, clerk: Cler
     response = await register(client, headers, wid, public_id, "image")
     assert response.status_code == 503
     assert response.json()["code"] == "service_unavailable"
+
+
+async def test_documents_for_messages_have_their_own_limit(
+    client: httpx.AsyncClient, clerk: Clerk
+) -> None:
+    headers, wid = await owner(client, clerk)
+    public_id = f"ws/{wid}/message/big.pdf"
+    clerk.router.get(f"{RESOURCES}/raw/upload/{public_id}").respond(
+        200, json=resource(public_id, resource_type="raw", format=None, bytes=101 * MB)
+    )
+    response = await register(client, headers, wid, public_id, "raw")
+    assert response.status_code == 415
+    assert response.json()["detail"] == "Documents can be up to 100 MB."

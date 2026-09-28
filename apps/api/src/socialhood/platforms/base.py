@@ -31,7 +31,7 @@ class ContactProfile:
 
 @dataclass(frozen=True, kw_only=True)
 class OutboundAttachment:
-    type: Literal["image", "video", "audio", "file"]
+    type: Literal["image", "video", "audio", "file", "sticker"]
     url: str  # a public URL the platform can fetch (our storage)
     filename: str | None = None
     mime_type: str | None = None
@@ -46,11 +46,13 @@ class OutboundTemplate:
 
 @dataclass(frozen=True, kw_only=True)
 class OutboundMessage:
-    """One platform send: text, or one attachment, or (WhatsApp) a template."""
+    """One platform send: text, one attachment, a built-in sticker (Instagram's heart) or
+    (WhatsApp) a template."""
 
     text: str | None = None
     attachment: OutboundAttachment | None = None
     template: OutboundTemplate | None = None
+    sticker: Literal["like_heart"] | None = None
     human_agent: bool = False  # Instagram HUMAN_AGENT tag (TR-PL-04)
 
 

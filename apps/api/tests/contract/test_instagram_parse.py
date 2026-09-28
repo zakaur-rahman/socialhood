@@ -255,3 +255,9 @@ def test_a_thread_without_participants_finds_the_contact_from_messages() -> None
         thread({"id": "t2"}, [], account_ref=ACCOUNT, own_ids=frozenset(), own_username=None)
         is None
     )
+
+
+def test_a_heart_sticker_arrives_as_its_emoji() -> None:
+    event = parsed("webhook_message_heart.json")
+    assert isinstance(event, InboundMessage)
+    assert (event.kind, event.text, event.attachments) == ("sticker", "❤️", ())

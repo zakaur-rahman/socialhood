@@ -41,6 +41,12 @@ describe("MessageBubble variants (UX-INB-06)", () => {
     expect(screen.queryByText("Edited ·")).not.toBeInTheDocument();
   });
 
+  it("shows a heart sticker large, without a bubble", () => {
+    const { row } = renderBubble({ ...out, kind: "sticker", text: "❤️", attachments: [] });
+    expect(screen.getByRole("img", { name: "Heart sticker" })).toHaveClass("text-5xl");
+    expect(row.querySelector('[data-variant="human"]')).not.toHaveClass("bg-brand-gradient");
+  });
+
   it("hides the avatar inside a group", () => {
     render(<MessageBubble message={message()} platform="instagram" timeZone="UTC" contact={contact} groupEnd={false} />);
     expect(screen.queryByText("P")).not.toBeInTheDocument();

@@ -83,6 +83,47 @@ async def test_an_image_with_the_human_agent_tag(
 
 
 @respx.mock
+async def test_the_heart_sticker(adapter: tuple[InstagramAdapter, SocialAccount]) -> None:
+    ig, acct = adapter
+    route = respx.post(SEND).respond(200, json={"recipient_id": IGSID, "message_id": "mid.3"})
+    await ig.send_message(acct, IGSID, OutboundMessage(sticker="like_heart"))
+    assert sent(route) == {
+        "recipient": {"id": IGSID},
+        "message": {"attachment": {"type": "like_heart"}},
+    }
+
+
+@pytest.mark.parametrize("kind", ["file", "audio", "video"])
+@respx.mock
+async def test_files_audio_and_video_by_url(
+    adapter: tuple[InstagramAdapter, SocialAccount], kind: str
+) -> None:
+    ig, acct = adapter
+    route = respx.post(SEND).respond(200, json={"recipient_id": IGSID, "message_id": "mid.4"})
+    item = OutboundAttachment(type=kind, url="https://res.cloudinary.com/x/raw/upload/a.pdf")  # type: ignore[arg-type]
+    await ig.send_message(acct, IGSID, OutboundMessage(attachment=item))
+    assert sent(route)["message"] == {
+        "attachment": {
+            "type": kind,
+            "payload": {"url": "https://res.cloudinary.com/x/raw/upload/a.pdf"},
+        }
+    }
+
+
+@respx.mock
+async def test_only_the_heart_sticker_exists_on_instagram(
+    adapter: tuple[InstagramAdapter, SocialAccount],
+) -> None:
+    ig, acct = adapter
+    route = respx.post(SEND)
+    webp = OutboundAttachment(type="sticker", url="https://s/1.webp")
+    with pytest.raises(PlatformError) as caught:
+        await ig.send_message(acct, IGSID, OutboundMessage(attachment=webp))
+    assert caught.value.code == "platform_rejected"
+    assert not route.called
+
+
+@respx.mock
 async def test_mark_seen(adapter: tuple[InstagramAdapter, SocialAccount]) -> None:
     ig, acct = adapter
     route = respx.post(SEND).respond(200, json={"recipient_id": IGSID})

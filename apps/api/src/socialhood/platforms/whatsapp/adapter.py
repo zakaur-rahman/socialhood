@@ -38,7 +38,13 @@ CAPABILITIES = frozenset(
 )
 
 # Our attachment types -> WhatsApp message types. Documents carry a filename; audio no caption.
-MEDIA_TYPES = {"image": "image", "video": "video", "audio": "audio", "file": "document"}
+MEDIA_TYPES = {
+    "image": "image",
+    "video": "video",
+    "audio": "audio",
+    "file": "document",
+    "sticker": "sticker",
+}
 TEMPLATE_FIELDS = "name,language,status,category,components"
 TEMPLATE_PAGE = 100
 TEMPLATE_MAX_PAGES = 5
@@ -50,9 +56,10 @@ def _media(attachment: OutboundAttachment, caption: str | None) -> dict[str, Any
     kind = MEDIA_TYPES[attachment.type]
     media: dict[str, Any] = {"link": attachment.url}
     if caption:
-        if kind == "audio":
+        if kind in ("audio", "sticker"):
             raise PlatformError(
-                "platform_rejected", message="WhatsApp audio can't carry text; send it separately"
+                "platform_rejected",
+                message=f"WhatsApp {kind} messages can't carry text; send it separately",
             )
         media["caption"] = caption
     if kind == "document" and attachment.filename:
@@ -75,6 +82,8 @@ def _template(template: OutboundTemplate) -> dict[str, Any]:
 def outbound_payload(to: str, message: OutboundMessage) -> dict[str, Any]:
     """The POST /{phone_number_id}/messages body for one send (text, one attachment, or a
     template). Text with an image, video or document goes as its caption."""
+    if message.sticker is not None:
+        raise PlatformError("platform_rejected", message="WhatsApp has no built-in stickers")
     if message.template is not None:
         content = _template(message.template)
     elif message.attachment is not None:

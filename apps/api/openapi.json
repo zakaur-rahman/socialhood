@@ -2293,6 +2293,30 @@
             "title": "Client Id",
             "type": "string"
           },
+          "sticker": {
+            "anyOf": [
+              {
+                "const": "like_heart",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sticker"
+          },
+          "sticker_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sticker Asset Id"
+          },
           "suggestion_id": {
             "anyOf": [
               {

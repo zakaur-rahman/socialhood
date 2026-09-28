@@ -7,32 +7,122 @@ import type { Api } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/queries/unwrap";
 import type { MediaAsset, Platform, ResourceType, UploadSignature } from "@/lib/api/types";
 
-export function resourceTypeFor(file: Pick<File, "type">): ResourceType {
+const KB = 1024;
+const MB = 1024 * KB;
+
+type FileKind = "image" | "video" | "audio" | "file";
+type Rule = { label: string; extensions: string[]; maxBytes: number };
+
+// The extension decides the kind: browsers report no MIME type for many documents.
+const KIND_BY_EXTENSION: Record<string, FileKind> = {
+  jpg: "image",
+  jpeg: "image",
+  png: "image",
+  webp: "image",
+  heic: "image",
+  mp4: "video",
+  mov: "video",
+  webm: "video",
+  avi: "video",
+  "3gp": "video",
+  mp3: "audio",
+  m4a: "audio",
+  aac: "audio",
+  wav: "audio",
+  ogg: "audio",
+  opus: "audio",
+  amr: "audio",
+  pdf: "file",
+  txt: "file",
+  doc: "file",
+  docx: "file",
+  xls: "file",
+  xlsx: "file",
+  ppt: "file",
+  pptx: "file",
+};
+
+// Meta's documented limits (Instagram Messaging; WhatsApp Cloud API media), as the API enforces
+// them. Images are converted to JPEG and video to MP4 when sent, so any stored format works.
+const RULES: Record<Platform, Partial<Record<FileKind, Rule>>> = {
+  instagram: {
+    image: { label: "Images", extensions: ["jpg", "jpeg", "png", "webp", "heic"], maxBytes: 8 * MB },
+    video: { label: "Videos", extensions: ["mp4", "mov", "webm", "avi"], maxBytes: 25 * MB },
+    audio: { label: "Audio files", extensions: ["aac", "m4a", "wav"], maxBytes: 25 * MB },
+    file: { label: "Files", extensions: ["pdf"], maxBytes: 25 * MB },
+  },
+  whatsapp: {
+    image: { label: "Images", extensions: ["jpg", "jpeg", "png", "webp", "heic"], maxBytes: 5 * MB },
+    video: { label: "Videos", extensions: ["mp4", "mov", "3gp"], maxBytes: 16 * MB },
+    audio: { label: "Audio files", extensions: ["aac", "amr", "mp3", "m4a", "ogg", "opus"], maxBytes: 16 * MB },
+    file: {
+      label: "Files",
+      extensions: ["pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx"],
+      maxBytes: 100 * MB,
+    },
+  },
+};
+
+const PLATFORM_NAME: Record<Platform, string> = { instagram: "Instagram", whatsapp: "WhatsApp" };
+
+export function extensionOf(name: string): string {
+  const dot = name.lastIndexOf(".");
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
+}
+
+function kindOf(file: Pick<File, "name" | "type">): FileKind | null {
+  const byName = KIND_BY_EXTENSION[extensionOf(file.name)];
+  if (byName) return byName;
   if (file.type.startsWith("image/")) return "image";
   if (file.type.startsWith("video/")) return "video";
+  if (file.type.startsWith("audio/")) return "audio";
+  return null;
+}
+
+function formatSize(bytes: number): string {
+  return bytes >= MB ? `${bytes / MB} MB` : `${bytes / KB} KB`;
+}
+
+/** Cloudinary's resource type: audio is stored as "video", documents as "raw". */
+export function resourceTypeFor(file: Pick<File, "name" | "type">): ResourceType {
+  const kind = kindOf(file);
+  if (kind === "image") return "image";
+  if (kind === "video" || kind === "audio") return "video";
   return "raw";
 }
 
-const MB = 1024 * 1024;
+function checkFor(platform: Platform) {
+  return (file: File): string | null => {
+    const name = PLATFORM_NAME[platform];
+    const kind = kindOf(file);
+    const rule = kind ? RULES[platform][kind] : undefined;
+    if (!rule || !rule.extensions.includes(extensionOf(file.name) || "")) {
+      return `${name} can't send this type of file.`;
+    }
+    if (file.size > rule.maxBytes) return `${rule.label} can be up to ${formatSize(rule.maxBytes)} on ${name}.`;
+    return null;
+  };
+}
 
-/** What each platform accepts in a DM (FR-INB-08, TR-MED-02), for the file picker and a quick check. */
+function acceptFor(platform: Platform): string {
+  return Object.values(RULES[platform])
+    .flatMap((rule) => rule.extensions.map((extension) => `.${extension}`))
+    .join(",");
+}
+
+/** What each platform accepts in a DM (FR-INB-08), for the file picker and a quick check. */
 export const ATTACHMENT_RULES: Record<Platform, { accept: string; check: (file: File) => string | null }> = {
-  instagram: {
-    accept: "image/jpeg,image/png,image/webp,image/heic",
-    check: (file) => {
-      if (!file.type.startsWith("image/")) return "Instagram DMs accept images only.";
-      if (file.size > 8 * MB) return "Images can be up to 8 MB.";
-      return null;
-    },
-  },
-  whatsapp: {
-    accept: "image/jpeg,image/png,image/webp,video/mp4,video/quicktime,application/pdf",
-    check: (file) => {
-      if (file.type.startsWith("image/")) return file.size > 8 * MB ? "Images can be up to 8 MB." : null;
-      if (file.type.startsWith("video/")) return file.size > 100 * MB ? "Videos can be up to 100 MB." : null;
-      if (file.type === "application/pdf") return file.size > 20 * MB ? "PDFs can be up to 20 MB." : null;
-      return "WhatsApp accepts images, MP4 or MOV video, and PDF documents.";
-    },
+  instagram: { accept: acceptFor("instagram"), check: checkFor("instagram") },
+  whatsapp: { accept: acceptFor("whatsapp"), check: checkFor("whatsapp") },
+};
+
+/** WhatsApp stickers: 512 x 512 WebP up to 500 KB (the API checks the size in pixels). */
+export const STICKER_RULE = {
+  accept: ".webp",
+  check(file: File): string | null {
+    if (extensionOf(file.name) !== "webp") return "Stickers are WebP images.";
+    if (file.size > 500 * KB) return "Stickers can be up to 500 KB.";
+    return null;
   },
 };
 

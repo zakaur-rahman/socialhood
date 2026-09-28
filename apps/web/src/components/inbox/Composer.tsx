@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Paperclip, SendHorizontal, Smile } from "lucide-react";
+import { Clock, Heart, Paperclip, SendHorizontal, Smile, Sticker } from "lucide-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -16,7 +16,7 @@ import type { Conversation, MediaAsset } from "@/lib/api/types";
 import { composerCopy, errorMessage } from "@/lib/copy";
 import { contactName, firstName, timeLeft } from "@/lib/inbox/format";
 import { useInboxStore } from "@/lib/inbox/store";
-import { ATTACHMENT_RULES, UploadError, uploadAsset } from "@/lib/media/upload";
+import { ATTACHMENT_RULES, STICKER_RULE, UploadError, uploadAsset } from "@/lib/media/upload";
 import { relativeTime } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
@@ -85,7 +85,9 @@ export function Composer({
   const textRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
+  const stickerRef = useRef<HTMLInputElement>(null);
   const tray = useAttachmentTray(wid, upload);
+  const sticker = useStickerUpload(wid, upload);
 
   const name = contactName(conversation.contact, conversation.platform);
   const replyWindow = conversation.reply_window;
@@ -134,6 +136,16 @@ export function Composer({
     });
     resetAfterSend();
     textRef.current?.focus();
+  };
+
+  // Stickers go on their own, straight away (the draft stays for the next message).
+  const sendHeart = () => onSend({ heart: true, humanAgent: replyWindow.state === "human_agent" });
+  const onStickerFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    const asset = await sticker.upload(file);
+    if (asset) onSend({ sticker: asset, humanAgent: replyWindow.state === "human_agent" });
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -243,6 +255,38 @@ export function Composer({
           maxLength={4096}
           className="min-h-10 max-h-40 flex-1 resize-none rounded-[20px] border border-line bg-field px-4 py-2 text-sm leading-relaxed outline-none focus:bg-raised"
         />
+        {conversation.platform === "instagram" ? (
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            className="size-10 rounded-full text-fg-secondary md:size-9"
+            aria-label="Send a heart"
+            onClick={sendHeart}
+          >
+            <Heart aria-hidden />
+          </Button>
+        ) : canAttach ? (
+          <>
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              className="size-10 rounded-full text-fg-secondary md:size-9"
+              aria-label="Send a sticker"
+              disabled={sticker.busy}
+              onClick={() => stickerRef.current?.click()}
+            >
+              <Sticker aria-hidden />
+            </Button>
+            <input
+              ref={stickerRef}
+              type="file"
+              hidden
+              accept={STICKER_RULE.accept}
+              onChange={(event) => void onStickerFile(event)}
+              data-testid="composer-sticker-input"
+            />
+          </>
+        ) : null}
         <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon-lg" className="size-10 rounded-full text-fg-secondary md:size-9" aria-label="Add emoji">
@@ -463,4 +507,31 @@ function useAttachmentTray(wid: string, injected?: Uploader) {
   }, []);
 
   return { items, add, remove, retry, clear };
+}
+
+/** A WhatsApp sticker: check it, upload it, hand back the asset (or null after a toast). */
+function useStickerUpload(wid: string, injected?: Uploader) {
+  const api = useApi();
+  const [busy, setBusy] = useState(false);
+  const upload = useCallback(
+    async (file: File): Promise<MediaAsset | null> => {
+      const problem = STICKER_RULE.check(file);
+      if (problem) {
+        toast.error(problem);
+        return null;
+      }
+      setBusy(true);
+      const options = { onProgress: () => {}, signal: new AbortController().signal };
+      try {
+        return await (injected ? injected(file, options) : uploadAsset(api, wid, file, options));
+      } catch (error) {
+        toast.error(error instanceof UploadError ? error.message : errorMessage(error));
+        return null;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [api, injected, wid],
+  );
+  return { busy, upload };
 }

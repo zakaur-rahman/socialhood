@@ -19,6 +19,9 @@ from socialhood.platforms.events import InboundMediaRef
 from socialhood.platforms.http import PlatformHttp
 from socialhood.platforms.instagram import oauth
 
+# Attachment types the Send API takes by URL; the only sticker is the built-in heart.
+INSTAGRAM_SENDABLE = frozenset({"image", "video", "audio", "file"})
+
 # Fields every connected account is subscribed to (@mentions arrive inside comments).
 SUBSCRIBED_FIELDS = "messages,messaging_seen,message_reactions,message_edit,comments"
 
@@ -101,7 +104,8 @@ class InstagramAdapter:
     async def send_message(
         self, acct: SocialAccount, recipient_ref: str, message: OutboundMessage
     ) -> SendResult:
-        """One Send API call: text, or one attachment by URL (Instagram has no templates).
+        """One Send API call: text, one attachment by URL (image, video, audio or PDF file),
+        or the heart sticker (Instagram has no templates).
 
         Human Agent replies carry ``messaging_type: MESSAGE_TAG`` and ``tag: HUMAN_AGENT``
         (TR-PL-04). A failure after the request went out is ``delivery_unknown`` (TR-JOB-05).
@@ -109,7 +113,13 @@ class InstagramAdapter:
         from socialhood.platforms.outcome import for_write
 
         content: dict[str, object]
-        if message.attachment is not None:
+        if message.sticker == "like_heart":
+            content = {"attachment": {"type": "like_heart"}}
+        elif message.attachment is not None:
+            if message.attachment.type not in INSTAGRAM_SENDABLE:
+                raise PlatformError(
+                    "platform_rejected", message="Instagram can only send its heart sticker"
+                )
             content = {
                 "attachment": {
                     "type": message.attachment.type,

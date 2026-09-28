@@ -168,6 +168,8 @@ def _message(
 
     text = _str(message.get("text"))
     kinds, refs = _attachments(message.get("attachments"))
+    if not text and _has_heart(message.get("attachments")):
+        text = HEART  # the heart sticker has no image to show
     reply_to = _dict(message.get("reply_to"))
     story = reply_to.get("story")
     if message.get("is_unsupported"):
@@ -194,6 +196,13 @@ def _message(
     )
 
 
+HEART = "\u2764\ufe0f"
+
+
+def _has_heart(raw: object) -> bool:
+    return any(_dict(a).get("type") == "like_heart" for a in (raw if isinstance(raw, list) else []))
+
+
 def _attachments(raw: object) -> tuple[list[str], list[InboundMediaRef]]:
     """The message kind and media ref of each attachment type we know (others are skipped)."""
     kinds: list[str] = []
@@ -204,6 +213,9 @@ def _attachments(raw: object) -> tuple[list[str], list[InboundMediaRef]]:
             continue
         payload = _dict(attachment.get("payload"))
         message_kind, ref_kind = known
+        if attachment.get("type") == "like_heart":
+            kinds.append("sticker")  # shown as text (HEART); there is nothing to copy
+            continue
         if ref_kind == "image" and payload.get("sticker_id") is not None:
             message_kind, ref_kind = "sticker", "sticker"
         kinds.append(message_kind)

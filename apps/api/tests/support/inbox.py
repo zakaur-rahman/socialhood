@@ -164,6 +164,10 @@ async def make_asset(
     workspace_id: uuid.UUID | str,
     purpose: str = "message",
     resource_type: str = "image",
+    fmt: str = "jpg",
+    size: int = 120_000,
+    width: int | None = 1080,
+    height: int | None = 1080,
 ) -> uuid.UUID:
     wid = uuid.UUID(str(workspace_id))
     with workspace_scope(wid):
@@ -172,11 +176,11 @@ async def make_asset(
                 public_id=f"ws/{wid}/{purpose}/{uuid.uuid4().hex}",
                 resource_type=resource_type,
                 purpose=purpose,
-                format="jpg",
-                secure_url="https://res.cloudinary.com/demo/image/upload/sample.jpg",
-                bytes=120_000,
-                width=1080,
-                height=1080,
+                format=fmt,
+                secure_url=f"https://res.cloudinary.com/demo/{resource_type}/upload/sample.{fmt}",
+                bytes=size,
+                width=width,
+                height=height,
             )
             session.add(row)
             await session.commit()

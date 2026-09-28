@@ -287,6 +287,8 @@ class SendMessage(RequestModel):
     text: str | None = Field(default=None, max_length=4096)
     attachment_asset_ids: list[uuid.UUID] = Field(default_factory=list, max_length=10)
     template: TemplateSend | None = None  # WhatsApp outside the window
+    sticker: Literal["like_heart"] | None = None  # Instagram's heart sticker, on its own
+    sticker_asset_id: uuid.UUID | None = None  # a WhatsApp sticker: an uploaded 512x512 WebP
     suggestion_id: uuid.UUID | None = None  # P5: sending a suggestion
 
 

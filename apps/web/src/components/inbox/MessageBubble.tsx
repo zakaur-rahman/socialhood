@@ -78,17 +78,22 @@ export function MessageBubble({
   const pending = outbound && (status === "queued" || status === "sending");
   const nativeApp = outbound && message.source === "native_app";
   const platformName = PLATFORM_LABEL[platform];
+  // Stickers stand on their own, without a bubble; Instagram's heart is stored as its emoji.
+  const sticker = message.kind === "sticker" && !failed && !unsent;
+  const heart = sticker && message.attachments.length === 0 && Boolean(message.text);
 
   const bubbleClass = cn(
     "relative max-w-full rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap",
-    !outbound && "rounded-bl-md border border-line-subtle bg-field text-fg shadow-sm",
+    sticker && "px-0 py-0",
+    !outbound && !sticker && "rounded-bl-md border border-line-subtle bg-field text-fg shadow-sm",
     outbound && "rounded-br-md",
-    outbound && !failed && !pending && !nativeApp && "bg-brand-gradient text-white",
-    outbound && nativeApp && !failed && !pending && "bg-raised text-fg",
-    pending && "bg-brand/60 text-white opacity-80",
+    outbound && !failed && !pending && !nativeApp && !sticker && "bg-brand-gradient text-white",
+    outbound && nativeApp && !failed && !pending && !sticker && "bg-raised text-fg",
+    pending && !sticker && "bg-brand/60 text-white",
+    pending && "opacity-80",
     failed && "bg-danger-fill text-white",
   );
-  const metaClass = outbound && !nativeApp ? "text-white/75" : "text-fg-secondary";
+  const metaClass = outbound && !nativeApp && !sticker ? "text-white/75" : "text-fg-secondary";
 
   let label: { icon?: LucideIcon; text: string } | null = null;
   if (outbound && message.source === "ai_auto") label = { icon: Sparkles, text: "Sent by AI" };
@@ -135,6 +140,10 @@ export function MessageBubble({
           ) : null}
           {unsent ? (
             <p className="italic text-fg-secondary">Message unsent</p>
+          ) : heart ? (
+            <p className="text-5xl leading-none" role="img" aria-label="Heart sticker">
+              {message.text}
+            </p>
           ) : message.kind === "unsupported" ? (
             <p>
               Unsupported message.{" "}

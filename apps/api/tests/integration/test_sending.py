@@ -241,12 +241,13 @@ async def test_attachments_must_be_this_workspaces_images(
         {"field": "attachment_asset_ids", "message": "Attachment not found. Upload it again."}
     ]
 
-    video = await make_asset(engine, workspace_id=setup.wid, resource_type="video")
-    problem(
-        await post_message(client, setup, attachment_asset_ids=[str(video)]),
+    sheet = await make_asset(engine, workspace_id=setup.wid, resource_type="raw", fmt="xlsx")
+    refused = problem(
+        await post_message(client, setup, attachment_asset_ids=[str(sheet)]),
         415,
         "unsupported_media",
     )
+    assert refused["detail"] == "Instagram files can be PDF."
 
     image = await make_asset(engine, workspace_id=setup.wid)
     response = await post_message(client, setup, text=None, attachment_asset_ids=[str(image)])

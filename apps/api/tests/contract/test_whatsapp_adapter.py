@@ -241,6 +241,10 @@ async def test_what_whatsapp_does_not_have(adapter: WhatsAppAdapter, acct: Socia
             },
         ),
         (
+            OutboundMessage(attachment=OutboundAttachment(type="sticker", url="https://s/1.webp")),
+            {"type": "sticker", "sticker": {"link": "https://s/1.webp"}},
+        ),
+        (
             OutboundMessage(template=OutboundTemplate(name="hello_again", language="en_US")),
             {
                 "type": "template",
@@ -248,7 +252,17 @@ async def test_what_whatsapp_does_not_have(adapter: WhatsAppAdapter, acct: Socia
             },
         ),
     ],
-    ids=["text", "image", "image-caption", "video", "audio", "document", "template", "no-params"],
+    ids=[
+        "text",
+        "image",
+        "image-caption",
+        "video",
+        "audio",
+        "document",
+        "template",
+        "sticker",
+        "no-params",
+    ],
 )
 @respx.mock
 async def test_each_send_shape(
@@ -270,8 +284,10 @@ async def test_each_send_shape(
     [
         OutboundMessage(),
         OutboundMessage(text="hi", attachment=OutboundAttachment(type="audio", url="https://a")),
+        OutboundMessage(text="hi", attachment=OutboundAttachment(type="sticker", url="https://s")),
+        OutboundMessage(sticker="like_heart"),
     ],
-    ids=["empty", "captioned-audio"],
+    ids=["empty", "captioned-audio", "captioned-sticker", "heart"],
 )
 @respx.mock
 async def test_sends_whatsapp_cannot_take_are_refused_before_calling(

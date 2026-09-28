@@ -159,6 +159,36 @@ describe("Composer (UX-INB-07)", () => {
     vi.restoreAllMocks();
   });
 
+  it("sends Instagram's heart sticker on its own", async () => {
+    const user = userEvent.setup();
+    const { onSend } = renderComposer({ platform: "instagram" });
+    await user.type(textbox(), "Draft stays");
+    await user.click(screen.getByRole("button", { name: "Send a heart" }));
+    expect(onSend).toHaveBeenCalledWith({ heart: true, humanAgent: false });
+    expect(textbox().value).toBe("Draft stays");
+    expect(screen.queryByRole("button", { name: "Send a sticker" })).not.toBeInTheDocument();
+  });
+
+  it("uploads and sends a WhatsApp sticker", async () => {
+    const user = userEvent.setup();
+    const asset = { id: "sticker-1", resource_type: "image", secure_url: "https://res.cloudinary.com/s.webp", bytes: 40_000 } as MediaAsset;
+    const upload = vi.fn<Uploader>().mockResolvedValue(asset);
+    const { onSend } = renderComposer({ platform: "whatsapp" }, { upload });
+    expect(screen.queryByRole("button", { name: "Send a heart" })).not.toBeInTheDocument();
+    await user.upload(screen.getByTestId("composer-sticker-input"), new File(["x"], "wave.webp", { type: "image/webp" }));
+    await waitFor(() => expect(onSend).toHaveBeenCalledWith({ sticker: asset, humanAgent: false }));
+    expect(upload).toHaveBeenCalledOnce();
+  });
+
+  it("refuses a sticker that is too big before uploading", async () => {
+    const upload = vi.fn<Uploader>();
+    const { onSend } = renderComposer({ platform: "whatsapp" }, { upload });
+    const big = new File([new Uint8Array(600 * 1024)], "big.webp", { type: "image/webp" });
+    fireEvent.change(screen.getByTestId("composer-sticker-input"), { target: { files: [big] } });
+    await waitFor(() => expect(upload).not.toHaveBeenCalled());
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
   it("shows a failed upload with Retry, and removes it", async () => {
     const user = userEvent.setup();
     const upload = vi.fn<Uploader>().mockRejectedValueOnce(new Error("nope")).mockReturnValue(new Promise(() => {}));
@@ -177,7 +207,8 @@ describe("Composer (UX-INB-07)", () => {
     const user = userEvent.setup({ applyAccept: false });
     const upload = vi.fn<Uploader>();
     renderComposer({}, { upload });
-    await user.upload(screen.getByTestId("composer-file-input"), new File(["%PDF"], "menu.pdf", { type: "application/pdf" }));
+    // Instagram takes PDFs but not Office documents.
+    await user.upload(screen.getByTestId("composer-file-input"), new File(["x"], "menu.docx", { type: "" }));
     expect(upload).not.toHaveBeenCalled();
     expect(screen.queryByRole("list", { name: "Attachments" })).not.toBeInTheDocument();
   });

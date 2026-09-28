@@ -114,3 +114,13 @@ replies from the Instagram app clear it; AI and automations do not.
 The job catalogue's cadence, needed for FR-SMS-03's "within 60 s". `send_scheduled` carries the
 workspace id so it never needs a cross-workspace lookup; the stuck-claim sweeper is its own
 periodic task (`sweep_stuck_scheduled`).
+
+## C-021 · Instagram can send more than images (resolved in the spec)
+FR-INB-08 allowed images only on Instagram and video and documents only on WhatsApp. Meta's
+Instagram Messaging docs (checked 2026-09-29) list image (PNG, JPEG, 8 MB), video (MP4, OGG, AVI,
+MOV, WEBM, 25 MB), audio (AAC, M4A, WAV, MP4, 25 MB), file (PDF, 25 MB) and the heart sticker
+(`like_heart`); the WhatsApp Cloud API adds WebP stickers (512 × 512, 100 KB static, 500 KB
+animated) and Office and text documents up to 100 MB, with tighter image (5 MB), video and audio
+(16 MB) limits. FR-INB-08 now says so; `services/sending.py SEND_RULES` and the composer apply
+these limits, and uploads for posts keep TR-MED-02's image and 90-second video rules. An
+Instagram heart is stored and shown as ❤️, both ways.

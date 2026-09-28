@@ -103,11 +103,44 @@ TEXT_LIMITS: dict[str, TextLimit] = {
     "instagram": TextLimit(1000, "bytes"),
     "whatsapp": TextLimit(4096, "characters"),
 }
-# FR-INB-08: images on both platforms; video and documents on WhatsApp.
-ATTACHMENT_TYPES: dict[str, frozenset[str]] = {
-    "instagram": frozenset({"image"}),
-    "whatsapp": frozenset({"image", "video", "file"}),
+KB = 1024
+MB = 1024 * KB
+
+
+@dataclass(frozen=True)
+class SendRule:
+    """What a platform accepts for one attachment type (formats as uploaded; None means any we
+    store, because the delivery URL converts it: images to JPEG, video to H.264 MP4)."""
+
+    label: str
+    max_bytes: int
+    formats: frozenset[str] | None = None
+
+
+# Meta's documented limits (Instagram Messaging, WhatsApp Cloud API media; checked 2026-09-29).
+SEND_RULES: dict[str, dict[str, SendRule]] = {
+    "instagram": {
+        "image": SendRule("Images", 8 * MB),
+        "video": SendRule("Videos", 25 * MB),
+        "audio": SendRule("Audio files", 25 * MB, frozenset({"aac", "m4a", "wav", "mp4"})),
+        "file": SendRule("Files", 25 * MB, frozenset({"pdf"})),
+    },
+    "whatsapp": {
+        "image": SendRule("Images", 5 * MB),
+        "video": SendRule("Videos", 16 * MB),
+        "audio": SendRule(
+            "Audio files", 16 * MB, frozenset({"aac", "amr", "mp3", "m4a", "ogg", "opus"})
+        ),
+        "file": SendRule(
+            "Files",
+            100 * MB,
+            frozenset({"pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx"}),
+        ),
+        "sticker": SendRule("Stickers", 500 * KB, frozenset({"webp"})),
+    },
 }
+HEART = "\u2764\ufe0f"  # Instagram's built-in heart sticker, stored as its emoji
+STICKER_SIZE = 512  # WhatsApp stickers are 512 x 512
 
 
 def platform_name(platform: str) -> str:
@@ -200,6 +233,8 @@ async def queue_outbound(
     text: str | None = None,
     attachment_asset_ids: Sequence[uuid.UUID] = (),
     template: OutboundTemplate | None = None,
+    sticker: Literal["like_heart"] | None = None,
+    sticker_asset_id: uuid.UUID | None = None,
     sent_by_user_id: uuid.UUID | None = None,
     scheduled_message_id: uuid.UUID | None = None,
     suggestion_id: uuid.UUID | None = None,
@@ -213,6 +248,11 @@ async def queue_outbound(
     now = now or datetime.now(UTC)
     text = text if text is not None and text.strip() else None
     asset_ids = list(attachment_asset_ids)
+    typed_text = text
+    if sticker == "like_heart":
+        text = HEART
+    if sticker_asset_id is not None:
+        asset_ids = [sticker_asset_id]
 
     existing = await messages_repo.find_by_client_id(session, conv.id, client_id)
     if existing is not None:
@@ -224,13 +264,26 @@ async def queue_outbound(
     check_account(acct)
     caps = capabilities(acct, deps or _worker_deps())
     require(caps, Capability.DM_SEND)
-    _check_content(conv.platform, text=text, asset_ids=asset_ids, template=template)
+    _check_content(
+        conv.platform,
+        text=None if sticker else text,
+        asset_ids=[] if sticker_asset_id else asset_ids,
+        template=template,
+        sticker=sticker,
+        sticker_asset=sticker_asset_id is not None,
+        other_content=bool(
+            (sticker or sticker_asset_id) and (typed_text or attachment_asset_ids or template)
+        ),
+    )
     if template is not None:
         require(caps, Capability.TEMPLATES)
     assets = await media_assets.load(session, asset_ids)
     if assets:
         require(caps, Capability.DM_ATTACHMENTS)
-        _check_attachment_types(conv.platform, assets)
+        if sticker_asset_id is not None:
+            _check_sticker(conv.platform, assets[0])
+        else:
+            _check_attachments(conv.platform, assets)
 
     human_agent = Capability.HUMAN_AGENT in caps
     window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now)
@@ -238,13 +291,15 @@ async def queue_outbound(
     if not may_send(window, kind):
         raise ApiError("reply_window_closed", window_closed_detail(conv.platform))
 
-    attachments = [media_assets.attachment(a) for a in assets]
+    attachments = [
+        media_assets.attachment(a, as_sticker=sticker_asset_id is not None) for a in assets
+    ]
     msg = Message(
         conversation_id=conv.id,
         social_account_id=acct.id,
         direction=Direction.OUTBOUND,
         source=source,
-        kind=_message_kind(text, attachments, template),
+        kind=MessageKind.STICKER if sticker else _message_kind(text, attachments, template),
         text=text,
         attachments=attachments,
         template=(
@@ -309,7 +364,21 @@ def _check_content(
     text: str | None,
     asset_ids: Sequence[uuid.UUID],
     template: OutboundTemplate | None,
+    sticker: str | None = None,
+    sticker_asset: bool = False,
+    other_content: bool = False,
 ) -> None:
+    if sticker or sticker_asset:
+        if other_content:
+            raise _invalid("sticker", "Send a sticker on its own.")
+        if sticker and platform != "instagram":
+            raise ApiError("unsupported_media", f"{platform_name(platform)} has no heart sticker.")
+        if sticker_asset and "sticker" not in SEND_RULES.get(platform, {}):
+            raise ApiError(
+                "unsupported_media",
+                f"{platform_name(platform)} can only send its heart sticker.",
+            )
+        return
     if template is not None:
         if text or asset_ids:
             raise _invalid("template", "Send a template on its own, without text or attachments.")
@@ -322,15 +391,40 @@ def _check_content(
             raise _invalid("text", problem)
 
 
-def _check_attachment_types(platform: str, assets: Sequence[Any]) -> None:
-    allowed = ATTACHMENT_TYPES.get(platform, frozenset())
+def _check_attachments(platform: str, assets: Sequence[Any]) -> None:
+    """FR-INB-08 with Meta's per-platform limits (SEND_RULES): type, format and size."""
+    rules = SEND_RULES.get(platform, {})
+    name = platform_name(platform)
     for asset in assets:
         kind = media_assets.attachment_type(asset)
-        if kind not in allowed:
-            noun = {"image": "images", "video": "videos", "file": "files"}[kind]
+        rule = rules.get(kind)
+        if rule is None:
+            raise ApiError("unsupported_media", f"{name} messages can't include this file.")
+        fmt = media_assets.file_format(asset.format, asset.public_id)
+        if rule.formats is not None and fmt not in rule.formats:
+            allowed = ", ".join(sorted(f.upper() for f in rule.formats))
+            raise ApiError("unsupported_media", f"{name} {rule.label.lower()} can be {allowed}.")
+        if asset.bytes > rule.max_bytes:
             raise ApiError(
-                "unsupported_media", f"{platform_name(platform)} messages can't include {noun}."
+                "unsupported_media",
+                f"{name} {rule.label.lower()} can be up to {_size(rule.max_bytes)}.",
             )
+
+
+def _check_sticker(platform: str, asset: Any) -> None:
+    rule = SEND_RULES[platform]["sticker"]
+    fmt = media_assets.file_format(asset.format, asset.public_id)
+    square = asset.width in (None, STICKER_SIZE) and asset.height in (None, STICKER_SIZE)
+    if fmt not in (rule.formats or frozenset()) or asset.bytes > rule.max_bytes or not square:
+        raise ApiError(
+            "unsupported_media",
+            f"{platform_name(platform)} stickers are {STICKER_SIZE} x {STICKER_SIZE} WebP images "
+            f"up to {_size(rule.max_bytes)}.",
+        )
+
+
+def _size(max_bytes: int) -> str:
+    return f"{max_bytes // MB} MB" if max_bytes >= MB else f"{max_bytes // KB} KB"
 
 
 def _invalid(field: str, message: str) -> ApiError:
@@ -642,7 +736,7 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
         if item.get("sent"):
             continue
         attachment = OutboundAttachment(
-            type=cast(Literal["image", "video", "audio", "file"], item["type"]),
+            type=cast(Literal["image", "video", "audio", "file", "sticker"], item["type"]),
             url=str(item.get("send_url") or item["url"]),
             filename=item.get("filename"),
             mime_type=item.get("send_mime_type") or item.get("mime_type"),
@@ -654,6 +748,16 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
                 _bucket(platform, media=True),
             )
         )
+    if msg.kind == MessageKind.STICKER and not msg.attachments:
+        # Instagram's heart sticker (stored as its emoji)
+        parts.append(
+            Part(
+                None,
+                OutboundMessage(sticker="like_heart", human_agent=human_agent),
+                _bucket(platform, media=False),
+            )
+        )
+        return parts
     if msg.template:
         template = OutboundTemplate(
             name=str(msg.template["name"]),

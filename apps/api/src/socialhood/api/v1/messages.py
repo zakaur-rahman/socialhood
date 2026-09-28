@@ -79,6 +79,8 @@ async def send_message(
                 else None
             ),
             sent_by_user_id=ctx.user.id,
+            sticker=body.sticker,
+            sticker_asset_id=body.sticker_asset_id,
             suggestion_id=body.suggestion_id,
             deps=_deps(request),
         )

@@ -41,8 +41,8 @@ _PUBLIC_ID = re.compile(
     r"^ws/(?P<wid>[0-9a-f-]{36})/(?P<purpose>[a-z]+)/[A-Za-z0-9_-]+(?:\.[A-Za-z0-9]{1,8})?$"
 )
 
-MediaKind = Literal["image", "video", "document"]
-AttachmentType = Literal["image", "video", "file"]
+MediaKind = Literal["image", "video", "audio", "document"]
+AttachmentType = Literal["image", "video", "audio", "file", "sticker"]
 
 
 @dataclass(frozen=True)
@@ -56,10 +56,33 @@ class Limit:
     max_duration_s: float | None = None
 
 
+# The widest limits any use accepts; each platform's own limits apply when the file is sent
+# (services/sending.py SEND_RULES) and, for posts, when it is published.
 IMAGE = Limit("image", "Images", frozenset({"jpg", "jpeg", "png", "webp", "heic"}), 8 * MB)
-VIDEO = Limit("video", "Videos", frozenset({"mp4", "mov"}), 100 * MB, max_duration_s=90)
-DOCUMENT = Limit("document", "Documents", frozenset({"pdf"}), 20 * MB)
-UNSUPPORTED = "Use JPEG, PNG, WEBP or HEIC images, MP4 or MOV video up to 90 seconds, or PDF files."
+VIDEO = Limit(
+    "video",
+    "Videos",
+    frozenset({"mp4", "mov", "webm", "avi", "3gp"}),
+    100 * MB,
+    max_duration_s=None,
+)
+# Cloudinary stores audio as a "video" resource.
+AUDIO = Limit(
+    "audio", "Audio files", frozenset({"mp3", "m4a", "aac", "wav", "ogg", "amr", "opus"}), 25 * MB
+)
+DOCUMENT = Limit(
+    "document",
+    "Documents",
+    frozenset({"pdf", "txt", "doc", "docx", "xls", "xlsx", "ppt", "pptx"}),
+    100 * MB,
+)
+# Posts publish only images and video, video up to 90 s (TR-MED-02, R1).
+POST_VIDEO = Limit("video", "Videos", frozenset({"mp4", "mov"}), 100 * MB, max_duration_s=90)
+POST_UNSUPPORTED = "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 90 seconds."
+UNSUPPORTED = (
+    "Use JPEG, PNG, WEBP or HEIC images; MP4, MOV or WEBM video; MP3, M4A, AAC, WAV or OGG "
+    "audio; or PDF, Word, Excel, PowerPoint or text files."
+)
 
 MIME_TYPES = {
     "jpg": "image/jpeg",
@@ -69,7 +92,24 @@ MIME_TYPES = {
     "heic": "image/heic",
     "mp4": "video/mp4",
     "mov": "video/quicktime",
+    "webm": "video/webm",
+    "avi": "video/x-msvideo",
+    "3gp": "video/3gpp",
+    "mp3": "audio/mpeg",
+    "m4a": "audio/mp4",
+    "aac": "audio/aac",
+    "wav": "audio/wav",
+    "ogg": "audio/ogg",
+    "opus": "audio/ogg",
+    "amr": "audio/amr",
     "pdf": "application/pdf",
+    "txt": "text/plain",
+    "doc": "application/msword",
+    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "xls": "application/vnd.ms-excel",
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "ppt": "application/vnd.ms-powerpoint",
+    "pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
 }
 
 # What platforms fetch: images as JPEG and video as H.264 MP4 (TR-MED-02), whatever was uploaded.
@@ -102,17 +142,29 @@ def purpose_of(public_id: str, workspace_id: uuid.UUID) -> str:
     return match["purpose"]
 
 
-def check_limits(resource: StoredResource) -> Limit:
+def check_limits(resource: StoredResource, purpose: str = "message") -> Limit:
     """The limit the asset falls under; 415 unsupported_media when it breaks one."""
     fmt = file_format(resource.format, resource.public_id)
+    if purpose == AssetPurpose.POST:
+        if resource.resource_type == "image" and fmt in IMAGE.formats:
+            return _within(resource, IMAGE)
+        if resource.resource_type == "video" and fmt in POST_VIDEO.formats:
+            return _within(resource, POST_VIDEO)
+        raise ApiError("unsupported_media", POST_UNSUPPORTED)
     if resource.resource_type == "image" and fmt in IMAGE.formats:
         limit = IMAGE
+    elif resource.resource_type == "video" and fmt in AUDIO.formats:
+        limit = AUDIO
     elif resource.resource_type == "video" and fmt in VIDEO.formats:
         limit = VIDEO
     elif fmt in DOCUMENT.formats:
         limit = DOCUMENT
     else:
         raise ApiError("unsupported_media", UNSUPPORTED)
+    return _within(resource, limit)
+
+
+def _within(resource: StoredResource, limit: Limit) -> Limit:
     if resource.bytes > limit.max_bytes:
         raise ApiError(
             "unsupported_media", f"{limit.label} can be up to {limit.max_bytes // MB} MB."
@@ -143,7 +195,7 @@ async def register(
     if existing is not None:
         return existing
     resource = await _lookup(cloudinary, public_id, resource_type)
-    check_limits(resource)
+    check_limits(resource, purpose)
     asset = MediaAsset(
         public_id=public_id,
         resource_type=resource.resource_type,
@@ -219,15 +271,15 @@ def attachment_type(asset: MediaAsset) -> AttachmentType:
     if asset.resource_type == "image" and fmt not in DOCUMENT.formats:
         return "image"
     if asset.resource_type == "video":
-        return "video"
+        return "audio" if fmt in AUDIO.formats else "video"
     return "file"
 
 
-def attachment(asset: MediaAsset) -> dict[str, Any]:
+def attachment(asset: MediaAsset, *, as_sticker: bool = False) -> dict[str, Any]:
     """A message attachment (§5.10 Attachment) plus what the send job needs: the delivery URL,
-    and the platform id of the part once it is sent."""
+    and the platform id of the part once it is sent. A sticker is sent as uploaded (WebP)."""
     fmt = file_format(asset.format, asset.public_id)
-    kind = attachment_type(asset)
+    kind: AttachmentType = "sticker" if as_sticker else attachment_type(asset)
     return {
         "id": str(asset.id),
         "type": kind,
@@ -272,6 +324,8 @@ def _transformed(url: str, transformation: str, extension: str) -> str:
 
 
 def _send_mime(kind: AttachmentType, fmt: str | None) -> str | None:
+    if kind == "sticker":
+        return "image/webp"
     if kind == "image":
         return "image/jpeg"
     if kind == "video":

@@ -17,13 +17,25 @@ export type ReplyInput = {
   assets?: MediaAsset[];
   /** WhatsApp outside the window (FR-INB-10), with the body as the customer will read it. */
   template?: TemplateSend & { preview: string };
+  /** Instagram's heart sticker, sent on its own. */
+  heart?: boolean;
+  /** A WhatsApp sticker: an uploaded 512 x 512 WebP, sent on its own. */
+  sticker?: MediaAsset;
   humanAgent?: boolean;
 };
 
-function attachmentFor(asset: MediaAsset): Attachment {
+export const HEART = "\u2764\ufe0f";
+
+function assetType(asset: MediaAsset): "image" | "video" | "audio" | "file" {
+  if (asset.resource_type === "image") return "image";
+  if (asset.resource_type === "video") return asset.mime_type?.startsWith("audio/") ? "audio" : "video";
+  return "file";
+}
+
+function attachmentFor(asset: MediaAsset, asSticker = false): Attachment {
   return {
     id: asset.id,
-    type: asset.resource_type === "image" ? "image" : asset.resource_type === "video" ? "video" : "file",
+    type: asSticker ? "sticker" : assetType(asset),
     url: asset.secure_url ?? "",
     filename: asset.original_filename ?? null,
     size_bytes: asset.bytes,
@@ -35,9 +47,10 @@ function attachmentFor(asset: MediaAsset): Attachment {
 
 function kindFor(input: ReplyInput): MessageKind {
   if (input.template) return "template";
+  if (input.heart || input.sticker) return "sticker";
+  // As the API decides: attachments without text take the first attachment's kind.
   const first = input.assets?.[0];
-  if (!first) return "text";
-  return first.resource_type === "image" ? "image" : first.resource_type === "video" ? "video" : "file";
+  return first && !input.text?.trim() ? assetType(first) : "text";
 }
 
 /** The optimistic bubble (status queued) shown until the server's message replaces it. */
@@ -49,8 +62,10 @@ export function optimisticMessage(conversationId: string, clientId: string, inpu
     direction: "outbound",
     source: "human",
     kind: kindFor(input),
-    text: input.template ? input.template.preview : input.text?.trim() || null,
-    attachments: (input.assets ?? []).map(attachmentFor),
+    text: input.heart ? HEART : input.template ? input.template.preview : input.text?.trim() || null,
+    attachments: input.sticker
+      ? [attachmentFor(input.sticker, true)]
+      : (input.assets ?? []).map((asset) => attachmentFor(asset)),
     template: input.template
       ? { name: input.template.name, language: input.template.language, params: input.template.params ?? [] }
       : null,
@@ -117,13 +132,16 @@ export function useSendReply(wid: string, conversationId: string) {
   const send = useCallback(
     (input: ReplyInput) => {
       const clientId = uuid();
+      const sticker = Boolean(input.heart || input.sticker);
       const body: SendMessage = {
         client_id: clientId,
-        text: input.template ? null : input.text?.trim() || null,
-        attachment_asset_ids: (input.assets ?? []).map((asset) => asset.id),
+        text: input.template || sticker ? null : input.text?.trim() || null,
+        attachment_asset_ids: sticker ? [] : (input.assets ?? []).map((asset) => asset.id),
         template: input.template
           ? { name: input.template.name, language: input.template.language, params: input.template.params ?? [] }
           : null,
+        sticker: input.heart ? "like_heart" : null,
+        sticker_asset_id: input.sticker?.id ?? null,
       };
       useInboxStore.getState().putOutbox({
         clientId,
