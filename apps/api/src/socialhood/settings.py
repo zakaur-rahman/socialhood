@@ -143,6 +143,12 @@ class Settings(BaseSettings):
             return [item.strip() for item in value.split(",") if item.strip()]
         return value
 
+    @field_validator("clerk_jwt_key")
+    @classmethod
+    def _pem_newlines(cls, value: str | None) -> str | None:
+        # Hosts often store a PEM on one line with literal backslash-n sequences.
+        return value.replace("\\n", "\n").strip() if value else value
+
     @field_validator("log_level")
     @classmethod
     def _upper_level(cls, value: str) -> str:

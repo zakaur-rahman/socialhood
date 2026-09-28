@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from collections.abc import AsyncIterator
 
-import pytest
 from procrastinate.periodic import PeriodicDeferrer
 from redis.asyncio import Redis
 
@@ -13,20 +11,6 @@ from socialhood.jobs.app import INTERACTIVE, app
 from socialhood.jobs.enqueue import enqueue
 from socialhood.jobs.fairness import RETRY_DELAY_S, BulkSemaphore, run_with_bulk_slot
 from socialhood.jobs.tasks.maintenance import ping
-
-
-@pytest.fixture
-async def queue() -> AsyncIterator[None]:
-    async with app.open_async():
-        await _clear()
-        yield
-        await _clear()
-
-
-async def _clear() -> None:
-    await app.connector.execute_query_async(
-        "TRUNCATE procrastinate_periodic_defers, procrastinate_events, procrastinate_jobs CASCADE"
-    )
 
 
 async def _jobs(task_name: str) -> list[dict[str, object]]:

@@ -13,6 +13,8 @@ from collections.abc import Callable, Mapping
 
 import pytest
 
+pytest_plugins = ["tests.support.db", "tests.support.api"]
+
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = os.environ.get(
     "TEST_DATABASE_URL",

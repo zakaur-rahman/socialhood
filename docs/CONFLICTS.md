@@ -26,3 +26,13 @@ spec's sample now says so. Tests cover counts, subqueries, `EXISTS` and joins.
 Installed at scaffold time (September 2026): Next.js 16.3 (Turbopack by default; `middleware.ts`
 is now `proxy.ts`, which TR-FE-01 already allows for), React 19.2, FastAPI 0.141, Starlette 1.7,
 SQLAlchemy 2.1, Procrastinate 3.10, pytest-asyncio 1.4. All meet the stack table's minimums.
+
+## C-005 · Clerk Core 3 and Next.js 16 (no spec change needed)
+The installed `@clerk/nextjs` 7 is Clerk Core 3 (March 2026): `<ClerkProvider>` goes inside
+`<body>`; `<SignedIn>`/`<SignedOut>` are replaced by `<Show when=…>`; the dark theme comes from
+`@clerk/ui/themes`; appearance variables were renamed (`colorText` to `colorForeground`,
+`colorInputBackground` to `colorInput`, and so on); `useAuth().getToken` throws during SSR and
+offline. On Next.js 16 the middleware file is `src/proxy.ts`, which TR-FE-01 already allows.
+
+## C-006 · Sidebar still said "Publish" (resolved in the spec)
+§3.1's sidebar sentence listed "Publish" after the page was renamed Schedule. Corrected.

@@ -17,6 +17,8 @@ dependencies = [
     "redis>=5.2",
     "structlog>=24.4",
     "httpx>=0.28",
+    "pyjwt[crypto]>=2.10",
+    "svix>=1.40",
 ]
 
 [dependency-groups]
@@ -26,6 +28,7 @@ dev = [
     "ruff>=0.8",
     "mypy>=1.13",
     "time-machine>=2.16",
+    "respx>=0.22",
 ]
 
 [build-system]
@@ -45,7 +48,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC", "RUF", "SIM", "PT"]
 ignore = ["S101"]  # assert is fine in tests and type narrowing
 
 [tool.ruff.lint.per-file-ignores]
-"migrations/*" = ["S608"]
+"migrations/*" = ["S608", "E501"]
 "tests/*" = ["S105", "S106"]
 
 [tool.mypy]

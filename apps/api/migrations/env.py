@@ -22,6 +22,15 @@ config = context.config
 target_metadata = Base.metadata
 
 
+def include_object(
+    obj: object, name: str | None, type_: str, reflected: bool, compare_to: object
+) -> bool:
+    # The job queue's tables belong to Procrastinate and are managed by its own SQL (0002).
+    return not (
+        type_ in ("table", "index") and name is not None and name.startswith("procrastinate_")
+    )
+
+
 def migration_url() -> str:
     url = get_settings().database_url_direct
     for prefix in ("postgresql://", "postgres://"):
@@ -36,13 +45,19 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         compare_type=True,
+        include_object=include_object,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        compare_type=True,
+        include_object=include_object,
+    )
     with context.begin_transaction():
         context.run_migrations()
 

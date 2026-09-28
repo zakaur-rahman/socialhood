@@ -18,6 +18,7 @@ LANES = (INTERACTIVE, BULK)
 # Every module that declares tasks. Procrastinate imports them when a worker starts.
 TASK_MODULES = [
     "socialhood.jobs.tasks.maintenance",
+    "socialhood.jobs.tasks.webhooks",
 ]
 
 configure_logging(get_settings().log_level)

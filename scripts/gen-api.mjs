@@ -2,7 +2,6 @@
 // packages/api-client/schema.d.ts from that file. CI runs this and fails if either changes.
 // Set UV to the uv executable if it is not on PATH.
 import { execFileSync } from "node:child_process";
-import { writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,12 +11,12 @@ const apiDir = join(root, "apps", "api");
 const clientDir = join(root, "packages", "api-client");
 const uv = process.env.UV ?? "uv";
 
-const document = execFileSync(uv, ["run", "--quiet", "python", "-m", "socialhood.openapi"], {
+// The Python script writes the file itself, so log lines on stdout never reach the contract.
+execFileSync(uv, ["run", "--quiet", "python", "-m", "socialhood.openapi", "openapi.json"], {
   cwd: apiDir,
-  encoding: "utf8",
+  stdio: ["ignore", "ignore", "inherit"],
   env: { ...process.env, PYTHONIOENCODING: "utf-8" },
 });
-writeFileSync(join(apiDir, "openapi.json"), document.replace(/\r\n/g, "\n"));
 
 // Run the generator's CLI with this Node binary (no shell, so arguments are never re-parsed).
 const require = createRequire(join(clientDir, "package.json"));

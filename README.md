@@ -37,6 +37,7 @@ uv run alembic upgrade head
 ```sh
 # API on http://localhost:8000 (docs at /docs outside production)
 cd apps/api && uv run uvicorn socialhood.main:app --reload --port 8000 --no-access-log
+# Windows: add --loop asyncio:SelectorEventLoop (the job queue's driver needs it; see QUESTIONS Q-006)
 
 # Worker. Linux and macOS: one process per lane, as in production
 cd apps/api && ./scripts/worker.sh
