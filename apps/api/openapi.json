@@ -3432,8 +3432,7 @@
         "summary": "List Conversations",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.5"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/counts": {
@@ -3486,8 +3485,7 @@
         "summary": "Get Inbox Counts",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.5"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/{conversation_id}": {
@@ -3550,8 +3548,7 @@
         "summary": "Get Conversation",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.5"
+        ]
       },
       "patch": {
         "description": "Archive or unarchive; set or clear the conversation's AI mode override.",
@@ -3623,8 +3620,7 @@
         "summary": "Update Conversation",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.5"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/{conversation_id}/messages": {
@@ -3717,8 +3713,7 @@
         "summary": "List Messages",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.5"
+        ]
       },
       "post": {
         "operationId": "send_message",
@@ -3857,8 +3852,7 @@
         "summary": "Mark Conversation Read",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.5"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/{conversation_id}/scheduled-messages": {
@@ -4050,8 +4044,7 @@
         "summary": "Mark Conversation Unread",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.5"
+        ]
       }
     },
     "/v1/w/{wid}/dev/sandbox/accounts": {
@@ -4235,8 +4228,7 @@
         "summary": "Stream Events",
         "tags": [
           "realtime"
-        ],
-        "x-pending": "T3.4"
+        ]
       }
     },
     "/v1/w/{wid}/media-assets": {
