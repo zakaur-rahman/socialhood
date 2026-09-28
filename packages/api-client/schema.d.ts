@@ -162,10 +162,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Conversation Scheduled Messages */
+        /**
+         * List Conversation Scheduled Messages
+         * @description The conversation's pending (scheduled or sending) messages, soonest first.
+         */
         get: operations["list_conversation_scheduled_messages"];
         put?: never;
-        /** Create Scheduled Message */
+        /**
+         * Create Scheduled Message
+         * @description send_at must be at least 2 minutes away and 5 minutes before the reply window closes.
+         */
         post: operations["create_scheduled_message"];
         delete?: never;
         options?: never;
@@ -379,11 +385,17 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Cancel Scheduled Message */
+        /**
+         * Cancel Scheduled Message
+         * @description Cancel while the message is still scheduled (409 conflict after that).
+         */
         delete: operations["cancel_scheduled_message"];
         options?: never;
         head?: never;
-        /** Update Scheduled Message */
+        /**
+         * Update Scheduled Message
+         * @description Edit the text or time while the message is still scheduled (409 conflict after that).
+         */
         patch: operations["update_scheduled_message"];
         trace?: never;
     };
