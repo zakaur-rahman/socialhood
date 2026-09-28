@@ -130,7 +130,13 @@ export interface paths {
          */
         get: operations["list_messages"];
         put?: never;
-        /** Send Message */
+        /**
+         * Send Message
+         * @description Queue a reply; it is sent by the worker and progress arrives as message.updated events.
+         *
+         *     Any member may reply. The same Idempotency-Key with the same body returns the first response
+         *     and sends nothing more; with a different body it is 409 idempotency_conflict.
+         */
         post: operations["send_message"];
         delete?: never;
         options?: never;
@@ -256,7 +262,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Register Media Asset */
+        /**
+         * Register Media Asset
+         * @description Register an uploaded file: it must be in this workspace's folder (else 422 on public_id)
+         *     and within the limits (else 415 unsupported_media). Registering it again returns it.
+         */
         post: operations["register_media_asset"];
         delete?: never;
         options?: never;
@@ -273,7 +283,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create Upload Signature */
+        /**
+         * Create Upload Signature
+         * @description Parameters for uploading one file from the browser into ws/{workspace_id}/{purpose}.
+         */
         post: operations["create_upload_signature"];
         delete?: never;
         options?: never;
@@ -290,7 +303,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Retry Message */
+        /**
+         * Retry Message
+         * @description Send a failed message again (the same row). A message already queued or sending is
+         *     returned as it is, so a second click never sends it twice.
+         */
         post: operations["retry_message"];
         delete?: never;
         options?: never;

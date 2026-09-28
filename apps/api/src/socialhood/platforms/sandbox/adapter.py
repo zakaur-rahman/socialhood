@@ -57,10 +57,18 @@ class SandboxAdapter:
     async def send_message(
         self, acct: SocialAccount, recipient_ref: str, message: OutboundMessage
     ) -> SendResult:
-        raise NotImplementedError("T3.6")
+        """A fake mid, or an injected failure (see ``sandbox.outbox``)."""
+        from socialhood.platforms.sandbox import outbox
+
+        failure = outbox.failure_for(message)
+        if failure is not None:
+            raise failure
+        return SendResult(outbox.record(acct.platform_account_id, recipient_ref, message))
 
     async def mark_read(self, acct: SocialAccount, recipient_ref: str) -> None:
-        raise NotImplementedError("T3.6")
+        from socialhood.platforms.sandbox import outbox
+
+        outbox.SEEN.append((acct.platform_account_id, recipient_ref))
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
         raise NotImplementedError("T3.3")

@@ -3721,6 +3721,7 @@
         "x-pending": "T3.5"
       },
       "post": {
+        "description": "Queue a reply; it is sent by the worker and progress arrives as message.updated events.\n\nAny member may reply. The same Idempotency-Key with the same body returns the first response\nand sends nothing more; with a different body it is 409 idempotency_conflict.",
         "operationId": "send_message",
         "parameters": [
           {
@@ -3800,8 +3801,7 @@
         "summary": "Send Message",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.6"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/{conversation_id}/read": {
@@ -4241,6 +4241,7 @@
     },
     "/v1/w/{wid}/media-assets": {
       "post": {
+        "description": "Register an uploaded file: it must be in this workspace's folder (else 422 on public_id)\nand within the limits (else 415 unsupported_media). Registering it again returns it.",
         "operationId": "register_media_asset",
         "parameters": [
           {
@@ -4299,12 +4300,12 @@
         "summary": "Register Media Asset",
         "tags": [
           "media"
-        ],
-        "x-pending": "T3.7"
+        ]
       }
     },
     "/v1/w/{wid}/media-assets/upload-signature": {
       "post": {
+        "description": "Parameters for uploading one file from the browser into ws/{workspace_id}/{purpose}.",
         "operationId": "create_upload_signature",
         "parameters": [
           {
@@ -4363,12 +4364,12 @@
         "summary": "Create Upload Signature",
         "tags": [
           "media"
-        ],
-        "x-pending": "T3.7"
+        ]
       }
     },
     "/v1/w/{wid}/messages/{message_id}/retry": {
       "post": {
+        "description": "Send a failed message again (the same row). A message already queued or sending is\nreturned as it is, so a second click never sends it twice.",
         "operationId": "retry_message",
         "parameters": [
           {
@@ -4427,8 +4428,7 @@
         "summary": "Retry Message",
         "tags": [
           "inbox"
-        ],
-        "x-pending": "T3.6"
+        ]
       }
     },
     "/v1/w/{wid}/notifications": {
