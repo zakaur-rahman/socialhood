@@ -3863,6 +3863,7 @@
     },
     "/v1/w/{wid}/conversations/{conversation_id}/scheduled-messages": {
       "get": {
+        "description": "The conversation's pending (scheduled or sending) messages, soonest first.",
         "operationId": "list_conversation_scheduled_messages",
         "parameters": [
           {
@@ -3921,10 +3922,10 @@
         "summary": "List Conversation Scheduled Messages",
         "tags": [
           "scheduled"
-        ],
-        "x-pending": "T3.13"
+        ]
       },
       "post": {
+        "description": "send_at must be at least 2 minutes away and 5 minutes before the reply window closes.",
         "operationId": "create_scheduled_message",
         "parameters": [
           {
@@ -3993,8 +3994,7 @@
         "summary": "Create Scheduled Message",
         "tags": [
           "scheduled"
-        ],
-        "x-pending": "T3.13"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/{conversation_id}/unread": {
@@ -4716,12 +4716,12 @@
         "summary": "List Scheduled Messages",
         "tags": [
           "scheduled"
-        ],
-        "x-pending": "T3.13"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-messages/{scheduled_message_id}": {
       "delete": {
+        "description": "Cancel while the message is still scheduled (409 conflict after that).",
         "operationId": "cancel_scheduled_message",
         "parameters": [
           {
@@ -4773,10 +4773,10 @@
         "summary": "Cancel Scheduled Message",
         "tags": [
           "scheduled"
-        ],
-        "x-pending": "T3.13"
+        ]
       },
       "patch": {
+        "description": "Edit the text or time while the message is still scheduled (409 conflict after that).",
         "operationId": "update_scheduled_message",
         "parameters": [
           {
@@ -4845,8 +4845,7 @@
         "summary": "Update Scheduled Message",
         "tags": [
           "scheduled"
-        ],
-        "x-pending": "T3.13"
+        ]
       }
     },
     "/v1/w/{wid}/social-accounts": {
