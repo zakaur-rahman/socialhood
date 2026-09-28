@@ -1,0 +1,3 @@
+# False positives, one per line: <commit>:<file>:<rule>:<line>
+# A fake Clerk key in a test fixture matched the Stripe key pattern; replaced in the next commit.
+77fca1a84bb5e96151d67dc1ecfd7ef51decbacd:apps/api/tests/support/api.py:stripe-access-token:44

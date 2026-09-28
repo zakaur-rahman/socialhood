@@ -41,7 +41,7 @@ def api_settings(keys: Keys) -> Settings:
         clerk_jwt_key=keys.public_pem,
         clerk_issuer=ISSUER,
         clerk_authorized_parties=[PARTY],
-        clerk_secret_key="sk_test_socialhood",
+        clerk_secret_key="fake-clerk-secret-for-tests",
         clerk_webhook_secret=WEBHOOK_SECRET,
     )
 
