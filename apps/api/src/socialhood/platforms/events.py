@@ -65,6 +65,13 @@ class MessageEdit(Inbound):
 
 
 @dataclass(frozen=True, kw_only=True)
+class MessageDeleted(Inbound):
+    """The customer unsent a message."""
+
+    platform_message_id: str
+
+
+@dataclass(frozen=True, kw_only=True)
 class DeliveryStatus(Inbound):
     platform_message_id: str
     status: Literal["sent", "delivered", "read", "failed"]
@@ -82,6 +89,7 @@ InboundEvent = (
     | Reaction
     | ReadReceipt
     | MessageEdit
+    | MessageDeleted
     | DeliveryStatus
     | Unsupported
 )

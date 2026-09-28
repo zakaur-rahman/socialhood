@@ -71,3 +71,17 @@ async def phone_number(wa: WhatsAppHttp, token: str, phone_number_id: str) -> Ph
         verified_name=body.get("verified_name"),
         quality_rating=body.get("quality_rating"),
     )
+
+
+async def register_number(wa: WhatsAppHttp, token: str, phone_number_id: str, pin: str) -> None:
+    """Register the number on the Cloud API with a two-step verification PIN (Q-017). Without it
+    a number new to the Cloud API cannot send (133010)."""
+    body = await wa.request(
+        "POST",
+        f"{phone_number_id}/register",
+        endpoint="phone_number.register",
+        token=token,
+        json={"messaging_product": "whatsapp", "pin": pin},
+    )
+    if not (isinstance(body, dict) and body.get("success")):
+        raise PlatformError("platform_rejected", message="Meta did not confirm the registration")

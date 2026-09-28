@@ -323,6 +323,7 @@ async def conversation_detail(
                 status=acct.status,
             ),
             "scheduled_count": int(scheduled or 0),
+            "last_inbound_at": conv.last_inbound_at,
         }
     )
 

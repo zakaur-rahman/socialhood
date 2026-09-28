@@ -30,6 +30,17 @@ describe("MessageBubble variants (UX-INB-06)", () => {
     expect(screen.getByText("18:12")).toBeInTheDocument();
   });
 
+  it("marks an edited message", () => {
+    renderBubble({ text: "Is the rye sourdough available today?", edited_at: "2026-09-28T12:45:00Z" });
+    expect(screen.getByText("Edited ·")).toBeInTheDocument();
+  });
+
+  it("shows an unsent message without its content", () => {
+    renderBubble({ text: null, attachments: [], deleted_at: "2026-09-28T12:46:00Z", edited_at: "2026-09-28T12:45:00Z" });
+    expect(screen.getByText("Message unsent")).toHaveClass("italic");
+    expect(screen.queryByText("Edited ·")).not.toBeInTheDocument();
+  });
+
   it("hides the avatar inside a group", () => {
     render(<MessageBubble message={message()} platform="instagram" timeZone="UTC" contact={contact} groupEnd={false} />);
     expect(screen.queryByText("P")).not.toBeInTheDocument();

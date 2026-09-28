@@ -99,10 +99,12 @@ function Thread({ conversation, upload }: { conversation: Conversation; upload?:
     return local.length ? [...server, ...local].sort(compareOldestFirst) : server;
   }, [messages.data, outbox, conversationId]);
 
+  // The API's value covers history not loaded yet; the loaded messages fill in until it arrives.
   const lastInboundAt = useMemo(() => {
+    if (conversation.last_inbound_at) return conversation.last_inbound_at;
     for (let i = all.length - 1; i >= 0; i--) if (all[i].direction === "inbound") return all[i].occurred_at;
     return null;
-  }, [all]);
+  }, [all, conversation.last_inbound_at]);
 
   // Messages that arrive after the thread opened animate in; history does not (§4.2 motion).
   const [openedAt] = useState(() => Date.now());

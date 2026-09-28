@@ -56,6 +56,8 @@ class FakeWhatsApp:
         200,
         fixture("whatsapp_subscribed_apps_success.json"),
     )
+    register: tuple[int, dict[str, Any]] = (200, {"success": True})
+    pins: list[str] = field(default_factory=list)
     templates: tuple[int, dict[str, Any]] | None = None  # None: the two fixture pages
     calls: list[str] = field(default_factory=list)
     tokens_seen: list[str] = field(default_factory=list)
@@ -65,6 +67,7 @@ class FakeWhatsApp:
         router.get(url__regex=_graph("oauth/access_token")).mock(side_effect=self._exchange)
         router.get(url__regex=_graph(r"\d+")).mock(side_effect=self._number)
         router.post(url__regex=_graph(r"\d+/subscribed_apps")).mock(side_effect=self._subscribe)
+        router.post(url__regex=_graph(r"\d+/register")).mock(side_effect=self._register)
         router.get(url__regex=_graph(r"\d+/message_templates")).mock(side_effect=self._templates)
 
     def _auth(self, request: httpx.Request) -> None:
@@ -82,6 +85,11 @@ class FakeWhatsApp:
         self._auth(request)
         body = {**self.number[1], "id": request.url.path.rsplit("/", 1)[-1]}
         return httpx.Response(self.number[0], json=body if self.number[0] < 400 else self.number[1])
+
+    def _register(self, request: httpx.Request) -> httpx.Response:
+        self.calls.append("register")
+        self.pins.append(str(json.loads(request.content)["pin"]))
+        return httpx.Response(self.register[0], json=self.register[1])
 
     def _subscribe(self, request: httpx.Request) -> httpx.Response:
         self.calls.append("subscribe")

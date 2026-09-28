@@ -361,6 +361,18 @@
             "title": "Id",
             "type": "string"
           },
+          "last_inbound_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Inbound At"
+          },
           "last_message_at": {
             "anyOf": [
               {
@@ -1270,6 +1282,17 @@
             "title": "Id",
             "type": "string"
           },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
           "original_filename": {
             "anyOf": [
               {
@@ -1368,6 +1391,18 @@
             "title": "Conversation Id",
             "type": "string"
           },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
           "delivered_at": {
             "anyOf": [
               {
@@ -1388,6 +1423,18 @@
             ],
             "title": "Direction",
             "type": "string"
+          },
+          "edited_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited At"
           },
           "error": {
             "anyOf": [
@@ -3919,7 +3966,7 @@
         ]
       },
       "post": {
-        "description": "send_at must be at least 2 minutes away and 5 minutes before the reply window closes.",
+        "description": "send_at must be at least 2 minutes away and 5 minutes before the reply window closes.\n\nWith an Idempotency-Key (TR-API-05), repeating the request returns the first response and\nschedules nothing more; the same key with a different body is 409 idempotency_conflict.",
         "operationId": "create_scheduled_message",
         "parameters": [
           {
@@ -3940,6 +3987,24 @@
               "format": "uuid",
               "title": "Wid",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 128,
+                  "minLength": 8,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Idempotency-Key"
             }
           }
         ],

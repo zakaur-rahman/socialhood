@@ -20,6 +20,7 @@ from socialhood.models.inbox import Direction, Message, MessageStatus
 from socialhood.platforms.events import DeliveryStatus
 from socialhood.platforms.whatsapp.parse import WhatsAppDeliveryStatus
 from socialhood.realtime import events
+from socialhood.services import scheduled
 
 StatusResult = Literal["applied", "stale", "unknown_message"]
 
@@ -97,4 +98,5 @@ async def apply_status(
         else None
     )
     events.queue_message(session, msg, created=False, sent_by_name=sender)
+    await scheduled.follow_message(session, msg)
     return "applied"

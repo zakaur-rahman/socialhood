@@ -25,6 +25,8 @@ def _messaging_event(entry_id: str, item: dict[str, Any]) -> tuple[str, str]:
     timestamp = item.get("timestamp", "")
     if "message" in item:
         message = item["message"] or {}
+        if message.get("is_deleted"):  # an unsend reuses the message's mid: its own key
+            return "unsend", f"ig:unsend:{message.get('mid') or _digest(item)}"
         kind = "echo" if message.get("is_echo") else "message"
         return kind, f"ig:msg:{message.get('mid') or _digest(item)}"
     if "read" in item:

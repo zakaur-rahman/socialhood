@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 
 from socialhood.jobs.app import INTERACTIVE, app
-from socialhood.jobs.retry import PlatformRetry
+from socialhood.jobs.retry import BackoffRetry, PlatformRetry
 from socialhood.jobs.runtime import runtime
 from socialhood.platforms.deps import deps_from
 from socialhood.services import ingest_followups
@@ -37,4 +37,15 @@ async def ingest_media(workspace_id: str, message_id: str, attachment_id: str) -
         workspace_id=uuid.UUID(workspace_id),
         message_id=uuid.UUID(message_id),
         attachment_id=attachment_id,
+    )
+
+
+@app.task(name="delete_unsent_media", queue=INTERACTIVE, retry=BackoffRetry(max_attempts=3))
+async def delete_unsent_media(workspace_id: str, asset_ids: list[str]) -> None:
+    rt = runtime()
+    await ingest_followups.delete_unsent_media(
+        rt.sessionmaker,
+        deps_from(rt.http, rt.settings),
+        workspace_id=uuid.UUID(workspace_id),
+        asset_ids=[uuid.UUID(a) for a in asset_ids],
     )

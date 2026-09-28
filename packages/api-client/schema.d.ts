@@ -177,6 +177,9 @@ export interface paths {
         /**
          * Create Scheduled Message
          * @description send_at must be at least 2 minutes away and 5 minutes before the reply window closes.
+         *
+         *     With an Idempotency-Key (TR-API-05), repeating the request returns the first response and
+         *     schedules nothing more; the same key with a different body is 409 idempotency_conflict.
          */
         post: operations["create_scheduled_message"];
         delete?: never;
@@ -670,6 +673,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Last Inbound At */
+            last_inbound_at?: string | null;
             /** Last Message At */
             last_message_at?: string | null;
             /** Last Message Direction */
@@ -926,6 +931,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Mime Type */
+            mime_type?: string | null;
             /** Original Filename */
             original_filename?: string | null;
             /** Public Id */
@@ -954,6 +961,8 @@ export interface components {
              * Format: uuid
              */
             conversation_id: string;
+            /** Deleted At */
+            deleted_at?: string | null;
             /** Delivered At */
             delivered_at?: string | null;
             /**
@@ -961,6 +970,8 @@ export interface components {
              * @enum {string}
              */
             direction: "inbound" | "outbound" | "system";
+            /** Edited At */
+            edited_at?: string | null;
             error?: components["schemas"]["ErrorInfo"] | null;
             /** Human Agent Tag */
             human_agent_tag: boolean;
@@ -2045,7 +2056,9 @@ export interface operations {
     create_scheduled_message: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "Idempotency-Key"?: string | null;
+            };
             path: {
                 conversation_id: string;
                 wid: string;

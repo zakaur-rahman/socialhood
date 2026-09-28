@@ -24,6 +24,7 @@ from socialhood.platforms.events import (
     InboundEvent,
     InboundMediaRef,
     InboundMessage,
+    MessageDeleted,
     MessageEdit,
     Reaction,
     ReadReceipt,
@@ -158,9 +159,8 @@ def _message(
     mid = _str(message.get("mid"))
     if not mid:
         return Unsupported(account_ref=entry_id, occurred_at=at, reason="message without an id")
-    if message.get("is_deleted"):
-        # The customer unsent it. The schema cannot record a deletion yet: reported, not applied.
-        return Unsupported(account_ref=entry_id, occurred_at=at, reason="message deleted")
+    if message.get("is_deleted"):  # the customer unsent it
+        return MessageDeleted(account_ref=entry_id, occurred_at=at, platform_message_id=mid)
     is_echo = bool(message.get("is_echo")) or (sender is not None and sender == entry_id)
     contact = recipient if is_echo else sender
     if not contact:

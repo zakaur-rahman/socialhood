@@ -232,3 +232,25 @@ async def copy_inbound_media(
             queue_message(session, msg, created=False)
             await commit_and_publish(session, redis)
     return True
+
+
+async def delete_unsent_media(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    deps: PlatformDeps,
+    *,
+    workspace_id: uuid.UUID,
+    asset_ids: list[uuid.UUID],
+) -> int:
+    """Q-021: delete our stored copies of an unsent message's media (storage, then the row).
+    Returns how many were deleted; a storage failure leaves that asset for a retry."""
+    storage = Cloudinary(deps.http, deps.settings)
+    deleted = 0
+    with workspace_scope(workspace_id):
+        async with sessionmaker() as session:
+            for asset in await rows.assets_by_id(session, asset_ids):
+                if storage.configured and in_workspace(asset.public_id, workspace_id):
+                    await storage.destroy(asset.public_id, asset.resource_type)  # type: ignore[arg-type]
+                await rows.delete_asset(session, asset.id)
+                await session.commit()
+                deleted += 1
+    return deleted

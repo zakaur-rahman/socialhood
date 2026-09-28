@@ -185,7 +185,9 @@ async def _lookup(
 
 
 def asset_out(asset: MediaAsset) -> MediaAssetOut:
-    return MediaAssetOut.model_validate(asset)
+    out = MediaAssetOut.model_validate(asset)
+    # Cloudinary reports a format, not a MIME type.
+    return out.model_copy(update={"mime_type": MIME_TYPES.get((asset.format or "").lower())})
 
 
 # ---------------------------------------------------------------- lookups and attachments

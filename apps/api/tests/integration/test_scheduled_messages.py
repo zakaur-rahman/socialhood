@@ -22,6 +22,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError
 from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.tasks.scheduled import (
@@ -31,6 +32,7 @@ from socialhood.jobs.tasks.scheduled import (
 )
 from socialhood.models.inbox import Conversation, Message
 from socialhood.realtime import events
+from socialhood.services import scheduled as scheduled_service
 from socialhood.services import sending
 from socialhood.services.scheduled import client_id_for
 from tests.support.api import Clerk, sign_in
@@ -784,3 +786,111 @@ async def test_the_sweeper_resets_stuck_claims_and_fails_them_after_five(
 
     # The reset row is due again, so the next dispatcher tick claims it.
     assert await dispatch_due_messages(app.state.sessionmaker, redis, now=now) == [lost]
+
+
+# ---- idempotency (TR-API-05) and following the message (Q-015)
+
+
+async def test_the_same_idempotency_key_schedules_once(
+    client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, redis: Redis
+) -> None:
+    ws = await workspace(client, clerk, engine)
+    at = iso(datetime.now(UTC) + timedelta(minutes=30))
+    key = {"Idempotency-Key": "schedule-key-1"}
+    url = f"{ws.base}/conversations/{ws.conversation_id}/scheduled-messages"
+    body = {"text": "Your order ships today", "send_at": at}
+    first = await client.post(url, json=body, headers={**ws.headers, **key})
+    again = await client.post(url, json=body, headers={**ws.headers, **key})
+    assert (first.status_code, again.status_code) == (201, 201)
+    assert first.json()["id"] == again.json()["id"]
+    changed = await client.post(url, json={**body, "text": "Other"}, headers={**ws.headers, **key})
+    assert changed.status_code == 409
+    assert changed.json()["code"] == "idempotency_conflict"
+    async with engine.connect() as conn:
+        count = (await conn.execute(text("SELECT count(*) FROM scheduled_messages"))).scalar_one()
+    assert count == 1
+
+
+async def _message_for(engine: AsyncEngine, ws: Ws, scheduled_id: str, **values: Any) -> uuid.UUID:
+    async with engine.begin() as conn:
+        account_id = (
+            await conn.execute(
+                text("SELECT social_account_id FROM conversations WHERE id = :c"),
+                {"c": ws.conversation_id},
+            )
+        ).scalar_one()
+        return uuid.UUID(
+            str(
+                (
+                    await conn.execute(
+                        text(
+                            "INSERT INTO messages (workspace_id, conversation_id,"
+                            " social_account_id, direction, source, kind, text, occurred_at,"
+                            " status, error_code, error_message, scheduled_message_id)"
+                            " VALUES (:w, :c, :a, 'outbound', 'human', 'text', 'x', now(),"
+                            " :status, :code, :reason, :s) RETURNING id"
+                        ),
+                        {
+                            "w": ws.wid,
+                            "c": ws.conversation_id,
+                            "a": account_id,
+                            "s": scheduled_id,
+                            "status": values.get("status", "failed"),
+                            "code": values.get("code"),
+                            "reason": values.get("reason"),
+                        },
+                    )
+                ).scalar_one()
+            )
+        )
+
+
+async def _follow(engine: AsyncEngine, ws: Ws, message_id: uuid.UUID, redis: Redis) -> None:
+    with workspace_scope(uuid.UUID(ws.wid)):
+        async with AsyncSession(engine) as session:
+            msg = await session.get(Message, message_id)
+            assert msg is not None
+            await scheduled_service.follow_message(session, msg)
+            await events.commit_and_publish(session, redis)
+
+
+async def test_a_scheduled_message_shows_its_sends_result(
+    client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, redis: Redis
+) -> None:
+    """Q-015: sent at hand-over; failed if the send then fails; sent again after a retry."""
+    ws = await workspace(client, clerk, engine)
+    scheduled_id = (await schedule(client, ws)).json()["id"]
+    await set_row(engine, scheduled_id, status="sent")
+    message_id = await _message_for(
+        engine, ws, scheduled_id, code="platform_rejected", reason="Instagram rejected this"
+    )
+
+    await _follow(engine, ws, message_id, redis)
+    failed = await row(engine, scheduled_id)
+    assert (failed["status"], failed["error_code"], failed["error_message"]) == (
+        "failed",
+        "platform_rejected",
+        "Instagram rejected this",
+    )
+    assert failed["message_id"] == message_id
+
+    async with engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE messages SET status = 'sent', error_code = NULL WHERE id = :m"),
+            {"m": message_id},
+        )
+    await _follow(engine, ws, message_id, redis)
+    sent = await row(engine, scheduled_id)
+    assert (sent["status"], sent["error_code"]) == ("sent", None)
+    assert statuses(await published(redis, ws.wid), scheduled_id)[-2:] == ["failed", "sent"]
+
+
+async def test_an_expired_or_canceled_row_is_left_alone(
+    client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, redis: Redis
+) -> None:
+    ws = await workspace(client, clerk, engine)
+    scheduled_id = (await schedule(client, ws)).json()["id"]
+    await set_row(engine, scheduled_id, status="canceled")
+    message_id = await _message_for(engine, ws, scheduled_id, code="platform_rejected")
+    await _follow(engine, ws, message_id, redis)
+    assert (await row(engine, scheduled_id))["status"] == "canceled"

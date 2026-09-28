@@ -70,7 +70,7 @@ async def test_signup_stores_the_number_and_subscribes_its_business_account(
     assert body["capabilities"] == ["dm_attachments", "dm_send", "read_receipts", "templates"]
     assert body["token_expires_at"] is None
 
-    assert whatsapp.calls == ["exchange", "number", "subscribe"]
+    assert whatsapp.calls == ["exchange", "number", "subscribe", "register"]
     assert whatsapp.exchange_params == [
         {"client_id": META_APP_ID, "client_secret": META_APP_SECRET, "code": "wa-code-1"}
     ]
@@ -86,6 +86,11 @@ async def test_signup_stores_the_number_and_subscribes_its_business_account(
     assert row["connected_by_user_id"] is not None
     assert BUSINESS_TOKEN.encode() not in bytes(row["access_token_enc"])
     assert TokenCipher([TOKEN_KEY]).decrypt(row["access_token_enc"]) == BUSINESS_TOKEN
+    # Q-017: registered with a generated 6-digit PIN that we keep, encrypted.
+    [pin] = whatsapp.pins
+    assert len(pin) == 6
+    assert pin.isdigit()
+    assert TokenCipher([TOKEN_KEY]).decrypt(row["whatsapp_pin_enc"]) == pin
 
     listed = (
         await client.get(f"/v1/w/{ws['id']}/social-accounts", headers=clerk.headers(clerk_id))
@@ -120,6 +125,19 @@ async def test_reconnecting_updates_the_same_row(
     [after] = await rows(engine)
     assert after["id"] == before["id"]
     assert (after["status"], after["last_error"]) == ("active", None)
+    first, second = whatsapp.pins
+    assert second == first  # a reconnect registers with the same PIN
+
+
+async def test_a_failed_registration_leaves_the_number_usable(
+    client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
+) -> None:
+    whatsapp.register = (400, {"error": {"code": 100, "message": "Already registered"}})
+    clerk_id, ws = await owner(client, clerk)
+    response = await signup(client, clerk, clerk_id, ws["id"])
+    assert response.status_code == 201
+    [row] = await rows(engine)
+    assert (row["status"], row["whatsapp_pin_enc"]) == ("active", None)
 
 
 async def test_the_free_plan_allows_one_whatsapp_number(

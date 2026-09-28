@@ -84,31 +84,45 @@ It becomes `sent` once its message is queued. If the platform then refuses the s
 shows that message as failed with Retry, but the scheduled row stays `sent`. F-10's "sent or
 failed" could mean mirroring the final result, which needs a hook in `send_message`.
 
+**Decided (2026-09-29, delegated by the owner):** It mirrors the send: `sent` at hand-over, `failed` (with the message's reason) if the send then fails, `sent` again after a successful retry (`services/scheduled.follow_message`, called wherever a send's result is decided).
+
 ## Q-016 · Retry counts
 FR-SMS-03 says a scheduled send is "retried up to 3 times"; the job catalogue gives send_message 5
 tries. P3 uses 5.
+
+**Decided (2026-09-29, delegated by the owner):** 5 tries, as the job catalogue says; FR-SMS-03's 3 is superseded.
 
 ## Q-017 · WhatsApp number registration
 Meta's Cloud API onboarding registers a number with a 6-digit PIN (`POST /{phone_number_id}/
 register`); F-04 leaves it out. Without it sends fail with 133010. Who sets the PIN, and where is
 it kept?
 
+**Decided (2026-09-29, delegated by the owner):** Social Hood generates a random 6-digit PIN at signup, registers the number with it and keeps it encrypted (`social_accounts.whatsapp_pin_enc`, rotated with the tokens); a reconnect reuses it. A failed registration is logged and leaves the account usable.
+
 ## Q-018 · The "AI handled" view
 Not defined in the spec. P3: the AI has replied in the conversation (a message with source
 `ai_auto`) and it does not need a human.
 
+**Decided (2026-09-29, delegated by the owner):** Kept: an AI reply in the conversation and no human needed.
+
 ## Q-019 · A reply from the Instagram app and unread
 It clears `awaiting_reply` and `needs_human` but leaves the unread count. Should it mark the
 conversation read?
+
+**Decided (2026-09-29, delegated by the owner):** Yes: a reply from the app sets unread to 0.
 
 ## Q-020 · Which inbound attachments are copied
 TR-MED-03 says each inbound attachment is copied because platform URLs expire. P3 copies images,
 video, audio, files and stickers; stories are never copied (story mentions by policy; a story
 reply's story is the business's own), and shared posts keep the link to someone else's post.
 
+**Decided (2026-09-29, delegated by the owner):** Kept as built.
+
 ## Q-021 · Unsent messages
 Instagram reports a message the customer unsent (`is_deleted`). P3 records it but cannot hide the
 message: that needs a `deleted_at` column (a migration). Add it in P4?
+
+**Decided (2026-09-29, delegated by the owner):** Migration 0006 adds `messages.deleted_at`. An unsend clears the text, attachments and reactions, the bubble says "Message unsent", the preview too when it was the last message, and our stored copies of its media are deleted. Unsends get their own webhook dedupe key (they reuse the original mid and were being dropped as re-deliveries).
 
 ## Q-022 · Contract gaps found while building the web inbox
 `Message` has no `edited_at` (so no "Edited" label), `Conversation` has no `last_inbound_at`,
@@ -116,7 +130,11 @@ message: that needs a `deleted_at` column (a migration). Add it in P4?
 MIME type, and there is no error code for Meta's Embedded Signup allowance ("WhatsApp connections
 are paused…", F-04). All additive; proposed for the start of P4.
 
+**Decided (2026-09-29, delegated by the owner):** Added: `Message.edited_at` and `deleted_at` (the web shows "Edited" and "Message unsent"), `Conversation.last_inbound_at`, an optional Idempotency-Key on scheduling (the web always sends one), `MediaAssetOut.mime_type`. The Embedded Signup allowance code waits for Meta's real error (verification item 26).
+
 ## Q-023 · Not built in P3
 TR-API-07's 60 sends per minute per workspace (429), and the job catalogue's 30 s task timeout
 (Procrastinate enforces none; HTTP timeouts apply). The echo race and follow-up jobs are deferred
 by a few seconds rather than enqueued after commit; a transactional outbox would remove that.
+
+**Decided (2026-09-29, delegated by the owner):** TR-API-07's send rate limit stays in T9.2 (rate limits, §2.12), where the plan has it. The few-second deferral of follow-up jobs stays until it causes a problem.

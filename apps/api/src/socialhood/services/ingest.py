@@ -54,6 +54,7 @@ from socialhood.platforms.events import (
     InboundEvent,
     InboundMediaRef,
     InboundMessage,
+    MessageDeleted,
     MessageEdit,
     Reaction,
     ReadReceipt,
@@ -62,7 +63,7 @@ from socialhood.platforms.events import (
 from socialhood.realtime.events import queue_conversation, queue_message
 from socialhood.repositories import inbox
 from socialhood.repositories import ingest as rows
-from socialhood.services.inbox_views import conversation_touch, preview_text
+from socialhood.services.inbox_views import UNSENT_PREVIEW, conversation_touch, preview_text
 
 PROFILE_MAX_AGE = timedelta(days=7)
 RECONCILE_WINDOW = timedelta(minutes=2)  # TR-JOB-05
@@ -126,6 +127,13 @@ def attachment_record(ref: InboundMediaRef) -> dict[str, Any] | None:
     return record
 
 
+async def _follow_scheduled(session: AsyncSession, msg: Message) -> None:
+    # Imported here: scheduled → sending → connections → sync → ingest would be a cycle.
+    from socialhood.services import scheduled
+
+    await scheduled.follow_message(session, msg)
+
+
 def _later(current: datetime | None, candidate: datetime) -> datetime:
     return candidate if current is None or candidate > current else current
 
@@ -142,6 +150,7 @@ class _Ingest:
         self.touched: dict[uuid.UUID, tuple[Conversation, Contact | None]] = {}
         self.profiles: dict[uuid.UUID, None] = {}  # contact ids, in order, without duplicates
         self.media: list[tuple[uuid.UUID, str]] = []  # (message id, attachment id)
+        self.unsent_assets: list[str] = []  # stored copies of unsent messages' media
 
     async def apply(self, event: InboundEvent) -> None:
         if isinstance(event, InboundMessage):
@@ -152,6 +161,8 @@ class _Ingest:
             await self._read(event)
         elif isinstance(event, MessageEdit):
             await self._edit(event)
+        elif isinstance(event, MessageDeleted):
+            await self._unsend(event)
         elif isinstance(event, DeliveryStatus):
             await self._status(event)
         elif isinstance(event, InboundComment):
@@ -250,6 +261,9 @@ class _Ingest:
         if not self.backfill:  # F-09: sending any message clears needs_human
             conv.needs_human = False
             conv.needs_human_reason = None
+            # Q-019: replying in the Instagram app means the business has read the conversation.
+            if self._newest(conv, msg):
+                conv.unread_count = 0
 
     async def _own_send(self, conv: Conversation, event: InboundMessage) -> bool:
         """An echo of our own send that arrived before the send job stored its id. A text echo is
@@ -272,6 +286,7 @@ class _Ingest:
             own.sent_at = event.occurred_at
             await self.session.flush()
             queue_message(self.session, own, created=False)
+            await _follow_scheduled(self.session, own)
             self.result.updated_message_ids.append(own.id)
         return True
 
@@ -294,6 +309,7 @@ class _Ingest:
         pending.error_message = None
         await self.session.flush()
         queue_message(self.session, pending, created=False)
+        await _follow_scheduled(self.session, pending)
         self.result.updated_message_ids.append(pending.id)
         return True
 
@@ -361,6 +377,31 @@ class _Ingest:
         conv.last_message_preview = preview_text(msg.kind, msg.text)
         self.touched.setdefault(conv.id, (conv, None))
 
+    async def _unsend(self, event: MessageDeleted) -> None:
+        """Q-021: the customer unsent a message. Its content goes (text, attachments, reactions)
+        and the bubble says it was unsent; stored copies of its media are deleted."""
+        msg = await rows.lock_message_by_platform_id(
+            self.session, self.acct.id, event.platform_message_id
+        )
+        if msg is None:
+            self.result.ignored.append("unsent message we don't have")
+            return
+        if msg.deleted_at is not None:
+            return
+        self.unsent_assets.extend(
+            str(a["asset_id"]) for a in msg.attachments or [] if a.get("asset_id")
+        )
+        msg.deleted_at = event.occurred_at
+        msg.text = None
+        msg.attachments = []
+        msg.reactions = []
+        await self._updated(msg)
+        conv = await rows.lock_conversation(self.session, msg.conversation_id)
+        if conv is None or conv.last_message_at is None or msg.occurred_at < conv.last_message_at:
+            return
+        conv.last_message_preview = UNSENT_PREVIEW
+        self.touched.setdefault(conv.id, (conv, None))
+
     async def _status(self, event: DeliveryStatus) -> None:
         msg = await rows.lock_message_by_platform_id(
             self.session, self.acct.id, event.platform_message_id
@@ -403,10 +444,14 @@ class _Ingest:
         await self._enqueue_followups()
 
     async def _enqueue_followups(self) -> None:
-        if not (self.profiles or self.media):
+        if not (self.profiles or self.media or self.unsent_assets):
             return
         from socialhood.jobs.enqueue import enqueue
-        from socialhood.jobs.tasks.ingest import fetch_contact_profile, ingest_media
+        from socialhood.jobs.tasks.ingest import (
+            delete_unsent_media,
+            fetch_contact_profile,
+            ingest_media,
+        )
 
         workspace_id = str(self.acct.workspace_id)
         for contact_id in self.profiles:
@@ -425,4 +470,11 @@ class _Ingest:
                 workspace_id=workspace_id,
                 message_id=str(message_id),
                 attachment_id=attachment_id,
+            )
+        if self.unsent_assets:
+            await enqueue(
+                delete_unsent_media,
+                delay_s=FOLLOWUP_DELAY_S,
+                workspace_id=workspace_id,
+                asset_ids=list(self.unsent_assets),
             )

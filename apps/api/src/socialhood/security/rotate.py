@@ -22,7 +22,10 @@ from socialhood.security.crypto import TokenCipher, new_key
 from socialhood.settings import get_settings
 
 # Every encrypted column (SEC-03: they all end in _enc).
-ENCRYPTED_COLUMNS = (("social_accounts", "access_token_enc"),)
+ENCRYPTED_COLUMNS = (
+    ("social_accounts", "access_token_enc"),
+    ("social_accounts", "whatsapp_pin_enc"),
+)
 
 
 async def rotate_all(database_url: str, cipher: TokenCipher) -> int:

@@ -434,6 +434,7 @@ async def test_conversation_detail(owner: Owner, engine: AsyncEngine) -> None:
     assert body["latest_analysis"] is None
     assert body["pending_suggestion"] is None
     assert body["summary"] is None
+    assert body["last_inbound_at"] is not None  # the reply window's anchor (Q-022)
 
     paused = datetime.now(UTC) + timedelta(hours=1)
     await set_conversation(engine, conv, ai_mode_override="off", ai_paused_until=paused)

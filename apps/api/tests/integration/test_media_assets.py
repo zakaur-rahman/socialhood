@@ -100,6 +100,7 @@ async def test_an_upload_in_the_workspace_folder_is_registered_once(
     assert asset["public_id"] == public_id
     assert asset["purpose"] == "message"
     assert asset["format"] == "jpg"
+    assert asset["mime_type"] == "image/jpeg"
     assert asset["bytes"] == 250_000
     assert route.calls.last.request.headers["authorization"].startswith("Basic ")
 

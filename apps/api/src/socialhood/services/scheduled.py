@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ERROR_CODES, ApiError, FieldError
-from socialhood.models.inbox import Conversation, ScheduledMessage
+from socialhood.models.inbox import Conversation, Message, ScheduledMessage
 from socialhood.models.inbox import ScheduledStatus as S
 from socialhood.realtime import events
 from socialhood.repositories import inbox
@@ -441,3 +441,30 @@ async def _expire(session: AsyncSession, row: ScheduledRow) -> None:
         link=f"/inbox/{s.conversation_id}",
         dedupe_key=f"smsg_expired:{s.id}",
     )
+
+
+# ---- following the message it became (Q-015)
+
+MESSAGE_SENT = frozenset({"sent", "delivered", "read"})
+
+
+async def follow_message(session: AsyncSession, msg: Message) -> None:
+    """A scheduled message shows its send's final result (Q-015): its message failing makes the
+    row failed with the same reason, and a later successful retry makes it sent again. Runs in the
+    caller's transaction and queues scheduled_message.updated; rows already expired or canceled
+    are left alone."""
+    if msg.scheduled_message_id is None:
+        return
+    if msg.status == "failed":
+        target, code, reason = S.FAILED, msg.error_code, msg.error_message
+    elif msg.status in MESSAGE_SENT:
+        target, code, reason = S.SENT, None, None
+    else:
+        return
+    row = await repo.get(session, msg.scheduled_message_id, for_update=True)
+    if row is None or row.scheduled.status not in (S.SENT, S.FAILED):
+        return
+    s = row.scheduled
+    if (s.status, s.error_code) == (target, code):
+        return
+    _finish(session, row, target, message_id=msg.id, error_code=code, error_message=reason)

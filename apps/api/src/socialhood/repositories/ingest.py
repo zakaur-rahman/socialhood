@@ -15,8 +15,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.inbox import Contact, Conversation, Direction, Message, MessageStatus
-from socialhood.models.media import MediaItem
+from socialhood.models.media import MediaAsset, MediaItem
 from socialhood.platforms.base import PlatformMedia
+from socialhood.repositories.base import scoped_delete
 
 _FRESH = {"populate_existing": True}
 
@@ -338,3 +339,14 @@ async def upsert_media_item(
         set_={**{k: statement.excluded[k] for k in changing}, "updated_at": synced_at},
     )
     await session.execute(statement)
+
+
+async def assets_by_id(session: AsyncSession, asset_ids: Sequence[uuid.UUID]) -> list[MediaAsset]:
+    if not asset_ids:
+        return []
+    result = await session.scalars(select(MediaAsset).where(MediaAsset.id.in_(asset_ids)))
+    return list(result.all())
+
+
+async def delete_asset(session: AsyncSession, asset_id: uuid.UUID) -> None:
+    await session.execute(scoped_delete(MediaAsset, id=asset_id))

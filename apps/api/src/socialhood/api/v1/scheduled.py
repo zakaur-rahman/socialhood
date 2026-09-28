@@ -11,7 +11,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, Header, Query, Request, Response
 
 from socialhood.auth.deps import AnyMember, Session
 from socialhood.realtime import events
@@ -21,6 +21,7 @@ from socialhood.schemas.inbox import (
     ScheduledMessageList,
     ScheduledMessagePatch,
 )
+from socialhood.services import idempotency
 from socialhood.services import scheduled as service
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["scheduled"])
@@ -63,17 +64,46 @@ async def create_scheduled_message(
     body: ScheduledMessageCreate,
     ctx: AnyMember,
     session: Session,
+    idempotency_key: Annotated[
+        str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)
+    ] = None,
 ) -> ScheduledMessage:
-    """send_at must be at least 2 minutes away and 5 minutes before the reply window closes."""
-    out = await service.create(
-        session,
-        conversation_id,
-        body,
-        user_id=ctx.user.id,
-        human_agent_enabled=_human_agent_enabled(request),
-        now=datetime.now(UTC),
-    )
-    await events.commit_and_publish(session, request.app.state.redis)
+    """send_at must be at least 2 minutes away and 5 minutes before the reply window closes.
+
+    With an Idempotency-Key (TR-API-05), repeating the request returns the first response and
+    schedules nothing more; the same key with a different body is 409 idempotency_conflict.
+    """
+    redis = request.app.state.redis
+    claim = None
+    if idempotency_key:
+        claim = idempotency.IdempotencyKey(
+            redis,
+            workspace_id=ctx.workspace_id,
+            user_id=ctx.user.id,
+            key=idempotency_key,
+            fingerprint=idempotency.fingerprint(
+                "POST", request.url.path, body.model_dump(mode="json")
+            ),
+        )
+        stored = await claim.begin()
+        if stored is not None:
+            return ScheduledMessage.model_validate(stored.body)
+    try:
+        out = await service.create(
+            session,
+            conversation_id,
+            body,
+            user_id=ctx.user.id,
+            human_agent_enabled=_human_agent_enabled(request),
+            now=datetime.now(UTC),
+        )
+        await events.commit_and_publish(session, redis)
+    except BaseException:
+        if claim is not None:
+            await claim.release()
+        raise
+    if claim is not None:
+        await claim.complete(201, out.model_dump(mode="json"))
     return out
 
 

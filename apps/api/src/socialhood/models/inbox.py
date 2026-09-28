@@ -216,6 +216,8 @@ class Message(IdMixin, TimestampMixin, TenantScoped, Base):
     kind: Mapped[str] = mapped_column(Text, server_default=sql("'text'"))
     text: Mapped[str | None] = mapped_column(Text)
     edited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # The customer unsent it: text and attachments are cleared, the bubble says so (Q-021).
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     attachments: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, server_default=sql("'[]'::jsonb")
     )

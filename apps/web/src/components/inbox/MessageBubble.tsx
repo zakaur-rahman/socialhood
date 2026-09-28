@@ -71,6 +71,7 @@ export function MessageBubble({
   if (message.direction === "system" || message.kind === "system") {
     return <SystemNote>{message.text ?? "Conversation updated"}</SystemNote>;
   }
+  const unsent = Boolean(message.deleted_at);
   const outbound = message.direction === "outbound";
   const status = message.status ?? null;
   const failed = outbound && status === "failed";
@@ -132,7 +133,9 @@ export function MessageBubble({
               ))}
             </div>
           ) : null}
-          {message.kind === "unsupported" ? (
+          {unsent ? (
+            <p className="italic text-fg-secondary">Message unsent</p>
+          ) : message.kind === "unsupported" ? (
             <p>
               Unsupported message.{" "}
               <a
@@ -150,6 +153,7 @@ export function MessageBubble({
             <p>{message.text}</p>
           ) : null}
           <p className={cn("mt-1 flex items-center justify-end gap-1 text-xs tabular-nums", metaClass)}>
+            {message.edited_at && !unsent ? <span>Edited ·</span> : null}
             <time dateTime={message.occurred_at}>{formatTime(message.occurred_at, timeZone)}</time>
             {statusInfo ? (
               <span role="img" aria-label={statusInfo.label} title={statusInfo.label} className="inline-flex">

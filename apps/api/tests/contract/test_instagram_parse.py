@@ -15,6 +15,7 @@ from socialhood.platforms.events import (
     InboundComment,
     InboundEvent,
     InboundMessage,
+    MessageDeleted,
     MessageEdit,
     Reaction,
     ReadReceipt,
@@ -109,10 +110,21 @@ def test_seen_and_edit() -> None:
     assert edit.platform_message_id == message("webhook_message_text.json").platform_message_id
 
 
-def test_a_deleted_message_is_reported_not_stored() -> None:
+def test_an_unsent_message_becomes_a_deletion() -> None:
     event = parsed("webhook_message_deleted.json")
-    assert isinstance(event, Unsupported)
-    assert event.reason == "message deleted"
+    assert isinstance(event, MessageDeleted)
+    assert (
+        event.platform_message_id
+        == fixture("webhook_message_text.json")["entry"][0]["messaging"][0]["message"]["mid"]
+    )
+
+
+def test_an_unsend_has_its_own_dedupe_key() -> None:
+    """It reuses the original message's mid; the same key would drop it as a re-delivery."""
+    [original] = split_payload(fixture("webhook_message_text.json"))
+    [unsend] = split_payload(fixture("webhook_message_deleted.json"))
+    assert unsend.dedupe_key != original.dedupe_key
+    assert unsend.event_type == "unsend"
 
 
 def test_comments_parse_for_p6() -> None:

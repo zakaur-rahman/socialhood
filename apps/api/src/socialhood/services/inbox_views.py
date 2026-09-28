@@ -106,6 +106,8 @@ def message_out(msg: Message, *, sent_by_name: str | None = None) -> MessageOut:
         sent_at=msg.sent_at,
         delivered_at=msg.delivered_at,
         read_at=msg.read_at,
+        edited_at=msg.edited_at,
+        deleted_at=msg.deleted_at,
         sent_by=Actor(id=msg.sent_by_user_id, name=sent_by_name) if msg.sent_by_user_id else None,
         automation=None,  # P4
         suggestion_id=msg.suggestion_id,
@@ -127,6 +129,7 @@ ATTACHMENT_PREVIEW = {
     "location": "Location",
     "unsupported": "Message",
 }
+UNSENT_PREVIEW = "Message unsent"
 
 
 def preview_text(kind: str, text: str | None) -> str:

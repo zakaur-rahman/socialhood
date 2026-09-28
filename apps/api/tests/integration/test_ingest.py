@@ -61,7 +61,8 @@ async def messages(engine: AsyncEngine) -> list[dict[str, Any]]:
     return await rows(
         engine,
         "SELECT id, direction, source, kind, text, attachments, status, platform_message_id,"
-        " reactions, read_at, edited_at, sent_at, error_code, reply_to_platform_message_id"
+        " reactions, read_at, edited_at, deleted_at, sent_at, error_code,"
+        " reply_to_platform_message_id"
         " FROM messages ORDER BY occurred_at",
     )
 
@@ -441,6 +442,39 @@ async def test_an_edit_replaces_the_text_and_the_preview(
     ]
 
 
+async def test_a_reply_from_the_instagram_app_marks_the_conversation_read(
+    engine: AsyncEngine, redis: Redis, workspace: uuid.UUID
+) -> None:
+    """Q-019: whoever answered in the app has read the conversation."""
+    maker = sessions(engine)
+    await deliver(maker, redis, "webhook_message_text.json")
+    assert (await conversation(engine))["unread_count"] == 1
+    await deliver(maker, redis, "webhook_echo.json")
+    conv = await conversation(engine)
+    assert (conv["unread_count"], conv["awaiting_reply"]) == (0, False)
+
+
+async def test_an_unsent_message_loses_its_content(
+    engine: AsyncEngine, redis: Redis, workspace: uuid.UUID
+) -> None:
+    """Q-021: the customer unsent it; the bubble and the preview say so."""
+    maker = sessions(engine)
+    await deliver(maker, redis, "webhook_message_text.json")
+    assert await deliver(maker, redis, "webhook_message_deleted.json") == PROCESSED
+    [msg] = await messages(engine)
+    assert msg["text"] is None
+    assert msg["attachments"] == []
+    assert msg["deleted_at"] == at("webhook_message_deleted.json")
+    assert (await conversation(engine))["last_message_preview"] == "Message unsent"
+    published = await stream(redis, workspace)
+    assert [t for t, _ in published][-2:] == ["message.updated", "conversation.updated"]
+    assert published[-2][1]["message"]["deleted_at"] is not None
+    # A second delivery of the same unsend changes nothing.
+    before = len(published)
+    await deliver(maker, redis, "webhook_message_deleted.json", copy="again")
+    assert len(await stream(redis, workspace)) == before
+
+
 async def test_events_we_do_not_act_on_are_ignored_with_the_reason(
     engine: AsyncEngine, redis: Redis, workspace: uuid.UUID
 ) -> None:
@@ -451,7 +485,7 @@ async def test_events_we_do_not_act_on_are_ignored_with_the_reason(
     assert await deliver(maker, redis, "webhook_comment_changes.json") == IGNORED
     assert [r["last_error"] for r in await webhook_rows(engine)] == [
         "reaction to a message we don't have",
-        "message deleted",
+        "unsent message we don't have",
         "read receipt from an unknown contact",
         "comments arrive in P6",
     ]

@@ -2696,6 +2696,7 @@ erDiagram
       <tr><td class="m">status</td><td class="m">text</td><td>no</td><td class="m">'active'</td><td>active, needs_reconnect, disconnected, error</td></tr>
       <tr><td class="m">last_error</td><td class="m">text</td><td>yes</td><td></td><td>user-readable</td></tr>
       <tr><td class="m">access_token_enc</td><td class="m">bytea</td><td>yes</td><td></td><td>null after disconnect</td></tr>
+      <tr><td class="m">whatsapp_pin_enc</td><td class="m">bytea</td><td>yes</td><td></td><td>WhatsApp two-step verification PIN, generated at signup and used to register the number (Q-017)</td></tr>
       <tr><td class="m">token_expires_at · token_refreshed_at</td><td class="m">timestamptz</td><td>yes</td><td></td><td></td></tr>
       <tr><td class="m">scopes</td><td class="m">text[]</td><td>no</td><td class="m">'{}'</td><td>granted permissions</td></tr>
       <tr><td class="m">ai_mode</td><td class="m">text</td><td>no</td><td class="m">'suggest'</td><td>off, suggest, auto</td></tr>
@@ -2756,6 +2757,7 @@ erDiagram
       <tr><td class="m">kind</td><td class="m">text</td><td>no</td><td class="m">'text'</td><td>see §5.5 enums</td></tr>
       <tr><td class="m">text</td><td class="m">text</td><td>yes</td><td></td><td>stored as received (no HTML stripping); outbound limited per platform (TR-PL-10: Instagram 1,000 bytes, WhatsApp 4,096 chars)</td></tr>
       <tr><td class="m">edited_at</td><td class="m">timestamptz</td><td>yes</td><td></td><td>set by Instagram <code>message_edit</code>; <code>text</code> holds the latest version</td></tr>
+      <tr><td class="m">deleted_at</td><td class="m">timestamptz</td><td>yes</td><td></td><td>the customer unsent it; <code>text</code>, <code>attachments</code> and <code>reactions</code> are cleared (Q-021)</td></tr>
       <tr><td class="m">attachments</td><td class="m">jsonb</td><td>no</td><td class="m">'[]'</td><td>array of Attachment (§5.10)</td></tr>
       <tr><td class="m">template</td><td class="m">jsonb</td><td>yes</td><td></td><td><code>{name, language, params[]}</code> for WhatsApp templates</td></tr>
       <tr><td class="m">occurred_at</td><td class="m">timestamptz</td><td>no</td><td></td><td>platform timestamp for inbound; queue time for outbound. Sort key</td></tr>
@@ -3295,6 +3297,7 @@ interface Conversation extends ConversationListItem {
              first_seen_at: string; platform_user_id: string };
   social_account: { id: string; username?: string; display_name?: string; status: string };
   scheduled_count: number;
+  last_inbound_at?: string;                                   // the reply window's anchor
 }
 
 type MessageSource = "customer" | "human" | "ai_auto" | "automation" | "native_app" | "system";
@@ -3308,6 +3311,7 @@ interface Message {
   status?: "received" | "queued" | "sending" | "sent" | "delivered" | "read" | "failed";
   error?: { code: string; message: string };
   occurred_at: string; sent_at?: string; delivered_at?: string; read_at?: string;
+  edited_at?: string; deleted_at?: string;                    // "Edited", "Message unsent"
   sent_by?: { id: string; name?: string };
   automation?: { id: string; name: string };
   suggestion_id?: string; human_agent_tag: boolean;

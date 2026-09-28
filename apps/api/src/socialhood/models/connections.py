@@ -59,6 +59,8 @@ class SocialAccount(IdMixin, TimestampMixin, TenantScoped, Base):
     status: Mapped[str] = mapped_column(Text, server_default=text("'active'"))
     last_error: Mapped[str | None] = mapped_column(Text)
     access_token_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
+    # WhatsApp two-step verification PIN set when the number is registered (Q-017), encrypted.
+    whatsapp_pin_enc: Mapped[bytes | None] = mapped_column(LargeBinary)
     token_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     token_refreshed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     scopes: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'"))

@@ -180,6 +180,7 @@ class Conversation(ConversationListItem):
     summary: ConversationSummary | None = None  # P5
     social_account: ConversationAccount
     scheduled_count: int
+    last_inbound_at: datetime | None = None  # the customer's last message (reply window)
 
 
 class ConversationList(ResponseModel):
@@ -257,6 +258,8 @@ class Message(ResponseModel):
     sent_at: datetime | None = None
     delivered_at: datetime | None = None
     read_at: datetime | None = None
+    edited_at: datetime | None = None  # the customer edited it; ``text`` is the latest version
+    deleted_at: datetime | None = None  # the customer unsent it; text and attachments are gone
     sent_by: Actor | None = None
     automation: AutomationRef | None = None  # P4
     suggestion_id: uuid.UUID | None = None
@@ -355,6 +358,7 @@ class MediaAssetOut(ResponseModel):
     resource_type: ResourceTypeName
     purpose: str
     format: str | None = None
+    mime_type: str | None = None
     original_filename: str | None = None
     secure_url: str | None = None
     bytes: int

@@ -778,12 +778,15 @@ async def _commit(send: _Send, *, publish: bool) -> None:
     await send.session.flush()
     await send.session.refresh(send.msg)
     if publish:
+        from socialhood.services import scheduled  # scheduled calls queue_outbound
+
         events.queue_message(
             send.session,
             send.msg,
             created=False,
             sent_by_name=await sender_name(send.session, send.msg.sent_by_user_id),
         )
+        await scheduled.follow_message(send.session, send.msg)
         await events.commit_and_publish(send.session, send.redis)
     else:
         await send.session.commit()

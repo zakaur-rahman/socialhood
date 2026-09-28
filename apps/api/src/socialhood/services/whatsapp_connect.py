@@ -9,6 +9,7 @@ Social Hood's weekly onboarding allowance is used up).
 
 from __future__ import annotations
 
+import secrets
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -101,6 +102,7 @@ async def complete_signup(
         log.info("whatsapp_connect_refused", reason="account_in_use", **attempt)
         raise ApiError("account_in_use", IN_USE)
     await subscribe(session, acct, deps)
+    await _register(session, deps, wa, acct, grant.access_token)
     await session.commit()
     await session.refresh(acct)
     log.info(
@@ -112,3 +114,28 @@ async def complete_signup(
         **attempt,
     )
     return acct
+
+
+def new_pin() -> str:
+    return f"{secrets.randbelow(10**6):06d}"
+
+
+async def _register(
+    session: AsyncSession, deps: PlatformDeps, wa: WhatsAppHttp, acct: SocialAccount, token: str
+) -> None:
+    """Q-017: register the number with a two-step verification PIN we generate and keep
+    (encrypted), so nobody has to choose one. A reconnect reuses the stored PIN. A failure is
+    logged and leaves the account usable: a number already registered elsewhere keeps working."""
+    pin = deps.cipher.decrypt(acct.whatsapp_pin_enc) if acct.whatsapp_pin_enc else new_pin()
+    try:
+        await meta.register_number(wa, token, acct.platform_account_id, pin)
+    except PlatformError as error:
+        log.warning(
+            "whatsapp_register_failed",
+            account_id=str(acct.id),
+            error_code=error.code,
+            platform_code=error.platform_code,
+            platform_message=error.message,
+        )
+        return
+    await accounts.update(session, acct.id, whatsapp_pin_enc=deps.cipher.encrypt(pin))
