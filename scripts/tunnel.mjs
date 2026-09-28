@@ -36,26 +36,19 @@ function fail(message) {
   process.exit(1);
 }
 
-// 1. ngrok installed and signed in?
-const check = spawnSync(ngrok, ["config", "check"], { encoding: "utf8" });
-if (check.error) {
+// 1. ngrok installed? (Whether it is signed in is reported by ngrok itself when it starts: the
+// Microsoft Store build keeps its config in a private folder other programs cannot read.)
+if (spawnSync(ngrok, ["version"], { encoding: "utf8" }).error) {
   fail("ngrok is not installed. Install it (winget install ngrok.ngrok), then run this again.");
 }
-const configPath = /at (.+ngrok\.yml)/.exec(`${check.stdout}${check.stderr}`)?.[1]?.trim();
-const signedIn =
-  check.status === 0 && configPath && existsSync(configPath) && /^\s*authtoken:\s*\S+/m.test(readFileSync(configPath, "utf8"));
-if (!signedIn) {
-  fail(
-    [
-      "ngrok has no authtoken on this machine. Copy yours from",
-      "  https://dashboard.ngrok.com/get-started/your-authtoken",
-      "and run, in your own terminal:",
-      "  ngrok config add-authtoken <your-token>",
-      "Then run `pnpm tunnel` again.",
-    ].join("\n"),
-  );
-}
 if (!existsSync(envPath)) fail("apps/api/.env is missing; copy apps/api/.env.example first.");
+const SIGN_IN_HELP = [
+  "ngrok is not signed in. Copy your authtoken from",
+  "  https://dashboard.ngrok.com/get-started/your-authtoken",
+  "and run, in your own terminal:",
+  "  ngrok config add-authtoken <your-token>",
+  "Then run `pnpm tunnel` again.",
+].join("\n");
 
 // 2. Start the tunnel and wait for its public URL.
 const env = readEnv(readFileSync(envPath, "utf8"));
@@ -63,7 +56,16 @@ const domain = (process.env.NGROK_DOMAIN ?? env.NGROK_DOMAIN ?? "").replace(/^ht
 const args = ["http", port, "--log", "stdout", "--log-format", "json"];
 if (domain) args.push("--url", `https://${domain}`);
 
-const child = spawn(ngrok, args, { stdio: ["ignore", "pipe", "inherit"] });
+const child = spawn(ngrok, args, { stdio: ["ignore", "pipe", "pipe"] });
+let explainedSignIn = false;
+createInterface({ input: child.stderr }).on("line", (line) => {
+  if (/authentication failed|ERR_NGROK_(4018|401)\b/.test(line)) {
+    if (!explainedSignIn) console.error(SIGN_IN_HELP);
+    explainedSignIn = true;
+  } else if (line.trim() && !explainedSignIn) {
+    console.error(line);
+  }
+});
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => child.kill());
 child.on("exit", (code) => process.exit(code ?? 0));
 
@@ -81,7 +83,11 @@ createInterface({ input: child.stdout }).on("line", (line) => {
   } catch {
     return;
   }
-  if (["eror", "crit"].includes(entry.lvl)) console.error(`ngrok: ${entry.err ?? entry.msg}`);
+  const problem = String(entry.err ?? entry.msg);
+  // Sign-in failures are explained once from stderr; other errors are passed on.
+  if (["eror", "crit"].includes(entry.lvl) && !/authentication failed/.test(problem)) {
+    console.error(`ngrok: ${problem}`);
+  }
   if (entry.msg === "started tunnel" && String(entry.url).startsWith("https://")) announce(entry.url);
 });
 
