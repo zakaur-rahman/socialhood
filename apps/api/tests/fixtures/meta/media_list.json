@@ -1,0 +1,42 @@
+{
+  "data": [
+    {
+      "id": "18100000000000003",
+      "caption": "Fresh out of the oven",
+      "media_type": "IMAGE",
+      "media_product_type": "FEED",
+      "media_url": "https://scontent.cdninstagram.com/v/post3.jpg",
+      "permalink": "https://www.instagram.com/p/C3abc/",
+      "timestamp": "2026-09-27T08:30:00+0000",
+      "like_count": 57,
+      "comments_count": 4
+    },
+    {
+      "id": "18100000000000002",
+      "caption": "Our weekend menu",
+      "media_type": "CAROUSEL_ALBUM",
+      "media_product_type": "FEED",
+      "media_url": "https://scontent.cdninstagram.com/v/post2.jpg",
+      "permalink": "https://www.instagram.com/p/C2abc/",
+      "timestamp": "2026-09-25T10:00:00+0000",
+      "comments_count": 1
+    },
+    {
+      "id": "18100000000000001",
+      "media_type": "VIDEO",
+      "media_product_type": "REELS",
+      "media_url": "https://scontent.cdninstagram.com/v/reel1.mp4",
+      "thumbnail_url": "https://scontent.cdninstagram.com/v/reel1.jpg",
+      "permalink": "https://www.instagram.com/reel/C1abc/",
+      "timestamp": "2026-09-20T18:45:00+0000",
+      "like_count": 212,
+      "comments_count": 19
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFIU",
+      "after": "QVFIU2"
+    }
+  }
+}

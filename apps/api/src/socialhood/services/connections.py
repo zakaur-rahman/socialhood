@@ -26,6 +26,7 @@ from socialhood.platforms.sandbox.adapter import SANDBOX_PREFIX, is_sandbox
 from socialhood.repositories import social_accounts as accounts
 from socialhood.schemas.accounts import SocialAccountOut, SocialAccountPatch
 from socialhood.services.notifications import notify_admins
+from socialhood.services.sync import start_initial_sync
 
 log = get_logger(__name__)
 
@@ -189,6 +190,7 @@ async def complete_instagram_connect(
         return ConnectOutcome(error="account_in_use")
     await subscribe(session, acct, deps)
     await session.commit()
+    await start_initial_sync(acct)  # FR-CON-01: recent posts and conversations
     return ConnectOutcome(account_id=acct.id)
 
 
@@ -271,6 +273,7 @@ async def connect_sandbox(
     session.add(acct)
     await session.commit()
     await session.refresh(acct)
+    await start_initial_sync(acct)
     return acct
 
 

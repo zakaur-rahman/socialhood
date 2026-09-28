@@ -135,7 +135,7 @@ async def test_events_route_to_the_connected_workspace(
 
     [event] = await events(engine)
     assert str(event["workspace_id"]) == wid
-    assert event["last_error"] == "comment handling arrives with the inbox"
+    assert event["last_error"] == "comments arrive in P6"
     assert event["attempts"] == 1
 
 

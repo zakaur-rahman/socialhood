@@ -63,10 +63,16 @@ class SandboxAdapter:
         raise NotImplementedError("T3.6")
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
-        raise NotImplementedError("T3.3")
+        from socialhood.platforms.sandbox import history
+
+        return history.image()
 
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
-        raise NotImplementedError("T3.14")
+        from socialhood.platforms.sandbox import history
+
+        return history.posts(acct, limit=limit)
 
     async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
-        raise NotImplementedError("T3.14")
+        from socialhood.platforms.sandbox import history
+
+        return history.threads(acct, limit=limit)
