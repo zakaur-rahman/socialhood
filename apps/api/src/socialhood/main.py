@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from socialhood import __version__
 from socialhood.api import health
 from socialhood.api import v1 as api_v1
-from socialhood.api.middleware import RequestContextMiddleware
+from socialhood.api.middleware import BodyLimitMiddleware, RequestContextMiddleware
 from socialhood.api.openapi_errors import problem_openapi
 from socialhood.api.problems import install_problem_handlers
 from socialhood.db.engine import make_engine, make_sessionmaker
@@ -21,6 +21,8 @@ from socialhood.kv import make_redis
 from socialhood.observability.logging import configure_logging
 from socialhood.settings import Settings, get_settings
 from socialhood.webhooks import clerk as clerk_webhook
+from socialhood.webhooks import instagram as instagram_webhook
+from socialhood.webhooks import meta_privacy
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -56,6 +58,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for router in api_v1.ROUTERS:
         app.include_router(router)
     app.include_router(clerk_webhook.router)
+    app.include_router(instagram_webhook.router)
+    app.include_router(meta_privacy.router)
 
     # SEC-05: exact origins only, no credentials (bearer tokens, not cookies).
     app.add_middleware(
@@ -67,6 +71,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         expose_headers=["X-Request-ID", "Retry-After"],
         max_age=600,
     )
+    app.add_middleware(BodyLimitMiddleware)
     # Added last, so it is the outermost middleware.
     app.add_middleware(RequestContextMiddleware)
     return app

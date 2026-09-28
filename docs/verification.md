@@ -27,3 +27,7 @@ Gemini key.
 | 15 | WhatsApp template send format; error codes 131047 and 131026 | TR-PL-03 | Send a template; send outside the window; send to an invalid number | | |
 | 16 | Dodo checkout fields, customer portal endpoint, merchant of record | TR-BIL-01, TR-BIL-06 | Dodo test account and docs | | |
 | 17 | Gemini model ids; `response_format` and `thinking_level` in the Python SDK; Embedding 2 task-prefix format | TR-AI-02, TR-AI-03 | Call each model with the SDK version in `uv.lock` | | |
+| 18 | `graph.instagram.com` accepts the token as `Authorization: Bearer` (the adapter never puts it in the URL) | TR-PL-05 | Call `/me` with the header only | | |
+| 19 | Code-exchange response shape (`data[]` or flat) and the `permissions` format | F-03 | Complete Instagram Login on a test account; record the response in `tests/fixtures/meta/` | | |
+| 20 | `/me` `user_id` equals the webhook `entry.id` (routing depends on it), and `id` is the app-scoped id the deauthorize callback sends | TR-WH-05, F-16 | Compare `/me` with a webhook and a deauthorize payload | | |
+| 21 | Long-lived token refresh: minimum age (24 h) and the new `expires_in` | FR-CON-05 | Refresh a day-old token | | |

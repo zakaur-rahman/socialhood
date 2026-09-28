@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.identity import SLUG_PATTERN, Workspace
-from socialhood.repositories import workspaces
+from socialhood.repositories import social_accounts, workspaces
 from socialhood.schemas.workspaces import Checklist, ChecklistKey, ChecklistStep, WorkspacePatch
 
 _SLUG = re.compile(SLUG_PATTERN)
@@ -87,7 +87,7 @@ async def update_workspace(
 
 
 # Each checklist step is computed from data (FR-ACC-04). Steps whose tables arrive in later
-# phases report False until then: connect_account (T2.2), create_automation (T4.1),
+# phases report False until then: create_automation (T4.1),
 # add_knowledge and choose_ai_mode (T5.x). See docs/QUESTIONS.md Q-008.
 StepCheck = Callable[[AsyncSession, uuid.UUID], Awaitable[bool]]
 
@@ -96,8 +96,12 @@ async def _not_available_yet(session: AsyncSession, workspace_id: uuid.UUID) -> 
     return False
 
 
+async def _account_connected(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
+    return await social_accounts.any_live(session)
+
+
 CHECKLIST: dict[ChecklistKey, StepCheck] = {
-    "connect_account": _not_available_yet,
+    "connect_account": _account_connected,
     "add_knowledge": _not_available_yet,
     "choose_ai_mode": _not_available_yet,
     "create_automation": _not_available_yet,

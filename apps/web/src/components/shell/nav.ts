@@ -55,7 +55,7 @@ export const SETTINGS_NAV: NavItem = {
   icon: Settings,
   segment: "settings",
   roles: EVERYONE,
-  href: (s) => route(`/w/${s}/settings/workspace`),
+  href: (s) => route(`/w/${s}/settings/connections`),
 };
 
 export const BILLING_HREF = (slug: string): Route => later(`/w/${slug}/settings/billing`, "P8");

@@ -14,6 +14,7 @@ from fastapi import FastAPI
 
 from socialhood.jobs.app import app as jobs_app
 from socialhood.main import create_app
+from socialhood.security.crypto import new_key
 from socialhood.settings import AppEnv, Settings
 from tests.support.identity import (
     ISSUER,
@@ -26,6 +27,11 @@ from tests.support.identity import (
 )
 
 CLERK_USERS_URL = "https://api.clerk.com/v1/users/"
+WEB = "http://web.test"
+IG_APP_SECRET = "fake-instagram-app-secret"
+META_APP_SECRET = "fake-meta-app-secret"
+IG_VERIFY_TOKEN = "fake-verify-token"
+TOKEN_KEY = new_key()
 
 
 @pytest.fixture(scope="session")
@@ -43,6 +49,14 @@ def api_settings(keys: Keys) -> Settings:
         clerk_authorized_parties=[PARTY],
         clerk_secret_key="fake-clerk-secret-for-tests",
         clerk_webhook_secret=WEBHOOK_SECRET,
+        web_base_url=WEB,
+        token_encryption_keys=[TOKEN_KEY],
+        ig_app_id="1234567890",
+        ig_app_secret=IG_APP_SECRET,
+        ig_redirect_uri="http://api.test/v1/oauth/instagram/callback",
+        ig_webhook_verify_token=IG_VERIFY_TOKEN,
+        meta_app_secret=META_APP_SECRET,
+        sandbox_platform_enabled=True,
     )
 
 

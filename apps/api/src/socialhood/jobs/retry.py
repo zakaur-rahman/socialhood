@@ -34,3 +34,17 @@ class PlatformRetry(BaseRetryStrategy):
         if job.attempts + 1 >= limit:
             return None
         return RetryDecision(retry_in={"seconds": self.delay_for(exception, job.attempts)})
+
+
+class BackoffRetry(BaseRetryStrategy):
+    """Retry any error with the same backoff (TR-WH-05: webhook processing, up to 5 attempts)."""
+
+    def __init__(self, max_attempts: int = 5) -> None:
+        self.max_attempts = max_attempts
+
+    def get_retry_decision(self, *, exception: BaseException, job: Job) -> RetryDecision | None:
+        if job.attempts + 1 >= self.max_attempts:
+            return None
+        return RetryDecision(
+            retry_in={"seconds": min(MAX_DELAY_S, BASE_DELAY_S << min(job.attempts, 16))}
+        )

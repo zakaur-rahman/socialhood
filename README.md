@@ -48,6 +48,32 @@ cd apps/api && uv run procrastinate --app=socialhood.jobs.app.app worker
 cd apps/web && cp .env.example .env.local && pnpm dev
 ```
 
+### Instagram without Meta: the sandbox
+
+With `SANDBOX_PLATFORM_ENABLED=true` in `apps/api/.env` (never in production), an owner can add a
+fake Instagram account from Settings → Connections ("Add sandbox account") and inject DMs and
+comments with `POST /v1/w/{wid}/dev/sandbox/inbound`. They go through the same intake as real
+webhooks. Connecting a real account needs the Meta app's redirect URI and webhook URL to point at
+a public HTTPS address for the API (a tunnel in development).
+
+## Operations
+
+Failed webhook events and jobs (TR-OPS-04), from a shell on the worker service:
+
+```sh
+cd apps/api
+uv run python -m socialhood.ops failed-events list --since 2h [--provider instagram] [--error-contains …]
+uv run python -m socialhood.ops failed-events replay --since 2h [--provider …] [--dry-run]   # or --id …
+uv run python -m socialhood.ops failed-jobs list [--task …] [--since 2h]
+uv run python -m socialhood.ops failed-jobs retry --task … --since 2h [--dry-run]           # or --id …
+```
+
+Every run logs the operator (`--operator`, or `SOCIALHOOD_OPERATOR`), the filters and the counts.
+Jobs that write to a platform (sends, publishing, replies) are never retried from here (Q-011).
+
+Rotating the token encryption key (SEC-03): put the new key first in `TOKEN_ENCRYPTION_KEYS`,
+deploy, run `uv run python -m socialhood.security.rotate`, then drop the old key.
+
 ## Checks (all must pass before merge, §6.1)
 
 ```sh

@@ -1,7 +1,8 @@
 """Tenant isolation in the ORM (TR-TEN-02).
 
 Every tenant table inherits ``TenantScoped``. A session event adds ``workspace_id = current`` to
-every ORM SELECT that touches such a table and raises when no workspace is set. Code that must
+every ORM SELECT that touches such a table and raises when no workspace is set; another stamps new
+rows with the current workspace and refuses rows for a different one. Code that must
 look across workspaces (for example, finding the account that owns a webhook) wraps that single
 lookup in ``tenant_bypass_scope()``.
 """
@@ -88,6 +89,25 @@ def _tenant_filter(state: ORMExecuteState) -> None:
             include_aliases=True,
         )
     )
+
+
+@event.listens_for(Session, "before_flush")
+def _stamp_new_rows(session: Session, flush_context: object, instances: object) -> None:
+    """New tenant rows take the current workspace; a row for another workspace is refused."""
+    if tenant_bypass.get():
+        return
+    for obj in session.new:
+        if not isinstance(obj, TenantScoped):
+            continue
+        ws = current_workspace_id.get()
+        if ws is None:
+            if obj.workspace_id is None:
+                raise TenancyError("tenant insert without workspace context")
+            continue  # provisioning creates a workspace's first rows before it is current
+        if obj.workspace_id is None:
+            obj.workspace_id = ws
+        elif obj.workspace_id != ws:
+            raise TenancyError("tenant insert for another workspace")
 
 
 def require_workspace() -> uuid.UUID:

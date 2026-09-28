@@ -1,9 +1,11 @@
 """TR-TEN-03: every route with an id in its path hides other workspaces.
 
 Workspaces A and B each get one of every resource. For every such route in the OpenAPI document,
-a member of A calls it with B's ids: the answer must be 404 and B must be unchanged. A route whose
-path parameters (or request body) have no seed entry fails the suite, so new routes cannot slip
-through without coverage.
+a member of A calls it with B's ids: the answer must be 404 and B must be unchanged. Routes with ids
+below the workspace are called a second time with A's own workspace and B's resource ids, which
+tests the row filter rather than membership. A route whose path parameters (or request body) have
+no seed entry fails the suite, so new routes cannot slip through without coverage. Public routes
+(no workspace, no session) are listed in ``PUBLIC_ROUTES`` and tested on their own.
 
 When a phase adds a resource, extend ``Seed`` with B's id for it, map the path parameter in
 ``PARAM_TO_SEED``, and add an example body for any new write route in ``EXAMPLE_BODIES``.
@@ -29,20 +31,41 @@ METHODS = ("get", "post", "put", "patch", "delete")
 # Path parameter name -> Seed attribute holding workspace B's id for it.
 PARAM_TO_SEED: dict[str, str] = {
     "wid": "workspace_id",
+    "account_id": "account_id",
 }
 
+# Public routes keyed by something other than a workspace; each has its own tests.
+PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}"})
+
 # A valid body for each write route, so the call fails on tenancy, not validation.
+# A string "{param}" in a body is replaced by B's id for that parameter.
 EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     ("PATCH", "/v1/w/{wid}"): {"name": "Taken over", "timezone": "UTC"},
+    ("PATCH", "/v1/w/{wid}/social-accounts/{account_id}"): {"auto_hide_spam": True},
+    ("POST", "/v1/w/{wid}/dev/sandbox/inbound"): {
+        "account_id": "{account_id}",
+        "kind": "dm",
+        "text": "Injected into B",
+    },
+    ("POST", "/v1/w/{wid}/notifications/read"): {"all": True},
 }
 
 # Tables snapshotted for workspace B before and after every call.
-B_TABLES = ("workspaces", "workspace_members", "subscriptions", "ai_settings", "usage_counters")
+B_TABLES = (
+    "workspaces",
+    "workspace_members",
+    "subscriptions",
+    "ai_settings",
+    "usage_counters",
+    "social_accounts",
+    "notifications",
+)
 
 
 @dataclass(frozen=True)
 class Seed:
     workspace_id: str
+    account_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -53,13 +76,35 @@ class Call:
     body: dict[str, Any] | None
 
 
-def plan_calls(openapi: dict[str, Any], seed: Seed) -> tuple[list[Call], list[str]]:
-    """Return the calls to make and the routes that lack seed data."""
+def _fill(body: dict[str, Any] | None, seed: Seed) -> tuple[dict[str, Any] | None, bool]:
+    """Resolve "{param}" placeholders; report whether the body refers to another resource."""
+    if body is None:
+        return None, False
+    filled: dict[str, Any] = {}
+    refers = False
+    for key, value in body.items():
+        match = re.fullmatch(r"{(\w+)}", value) if isinstance(value, str) else None
+        if match:
+            filled[key] = getattr(seed, PARAM_TO_SEED[match.group(1)])
+            refers = True
+        else:
+            filled[key] = value
+    return filled, refers
+
+
+def plan_calls(
+    openapi: dict[str, Any], seed: Seed, *, nested_only: bool = False
+) -> tuple[list[Call], list[str]]:
+    """Return the calls to make and the routes that lack seed data.
+
+    ``nested_only`` keeps the routes that name a resource besides the workspace (in the path or
+    the body), for the pass that uses the caller's own workspace.
+    """
     calls: list[Call] = []
     uncovered: list[str] = []
     for path, operations in openapi.get("paths", {}).items():
         params = re.findall(r"{(\w+)}", path)
-        if not params:
+        if not params or path in PUBLIC_ROUTES:
             continue
         for method in METHODS:
             operation = operations.get(method)
@@ -72,8 +117,11 @@ def plan_calls(openapi: dict[str, Any], seed: Seed) -> tuple[list[Call], list[st
                 reason = f"params {missing}" if missing else "no example body"
                 uncovered.append(f"{method.upper()} {path} ({reason})")
                 continue
+            body, refers = _fill(EXAMPLE_BODIES.get(key), seed)
+            if nested_only and params == ["wid"] and not refers:
+                continue
             url = path.format(**{p: getattr(seed, PARAM_TO_SEED[p]) for p in params})
-            calls.append(Call(method.upper(), path, url, EXAMPLE_BODIES.get(key)))
+            calls.append(Call(method.upper(), path, url, body))
     return calls, uncovered
 
 
@@ -90,24 +138,35 @@ async def snapshot(engine: AsyncEngine, workspace_id: str) -> str:
     return json.dumps(parts, default=str, sort_keys=True)
 
 
+async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk) -> Seed:
+    """Workspace B with one of every resource, created through the API."""
+    owner_b, b = await sign_in(client, clerk, email="b@example.com", first_name="Ben")
+    wid = b["workspaces"][0]["id"]
+    account = await client.post(f"/v1/w/{wid}/dev/sandbox/accounts", headers=clerk.headers(owner_b))
+    assert account.status_code == 201, account.text
+    return Seed(workspace_id=wid, account_id=account.json()["id"])
+
+
 async def test_every_route_with_a_path_id_hides_other_workspaces(
     app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
 ) -> None:
-    member_a, _ = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
-    _, b = await sign_in(client, clerk, email="b@example.com", first_name="Ben")
-    seed = Seed(workspace_id=b["workspaces"][0]["id"])
+    member_a, a = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
+    seed = await seed_workspace_b(client, clerk)
+    own = Seed(workspace_id=a["workspaces"][0]["id"], account_id=seed.account_id)
 
     calls, uncovered = plan_calls(app.openapi(), seed)
     assert not uncovered, "Routes without isolation seed data:\n" + "\n".join(uncovered)
     assert calls, "no routes with path ids found; is the router mounted?"
+    nested, _ = plan_calls(app.openapi(), own, nested_only=True)
+    assert nested, "no nested routes found"
 
     headers = clerk.headers(member_a)
-    for call in calls:
+    for call in calls + nested:
         before = await snapshot(engine, seed.workspace_id)
         response = await client.request(call.method, call.url, json=call.body, headers=headers)
-        assert response.status_code == 404, f"{call.method} {call.path}: {response.text}"
+        assert response.status_code == 404, f"{call.method} {call.url}: {response.text}"
         assert response.json()["code"] == "not_found"
-        assert await snapshot(engine, seed.workspace_id) == before, f"{call.method} {call.path}"
+        assert await snapshot(engine, seed.workspace_id) == before, f"{call.method} {call.url}"
 
 
 def test_a_new_route_without_seed_data_fails_the_suite() -> None:
@@ -120,6 +179,7 @@ def test_a_new_route_without_seed_data_fails_the_suite() -> None:
     }
     calls, uncovered = plan_calls(openapi, Seed(workspace_id="b"))
     assert [c.url for c in calls] == ["/v1/w/b"]
+    assert plan_calls(openapi, Seed(workspace_id="b"), nested_only=True)[0] == []
     assert uncovered == [
         "GET /v1/w/{wid}/automations/{automation_id} (params ['automation_id'])",
         "POST /v1/w/{wid}/things (no example body)",

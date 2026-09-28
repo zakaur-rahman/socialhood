@@ -4,7 +4,11 @@ import { UserButton } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { useMe } from "@/lib/api/queries";
+import type { Route } from "next";
+
+import { useMe, useSocialAccounts } from "@/lib/api/queries";
+import type { SocialAccount } from "@/lib/api/types";
+import { reconnectBanner } from "@/lib/copy";
 import { useMediaQuery, useStoredFlag } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -21,6 +25,8 @@ import { pageTitle } from "./nav";
 export function AppShell({ children, banners = [] }: { children: ReactNode; banners?: Banner[] }) {
   const workspace = useCurrentWorkspace();
   const me = useMe();
+  const accounts = useSocialAccounts(workspace.id);
+  const allBanners = [...accountBanners(accounts.data ?? [], workspace.slug), ...banners];
   const pathname = usePathname();
   const wide = useMediaQuery("(min-width: 1024px)");
   const [collapsedPreference, setCollapsedPreference] = useStoredFlag("socialhood:sidebar-collapsed");
@@ -48,9 +54,21 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
         />
       </aside>
       <main className="min-w-0 flex-1">
-        <BannerSlot banners={banners} />
+        <BannerSlot banners={allBanners} />
         {children}
       </main>
     </div>
   );
+}
+
+/** F-05 / FR-CON-04: every account that needs reconnecting gets a banner until it is fixed. */
+export function accountBanners(accounts: SocialAccount[], slug: string): Banner[] {
+  return accounts
+    .filter((account) => account.status === "needs_reconnect")
+    .map((account) => ({
+      id: `reconnect:${account.id}`,
+      tone: "warning" as const,
+      message: reconnectBanner(account.username),
+      action: { label: "Reconnect", href: `/w/${slug}/settings/connections` as Route },
+    }));
 }

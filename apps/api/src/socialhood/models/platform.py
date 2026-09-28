@@ -65,3 +65,25 @@ class WebhookEvent(IdMixin, Base):
         CheckConstraint(_in("provider", WebhookProvider), name="provider"),
         CheckConstraint(_in("status", WebhookStatus), name="status"),
     )
+
+
+class DeletionStatus(StrEnum):
+    RECEIVED = "received"
+    PROCESSING = "processing"
+    COMPLETED = "completed"
+
+
+class DataDeletionRequest(IdMixin, Base):
+    """Meta data-deletion callbacks (F-16, FR-PRV-01). Not tenant-scoped: one request can touch
+    every workspace that holds data about that platform user."""
+
+    __tablename__ = "data_deletion_requests"
+
+    confirmation_code: Mapped[str] = mapped_column(Text, unique=True)
+    platform: Mapped[str] = mapped_column(Text)
+    platform_user_id: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text, server_default=text("'received'"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (CheckConstraint(_in("status", DeletionStatus), name="status"),)

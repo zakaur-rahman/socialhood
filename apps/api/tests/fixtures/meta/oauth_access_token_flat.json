@@ -1,0 +1,8 @@
+{
+  "access_token": "IGQVJshort-lived-token",
+  "user_id": 17841400000000001,
+  "permissions": [
+    "instagram_business_basic",
+    "instagram_business_manage_messages"
+  ]
+}

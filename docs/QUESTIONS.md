@@ -44,8 +44,8 @@ metrics join `Overview` in T9.1. Add them to §5.10?
 
 ## Q-008 · Checklist steps before their data exists
 FR-ACC-04 computes each step from data. Only the dismiss state has data in P1; the steps report
-not done until their tables arrive: connect_account (T2.2), create_automation (T4.1),
-add_knowledge (T5.x). "Choose an AI mode" needs a definition: proposed as "at least one
+not done until their tables arrive: create_automation (T4.1), add_knowledge (T5.x).
+(connect_account is computed from `social_accounts` since P2.) "Choose an AI mode" needs a definition: proposed as "at least one
 connected account whose `ai_mode` was changed from its default, or the AI settings saved once".
 
 ## Q-009 · Delete workspace in Settings
@@ -57,3 +57,24 @@ showing a button that does nothing.
 TR-AUTH-04 is in P1 and TR-WH-03 says webhooks are stored and processed by a job, but
 `webhook_events` was planned for T2.5. It is built in P1 (migration 0003) together with
 `process_webhook_event`, so the Clerk webhook follows the same path every provider will.
+
+## Q-011 · The ops CLI never retries platform writes
+TR-OPS-04 says the CLI never retries a send that ended `delivery_unknown`. A failed job row does
+not record why the send failed, so the CLI cannot tell that case apart. It refuses every task in
+`jobs/failed.py: PLATFORM_WRITE_TASKS` (sends, publishing, comment replies) and says so; users
+retry those from the app, after checking Instagram, as TR-JOB-05 intends. Each sending task must
+be added to that set when it is written (P3, P5, P6).
+
+## Q-012 · Copy for a failed code exchange
+The callback's `connect_failed` (Instagram refused the code or the token exchange) has no row in
+§4.7. The page uses `platform_unavailable`'s copy, "Instagram didn't respond. Try again.", with
+Try again. Add a row?
+
+## Q-013 · Settings sections and Connect WhatsApp before they exist
+Settings shows only the built sections (Connections, Workspace); AI, Notifications and Billing
+join with their phases. "Connect WhatsApp" is shown disabled ("coming soon") until F-04 is built.
+
+## Q-014 · "Delete data" on disconnect has nothing to delete yet
+FR-CON-06's choice is in the dialog and the API (`?delete_data=`), but conversations (P3) and
+comments (P6) do not exist yet, so the flag is only recorded in the log. The deletion joins the
+disconnect when those tables arrive.

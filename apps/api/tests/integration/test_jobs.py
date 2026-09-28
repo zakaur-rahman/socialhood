@@ -46,7 +46,9 @@ async def test_lane_and_delay_are_applied(queue: None) -> None:
 
 
 async def test_a_periodic_job_runs_once_with_two_workers(queue: None) -> None:
-    periodic_task = next(iter(app.periodic_registry.periodic_tasks.values()))
+    periodic_task = next(
+        p for p in app.periodic_registry.periodic_tasks.values() if p.task.name == "ping"
+    )
     tick = 1_790_000_040
     first, second = PeriodicDeferrer(app.periodic_registry), PeriodicDeferrer(app.periodic_registry)
 

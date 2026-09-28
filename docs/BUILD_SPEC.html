@@ -3377,6 +3377,7 @@ interface SocialAccount {
   ai_mode: "off" | "suggest" | "auto"; ai_analysis_enabled: boolean; auto_hide_spam: boolean;
   connected_at?: string; token_expires_at?: string;          // never the token itself
   capabilities: Capability[];                                // effective for this account (TR-PL-11)
+  sandbox: boolean;                                          // a TR-PL-07 development account
 }
 
 interface BillingState {

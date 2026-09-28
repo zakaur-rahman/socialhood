@@ -19,6 +19,8 @@ LANES = (INTERACTIVE, BULK)
 TASK_MODULES = [
     "socialhood.jobs.tasks.maintenance",
     "socialhood.jobs.tasks.webhooks",
+    "socialhood.jobs.tasks.accounts",
+    "socialhood.jobs.tasks.privacy",
 ]
 
 configure_logging(get_settings().log_level)

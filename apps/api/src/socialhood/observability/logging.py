@@ -78,6 +78,13 @@ def configure_logging(level: str = "INFO") -> None:
         cache_logger_on_first_use=True,
     )
     logging.basicConfig(level=numeric, format="%(message)s", stream=sys.stdout, force=True)
+    # httpx logs every request URL at INFO, and Meta's token endpoints take the app secret and
+    # tokens as query parameters. Platform calls are logged by endpoint name instead (TR-PL-05).
+    for noisy in QUIET_LOGGERS:
+        logging.getLogger(noisy).setLevel(max(numeric, logging.WARNING))
+
+
+QUIET_LOGGERS = ("httpx", "httpcore")
 
 
 def get_logger(name: str | None = None) -> Any:

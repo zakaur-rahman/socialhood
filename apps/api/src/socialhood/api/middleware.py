@@ -82,11 +82,16 @@ class RequestContextMiddleware:
 
 
 async def _send_internal_error(send: Send, request_id: str) -> None:
-    body = json.dumps(problem_body("internal", detail=None, request_id=request_id)).encode()
+    await _send_problem(send, "internal", request_id)
+
+
+async def _send_problem(send: Send, code: str, request_id: str | None) -> None:
+    payload = problem_body(code, detail=None, request_id=request_id)
+    body = json.dumps(payload).encode()
     await send(
         {
             "type": "http.response.start",
-            "status": 500,
+            "status": payload["status"],
             "headers": [
                 (b"content-type", b"application/problem+json"),
                 (b"content-length", str(len(body)).encode()),
@@ -94,3 +99,61 @@ async def _send_internal_error(send: Send, request_id: str) -> None:
         }
     )
     await send({"type": "http.response.body", "body": body})
+
+
+WEBHOOK_BODY_LIMIT = 5 * 1024 * 1024
+API_BODY_LIMIT = 1024 * 1024
+
+
+class _BodyTooLarge(Exception):
+    pass
+
+
+class BodyLimitMiddleware:
+    """SEC-09: 5 MB for webhook deliveries, 1 MB for everything else. Checks Content-Length up
+    front and counts streamed bytes, so a chunked body cannot get past the limit either."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        path: str = scope.get("path", "")
+        limit = WEBHOOK_BODY_LIMIT if path.startswith("/webhooks/") else API_BODY_LIMIT
+
+        for name, value in scope.get("headers", []):
+            if name == b"content-length":
+                try:
+                    declared = int(value)
+                except ValueError:
+                    declared = 0
+                if declared > limit:
+                    await _send_problem(send, "payload_too_large", current_request_id.get())
+                    return
+                break
+
+        received = 0
+        response_started = False
+
+        async def limited_receive() -> Message:
+            nonlocal received
+            message = await receive()
+            if message["type"] == "http.request":
+                received += len(message.get("body", b""))
+                if received > limit:
+                    raise _BodyTooLarge
+            return message
+
+        async def tracking_send(message: Message) -> None:
+            nonlocal response_started
+            if message["type"] == "http.response.start":
+                response_started = True
+            await send(message)
+
+        try:
+            await self.app(scope, limited_receive, tracking_send)
+        except _BodyTooLarge:
+            if not response_started:
+                await _send_problem(send, "payload_too_large", current_request_id.get())

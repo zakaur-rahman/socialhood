@@ -36,3 +36,30 @@ offline. On Next.js 16 the middleware file is `src/proxy.ts`, which TR-FE-01 alr
 
 ## C-006 · Sidebar still said "Publish" (resolved in the spec)
 §3.1's sidebar sentence listed "Publish" after the page was renamed Schedule. Corrected.
+
+## C-007 · `SocialAccount` gains `sandbox` (resolved in the spec)
+The Connections page must tell a TR-PL-07 sandbox account from a real one (its card is labelled,
+and it accepts injected events). `SocialAccount` in §5.10 now has `sandbox: boolean`. The SEC-02
+schema test forbids `token` in response properties except `token_expires_at`, which is a date.
+
+## C-008 · Webhook processing marked events failed, then retried (fixed in code)
+The first `process_event` set a failed event to `failed` and re-raised for the job to retry,
+which TR-JOB-04 forbids ("never mark failed and then re-raise"), and its rollback also undid the
+attempt count, so the 5-attempt cap never applied. Now: the claim is a row lock held for the
+processing transaction (`processing` is never committed, so a crashed worker leaves the row
+`received` for `sweep_stuck`); a failure with attempts left writes `received` with the attempt
+count and error and re-raises; the last attempt writes `failed` and returns. The stale
+`processing` sweep was removed because nothing can be left in that state.
+
+## C-009 · Plan limit versus reconnecting (fixed in code)
+F-03 checks `accounts_per_platform` when the connect starts. On a full plan that blocked
+reconnecting the very account that needed it (F-05). The start now refuses only when no account
+in the workspace needs reconnecting or has an error; the callback decides exactly once it knows
+which account came back: a reconnect always passes, a new account over the limit redirects with
+`?error=quota_exceeded&limit=N`, and the page shows "Your plan includes N Instagram accounts."
+
+## C-010 · httpx logged token URLs (fixed in code)
+httpx logs each request URL at INFO. Instagram's token endpoints take the app secret and tokens
+as query parameters, so those values reached the logs (SEC-06). `configure_logging` now holds
+the `httpx` and `httpcore` loggers at WARNING; platform calls are logged by endpoint name
+(TR-PL-05). A unit test pins it.

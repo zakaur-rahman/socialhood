@@ -19,6 +19,8 @@ dependencies = [
     "httpx>=0.28",
     "pyjwt[crypto]>=2.10",
     "svix>=1.40",
+    "cryptography>=44",
+    "python-multipart>=0.0.20",
 ]
 
 [dependency-groups]
