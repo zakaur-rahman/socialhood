@@ -62,6 +62,134 @@ export interface paths {
         patch: operations["update_workspace"];
         trace?: never;
     };
+    "/v1/w/{wid}/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversations */
+        get: operations["list_conversations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Inbox Counts */
+        get: operations["get_inbox_counts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Conversation */
+        get: operations["get_conversation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Conversation
+         * @description Archive or unarchive; set or clear the conversation's AI mode override.
+         */
+        patch: operations["update_conversation"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Messages
+         * @description Newest first; next_cursor loads older messages (upward infinite scroll).
+         */
+        get: operations["list_messages"];
+        put?: never;
+        /** Send Message */
+        post: operations["send_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Conversation Read */
+        post: operations["mark_conversation_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/scheduled-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Conversation Scheduled Messages */
+        get: operations["list_conversation_scheduled_messages"];
+        put?: never;
+        /** Create Scheduled Message */
+        post: operations["create_scheduled_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/unread": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Conversation Unread */
+        post: operations["mark_conversation_unread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/dev/sandbox/accounts": {
         parameters: {
             query?: never;
@@ -96,6 +224,74 @@ export interface paths {
          * @description Inject a fake DM or comment. It goes through the same intake as a real webhook.
          */
         post: operations["sandbox_inbound"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream Events */
+        get: operations["stream_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/media-assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Register Media Asset */
+        post: operations["register_media_asset"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/media-assets/upload-signature": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Upload Signature */
+        post: operations["create_upload_signature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/messages/{message_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Retry Message */
+        post: operations["retry_message"];
         delete?: never;
         options?: never;
         head?: never;
@@ -153,6 +349,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/scheduled-messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Scheduled Messages
+         * @description The Scheduled tab: pending first by send time, then recent sent, failed and expired.
+         */
+        get: operations["list_scheduled_messages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-messages/{scheduled_message_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Cancel Scheduled Message */
+        delete: operations["cancel_scheduled_message"];
+        options?: never;
+        head?: never;
+        /** Update Scheduled Message */
+        patch: operations["update_scheduled_message"];
+        trace?: never;
+    };
     "/v1/w/{wid}/social-accounts": {
         parameters: {
             query?: never;
@@ -181,6 +415,23 @@ export interface paths {
         put?: never;
         /** Start Instagram Connect */
         post: operations["start_instagram_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/whatsapp/embedded-signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Complete Whatsapp Signup */
+        post: operations["complete_whatsapp_signup"];
         delete?: never;
         options?: never;
         head?: never;
@@ -225,6 +476,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/social-accounts/{account_id}/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Whatsapp Templates
+         * @description Approved message templates for the template picker (sends outside the 24 h window).
+         */
+        get: operations["list_whatsapp_templates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces": {
         parameters: {
             query?: never;
@@ -246,6 +517,56 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** Actor */
+        Actor: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name?: string | null;
+        };
+        /** Attachment */
+        Attachment: {
+            /** Duration S */
+            duration_s?: number | null;
+            /** Expired */
+            expired?: boolean | null;
+            /** Filename */
+            filename?: string | null;
+            /** Height */
+            height?: number | null;
+            /** Id */
+            id: string;
+            /** Mime Type */
+            mime_type?: string | null;
+            /** Permalink */
+            permalink?: string | null;
+            /** Size Bytes */
+            size_bytes?: number | null;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "image" | "video" | "audio" | "file" | "sticker" | "story" | "share";
+            /** Url */
+            url: string;
+            /** Width */
+            width?: number | null;
+        };
+        /** AutomationRef */
+        AutomationRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /** Checklist */
         Checklist: {
             /** Completed */
@@ -270,6 +591,202 @@ export interface components {
             /** Authorize Url */
             authorize_url: string;
         };
+        /** ContactDetail */
+        ContactDetail: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Platform User Id */
+            platform_user_id: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /** Username */
+            username?: string | null;
+        };
+        /** ContactSummary */
+        ContactSummary: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /** Username */
+            username?: string | null;
+        };
+        /** Conversation */
+        Conversation: {
+            ai: components["schemas"]["ConversationAi"];
+            /** Awaiting Reply */
+            awaiting_reply: boolean;
+            contact: components["schemas"]["ContactDetail"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Message At */
+            last_message_at?: string | null;
+            /** Last Message Direction */
+            last_message_direction?: ("inbound" | "outbound" | "system") | null;
+            /** Last Message Kind */
+            last_message_kind?: ("text" | "image" | "video" | "audio" | "file" | "sticker" | "story_mention" | "story_reply" | "share" | "template" | "location" | "unsupported" | "system") | null;
+            /** Last Message Preview */
+            last_message_preview?: string | null;
+            /** Last Message Source */
+            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "native_app" | "system") | null;
+            latest_analysis?: components["schemas"]["MessageAnalysis"] | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /** Needs Human */
+            needs_human: boolean;
+            /** Needs Human Reason */
+            needs_human_reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | null;
+            pending_suggestion?: components["schemas"]["Suggestion"] | null;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
+            reply_window: components["schemas"]["ReplyWindow"];
+            /** Reply Window Closes At */
+            reply_window_closes_at?: string | null;
+            /** Scheduled Count */
+            scheduled_count: number;
+            /** Signal */
+            signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            social_account: components["schemas"]["ConversationAccount"];
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "archived";
+            summary?: components["schemas"]["ConversationSummary"] | null;
+            /** Unread Count */
+            unread_count: number;
+        };
+        /** ConversationAccount */
+        ConversationAccount: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Status */
+            status: string;
+            /** Username */
+            username?: string | null;
+        };
+        /** ConversationAi */
+        ConversationAi: {
+            /**
+             * Effective Mode
+             * @enum {string}
+             */
+            effective_mode: "off" | "suggest" | "auto";
+            /** Override */
+            override?: ("off" | "suggest" | "auto") | null;
+            /** Paused Until */
+            paused_until?: string | null;
+        };
+        /** ConversationList */
+        ConversationList: {
+            /** Items */
+            items: components["schemas"]["ConversationListItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** ConversationListItem */
+        ConversationListItem: {
+            /** Awaiting Reply */
+            awaiting_reply: boolean;
+            contact: components["schemas"]["ContactSummary"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Message At */
+            last_message_at?: string | null;
+            /** Last Message Direction */
+            last_message_direction?: ("inbound" | "outbound" | "system") | null;
+            /** Last Message Kind */
+            last_message_kind?: ("text" | "image" | "video" | "audio" | "file" | "sticker" | "story_mention" | "story_reply" | "share" | "template" | "location" | "unsupported" | "system") | null;
+            /** Last Message Preview */
+            last_message_preview?: string | null;
+            /** Last Message Source */
+            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "native_app" | "system") | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /** Needs Human */
+            needs_human: boolean;
+            /** Needs Human Reason */
+            needs_human_reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | null;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
+            /** Reply Window Closes At */
+            reply_window_closes_at?: string | null;
+            /** Signal */
+            signal?: ("needs_you" | "complaint" | "closing_soon" | "lead" | "negative") | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "archived";
+            /** Unread Count */
+            unread_count: number;
+        };
+        /** ConversationPatch */
+        ConversationPatch: {
+            /** Ai Mode Override */
+            ai_mode_override?: ("off" | "suggest" | "auto") | null;
+            /**
+             * Clear Ai Mode Override
+             * @default false
+             */
+            clear_ai_mode_override: boolean;
+            /** Status */
+            status?: ("open" | "archived") | null;
+        };
+        /** ConversationSummary */
+        ConversationSummary: {
+            /** Next Step */
+            next_step?: string | null;
+            /** Text */
+            text: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** DataDeletionStatus */
         DataDeletionStatus: {
             /** Completed At */
@@ -286,6 +803,37 @@ export interface components {
              * @enum {string}
              */
             status: "received" | "processing" | "completed";
+        };
+        /**
+         * EmbeddedSignup
+         * @description What the page receives from Meta's Embedded Signup v4 (FB.login code + session info).
+         */
+        EmbeddedSignup: {
+            /** Code */
+            code: string;
+            /** Phone Number Id */
+            phone_number_id: string;
+            /** Waba Id */
+            waba_id: string;
+        };
+        /** ErrorInfo */
+        ErrorInfo: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * InboxCounts
+         * @description The Inbox nav badge (FR-INB-04) and view chips.
+         */
+        InboxCounts: {
+            /** Needs Reply */
+            needs_reply: number;
+            /** Needs You */
+            needs_you: number;
+            /** Unread */
+            unread: number;
         };
         /** MarkRead */
         MarkRead: {
@@ -314,6 +862,168 @@ export interface components {
             name?: string | null;
             /** Workspaces */
             workspaces: components["schemas"]["WorkspaceSummary"][];
+        };
+        /** MediaAssetCreate */
+        MediaAssetCreate: {
+            /** Public Id */
+            public_id: string;
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "image" | "video" | "raw";
+        };
+        /** MediaAssetOut */
+        MediaAssetOut: {
+            /** Bytes */
+            bytes: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duration S */
+            duration_s?: number | null;
+            /** Format */
+            format?: string | null;
+            /** Height */
+            height?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Original Filename */
+            original_filename?: string | null;
+            /** Public Id */
+            public_id: string;
+            /** Purpose */
+            purpose: string;
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "image" | "video" | "raw";
+            /** Secure Url */
+            secure_url?: string | null;
+            /** Width */
+            width?: number | null;
+        };
+        /** Message */
+        Message: {
+            /** Attachments */
+            attachments: components["schemas"]["Attachment"][];
+            automation?: components["schemas"]["AutomationRef"] | null;
+            /** Client Id */
+            client_id?: string | null;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /** Delivered At */
+            delivered_at?: string | null;
+            /**
+             * Direction
+             * @enum {string}
+             */
+            direction: "inbound" | "outbound" | "system";
+            error?: components["schemas"]["ErrorInfo"] | null;
+            /** Human Agent Tag */
+            human_agent_tag: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "text" | "image" | "video" | "audio" | "file" | "sticker" | "story_mention" | "story_reply" | "share" | "template" | "location" | "unsupported" | "system";
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Reactions */
+            reactions: components["schemas"]["Reaction"][];
+            /** Read At */
+            read_at?: string | null;
+            /** Sent At */
+            sent_at?: string | null;
+            sent_by?: components["schemas"]["Actor"] | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "customer" | "human" | "ai_auto" | "automation" | "native_app" | "system";
+            /** Status */
+            status?: ("received" | "queued" | "sending" | "sent" | "delivered" | "read" | "failed") | null;
+            /** Suggestion Id */
+            suggestion_id?: string | null;
+            template?: components["schemas"]["TemplateInfo"] | null;
+            /** Text */
+            text?: string | null;
+        };
+        /** MessageAnalysis */
+        MessageAnalysis: {
+            /** Corrected */
+            corrected: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Intent
+             * @enum {string}
+             */
+            intent: "pricing" | "product_inquiry" | "purchase" | "order_status" | "shipping" | "support" | "complaint" | "refund" | "feedback" | "collaboration" | "greeting" | "spam" | "other";
+            /** Language */
+            language: string;
+            /** Lead Score */
+            lead_score: number;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /** Needs Human */
+            needs_human: boolean;
+            /** Needs Human Reason */
+            needs_human_reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | null;
+            /** Needs Reply */
+            needs_reply: boolean;
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "critical" | "high" | "medium" | "low";
+            /**
+             * Sentiment
+             * @enum {string}
+             */
+            sentiment: "positive" | "neutral" | "negative";
+            /** Sentiment Score */
+            sentiment_score: number;
+            /** Topics */
+            topics: string[];
+        };
+        /**
+         * MessageList
+         * @description Newest first; ``next_cursor`` fetches older messages.
+         */
+        MessageList: {
+            /** Items */
+            items: components["schemas"]["Message"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
         };
         /** NotificationList */
         NotificationList: {
@@ -383,6 +1093,31 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** Reaction */
+        Reaction: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * By
+             * @enum {string}
+             */
+            by: "customer" | "business";
+            /** Emoji */
+            emoji: string;
+        };
+        /** ReplyWindow */
+        ReplyWindow: {
+            /** Closes At */
+            closes_at?: string | null;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "human_agent" | "template_only" | "closed";
+        };
         /** SandboxInbound */
         SandboxInbound: {
             /**
@@ -406,6 +1141,93 @@ export interface components {
         SandboxInboundResult: {
             /** Stored */
             stored: number;
+        };
+        /** ScheduledContact */
+        ScheduledContact: {
+            /** Display Name */
+            display_name?: string | null;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /** Username */
+            username?: string | null;
+        };
+        /** ScheduledMessage */
+        ScheduledMessage: {
+            /** Attachment Asset Ids */
+            attachment_asset_ids: string[];
+            contact: components["schemas"]["ScheduledContact"];
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            error?: components["schemas"]["ErrorInfo"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
+            /**
+             * Send At
+             * Format: date-time
+             */
+            send_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "sending" | "sent" | "failed" | "canceled" | "expired";
+            /** Text */
+            text: string;
+        };
+        /** ScheduledMessageCreate */
+        ScheduledMessageCreate: {
+            /** Attachment Asset Ids */
+            attachment_asset_ids?: string[];
+            /**
+             * Send At
+             * Format: date-time
+             */
+            send_at: string;
+            /** Text */
+            text: string;
+        };
+        /** ScheduledMessageList */
+        ScheduledMessageList: {
+            /** Items */
+            items: components["schemas"]["ScheduledMessage"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** ScheduledMessagePatch */
+        ScheduledMessagePatch: {
+            /** Send At */
+            send_at?: string | null;
+            /** Text */
+            text?: string | null;
+        };
+        /**
+         * SendMessage
+         * @description POST …/conversations/{id}/messages with an Idempotency-Key header (TR-API-05).
+         */
+        SendMessage: {
+            /** Attachment Asset Ids */
+            attachment_asset_ids?: string[];
+            /**
+             * Client Id
+             * Format: uuid
+             */
+            client_id: string;
+            /** Suggestion Id */
+            suggestion_id?: string | null;
+            template?: components["schemas"]["TemplateSend"] | null;
+            /** Text */
+            text?: string | null;
         };
         /** SocialAccountList */
         SocialAccountList: {
@@ -475,6 +1297,125 @@ export interface components {
             auto_hide_spam?: boolean | null;
             /** Display Name */
             display_name?: string | null;
+        };
+        /** Suggestion */
+        Suggestion: {
+            /** Can Answer */
+            can_answer: boolean;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Low Confidence */
+            low_confidence: boolean;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /** Missing Info */
+            missing_info?: string | null;
+            /** Regenerations Left */
+            regenerations_left: number;
+            /** Reply Text */
+            reply_text?: string | null;
+            /** Sources */
+            sources: components["schemas"]["SuggestionSource"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "sent" | "edited_sent" | "dismissed" | "superseded" | "expired" | "failed";
+        };
+        /** SuggestionSource */
+        SuggestionSource: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+        };
+        /** TemplateInfo */
+        TemplateInfo: {
+            /** Language */
+            language: string;
+            /** Name */
+            name: string;
+            /** Params */
+            params: string[];
+        };
+        /** TemplateSend */
+        TemplateSend: {
+            /** Language */
+            language: string;
+            /** Name */
+            name: string;
+            /** Params */
+            params?: string[];
+        };
+        /** UploadSignature */
+        UploadSignature: {
+            /** Api Key */
+            api_key: string;
+            /** Cloud Name */
+            cloud_name: string;
+            /** Folder */
+            folder: string;
+            /** Signature */
+            signature: string;
+            /** Timestamp */
+            timestamp: number;
+            /** Upload Url */
+            upload_url: string;
+        };
+        /** UploadSignatureRequest */
+        UploadSignatureRequest: {
+            /**
+             * Purpose
+             * @enum {string}
+             */
+            purpose: "post" | "message" | "knowledge";
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "image" | "video" | "raw";
+        };
+        /** WhatsAppTemplate */
+        WhatsAppTemplate: {
+            /** Body */
+            body: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "marketing" | "utility" | "authentication";
+            /** Language */
+            language: string;
+            /** Name */
+            name: string;
+            /** Param Count */
+            param_count: number;
+            /** Status */
+            status: string;
+        };
+        /** WhatsAppTemplateList */
+        WhatsAppTemplateList: {
+            /** Items */
+            items: components["schemas"]["WhatsAppTemplate"][];
         };
         /** WorkspaceList */
         WorkspaceList: {
@@ -724,6 +1665,434 @@ export interface operations {
             };
         };
     };
+    list_conversations: {
+        parameters: {
+            query?: {
+                view?: "all" | "unread" | "needs_reply" | "leads" | "ai_handled" | "archived";
+                platform?: ("instagram" | "whatsapp") | null;
+                account_id?: string | null;
+                q?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConversationList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_inbox_counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxCounts"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_conversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_conversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Conversation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_messages: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    send_message: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SendMessage"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    mark_conversation_read: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_conversation_scheduled_messages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledMessageList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_scheduled_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduledMessageCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledMessage"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    mark_conversation_unread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     create_sandbox_account: {
         parameters: {
             query?: never;
@@ -786,6 +2155,177 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SandboxInboundResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    stream_events: {
+        parameters: {
+            query?: never;
+            header?: {
+                "Last-Event-ID"?: string | null;
+            };
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Event stream */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    register_media_asset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaAssetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAssetOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_upload_signature: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UploadSignatureRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UploadSignature"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    retry_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
                 };
             };
             /** @description Validation error */
@@ -935,6 +2475,133 @@ export interface operations {
             };
         };
     };
+    list_scheduled_messages: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledMessageList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_scheduled_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_message_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_scheduled_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_message_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduledMessagePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledMessage"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_social_accounts: {
         parameters: {
             query?: never;
@@ -993,6 +2660,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_whatsapp_signup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmbeddedSignup"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountOut"];
                 };
             };
             /** @description Validation error */
@@ -1120,6 +2831,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_whatsapp_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppTemplateList"];
                 };
             };
             /** @description Validation error */

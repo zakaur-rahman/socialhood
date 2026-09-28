@@ -1,0 +1,130 @@
+"""Real-time events (TR-RT-01, TR-RT-03): published after commit to a per-workspace Redis Stream.
+
+Services queue events on the session while they work and call ``commit_and_publish`` instead of
+``session.commit``: nothing is published for a transaction that rolls back, and a client never
+hears about a row it cannot read yet. Publishing never fails the caller; a lost event is healed
+by the client's resync (TR-RT-02).
+"""
+
+from __future__ import annotations
+
+import json
+import uuid
+from typing import Any, Literal
+
+from redis.asyncio import Redis
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from socialhood.models.inbox import Contact, Conversation, Message
+from socialhood.observability.logging import get_logger
+from socialhood.services.inbox_views import list_item, message_out
+
+log = get_logger(__name__)
+
+STREAM_MAXLEN = 10_000
+MAX_EVENT_BYTES = 64 * 1024
+_QUEUE_KEY = "realtime_events"
+
+EventType = Literal[
+    "message.created",
+    "message.updated",
+    "conversation.updated",
+    "analysis.created",
+    "suggestion.created",
+    "suggestion.updated",
+    "scheduled_message.updated",
+    "scheduled_post.updated",
+    "comment.created",
+    "comment.updated",
+    "social_account.updated",
+    "usage.updated",
+    "notification.created",
+    "resync",
+]
+
+
+def stream_key(workspace_id: uuid.UUID) -> str:
+    return f"events:{workspace_id}"
+
+
+async def publish(
+    redis: Redis, workspace_id: uuid.UUID, event_type: EventType, payload: dict[str, Any]
+) -> str | None:
+    """Append one event; returns its stream id, or None if it was not published."""
+    data = json.dumps(payload, separators=(",", ":"), default=str)
+    if len(data.encode()) > MAX_EVENT_BYTES:
+        log.warning("realtime_event_too_large", event_type=event_type, bytes=len(data))
+        return None
+    try:
+        event_id = await redis.xadd(
+            stream_key(workspace_id),
+            {"type": event_type, "data": data},
+            maxlen=STREAM_MAXLEN,
+            approximate=True,
+        )
+    except Exception:
+        log.warning("realtime_publish_failed", event_type=event_type)
+        return None
+    return event_id.decode() if isinstance(event_id, bytes) else str(event_id)
+
+
+def queue(
+    session: AsyncSession,
+    workspace_id: uuid.UUID,
+    event_type: EventType,
+    payload: dict[str, Any],
+) -> None:
+    """Queue an event to publish once this session's transaction commits."""
+    session.info.setdefault(_QUEUE_KEY, []).append((workspace_id, event_type, payload))
+
+
+def discard(session: AsyncSession) -> None:
+    session.info.pop(_QUEUE_KEY, None)
+
+
+async def commit_and_publish(session: AsyncSession, redis: Redis) -> None:
+    try:
+        await session.commit()
+    except Exception:
+        discard(session)
+        raise
+    pending = session.info.pop(_QUEUE_KEY, [])
+    for workspace_id, event_type, payload in pending:
+        await publish(redis, workspace_id, event_type, payload)
+
+
+# ---- builders for the inbox events every producer emits
+
+
+def queue_message(
+    session: AsyncSession,
+    msg: Message,
+    *,
+    created: bool,
+    sent_by_name: str | None = None,
+) -> None:
+    payload = {
+        "conversation_id": str(msg.conversation_id),
+        "message": message_out(msg, sent_by_name=sent_by_name).model_dump(mode="json"),
+    }
+    queue(session, msg.workspace_id, "message.created" if created else "message.updated", payload)
+
+
+async def queue_conversation(
+    session: AsyncSession,
+    conv: Conversation,
+    *,
+    now: Any,
+    human_agent: bool = False,
+    contact: Contact | None = None,
+) -> None:
+    contact = contact or await session.get(Contact, conv.contact_id)
+    if contact is None:
+        return
+    item = list_item(conv, contact, now=now, human_agent=human_agent)
+    queue(
+        session,
+        conv.workspace_id,
+        "conversation.updated",
+        {"conversation": item.model_dump(mode="json")},
+    )

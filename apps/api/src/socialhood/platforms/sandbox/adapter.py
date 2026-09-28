@@ -8,9 +8,18 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from socialhood.models.connections import SocialAccount
-from socialhood.platforms.base import ContactProfile, TokenGrant
+from socialhood.platforms.base import (
+    ContactProfile,
+    MediaDownload,
+    OutboundMessage,
+    PlatformMedia,
+    PlatformThread,
+    SendResult,
+    TokenGrant,
+)
 from socialhood.platforms.capabilities import Capability
 from socialhood.platforms.deps import PlatformDeps
+from socialhood.platforms.events import InboundMediaRef
 from socialhood.platforms.instagram.adapter import CAPABILITIES
 
 SANDBOX_PREFIX = "sandbox_"
@@ -42,3 +51,22 @@ class SandboxAdapter:
         return ContactProfile(
             name=f"Sandbox customer {short}", username=f"customer_{short}", profile_picture_url=None
         )
+
+    # ---- P3 (filled by T3.6/T3.7 for sending, T3.3/T3.14 for media, sync and backfill)
+
+    async def send_message(
+        self, acct: SocialAccount, recipient_ref: str, message: OutboundMessage
+    ) -> SendResult:
+        raise NotImplementedError("T3.6")
+
+    async def mark_read(self, acct: SocialAccount, recipient_ref: str) -> None:
+        raise NotImplementedError("T3.6")
+
+    async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
+        raise NotImplementedError("T3.3")
+
+    async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
+        raise NotImplementedError("T3.14")
+
+    async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
+        raise NotImplementedError("T3.14")

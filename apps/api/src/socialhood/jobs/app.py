@@ -21,6 +21,11 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.webhooks",
     "socialhood.jobs.tasks.accounts",
     "socialhood.jobs.tasks.privacy",
+    "socialhood.jobs.tasks.ingest",
+    "socialhood.jobs.tasks.sync",
+    "socialhood.jobs.tasks.send",
+    "socialhood.jobs.tasks.scheduled",
+    "socialhood.jobs.tasks.whatsapp",
 ]
 
 configure_logging(get_settings().log_level)

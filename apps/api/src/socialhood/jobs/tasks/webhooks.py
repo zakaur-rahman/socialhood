@@ -17,4 +17,5 @@ from socialhood.services.webhook_processing import process_event
     retry=BackoffRetry(max_attempts=MAX_ATTEMPTS),
 )
 async def process_webhook_event(webhook_event_id: str) -> None:
-    await process_event(runtime().sessionmaker, uuid.UUID(webhook_event_id))
+    rt = runtime()
+    await process_event(rt.sessionmaker, uuid.UUID(webhook_event_id), rt.redis)

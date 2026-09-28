@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any
 
 import httpx
@@ -25,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.support.api import Clerk, sign_in
+from tests.support.inbox import make_asset, make_scheduled, make_thread
 
 METHODS = ("get", "post", "put", "patch", "delete")
 
@@ -32,6 +33,10 @@ METHODS = ("get", "post", "put", "patch", "delete")
 PARAM_TO_SEED: dict[str, str] = {
     "wid": "workspace_id",
     "account_id": "account_id",
+    "conversation_id": "conversation_id",
+    "message_id": "message_id",
+    "scheduled_message_id": "scheduled_message_id",
+    "asset_id": "asset_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -48,6 +53,36 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "text": "Injected into B",
     },
     ("POST", "/v1/w/{wid}/notifications/read"): {"all": True},
+    ("PATCH", "/v1/w/{wid}/conversations/{conversation_id}"): {"status": "archived"},
+    ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
+        "client_id": "5f0c3c1e-2d7a-4b43-9d35-9d7f0b0c2a11",
+        "text": "Sent into B",
+    },
+    ("POST", "/v1/w/{wid}/conversations/{conversation_id}/scheduled-messages"): {
+        "text": "Scheduled into B",
+        "send_at": "2030-01-01T09:00:00Z",
+    },
+    ("PATCH", "/v1/w/{wid}/scheduled-messages/{scheduled_message_id}"): {"text": "Changed"},
+    ("POST", "/v1/w/{wid}/media-assets/upload-signature"): {
+        "resource_type": "image",
+        "purpose": "message",
+    },
+    ("POST", "/v1/w/{wid}/media-assets"): {
+        "public_id": "ws/not-yours/message/x",
+        "resource_type": "image",
+    },
+    ("POST", "/v1/w/{wid}/social-accounts/whatsapp/embedded-signup"): {
+        "code": "c",
+        "waba_id": "1",
+        "phone_number_id": "2",
+    },
+}
+
+# Headers a route requires, so the call fails on tenancy, not validation.
+EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
+    ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
+        "Idempotency-Key": "isolation-test-key"
+    },
 }
 
 # Tables snapshotted for workspace B before and after every call.
@@ -59,6 +94,11 @@ B_TABLES = (
     "usage_counters",
     "social_accounts",
     "notifications",
+    "contacts",
+    "conversations",
+    "messages",
+    "scheduled_messages",
+    "media_assets",
 )
 
 
@@ -66,6 +106,10 @@ B_TABLES = (
 class Seed:
     workspace_id: str
     account_id: str = ""
+    conversation_id: str = ""
+    message_id: str = ""
+    scheduled_message_id: str = ""
+    asset_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -74,6 +118,7 @@ class Call:
     path: str
     url: str
     body: dict[str, Any] | None
+    headers: dict[str, str]
 
 
 def _fill(body: dict[str, Any] | None, seed: Seed) -> tuple[dict[str, Any] | None, bool]:
@@ -108,8 +153,8 @@ def plan_calls(
             continue
         for method in METHODS:
             operation = operations.get(method)
-            if operation is None:
-                continue
+            if operation is None or "x-pending" in operation:
+                continue  # stubs of routes not built yet (see the route module)
             key = (method.upper(), path)
             missing = [p for p in params if p not in PARAM_TO_SEED]
             needs_body = "requestBody" in operation and key not in EXAMPLE_BODIES
@@ -121,7 +166,7 @@ def plan_calls(
             if nested_only and params == ["wid"] and not refers:
                 continue
             url = path.format(**{p: getattr(seed, PARAM_TO_SEED[p]) for p in params})
-            calls.append(Call(method.upper(), path, url, body))
+            calls.append(Call(method.upper(), path, url, body, EXAMPLE_HEADERS.get(key, {})))
     return calls, uncovered
 
 
@@ -138,21 +183,34 @@ async def snapshot(engine: AsyncEngine, workspace_id: str) -> str:
     return json.dumps(parts, default=str, sort_keys=True)
 
 
-async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk) -> Seed:
+async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Seed:
     """Workspace B with one of every resource, created through the API."""
     owner_b, b = await sign_in(client, clerk, email="b@example.com", first_name="Ben")
     wid = b["workspaces"][0]["id"]
     account = await client.post(f"/v1/w/{wid}/dev/sandbox/accounts", headers=clerk.headers(owner_b))
     assert account.status_code == 201, account.text
-    return Seed(workspace_id=wid, account_id=account.json()["id"])
+    account_id = account.json()["id"]
+    thread = await make_thread(engine, workspace_id=wid, account_id=account_id)
+    scheduled = await make_scheduled(
+        engine, workspace_id=wid, conversation_id=thread.conversation_id
+    )
+    asset = await make_asset(engine, workspace_id=wid)
+    return Seed(
+        workspace_id=wid,
+        account_id=account_id,
+        conversation_id=str(thread.conversation_id),
+        message_id=str(thread.message_ids[0]),
+        scheduled_message_id=str(scheduled),
+        asset_id=str(asset),
+    )
 
 
 async def test_every_route_with_a_path_id_hides_other_workspaces(
     app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
 ) -> None:
     member_a, a = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
-    seed = await seed_workspace_b(client, clerk)
-    own = Seed(workspace_id=a["workspaces"][0]["id"], account_id=seed.account_id)
+    seed = await seed_workspace_b(client, clerk, engine)
+    own = replace(seed, workspace_id=a["workspaces"][0]["id"])
 
     calls, uncovered = plan_calls(app.openapi(), seed)
     assert not uncovered, "Routes without isolation seed data:\n" + "\n".join(uncovered)
@@ -163,7 +221,9 @@ async def test_every_route_with_a_path_id_hides_other_workspaces(
     headers = clerk.headers(member_a)
     for call in calls + nested:
         before = await snapshot(engine, seed.workspace_id)
-        response = await client.request(call.method, call.url, json=call.body, headers=headers)
+        response = await client.request(
+            call.method, call.url, json=call.body, headers={**headers, **call.headers}
+        )
         assert response.status_code == 404, f"{call.method} {call.url}: {response.text}"
         assert response.json()["code"] == "not_found"
         assert await snapshot(engine, seed.workspace_id) == before, f"{call.method} {call.url}"

@@ -7,7 +7,20 @@ full template.
 
 from fastapi import APIRouter
 
-from socialhood.api.v1 import accounts, me, notifications, oauth, privacy, workspaces
+from socialhood.api.v1 import (
+    accounts,
+    conversations,
+    events,
+    me,
+    media,
+    messages,
+    notifications,
+    oauth,
+    privacy,
+    scheduled,
+    whatsapp,
+    workspaces,
+)
 
 ROUTERS: tuple[APIRouter, ...] = (
     me.router,
@@ -16,4 +29,10 @@ ROUTERS: tuple[APIRouter, ...] = (
     notifications.router,
     oauth.router,
     privacy.router,
+    conversations.router,
+    messages.router,
+    media.router,
+    scheduled.router,
+    events.router,
+    whatsapp.router,
 )

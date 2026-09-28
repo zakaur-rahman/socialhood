@@ -8,30 +8,20 @@ handler, and record the outcome: processed, ignored (with the reason), or failed
 from __future__ import annotations
 
 import uuid
-from collections.abc import Awaitable, Callable
-from dataclasses import dataclass
-from typing import Literal
 
+from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from socialhood.db.tenancy import workspace_scope
 from socialhood.models.platform import WebhookEvent, WebhookProvider, WebhookStatus
 from socialhood.observability.logging import get_logger
+from socialhood.realtime import events
 from socialhood.repositories import webhook_events
 from socialhood.services import clerk_sync
-from socialhood.webhooks.routing import resolve_account
+from socialhood.services.webhook_handlers import Handler, Outcome, instagram, whatsapp
+
+__all__ = ["HANDLERS", "Outcome", "process_event"]
 
 log = get_logger(__name__)
-
-
-@dataclass(frozen=True)
-class Outcome:
-    status: Literal["processed", "ignored"]
-    reason: str | None = None
-    workspace_id: uuid.UUID | None = None
-
-
-Handler = Callable[[AsyncSession, WebhookEvent], Awaitable[Outcome]]
 
 
 async def _clerk(session: AsyncSession, event: WebhookEvent) -> Outcome:
@@ -39,28 +29,17 @@ async def _clerk(session: AsyncSession, event: WebhookEvent) -> Outcome:
     return Outcome(result, None if result == "processed" else "not a user change we act on")
 
 
-async def _instagram(session: AsyncSession, event: WebhookEvent) -> Outcome:
-    if event.event_type == "invalid":
-        return Outcome("ignored", "unreadable payload")
-    routed = await resolve_account(session, "instagram", event.platform_account_id or "")
-    if routed is None:
-        return Outcome("ignored", "unknown or disconnected account")
-    with workspace_scope(routed.workspace_id):
-        # Messages, reactions and reads become inbox data in P3 (services/ingest.py, T3.2);
-        # comments in P6. Until then routed events are kept and can be replayed (TR-OPS-04).
-        return Outcome(
-            "ignored", f"{event.event_type} handling arrives with the inbox", routed.workspace_id
-        )
-
-
 HANDLERS: dict[str, Handler] = {
     WebhookProvider.CLERK: _clerk,
-    WebhookProvider.INSTAGRAM: _instagram,
+    WebhookProvider.INSTAGRAM: instagram.handle,
+    WebhookProvider.WHATSAPP: whatsapp.handle,
 }
 
 
 async def process_event(
-    sessionmaker: async_sessionmaker[AsyncSession], event_id: uuid.UUID
+    sessionmaker: async_sessionmaker[AsyncSession],
+    event_id: uuid.UUID,
+    redis: Redis | None = None,
 ) -> WebhookStatus | None:
     """Return the final status, or None when there was nothing to do.
 
@@ -84,6 +63,7 @@ async def process_event(
             outcome = await handler(session, event)
         except Exception as error:
             await session.rollback()
+            events.discard(session)
             final = attempt >= webhook_events.MAX_ATTEMPTS
             log.exception(
                 "webhook_event_failed",
@@ -113,5 +93,10 @@ async def process_event(
             workspace_id=outcome.workspace_id,
             attempts=attempt,
         )
-        await session.commit()
+        # Real-time events the handler queued go out only now that the rows are committed.
+        if redis is not None:
+            await events.commit_and_publish(session, redis)
+        else:
+            await session.commit()
+            events.discard(session)
         return status
