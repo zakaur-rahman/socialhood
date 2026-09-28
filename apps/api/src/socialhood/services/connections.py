@@ -342,7 +342,9 @@ async def refresh_account(session: AsyncSession, acct: SocialAccount, deps: Plat
     except PlatformError as error:
         if error.retryable:
             raise
-        await mark_needs_reconnect(session, acct, "Instagram stopped accepting this connection.")
+        await mark_needs_reconnect(
+            session, acct, f"{platform_label(acct)} stopped accepting this connection."
+        )
         await session.commit()
         return False
     await accounts.update(
@@ -383,7 +385,7 @@ async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccou
         access_token_enc=None,
         status=AccountStatus.DISCONNECTED,
         disconnected_at=datetime.now(UTC),
-        last_error="Social Hood was removed from this account in Instagram.",
+        last_error=f"Social Hood was removed from this account in {platform_label(acct)}.",
     )
     handle = f"@{acct.username}" if acct.username else "An account"
     await notify_admins(
@@ -392,12 +394,19 @@ async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccou
         severity="warning",
         title=f"{handle} was disconnected",
         body=(
-            f"Social Hood was removed from {handle} in Instagram. "
+            f"Social Hood was removed from {handle} in {platform_label(acct)}. "
             "Connect it again to keep receiving messages."
         ),
         link="/settings/connections",
         dedupe_key=f"deauthorized:{acct.id}:{(acct.connected_at or datetime.now(UTC)).isoformat()}",
     )
+
+
+PLATFORM_LABELS = {"instagram": "Instagram", "whatsapp": "WhatsApp"}
+
+
+def platform_label(acct: SocialAccount) -> str:
+    return PLATFORM_LABELS.get(acct.platform, acct.platform.capitalize())
 
 
 def default_ai_mode(plan: str) -> str:
