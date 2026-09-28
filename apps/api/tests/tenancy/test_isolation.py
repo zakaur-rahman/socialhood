@@ -25,6 +25,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.support.api import Clerk, sign_in
+from tests.support.automations import make_automation
 from tests.support.inbox import make_asset, make_scheduled, make_thread
 
 METHODS = ("get", "post", "put", "patch", "delete")
@@ -37,6 +38,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "message_id": "message_id",
     "scheduled_message_id": "scheduled_message_id",
     "asset_id": "asset_id",
+    "automation_id": "automation_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -78,6 +80,19 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     },
 }
 
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/automations"): {"name": "Taken over"},
+        ("PUT", "/v1/w/{wid}/automations/priorities"): {
+            "social_account_id": "{account_id}",
+            "ordered_ids": ["{automation_id}"],
+        },
+        ("POST", "/v1/w/{wid}/automations/pause"): {"ids": ["{automation_id}"]},
+        ("PUT", "/v1/w/{wid}/automations/{automation_id}"): {"name": "Taken over"},
+        ("POST", "/v1/w/{wid}/automations/{automation_id}/test"): {"kind": "dm", "text": "link"},
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
@@ -99,6 +114,10 @@ B_TABLES = (
     "messages",
     "scheduled_messages",
     "media_assets",
+    "automations",
+    "automation_keywords",
+    "automation_runs",
+    "comments",
 )
 
 
@@ -110,6 +129,7 @@ class Seed:
     message_id: str = ""
     scheduled_message_id: str = ""
     asset_id: str = ""
+    automation_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -125,15 +145,19 @@ def _fill(body: dict[str, Any] | None, seed: Seed) -> tuple[dict[str, Any] | Non
     """Resolve "{param}" placeholders; report whether the body refers to another resource."""
     if body is None:
         return None, False
-    filled: dict[str, Any] = {}
     refers = False
-    for key, value in body.items():
+
+    def resolve(value: Any) -> Any:
+        nonlocal refers
+        if isinstance(value, list):
+            return [resolve(item) for item in value]
         match = re.fullmatch(r"{(\w+)}", value) if isinstance(value, str) else None
         if match:
-            filled[key] = getattr(seed, PARAM_TO_SEED[match.group(1)])
             refers = True
-        else:
-            filled[key] = value
+            return getattr(seed, PARAM_TO_SEED[match.group(1)])
+        return value
+
+    filled = {key: resolve(value) for key, value in body.items()}
     return filled, refers
 
 
@@ -195,6 +219,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )
     asset = await make_asset(engine, workspace_id=wid)
+    automation = await make_automation(engine, workspace_id=wid, account_id=account_id)
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -202,6 +227,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         message_id=str(thread.message_ids[0]),
         scheduled_message_id=str(scheduled),
         asset_id=str(asset),
+        automation_id=str(automation),
     )
 
 
@@ -233,7 +259,7 @@ def test_a_new_route_without_seed_data_fails_the_suite() -> None:
     openapi = {
         "paths": {
             "/v1/w/{wid}": {"get": {}},
-            "/v1/w/{wid}/automations/{automation_id}": {"get": {}},
+            "/v1/w/{wid}/widgets/{widget_id}": {"get": {}},
             "/v1/w/{wid}/things": {"post": {"requestBody": {}}},
         }
     }
@@ -241,7 +267,7 @@ def test_a_new_route_without_seed_data_fails_the_suite() -> None:
     assert [c.url for c in calls] == ["/v1/w/b"]
     assert plan_calls(openapi, Seed(workspace_id="b"), nested_only=True)[0] == []
     assert uncovered == [
-        "GET /v1/w/{wid}/automations/{automation_id} (params ['automation_id'])",
+        "GET /v1/w/{wid}/widgets/{widget_id} (params ['widget_id'])",
         "POST /v1/w/{wid}/things (no example body)",
     ]
 

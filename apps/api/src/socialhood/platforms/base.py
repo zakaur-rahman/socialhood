@@ -45,6 +45,14 @@ class OutboundTemplate:
 
 
 @dataclass(frozen=True, kw_only=True)
+class OutboundButton:
+    """A link button (FR-AUT-13): Instagram's button template."""
+
+    title: str  # up to 20 characters
+    url: str  # https
+
+
+@dataclass(frozen=True, kw_only=True)
 class OutboundMessage:
     """One platform send: text, one attachment, a built-in sticker (Instagram's heart) or
     (WhatsApp) a template."""
@@ -53,6 +61,7 @@ class OutboundMessage:
     attachment: OutboundAttachment | None = None
     template: OutboundTemplate | None = None
     sticker: Literal["like_heart"] | None = None
+    buttons: tuple[OutboundButton, ...] = ()  # with text: sent as one button-template message
     human_agent: bool = False  # Instagram HUMAN_AGENT tag (TR-PL-04)
 
 
@@ -121,3 +130,16 @@ class PlatformAdapter(Protocol):
     async def list_threads(
         self, acct: SocialAccount, *, limit: int = 20
     ) -> list[PlatformThread]: ...
+
+    async def private_reply(
+        self, acct: SocialAccount, comment_ref: str, message: OutboundMessage
+    ) -> SendResult:
+        """A DM to a comment's author, addressed by the comment (Instagram: one per comment,
+        within 7 days; FR-AUT-10)."""
+        ...
+
+    async def reply_to_comment(
+        self, acct: SocialAccount, comment_ref: str, text: str
+    ) -> str | None:
+        """A public reply under the comment; returns the reply's platform id."""
+        ...

@@ -177,3 +177,15 @@ class InstagramAdapter:
         return await reads.list_threads(
             self.http, self._graph, self._token(acct), acct, limit=limit
         )
+
+    # ---- P4 (filled by T4.4)
+
+    async def private_reply(
+        self, acct: SocialAccount, comment_ref: str, message: OutboundMessage
+    ) -> SendResult:
+        raise NotImplementedError("T4.4")
+
+    async def reply_to_comment(
+        self, acct: SocialAccount, comment_ref: str, text: str
+    ) -> str | None:
+        raise NotImplementedError("T4.4")

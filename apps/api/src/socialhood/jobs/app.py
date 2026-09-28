@@ -26,6 +26,8 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.send",
     "socialhood.jobs.tasks.scheduled",
     "socialhood.jobs.tasks.whatsapp",
+    "socialhood.jobs.tasks.automations",
+    "socialhood.jobs.tasks.automation_windows",
 ]
 
 configure_logging(get_settings().log_level)

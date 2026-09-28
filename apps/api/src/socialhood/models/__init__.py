@@ -2,6 +2,7 @@
 
 from socialhood.models import (
     ai,
+    automations,
     billing,
     connections,
     identity,
@@ -13,6 +14,7 @@ from socialhood.models import (
 
 __all__ = [
     "ai",
+    "automations",
     "billing",
     "connections",
     "identity",

@@ -86,3 +86,15 @@ class SandboxAdapter:
         from socialhood.platforms.sandbox import history
 
         return history.threads(acct, limit=limit)
+
+    # ---- P4 (filled by T4.4)
+
+    async def private_reply(
+        self, acct: SocialAccount, comment_ref: str, message: OutboundMessage
+    ) -> SendResult:
+        raise NotImplementedError("T4.4")
+
+    async def reply_to_comment(
+        self, acct: SocialAccount, comment_ref: str, text: str
+    ) -> str | None:
+        raise NotImplementedError("T4.4")

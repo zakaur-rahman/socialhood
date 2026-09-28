@@ -227,3 +227,13 @@ class WhatsAppAdapter:
 
     async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
         return []  # no history API: the inbox fills as customers write (F-04)
+
+    async def private_reply(
+        self, acct: SocialAccount, comment_ref: str, message: OutboundMessage
+    ) -> SendResult:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no comments")
+
+    async def reply_to_comment(
+        self, acct: SocialAccount, comment_ref: str, text: str
+    ) -> str | None:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no comments")

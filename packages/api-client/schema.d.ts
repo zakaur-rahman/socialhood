@@ -62,6 +62,231 @@ export interface paths {
         patch: operations["update_workspace"];
         trace?: never;
     };
+    "/v1/w/{wid}/automation-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Automation Templates */
+        get: operations["list_automation_templates"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Automations */
+        get: operations["list_automations"];
+        put?: never;
+        /**
+         * Create Automation
+         * @description A draft, blank or filled from a template (FR-AUT-12).
+         */
+        post: operations["create_automation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pause Automations
+         * @description Bulk pause from the list (FR-AUT-19).
+         */
+        post: operations["pause_automations"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/priorities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Automation Priorities
+         * @description The account's automations in their new order (FR-AUT-15).
+         */
+        put: operations["update_automation_priorities"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Automations Summary */
+        get: operations["get_automations_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/{automation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Automation */
+        get: operations["get_automation"];
+        /**
+         * Update Automation
+         * @description Replace the whole definition (autosave). Returns overlaps and what activation still needs.
+         */
+        put: operations["update_automation"];
+        post?: never;
+        /** Delete Automation */
+        delete: operations["delete_automation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/{automation_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate Automation
+         * @description Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field.
+         */
+        post: operations["activate_automation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/{automation_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Duplicate Automation */
+        post: operations["duplicate_automation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/{automation_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Automation */
+        post: operations["pause_automation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/{automation_id}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Automation Runs */
+        get: operations["list_automation_runs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/{automation_id}/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Automation Stats */
+        get: operations["get_automation_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/automations/{automation_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Automation
+         * @description What would happen for this text; sends nothing.
+         */
+        post: operations["test_automation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations": {
         parameters: {
             query?: never;
@@ -375,6 +600,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Posts
+         * @description Newest first; ``q`` searches captions.
+         */
+        get: operations["list_posts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/scheduled-messages": {
         parameters: {
             query?: never;
@@ -593,6 +838,181 @@ export interface components {
             /** Width */
             width?: number | null;
         };
+        /** Automation */
+        Automation: {
+            /** Action */
+            action?: ("send_message" | "ai_reply") | null;
+            /** Activated At */
+            activated_at?: string | null;
+            /** Ai Instructions */
+            ai_instructions?: string | null;
+            /** Cooldown Hours */
+            cooldown_hours: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Display Status
+             * @enum {string}
+             */
+            display_status: "draft" | "scheduled" | "active" | "paused" | "ended";
+            /** Ends At */
+            ends_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Keywords */
+            keywords: string[];
+            /** Last Run At */
+            last_run_at?: string | null;
+            /**
+             * Match Mode
+             * @enum {string}
+             */
+            match_mode: "word" | "exact" | "contains";
+            /** Message Buttons */
+            message_buttons: components["schemas"]["LinkButton"][];
+            /** Message Media Asset Id */
+            message_media_asset_id?: string | null;
+            /** Message Media Url */
+            message_media_url?: string | null;
+            /** Message Text */
+            message_text?: string | null;
+            /** Missing For Activation */
+            missing_for_activation: string[];
+            /** Name */
+            name: string;
+            /** Overlaps */
+            overlaps: components["schemas"]["OverlapWarning"][];
+            /** Paused At */
+            paused_at?: string | null;
+            /**
+             * Post Scope
+             * @enum {string}
+             */
+            post_scope: "all" | "selected" | "next_post";
+            /** Posts */
+            posts: components["schemas"]["PostRef"][];
+            /** Priority */
+            priority: number;
+            /** Public Reply Texts */
+            public_reply_texts: string[];
+            queue: components["schemas"]["QueueInfo"];
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+            stats: components["schemas"]["AutomationListStats"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "active" | "paused";
+            /**
+             * Surge Order
+             * @enum {string}
+             */
+            surge_order: "oldest_first" | "newest_first" | "public_only";
+            /** Template Key */
+            template_key?: string | null;
+            /** Trigger */
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * AutomationCreate
+         * @description A draft, blank or from a template (FR-AUT-12).
+         */
+        AutomationCreate: {
+            /** Name */
+            name?: string | null;
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Template Key */
+            template_key?: string | null;
+        };
+        /**
+         * AutomationDefinition
+         * @description PUT …/automations/{id}: the whole editable definition (autosaved, F-11). Drafts may be
+         *     incomplete; activation checks completeness.
+         */
+        AutomationDefinition: {
+            /** Action */
+            action?: ("send_message" | "ai_reply") | null;
+            /** Ai Instructions */
+            ai_instructions?: string | null;
+            /**
+             * Cooldown Hours
+             * @default 24
+             */
+            cooldown_hours: number;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Keywords */
+            keywords?: string[];
+            /**
+             * Match Mode
+             * @default word
+             * @enum {string}
+             */
+            match_mode: "word" | "exact" | "contains";
+            /** Media Item Ids */
+            media_item_ids?: string[];
+            /** Message Buttons */
+            message_buttons?: components["schemas"]["LinkButtonIn"][];
+            /** Message Media Asset Id */
+            message_media_asset_id?: string | null;
+            /** Message Text */
+            message_text?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Post Scope
+             * @default all
+             * @enum {string}
+             */
+            post_scope: "all" | "selected" | "next_post";
+            /** Public Reply Texts */
+            public_reply_texts?: string[];
+            /** Scheduled Post Ids */
+            scheduled_post_ids?: string[];
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /**
+             * Surge Order
+             * @default oldest_first
+             * @enum {string}
+             */
+            surge_order: "oldest_first" | "newest_first" | "public_only";
+            /** Trigger */
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+        };
+        /** AutomationList */
+        AutomationList: {
+            /** Items */
+            items: components["schemas"]["Automation"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** AutomationListStats */
+        AutomationListStats: {
+            /** Daily 7D */
+            daily_7d: number[];
+            /** Last Run At */
+            last_run_at?: string | null;
+            /** Runs 7D */
+            runs_7d: number;
+        };
         /** AutomationRef */
         AutomationRef: {
             /**
@@ -602,6 +1022,163 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** AutomationRun */
+        AutomationRun: {
+            contact?: components["schemas"]["RunContact"] | null;
+            /** Contact Replied At */
+            contact_replied_at?: string | null;
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            error?: components["schemas"]["RunError"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Matched Keyword */
+            matched_keyword: string;
+            /** Private Reply Message Id */
+            private_reply_message_id?: string | null;
+            /** Public Reply Platform Id */
+            public_reply_platform_id?: string | null;
+            /**
+             * Result
+             * @enum {string}
+             */
+            result: "queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated";
+            /**
+             * Trigger Kind
+             * @enum {string}
+             */
+            trigger_kind: "dm" | "comment";
+            /** Trigger Text */
+            trigger_text?: string | null;
+        };
+        /** AutomationRunList */
+        AutomationRunList: {
+            /** Items */
+            items: components["schemas"]["AutomationRun"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * AutomationStats
+         * @description FR-AUT-16 / UX-SCR-12, for the last 7 or 30 days.
+         */
+        AutomationStats: {
+            /** Daily */
+            daily: components["schemas"]["DailyRuns"][];
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 7 | 30;
+            /** Dms Sent */
+            dms_sent: number;
+            /** Failures */
+            failures: number;
+            /** Public Replies */
+            public_replies: number;
+            /** Queued Now */
+            queued_now: number;
+            /** Replied 24H */
+            replied_24h: number;
+            /** Runs */
+            runs: number;
+            skipped: components["schemas"]["SkippedCounts"];
+        };
+        /** AutomationTemplate */
+        AutomationTemplate: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "send_message" | "ai_reply";
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "grow" | "sell" | "support";
+            /** Icon */
+            icon: string;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Outcome */
+            outcome: string;
+            /** Requires Paid Plan */
+            requires_paid_plan: boolean;
+            /**
+             * Trigger
+             * @enum {string}
+             */
+            trigger: "dm_keyword" | "comment_keyword" | "comment_any";
+        };
+        /** AutomationTemplateList */
+        AutomationTemplateList: {
+            /** Items */
+            items: components["schemas"]["AutomationTemplate"][];
+        };
+        /** AutomationTest */
+        AutomationTest: {
+            /** First Name */
+            first_name?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "dm" | "comment";
+            /** Media Item Id */
+            media_item_id?: string | null;
+            /** Text */
+            text: string;
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * AutomationTestResult
+         * @description What would happen; nothing is sent (T4.3).
+         */
+        AutomationTestResult: {
+            /** Matched */
+            matched: boolean;
+            /** Matched Keyword */
+            matched_keyword?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Rendered Message */
+            rendered_message?: string | null;
+            /** Rendered Public Reply */
+            rendered_public_reply?: string | null;
+            winner?: components["schemas"]["WinningAutomation"] | null;
+        };
+        /**
+         * AutomationsSummary
+         * @description UX-SCR-02's figures strip, for the last 7 days.
+         */
+        AutomationsSummary: {
+            /** Active */
+            active: number;
+            /** Dms Sent 7D */
+            dms_sent_7d: number;
+            /** Longest Eta Minutes */
+            longest_eta_minutes?: number | null;
+            /** Runs 7D */
+            runs_7d: number;
+            /** Waiting */
+            waiting: number;
+        };
+        /** BulkPause */
+        BulkPause: {
+            /** Ids */
+            ids: string[];
         };
         /** Checklist */
         Checklist: {
@@ -825,6 +1402,18 @@ export interface components {
              */
             updated_at: string;
         };
+        /** DailyRuns */
+        DailyRuns: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Failures */
+            failures: number;
+            /** Runs */
+            runs: number;
+        };
         /** DataDeletionStatus */
         DataDeletionStatus: {
             /** Completed At */
@@ -872,6 +1461,20 @@ export interface components {
             needs_you: number;
             /** Unread */
             unread: number;
+        };
+        /** LinkButton */
+        LinkButton: {
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+        };
+        /** LinkButtonIn */
+        LinkButtonIn: {
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
         };
         /** MarkRead */
         MarkRead: {
@@ -1106,6 +1709,20 @@ export interface components {
             /** Type */
             type: string;
         };
+        /** OverlapWarning */
+        OverlapWarning: {
+            /**
+             * Automation Id
+             * Format: uuid
+             */
+            automation_id: string;
+            /** Automation Name */
+            automation_name: string;
+            /** Keyword */
+            keyword: string;
+            /** This Runs First */
+            this_runs_first: boolean;
+        };
         /** Overview */
         Overview: {
             checklist: components["schemas"]["Checklist"];
@@ -1114,6 +1731,78 @@ export interface components {
              * @enum {string}
              */
             range: "7d" | "30d";
+        };
+        /** PostList */
+        PostList: {
+            /** Items */
+            items: components["schemas"]["PostSummary"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * PostRef
+         * @description A post an automation is scoped to: a synced post, or a scheduled one not yet published.
+         */
+        PostRef: {
+            /** Caption */
+            caption?: string | null;
+            /** Media Item Id */
+            media_item_id?: string | null;
+            /** Media Type */
+            media_type?: string | null;
+            /** Posted At */
+            posted_at?: string | null;
+            /** Scheduled Post Id */
+            scheduled_post_id?: string | null;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+        };
+        /**
+         * PostSummary
+         * @description A synced post, for the automation post picker (and the Comments page from P6).
+         */
+        PostSummary: {
+            /** Caption */
+            caption?: string | null;
+            /** Comments Count */
+            comments_count?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Like Count */
+            like_count?: number | null;
+            /** Media Type */
+            media_type: string;
+            /** Media Url */
+            media_url?: string | null;
+            /** Permalink */
+            permalink?: string | null;
+            /** Platform Media Id */
+            platform_media_id: string;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+        };
+        /** PrioritiesUpdate */
+        PrioritiesUpdate: {
+            /** Ordered Ids */
+            ordered_ids: string[];
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
         };
         /** Problem */
         Problem: {
@@ -1136,6 +1825,21 @@ export interface components {
             title: string;
             /** Type */
             type: string;
+        };
+        /**
+         * QueueInfo
+         * @description FR-AUT-10: private replies waiting in the account's 750/hour queue for this automation.
+         */
+        QueueInfo: {
+            /** Eta Minutes */
+            eta_minutes?: number | null;
+            /**
+             * Order
+             * @enum {string}
+             */
+            order: "oldest_first" | "newest_first" | "public_only";
+            /** Waiting */
+            waiting: number;
         };
         /** Reaction */
         Reaction: {
@@ -1161,6 +1865,27 @@ export interface components {
              * @enum {string}
              */
             state: "open" | "human_agent" | "template_only" | "closed";
+        };
+        /** RunContact */
+        RunContact: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /** Username */
+            username?: string | null;
+        };
+        /** RunError */
+        RunError: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
         };
         /** SandboxInbound */
         SandboxInbound: {
@@ -1276,6 +2001,15 @@ export interface components {
             template?: components["schemas"]["TemplateSend"] | null;
             /** Text */
             text?: string | null;
+        };
+        /** SkippedCounts */
+        SkippedCounts: {
+            /** Cooldown */
+            cooldown: number;
+            /** Expired */
+            expired: number;
+            /** Outside Window */
+            outside_window: number;
         };
         /** SocialAccountList */
         SocialAccountList: {
@@ -1464,6 +2198,16 @@ export interface components {
         WhatsAppTemplateList: {
             /** Items */
             items: components["schemas"]["WhatsAppTemplate"][];
+        };
+        /** WinningAutomation */
+        WinningAutomation: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /** WorkspaceList */
         WorkspaceList: {
@@ -1691,6 +2435,641 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_automation_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationTemplateList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_automations: {
+        parameters: {
+            query?: {
+                account_id?: string | null;
+                status?: ("draft" | "active" | "paused") | null;
+                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+                q?: string | null;
+                sort?: "recent_runs" | "name" | "created";
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutomationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Automation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    pause_automations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkPause"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_automation_priorities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrioritiesUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_automations_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationsSummary"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Automation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutomationDefinition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Automation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    activate_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Automation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    duplicate_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Automation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    pause_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Automation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_automation_runs: {
+        parameters: {
+            query?: {
+                result?: ("queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated") | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationRunList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_automation_stats: {
+        parameters: {
+            query?: {
+                days?: 7 | 30;
+            };
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationStats"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    test_automation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutomationTest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationTestResult"];
                 };
             };
             /** @description Validation error */
@@ -2503,6 +3882,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Overview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_posts: {
+        parameters: {
+            query?: {
+                account_id?: string | null;
+                q?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostList"];
                 };
             };
             /** @description Validation error */
