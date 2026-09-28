@@ -107,10 +107,18 @@ class InstagramAdapter:
         raise NotImplementedError("T3.6")
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload:
-        raise NotImplementedError("T3.3")
+        from socialhood.platforms.instagram import reads
+
+        return await reads.download(self.deps.http, ref)
 
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
-        raise NotImplementedError("T3.14")
+        from socialhood.platforms.instagram import reads
+
+        return await reads.list_media(self.http, self._graph, self._token(acct), limit=limit)
 
     async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
-        raise NotImplementedError("T3.14")
+        from socialhood.platforms.instagram import reads
+
+        return await reads.list_threads(
+            self.http, self._graph, self._token(acct), acct, limit=limit
+        )

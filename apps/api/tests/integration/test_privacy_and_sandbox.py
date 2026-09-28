@@ -130,9 +130,12 @@ async def test_sandbox_account_and_inbound_events(
         assert injected.json() == {"stored": 1}
 
     async with engine.connect() as conn:
-        ids = (await conn.execute(text("SELECT id FROM webhook_events"))).scalars().all()
-    for event_id in ids:
-        assert await process_event(app.state.sessionmaker, event_id) is WebhookStatus.IGNORED
+        stored = (await conn.execute(text("SELECT id, event_type FROM webhook_events"))).all()
+    expected = {"message": WebhookStatus.PROCESSED, "comment": WebhookStatus.IGNORED}  # P6
+    for event_id, event_type in stored:
+        assert await process_event(app.state.sessionmaker, event_id) is expected[event_type]
+    dm = await one(engine, "SELECT direction, text FROM messages")
+    assert dm == {"direction": "inbound", "text": "Hi, is this in stock?"}
     async with engine.connect() as conn:
         routed = (
             (await conn.execute(text("SELECT DISTINCT workspace_id FROM webhook_events")))

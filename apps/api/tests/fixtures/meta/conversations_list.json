@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "id": "aWdfZAG06MTpJR01lc3NhZA2VUaHJlYWQ6MTc4NDE0MDAwMDAwMDAwMDE6MzQwMjgyMzY2ODQxNzEw",
+      "updated_time": "2026-09-27T09:12:00+0000",
+      "participants": {
+        "data": [
+          {
+            "username": "maple.bakery",
+            "id": "17841400000000001"
+          },
+          {
+            "username": "priya.shah",
+            "id": "990000000000001"
+          }
+        ]
+      }
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "after": "QVFIUk"
+    }
+  }
+}
