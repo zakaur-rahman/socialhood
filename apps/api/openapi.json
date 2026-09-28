@@ -2531,6 +2531,13 @@
               }
             ]
           },
+          "buttons": {
+            "items": {
+              "$ref": "#/components/schemas/MessageButton"
+            },
+            "title": "Buttons",
+            "type": "array"
+          },
           "client_id": {
             "anyOf": [
               {
@@ -2885,6 +2892,24 @@
           "created_at"
         ],
         "title": "MessageAnalysis",
+        "type": "object"
+      },
+      "MessageButton": {
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url"
+        ],
+        "title": "MessageButton",
         "type": "object"
       },
       "MessageList": {

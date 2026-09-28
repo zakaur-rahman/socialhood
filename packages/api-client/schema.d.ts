@@ -1557,6 +1557,8 @@ export interface components {
             /** Attachments */
             attachments: components["schemas"]["Attachment"][];
             automation?: components["schemas"]["AutomationRef"] | null;
+            /** Buttons */
+            buttons?: components["schemas"]["MessageButton"][];
             /** Client Id */
             client_id?: string | null;
             /**
@@ -1661,6 +1663,13 @@ export interface components {
             sentiment_score: number;
             /** Topics */
             topics: string[];
+        };
+        /** MessageButton */
+        MessageButton: {
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
         };
         /**
          * MessageList

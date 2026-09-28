@@ -14,6 +14,7 @@ from socialhood.schemas.inbox import (
     ContactSummary,
     ConversationListItem,
     ErrorInfo,
+    MessageButton,
     Reaction,
     Signal,
     TemplateInfo,
@@ -96,6 +97,7 @@ def message_out(msg: Message, *, sent_by_name: str | None = None) -> MessageOut:
         text=msg.text,
         attachments=[Attachment.model_validate(a) for a in msg.attachments or []],
         template=TemplateInfo.model_validate(msg.template) if msg.template else None,
+        buttons=[MessageButton.model_validate(b) for b in msg.buttons or []],
         status=msg.status,
         error=(
             ErrorInfo(code=msg.error_code, message=msg.error_message or "")

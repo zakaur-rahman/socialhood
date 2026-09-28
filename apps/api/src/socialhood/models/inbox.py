@@ -222,6 +222,8 @@ class Message(IdMixin, TimestampMixin, TenantScoped, Base):
         JSONB, server_default=sql("'[]'::jsonb")
     )
     template: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # Link buttons sent with the text (automation DMs, FR-AUT-13): [{title, url}], at most 3.
+    buttons: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     platform_message_id: Mapped[str | None] = mapped_column(Text)
     client_id: Mapped[uuid.UUID | None] = mapped_column()

@@ -236,6 +236,11 @@ class AutomationRef(ResponseModel):
     name: str
 
 
+class MessageButton(ResponseModel):
+    title: str
+    url: str
+
+
 class Reaction(ResponseModel):
     emoji: str
     by: Literal["customer", "business"]
@@ -252,6 +257,7 @@ class Message(ResponseModel):
     text: str | None = None
     attachments: list[Attachment]
     template: TemplateInfo | None = None
+    buttons: list[MessageButton] = Field(default_factory=list)  # link buttons (automation DMs)
     status: MessageStatusName | None = None
     error: ErrorInfo | None = None
     occurred_at: datetime
