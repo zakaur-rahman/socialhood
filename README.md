@@ -53,8 +53,23 @@ cd apps/web && cp .env.example .env.local && pnpm dev
 With `SANDBOX_PLATFORM_ENABLED=true` in `apps/api/.env` (never in production), an owner can add a
 fake Instagram account from Settings → Connections ("Add sandbox account") and inject DMs and
 comments with `POST /v1/w/{wid}/dev/sandbox/inbound`. They go through the same intake as real
-webhooks. Connecting a real account needs the Meta app's redirect URI and webhook URL to point at
-a public HTTPS address for the API (a tunnel in development).
+webhooks.
+
+### A real Instagram account: `pnpm tunnel`
+
+Instagram only redirects to, and sends webhooks to, public HTTPS URLs. With the API running:
+
+```sh
+ngrok config add-authtoken <token>   # once; token from https://dashboard.ngrok.com/get-started/your-authtoken
+pnpm tunnel                          # keep it running
+```
+
+It starts `ngrok http 8000`, writes the tunnel into `IG_REDIRECT_URI` and `API_BASE_URL` in
+`apps/api/.env` (restart the API after the first run), and prints the redirect, webhook,
+deauthorize and data-deletion URLs to register in the Meta app. Set `NGROK_DOMAIN` in
+`apps/api/.env` to your ngrok dev domain so the address, and the Meta settings, never change. On a
+free ngrok domain the first browser visit to the callback shows ngrok's warning page once; click
+through. Meta's webhook deliveries are not affected.
 
 ## Operations
 
