@@ -1,0 +1,1006 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Social Hood Architecture Review</title>
+<meta name="description" content="Evidence-based architecture review for Social Hood: webhooks, queues, PostgreSQL, analytics, Redis, vector search, RAG, AI agents, cost, multi-tenancy and a phased roadmap.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap">
+<style>
+
+:root{
+  --ground:#F3F5FA;--surface:#FFFFFF;--sunk:#EDF0F7;--raised:#E4E8F2;
+  --ink:#0B0F1C;--ink-2:#353C52;--muted:#636B83;--line:#DCE1EC;--line-strong:#C6CDDD;
+  --accent:#2B45B8;--accent-strong:#20338A;--accent-soft:#E6EBFC;--accent-bright:#567FF8;
+  --grad:linear-gradient(135deg,#20338A 0%,#567FF8 100%);
+  --ok:#157A3C;--ok-soft:#E1F3E7;--warn:#9A4A06;--warn-soft:#FBEEDB;--bad:#B3261E;--bad-soft:#FAE3E1;
+  --code-bg:#F7F8FC;--code-ink:#1B2236;--code-line:#E3E7F1;
+  --font:"Geist",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"Geist Mono",ui-monospace,"Cascadia Mono","SFMono-Regular",Consolas,monospace;
+  --side-w:276px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --ground:#000000;--surface:#101012;--sunk:#0A0A0B;--raised:#1F1F1F;
+  --ink:#ECEDF1;--ink-2:#BCBFC8;--muted:#9B9CA0;--line:#242427;--line-strong:#35353A;
+  --accent:#7D9CFF;--accent-strong:#567FF8;--accent-soft:rgba(86,127,248,.15);--accent-bright:#567FF8;
+  --ok:#4ADE80;--ok-soft:rgba(34,197,94,.14);--warn:#FBBF5C;--warn-soft:rgba(251,146,60,.14);--bad:#F87171;--bad-soft:rgba(239,68,68,.15);
+  --code-bg:#0D0D10;--code-ink:#D9DEEA;--code-line:#1F1F24;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#000000;--surface:#101012;--sunk:#0A0A0B;--raised:#1F1F1F;
+  --ink:#ECEDF1;--ink-2:#BCBFC8;--muted:#9B9CA0;--line:#242427;--line-strong:#35353A;
+  --accent:#7D9CFF;--accent-strong:#567FF8;--accent-soft:rgba(86,127,248,.15);--accent-bright:#567FF8;
+  --ok:#4ADE80;--ok-soft:rgba(34,197,94,.14);--warn:#FBBF5C;--warn-soft:rgba(251,146,60,.14);--bad:#F87171;--bad-soft:rgba(239,68,68,.15);
+  --code-bg:#0D0D10;--code-ink:#D9DEEA;--code-line:#1F1F24;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important;animation:none!important}}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.65;-webkit-font-smoothing:antialiased;font-feature-settings:"ss01" on}
+a{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:2px}
+a:hover{color:var(--accent-strong)}
+:focus-visible{outline:2px solid var(--accent-bright);outline-offset:2px;border-radius:3px}
+.shell{display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);min-height:100vh}
+
+/* ---------- sidebar ---------- */
+.side{position:sticky;top:env(safe-area-inset-top,0px);height:100vh;overflow-y:auto;border-right:1px solid var(--line);background:var(--surface);padding-block:22px 40px;padding-inline:18px;display:flex;flex-direction:column;gap:18px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none;color:var(--ink)}
+.brand-tile{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;flex-shrink:0}
+.brand-tile svg{width:18px;height:18px}
+.brand b{display:block;font-size:14.5px;font-weight:600;letter-spacing:-.01em;line-height:1.2}
+.brand span{display:block;font-family:var(--mono);font-size:11px;color:var(--muted);letter-spacing:.02em}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav details{border-radius:8px}
+.nav summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:26px 1fr;align-items:baseline;gap:4px;padding:7px 8px;border-radius:8px;color:var(--ink-2);font-size:14px;font-weight:500}
+.nav summary::-webkit-details-marker{display:none}
+.nav summary:hover{background:var(--sunk);color:var(--ink)}
+.nav summary .n{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.nav details.on>summary{background:var(--accent-soft);color:var(--ink)}
+.nav details.on>summary .n{color:var(--accent)}
+.nav ol{list-style:none;margin:2px 0 8px;padding:0 0 0 30px;display:flex;flex-direction:column}
+.nav ol a{display:block;padding:3px 8px;font-size:13px;color:var(--muted);text-decoration:none;border-radius:6px;line-height:1.4}
+.nav ol a:hover{color:var(--ink);background:var(--sunk)}
+.nav ol a.cur{color:var(--accent)}
+.side-foot{margin-top:auto;font-size:12px;color:var(--muted);line-height:1.5;border-top:1px solid var(--line);padding-top:14px}
+.side-foot code{font-size:11px}
+
+/* ---------- main ---------- */
+.main{min-width:0;padding-block:44px 120px;padding-inline:clamp(18px,4.5vw,64px)}
+.content{max-width:940px;margin:0 auto}
+.doc{padding-top:8px;margin-bottom:96px;scroll-margin-top:16px}
+.cover{border-bottom:1px solid var(--line-strong);padding-bottom:26px;margin-bottom:34px}
+.cover .code{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:12px}
+.cover .code i{font-style:normal;display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--grad)}
+h1{font-size:clamp(30px,4vw,42px);line-height:1.08;letter-spacing:-.028em;font-weight:650;margin:0 0 14px;text-wrap:balance}
+.lede{font-size:18px;line-height:1.55;color:var(--ink-2);max-width:68ch;margin:0 0 20px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 22px;font-size:13px;color:var(--muted)}
+.meta b{color:var(--ink-2);font-weight:500}
+h2{font-size:24px;line-height:1.2;letter-spacing:-.018em;font-weight:620;margin:58px 0 14px;text-wrap:balance;scroll-margin-top:16px}
+h2 .sn{font-family:var(--mono);font-size:13px;font-weight:500;color:var(--muted);margin-right:10px;letter-spacing:0;vertical-align:3px}
+h3{font-size:18px;line-height:1.3;letter-spacing:-.01em;font-weight:600;margin:34px 0 10px;text-wrap:balance;scroll-margin-top:16px}
+h4{font-size:12.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:600;color:var(--muted);margin:26px 0 8px}
+p{margin:0 0 14px;max-width:72ch}
+ul,ol{margin:0 0 16px;padding-left:22px;max-width:72ch}
+li{margin:3px 0}
+li>ul,li>ol{margin:4px 0 6px}
+strong{font-weight:600}
+hr{border:0;border-top:1px solid var(--line);margin:40px 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--sunk);border:1px solid var(--line);border-radius:5px;padding:.08em .38em;color:var(--ink);word-break:break-word}
+pre{position:relative;margin:0 0 18px;background:var(--code-bg);border:1px solid var(--code-line);border-radius:10px;overflow:auto;max-width:100%}
+pre code{display:block;background:none;border:0;padding:16px 18px;font-size:12.8px;line-height:1.6;color:var(--code-ink);white-space:pre;word-break:normal}
+pre .cp{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:11px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink-2);border-radius:6px;padding:3px 8px;cursor:pointer;opacity:.85}
+pre .cp:hover{opacity:1;color:var(--ink)}
+pre.mermaid{background:var(--surface);padding:18px;text-align:center;border-color:var(--line)}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto;margin:0 0 20px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14px;line-height:1.5}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--line)}
+tr:last-child td{border-bottom:0}
+th{font-size:11.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:600;color:var(--muted);background:var(--sunk);white-space:nowrap}
+td code{font-size:12.4px}
+td.m,th.m{font-family:var(--mono);font-size:12.6px;white-space:nowrap}
+.num{font-variant-numeric:tabular-nums}
+table.wide{min-width:760px}
+table.xwide{min-width:980px}
+
+/* ---------- requirement blocks ---------- */
+.reqs{border-top:1px solid var(--line);margin:0 0 22px}
+.req{display:grid;grid-template-columns:118px minmax(0,1fr);gap:4px 18px;padding:14px 0;border-bottom:1px solid var(--line)}
+.req .id{font-family:var(--mono);font-size:12.5px;color:var(--accent);padding-top:2px}
+.req .t{font-weight:600;margin:0 0 4px}
+.req .t .tag{margin-left:6px}
+.req p,.req ul{margin-bottom:6px}
+.req .ac{font-size:14.5px;color:var(--ink-2)}
+.req .ac::before{content:"Acceptance";display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:6px 0 2px}
+.req .ac ul{margin:0;padding-left:18px}
+
+/* ---------- tags ---------- */
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.04em;padding:1px 7px;border-radius:999px;border:1px solid var(--line-strong);color:var(--ink-2);background:var(--surface);white-space:nowrap;vertical-align:1px}
+.tag.must{border-color:transparent;background:var(--accent-soft);color:var(--accent)}
+.tag.should{border-style:dashed}
+.tag.r1{border-color:transparent;background:var(--ok-soft);color:var(--ok)}
+.tag.r2{border-color:transparent;background:var(--warn-soft);color:var(--warn)}
+.tag.r3{border-color:transparent;background:var(--sunk);color:var(--muted)}
+.tag.bad{border-color:transparent;background:var(--bad-soft);color:var(--bad)}
+
+/* ---------- notes ---------- */
+.note{background:var(--accent-soft);border-radius:10px;padding:13px 16px;margin:0 0 18px;font-size:14.5px;line-height:1.6;color:var(--ink-2);max-width:78ch}
+.note b.l{display:block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);margin-bottom:3px}
+.note.v1{background:var(--warn-soft)}
+.note.v1 b.l{color:var(--warn)}
+.note.stop{background:var(--bad-soft)}
+.note.stop b.l{color:var(--bad)}
+.note p:last-child,.note ul:last-child{margin-bottom:0}
+
+/* ---------- misc grids ---------- */
+.kv{display:grid;grid-template-columns:minmax(150px,220px) minmax(0,1fr);border-top:1px solid var(--line);margin:0 0 20px}
+.kv>div{padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.kv>div:nth-child(odd){color:var(--muted);font-size:13.5px;padding-right:14px}
+.steps{counter-reset:s;list-style:none;padding:0;margin:0 0 18px;max-width:80ch}
+.steps>li{counter-increment:s;position:relative;padding:8px 0 8px 34px;border-bottom:1px dashed var(--line);margin:0}
+.steps>li::before{content:counter(s);position:absolute;left:0;top:10px;min-width:22px;font-family:var(--mono);font-size:12px;line-height:1.4;color:var(--accent)}
+.steps>li:last-child{border-bottom:0}
+.sw{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:7px;border:1px solid var(--line-strong)}
+.cols2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px 28px}
+
+/* ---------- responsive ---------- */
+@media (max-width:980px){
+  .shell{grid-template-columns:minmax(0,1fr)}
+  .side{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;height:auto;flex-direction:row;align-items:center;gap:12px;padding-block:10px;padding-inline:16px;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line)}
+  .brand span,.side-foot{display:none}
+  .brand b{white-space:nowrap}
+  .nav{flex-direction:row;gap:4px}
+  .nav ol{display:none}
+  .nav summary{white-space:nowrap;grid-template-columns:auto auto;padding:6px 10px}
+  .req{grid-template-columns:minmax(0,1fr)}
+  .kv{grid-template-columns:minmax(0,1fr)}
+  .kv>div:nth-child(odd){padding-bottom:0;border-bottom:0}
+}
+
+/* ---------- research labels ---------- */
+.lbl{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:5px;vertical-align:1px;white-space:nowrap}
+.lbl.v{background:var(--ok-soft);color:var(--ok)}
+.lbl.r{background:var(--accent-soft);color:var(--accent)}
+.lbl.a{background:var(--sunk);color:var(--muted);border:1px solid var(--line-strong)}
+.lbl.e{background:var(--warn-soft);color:var(--warn)}
+.lbl.u{background:var(--bad-soft);color:var(--bad)}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted);margin:0 0 22px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+/* capability cards: label/value grid per capability */
+.cap{border:1px solid var(--line);border-radius:10px;background:var(--surface);margin:0 0 16px;overflow:hidden}
+.cap h4{margin:0;padding:10px 14px;background:var(--sunk);border-bottom:1px solid var(--line);font-size:13px;letter-spacing:.02em;text-transform:none;color:var(--ink)}
+.cap dl{display:grid;grid-template-columns:minmax(130px,190px) minmax(0,1fr);margin:0}
+.cap dt,.cap dd{margin:0;padding:8px 14px;border-bottom:1px solid var(--line);font-size:14px;line-height:1.55}
+.cap dt{color:var(--muted);font-size:12.5px}
+.cap dl>*:nth-last-child(-n+2){border-bottom:0}
+.cap dd.rec{background:var(--accent-soft)}
+.big{font-size:22px;font-weight:620;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 20px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.stat small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.decision{display:grid;grid-template-columns:minmax(140px,200px) minmax(0,1fr);border:1px solid var(--line-strong);border-radius:12px;overflow:hidden;background:var(--surface);margin:0 0 22px}
+.decision>div{padding:10px 16px;border-bottom:1px solid var(--line);font-size:14.5px}
+.decision>div:nth-child(odd){font-family:var(--mono);font-size:12.5px;color:var(--muted);background:var(--sunk)}
+.decision>div:nth-last-child(-n+2){border-bottom:0}
+.yes{color:var(--ok);font-weight:600}.no{color:var(--bad);font-weight:600}.later{color:var(--warn);font-weight:600}
+@media (max-width:980px){.cap dl,.decision{grid-template-columns:minmax(0,1fr)}.cap dt{border-bottom:0;padding-bottom:0}.decision>div:nth-child(odd){border-bottom:0}}
+
+</style>
+</head>
+<body>
+<div class="shell">
+<aside class="side" aria-label="Sections">
+  <a class="brand" href="#top">
+    <span class="brand-tile" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M4 12h10M4 17h6"/><circle cx="18" cy="16" r="3"/></svg></span>
+    <span><b>Architecture Review</b><span>Social Hood · Sep 2026</span></span>
+  </a>
+  <nav class="nav" id="nav">
+    <details data-doc="top" open><summary><span class="n">§</span>Contents</summary><ol>
+      <li><a href="#decision">Final decision</a></li>
+      <li><a href="#workload">Workload model</a></li>
+      <li><a href="#webhooks">Webhook gateway</a></li>
+      <li><a href="#queues">Queue choice</a></li>
+      <li><a href="#idempotency">Idempotency</a></li>
+      <li><a href="#postgres">PostgreSQL</a></li>
+      <li><a href="#analytics">Analytics storage</a></li>
+      <li><a href="#acquisition">Metric acquisition</a></li>
+      <li><a href="#redis">Redis</a></li>
+      <li><a href="#vector">Vector search</a></li>
+      <li><a href="#rag">RAG and retrieval</a></li>
+      <li><a href="#agent">Agent architecture</a></li>
+      <li><a href="#memory">Agent memory</a></li>
+      <li><a href="#ai-scale">AI at scale</a></li>
+      <li><a href="#classification">Classification strategy</a></li>
+      <li><a href="#tenancy">Multi-tenancy</a></li>
+      <li><a href="#options">Architecture options</a></li>
+      <li><a href="#matrix">Decision matrix</a></li>
+      <li><a href="#roadmap">Roadmap and triggers</a></li>
+      <li><a href="#spec-changes">Changes to the build spec</a></li>
+      <li><a href="#sources">Sources</a></li>
+    </ol></details>
+  </nav>
+  <div class="side-foot">Companion document: <code>instagram-social-hood-requirements.html</code>. Facts checked against official documentation on 28 Sep 2026.</div>
+</aside>
+
+<main class="main">
+<div class="content">
+<section class="doc" id="top">
+  <div class="cover">
+    <div class="code"><i></i>Architecture review</div>
+    <h1>How Social Hood should handle webhooks, analytics and AI at scale</h1>
+    <p class="lede">A review of what Social Hood actually has to process, what the platforms and vendors allow today, and the smallest architecture that handles it reliably, with the measurable points at which each larger piece becomes worth adding.</p>
+    <div class="meta"><span><b>Scope</b> webhooks, queues, storage, analytics, AI, multi-tenancy</span><span><b>Evidence date</b> 28 Sep 2026</span><span><b>Audience</b> owner and engineers building v2</span></div>
+  </div>
+
+  <div class="legend">
+    <span><span class="lbl v">Verified</span> read on an official page (see <a href="#sources">Sources</a>)</span>
+    <span><span class="lbl r">Recommendation</span> this review's design choice</span>
+    <span><span class="lbl a">Assumption</span> an input to the model, not a fact</span>
+    <span><span class="lbl e">Estimate</span> derived from assumptions and verified prices</span>
+    <span><span class="lbl u">Unknown</span> needs testing with a real account</span>
+  </div>
+
+  <h2>In one paragraph</h2>
+  <p><strong>PostgreSQL alone is enough for the data, and enough for the queue at MVP scale. Kafka, ClickHouse, a separate vector database and Kubernetes are not needed now.</strong> The workload in your brief (100,000 comments and 50,000 DMs a day, a 100,000-comment viral spike) averages a few events per second with peaks in the low hundreds, which one PostgreSQL instance absorbs comfortably. What actually limits Social Hood is not infrastructure but the platforms: Instagram lets an account send only 750 automated private replies an hour, insights can lag 48 hours, webhooks must be answered within 5 seconds or the app gets unsubscribed, and WhatsApp onboarding is capped at 10 new businesses a week until you are verified. The architecture below is built around those limits. AI cost, not compute, is the largest variable expense, at roughly $0.20–0.25 per connected account per month in the brief's scenario.</p>
+
+  <h2 id="decision"><span class="sn">1</span>Final decision for the MVP</h2>
+  <div class="decision">
+    <div>Database</div><div><strong>PostgreSQL 18 on Render</strong> (start at 1 CPU / 4 GB, $55/month plus storage) with <code>pgvector</code>, <code>pg_trgm</code>, <code>pgcrypto</code>, <code>pg_stat_statements</code>. The only system of record. <span class="lbl r">Recommendation</span></div>
+    <div>Cache</div><div><strong>Valkey (Render Key Value, 256 MB, $10/month)</strong>, used only for real-time event streams to browsers, rate-limit counters, short caches and locks. Nothing in it needs to survive a restart. <span class="lbl r">Recommendation</span></div>
+    <div>Queue</div><div><strong>A PostgreSQL-backed job queue (Procrastinate)</strong>, replacing ARQ, which its maintainers put in maintenance-only mode. Jobs carry ids; the domain tables hold the state. Two lanes: interactive and bulk. <span class="lbl r">Recommendation</span></div>
+    <div>Workers</div><div><strong>One Render background worker</strong> running two processes (interactive lane, bulk lane); add instances horizontally. <span class="lbl r">Recommendation</span></div>
+    <div>Analytics</div><div><strong>PostgreSQL tables</strong>: one wide row per post per snapshot window, one row per account per day, rollups computed on write. No separate analytics database. <span class="lbl r">Recommendation</span></div>
+    <div>Vector DB</div><div><strong>No dedicated vector database.</strong> pgvector in the same PostgreSQL, used only for business knowledge (and later post captions). <span class="lbl r">Recommendation</span></div>
+    <div>RAG</div><div><strong>Yes, but narrow:</strong> only for replies that need business facts (policies, shipping, products). Greetings, analytics and order questions use no retrieval, SQL or tools. <span class="lbl r">Recommendation</span></div>
+    <div>LLM</div><div><strong>Gemini 3.5 Flash-Lite</strong> for classification and most replies; <strong>Gemini 3.8 Flash</strong> only for complex replies and long summaries; <strong>Gemini Embedding 2</strong> at 768 dimensions. Gemini 2.5 models are closed to new projects. Paid tier only. <span class="lbl r">Recommendation</span></div>
+    <div>Object storage</div><div><strong>Cloudinary</strong> for media (publishing needs public URLs; inbound media must be copied because platform URLs expire). Cloudflare R2 later for archives and exports. <span class="lbl r">Recommendation</span></div>
+    <div>Monitoring</div><div><strong>Sentry</strong> (errors, performance, cron monitors) plus Render metrics and logs; alerts on webhook failures, queue lag and AI spend. <span class="lbl r">Recommendation</span></div>
+    <div>Webhook strategy</div><div><strong>Verify → split → store once → enqueue → 200</strong>, in under 500 ms. Never fail a webhook for a processing error. Reconciliation polling fills gaps; a daily job re-checks every account's webhook subscription. <span class="lbl r">Recommendation</span></div>
+    <div>AI architecture</div><div><strong>A fixed pipeline, not a free-roaming agent:</strong> rules pre-filter → cheap classification (batched for comments) → retrieval router → reply generation → 13-check safety policy → send. Tool-calling agents (Ask Social Hood, operator assistant) come later with read-only tools first. <span class="lbl r">Recommendation</span></div>
+  </div>
+  <p>Estimated monthly infrastructure at launch: <strong>about $200</strong> (Render workspace, API, worker, PostgreSQL, Valkey, Vercel Pro, Sentry Team), plus Cloudinary once past its free tier, plus AI usage. <span class="lbl e">Estimate</span> The <a href="#matrix">decision matrix</a> gives the reason for every component, including those left out.</p>
+
+  <h2 id="workload"><span class="sn">2</span>Workload model</h2>
+  <p>Every recommendation rests on these numbers. They follow the brief's scenario; change them and the thresholds in <a href="#roadmap">§19</a> tell you what changes.</p>
+  <div class="stats">
+    <div class="stat"><div class="big">10,000</div><small>connected accounts <span class="lbl a">Assumption</span></small></div>
+    <div class="stat"><div class="big">100,000</div><small>comments per day <span class="lbl a">Assumption</span></small></div>
+    <div class="stat"><div class="big">50,000</div><small>inbound DMs per day <span class="lbl a">Assumption</span></small></div>
+    <div class="stat"><div class="big">≈ 300,000</div><small>webhook events per day, including echoes, read receipts and reactions <span class="lbl e">Estimate</span></small></div>
+  </div>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Quantity</th><th>Average</th><th>Peak</th><th>Basis</th></tr></thead>
+    <tbody class="num">
+      <tr><td>Webhook events</td><td>≈ 3.5 / s</td><td>≈ 30 / s sustained for an hour (100k comments on one viral post); bursts to a few hundred / s</td><td><span class="lbl e">Estimate</span> Meta may pack up to 1,000 updates in one POST <span class="lbl v">Verified</span> [S1]</td></tr>
+      <tr><td>Background jobs</td><td>≈ 6 / s</td><td>≈ 100 / s</td><td><span class="lbl e">Estimate</span> about 1.7 jobs per event (process, analyse, suggest, send, ingest media)</td></tr>
+      <tr><td>AI calls</td><td>≈ 66,000 / day (0.8 / s)</td><td>≈ 10 in flight</td><td><span class="lbl e">Estimate</span> after rules, burst debouncing and batching (§14)</td></tr>
+      <tr><td>New database rows</td><td>≈ 500,000 / day</td><td>≈ 200 / s</td><td><span class="lbl e">Estimate</span> messages, comments, analyses, events, snapshots</td></tr>
+      <tr><td>Database growth</td><td colspan="2">≈ 120–150 GB in year one, including indexes</td><td><span class="lbl e">Estimate</span> §6</td></tr>
+      <tr><td>Metric snapshot calls</td><td colspan="2">≈ 80,000 Instagram API calls / day (6 per new post, 2 per account per day), under 10 per account per day</td><td><span class="lbl e">Estimate</span> well inside the per-account budget of 4,800 × impressions per 24 h <span class="lbl v">Verified</span> [S4]</td></tr>
+    </tbody>
+  </table></div>
+  <p>For scale: a single PostgreSQL instance on modest hardware handles thousands of simple inserts per second, and one Python API process handles hundreds of small webhook requests per second. The peak above is one to two orders of magnitude below where either becomes the constraint. <span class="lbl e">Estimate</span> Load-test the gateway at 500 requests per second before launch to confirm it on Render's hardware. <span class="lbl u">Unknown</span></p>
+</section>
+
+<section class="doc" id="webhooks-sec">
+  <h2 id="webhooks"><span class="sn">3</span>Webhook gateway</h2>
+  <p><strong>Answer:</strong> yes, <em>validate → persist → return 200 → process asynchronously</em>, with two refinements: split each POST into its individual events before storing, and treat the database write as both the durable log and the duplicate check. <span class="lbl r">Recommendation</span></p>
+  <h3>Why this shape</h3>
+  <ul>
+    <li><strong>Meta sets a hard deadline.</strong> Messaging webhooks must be answered "within 5 or less seconds". If delivery keeps failing for 1 hour, Meta sends a "Webhooks Disabled" alert and <em>unsubscribes the app from that Instagram account</em>. <span class="lbl v">Verified</span> [S3] Any AI call, platform call or slow query inside the request puts every tenant's subscription at risk. v1 ran up to 15 s of AI before answering.</li>
+    <li><strong>Meta retries and duplicates.</strong> Instagram: "retry immediately, then … over the next 36 hours … Your server should handle deduplication." WhatsApp: retries "for up to 7 days". <span class="lbl v">Verified</span> [S2][S8] A 200 must mean "stored durably", and storing must be idempotent.</li>
+    <li><strong>No replay exists.</strong> "You will not be able to query historical webhook event notification data." <span class="lbl v">Verified</span> [S1] If Social Hood drops an event, it is gone; only reconciliation polling can recover part of it.</li>
+    <li><strong>Batches mix objects.</strong> One POST can carry up to 1,000 updates, from different accounts of the same type. <span class="lbl v">Verified</span> [S1] Splitting lets each event be routed to its tenant, retried and deduplicated independently.</li>
+  </ul>
+  <h3>Diagram 1 · Webhook processing</h3>
+  <pre class="mermaid">
+sequenceDiagram
+  participant M as Meta
+  participant G as Webhook route (API)
+  participant P as PostgreSQL
+  participant Q as Job queue (in PostgreSQL)
+  participant W as Worker
+  M->>G: POST batch (1..1000 updates) + X-Hub-Signature-256
+  G->>G: HMAC over raw bytes (constant-time)
+  alt signature invalid
+    G-->>M: 401 (nothing stored)
+  else valid
+    G->>P: INSERT webhook_events per update ON CONFLICT (provider, dedupe_key) DO NOTHING
+    G->>Q: defer process_webhook_event(id) for rows inserted
+    G-->>M: 200 in under 500 ms
+    Q->>W: job
+    W->>P: lock event, route to tenant, write domain rows (unique keys)
+    W->>Q: follow-up jobs (analyse, automate, fetch media)
+  end
+  </pre>
+  <h3>Rules for the gateway</h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Verify <code>X-Hub-Signature-256</code> over the raw request bytes before parsing. Reject only on a bad or missing signature.</td><td>Meta signs the payload bytes; re-serialised JSON differs (v1's Dodo bug). Messenger notes the signature is computed over escaped unicode. <span class="lbl v">Verified</span> [S3] Which secret signs Instagram Login webhooks (Meta app secret or Instagram app secret) is ambiguous. <span class="lbl u">Unknown</span></td></tr>
+      <tr><td>Return 200 for everything else, including unknown accounts, unsupported events and payloads that fail to parse after the signature passed; store them as <code>ignored</code> or <code>failed</code>.</td><td>A non-200 invites retries that cannot succeed and counts toward the 1-hour disable. <span class="lbl r">Recommendation</span></td></tr>
+      <tr><td>Accept bodies up to 5 MB.</td><td>WhatsApp payloads can be up to 3 MB. <span class="lbl v">Verified</span> [S8] (The build spec's 1 MB cap is corrected in §20.)</td></tr>
+      <tr><td>No platform calls, AI calls or cross-table work in the request. One multi-row INSERT and one enqueue.</td><td>Keeps p99 under 500 ms; WhatsApp asks for median latency under 250 ms and under 1% above 1 s. <span class="lbl v">Verified</span> [S8]</td></tr>
+      <tr><td>Enqueue after the insert. If the enqueue fails, still return 200; a sweeper re-enqueues <code>received</code> events older than 60 s.</td><td>PostgreSQL is the source of truth; the queue entry is only a pointer. <span class="lbl r">Recommendation</span></td></tr>
+      <tr><td>Alert when the webhook error rate exceeds 1% for 5 minutes; a daily job re-subscribes every active account (<code>POST /{ig-id}/subscribed_apps</code>, <code>POST /{waba}/subscribed_apps</code>).</td><td>Recover within minutes from the 1-hour unsubscribe, and heal accounts that dropped off silently. <span class="lbl r">Recommendation</span></td></tr>
+      <tr><td>Consider WhatsApp mTLS instead of IP allow-lists.</td><td>Meta changes IPs and recommends mTLS; the CA changed in 2026. <span class="lbl v">Verified</span> [S8] Optional at MVP.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Missing, delayed and out-of-order events</h3>
+  <ul>
+    <li><strong>Delayed or out of order:</strong> order everything by the platform's own timestamp (<code>messaging[].timestamp</code>, <code>statuses[].timestamp</code>), never by arrival time. The envelope's <code>time</code> is when the notification was sent, not when the event happened. <span class="lbl v">Verified</span> [S1] Status changes only move forward (sent → delivered → read); a late "delivered" after "read" is ignored.</li>
+    <li><strong>Missing comments:</strong> for posts under 7 days old, every 30 minutes compare the post's <code>comments_count</code> with Social Hood's stored count, and fetch comments only when they differ. That costs one cheap call per post most of the time. <span class="lbl r">Recommendation</span> Note: the comments endpoint returns top-level comments only, 50 per query, with no timestamp filter. <span class="lbl v">Verified</span> [S7i]</li>
+    <li><strong>Missing DMs:</strong> the Conversations API only exposes the 20 most recent messages per thread and allows 2 calls per second per account. <span class="lbl v">Verified</span> [S7i] Use it only for accounts whose webhook traffic stopped unexpectedly (no events for 6 h during their usual active hours), not as a routine sync.</li>
+    <li><strong>Subscription loss:</strong> the daily re-subscribe above, plus an alert when a normally busy account goes silent.</li>
+  </ul>
+</section>
+
+<section class="doc" id="queues-sec">
+  <h2 id="queues"><span class="sn">4</span>Queue choice</h2>
+  <p>The expected load is about 6 jobs a second on average and about 100 at peak (§2). Every option below handles that; the choice is about durability, operations and cost.</p>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Option</th><th>Throughput</th><th>Ordering</th><th>Retries and dead letters</th><th>Durability</th><th>Operations</th><th>Cost at MVP</th><th>Fit</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PostgreSQL queue</strong> (Procrastinate, or <code>FOR UPDATE SKIP LOCKED</code>)</td><td>Hundreds to low thousands of jobs/s on one instance <span class="lbl e">Estimate</span></td><td>Per queue by priority and time; per-key serialisation with locks</td><td>Built in; failed jobs stay queryable</td><td>Same as the data (WAL, point-in-time recovery)</td><td>None extra; needs a direct (non-PgBouncer) connection for LISTEN/NOTIFY <span class="lbl v">Verified</span> [S21]</td><td>$0</td><td><strong>Chosen for MVP</strong></td></tr>
+      <tr><td>Redis Streams (Valkey)</td><td>Tens of thousands/s</td><td>Per stream</td><td>At-least-once via XPENDING/XCLAIM; dead letters are a manual pattern <span class="lbl v">Verified</span> [S26]</td><td>AOF every second: "might lose up to the last second of writes" <span class="lbl v">Verified</span> [S22]</td><td>Low (managed)</td><td>$10+/mo</td><td>Good for real-time fan-out; weaker as the only record</td></tr>
+      <tr><td>ARQ on Redis</td><td>High</td><td>n/a</td><td>Built in</td><td>As Redis</td><td>Low</td><td>$10+/mo</td><td>Rejected: "In maintenance only mode" <span class="lbl v">Verified</span> [S23]</td></tr>
+      <tr><td>RabbitMQ</td><td>High</td><td>Per queue</td><td>Quorum queues, delivery limit, dead-lettering <span class="lbl v">Verified</span> [S30]</td><td>Replicated</td><td>A new service to run or buy (not a Render product)</td><td>Extra vendor</td><td>Not needed</td></tr>
+      <tr><td>Kafka</td><td>Very high, replayable log</td><td>Per partition <span class="lbl v">Verified</span> [S30]</td><td>No per-message retry or dead letters without extra code</td><td>Replicated</td><td>Heavy</td><td>Hundreds $/mo managed</td><td>Only for multi-consumer event streaming at far higher volume</td></tr>
+      <tr><td>AWS SQS</td><td>Effectively unlimited (standard)</td><td>Best effort; FIFO per group</td><td>Redrive policy, visibility timeout <span class="lbl v">Verified</span> [S30]</td><td>Managed</td><td>New cloud account and credentials; cross-cloud latency from Render</td><td>$0.40 per million requests</td><td>Good Growth option</td></tr>
+      <tr><td>Google Pub/Sub</td><td>Very high</td><td>Ordering keys (1 MBps per key)</td><td>Dead-letter topics (5–100 attempts) <span class="lbl v">Verified</span> [S30]</td><td>Managed</td><td>New cloud account</td><td>$40 per TiB</td><td>Good Growth option</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Recommendation: a PostgreSQL-backed queue for the MVP.</strong> <span class="lbl r">Recommendation</span> It adds no system, shares the database's backups and durability, and lets Social Hood inspect or repair jobs with plain SQL. Its limit is database write capacity, which is far above the MVP load. <strong>Procrastinate</strong> (3.10.0, September 2026, "Production/Stable", async, periodic tasks with de-duplication, retries, queueing locks) fits a FastAPI codebase. <span class="lbl v">Verified</span> [S24] Two cautions: it uses psycopg 3 (its own small pool next to the app's), and its repository asks for more maintainers. <span class="lbl v">Verified</span> [S24] Keep the job layer behind one internal function (<code>jobs.enqueue(name, args, key=…, lane=…)</code>) so it can be swapped for SQS or a Redis-based queue in a day.</p>
+  <h3>Lanes, backpressure and fairness</h3>
+  <ul>
+    <li><strong>Two lanes.</strong> <em>interactive</em>: webhook processing, inbound DM analysis, suggestions, sends, scheduled sends. <em>bulk</em>: comment analysis, backfills, media sync, metric snapshots, summaries, knowledge ingestion. Each lane has its own worker processes, so a viral post never delays a customer's DM reply. <span class="lbl r">Recommendation</span></li>
+    <li><strong>Per-tenant caps in the bulk lane.</strong> At most 4 concurrent bulk jobs per workspace (a Valkey semaphore). One tenant's 100,000 comments then use 4 slots while everyone else's work continues. <span class="lbl r">Recommendation</span></li>
+    <li><strong>Per-account platform token buckets.</strong> Instagram Send API 100/s for text and 10/s for audio or video, private replies 750/hour, Conversations API 2/s; WhatsApp 80 messages/s per number and 1 message every 6 s to the same user. <span class="lbl v">Verified</span> [S5][S9] Jobs that would exceed a bucket are re-scheduled for when a token frees, not retried blindly.</li>
+    <li><strong>Backpressure signal.</strong> Queue depth and the age of the oldest ready job per lane are exported as metrics; alert when the interactive lane's oldest job is older than 30 s.</li>
+    <li><strong>Dead letters.</strong> A job that exhausts its retries stays in the queue table as failed, with its error; its domain row is marked <code>failed</code> with a reason. An admin view lists them; a "retry" action re-enqueues.</li>
+  </ul>
+</section>
+
+<section class="doc" id="idem-sec">
+  <h2 id="idempotency"><span class="sn">5</span>Idempotency</h2>
+  <p><strong>Exactly-once delivery is not available</strong> from Meta or from any queue here; every hop is at-least-once. Social Hood makes each <em>effect</em> happen once by giving every step a natural key and a unique constraint. <span class="lbl r">Recommendation</span></p>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Layer</th><th>Key</th><th>Where</th><th>Kept</th></tr></thead>
+    <tbody>
+      <tr><td>Incoming event</td><td><code>(provider, dedupe_key)</code>, e.g. <code>ig:msg:{mid}</code>, <code>ig:comment:{id}:add</code>, <code>wa:msg:{wamid}</code>, <code>wa:status:{wamid}:{status}</code>, <code>dodo:{webhook-id}</code></td><td>Unique index on <code>webhook_events</code></td><td>30 days; must exceed WhatsApp's 7-day retry window <span class="lbl v">Verified</span> [S8]</td></tr>
+      <tr><td>Stored message or comment</td><td><code>(social_account_id, platform_message_id)</code>, <code>(social_account_id, platform_comment_id)</code></td><td>Unique indexes</td><td>Lifetime of the row</td></tr>
+      <tr><td>Side effects</td><td><code>automation_runs (automation_id, trigger_comment_id)</code>; one private reply per comment; one AI reply per inbound message</td><td>Unique indexes; follow-ups run only if the insert created the row</td><td>Lifetime</td></tr>
+      <tr><td>Queued job</td><td>Queueing lock, e.g. <code>analyze:{conversation_id}</code></td><td>Job queue</td><td>Until the job finishes</td></tr>
+      <tr><td>Client request</td><td><code>Idempotency-Key</code> header</td><td><code>idempotency_keys</code></td><td>24 hours</td></tr>
+      <tr><td>Outbound send</td><td><code>client_id</code> per message; a timeout after sending is marked <code>delivery_unknown</code> and never auto-retried</td><td><code>messages</code></td><td>Lifetime</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>PostgreSQL rather than Redis for de-duplication.</strong> The check must be in the same transaction as the write it protects, and it must survive restarts for 7 days. At about 300,000 events a day the unique index costs nothing noticeable. <span class="lbl r">Recommendation</span> A Redis <code>SET NX</code> in front becomes worthwhile only above roughly 1,000 events per second, as an optimisation, never as the only check.</p>
+</section>
+
+<section class="doc" id="pg-sec">
+  <h2 id="postgres"><span class="sn">6</span>PostgreSQL as the primary database</h2>
+  <p><strong>Answer: yes.</strong> Every entity in the brief (users, organisations, teams, accounts, posts, comments, conversations, messages, automations, agent configuration, leads, AI outputs, analytics metadata, AI logs) is relational, tenant-keyed and queried by index. PostgreSQL also covers full-text search (<code>tsvector</code>), fuzzy matching (<code>pg_trgm</code>), vectors (<code>pgvector</code>) and partitioning, all available on Render. <span class="lbl v">Verified</span> [S21] <span class="lbl r">Recommendation</span></p>
+  <h3>Size at the brief's scale</h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Table</th><th>Rows per year</th><th>Size per year incl. indexes</th><th>Access pattern</th></tr></thead>
+    <tbody class="num">
+      <tr><td><code>messages</code></td><td>≈ 36 million (50k in + 50k out per day)</td><td>≈ 40 GB</td><td>Latest page per conversation; keyset on <code>(conversation_id, occurred_at, id)</code></td></tr>
+      <tr><td><code>comments</code> + <code>comment_analyses</code></td><td>≈ 36 million + 25 million</td><td>≈ 40 GB</td><td>Per post, newest first; filters by sentiment</td></tr>
+      <tr><td><code>message_analyses</code>, <code>reply_suggestions</code>, <code>ai_decisions</code></td><td>≈ 20 million</td><td>≈ 15 GB</td><td>By message or conversation</td></tr>
+      <tr><td><code>webhook_events</code> (30-day window)</td><td>≈ 9 million live</td><td>≈ 10 GB steady</td><td>Insert, one update, purge</td></tr>
+      <tr><td><code>post_metric_snapshots</code>, <code>account_daily_metrics</code></td><td>≈ 22 million + 3.6 million</td><td>≈ 7 GB</td><td>By post or account and date</td></tr>
+      <tr><td><code>knowledge_chunks</code> (768-dim vectors)</td><td>≈ 1–5 million total</td><td>≈ 3–15 GB</td><td>Nearest neighbours within one workspace</td></tr>
+    </tbody>
+  </table></div>
+  <p>Total: roughly 120–150 GB in year one. <span class="lbl e">Estimate</span> That fits a 4 GB instance at launch, moving to 8–16 GB RAM as the hot working set (recent conversations, recent comments, indexes) grows. Storage on Render costs $0.30 per GB and can grow to 16 TB. <span class="lbl v">Verified</span> [S21]</p>
+  <h3>Design rules</h3>
+  <ul>
+    <li><strong>Indexes</strong> follow the access patterns above, always leading with the tenant or parent key: <code>(workspace_id, status, last_message_at DESC, id DESC)</code> for the inbox, partial indexes for small filters (<code>WHERE awaiting_reply</code>), GIN for full-text, HNSW for vectors. No index without a query that needs it.</li>
+    <li><strong>Partitioning, later:</strong> range-partition <code>messages</code>, <code>comments</code> and <code>webhook_events</code> by month once a trigger in §19 fires. Dropping a partition "is far faster than a bulk operation", and "unique and primary keys must include the partition key". <span class="lbl v">Verified</span> [S31] The inbox's keyset queries already carry a time bound, so pruning works. <code>pg_partman</code> is available on Render, but without its background worker, so maintenance runs from a Social Hood cron job. <span class="lbl v">Verified</span> [S21] <code>webhook_events</code> is the first candidate: its 30-day purge becomes dropping a daily or weekly partition.</li>
+    <li><strong>Connection pooling:</strong> Render's built-in PgBouncer runs in transaction mode. <span class="lbl v">Verified</span> [S21] The API can use it once connection counts grow; asyncpg then needs prepared-statement caching disabled (<code>statement_cache_size=0</code>). Workers that LISTEN for jobs connect directly. Connection limit is 100 below 8 GB RAM, 200 at 8–16 GB. <span class="lbl v">Verified</span> [S21]</li>
+    <li><strong>Read replicas, later:</strong> for analytics and reporting reads once they measurably slow the primary (§19). Render supports up to 5, each billed like the primary. <span class="lbl v">Verified</span> [S21]</li>
+    <li><strong>Retention and archiving:</strong> the purge job enforces plan retention (Free: 90 days of messages), 30 days of raw webhook payloads, 13 months of AI usage events. Archive to object storage (R2, JSON lines) only when a customer or regulation needs it.</li>
+    <li><strong>Backups:</strong> point-in-time recovery, 7 days on Render Pro workspaces. <span class="lbl v">Verified</span> [S21] Rehearse a restore before launch.</li>
+  </ul>
+  <h3>Where PostgreSQL stops being enough</h3>
+  <p>Not at hundreds of millions of rows as such: indexed point and range queries stay fast on well-partitioned tables. It becomes the wrong tool for <strong>interactive aggregations that scan tens of millions of rows</strong> (for example "engagement across all posts of all accounts by week for the last year", or a cross-tenant benchmark), and for <strong>very high write rates of append-only events</strong> (thousands per second, sustained). Both have concrete triggers in §19. Neither is in the R1 or R2 feature set. <span class="lbl r">Recommendation</span></p>
+</section>
+
+<section class="doc" id="an-sec">
+  <h2 id="analytics"><span class="sn">7</span>Analytics storage</h2>
+  <p>Post metrics over time are small, append-mostly data keyed by post and time. At 10,000 accounts publishing about one post a day with six snapshot windows, that is 60,000 snapshot rows a day, or about 22 million a year. That is modest for PostgreSQL. <span class="lbl e">Estimate</span></p>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Option</th><th>Verdict</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td><strong>PostgreSQL tables</strong></td><td class="yes">Use now</td><td>Same database, joins with posts and comments, simple. Wide rows (one per post per window) keep row counts low.</td></tr>
+      <tr><td>TimescaleDB</td><td class="no">Not on Render</td><td>Render offers only the Apache-2 edition: "Community features are not available", so no compression, continuous aggregates or retention policies. <span class="lbl v">Verified</span> [S21][S27] Without those it adds little over native partitioning.</td></tr>
+      <tr><td>ClickHouse</td><td class="later">Later</td><td>Excellent for large scans; ClickHouse Cloud starts at $66.52/month. <span class="lbl v">Verified</span> [S28] Worth it once raw analytics exceed about 1 billion rows or dashboards scan tens of millions of rows (§19).</td></tr>
+      <tr><td>BigQuery</td><td class="later">Later, as a warehouse</td><td>$6.25 per TiB scanned, first TiB free. <span class="lbl v">Verified</span> [S29] Good for internal cross-tenant analysis and benchmarks, not for serving dashboards.</td></tr>
+      <tr><td>Snowflake</td><td class="no">No</td><td>Same role as BigQuery, and no advantage for this workload.</td></tr>
+      <tr><td>Elasticsearch / OpenSearch</td><td class="no">No</td><td>A search engine, not a metrics store. PostgreSQL full-text search covers inbox search at this scale.</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Source of truth:</strong> PostgreSQL. <strong>Analytics layer:</strong> rollup tables in PostgreSQL now (per account per day, per post per window); a columnar copy (ClickHouse) fed from PostgreSQL later, never written to directly by the app. <span class="lbl r">Recommendation</span></p>
+  <h3>Tables</h3>
+<pre><code>post_metric_snapshots   one row per (media_item_id, window)          window: 1h 6h 24h 72h 7d 30d
+  likes, comments        from the post's own fields (live)
+  views, reach, saves, shares, total_interactions, profile_visits, follows   from insights (may lag)
+  insights_final bool    false until the 72h snapshot re-polls lagging values
+  captured_at
+
+account_daily_metrics   one row per (social_account_id, date)
+  followers_count        polled daily from the account fields (the reliable history)
+  reach, views, accounts_engaged, total_interactions, follows, unfollows, profile_links_taps
+
+post_benchmarks          per (social_account_id, media_product_type, window): p25, p50, p75
+                         recomputed nightly from the last 90 days of snapshots</code></pre>
+  <p>"New vs older post" comparison then becomes: this post's value at window W against the account's p50 at the same W, for the same media type. That is one indexed lookup, not a scan. <span class="lbl r">Recommendation</span></p>
+  <h3>Diagram 3 · Post analytics</h3>
+  <pre class="mermaid">
+flowchart LR
+  P["Post published or synced"] --> S["Snapshot schedule rows (due at +1h +6h +24h +72h +7d +30d)"]
+  S --> D["Dispatcher claims due rows"]
+  D --> F["Fetch fields: like_count, comments_count"]
+  D --> I["Fetch insights: views, reach, saved, shares, total_interactions"]
+  F --> W["post_metric_snapshots (wide row)"]
+  I --> W
+  A["Daily 02:00 local"] --> AC["Account fields + account insights"] --> AD["account_daily_metrics"]
+  W --> B["Nightly benchmarks p25/p50/p75"]
+  AD --> B
+  B --> UI["Post page: this post vs account median at same age"]
+  W --> AI["AI post explanation (reads computed numbers)"]
+  </pre>
+</section>
+
+<section class="doc" id="acq-sec">
+  <h2 id="acquisition"><span class="sn">8</span>How metrics are acquired</h2>
+  <p>No platform pushes metric values by webhook for the setup Social Hood uses; every count is polled. (Instagram's <code>story_insights</code> webhook exists only for the Facebook-Login API.) <span class="lbl v">Verified</span> [S2][S14] The full per-metric matrix is in the companion Instagram document; the summary:</p>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Metric</th><th>Instagram</th><th>Facebook Page</th><th>LinkedIn</th><th>WhatsApp</th></tr></thead>
+    <tbody>
+      <tr><td>Likes</td><td>Field <code>like_count</code>; insights <code>likes</code> (organic)</td><td>Field reactions summary; insights <code>post_reactions_by_type_total</code></td><td><code>socialMetadata</code> reactions; share stats <code>likeCount</code></td><td>n/a</td></tr>
+      <tr><td>Comments</td><td>Field <code>comments_count</code>; comment events by webhook</td><td>Field comments summary; <code>feed</code> webhook events</td><td><code>commentSummary</code>; webhook events (Standard tier)</td><td>n/a</td></tr>
+      <tr><td>Shares</td><td>Insights <code>shares</code></td><td>Field <code>shares.count</code></td><td><code>shareCount</code></td><td>n/a</td></tr>
+      <tr><td>Saves</td><td>Insights <code>saved</code></td><td>Not available</td><td>Organisation: not available</td><td>n/a</td></tr>
+      <tr><td>Reach</td><td>Insights <code>reach</code> (estimated)</td><td><code>post_total_media_view_unique</code></td><td><code>uniqueImpressionsCount</code></td><td>n/a</td></tr>
+      <tr><td>Impressions / views</td><td>Insights <code>views</code> (impressions removed 2025)</td><td><code>post_media_view</code> (impressions removed Nov 2025)</td><td><code>impressionCount</code></td><td>Sent / delivered counts via <code>analytics</code></td></tr>
+      <tr><td>Video views</td><td><code>views</code>, Reels watch-time metrics</td><td><code>post_video_views</code> (3-second)</td><td><code>videoAnalytics</code> (6 months only)</td><td>n/a</td></tr>
+      <tr><td>Clicks</td><td>Story <code>link_clicks</code>; <code>profile_activity</code>; account <code>website_clicks</code> removed</td><td><code>post_clicks</code></td><td><code>clickCount</code></td><td>Template button clicks (7 days)</td></tr>
+      <tr><td>Follower growth</td><td>Poll <code>followers_count</code> daily; <code>follows_and_unfollows</code></td><td><code>page_follows</code>, daily follows/unfollows</td><td><code>followerGains</code> (2-day lag)</td><td>n/a</td></tr>
+      <tr><td>Profile visits</td><td>Per post <code>profile_visits</code>; account <code>profile_views</code> removed</td><td><code>page_views_total</code></td><td>Page statistics views</td><td>n/a</td></tr>
+    </tbody>
+  </table></div>
+  <p>All <span class="lbl v">Verified</span> [S14][S15][S16][S18][S19]. Consequences for the design:</p>
+  <ul>
+    <li><strong>Early windows use live fields.</strong> Instagram insights "can be delayed up to 48 hours" and Facebook Page metrics mostly "update once every 24 hours". <span class="lbl v">Verified</span> [S14][S18] The 1 h and 6 h snapshots therefore rely on <code>like_count</code> and <code>comments_count</code>; insight-based values are re-polled at 72 h and marked final then. <span class="lbl r">Recommendation</span></li>
+    <li><strong>Store history yourself.</strong> Instagram keeps account-level metrics for 90 days and media metrics for 2 years; stories only 24 hours. <span class="lbl v">Verified</span> [S14][S17] Anything not captured is lost, which is why snapshot collection starts in R1.</li>
+    <li><strong>Carousel children have no insights</strong>, and most metrics are organic only. <span class="lbl v">Verified</span> [S14]</li>
+    <li><strong>LinkedIn restricts storage</strong>: organisation reporting data may be kept one year; members' activity data 48 hours. <span class="lbl v">Verified</span> [S19] Any LinkedIn analytics (R3) must purge accordingly.</li>
+    <li><strong>API budget is ample</strong>: about 8 Instagram calls per account per day against a per-account budget of 4,800 × daily impressions. <span class="lbl v">Verified</span> [S4] <span class="lbl e">Estimate</span></li>
+  </ul>
+</section>
+
+<section class="doc" id="redis-sec">
+  <h2 id="redis"><span class="sn">9</span>Do we need Redis?</h2>
+  <p><strong>Not as a queue or a record of anything. Yes, cheaply, for four real-time jobs</strong> that would otherwise add write load to PostgreSQL:</p>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Use</th><th>Why Redis (Valkey)</th><th>What happens if it restarts empty</th></tr></thead>
+    <tbody>
+      <tr><td>Live event stream to browsers (one stream per workspace, replay by last event id)</td><td>Fan-out across API instances; streams are native</td><td>Clients get a <code>resync</code> and refetch</td></tr>
+      <tr><td>Rate limits and token buckets (API per user, platform per account, AI per workspace)</td><td>Thousands of tiny counter updates per second</td><td>Limits reset; brief over-sending is prevented by platform-side limits and retries</td></tr>
+      <tr><td>Short caches (contact profiles, OAuth state, JWT key)</td><td>Avoid repeated platform calls</td><td>Refetched; OAuth attempts in progress must restart</td></tr>
+      <tr><td>Locks and semaphores (cron locks, per-tenant bulk caps)</td><td>Cross-process coordination</td><td>Locks released; cron guarded again by the job queue's own periodic de-duplication</td></tr>
+    </tbody>
+  </table></div>
+  <p>Render Key Value is Valkey 8 (Redis 7.2-compatible), $10/month for 256 MB, with optional AOF persistence. <span class="lbl v">Verified</span> [S22] Because nothing in it must survive, the plan can run with persistence off or on at no design cost. Could the MVP drop it entirely? Yes, by using PostgreSQL LISTEN/NOTIFY for live events and in-process limiters, at the cost of more database writes and weaker cross-instance limits. At $10 a month it is not worth that trade. <span class="lbl r">Recommendation</span></p>
+</section>
+
+<section class="doc" id="vec-sec">
+  <h2 id="vector"><span class="sn">10</span>Do we need a vector database?</h2>
+  <p><strong>Answer: vector search yes, for one use case; a separate vector database no.</strong> <span class="lbl r">Recommendation</span></p>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Use case</th><th>Needs vectors?</th><th>Better mechanism</th><th>Volume</th><th>Decision</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A · Business knowledge</strong> (FAQs, policies, products, pricing)</td><td>Partly. Customers paraphrase ("do u deliver to uae" vs "Shipping to Dubai")</td><td>Hybrid: trigram/full-text match for exact wording plus vector similarity for paraphrase; structured lookup for prices and stock once the catalog exists (R2)</td><td>Hundreds of chunks per workspace; ≈ 1–5 M in total</td><td class="yes">pgvector now</td></tr>
+      <tr><td><strong>B · Conversation memory</strong></td><td>No</td><td>The last 12 messages plus a stored summary plus structured customer facts</td><td>Threads are short</td><td class="no">No vectors</td></tr>
+      <tr><td><strong>C · Semantic search of history</strong></td><td>Rarely</td><td>Full-text and trigram search finds names, order numbers, keywords, which is what inbox users search for</td><td>≈ 36 M messages a year; embedding them all is cheap in tokens but ≈ 55 GB a year of vectors plus index</td><td class="later">Later, only if users ask</td></tr>
+      <tr><td><strong>D · Similar posts</strong></td><td>Yes (caption and topic similarity)</td><td>Embeddings of captions</td><td>Small: one vector per post</td><td class="later">pgvector in R2</td></tr>
+      <tr><td><strong>E · Similar customer questions</strong></td><td>Helpful</td><td>R1: trigram grouping of "missing topics" (the knowledge-gap list). R2: embed only the missing-topic labels and unanswered questions</td><td>Tiny</td><td class="later">Trigram now, pgvector later</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>Why pgvector and not Qdrant, Pinecone, Weaviate or Milvus:</strong> the vectors belong to rows that already live in PostgreSQL, must be filtered by workspace, and must disappear when a source is edited or a workspace is deleted. Keeping them in the same database makes that a transaction instead of a sync job. pgvector 0.8.6 supports HNSW indexes up to 2,000 dimensions (4,000 with <code>halfvec</code>) and iterative index scans, which fix the problem of a tenant filter starving results. <span class="lbl v">Verified</span> [S25] Gemini Embedding 2 defaults to 3,072 dimensions, so request 768 (it normalises truncated vectors itself). <span class="lbl v">Verified</span> [S20] At 5 million 768-dimension vectors the table is about 15 GB (7.5 GB as <code>halfvec</code>), which one instance handles. <span class="lbl e">Estimate</span></p>
+  <p><strong>When to reconsider:</strong> more than about 20 million vectors, retrieval p95 above 150 ms after tuning, or the vector index no longer fitting in RAM. Then first try <code>halfvec</code> and list-partitioning by workspace (the pgvector README's suggestion for multi-tenancy), and only then a dedicated service. <span class="lbl v">Verified</span> [S25] <span class="lbl r">Recommendation</span></p>
+</section>
+
+<section class="doc" id="rag-sec">
+  <h2 id="rag"><span class="sn">11</span>RAG and retrieval</h2>
+  <p><strong>RAG is right for one job:</strong> answering a customer with facts only the business knows. It is wrong as a default. Each question type gets the cheapest mechanism that answers it correctly. <span class="lbl r">Recommendation</span></p>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Question type (from the intent classifier)</th><th>Mechanism</th><th>Example</th></tr></thead>
+    <tbody>
+      <tr><td>Greeting, thanks, emoji</td><td>None. Often no reply is needed (<code>needs_reply = false</code>)</td><td>"Hi", "Thanks!", "❤️"</td></tr>
+      <tr><td>Policy, shipping, returns, how-to</td><td>Knowledge retrieval (hybrid: text + vector)</td><td>"What is your refund policy?"</td></tr>
+      <tr><td>Price, stock, sizes</td><td>Structured catalog lookup (R2), falling back to knowledge retrieval</td><td>"Is the Aria dress in M?"</td></tr>
+      <tr><td>Order status</td><td>Order tool (R2); until then, escalate</td><td>"Where is my order #4821?"</td></tr>
+      <tr><td>Something said earlier in the chat</td><td>Conversation history already in the prompt</td><td>"Like I said, the blue one"</td></tr>
+      <tr><td>Owner's analytics question</td><td>SQL tools over a curated, tenant-filtered view (R3); the model narrates computed numbers, never calculates them</td><td>"Why did engagement drop this month?"</td></tr>
+      <tr><td>Refund, complaint, legal, abuse</td><td>No generation; escalate to a person</td><td>"I want my money back"</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Diagram 5 · Knowledge retrieval</h3>
+  <pre class="mermaid">
+flowchart TD
+  M["Inbound message + analysis"] --> R{"Router by intent"}
+  R -- "greeting / thanks" --> N["No retrieval; maybe no reply"]
+  R -- "refund / complaint / legal" --> E["Escalate to human"]
+  R -- "price / stock (R2)" --> C["Catalog lookup (SQL)"]
+  R -- "policy / shipping / how-to" --> H["Hybrid search"]
+  C -- "not found" --> H
+  H --> T["Trigram + full-text on chunks"]
+  H --> V["pgvector top-8, same workspace, sim ≥ 0.60"]
+  T --> K["Merge, top 6 chunks"]
+  V --> K
+  K --> G["Reply model with KNOWLEDGE block"]
+  G --> P["Safety policy (13 checks)"]
+  </pre>
+</section>
+
+<section class="doc" id="agent-sec">
+  <h2 id="agent"><span class="sn">12</span>Agent architecture</h2>
+  <p>Two different "agents" hide in the brief, and they should be built differently. <span class="lbl r">Recommendation</span></p>
+  <ul>
+    <li><strong>The customer-facing reply agent</strong> (R1) should be a <em>fixed pipeline</em>, not an open tool-calling loop: classify → route → retrieve → draft → check → send. Every step is predictable, testable and cheap, and it can never decide to take an action nobody reviewed.</li>
+    <li><strong>The owner-facing assistant</strong> (Ask Social Hood, automation builder; R3) is where tool calling pays off: open-ended questions, several steps, a human watching. It starts with read-only tools; action tools always go through an approval card (the pattern already prototyped in v1's agent code).</li>
+  </ul>
+  <h3>Tools, and when each kind is used</h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Kind</th><th>Tools</th><th>Used when</th><th>Guard</th></tr></thead>
+    <tbody>
+      <tr><td>Structured (read)</td><td><code>get_customer</code>, <code>get_conversation</code>, <code>get_post</code>, <code>get_post_metrics</code>, <code>get_comments</code>, <code>get_product</code>, <code>get_order</code></td><td>The answer is a fact with an exact location (a row). Always preferred over search.</td><td>Workspace-scoped queries only; ids come from earlier tool results</td></tr>
+      <tr><td>Search (read)</td><td><code>search_knowledge</code>, <code>search_conversations</code>, <code>search_similar_questions</code></td><td>The fact's location is unknown or phrased differently</td><td>Returns ids and snippets; the model cites what it used</td></tr>
+      <tr><td>Action (write)</td><td><code>send_dm</code>, <code>reply_comment</code>, <code>assign_conversation</code>, <code>create_followup</code>, <code>schedule_message</code></td><td>Only after reading enough to justify it</td><td>R1: only the reply pipeline sends, through the 13-check policy. R3 assistant: every action is a proposal the user approves; arguments are frozen at proposal time</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Diagram 4 · AI agent</h3>
+  <pre class="mermaid">
+flowchart LR
+  subgraph R1["R1 reply pipeline (fixed steps)"]
+    IN["Inbound DM"] --> PF["Rules pre-filter"] --> CL["Classify (Flash-Lite)"] --> RT{"Route"}
+    RT --> RET["Retrieve (knowledge / catalog)"] --> GEN["Draft (Flash-Lite or 3.8 Flash)"] --> POL["Policy: 13 checks"]
+    POL -- "pass, Auto" --> SEND["send_dm"]
+    POL -- "fail or Suggest" --> SUG["Suggestion card for a human"]
+  end
+  subgraph R3["R3 owner assistant (tool loop)"]
+    Q["Owner question"] --> LLM["Model with tools"]
+    LLM --> RD["Read tools: SQL views, search"]
+    RD --> LLM
+    LLM --> ACT["Action proposal"] --> APR{"Owner approves?"}
+    APR -- "yes" --> EXE["Execute stored arguments"]
+  end
+  </pre>
+</section>
+
+<section class="doc" id="mem-sec">
+  <h2 id="memory"><span class="sn">13</span>Agent memory</h2>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Memory</th><th>What it holds</th><th>Store</th><th>How it is read</th></tr></thead>
+    <tbody>
+      <tr><td>Short-term</td><td>The current conversation</td><td>PostgreSQL <code>messages</code></td><td>Last 12 messages by index, every call</td></tr>
+      <tr><td>Conversation summary</td><td>Compressed older context: what was asked, promised, bought; next step</td><td>PostgreSQL <code>conversations.summary</code></td><td>Included when the thread exceeds 12 messages; refreshed every 8 new messages</td></tr>
+      <tr><td>Long-term customer memory</td><td>Facts: name, lead score, past orders, preferences ("prefers size M"), language</td><td>PostgreSQL columns and a small <code>contact_facts</code> table with source message and date (R2)</td><td>Loaded by contact id; never guessed from similarity</td></tr>
+      <tr><td>Business memory</td><td>Policies, FAQs, product details, brand voice</td><td>PostgreSQL + pgvector (<code>knowledge_chunks</code>); catalog tables (R2)</td><td>Router-driven retrieval (§11)</td></tr>
+      <tr><td>Working state</td><td>Locks, rate counters, in-flight flags</td><td>Valkey</td><td>Ephemeral</td></tr>
+      <tr><td>Originals</td><td>Uploaded documents, media, exports</td><td>Cloudinary now; R2 for archives later</td><td>By reference from PostgreSQL</td></tr>
+    </tbody>
+  </table></div>
+  <p>Nothing goes into a vector store "just in case". Customer memory in particular must be exact, editable and deletable on request, which structured rows are and embeddings are not. <span class="lbl r">Recommendation</span></p>
+</section>
+
+<section class="doc" id="ai-sec">
+  <h2 id="ai-scale"><span class="sn">14</span>AI processing at scale</h2>
+  <p>Scenario from the brief: 100,000 comments and 50,000 inbound DMs a day (analytics events need no AI). Prices are Gemini paid-tier list prices from 24 Sep 2026. <span class="lbl v">Verified</span> [S20] Token counts and ratios are <span class="lbl a">Assumption</span>s; results are <span class="lbl e">Estimate</span>s.</p>
+  <h3>Models</h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Model</th><th>Price per 1M tokens (in / out)</th><th>Role</th></tr></thead>
+    <tbody>
+      <tr><td><code>gemini-3.5-flash-lite</code></td><td>$0.30 / $2.50 (batch $0.15 / $1.25)</td><td>All classification; most replies; summaries</td></tr>
+      <tr><td><code>gemini-3.8-flash</code></td><td>$0.75 / $3.75 until 31 Dec 2026, then $1.50 / $7.50</td><td>Complex replies only (long threads, several questions, low-confidence retry)</td></tr>
+      <tr><td><code>gemini-embedding-2</code></td><td>$0.20 (batch $0.10)</td><td>Knowledge chunks and retrieval queries, 768 dimensions</td></tr>
+    </tbody>
+  </table></div>
+  <p>Gemini 2.5 models (the v1 default and the build spec's first choice) are now limited "to users who have actively used them in the past". Gemini 3 Flash and Flash-Lite "do not support full thinking-off", and thinking tokens are billed as output, so keep <code>thinking_level</code> at its minimum for classification. <span class="lbl v">Verified</span> [S20]</p>
+  <h3>Volume, cost and concurrency</h3>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Task</th><th>Calls / day</th><th>Input tokens</th><th>Output tokens</th><th>$ / day</th><th>How the volume was cut</th></tr></thead>
+    <tbody class="num">
+      <tr><td>Comment analysis (Flash-Lite, 50 per call)</td><td>1,400</td><td>3.6 M</td><td>1.9 M</td><td>5.82</td><td>Rules drop 30% (emoji only, tags only, 1–2 words); batching</td></tr>
+      <tr><td>DM analysis (Flash-Lite)</td><td>26,600</td><td>23.9 M</td><td>4.0 M</td><td>17.13</td><td>Burst debounce (≈ 1.6 messages per burst); rules skip 15%</td></tr>
+      <tr><td>Suggested replies, simple (Flash-Lite, 80%)</td><td>12,800</td><td>30.6 M</td><td>3.2 M</td><td>17.15</td><td>Only when <code>needs_reply</code> (≈ 60%)</td></tr>
+      <tr><td>Suggested replies, complex (3.8 Flash, 20%)</td><td>3,200</td><td>7.7 M</td><td>1.9 M</td><td>25.82</td><td>Router sends only hard cases</td></tr>
+      <tr><td>Conversation summaries (Flash-Lite)</td><td>5,000</td><td>7.5 M</td><td>1.5 M</td><td>6.00</td><td>Every 8 new messages, not every message</td></tr>
+      <tr><td>Post comment summaries (Flash-Lite)</td><td>2,000</td><td>4.0 M</td><td>0.8 M</td><td>3.20</td><td>Every 20 new comments or 24 h</td></tr>
+      <tr><td>Retrieval query embeddings</td><td>15,900</td><td>1.0 M</td><td>n/a</td><td>0.19</td><td></td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>≈ 66,900</strong></td><td><strong>78 M</strong></td><td><strong>13 M</strong></td><td><strong>75.31</strong></td><td>≈ $2,260 / month; ≈ $1,870 at the 2026 introductory price</td></tr>
+    </tbody>
+  </table></div>
+  <div class="stats">
+    <div class="stat"><div class="big">$0.23</div><small>AI cost per connected account per month in this scenario <span class="lbl e">Estimate</span></small></div>
+    <div class="stat"><div class="big">$18</div><small>per month for one heavy seller (500 DMs a day) if AI were unlimited <span class="lbl e">Estimate</span></small></div>
+    <div class="stat"><div class="big">$5.33</div><small>per month for a Pro workspace using all 5,000 credits (≈ $3.31 if all replies use Flash-Lite) <span class="lbl e">Estimate</span></small></div>
+    <div class="stat"><div class="big">≈ 10</div><small>AI calls in flight at peak; latency, not throughput, is the constraint <span class="lbl e">Estimate</span></small></div>
+  </div>
+  <p><strong>What this means:</strong> AI is affordable on average but not unlimited. A ₹999 (≈ $12) Pro plan can carry about $3–5 of AI per month; the credit cap in the build spec is what keeps a heavy seller from costing more than they pay. Set the final allowances from a week of measured beta usage (build-spec task T8.8). <span class="lbl r">Recommendation</span></p>
+  <h3>Pipeline rules</h3>
+  <ol>
+    <li><strong>Rules before models.</strong> Skip analysis for messages that are only emoji, stickers, reactions, "ok", "thanks" or tags; classify obvious keywords ("price", "link", "COD") with rules as hints.</li>
+    <li><strong>Debounce bursts.</strong> One analysis per burst of messages, not per message (4-second deferral keyed by conversation).</li>
+    <li><strong>Batch what is not urgent.</strong> Comments in batches of 50. Backfills and re-analysis go through the Batch API at half price; its turnaround target is 24 hours, so never for live traffic. <span class="lbl v">Verified</span> [S20]</li>
+    <li><strong>Small model first.</strong> Flash-Lite for classification and simple replies; 3.8 Flash only when the router flags complexity (thread longer than 20 messages, two or more questions, or a Flash-Lite draft that fails the confidence check).</li>
+    <li><strong>Cache by content.</strong> Identical comment text on the same post ("😍", "link please") reuses its classification. Viral posts repeat a lot. <span class="lbl r">Recommendation</span></li>
+    <li><strong>Everything asynchronous</strong>, off the request path, with per-task timeouts (8 s analysis, 12 s reply) and one retry on 429 or 5xx.</li>
+    <li><strong>Fallbacks:</strong> if the reply model fails, fall back to Flash-Lite; if AI is unavailable altogether, the inbox works without suggestions, and Auto mode stops sending (it never sends a canned "technical difficulties" reply, as v1 did).</li>
+    <li><strong>Spend guard.</strong> Gemini's Tier 1 caps spend at $10 per rolling 10 minutes, with $250 total; Tier 2 needs $100 paid and 3 days. <span class="lbl v">Verified</span> [S20] Reach Tier 2 before launch, and add Social Hood's own global limit so a bug cannot spend the monthly budget in an afternoon.</li>
+    <li><strong>Paid tier only.</strong> Free-tier inputs are "used to … improve, and develop Google products", and humans may read them; paid-tier prompts are not. <span class="lbl v">Verified</span> [S20]</li>
+  </ol>
+
+  <h3>The viral post, step by step</h3>
+  <p>One seller's Reel collects 100,000 comments in an hour; 30,000 of them are "LINK", which matches a comment→DM automation.</p>
+  <h4>Diagram 2 · Comment processing</h4>
+  <pre class="mermaid">
+flowchart TD
+  WH["~30 comment webhooks/s"] --> GW["Gateway: verify, store, 200"]
+  GW --> PR["process_webhook_event (interactive lane)"]
+  PR --> CM["comments row (unique per comment)"]
+  CM --> SELF{"Own comment?"}
+  SELF -- "yes" --> SKIP["Skip (prevents reply loops)"]
+  SELF -- "no" --> AUTO["run_automation"]
+  AUTO --> MATCH{"Keyword match + cooldown per person"}
+  MATCH -- "match" --> PQ["Private-reply queue for this account"]
+  PQ --> TB["Token bucket: 750/hour"]
+  TB --> DM["Private reply (one per comment, within 7 days)"]
+  CM --> AQ["Mark for analysis"]
+  AQ --> BULK["analyze_comments batches of 50 (bulk lane, max 4 per tenant)"]
+  BULK --> STATS["comment_stats + post summary every 20 new"]
+  </pre>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Stage</th><th>Behaviour</th><th>Label</th></tr></thead>
+    <tbody>
+      <tr><td>Ingestion</td><td>≈ 30 inserts per second into PostgreSQL: trivial. Other tenants' DMs are unaffected because the interactive lane stays short.</td><td><span class="lbl e">Estimate</span></td></tr>
+      <tr><td>Analysis</td><td>70,000 comments after rules → 1,400 batches. With 4 concurrent slots and about 8 s per batch, that clears in about 45 minutes, at about $5.80. Caching repeated texts cuts both.</td><td><span class="lbl e">Estimate</span></td></tr>
+      <tr><td>Private replies</td><td>Instagram allows <strong>750 private replies per hour per account</strong> and only within 7 days of the comment. <span class="lbl v">Verified</span> [S5][S6] 30,000 matches take 40 hours to send. At 126,000 matches, some comments would pass their 7-day window before their turn.</td><td><span class="lbl v">Verified</span> limit, <span class="lbl e">Estimate</span> time</td></tr>
+      <tr><td>What the user sees</td><td>The automation card shows "12,340 DMs queued · Instagram allows 750 per hour · last one ≈ Thu 14:00", and offers <strong>public reply only</strong> (no hourly cap is documented for public replies, but spam restrictions apply) or <strong>newest first</strong> for the rest. The build spec gains this as FR-AUT-10.</td><td><span class="lbl r">Recommendation</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="doc" id="cls-sec">
+  <h2 id="classification"><span class="sn">15</span>Classification strategy</h2>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Task</th><th>Recommended approach</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr><td>Sentiment</td><td>Rules for trivial cases; Flash-Lite (batched for comments) for the rest. At more than about 1 million items a day, distil a small multilingual classifier from the LLM's own labels.</td><td>Customers write in English, Hindi and Hinglish, with slang and emoji; off-the-shelf small classifiers do poorly on code-mixed text, and at MVP volume the LLM costs about $0.0006 per message.</td></tr>
+      <tr><td>Intent</td><td>Keyword rules as hints plus Flash-Lite in the same call as sentiment</td><td>One call returns all labels. Rules alone miss paraphrase; the LLM alone misses nothing important but costs a little more.</td></tr>
+      <tr><td>Topic</td><td>Flash-Lite labels each item (≤ 3 words); a second, small call merges a post's labels into ≤ 6 topics; embeddings and clustering only for cross-post trends (R2)</td><td>Readable topics without running clustering jobs.</td></tr>
+      <tr><td>Spam</td><td>Rules first (links, repeated text, mass mentions, known patterns); Flash-Lite flag in the same batch</td><td>Most spam is pattern-shaped and free to catch.</td></tr>
+      <tr><td>Lead signal</td><td>Flash-Lite score plus rules (purchase words, repeat contact, price questions)</td><td>Cheap, explainable.</td></tr>
+      <tr><td>Reply generation</td><td>Flash-Lite by default; 3.8 Flash when the router flags complexity</td><td>Needs a generative model; most replies are short and grounded.</td></tr>
+      <tr><td>Summarisation</td><td>Flash-Lite; 3.8 Flash for threads longer than 50 messages</td><td>Short outputs; triggered, not per message.</td></tr>
+      <tr><td>Analytics</td><td>SQL computes every number; the model only explains them</td><td>Language models make arithmetic mistakes, and SQL is exact and cheap.</td></tr>
+    </tbody>
+  </table></div>
+  <p>All <span class="lbl r">Recommendation</span>. Accuracy targets and the evaluation set are in the build spec (TR-AI-10).</p>
+</section>
+
+<section class="doc" id="ten-sec">
+  <h2 id="tenancy"><span class="sn">16</span>Multi-tenancy</h2>
+  <p>The hierarchy is Workspace (organisation) → members → connected accounts → posts, comments, conversations, messages → AI outputs. Every row below the workspace carries <code>workspace_id</code>.</p>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Concern</th><th>Design</th></tr></thead>
+    <tbody>
+      <tr><td>Isolation</td><td>Three layers from day one (route membership check; automatic ORM filter; an isolation test over every route), plus PostgreSQL row-level security as a fourth layer in R2. v1 leaked platform tokens across accounts because this was left to each endpoint.</td></tr>
+      <tr><td>Indexes and queries</td><td>Every index on a tenant table starts with <code>workspace_id</code> or a parent key that implies it; list queries are keyset-paginated within one workspace; no query scans across tenants except internal analytics on a replica or warehouse.</td></tr>
+      <tr><td>Retention</td><td>Per plan (Free 90 days of messages), per platform rule (LinkedIn one year for reporting data), per request (workspace deletion within 24 h).</td></tr>
+      <tr><td>API rate limits</td><td>Per user and per workspace sliding windows in Valkey; heavier limits on AI endpoints.</td></tr>
+      <tr><td>Platform limits</td><td>Token buckets per connected account (they are per account at Meta), so one tenant exhausting its Instagram budget cannot slow another's.</td></tr>
+      <tr><td>Queue isolation</td><td>Interactive and bulk lanes; at most 4 concurrent bulk jobs per workspace; optionally a third lane for Enterprise tenants later.</td></tr>
+      <tr><td>AI budgets</td><td>Monthly credit counters reserved atomically before each call; per-workspace alerts at 80% and 100%; a global spend guard above them.</td></tr>
+      <tr><td>Noisy neighbours in storage</td><td>At Growth scale, partition the largest tables by time (not tenant); if one tenant dominates, list-partition that tenant's vectors or move them to their own index.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="doc" id="opt-sec">
+  <h2 id="options"><span class="sn">17</span>Architecture options</h2>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th></th><th>A · Simple MVP</th><th>B · Growth</th><th>C · Large scale</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Components</strong></td><td>API and worker (one codebase), PostgreSQL + pgvector, Valkey, PostgreSQL job queue, Cloudinary, Gemini, Sentry</td><td>A + PgBouncer, read replica, monthly partitions, rollup tables, a thin separate webhook-gateway service, more workers, R2 archives; queue moves to SQS or Pub/Sub if it loads the database</td><td>B + managed event stream (Pub/Sub or Kafka) feeding several consumers, ClickHouse for analytics, dedicated vector service if needed, per-region deployment</td></tr>
+      <tr><td><strong>Expected scale</strong></td><td>Up to ≈ 2,000 accounts, ≈ 2 M events/day <span class="lbl e">Estimate</span></td><td>≈ 2,000–20,000 accounts, 2–20 M events/day</td><td>&gt; 20,000 accounts, &gt; 20 M events/day, &gt; 1 B analytics rows</td></tr>
+      <tr><td><strong>Monthly infrastructure</strong> (excl. AI)</td><td>≈ $200–300 <span class="lbl e">Estimate</span></td><td>≈ $1,300–1,800 <span class="lbl e">Estimate</span></td><td>$5,000+ <span class="lbl e">Estimate</span></td></tr>
+      <tr><td><strong>Complexity</strong></td><td>One repository, two process types, two data services</td><td>Adds a replica, partition maintenance, one extra service</td><td>Several services, stream operations, data pipelines</td></tr>
+      <tr><td><strong>Operational burden</strong></td><td>Low: one person can run it</td><td>Moderate: on-call rotation helpful</td><td>High: needs a platform engineer</td></tr>
+      <tr><td><strong>Advantages</strong></td><td>Cheap, transactional, easy to debug with SQL, fast to build</td><td>Headroom for 10× growth without new paradigms</td><td>Independent scaling of ingestion, analytics and AI</td></tr>
+      <tr><td><strong>Disadvantages</strong></td><td>Database is the single point of scale</td><td>More moving parts to keep in sync</td><td>Cost and expertise; slower feature work</td></tr>
+      <tr><td><strong>Move on when</strong></td><td>Any trigger in §19 fires</td><td>Any C trigger in §19 fires</td><td>n/a</td></tr>
+    </tbody>
+  </table></div>
+  <p>MVP infrastructure line items (Render and vendor prices <span class="lbl v">Verified</span> [S21][S22][S32]): Render Pro workspace $25; API web service 1 CPU / 2 GB $25; worker 1 CPU / 2 GB $25; PostgreSQL 1 CPU / 4 GB $55 plus 50 GB storage ≈ $15; Key Value 256 MB $10; Vercel Pro $20 (the free Hobby plan is "restricted to non-commercial personal use"); Sentry Team $26. Total ≈ $201/month, plus Cloudinary when past its free tier ($99/month Plus) and AI usage.</p>
+  <h3>Diagram 6 · Data architecture</h3>
+  <pre class="mermaid">
+flowchart LR
+  subgraph Sources
+    IG["Instagram / WhatsApp webhooks"]
+    POLL["Platform API polling"]
+    UI["Web app"]
+  end
+  subgraph Processing
+    API["FastAPI"]
+    WK["Workers (interactive, bulk)"]
+    LLM["Gemini"]
+  end
+  subgraph PostgreSQL
+    OP["Operational tables: accounts, conversations, messages, comments, automations"]
+    AIT["AI tables: analyses, suggestions, decisions, usage"]
+    KN["Knowledge + pgvector"]
+    AN["Analytics: snapshots, daily metrics, benchmarks"]
+    JQ["Job queue tables"]
+  end
+  VK["Valkey: streams, rate limits, caches, locks"]
+  OBJ["Cloudinary (media) / R2 (archives, later)"]
+  IG --> API
+  UI --> API
+  API --> OP
+  API --> JQ
+  API --> VK
+  JQ --> WK
+  POLL --> WK
+  WK --> OP
+  WK --> AIT
+  WK --> AN
+  WK --> KN
+  WK --> LLM
+  WK --> OBJ
+  WK --> VK
+  AN -. "later" .-> CH["ClickHouse / BigQuery"]
+  </pre>
+  <h3>Diagram 7 · Scaling path</h3>
+  <pre class="mermaid">
+flowchart LR
+  A["A · MVP: API + worker, PostgreSQL (data, queue, vectors), Valkey"] -->|"DB CPU > 60% or tables > 100 GB"| B1["Partitions + PgBouncer + bigger instance"]
+  B1 -->|"reporting > 20% of DB load"| B2["Read replica for analytics"]
+  B2 -->|"queue > 300 jobs/s or bloat"| B3["Queue on SQS / Pub/Sub"]
+  B3 -->|"> 20 M events/day and 3+ consumers"| C1["Event stream (Pub/Sub or Kafka)"]
+  B2 -->|"> 1 B analytics rows or slow scans"| C2["ClickHouse fed from PostgreSQL"]
+  A -->|"> 20 M vectors or p95 > 150 ms"| C3["Partitioned pgvector, then dedicated vector service"]
+  </pre>
+</section>
+
+<section class="doc" id="mx-sec">
+  <h2 id="matrix"><span class="sn">18</span>Technology decision matrix</h2>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Technology</th><th>Need now?</th><th>Why</th><th>When to introduce</th></tr></thead>
+    <tbody>
+      <tr><td>PostgreSQL</td><td class="yes">Yes</td><td>System of record for everything; transactions make idempotency and tenancy simple</td><td>Now</td></tr>
+      <tr><td>pgvector</td><td class="yes">Yes</td><td>Knowledge retrieval for grounded replies</td><td>Now (R1)</td></tr>
+      <tr><td>Redis (Valkey)</td><td class="yes">Yes, non-durable roles</td><td>Live event streams, rate limits, caches, locks</td><td>Now</td></tr>
+      <tr><td>Job queue</td><td class="yes">Yes, in PostgreSQL</td><td>Durable, no extra service, SQL-inspectable</td><td>Now; move to SQS or Pub/Sub when a §19 trigger fires</td></tr>
+      <tr><td>ARQ</td><td class="no">No</td><td>Maintenance-only since Oct 2025</td><td>Never for new work</td></tr>
+      <tr><td>Kafka</td><td class="no">No</td><td>Built for multi-consumer event logs at far higher volume</td><td>&gt; 20 M events/day with 3+ independent consumers needing replay</td></tr>
+      <tr><td>RabbitMQ</td><td class="no">No</td><td>Would add a service without solving a current problem</td><td>Probably never; SQS or Pub/Sub are simpler managed options</td></tr>
+      <tr><td>Dedicated vector DB</td><td class="no">No</td><td>pgvector covers the volume; co-location keeps deletes and tenancy correct</td><td>&gt; 20 M vectors or retrieval p95 &gt; 150 ms after tuning</td></tr>
+      <tr><td>RAG</td><td class="yes">Yes, narrow</td><td>Only for replies needing business facts</td><td>Now, behind the retrieval router</td></tr>
+      <tr><td>ClickHouse</td><td class="no">No</td><td>Analytics volume fits PostgreSQL with rollups</td><td>&gt; 1 B analytics rows, or dashboards scanning &gt; 50 M rows with p95 &gt; 2 s after rollups</td></tr>
+      <tr><td>TimescaleDB</td><td class="no">No</td><td>Render lacks its Community features</td><td>Only if you move to a host that offers them and PostgreSQL rollups fall short</td></tr>
+      <tr><td>BigQuery</td><td class="no">No</td><td>Useful as an internal warehouse, not for serving</td><td>When you want cross-tenant benchmarks or BI</td></tr>
+      <tr><td>Object storage</td><td class="yes">Yes (Cloudinary)</td><td>Public media URLs for publishing; copies of expiring inbound media</td><td>Now; add R2 for archives and exports when needed</td></tr>
+      <tr><td>Read replica</td><td class="no">No</td><td>No reporting load yet</td><td>Reporting &gt; 20% of primary CPU</td></tr>
+      <tr><td>Kubernetes / microservices</td><td class="no">No</td><td>A modular monolith with two process types is simpler to change and run</td><td>Not before a platform team exists</td></tr>
+      <tr><td>LLM (Gemini)</td><td class="yes">Yes</td><td>Classification and replies; paid tier only</td><td>Now</td></tr>
+      <tr><td>Monitoring (Sentry)</td><td class="yes">Yes</td><td>Errors, performance, cron monitors</td><td>Now</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="doc" id="rm-sec">
+  <h2 id="roadmap"><span class="sn">19</span>Roadmap and migration triggers</h2>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Phase</th><th>Scope</th><th>Enter when</th></tr></thead>
+    <tbody>
+      <tr><td><strong>1 · MVP</strong></td><td>Option A exactly as §1. Build spec phases P0–P9.</td><td>Now</td></tr>
+      <tr><td><strong>2 · Growth</strong></td><td>Bigger PostgreSQL instance; PgBouncer for the API; monthly partitions for <code>webhook_events</code>, <code>messages</code>, <code>comments</code>; read replica for analytics; separate thin webhook-gateway service; R2 archives; row-level security</td><td>Any of: database CPU above 60% at peak for a week; any table above 100 GB or 100 M rows; retention deletes above 1 M rows a day; reporting queries above 20% of database load; webhook p99 above 300 ms</td></tr>
+      <tr><td><strong>3 · Scale</strong></td><td>Queue on SQS or Pub/Sub; per-lane autoscaling; vector partitions by workspace; distilled classifier for sentiment and intent</td><td>Any of: sustained queue above 300 jobs/s; queue-table vacuum visibly affecting API latency; &gt; 1 M classified items a day (distillation pays off); vector count above 20 M</td></tr>
+      <tr><td><strong>4 · Large-scale</strong></td><td>Managed event stream feeding ingestion, analytics and AI independently; ClickHouse for analytics; multi-region; dedicated platform team</td><td>Any of: &gt; 20 M events a day with three or more consumers needing replay; &gt; 1 B analytics rows or slow interactive scans after rollups; enterprise customers requiring data residency</td></tr>
+    </tbody>
+  </table></div>
+  <p>All thresholds are <span class="lbl e">Estimate</span>s grounded in the workload model; measure them from the metrics listed in the build spec (TR-OPS-01) rather than guessing.</p>
+  <h3>Platform constraints that gate growth more than infrastructure</h3>
+  <ul>
+    <li><strong>WhatsApp onboarding:</strong> "By default, you can onboard up to 10 new business customers in a rolling 7-day window"; 200 after Business Verification, App Review and Access Verification; beyond that, Meta Business Partner status. <span class="lbl v">Verified</span> [S12] Start verification early.</li>
+    <li><strong>Instagram webhooks for other people's accounts</strong> require a Live app, Advanced Access and Business Verification. <span class="lbl v">Verified</span> [S2][S37]</li>
+    <li><strong>WhatsApp service messages become billable on 1 October 2026</strong> (Meta bills the business directly under the Tech Provider model). <span class="lbl v">Verified</span> [S11] Explain this in onboarding.</li>
+    <li><strong>WhatsApp Embedded Signup v2 is deprecated on 15 October 2026</strong>; build on v4. <span class="lbl v">Verified</span> [S12]</li>
+  </ul>
+</section>
+
+<section class="doc" id="chg-sec">
+  <h2 id="spec-changes"><span class="sn">20</span>Changes to the build spec</h2>
+  <p>This review changes the following decisions in <code>BUILD_SPEC.html</code>, which has been updated to match:</p>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Area</th><th>Before</th><th>After</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>Job queue (D6, §2.9)</td><td>ARQ on Redis</td><td>PostgreSQL-backed queue (Procrastinate) with interactive and bulk lanes; Valkey keeps only non-durable roles</td><td>ARQ maintenance-only [S23]; Procrastinate stable [S24]</td></tr>
+      <tr><td>AI models (D8, TR-AI-02/03)</td><td>Gemini 2.5 Flash-Lite and Flash; <code>gemini-embedding-001</code>; <code>response_schema</code>, <code>thinking_budget=0</code></td><td>Gemini 3.5 Flash-Lite, 3.8 Flash for complex replies, <code>gemini-embedding-2</code> (768); structured output via the current <code>response_format</code> parameter; minimal <code>thinking_level</code></td><td>2.5 limited to existing users; <code>responseSchema</code> deprecated [S20]</td></tr>
+      <tr><td>Database version and pooling</td><td>PostgreSQL 16</td><td>PostgreSQL 18 (Render default); asyncpg settings for PgBouncer transaction mode; workers connect directly</td><td>[S21]</td></tr>
+      <tr><td>Graph API version</td><td>v24.0</td><td>v25.0 (current Instagram docs; v26.0 is the latest Graph release)</td><td>[S34]</td></tr>
+      <tr><td>Webhook body limit</td><td>1 MB</td><td>5 MB</td><td>WhatsApp payloads up to 3 MB [S8]</td></tr>
+      <tr><td>Webhook health</td><td>not specified</td><td>Alert at 1% errors for 5 min; daily re-subscribe of all accounts</td><td>1-hour disable and unsubscribe [S3]</td></tr>
+      <tr><td>Platform rate limits</td><td>generic backoff</td><td>Per-account token buckets: Send API 100/s text, 10/s audio/video; private replies 750/h; Conversations 2/s; WhatsApp 80 mps and 1 per 6 s per user</td><td>[S5][S9]</td></tr>
+      <tr><td>Viral comment automations</td><td>not specified</td><td>New FR-AUT-10: queue with ETA, public-reply-only and newest-first options</td><td>750/h, 7-day window [S6]</td></tr>
+      <tr><td>Comment analysis SLA</td><td>within 2 minutes</td><td>within 2 minutes normally; in order with progress shown during surges</td><td>§14</td></tr>
+      <tr><td>Instagram DM text</td><td>≤ 4,096 characters</td><td>Outbound Instagram text ≤ 1,000 bytes (UTF-8)</td><td>[S7]</td></tr>
+      <tr><td>Story mentions</td><td>re-host all inbound media</td><td>Never store story-mention media; show a placeholder when the URL expires</td><td>Meta policy [S7i]</td></tr>
+      <tr><td>Self comments</td><td>skip own comments</td><td>Kept, now with evidence: webhooks fire for the account's own comments</td><td>[S7i]</td></tr>
+      <tr><td>Publishing polling</td><td>every 20 s up to 15 min</td><td>every 60 s for 5 min, then every 5 min up to 30 min (containers live 24 h)</td><td>Meta guidance [S35]</td></tr>
+      <tr><td>Metric snapshots</td><td>insights at every window</td><td>Live fields for 1 h and 6 h; insights re-polled at 72 h; daily account metrics table</td><td>48 h lag, 90-day account retention [S14][S17]</td></tr>
+      <tr><td>Likes</td><td>"no API"</td><td>Possible only with Instagram's Facebook-Login API (<code>instagram_manage_engagement</code>, April 2026); not available to Social Hood's Instagram-Login setup</td><td>[S7i]</td></tr>
+      <tr><td>WhatsApp onboarding</td><td>Embedded Signup</td><td>Embedded Signup v4; onboarding cap of 10 businesses a week until verified; launch checklist updated</td><td>[S12]</td></tr>
+      <tr><td>Automation disclosure</td><td>not specified</td><td>Optional disclosure line for automated replies, on by default where the law requires it</td><td>Meta automated-chat policy [S7i]</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section class="doc" id="src-sec">
+  <h2 id="sources"><span class="sn">21</span>Sources</h2>
+  <p>All fetched on 28 Sep 2026. "Updated" is the date shown on the page, where one was shown.</p>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>Id</th><th>Source</th><th>Version or date</th></tr></thead>
+    <tbody>
+      <tr><td class="m">S1</td><td><a href="https://developers.facebook.com/docs/graph-api/webhooks/getting-started">Meta Graph API: Webhooks, getting started</a></td><td>no date</td></tr>
+      <tr><td class="m">S2</td><td><a href="https://developers.facebook.com/documentation/instagram-platform/webhooks">Instagram Platform: Webhooks</a> and <a href="https://developers.facebook.com/documentation/instagram-platform/webhooks/setup">setup</a></td><td>Updated 16 Sep 2026; v25.0</td></tr>
+      <tr><td class="m">S3</td><td><a href="https://developers.facebook.com/documentation/business-messaging/messenger-platform/webhooks">Messenger Platform: Webhooks</a></td><td>Updated 16 Sep 2026</td></tr>
+      <tr><td class="m">S4</td><td><a href="https://developers.facebook.com/docs/graph-api/overview/rate-limiting">Graph API: Rate limiting</a></td><td>no date</td></tr>
+      <tr><td class="m">S5</td><td><a href="https://developers.facebook.com/documentation/instagram-platform/overview">Instagram Platform: Overview (rate limits)</a></td><td>Updated 16 Sep 2026</td></tr>
+      <tr><td class="m">S6</td><td><a href="https://developers.facebook.com/documentation/instagram-platform/private-replies">Instagram Platform: Private replies</a></td><td>v25.0</td></tr>
+      <tr><td class="m">S7</td><td><a href="https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-instagram-login/messaging-api">Instagram API with Instagram Login: Messaging</a></td><td>Updated 6 May 2026</td></tr>
+      <tr><td class="m">S7i</td><td>Instagram references: <a href="https://developers.facebook.com/documentation/instagram-platform/instagram-graph-api/reference/ig-media/comments">IG Media comments</a>, <a href="https://developers.facebook.com/documentation/instagram-platform/instagram-api-with-instagram-login/conversations-api">Conversations API</a>, <a href="https://developers.facebook.com/documentation/instagram-platform/self-messaging">Self messaging</a>, <a href="https://developers.facebook.com/documentation/business-messaging/instagram-messaging/overview">IG Messaging policy</a>, <a href="https://developers.facebook.com/documentation/development/permissions">Permissions reference</a></td><td>v25.0; changelog to 22 Jun 2026</td></tr>
+      <tr><td class="m">S8</td><td><a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/webhooks/overview">WhatsApp: Webhooks overview</a></td><td>Updated 26 Jun 2026</td></tr>
+      <tr><td class="m">S9</td><td><a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/throughput">WhatsApp: Throughput</a> and about the platform (pair limit)</td><td>Updated 17 Jun and 4 Aug 2026</td></tr>
+      <tr><td class="m">S10</td><td><a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/messaging-limits">WhatsApp: Messaging limits</a></td><td>Updated 21 May 2026</td></tr>
+      <tr><td class="m">S11</td><td><a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/pricing">WhatsApp: Pricing</a></td><td>Updated 10 Sep 2026; non-template pricing updated 25 Aug 2026</td></tr>
+      <tr><td class="m">S12</td><td><a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/embedded-signup/overview">WhatsApp: Embedded Signup</a> and versions</td><td>Updated 24 Jul 2026</td></tr>
+      <tr><td class="m">S13</td><td><a href="https://developers.facebook.com/documentation/business-messaging/whatsapp/business-phone-numbers/media">WhatsApp: Media</a></td><td>Updated 16 Jun 2026</td></tr>
+      <tr><td class="m">S14</td><td><a href="https://developers.facebook.com/docs/instagram-platform/reference/instagram-media/insights">Instagram: Media insights</a></td><td>v25.0</td></tr>
+      <tr><td class="m">S15</td><td><a href="https://developers.facebook.com/docs/instagram-platform/api-reference/instagram-user/insights">Instagram: User insights</a></td><td>v25.0</td></tr>
+      <tr><td class="m">S16</td><td><a href="https://developers.facebook.com/docs/instagram-platform/changelog">Instagram Platform changelog</a></td><td>newest entry 22 Jun 2026</td></tr>
+      <tr><td class="m">S17</td><td><a href="https://developers.facebook.com/docs/instagram-platform/insights">Instagram: Insights guide</a></td><td>v25.0</td></tr>
+      <tr><td class="m">S18</td><td><a href="https://developers.facebook.com/docs/platforminsights/page/deprecated-metrics">Facebook Page insights: deprecated metrics</a> and <a href="https://developers.facebook.com/docs/graph-api/reference/insights">Insights reference</a></td><td>v26.0</td></tr>
+      <tr><td class="m">S19</td><td>LinkedIn: <a href="https://learn.microsoft.com/en-us/linkedin/marketing/community-management/organizations/share-statistics">share statistics</a>, <a href="https://learn.microsoft.com/en-us/linkedin/marketing/increasing-access">access tiers</a>, <a href="https://learn.microsoft.com/en-us/linkedin/marketing/data-storage-requirements">data storage requirements</a></td><td>2026-04-28, 2026-07-28, updated 2026-02-02</td></tr>
+      <tr><td class="m">S20</td><td>Gemini API: <a href="https://ai.google.dev/gemini-api/docs/models">models</a>, <a href="https://ai.google.dev/gemini-api/docs/pricing">pricing</a>, <a href="https://ai.google.dev/gemini-api/docs/rate-limits">rate limits</a>, <a href="https://ai.google.dev/gemini-api/docs/structured-output">structured output</a>, <a href="https://ai.google.dev/gemini-api/terms">terms</a></td><td>24 Sep 2026; rate limits 2 Sep 2026; terms effective 23 Mar 2026</td></tr>
+      <tr><td class="m">S21</td><td>Render: <a href="https://render.com/docs/postgresql-extensions">Postgres extensions</a>, <a href="https://render.com/docs/postgresql-connection-pooling">connection pooling</a>, <a href="https://render.com/pricing">pricing</a></td><td>no date</td></tr>
+      <tr><td class="m">S22</td><td><a href="https://render.com/docs/key-value">Render Key Value</a></td><td>no date</td></tr>
+      <tr><td class="m">S23</td><td><a href="https://github.com/python-arq/arq">ARQ README</a> (0.28.0) and issue #510</td><td>16 Apr 2026; 18 Oct 2025</td></tr>
+      <tr><td class="m">S24</td><td><a href="https://github.com/procrastinate-org/procrastinate">Procrastinate</a> (3.10.0)</td><td>23 Sep 2026</td></tr>
+      <tr><td class="m">S25</td><td><a href="https://github.com/pgvector/pgvector">pgvector README</a> (0.8.6)</td><td>29 Jul 2026</td></tr>
+      <tr><td class="m">S26</td><td><a href="https://redis.io/docs/latest/develop/data-types/streams/">Redis Streams</a></td><td>no date</td></tr>
+      <tr><td class="m">S27</td><td><a href="https://www.tigerdata.com/docs/about/latest/timescaledb-editions">TimescaleDB editions</a></td><td>no date</td></tr>
+      <tr><td class="m">S28</td><td><a href="https://clickhouse.com/docs/cloud/manage/billing/overview">ClickHouse Cloud billing</a></td><td>no date</td></tr>
+      <tr><td class="m">S29</td><td><a href="https://cloud.google.com/bigquery/pricing">BigQuery pricing</a></td><td>no date</td></tr>
+      <tr><td class="m">S30</td><td>AWS SQS (quotas, DLQ, Price List API 11 Sep 2026); <a href="https://cloud.google.com/pubsub/pricing">Pub/Sub pricing</a>; <a href="https://www.rabbitmq.com/docs/quorum-queues">RabbitMQ quorum queues</a>; <a href="https://kafka.apache.org/43/getting-started/introduction/">Kafka introduction</a></td><td>various</td></tr>
+      <tr><td class="m">S31</td><td>PostgreSQL 18: <a href="https://www.postgresql.org/docs/current/ddl-partitioning.html">partitioning</a>, <a href="https://www.postgresql.org/docs/current/brin.html">BRIN</a>, <a href="https://www.postgresql.org/docs/current/sql-select.html">SKIP LOCKED</a></td><td>18.x</td></tr>
+      <tr><td class="m">S32</td><td><a href="https://vercel.com/docs/limits/fair-use-guidelines">Vercel fair use (Hobby)</a> and <a href="https://vercel.com/docs/plans/pro-plan">Pro plan</a></td><td>14–15 Sep 2026</td></tr>
+      <tr><td class="m">S33</td><td><a href="https://developers.cloudflare.com/r2/pricing/">Cloudflare R2 pricing</a></td><td>7 Aug 2026</td></tr>
+      <tr><td class="m">S34</td><td><a href="https://developers.facebook.com/docs/graph-api/changelog/">Graph API changelog</a></td><td>v26.0 released 29 Jul 2026</td></tr>
+      <tr><td class="m">S35</td><td><a href="https://developers.facebook.com/documentation/instagram-platform/content-publishing">Instagram: Content publishing</a> and IG Container reference</td><td>v25.0</td></tr>
+      <tr><td class="m">S37</td><td><a href="https://developers.facebook.com/documentation/instagram-platform/app-review">Instagram: App Review</a></td><td>v25.0</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</div>
+</main>
+</div>
+
+<script>
+(function () {
+  var nav = document.getElementById("nav");
+  if (!nav) return;
+  var details = Array.prototype.slice.call(nav.querySelectorAll("details"));
+  var links = Array.prototype.slice.call(nav.querySelectorAll("ol a"));
+  var docs = Array.prototype.slice.call(document.querySelectorAll("section.doc"));
+  var heads = Array.prototype.slice.call(document.querySelectorAll("section.doc h2[id]"));
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var current = null;
+
+  function top(el) { return el.getBoundingClientRect().top + window.scrollY; }
+
+  function setDoc(id) {
+    if (id === current) return;
+    current = id;
+    details.forEach(function (d) {
+      var on = d.getAttribute("data-doc") === id;
+      d.classList.toggle("on", on);
+      if (on) d.open = true;
+    });
+  }
+
+  function update() {
+    var y = window.scrollY + 140;
+    var doc = docs[0];
+    docs.forEach(function (s) { if (top(s) <= y) doc = s; });
+    if (doc) setDoc(doc.id);
+    var head = null;
+    heads.forEach(function (h) { if (top(h) <= y) head = h; });
+    links.forEach(function (a) {
+      a.classList.toggle("cur", !!head && a.getAttribute("href") === "#" + head.id);
+    });
+  }
+
+  details.forEach(function (d) {
+    var summary = d.querySelector("summary");
+    summary.addEventListener("click", function (e) {
+      var target = document.getElementById(d.getAttribute("data-doc"));
+      if (!target) return;
+      e.preventDefault();
+      d.open = true;
+      target.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+      try { history.replaceState(null, "", "#" + d.getAttribute("data-doc")); } catch (err) {}
+    });
+  });
+
+  var ticking = false;
+  window.addEventListener("scroll", function () {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(function () { ticking = false; update(); });
+  }, { passive: true });
+  window.addEventListener("resize", update);
+  update();
+
+  function selectText(el) {
+    try {
+      var range = document.createRange();
+      range.selectNodeContents(el);
+      var sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } catch (err) {}
+  }
+
+  Array.prototype.slice.call(document.querySelectorAll("pre:not(.mermaid)")).forEach(function (pre) {
+    var code = pre.querySelector("code");
+    if (!code) return;
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "cp";
+    btn.textContent = "Copy";
+    btn.setAttribute("aria-label", "Copy code");
+    btn.addEventListener("click", function () {
+      var text = code.innerText;
+      function done() {
+        btn.textContent = "Copied";
+        setTimeout(function () { btn.textContent = "Copy"; }, 1500);
+      }
+      try {
+        navigator.clipboard.writeText(text).then(done, function () { selectText(code); });
+      } catch (err) {
+        selectText(code);
+      }
+    });
+    pre.appendChild(btn);
+  });
+})();
+</script>
+
+<script type="module">
+  import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+  const dark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  mermaid.initialize({ startOnLoad: true, theme: dark ? "dark" : "default", securityLevel: "strict", flowchart: { useMaxWidth: true } });
+</script>
+</body>
+</html>

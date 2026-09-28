@@ -1,0 +1,114 @@
+# Gates from §6.1 (T0.8): every job must pass before merge. Never skip a red gate.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api:
+    name: API (lint, types, tenancy rule, tests, audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    services:
+      postgres:
+        image: pgvector/pgvector:pg18
+        env:
+          POSTGRES_USER: socialhood
+          POSTGRES_PASSWORD: socialhood
+          POSTGRES_DB: socialhood_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U socialhood -d socialhood_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      valkey:
+        image: valkey/valkey:8
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "valkey-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      TEST_DATABASE_URL: postgresql+asyncpg://socialhood:socialhood@localhost:5432/socialhood_test
+      TEST_DATABASE_URL_DIRECT: postgresql://socialhood:socialhood@localhost:5432/socialhood_test
+      TEST_REDIS_URL: redis://localhost:6379/15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run mypy
+      - name: Tenancy rule (TR-TEN-04)
+        run: uv run python scripts/check_tenancy.py
+      - run: uv run pytest
+      - name: Dependency audit (SEC-13)
+        run: |
+          uv export --format requirements-txt --no-hashes --no-emit-project --no-dev > "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit --requirement "$RUNNER_TEMP/requirements.txt" --disable-pip --no-deps
+
+  web:
+    name: Web (lint, types, tests, build, audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @socialhood/web lint
+      - run: pnpm --filter @socialhood/web typecheck
+      - run: pnpm --filter @socialhood/web test
+      - run: pnpm --filter @socialhood/web build
+      - name: Dependency audit (SEC-13)
+        run: pnpm audit --prod --audit-level high
+
+  contract:
+    name: OpenAPI drift (TR-API-08)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: uv sync --locked
+        working-directory: apps/api
+      - run: pnpm gen:api
+      - name: Committed contract matches the code
+        run: |
+          if ! git diff --exit-code -- apps/api/openapi.json packages/api-client/schema.d.ts; then
+            echo "::error::apps/api/openapi.json or packages/api-client is stale. Run pnpm gen:api and commit."
+            exit 1
+          fi
+
+  secrets:
+    name: Secret scan (SEC-06)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

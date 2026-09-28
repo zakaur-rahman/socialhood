@@ -1,0 +1,5 @@
+# Keep LF everywhere so shell scripts run on Linux and generated files never churn on Windows.
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.jpg binary

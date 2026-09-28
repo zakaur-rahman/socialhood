@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+/* Addition to §4.2 (docs/CONFLICTS.md C-002): keyframes and data-state variants used by shadcn v4 components. No colours. */
+@import "shadcn/tailwind.css";
+
+/* Addition to §4.2 (C-002): the app is dark-only (D13), so `dark:` follows the class on <html>, not the OS setting. */
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Surfaces: the v1 ladder */
+  --color-canvas: #000000;        /* app and thread background */
+  --color-panel: #1F1F1F;         /* sidebar card, list pane, headers, composer bar, popovers */
+  --color-field: #1D1D1D;         /* inputs, incoming bubbles, segmented track */
+  --color-raised: #2A2A2A;        /* selected row, active segment, focused input, secondary button */
+  --color-raised-hover: #333333;
+  --color-line: rgb(255 255 255 / 0.10);
+  --color-line-subtle: rgb(255 255 255 / 0.05);
+  --color-line-strong: rgb(255 255 255 / 0.20);
+
+  /* Text */
+  --color-fg: #FFFFFF;
+  --color-fg-secondary: #9B9CA0;  /* all secondary and meta text, including timestamps */
+  --color-fg-disabled: #71717A;   /* disabled controls and placeholders only */
+
+  /* Brand */
+  --color-brand: #567FF8;         /* fills, borders, dots, focus ring */
+  --color-brand-deep: #20338A;
+  --color-brand-fg: #9DB5FF;      /* brand-coloured text and icons on dark surfaces */
+  --color-brand-soft: rgb(86 127 248 / 0.15);
+  --color-brand-line: rgb(86 127 248 / 0.35);
+  --color-shell-1: #3352CC;       /* logo tile and upgrade button */
+  --color-shell-2: #1C2D70;
+
+  /* Semantic */
+  --color-success: #22C55E;
+  --color-warning: #FB923C;
+  --color-danger: #EF4444;        /* icons and borders */
+  --color-danger-fg: #FCA5A5;     /* danger text on dark */
+  --color-danger-fill: #C53030;   /* failed bubble background (white text) */
+
+  /* Platforms */
+  --color-instagram: #BE185D;
+  --color-whatsapp: #16A34A;
+  --color-facebook: #2563EB;
+  --color-linkedin: #1E40AF;
+}
+
+@utility bg-brand-gradient { background-image: linear-gradient(135deg, #20338A 0%, #4467E6 100%); }
+@utility bg-brand-gradient-decor { background-image: linear-gradient(135deg, #20338A 0%, #567FF8 100%); }
+@utility bg-shell-gradient { background-image: linear-gradient(135deg, #3352CC 0%, #1C2D70 100%); }
+
+:root {
+  color-scheme: dark;
+  /* shadcn/ui semantic variables mapped onto the tokens */
+  --background: var(--color-canvas);   --foreground: var(--color-fg);
+  --card: var(--color-panel);          --card-foreground: var(--color-fg);
+  --popover: var(--color-panel);       --popover-foreground: var(--color-fg);
+  --primary: var(--color-brand);       --primary-foreground: #FFFFFF;
+  --secondary: var(--color-raised);    --secondary-foreground: var(--color-fg);
+  --muted: var(--color-field);         --muted-foreground: var(--color-fg-secondary);
+  --accent: var(--color-raised);       --accent-foreground: var(--color-fg);
+  --destructive: var(--color-danger);
+  --border: var(--color-line);  --input: var(--color-line);  --ring: var(--color-brand);
+  --radius: 0.5rem;
+}
+@theme inline {
+  --color-background: var(--background); --color-foreground: var(--foreground);
+  --color-card: var(--card); --color-popover: var(--popover);
+  --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary); --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent);
+  --color-destructive: var(--destructive); --color-border: var(--border);
+  --color-input: var(--input); --color-ring: var(--ring);
+}
+
+@layer base {
+  * { border-color: var(--color-line); }
+  body { background: var(--color-canvas); color: var(--color-fg); }
+  /* In the base layer, so utilities still win (v1's unlayered rule squared off focused pills) */
+  :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
+  ::placeholder { color: var(--color-fg-disabled); }
+}
