@@ -1,0 +1,123 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "919876543210",
+              "phone_number_id": "106540352242922"
+            },
+            "contacts": [
+              {
+                "profile": { "name": "Priya Shah" },
+                "wa_id": "919812345678"
+              },
+              {
+                "profile": { "name": "Arjun Rao" },
+                "wa_id": "919811111111"
+              }
+            ],
+            "messages": [
+              {
+                "from": "919812345678",
+                "id": "wamid.LOCATION000000000000000000000000000000001",
+                "timestamp": "1759046410",
+                "type": "location",
+                "location": {
+                  "latitude": 18.5204,
+                  "longitude": 73.8567,
+                  "name": "Maple Bakery",
+                  "address": "12 FC Road, Pune"
+                }
+              },
+              {
+                "context": {
+                  "from": "919876543210",
+                  "id": "wamid.TEMPLATESENT0000000000000000000000000000001"
+                },
+                "from": "919811111111",
+                "id": "wamid.BUTTON00000000000000000000000000000000002",
+                "timestamp": "1759046411",
+                "type": "button",
+                "button": { "payload": "confirm_order", "text": "Yes, confirm" }
+              },
+              {
+                "context": {
+                  "from": "919876543210",
+                  "id": "wamid.LISTSENT000000000000000000000000000000001"
+                },
+                "from": "919812345678",
+                "id": "wamid.INTERACTIVE0000000000000000000000000000003",
+                "timestamp": "1759046412",
+                "type": "interactive",
+                "interactive": {
+                  "type": "list_reply",
+                  "list_reply": { "id": "slot_10am", "title": "Tomorrow 10am", "description": "Pickup" }
+                }
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.REACTION00000000000000000000000000000004",
+                "timestamp": "1759046413",
+                "type": "reaction",
+                "reaction": {
+                  "message_id": "wamid.OUTBOUND000000000000000000000000000000001",
+                  "emoji": "❤️"
+                }
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.REACTION00000000000000000000000000000005",
+                "timestamp": "1759046414",
+                "type": "reaction",
+                "reaction": { "message_id": "wamid.OUTBOUND000000000000000000000000000000001" }
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.UNSUPPORTED00000000000000000000000000006",
+                "timestamp": "1759046415",
+                "type": "unsupported",
+                "errors": [
+                  {
+                    "code": 131051,
+                    "title": "Message type unknown",
+                    "message": "Message type unknown",
+                    "error_data": { "details": "Message type is currently not supported." }
+                  }
+                ]
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.CONTACTS000000000000000000000000000000007",
+                "timestamp": "1759046416",
+                "type": "contacts",
+                "contacts": [
+                  {
+                    "name": { "formatted_name": "Barbara Johnson", "first_name": "Barbara" },
+                    "phones": [{ "phone": "+91 99999 00000", "type": "CELL", "wa_id": "919999900000" }]
+                  }
+                ]
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.SYSTEM0000000000000000000000000000000008",
+                "timestamp": "1759046417",
+                "type": "system",
+                "system": {
+                  "body": "Priya changed their phone number",
+                  "wa_id": "919812300000",
+                  "type": "user_changed_number"
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}

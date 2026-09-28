@@ -25,6 +25,7 @@ ERROR_CODES: dict[str, ErrorCode] = {
     "reply_window_closed": ErrorCode(409, "The reply window has closed"),
     "account_needs_reconnect": ErrorCode(409, "The account needs reconnecting"),
     "capability_unavailable": ErrorCode(409, "This account can't do that"),
+    "account_in_use": ErrorCode(409, "The account is connected to another workspace"),  # F-04
     "entitlement_required": ErrorCode(402, "Upgrade required"),
     "quota_exceeded": ErrorCode(402, "Plan limit reached"),
     "unsupported_media": ErrorCode(415, "Unsupported media"),

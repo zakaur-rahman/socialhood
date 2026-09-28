@@ -1,0 +1,88 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "919876543210",
+              "phone_number_id": "106540352242922"
+            },
+            "contacts": [
+              {
+                "profile": { "name": "Priya Shah" },
+                "wa_id": "919812345678"
+              }
+            ],
+            "messages": [
+              {
+                "from": "919812345678",
+                "id": "wamid.IMAGE0000000000000000000000000000000001",
+                "timestamp": "1759046401",
+                "type": "image",
+                "image": {
+                  "caption": "This one in blue?",
+                  "mime_type": "image/jpeg",
+                  "sha256": "Q3VzdG9tZXIgaW1hZ2UgaGFzaA==",
+                  "id": "1003383421387256"
+                }
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.VIDEO0000000000000000000000000000000002",
+                "timestamp": "1759046402",
+                "type": "video",
+                "video": {
+                  "mime_type": "video/mp4",
+                  "sha256": "Q3VzdG9tZXIgdmlkZW8gaGFzaA==",
+                  "id": "1003383421387257"
+                }
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.AUDIO0000000000000000000000000000000003",
+                "timestamp": "1759046403",
+                "type": "audio",
+                "audio": {
+                  "mime_type": "audio/ogg; codecs=opus",
+                  "sha256": "Q3VzdG9tZXIgYXVkaW8gaGFzaA==",
+                  "id": "1003383421387258",
+                  "voice": true
+                }
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.DOCUMENT00000000000000000000000000000004",
+                "timestamp": "1759046404",
+                "type": "document",
+                "document": {
+                  "caption": "My order",
+                  "filename": "order-1042.pdf",
+                  "mime_type": "application/pdf",
+                  "sha256": "Q3VzdG9tZXIgZG9jIGhhc2g=",
+                  "id": "1003383421387259"
+                }
+              },
+              {
+                "from": "919812345678",
+                "id": "wamid.STICKER0000000000000000000000000000000005",
+                "timestamp": "1759046405",
+                "type": "sticker",
+                "sticker": {
+                  "mime_type": "image/webp",
+                  "sha256": "Q3VzdG9tZXIgc3RpY2tlciBoYXNo",
+                  "id": "1003383421387260",
+                  "animated": false
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}

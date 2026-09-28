@@ -1,0 +1,82 @@
+{
+  "data": [
+    {
+      "name": "hello_again",
+      "language": "en_US",
+      "status": "APPROVED",
+      "category": "MARKETING",
+      "id": "594425479261600",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hi, it's Maple Bakery. Reply to pick up where we left off."
+        }
+      ]
+    },
+    {
+      "name": "login_code",
+      "language": "en",
+      "status": "APPROVED",
+      "category": "AUTHENTICATION",
+      "id": "594425479261601",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "*{{1}}* is your verification code."
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "OTP",
+              "otp_type": "COPY_CODE",
+              "text": "Copy code"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "track_order",
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "id": "594425479261602",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Track order {{1}} below."
+        },
+        {
+          "type": "BUTTONS",
+          "buttons": [
+            {
+              "type": "URL",
+              "text": "Track",
+              "url": "https://maple.example/track/{{1}}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "named_greeting",
+      "language": "en",
+      "status": "APPROVED",
+      "category": "UTILITY",
+      "id": "594425479261603",
+      "components": [
+        {
+          "type": "BODY",
+          "text": "Hi {{first_name}}, thanks for your order."
+        }
+      ]
+    }
+  ],
+  "paging": {
+    "cursors": {
+      "before": "QVFIUlpage2",
+      "after": "QVFIUlend"
+    }
+  }
+}
