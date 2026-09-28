@@ -13,6 +13,8 @@ class InboundMediaRef:
     kind: Literal["image", "video", "audio", "file", "sticker", "story", "share", "unsupported"]
     url: str | None = None
     media_id: str | None = None  # WhatsApp media id
+    mime_type: str | None = None
+    filename: str | None = None  # documents
 
 
 @dataclass(frozen=True, kw_only=True)

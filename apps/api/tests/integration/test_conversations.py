@@ -446,6 +446,21 @@ async def test_conversation_detail(owner: Owner, engine: AsyncEngine) -> None:
     assert (await owner.detail(conv))["ai"]["paused_until"] is None
 
 
+async def test_a_pause_until_resumed_reads_back(owner: Owner, engine: AsyncEngine) -> None:
+    """A takeover of 0 minutes stores 'infinity' (§5.4); it must read back and compare."""
+    conv = (
+        await make_thread(engine, workspace_id=owner.wid, account_id=owner.account_id)
+    ).conversation_id
+    async with engine.begin() as connection:
+        await connection.execute(
+            text("UPDATE conversations SET ai_paused_until = 'infinity' WHERE id = :id"),
+            {"id": conv},
+        )
+    paused_until = (await owner.detail(conv))["ai"]["paused_until"]
+    assert paused_until is not None
+    assert paused_until.startswith("9999-12-31")
+
+
 async def test_an_unknown_conversation_is_not_found(owner: Owner) -> None:
     missing = uuid.uuid4()
     for method, path in [

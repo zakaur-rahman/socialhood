@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -17,6 +17,7 @@ from sqlalchemy import (
     Integer,
     SmallInteger,
     Text,
+    TypeDecorator,
     UniqueConstraint,
     Uuid,
 )
@@ -28,6 +29,20 @@ from socialhood.db.base import Base, IdMixin, TimestampMixin
 from socialhood.db.tenancy import TenantScoped
 from socialhood.models.connections import AiMode
 from socialhood.models.identity import _in
+
+
+class AwareDateTime(TypeDecorator[datetime]):
+    """timestamptz that always reads back timezone-aware. Postgres 'infinity' (an AI pause "until
+    resumed", §5.4) comes back from asyncpg as a naive datetime.max, which cannot be compared
+    with aware datetimes."""
+
+    impl = DateTime(timezone=True)
+    cache_ok = True
+
+    def process_result_value(self, value: datetime | None, dialect: Any) -> datetime | None:
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value
 
 
 class ConversationStatus(StrEnum):
@@ -130,7 +145,7 @@ class Conversation(IdMixin, TimestampMixin, TenantScoped, Base):
     needs_human: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     needs_human_reason: Mapped[str | None] = mapped_column(Text)
     ai_mode_override: Mapped[str | None] = mapped_column(Text)
-    ai_paused_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    ai_paused_until: Mapped[datetime | None] = mapped_column(AwareDateTime())
     last_intent: Mapped[str | None] = mapped_column(Text)
     last_sentiment: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[str | None] = mapped_column(Text)

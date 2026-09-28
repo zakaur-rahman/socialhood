@@ -59,8 +59,18 @@ def test_media_messages_carry_the_media_id(
     event = by_id(parsed("whatsapp_webhook_media.json"), suffix)
     assert isinstance(event, InboundMessage)
     assert (event.kind, event.text) == (kind, text)
-    assert event.attachments == (InboundMediaRef(kind=attachment, media_id=media_id),)
+    [ref] = event.attachments
+    assert (ref.kind, ref.media_id, ref.url) == (attachment, media_id, None)
+    assert ref.mime_type
     assert event.contact_name == "Priya Shah"
+
+
+def test_a_document_keeps_its_file_name() -> None:
+    event = by_id(parsed("whatsapp_webhook_media.json"), "DOCUMENT")
+    assert isinstance(event, InboundMessage)
+    [ref] = event.attachments
+    assert isinstance(ref, InboundMediaRef)
+    assert ref.filename == "order-1042.pdf"
 
 
 def test_a_location_becomes_readable_text() -> None:

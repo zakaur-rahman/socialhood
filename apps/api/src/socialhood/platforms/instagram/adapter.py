@@ -139,7 +139,9 @@ class InstagramAdapter:
         mid = body.get("message_id") if isinstance(body, dict) else None
         return SendResult(str(mid) if mid else None)
 
-    async def mark_read(self, acct: SocialAccount, recipient_ref: str) -> None:
+    async def mark_read(
+        self, acct: SocialAccount, recipient_ref: str, *, message_ref: str | None = None
+    ) -> None:
         """Show the customer their messages were seen (sender action ``mark_seen``)."""
         await self.http.request(
             "POST",

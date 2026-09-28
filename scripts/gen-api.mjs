@@ -11,11 +11,19 @@ const apiDir = join(root, "apps", "api");
 const clientDir = join(root, "packages", "api-client");
 const uv = process.env.UV ?? "uv";
 
+// Importing the app reads settings, but the export never connects to anything: placeholders let
+// it run where there is no apps/api/.env (CI, fresh checkouts, worktrees). Real values win.
+const placeholders = {
+  DATABASE_URL: "postgresql+asyncpg://openapi:openapi@localhost:5432/openapi",
+  DATABASE_URL_DIRECT: "postgresql://openapi:openapi@localhost:5432/openapi",
+  REDIS_URL: "redis://localhost:6379/0",
+};
+
 // The Python script writes the file itself, so log lines on stdout never reach the contract.
 execFileSync(uv, ["run", "--quiet", "python", "-m", "socialhood.openapi", "openapi.json"], {
   cwd: apiDir,
   stdio: ["ignore", "ignore", "inherit"],
-  env: { ...process.env, PYTHONIOENCODING: "utf-8" },
+  env: { ...placeholders, ...process.env, PYTHONIOENCODING: "utf-8" },
 });
 
 // Run the generator's CLI with this Node binary (no shell, so arguments are never re-parsed).

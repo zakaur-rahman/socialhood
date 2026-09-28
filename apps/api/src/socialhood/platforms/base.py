@@ -105,7 +105,12 @@ class PlatformAdapter(Protocol):
         self, acct: SocialAccount, recipient_ref: str, message: OutboundMessage
     ) -> SendResult: ...
 
-    async def mark_read(self, acct: SocialAccount, recipient_ref: str) -> None: ...
+    async def mark_read(
+        self, acct: SocialAccount, recipient_ref: str, *, message_ref: str | None = None
+    ) -> None:
+        """Mark the conversation seen. Instagram needs the contact (``recipient_ref``); WhatsApp
+        needs the latest inbound message (``message_ref``)."""
+        ...
 
     async def download_media(self, acct: SocialAccount, ref: InboundMediaRef) -> MediaDownload: ...
 

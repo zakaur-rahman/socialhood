@@ -119,6 +119,10 @@ def attachment_record(ref: InboundMediaRef) -> dict[str, Any] | None:
         record["platform_url"] = ref.url
     if ref.media_id:
         record["media_id"] = ref.media_id
+    if ref.mime_type:
+        record["mime_type"] = ref.mime_type
+    if ref.filename:
+        record["filename"] = ref.filename
     return record
 
 
@@ -181,6 +185,8 @@ class _Ingest:
             contact_id=contact.id,
             platform=self.acct.platform,
         )
+        if event.is_echo and await self._own_send(conv, event):
+            return
         if event.is_echo and event.text and await self._reconcile(conv, event):
             return
         msg = await rows.insert_message(self.session, self._values(conv, event))
@@ -244,6 +250,30 @@ class _Ingest:
         if not self.backfill:  # F-09: sending any message clears needs_human
             conv.needs_human = False
             conv.needs_human_reason = None
+
+    async def _own_send(self, conv: Conversation, event: InboundMessage) -> bool:
+        """An echo of our own send that arrived before the send job stored its id. A text echo is
+        the send's last part, so it proves delivery: record the id and mark it sent (the job then
+        finds it done). An attachment part's echo changes nothing; the job records each part."""
+        own = await rows.own_send_for_echo(
+            self.session,
+            conv.id,
+            platform_message_id=event.platform_message_id,
+            text=event.text,
+            has_attachments=bool(event.attachments),
+            around=event.occurred_at,
+            window=RECONCILE_WINDOW,
+        )
+        if own is None:
+            return False
+        if event.text and own.platform_message_id is None and own.status == MessageStatus.SENDING:
+            own.platform_message_id = event.platform_message_id
+            own.status = MessageStatus.SENT
+            own.sent_at = event.occurred_at
+            await self.session.flush()
+            queue_message(self.session, own, created=False)
+            self.result.updated_message_ids.append(own.id)
+        return True
 
     async def _reconcile(self, conv: Conversation, event: InboundMessage) -> bool:
         """TR-JOB-05: the echo proves a timed-out send was delivered."""

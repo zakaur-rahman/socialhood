@@ -224,6 +224,7 @@ async def _outbound(
     status: str,
     platform_message_id: str | None = None,
     error_code: str | None = None,
+    attachments: list[dict[str, Any]] | None = None,
 ) -> uuid.UUID:
     """An outbound message from Social Hood in the customer's conversation."""
     [account] = await rows(engine, "SELECT id FROM social_accounts")
@@ -241,8 +242,9 @@ async def _outbound(
                 social_account_id=account["id"],
                 direction="outbound",
                 source="human",
-                kind="text",
-                text=text,
+                kind="image" if attachments and not text else "text",
+                text=text or None,
+                attachments=attachments or [],
                 occurred_at=occurred_at,
                 updated_at=occurred_at,
                 platform_message_id=platform_message_id,
@@ -292,6 +294,64 @@ async def test_an_echo_completes_a_send_whose_outcome_was_unknown(
     published = await stream(redis, workspace)
     assert [t for t, _ in published] == ["message.updated"]
     assert published[0][1]["message"]["status"] == "sent"
+
+
+async def test_an_echo_that_beats_our_send_job_completes_it(
+    engine: AsyncEngine, redis: Redis, workspace: uuid.UUID
+) -> None:
+    """The echo can arrive before the send job stores the id; it must not become a second
+    message, and it proves the send was delivered."""
+    ours = await _outbound(
+        engine,
+        workspace,
+        text="Yes, until 6 pm!",
+        occurred_at=at("webhook_echo.json") - timedelta(seconds=1),
+        status="sending",
+    )
+    assert await deliver(sessions(engine), redis, "webhook_echo.json") == PROCESSED
+    [msg] = await messages(engine)
+    assert msg["id"] == ours
+    assert (msg["status"], msg["platform_message_id"]) == ("sent", mid("webhook_echo.json"))
+    assert [t for t, _ in await stream(redis, workspace)] == ["message.updated"]
+
+
+async def test_an_echo_is_not_matched_to_a_send_that_has_not_started(
+    engine: AsyncEngine, redis: Redis, workspace: uuid.UUID
+) -> None:
+    await _outbound(
+        engine,
+        workspace,
+        text="Yes, until 6 pm!",
+        occurred_at=at("webhook_echo.json") - timedelta(seconds=1),
+        status="queued",
+    )
+    await deliver(sessions(engine), redis, "webhook_echo.json")
+    stored = await messages(engine)
+    assert [(m["source"], m["status"]) for m in stored] == [
+        ("human", "queued"),
+        ("native_app", "sent"),
+    ]
+
+
+@pytest.mark.parametrize("recorded", [True, False], ids=["part-recorded", "part-in-flight"])
+async def test_the_echo_of_one_of_our_attachment_parts_is_not_stored_again(
+    engine: AsyncEngine, redis: Redis, workspace: uuid.UUID, recorded: bool
+) -> None:
+    part: dict[str, Any] = {"id": "a1", "type": "image", "url": "https://res.cloudinary.com/x.jpg"}
+    if recorded:
+        part |= {"sent": True, "platform_message_id": mid("webhook_echo_image.json")}
+    await _outbound(
+        engine,
+        workspace,
+        text="",
+        occurred_at=at("webhook_echo_image.json") - timedelta(seconds=1),
+        status="sending",
+        attachments=[part],
+    )
+    await deliver(sessions(engine), redis, "webhook_echo_image.json")
+    [msg] = await messages(engine)
+    assert (msg["source"], msg["status"]) == ("human", "sending")  # the send job finishes it
+    assert await stream(redis, workspace) == []
 
 
 @pytest.mark.parametrize(

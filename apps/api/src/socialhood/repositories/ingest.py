@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -189,6 +189,65 @@ async def lock_message_by_platform_id(
                 Message.social_account_id == social_account_id,
                 Message.platform_message_id == platform_message_id,
             )
+            .with_for_update(),
+            execution_options=_FRESH,
+        )
+    ).one_or_none()
+
+
+OUR_SOURCES = ("human", "ai_auto", "automation")
+
+
+async def own_send_for_echo(
+    session: AsyncSession,
+    conversation_id: uuid.UUID,
+    *,
+    platform_message_id: str,
+    text: str | None,
+    has_attachments: bool,
+    around: datetime,
+    window: timedelta,
+) -> Message | None:
+    """The outbound message of ours an echo belongs to, if any (T3.6 / TR-JOB-05 race):
+    an attachment part whose id the send job already recorded in ``attachments``, or a send
+    being sent whose text matches (a text echo) or that has attachments (an attachment echo). The
+    oldest in-flight send wins, since sends in a conversation go out in order."""
+    part = (
+        await session.scalars(
+            select(Message).where(
+                Message.conversation_id == conversation_id,
+                Message.direction == Direction.OUTBOUND,
+                Message.attachments.contains([{"platform_message_id": platform_message_id}]),
+            ),
+            execution_options=_FRESH,
+        )
+    ).first()
+    if part is not None:
+        return part
+    content = (
+        Message.text == text
+        if text
+        else func.jsonb_array_length(Message.attachments) > 0
+        if has_attachments
+        else None
+    )
+    if content is None:
+        return None
+    return (
+        await session.scalars(
+            select(Message)
+            .where(
+                Message.conversation_id == conversation_id,
+                Message.direction == Direction.OUTBOUND,
+                Message.source.in_(OUR_SOURCES),
+                # Only a send already on its way can have an echo; a queued one is not ours.
+                Message.status == MessageStatus.SENDING,
+                Message.platform_message_id.is_(None),
+                Message.occurred_at.between(around - window, around + window),
+                content,
+            )
+            .order_by(Message.occurred_at)
+            .limit(1)
             .with_for_update(),
             execution_options=_FRESH,
         )

@@ -65,7 +65,9 @@ class SandboxAdapter:
             raise failure
         return SendResult(outbox.record(acct.platform_account_id, recipient_ref, message))
 
-    async def mark_read(self, acct: SocialAccount, recipient_ref: str) -> None:
+    async def mark_read(
+        self, acct: SocialAccount, recipient_ref: str, *, message_ref: str | None = None
+    ) -> None:
         from socialhood.platforms.sandbox import outbox
 
         outbox.SEEN.append((acct.platform_account_id, recipient_ref))

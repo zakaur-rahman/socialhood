@@ -54,6 +54,7 @@ async def send_read_receipt(
             return False
         acct = await accounts.get(session, conv.social_account_id)
         contact = await inbox.get_contact(session, conv.contact_id)
+        latest_inbound = await inbox.latest_inbound_platform_id(session, conv.id)
     if acct is None or contact is None or acct.status != AccountStatus.ACTIVE:
         return False
     try:
@@ -65,7 +66,7 @@ async def send_read_receipt(
         if buckets is not None and await _busy(buckets, acct.platform, acct.id):
             log.info("read_receipt_skipped", conversation_id=str(conversation_id), reason="rate")
             return False
-        await adapter.mark_read(acct, contact.platform_user_id)
+        await adapter.mark_read(acct, contact.platform_user_id, message_ref=latest_inbound)
     except PlatformError as error:
         log.info(
             "read_receipt_failed",

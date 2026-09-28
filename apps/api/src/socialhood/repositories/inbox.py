@@ -48,3 +48,19 @@ async def find_message_by_platform_id(
             )
         )
     ).one_or_none()
+
+
+async def latest_inbound_platform_id(
+    session: AsyncSession, conversation_id: uuid.UUID
+) -> str | None:
+    """The newest customer message's platform id (WhatsApp marks read by message)."""
+    return await session.scalar(
+        select(Message.platform_message_id)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.direction == "inbound",
+            Message.platform_message_id.is_not(None),
+        )
+        .order_by(Message.occurred_at.desc(), Message.id.desc())
+        .limit(1)
+    )

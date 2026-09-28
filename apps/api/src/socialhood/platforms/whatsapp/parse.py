@@ -77,7 +77,12 @@ def _content(message: dict[str, Any]) -> tuple[str, str | None, tuple[InboundMed
         return "text", body.get("body"), ()
     if kind in MEDIA_KINDS:
         message_kind, media_kind = MEDIA_KINDS[kind]
-        ref = InboundMediaRef(kind=media_kind, media_id=body.get("id"))
+        ref = InboundMediaRef(
+            kind=media_kind,
+            media_id=body.get("id"),
+            mime_type=body.get("mime_type"),
+            filename=body.get("filename"),
+        )
         return message_kind, body.get("caption"), (ref,)
     if kind == "location":
         return "location", _location_text(body), ()
