@@ -13,6 +13,9 @@ RETRYABLE_CODES = frozenset({"platform_rate_limited", "platform_unavailable"})
 
 RATE_LIMIT_CODES = frozenset({4, 17, 32, 613, 80002})
 UNAVAILABLE_CODES = frozenset({1, 2})
+# Permanent refusals Meta sends with HTTP 500: retrying cannot help. 230: the user has not
+# consented to profile access (seen on a real account, T0.9).
+REFUSED_CODES = frozenset({230})
 PUBLISH_TEMPORARY = 2207008
 PUBLISH_QUOTA = 2207042
 
@@ -83,6 +86,8 @@ def map_graph_error(status: int, body: Any, headers: dict[str, str] | None = Non
         return build("platform_unavailable")
     if subcode == PUBLISH_QUOTA:
         return build("platform_rejected", message="Instagram's daily publishing limit reached")
+    if code in REFUSED_CODES:
+        return build("platform_rejected")
     if code in UNAVAILABLE_CODES or status >= 500:
         return build("platform_unavailable")
     return build("platform_rejected")

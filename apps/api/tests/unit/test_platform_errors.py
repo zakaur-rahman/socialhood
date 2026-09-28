@@ -41,6 +41,7 @@ def graph_error(code: int, subcode: int | None = None) -> dict[str, Any]:
         (500, graph_error(2), "platform_unavailable", True),
         (503, None, "platform_unavailable", True),
         (400, graph_error(100), "platform_rejected", False),
+        (500, graph_error(230), "platform_rejected", False),  # consent required, not an outage
         (400, "not json", "platform_rejected", False),
     ],
 )

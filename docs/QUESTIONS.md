@@ -78,3 +78,45 @@ join with their phases. "Connect WhatsApp" is shown disabled ("coming soon") unt
 FR-CON-06's choice is in the dialog and the API (`?delete_data=`), but conversations (P3) and
 comments (P6) do not exist yet, so the flag is only recorded in the log. The deletion joins the
 disconnect when those tables arrive.
+
+## Q-015 · When is a scheduled message "sent"?
+It becomes `sent` once its message is queued. If the platform then refuses the send, the thread
+shows that message as failed with Retry, but the scheduled row stays `sent`. F-10's "sent or
+failed" could mean mirroring the final result, which needs a hook in `send_message`.
+
+## Q-016 · Retry counts
+FR-SMS-03 says a scheduled send is "retried up to 3 times"; the job catalogue gives send_message 5
+tries. P3 uses 5.
+
+## Q-017 · WhatsApp number registration
+Meta's Cloud API onboarding registers a number with a 6-digit PIN (`POST /{phone_number_id}/
+register`); F-04 leaves it out. Without it sends fail with 133010. Who sets the PIN, and where is
+it kept?
+
+## Q-018 · The "AI handled" view
+Not defined in the spec. P3: the AI has replied in the conversation (a message with source
+`ai_auto`) and it does not need a human.
+
+## Q-019 · A reply from the Instagram app and unread
+It clears `awaiting_reply` and `needs_human` but leaves the unread count. Should it mark the
+conversation read?
+
+## Q-020 · Which inbound attachments are copied
+TR-MED-03 says each inbound attachment is copied because platform URLs expire. P3 copies images,
+video, audio, files and stickers; stories are never copied (story mentions by policy; a story
+reply's story is the business's own), and shared posts keep the link to someone else's post.
+
+## Q-021 · Unsent messages
+Instagram reports a message the customer unsent (`is_deleted`). P3 records it but cannot hide the
+message: that needs a `deleted_at` column (a migration). Add it in P4?
+
+## Q-022 · Contract gaps found while building the web inbox
+`Message` has no `edited_at` (so no "Edited" label), `Conversation` has no `last_inbound_at`,
+`POST …/scheduled-messages` declares no Idempotency-Key (TR-API-05, F-10), `MediaAssetOut` has no
+MIME type, and there is no error code for Meta's Embedded Signup allowance ("WhatsApp connections
+are paused…", F-04). All additive; proposed for the start of P4.
+
+## Q-023 · Not built in P3
+TR-API-07's 60 sends per minute per workspace (429), and the job catalogue's 30 s task timeout
+(Procrastinate enforces none; HTTP timeouts apply). The echo race and follow-up jobs are deferred
+by a few seconds rather than enqueued after commit; a transactional outbox would remove that.

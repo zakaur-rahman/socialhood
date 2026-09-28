@@ -63,3 +63,54 @@ httpx logs each request URL at INFO. Instagram's token endpoints take the app se
 as query parameters, so those values reached the logs (SEC-06). `configure_logging` now holds
 the `httpx` and `httpcore` loggers at WARNING; platform calls are logged by endpoint name
 (TR-PL-05). A unit test pins it.
+
+## C-011 · Echoes of our own sends (fixed in code)
+Instagram echoes every message the account sends, ours included. An echo can arrive before the
+send job has stored the platform id, and ingest stored it as a second (native_app) message; the
+send job then hit the unique id. Ingest now matches an echo to our send that is being sent: a
+text echo completes it (sent, with the id), an attachment part's echo changes nothing. Only a
+send in `sending` can match; a queued one has not reached Instagram. TR-JOB-05's reconciliation
+of `delivery_unknown` sends is unchanged.
+
+## C-012 · Read receipts: contact or message (resolved in code)
+TR-PL-01 has `mark_read(acct, platform_message_id)`; Instagram marks a conversation seen by the
+contact, WhatsApp by message. The adapter method takes both: `mark_read(acct, recipient_ref, *,
+message_ref=None)`, and read receipts pass the latest inbound message id.
+
+## C-013 · AI paused "until resumed" (fixed in code)
+`ai_paused_until = 'infinity'` (§5.4) reads back from asyncpg as a naive `datetime.max`, which
+broke the conversation detail. The column now always reads timezone-aware.
+
+## C-014 · Contract export needed a database URL (fixed in code)
+`pnpm gen:api` imports the app, which reads settings, so it failed without apps/api/.env; the CI
+contract job had no env and would have failed the same way. The script supplies placeholders;
+the export never connects.
+
+## C-015 · Meta refusals sent as HTTP 500 (fixed in code)
+The profile API answers "User consent is required" (code 230) with HTTP 500, which the error map
+treated as an outage and retried. Code 230 is now `platform_rejected`.
+
+## C-016 · Idempotency keys in Valkey, not a table (decision)
+TR-API-05 names an `idempotency_keys` table. P3 stores keys in Valkey (`idem:{workspace}:{user}:
+{key}`, a pending marker for 60 s, the 2xx response for 24 h). If Valkey is lost, the unique
+(conversation, client_id) still prevents a double send. A table can replace it with a migration
+if durability is needed.
+
+## C-017 · Real-time client (decision)
+TR-FE-04 names `fetchEventSource`. The web uses its own small SSE reader through the one API client
+(`parseAs: "stream"`), so every reconnect gets a fresh Clerk token from the existing middleware;
+EventSource cannot send the Authorization header at all.
+
+## C-018 · Design details that conflicted (resolved in code)
+UX-INB-07's 36 px send button is 40 px on phones (UX-A11Y-05 touch targets). UX-INB-02's raw hex
+hover colour uses the `field` token. At 1024–1279 px the sidebar collapses on inbox routes only
+(UX-INB-01). The §4.7 errors name the account's platform, not always Instagram.
+
+## C-019 · `needs_human` is cleared by human replies (decision)
+§3 says any outbound human message clears it; F-09 says "sending any message". Human sends and
+replies from the Instagram app clear it; AI and automations do not.
+
+## C-020 · Scheduled messages run on a 30-second dispatcher (decision)
+The job catalogue's cadence, needed for FR-SMS-03's "within 60 s". `send_scheduled` carries the
+workspace id so it never needs a cross-workspace lookup; the stuck-claim sweeper is its own
+periodic task (`sweep_stuck_scheduled`).
