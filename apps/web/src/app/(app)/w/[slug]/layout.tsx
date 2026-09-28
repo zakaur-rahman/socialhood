@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { useWorkspace, useWorkspaces } from "@/lib/api/queries";
+import { useWorkspaceEvents } from "@/lib/realtime/use-workspace-events";
 import { WorkspaceProvider } from "@/lib/workspace";
 
 /**
@@ -16,7 +17,7 @@ import { WorkspaceProvider } from "@/lib/workspace";
  * renders "Workspace not found" with a link to /app (F-02).
  */
 export default function WorkspaceLayout({ children }: { children: ReactNode }) {
-  const { slug } = useParams<{ slug: string }>();
+  const { slug } = useParams<{ slug: string; id?: string }>();
   const workspaces = useWorkspaces();
 
   if (workspaces.isPending) return <PageSkeleton fullPage />;
@@ -41,6 +42,7 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   return (
     <WorkspaceProvider value={workspace}>
       <RememberWorkspace id={workspace.id} />
+      <WorkspaceEvents id={workspace.id} />
       <AppShell>{children}</AppShell>
     </WorkspaceProvider>
   );
@@ -49,5 +51,12 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
 /** Opening a workspace records it as the user's last one, so /app returns here (F-02). */
 function RememberWorkspace({ id }: { id: string }) {
   useWorkspace(id);
+  return null;
+}
+
+/** TR-FE-04: one real-time stream per tab, patching the cache for every page below. */
+function WorkspaceEvents({ id }: { id: string }) {
+  const { id: conversationId } = useParams<{ id?: string }>();
+  useWorkspaceEvents(id, conversationId ?? null);
   return null;
 }

@@ -1,0 +1,251 @@
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { Conversation, MediaAsset } from "@/lib/api/types";
+import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
+import { conversation, json, renderWithApi } from "@/test/api";
+
+import { Composer, type Uploader } from "./Composer";
+
+const now = new Date("2026-09-28T12:00:00Z");
+
+function renderComposer(overrides: Partial<Conversation> = {}, props: Partial<Parameters<typeof Composer>[0]> = {}) {
+  const onSend = vi.fn();
+  const onChooseTemplate = vi.fn();
+  const view = renderWithApi(
+    <Composer
+      wid="w1"
+      slug="maple"
+      timeZone="Asia/Kolkata"
+      conversation={conversation(overrides)}
+      lastInboundAt="2026-09-26T10:00:00Z"
+      now={now}
+      onSend={onSend}
+      scheduleOpen={false}
+      onScheduleOpenChange={() => {}}
+      onChooseTemplate={onChooseTemplate}
+      canAttach
+      {...props}
+    />,
+  );
+  return { ...view, onSend, onChooseTemplate };
+}
+
+function textbox() {
+  return screen.getByRole("textbox", { name: "Reply to Priya Nair" }) as HTMLTextAreaElement;
+}
+
+// jsdom has no layout: give the textarea a content height so autosize has something to measure.
+let scrollHeight = 0;
+beforeEach(() => {
+  resetInboxStore();
+  scrollHeight = 0;
+  Object.defineProperty(HTMLTextAreaElement.prototype, "scrollHeight", {
+    configurable: true,
+    get: () => scrollHeight,
+  });
+});
+afterEach(() => {
+  delete (HTMLTextAreaElement.prototype as { scrollHeight?: number }).scrollHeight;
+});
+
+describe("Composer (UX-INB-07)", () => {
+  it("sends on Enter, adds a line on Shift+Enter, and is disabled while empty", async () => {
+    const user = userEvent.setup();
+    const { onSend } = renderComposer();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(textbox()).toHaveAttribute("placeholder", "Reply to Priya…");
+
+    await user.type(textbox(), "Yes, we ship to Dubai");
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    await user.type(textbox(), "5–7 days");
+    expect(onSend).not.toHaveBeenCalled();
+    expect(textbox().value).toBe("Yes, we ship to Dubai\n5–7 days");
+
+    await user.keyboard("{Enter}");
+    expect(onSend).toHaveBeenCalledWith({ text: "Yes, we ship to Dubai\n5–7 days", assets: [], humanAgent: false });
+    expect(textbox().value).toBe("");
+  });
+
+  it("grows with the text up to 160 px and resets its height after send", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+    scrollHeight = 120;
+    await user.type(textbox(), "Line one");
+    expect(textbox().style.height).toBe("120px");
+    scrollHeight = 400;
+    await user.type(textbox(), " and more");
+    expect(textbox().style.height).toBe("160px");
+
+    await user.keyboard("{Enter}");
+    expect(textbox().style.height).toBe("");
+  });
+
+  it("keeps the draft per conversation in the store", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+    await user.type(textbox(), "Half a thought");
+    expect(useInboxStore.getState().drafts).toEqual({ c1: "Half a thought" });
+  });
+
+  it("does not send on Enter while the schedule popover is open", async () => {
+    const user = userEvent.setup();
+    useInboxStore.getState().setDraft("c1", "Later");
+    const { onSend } = renderComposer({}, { scheduleOpen: true });
+    fireEvent.keyDown(textbox(), { key: "Enter" });
+    expect(onSend).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(onSend).toHaveBeenCalledOnce();
+  });
+
+  it("Human Agent window: a note under the textarea, and the send is tagged", async () => {
+    const user = userEvent.setup();
+    const { onSend } = renderComposer({ reply_window: { state: "human_agent", closes_at: "2026-10-03T12:00:00Z" } });
+    expect(screen.getByText("Replying with Human Agent tag. Window closes in 5d.")).toBeInTheDocument();
+    await user.type(textbox(), "Hi{Enter}");
+    expect(onSend).toHaveBeenCalledWith(expect.objectContaining({ humanAgent: true }));
+  });
+
+  it("Instagram window closed: no textarea, says when the customer last wrote", () => {
+    renderComposer({ reply_window: { state: "closed", closes_at: null } });
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("You can reply after Priya messages again. Last message 2d ago.");
+  });
+
+  it("WhatsApp outside the window: template only", async () => {
+    const user = userEvent.setup();
+    const { onChooseTemplate } = renderComposer({ platform: "whatsapp", reply_window: { state: "template_only", closes_at: null } });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "The 24-hour window has closed. Send an approved template to restart the conversation.",
+    );
+    await user.click(screen.getByRole("button", { name: "Choose template" }));
+    expect(onChooseTemplate).toHaveBeenCalledOnce();
+  });
+
+  it("account needs reconnecting: disabled with Reconnect", () => {
+    renderComposer({ social_account: { id: "a1", username: "maple.bakery", display_name: null, status: "needs_reconnect" } });
+    expect(screen.getByRole("status")).toHaveTextContent("@maple.bakery needs reconnecting before you can send from it.");
+    expect(screen.getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/settings/connections");
+  });
+
+  it("uploads attachments with a progress ring; Send waits for them", async () => {
+    const user = userEvent.setup();
+    let finish: (asset: MediaAsset) => void = () => {};
+    let progress: (fraction: number) => void = () => {};
+    const upload: Uploader = (_file, options) => {
+      progress = options.onProgress;
+      return new Promise((resolve) => {
+        finish = resolve;
+      });
+    };
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:preview");
+    const revoke = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const { onSend } = renderComposer({}, { upload });
+    const file = new File(["x"], "dress.png", { type: "image/png" });
+    await user.upload(screen.getByTestId("composer-file-input"), file);
+
+    act(() => progress(0.4));
+    expect(screen.getByRole("progressbar", { name: "Uploading" })).toHaveAttribute("aria-valuenow", "40");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+
+    const asset = { id: "asset-1", resource_type: "image", secure_url: "https://res.cloudinary.com/x.png", bytes: 1 } as MediaAsset;
+    act(() => finish(asset));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Send" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Send" }));
+    expect(onSend).toHaveBeenCalledWith({ text: "", assets: [asset], humanAgent: false });
+    expect(screen.queryByRole("list", { name: "Attachments" })).not.toBeInTheDocument();
+    expect(revoke).toHaveBeenCalledWith("blob:preview");
+    vi.restoreAllMocks();
+  });
+
+  it("shows a failed upload with Retry, and removes it", async () => {
+    const user = userEvent.setup();
+    const upload = vi.fn<Uploader>().mockRejectedValueOnce(new Error("nope")).mockReturnValue(new Promise(() => {}));
+    renderComposer({}, { upload });
+    await user.upload(screen.getByTestId("composer-file-input"), new File(["x"], "look.jpg", { type: "image/jpeg" }));
+    const retry = await screen.findByRole("button", { name: "Retry uploading look.jpg" });
+    expect(screen.getByRole("listitem")).toHaveAttribute("data-status", "failed");
+    await user.click(retry);
+    expect(upload).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("listitem")).toHaveAttribute("data-status", "uploading");
+    await user.click(screen.getByRole("button", { name: "Remove look.jpg" }));
+    expect(screen.queryByRole("list", { name: "Attachments" })).not.toBeInTheDocument();
+  });
+
+  it("refuses files the platform can't take", async () => {
+    const user = userEvent.setup({ applyAccept: false });
+    const upload = vi.fn<Uploader>();
+    renderComposer({}, { upload });
+    await user.upload(screen.getByTestId("composer-file-input"), new File(["%PDF"], "menu.pdf", { type: "application/pdf" }));
+    expect(upload).not.toHaveBeenCalled();
+    expect(screen.queryByRole("list", { name: "Attachments" })).not.toBeInTheDocument();
+  });
+});
+
+describe("Schedule popover (F-10)", () => {
+  it("limits times to the window and schedules in the workspace timezone", async () => {
+    const user = userEvent.setup();
+    useInboxStore.getState().setDraft("c1", "Following up on your order");
+    const posted: unknown[] = [];
+    const onScheduleOpenChange = vi.fn();
+    renderWithApi(
+      <Composer
+        wid="w1"
+        slug="maple"
+        timeZone="Asia/Kolkata"
+        conversation={conversation({ reply_window: { state: "open", closes_at: "2026-09-28T18:00:00Z" } })}
+        lastInboundAt={null}
+        now={now}
+        onSend={() => {}}
+        scheduleOpen
+        onScheduleOpenChange={onScheduleOpenChange}
+        onChooseTemplate={() => {}}
+        canAttach={false}
+      />,
+      {
+        handlers: {
+          "POST /v1/w/:wid/conversations/:id/scheduled-messages": (call) => {
+            posted.push({ body: call.body, key: call.headers.get("Idempotency-Key") });
+            return json(
+              {
+                id: "s1",
+                conversation_id: "c1",
+                text: "Following up on your order",
+                attachment_asset_ids: [],
+                send_at: (call.body as { send_at: string }).send_at,
+                status: "scheduled",
+                contact: { display_name: "Priya Nair" },
+                platform: "instagram",
+              },
+              201,
+            );
+          },
+        },
+      },
+    );
+    // 18:00 UTC is 23:30 in Kolkata; the latest allowed time is 5 minutes earlier.
+    expect(screen.getByText("Window closes Today 23:30")).toBeInTheDocument();
+
+    const time = screen.getByLabelText("Time");
+    expect(screen.getByLabelText("Date")).toHaveValue("2026-09-28");
+    fireEvent.change(time, { target: { value: "23:45" } });
+    await user.click(screen.getByRole("button", { name: "Schedule" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick a time before Today 23:25, when the reply window closes.");
+
+    fireEvent.change(time, { target: { value: "17:30" } }); // 12:00 UTC: too soon
+    await user.click(screen.getByRole("button", { name: "Schedule" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("Pick a time at least 2 minutes from now.");
+
+    fireEvent.change(time, { target: { value: "21:00" } });
+    await user.click(screen.getByRole("button", { name: "Schedule" }));
+    await waitFor(() => expect(onScheduleOpenChange).toHaveBeenCalledWith(false));
+    expect(posted).toEqual([
+      {
+        body: { text: "Following up on your order", send_at: "2026-09-28T15:30:00.000Z", attachment_asset_ids: [] },
+        key: expect.stringMatching(/^[0-9a-f-]{36}$/),
+      },
+    ]);
+    expect(useInboxStore.getState().drafts).toEqual({});
+  });
+});

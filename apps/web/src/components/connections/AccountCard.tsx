@@ -10,7 +10,7 @@ import { accountStatusLabel } from "@/lib/copy";
 import { cn } from "@/lib/utils";
 
 import { DisconnectDialog } from "./DisconnectDialog";
-import { InstagramGlyph } from "./InstagramGlyph";
+import { PlatformGlyph } from "./PlatformGlyph";
 
 const STATUS_TONE: Record<AccountStatus, string> = {
   active: "bg-success/15 text-success",
@@ -46,8 +46,11 @@ export function AccountCard({
   busy: { saving: boolean; reconnecting: boolean; retrying: boolean; disconnecting: boolean };
   actions: AccountActions;
 }) {
-  const handle = account.username ? `@${account.username}` : (account.display_name ?? "this account");
-  const name = account.display_name ?? account.username ?? "Instagram account";
+  const whatsapp = account.platform === "whatsapp";
+  const platformName = whatsapp ? "WhatsApp" : "Instagram";
+  const handle = account.username ? `@${account.username}` : (account.display_name ?? account.phone_number ?? "this account");
+  const name = account.display_name ?? account.username ?? `${platformName} account`;
+  const subtitle = account.username ? `@${account.username}` : (account.phone_number ?? platformName);
   const live = account.status !== "disconnected";
   const autoLocked = plan === "free";
 
@@ -65,8 +68,8 @@ export function AccountCard({
         <div className="min-w-0 flex-1">
           <p className="truncate font-semibold">{name}</p>
           <p className="flex items-center gap-1.5 text-sm text-fg-secondary">
-            <InstagramGlyph className="size-3.5" />
-            <span className="truncate">{account.username ? `@${account.username}` : "Instagram"}</span>
+            <PlatformGlyph platform={account.platform} className="size-3.5" />
+            <span className="truncate">{subtitle}</span>
             {account.sandbox ? (
               <span className="rounded bg-brand-soft px-1.5 text-xs font-medium text-brand-fg">Sandbox</span>
             ) : null}
@@ -113,14 +116,16 @@ export function AccountCard({
               onCheckedChange={(checked) => actions.onChange({ ai_analysis_enabled: checked })}
             />
           </Setting>
-          <Setting id={`spam-${account.id}`} label="Hide spam comments" hint="Hides comments the AI marks as spam">
-            <Switch
-              id={`spam-${account.id}`}
-              checked={account.auto_hide_spam}
-              disabled={!canManage || busy.saving}
-              onCheckedChange={(checked) => actions.onChange({ auto_hide_spam: checked })}
-            />
-          </Setting>
+          {whatsapp ? null : (
+            <Setting id={`spam-${account.id}`} label="Hide spam comments" hint="Hides comments the AI marks as spam">
+              <Switch
+                id={`spam-${account.id}`}
+                checked={account.auto_hide_spam}
+                disabled={!canManage || busy.saving}
+                onCheckedChange={(checked) => actions.onChange({ auto_hide_spam: checked })}
+              />
+            </Setting>
+          )}
         </div>
       ) : null}
 
@@ -129,7 +134,7 @@ export function AccountCard({
           <div className="flex gap-2">
             {account.status === "needs_reconnect" || account.status === "disconnected" ? (
               <Button size="sm" className="bg-brand-gradient text-white" disabled={busy.reconnecting} onClick={actions.onReconnect}>
-                {busy.reconnecting ? "Opening Instagram…" : "Reconnect"}
+                {busy.reconnecting ? `Opening ${platformName}…` : "Reconnect"}
               </Button>
             ) : null}
             {account.status === "error" ? (

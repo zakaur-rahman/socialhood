@@ -7,15 +7,13 @@ import { Suspense, useEffect } from "react";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
-import { useMe } from "@/lib/api/queries";
+import { useMe, useSocialAccounts } from "@/lib/api/queries";
 import { SUPPORT_EMAIL } from "@/lib/copy";
+import { resolveDestination } from "@/lib/resolve";
 
 /**
- * /app resolver (F-01, F-02): GET /v1/me provisions a first-time user, then we go to the last
- * used workspace. It opens Home until the inbox exists (P3); then Home only when no account is
+ * /app resolver (F-01, F-02): the last used workspace's inbox, or Home while no account is
  * connected. If /v1/me fails, show the error with Retry and never bounce back to sign-in.
- * An expired Instagram connect link lands here (the API cannot tell which workspace it was for)
- * and is forwarded to Connections, which shows the message (F-03).
  */
 export default function AppResolverPage() {
   return (
@@ -33,15 +31,15 @@ function Resolver() {
   const target = me.data
     ? (me.data.workspaces.find((w) => w.id === me.data.last_workspace_id) ?? me.data.workspaces[0])
     : undefined;
+  const accounts = useSocialAccounts(target?.id ?? "", Boolean(target) && connectError !== "state_invalid");
+  // Accounts failing to load should not strand the user: Home works without them.
+  const destination = target
+    ? resolveDestination(target.slug, accounts.isError ? [] : accounts.data, connectError)
+    : null;
 
   useEffect(() => {
-    if (!target) return;
-    const destination =
-      connectError === "state_invalid"
-        ? `/w/${target.slug}/settings/connections?error=state_invalid`
-        : `/w/${target.slug}/home`;
-    router.replace(destination as Route);
-  }, [target, router, connectError]);
+    if (destination) router.replace(destination as Route);
+  }, [destination, router]);
 
   if (me.isError) return <ErrorState fullPage error={me.error} onRetry={() => void me.refetch()} />;
   if (me.data && !target) {
