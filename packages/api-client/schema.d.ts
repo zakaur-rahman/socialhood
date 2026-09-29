@@ -699,6 +699,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/comments/counts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Comment Counts
+         * @description The Comments nav badge: comments from the last 7 days that are waiting for a reply (not
+         *     replied to publicly or privately, not spam, hidden or deleted). comment.created and
+         *     comment.updated tell the web to fetch it again.
+         */
+        get: operations["get_comment_counts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/comments/{comment_id}": {
         parameters: {
             query?: never;
@@ -3273,6 +3295,15 @@ export interface components {
             sentiment_score: number;
             /** Topic */
             topic?: string | null;
+        };
+        /**
+         * CommentCounts
+         * @description The Comments nav badge: comments waiting for a reply (services/comments/queries.py
+         *     ``comment_counts`` has the rule).
+         */
+        CommentCounts: {
+            /** Needs Reply */
+            needs_reply: number;
         };
         /**
          * CommentList
@@ -7067,6 +7098,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Calendar"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_comment_counts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentCounts"];
                 };
             };
             /** @description Validation error */

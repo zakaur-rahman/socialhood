@@ -1,9 +1,9 @@
 """Comment actions (§2.15; FR-CMT-04, UX-SCR-05, T6.3): public reply, private reply, hide, unhide
-and delete. Each changes the comment on Instagram first, then here, and publishes comment.updated
-with the new ``Comment`` (TR-RT-03). Platform refusals: account_needs_reconnect (409),
-rate_limited (429) or platform_error (502) with the reason (TR-PL-03); an account without comments
-(WhatsApp) is 409 capability_unavailable; another workspace's comment is 404 not_found. The rules
-are in services/comments/actions.py.
+and delete; and the Comments nav badge's count. Each action changes the comment on Instagram
+first, then here, and publishes comment.updated with the new ``Comment`` (TR-RT-03). Platform
+refusals: account_needs_reconnect (409), rate_limited (429) or platform_error (502) with the reason
+(TR-PL-03); an account without comments (WhatsApp) is 409 capability_unavailable; another
+workspace's comment is 404 not_found. The rules are in services/comments/actions.py.
 
 Replies take an Idempotency-Key (TR-API-05, as sends and scheduled messages do): the same key with
 the same body returns the first answer and does nothing more; with a different body it is 409
@@ -22,9 +22,14 @@ from socialhood.auth.deps import Admin, AnyMember, Session
 from socialhood.errors import ApiError
 from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.realtime.events import commit_and_publish
-from socialhood.schemas.posts import Comment, CommentReplyCreate, PrivateReplyCreate
+from socialhood.schemas.posts import (
+    Comment,
+    CommentCounts,
+    CommentReplyCreate,
+    PrivateReplyCreate,
+)
 from socialhood.services import idempotency
-from socialhood.services.comments import actions, private_replies
+from socialhood.services.comments import actions, private_replies, queries
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["comments"])
 
@@ -45,6 +50,14 @@ def _claim(
         key=key,
         fingerprint=idempotency.fingerprint("POST", request.url.path, body.model_dump(mode="json")),
     )
+
+
+@router.get("/comments/counts", operation_id="get_comment_counts")
+async def get_comment_counts(ctx: AnyMember, session: Session) -> CommentCounts:
+    """The Comments nav badge: comments from the last 7 days that are waiting for a reply (not
+    replied to publicly or privately, not spam, hidden or deleted). comment.created and
+    comment.updated tell the web to fetch it again."""
+    return await queries.comment_counts(session, now=datetime.now(UTC))
 
 
 @router.post("/comments/{comment_id}/reply", operation_id="reply_to_comment")
