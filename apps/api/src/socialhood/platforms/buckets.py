@@ -25,6 +25,7 @@ class Bucket(StrEnum):
     IG_SEND_MEDIA = "ig_send_media"  # audio and video; images too until T0.9 says otherwise
     IG_PRIVATE_REPLY = "ig_private_reply"
     IG_CONVERSATIONS = "ig_conversations"
+    IG_INSIGHTS = "ig_insights"  # live counts and insights for the metric snapshots (FR-ANL-01)
     WA_SEND = "wa_send"
 
 
@@ -41,6 +42,10 @@ SPECS: dict[Bucket, BucketSpec] = {
         capacity=PRIVATE_REPLY_BURST, per_second=PRIVATE_REPLIES_PER_HOUR / 3600
     ),
     Bucket.IG_CONVERSATIONS: BucketSpec(capacity=2, per_second=2),
+    # Meta publishes no per-second limit for insight reads, only the rolling 24 h budget of
+    # 4,800 x the account's impressions (TR-PL-09), which snapshots use a tiny part of. The bucket
+    # paces bursts (a worker catching up after downtime) at the Conversations API's rate.
+    Bucket.IG_INSIGHTS: BucketSpec(capacity=10, per_second=2),
     Bucket.WA_SEND: BucketSpec(capacity=80, per_second=80),
 }
 

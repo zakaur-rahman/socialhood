@@ -1,0 +1,58 @@
+{
+  "data": [
+    {
+      "name": "reach",
+      "period": "day",
+      "title": "Accounts reached",
+      "description": "The number of unique accounts that have seen your content, at least once, including in ads.",
+      "total_value": {
+        "value": 5400
+      },
+      "id": "17841400000000001/insights/reach/day"
+    },
+    {
+      "name": "views",
+      "period": "day",
+      "title": "Views",
+      "description": "The number of times your content was played or displayed.",
+      "total_value": {
+        "value": 9100
+      },
+      "id": "17841400000000001/insights/views/day"
+    },
+    {
+      "name": "accounts_engaged",
+      "period": "day",
+      "title": "Accounts engaged",
+      "description": "The number of accounts that have interacted with your content, including in ads.",
+      "total_value": {
+        "value": 310
+      },
+      "id": "17841400000000001/insights/accounts_engaged/day"
+    },
+    {
+      "name": "total_interactions",
+      "period": "day",
+      "title": "Content interactions",
+      "description": "The total number of post interactions, story interactions, reels interactions, video interactions and live video interactions.",
+      "total_value": {
+        "value": 480
+      },
+      "id": "17841400000000001/insights/total_interactions/day"
+    },
+    {
+      "name": "profile_links_taps",
+      "period": "day",
+      "title": "Profile links taps",
+      "description": "The number of taps on your business address, call button, email button and text button.",
+      "total_value": {
+        "value": 25
+      },
+      "id": "17841400000000001/insights/profile_links_taps/day"
+    }
+  ],
+  "paging": {
+    "previous": "https://graph.instagram.com/v25.0/17841400000000001/insights?since=1759017600&until=1759104000",
+    "next": "https://graph.instagram.com/v25.0/17841400000000001/insights?since=1759190400&until=1759276800"
+  }
+}

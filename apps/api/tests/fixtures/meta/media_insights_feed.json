@@ -1,0 +1,112 @@
+{
+  "data": [
+    {
+      "name": "reach",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 1850
+        }
+      ],
+      "title": "Accounts reached",
+      "description": "The number of unique accounts that have seen your post at least once.",
+      "id": "18100000000000003/insights/reach/lifetime"
+    },
+    {
+      "name": "views",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 2400
+        }
+      ],
+      "title": "Views",
+      "description": "The number of times your post was played or displayed.",
+      "id": "18100000000000003/insights/views/lifetime"
+    },
+    {
+      "name": "likes",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 55
+        }
+      ],
+      "title": "Likes",
+      "description": "The number of likes on your post.",
+      "id": "18100000000000003/insights/likes/lifetime"
+    },
+    {
+      "name": "comments",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 4
+        }
+      ],
+      "title": "Comments",
+      "description": "The number of comments on your post.",
+      "id": "18100000000000003/insights/comments/lifetime"
+    },
+    {
+      "name": "shares",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 6
+        }
+      ],
+      "title": "Shares",
+      "description": "The number of shares of your post.",
+      "id": "18100000000000003/insights/shares/lifetime"
+    },
+    {
+      "name": "saved",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 21
+        }
+      ],
+      "title": "Saved",
+      "description": "The number of saves of your post.",
+      "id": "18100000000000003/insights/saved/lifetime"
+    },
+    {
+      "name": "total_interactions",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 86
+        }
+      ],
+      "title": "Post interactions",
+      "description": "The number of likes, saves, comments and shares on your post minus the number of unlikes, unsaves and deleted comments.",
+      "id": "18100000000000003/insights/total_interactions/lifetime"
+    },
+    {
+      "name": "profile_visits",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 12
+        }
+      ],
+      "title": "Profile visits",
+      "description": "The number of times your profile was visited.",
+      "id": "18100000000000003/insights/profile_visits/lifetime"
+    },
+    {
+      "name": "follows",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 3
+        }
+      ],
+      "title": "Follows",
+      "description": "The number of accounts that started following you.",
+      "id": "18100000000000003/insights/follows/lifetime"
+    }
+  ]
+}
