@@ -10,6 +10,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { makeApi } from "@/lib/api/client";
 import { ApiClientProvider, makeQueryClient } from "@/lib/api/provider";
 import type {
+  Automation,
+  AutomationTemplate,
   Conversation,
   ConversationListItem,
   Message,
@@ -194,6 +196,60 @@ export function message(overrides: Partial<Message> = {}): Message {
     suggestion_id: null,
     human_agent_tag: false,
     reactions: [],
+    ...overrides,
+  };
+}
+
+// ---- automations (P4)
+
+export function automation(overrides: Partial<Automation> = {}): Automation {
+  return {
+    id: "au1",
+    name: "Comment LINK, DM the link",
+    status: "draft",
+    display_status: "draft",
+    social_account_id: "a1",
+    trigger: "comment_keyword",
+    keywords: ["link"],
+    match_mode: "word",
+    action: "send_message",
+    message_text: "Hi {first_name|there}! Here's the link.",
+    message_buttons: [{ title: "Shop now", url: "https://maple.example/shop" }],
+    message_media_asset_id: null,
+    message_media_url: null,
+    ai_instructions: null,
+    public_reply_texts: ["Sent you a DM!"],
+    post_scope: "all",
+    posts: [],
+    cooldown_hours: 24,
+    starts_at: null,
+    ends_at: null,
+    surge_order: "oldest_first",
+    priority: 1,
+    template_key: null,
+    activated_at: null,
+    paused_at: null,
+    last_run_at: null,
+    created_at: "2026-09-20T10:00:00Z",
+    updated_at: "2026-09-20T10:00:00Z",
+    stats: { runs_7d: 0, daily_7d: [0, 0, 0, 0, 0, 0, 0], last_run_at: null },
+    queue: { waiting: 0, eta_minutes: null, order: "oldest_first" },
+    missing_for_activation: [],
+    overlaps: [],
+    ...overrides,
+  };
+}
+
+export function template(overrides: Partial<AutomationTemplate> = {}): AutomationTemplate {
+  return {
+    key: "link_to_commenters",
+    name: "Send a link to commenters",
+    outcome: "Send your link to everyone who comments LINK",
+    category: "grow",
+    icon: "link",
+    trigger: "comment_keyword",
+    action: "send_message",
+    requires_paid_plan: false,
     ...overrides,
   };
 }

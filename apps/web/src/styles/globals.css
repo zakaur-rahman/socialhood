@@ -52,6 +52,24 @@
 @utility bg-brand-gradient-decor { background-image: linear-gradient(135deg, #20338A 0%, #567FF8 100%); }
 @utility bg-shell-gradient { background-image: linear-gradient(135deg, #3352CC 0%, #1C2D70 100%); }
 
+/* UX-SCR-03: the editor's gutter line while an automation is active, a dashed brand gradient moving
+   down (2 s per cycle); static under reduced motion. Built from tokens only. */
+@utility automation-line-active {
+  background-image:
+    repeating-linear-gradient(to bottom, var(--color-canvas) 0 4px, transparent 4px 10px),
+    linear-gradient(to bottom, var(--color-brand), var(--color-brand-deep));
+  background-size: 100% 20px, 100% 100%;
+  animation: automation-line 2s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes automation-line {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 20px, 0 0; }
+}
+
 :root {
   color-scheme: dark;
   /* shadcn/ui semantic variables mapped onto the tokens */

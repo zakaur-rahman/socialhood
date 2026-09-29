@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/shell/AppShell";
@@ -56,7 +56,9 @@ function RememberWorkspace({ id }: { id: string }) {
 
 /** TR-FE-04: one real-time stream per tab, patching the cache for every page below. */
 function WorkspaceEvents({ id }: { id: string }) {
-  const { id: conversationId } = useParams<{ id?: string }>();
-  useWorkspaceEvents(id, conversationId ?? null);
+  const { id: routeId } = useParams<{ id?: string }>();
+  // [id] is a conversation only in the inbox (automations/[id] is an automation).
+  const inInbox = usePathname().includes("/inbox/");
+  useWorkspaceEvents(id, inInbox ? (routeId ?? null) : null);
   return null;
 }
