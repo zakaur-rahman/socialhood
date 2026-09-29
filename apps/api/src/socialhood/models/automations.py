@@ -245,6 +245,8 @@ class Comment(IdMixin, TimestampMixin, TenantScoped, Base):
     __table_args__ = (
         UniqueConstraint("social_account_id", "platform_comment_id"),
         Index("ix_comments_media_commented", "media_item_id", sql("commented_at DESC")),
+        # Comments in a date range: sentiment for a range (TR-AGT-05) and Home (FR-HOME-01).
+        Index("ix_comments_workspace_commented", "workspace_id", sql("commented_at DESC")),
         Index(
             "ix_comments_pending_analysis",
             "social_account_id",

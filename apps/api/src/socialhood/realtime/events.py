@@ -36,8 +36,9 @@ EventType = Literal[
     "suggestion.updated",
     "scheduled_message.updated",
     "scheduled_post.updated",
-    "comment.created",
-    "comment.updated",
+    "comment.created",  # {comment: Comment} (schemas/posts.py)
+    "comment.updated",  # {comment: Comment}: analysis, hidden, reply, deleted
+    "post.updated",  # {post: PostDetail}: comment counts, sentiment split, summary or topics (P6)
     "social_account.updated",
     "usage.updated",
     "notification.created",

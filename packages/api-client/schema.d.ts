@@ -107,6 +107,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/analytics/posts/{post_id}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compare Post
+         * @description The post against its account's earlier posts at the same age (TR-AGT-05): the previous
+         *     ``n`` posts, or (``baseline=range``, which needs ``since`` and ``until``) the posts published
+         *     in that range, this post left out. ``same_format`` compares Reels with Reels and feed posts
+         *     with feed posts.
+         */
+        get: operations["compare_post"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/analytics/posts/{post_id}/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Post Performance
+         * @description Reach, views, likes, comments, shares, saves and engagement rate at ``age`` (FR-ANL-02).
+         *     Without ``age``: the latest window the post has reached.
+         */
+        get: operations["get_post_performance"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/analytics/sentiment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Sentiment Distribution
+         * @description Comment sentiment for one post (``post_id``; the range is then ignored), or for comments
+         *     made in the range, optionally on one account's posts.
+         */
+        get: operations["get_sentiment_distribution"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/analytics/top-posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Top Posts
+         * @description Posts published in the range ranked by ``metric`` at ``age``, best first; posts without
+         *     the metric at that age are left out (``considered`` is the sample size).
+         */
+        get: operations["list_top_posts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/automation-templates": {
         parameters: {
             query?: never;
@@ -361,6 +447,113 @@ export interface paths {
         get: operations["get_billing"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/comments/{comment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Comment
+         * @description Delete the comment on Instagram (admins). The row keeps ``deleted_at`` and leaves every
+         *     list and count; comment.updated (with ``deleted_at`` set) tells open pages to drop it.
+         */
+        delete: operations["delete_comment"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/comments/{comment_id}/hide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Hide Comment
+         * @description Hide the comment on Instagram (others no longer see it; the commenter still does).
+         *     Hiding a hidden comment returns it as it is.
+         */
+        post: operations["hide_comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/comments/{comment_id}/private-reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Private Reply To Comment
+         * @description A DM to the commenter, addressed by the comment: queued as an outbound message in their
+         *     conversation (created if needed), which message.* events follow. The answer is the comment
+         *     with ``private_reply`` set. Instagram allows one per comment within 7 days: a second is 409
+         *     conflict. Idempotency-Key as for ``reply_to_comment``.
+         */
+        post: operations["private_reply_to_comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/comments/{comment_id}/reply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reply To Comment
+         * @description A public reply under the comment, posted on Instagram before the answer (the comment's
+         *     ``public_reply`` holds it). The same Idempotency-Key with the same body returns the first
+         *     answer and posts nothing more (TR-API-05).
+         */
+        post: operations["reply_to_comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/comments/{comment_id}/unhide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unhide Comment
+         * @description Show a hidden comment again.
+         */
+        post: operations["unhide_comment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -889,10 +1082,75 @@ export interface paths {
         /**
          * List Posts
          * @description Newest first; ``q`` searches captions. Stories are left out (they take no comments).
+         *     Each post carries its comment counts and sentiment split (``stats``, FR-CMT-03).
          */
         get: operations["list_posts"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/posts/{post_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Post
+         * @description FR-CMT-04: the post with its counts, sentiment split, summary and topics (at most 6,
+         *     largest first). post.updated carries the same shape when any of them change.
+         */
+        get: operations["get_post"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/posts/{post_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Post Comments
+         * @description The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are
+         *     defined with ``CommentFilter`` in schemas/posts.py). Deleted comments are left out.
+         */
+        get: operations["list_post_comments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/posts/{post_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Post Summary
+         * @description The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated
+         *     carries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post
+         *     has no analysed comments yet.
+         */
+        post: operations["refresh_post_summary"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1671,6 +1929,27 @@ export interface components {
             /** Waiting */
             waiting: number;
         };
+        /**
+         * Baseline
+         * @description What the post was compared with, as requested and as found.
+         */
+        Baseline: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "previous" | "range";
+            /** N */
+            n?: number | null;
+            /** Post Ids */
+            post_ids: string[];
+            /** Same Format */
+            same_format: boolean;
+            /** Since */
+            since?: string | null;
+            /** Until */
+            until?: string | null;
+        };
         /** BillingPrice */
         BillingPrice: {
             /** Amount Minor */
@@ -1740,6 +2019,152 @@ export interface components {
              * @enum {string}
              */
             key: "connect_account" | "add_knowledge" | "choose_ai_mode" | "create_automation";
+        };
+        /**
+         * Comment
+         * @description A comment row (UX-SCR-05). Replies to other comments carry the parent's platform id.
+         */
+        Comment: {
+            analysis?: components["schemas"]["CommentAnalysis"] | null;
+            /**
+             * Analysis Status
+             * @enum {string}
+             */
+            analysis_status: "pending" | "done" | "skipped";
+            /** Author Profile Picture Url */
+            author_profile_picture_url?: string | null;
+            /** Author Username */
+            author_username?: string | null;
+            /**
+             * Commented At
+             * Format: date-time
+             */
+            commented_at: string;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Deleted At */
+            deleted_at?: string | null;
+            /** Hidden */
+            hidden: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Like Count */
+            like_count: number;
+            /** Parent Platform Comment Id */
+            parent_platform_comment_id?: string | null;
+            /** Platform Comment Id */
+            platform_comment_id: string;
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            private_reply?: components["schemas"]["CommentPrivateReply"] | null;
+            public_reply?: components["schemas"]["CommentPublicReply"] | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Text */
+            text: string;
+        };
+        /**
+         * CommentAnalysis
+         * @description analyze_comments' reading of one comment (TR-AI-11).
+         */
+        CommentAnalysis: {
+            /**
+             * Intent
+             * @enum {string}
+             */
+            intent: "pricing" | "product_inquiry" | "purchase" | "order_status" | "shipping" | "support" | "complaint" | "refund" | "feedback" | "collaboration" | "greeting" | "spam" | "other";
+            /** Is Spam */
+            is_spam: boolean;
+            /**
+             * Sentiment
+             * @enum {string}
+             */
+            sentiment: "positive" | "neutral" | "negative";
+            /** Sentiment Score */
+            sentiment_score: number;
+            /** Topic */
+            topic?: string | null;
+        };
+        /**
+         * CommentList
+         * @description Newest first.
+         */
+        CommentList: {
+            /** Items */
+            items: components["schemas"]["Comment"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * CommentPrivateReply
+         * @description The one private reply Instagram allows per comment: a DM in the commenter's
+         *     conversation.
+         */
+        CommentPrivateReply: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+        };
+        /**
+         * CommentPublicReply
+         * @description The account's public reply under the comment (a member's or an automation's).
+         */
+        CommentPublicReply: {
+            /** Platform Id */
+            platform_id?: string | null;
+            /**
+             * Replied At
+             * Format: date-time
+             */
+            replied_at: string;
+            /** Text */
+            text: string;
+        };
+        /**
+         * CommentReplyCreate
+         * @description POST …/comments/{comment_id}/reply: a public reply under the comment.
+         */
+        CommentReplyCreate: {
+            /** Text */
+            text: string;
+        };
+        /**
+         * CommentStats
+         * @description A post's comment counts (``media_items.comment_stats``), kept by the analysis job.
+         *
+         *     ``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts
+         *     analysed spam. While ``analysed < total`` the page shows "Analysing {analysed} of {total}
+         *     comments" (FR-CMT-02). Deleted comments are not counted.
+         */
+        CommentStats: {
+            /** Analysed */
+            analysed: number;
+            /** Negative */
+            negative: number;
+            /** Neutral */
+            neutral: number;
+            /** Positive */
+            positive: number;
+            /** Spam */
+            spam: number;
+            /** Total */
+            total: number;
         };
         /** ConnectStart */
         ConnectStart: {
@@ -2419,6 +2844,29 @@ export interface components {
             /** Next Cursor */
             next_cursor?: string | null;
         };
+        /**
+         * MetricComparison
+         * @description One metric of the post against the baseline at the same age.
+         */
+        MetricComparison: {
+            /** Baseline Mean */
+            baseline_mean?: number | null;
+            /** Baseline Median */
+            baseline_median?: number | null;
+            /** Diff Pct */
+            diff_pct?: number | null;
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "reach" | "views" | "likes" | "comments" | "shares" | "saves" | "engagement_rate";
+            /** Sample Size */
+            sample_size: number;
+            /** Value */
+            value?: number | null;
+            /** Z Score */
+            z_score?: number | null;
+        };
         /** NotificationList */
         NotificationList: {
             /** Items */
@@ -2484,12 +2932,140 @@ export interface components {
              */
             range: "7d" | "30d";
         };
+        /**
+         * PostComparison
+         * @description GET …/analytics/posts/{post_id}/compare (TR-AGT-05; agent-architecture §6 "Fair
+         *     comparison"): the post against its account's earlier posts at the same age.
+         *
+         *     ``age`` is the window compared, chosen as in PostPerformance. Posts published before the
+         *     account was connected have no early snapshots, so they join a baseline only at ages they have:
+         *     ``baseline_size`` counts the posts actually compared. ``enough_history`` is False below
+         *     MIN_COMPARABLE_POSTS; the UI and the agent then say there is not enough history and draw no
+         *     conclusion.
+         */
+        PostComparison: {
+            /**
+             * Age
+             * @enum {string}
+             */
+            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            baseline: components["schemas"]["Baseline"];
+            /** Baseline Size */
+            baseline_size: number;
+            /** Enough History */
+            enough_history: boolean;
+            /** Metrics */
+            metrics: components["schemas"]["MetricComparison"][];
+            post: components["schemas"]["PostPerformance"];
+        };
+        /**
+         * PostDetail
+         * @description GET …/posts/{post_id} (FR-CMT-04): the post, its counts and sentiment split (``stats``),
+         *     the summary of two or three sentences and the topics, largest first.
+         */
+        PostDetail: {
+            /** Caption */
+            caption?: string | null;
+            /** Comments Count */
+            comments_count?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Like Count */
+            like_count?: number | null;
+            /** Media Type */
+            media_type: string;
+            /** Media Url */
+            media_url?: string | null;
+            /** Permalink */
+            permalink?: string | null;
+            /** Platform Media Id */
+            platform_media_id: string;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            stats: components["schemas"]["CommentStats"];
+            /** Summary */
+            summary?: string | null;
+            /** Summary Updated At */
+            summary_updated_at?: string | null;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+            /** Topics */
+            topics: components["schemas"]["PostTopic"][];
+        };
         /** PostList */
         PostList: {
             /** Items */
             items: components["schemas"]["PostSummary"][];
             /** Next Cursor */
             next_cursor?: string | null;
+        };
+        /**
+         * PostMetrics
+         * @description FR-ANL-02's figures at one age. ``engagement_rate`` = (likes + comments + shares + saves)
+         *     ÷ reach, as a percentage, at the same age; only when reach is known.
+         */
+        PostMetrics: {
+            /** Comments */
+            comments?: number | null;
+            /** Engagement Rate */
+            engagement_rate?: number | null;
+            /** Likes */
+            likes?: number | null;
+            /** Reach */
+            reach?: number | null;
+            /** Saves */
+            saves?: number | null;
+            /** Shares */
+            shares?: number | null;
+            /** Views */
+            views?: number | null;
+        };
+        /**
+         * PostPerformance
+         * @description GET …/analytics/posts/{post_id}/performance: one post's figures at an age.
+         *
+         *     ``age`` is the age the figures are at: the requested one or, when the post is younger, the
+         *     latest window it has reached (``requested_age`` then differs and the UI says so). Without
+         *     ``age`` in the request, the latest window the post has reached is used.
+         */
+        PostPerformance: {
+            /**
+             * Age
+             * @enum {string}
+             */
+            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            /** Captured At */
+            captured_at?: string | null;
+            /** Insights Final */
+            insights_final: boolean;
+            /** Insights Granted */
+            insights_granted: boolean;
+            /** Media Type */
+            media_type: string;
+            metrics: components["schemas"]["PostMetrics"];
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+            /** Requested Age */
+            requested_age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
         };
         /**
          * PostRef
@@ -2511,7 +3087,7 @@ export interface components {
         };
         /**
          * PostSummary
-         * @description A synced post, for the automation post picker (and the Comments page from P6).
+         * @description A synced post: the automation post picker (P4) and the Comments grid (FR-CMT-03).
          */
         PostSummary: {
             /** Caption */
@@ -2543,8 +3119,26 @@ export interface components {
              * Format: uuid
              */
             social_account_id: string;
+            stats: components["schemas"]["CommentStats"];
             /** Thumbnail Url */
             thumbnail_url?: string | null;
+        };
+        /**
+         * PostTopic
+         * @description One of a post's topic labels (TR-AI-11): the model merges the most frequent comment topics
+         *     into at most 6 labels; code counts each label's comments and their sentiment.
+         */
+        PostTopic: {
+            /** Count */
+            count: number;
+            /** Label */
+            label: string;
+            /** Negative */
+            negative: number;
+            /** Neutral */
+            neutral: number;
+            /** Positive */
+            positive: number;
         };
         /** PrioritiesUpdate */
         PrioritiesUpdate: {
@@ -2555,6 +3149,16 @@ export interface components {
              * Format: uuid
              */
             social_account_id: string;
+        };
+        /**
+         * PrivateReplyCreate
+         * @description POST …/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's
+         *     private replies carry no attachments). Instagram's limit is 1,000 bytes; the service checks
+         *     bytes.
+         */
+        PrivateReplyCreate: {
+            /** Text */
+            text: string;
         };
         /** Problem */
         Problem: {
@@ -2764,6 +3368,42 @@ export interface components {
             /** Text */
             text?: string | null;
         };
+        /**
+         * SentimentDistribution
+         * @description GET …/analytics/sentiment: comment sentiment for one post, or for comments made in a date
+         *     range (optionally one account's). Unanalysed comments are counted, not guessed.
+         *
+         *     ``positive + neutral + negative`` are analysed comments that are not spam; the percentages
+         *     are shares of that sum (None when it is 0).
+         */
+        SentimentDistribution: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Analysed */
+            analysed: number;
+            /** Negative */
+            negative: number;
+            /** Negative Pct */
+            negative_pct?: number | null;
+            /** Neutral */
+            neutral: number;
+            /** Neutral Pct */
+            neutral_pct?: number | null;
+            /** Positive */
+            positive: number;
+            /** Positive Pct */
+            positive_pct?: number | null;
+            /** Post Id */
+            post_id?: string | null;
+            /** Since */
+            since?: string | null;
+            /** Spam */
+            spam: number;
+            /** Total */
+            total: number;
+            /** Until */
+            until?: string | null;
+        };
         /** SkippedCounts */
         SkippedCounts: {
             /** Cooldown */
@@ -2909,6 +3549,48 @@ export interface components {
             name: string;
             /** Params */
             params?: string[];
+        };
+        /** TopPost */
+        TopPost: {
+            /**
+             * Age
+             * @enum {string}
+             */
+            age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            post: components["schemas"]["PostSummary"];
+            /** Value */
+            value: number;
+        };
+        /**
+         * TopPosts
+         * @description GET …/analytics/top-posts: posts published in the range, ranked by a metric at an age
+         *     (each post at the requested age, or at the latest window it has reached when younger).
+         */
+        TopPosts: {
+            /** Considered */
+            considered: number;
+            /** Items */
+            items: components["schemas"]["TopPost"][];
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "reach" | "views" | "likes" | "comments" | "shares" | "saves" | "engagement_rate";
+            /**
+             * Requested Age
+             * @enum {string}
+             */
+            requested_age: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+            /**
+             * Since
+             * Format: date
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date
+             */
+            until: string;
         };
         /** UploadSignature */
         UploadSignature: {
@@ -3337,6 +4019,189 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    compare_post: {
+        parameters: {
+            query?: {
+                baseline?: "previous" | "range";
+                n?: number;
+                since?: string | null;
+                until?: string | null;
+                age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+                same_format?: boolean;
+            };
+            header?: never;
+            path: {
+                post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostComparison"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_post_performance: {
+        parameters: {
+            query?: {
+                age?: ("1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime") | null;
+            };
+            header?: never;
+            path: {
+                post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostPerformance"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_sentiment_distribution: {
+        parameters: {
+            query?: {
+                post_id?: string | null;
+                account_id?: string | null;
+                since?: string | null;
+                until?: string | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SentimentDistribution"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_top_posts: {
+        parameters: {
+            query?: {
+                metric?: "reach" | "views" | "likes" | "comments" | "shares" | "saves" | "engagement_rate";
+                since?: string | null;
+                until?: string | null;
+                n?: number;
+                age?: "1h" | "6h" | "24h" | "72h" | "7d" | "30d" | "lifetime";
+                account_id?: string | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TopPosts"];
                 };
             };
             /** @description Validation error */
@@ -4012,6 +4877,221 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingState"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    hide_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    private_reply_to_comment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                comment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PrivateReplyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reply_to_comment: {
+        parameters: {
+            query?: never;
+            header: {
+                "Idempotency-Key": string;
+            };
+            path: {
+                comment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentReplyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unhide_comment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                comment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Comment"];
                 };
             };
             /** @description Validation error */
@@ -5373,6 +6453,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PostList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostDetail"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_post_comments: {
+        parameters: {
+            query?: {
+                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden";
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CommentList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refresh_post_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation error */

@@ -3,18 +3,19 @@ names: they get an adapter and check its capabilities (TR-PL-11).
 
 Methods arrive with the phase that needs them: P2 tokens, webhooks and profiles; P3 sending,
 read receipts, media download, and the post and conversation lists used by sync and backfill;
-P4 link buttons, private replies, public comment replies and single posts for comment intake.
+P4 link buttons, private replies, public comment replies and single posts for comment intake;
+P6 comment backfill and moderation, live counts and insights.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime
+from dataclasses import asdict, dataclass, field
+from datetime import date, datetime
 from typing import Literal, Protocol
 
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.capabilities import Capability
-from socialhood.platforms.events import InboundMediaRef, InboundMessage
+from socialhood.platforms.events import InboundComment, InboundMediaRef, InboundMessage
 
 
 @dataclass(frozen=True)
@@ -111,6 +112,79 @@ class PlatformThread:
     messages: tuple[InboundMessage, ...] = field(default_factory=tuple)  # oldest first
 
 
+@dataclass(frozen=True, kw_only=True)
+class PlatformComment(InboundComment):
+    """A comment read from the platform for backfill (FR-CMT-01). It has the webhook event's
+    fields, so it goes through the same intake (F-12), plus what only a read returns."""
+
+    like_count: int = 0
+    hidden: bool = False
+
+
+@dataclass(frozen=True)
+class CommentPage:
+    """One page of a post's comments, replies included (their ``parent_id`` set)."""
+
+    comments: tuple[PlatformComment, ...]
+    next_cursor: str | None = None  # None on the last page
+
+
+@dataclass(frozen=True, kw_only=True)
+class MediaCounts:
+    """A post's live counts (the 1 h and 6 h snapshots, FR-ANL-01; refreshing like_count and
+    comments_count on media_items). None: the platform did not say."""
+
+    like_count: int | None = None
+    comments_count: int | None = None
+
+
+def _known(values: dict[str, int | None]) -> dict[str, int]:
+    return {name: value for name, value in values.items() if value is not None}
+
+
+@dataclass(frozen=True, kw_only=True)
+class MediaInsights:
+    """A post's lifetime insights at the moment of the call (FR-ANL-01). Field names are the
+    PostMetric keys of ``post_metric_snapshots.metrics``; None: not given for this media type or
+    not available yet."""
+
+    reach: int | None = None
+    views: int | None = None
+    likes: int | None = None
+    comments: int | None = None
+    shares: int | None = None
+    saves: int | None = None
+    total_interactions: int | None = None
+    profile_visits: int | None = None
+    follows: int | None = None
+
+    def metrics(self) -> dict[str, int]:
+        """The known values, as stored in a snapshot's ``metrics``."""
+        return _known(asdict(self))
+
+
+@dataclass(frozen=True, kw_only=True)
+class AccountInsights:
+    """One day of an account's metrics (FR-ANL-01). ``followers_count`` is read from the account
+    fields and is known without the insights scope; the rest are the AccountMetric keys of
+    ``account_daily_metrics.metrics`` and stay None without it."""
+
+    followers_count: int | None = None
+    reach: int | None = None
+    views: int | None = None
+    accounts_engaged: int | None = None
+    total_interactions: int | None = None
+    follows: int | None = None
+    unfollows: int | None = None
+    profile_links_taps: int | None = None
+
+    def metrics(self) -> dict[str, int]:
+        """The known insight values, as stored in ``account_daily_metrics.metrics``."""
+        values = asdict(self)
+        values.pop("followers_count")
+        return _known(values)
+
+
 class PlatformAdapter(Protocol):
     platform: str
 
@@ -158,4 +232,43 @@ class PlatformAdapter(Protocol):
         self, acct: SocialAccount, comment_ref: str, text: str
     ) -> str | None:
         """A public reply under the comment; returns the reply's platform id."""
+        ...
+
+    # ---- P6: comment backfill (T6.1), moderation (T6.2 auto-hide, T6.3 actions), live counts and
+    # insights (T6.5). Accounts without comments or posts raise capability_unavailable.
+
+    async def list_comments(
+        self, acct: SocialAccount, media_ref: str, *, cursor: str | None = None
+    ) -> CommentPage:
+        """One page of a post's comments for the backfill on connect (FR-CMT-01: 25 recent posts,
+        up to 200 comments each). Pass the previous page's ``next_cursor`` for the next."""
+        ...
+
+    async def hide_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        """Hide a comment on the account's post (FR-CMT-04, FR-CMT-05 auto-hide)."""
+        ...
+
+    async def unhide_comment(self, acct: SocialAccount, comment_ref: str) -> None: ...
+
+    async def delete_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        """Delete a comment on the account's post. Already deleted counts as done."""
+        ...
+
+    async def get_media_counts(self, acct: SocialAccount, media_ref: str) -> MediaCounts | None:
+        """A post's live like and comment counts; None when the post no longer exists."""
+        ...
+
+    async def get_media_insights(
+        self, acct: SocialAccount, media_ref: str, *, media_type: str
+    ) -> MediaInsights:
+        """A post's insights now (needs Capability.POST_INSIGHTS). ``media_type`` is the stored
+        MediaType: Instagram's valid metrics differ between Reels, feed posts and carousels."""
+        ...
+
+    async def get_account_insights(
+        self, acct: SocialAccount, day: date, *, tz: str = "UTC"
+    ) -> AccountInsights:
+        """The account's followers now and its insights for ``day``, a date in the IANA time
+        zone ``tz`` (the workspace's). Insights need Capability.ACCOUNT_INSIGHTS; without it only
+        ``followers_count`` is filled."""
         ...

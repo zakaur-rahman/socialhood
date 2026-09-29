@@ -87,8 +87,10 @@ class MediaItem(IdMixin, TimestampMixin, TenantScoped, Base):
     posted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     like_count: Mapped[int | None] = mapped_column(Integer)
     comments_count: Mapped[int | None] = mapped_column(Integer)
+    # {total, analysed, positive, neutral, negative, spam}: schemas/posts.py CommentStats (P6).
     comment_stats: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     summary: Mapped[str | None] = mapped_column(Text)
+    # [{label, count, positive, neutral, negative}], at most 6: schemas/posts.py PostTopic (P6).
     topics: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
     summary_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -99,5 +101,7 @@ class MediaItem(IdMixin, TimestampMixin, TenantScoped, Base):
     __table_args__ = (
         UniqueConstraint("social_account_id", "platform_media_id"),
         Index("ix_media_items_workspace_posted", "workspace_id", text("posted_at DESC")),
+        # An account's previous posts, the baseline of a comparison (TR-AGT-05).
+        Index("ix_media_items_account_posted", "social_account_id", text("posted_at DESC")),
         CheckConstraint(_in("media_type", MediaType), name="media_type"),
     )

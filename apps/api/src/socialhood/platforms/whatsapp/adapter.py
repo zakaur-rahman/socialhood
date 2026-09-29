@@ -6,13 +6,18 @@ WhatsApp Business Account. Calls use the business token from Embedded Signup.
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from socialhood.models.connections import SocialAccount
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.base import (
+    AccountInsights,
+    CommentPage,
     ContactProfile,
+    MediaCounts,
     MediaDownload,
+    MediaInsights,
     OutboundAttachment,
     OutboundMessage,
     OutboundTemplate,
@@ -240,3 +245,32 @@ class WhatsAppAdapter:
         self, acct: SocialAccount, comment_ref: str, text: str
     ) -> str | None:
         raise PlatformError("capability_unavailable", message="WhatsApp has no comments")
+
+    # ---- P6: WhatsApp numbers have no posts, comments or insights (TR-PL-11)
+
+    async def list_comments(
+        self, acct: SocialAccount, media_ref: str, *, cursor: str | None = None
+    ) -> CommentPage:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no comments")
+
+    async def hide_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no comments")
+
+    async def unhide_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no comments")
+
+    async def delete_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no comments")
+
+    async def get_media_counts(self, acct: SocialAccount, media_ref: str) -> MediaCounts | None:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no posts")
+
+    async def get_media_insights(
+        self, acct: SocialAccount, media_ref: str, *, media_type: str
+    ) -> MediaInsights:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no posts")
+
+    async def get_account_insights(
+        self, acct: SocialAccount, day: date, *, tz: str = "UTC"
+    ) -> AccountInsights:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no account insights")

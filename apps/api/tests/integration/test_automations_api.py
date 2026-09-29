@@ -934,11 +934,20 @@ async def test_posts_for_the_picker(ws: Ws, engine: AsyncEngine) -> None:
         await conn.execute(
             text("UPDATE media_items SET media_type = 'story' WHERE id = :i"), {"i": story}
         )
+        # P6 comment stats: stored counts come through; a post not analysed yet shows zeros.
+        await conn.execute(
+            text("UPDATE media_items SET comment_stats = CAST(:s AS jsonb) WHERE id = :i"),
+            {"i": ids[0], "s": '{"total": 5, "analysed": 4, "positive": 3, "spam": 1}'},
+        )
     elsewhere = await make_media_item(engine, workspace_id=ws.wid, account_id=second, posted_at=now)
 
     mine = await ws.ok("GET", "/posts", params={"account_id": ws.account_id})
     assert [p["id"] for p in mine["items"]] == [str(i) for i in ids]
     assert mine["items"][0]["media_type"] == "image"
+    zero = {"total": 0, "analysed": 0, "positive": 0, "neutral": 0, "negative": 0, "spam": 0}
+    stored = {"total": 5, "analysed": 4, "positive": 3, "spam": 1}
+    assert mine["items"][0]["stats"] == {**zero, **stored}
+    assert mine["items"][1]["stats"] == zero
     everything = await ws.ok("GET", "/posts")
     assert everything["items"][0]["id"] == str(elsewhere)
     sale = await ws.ok("GET", "/posts", params={"account_id": ws.account_id, "q": "sale"})

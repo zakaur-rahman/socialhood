@@ -287,24 +287,3 @@ class AutomationTestResult(ResponseModel):
     rendered_public_reply: str | None = None
     rendered_opening: str | None = None  # tap first: the private reply before the message
     rendered_nudge: str | None = None  # the follow nudge, as a non-follower would get it
-
-
-class PostSummary(ResponseModel):
-    """A synced post, for the automation post picker (and the Comments page from P6)."""
-
-    id: uuid.UUID
-    social_account_id: uuid.UUID
-    platform_media_id: str
-    media_type: str
-    caption: str | None = None
-    media_url: str | None = None
-    thumbnail_url: str | None = None
-    permalink: str | None = None
-    posted_at: datetime
-    like_count: int | None = None
-    comments_count: int | None = None
-
-
-class PostList(ResponseModel):
-    items: list[PostSummary]
-    next_cursor: str | None = None

@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.base import (
+    AccountInsights,
+    CommentPage,
     ContactProfile,
+    MediaCounts,
     MediaDownload,
+    MediaInsights,
     OutboundMessage,
     PlatformMedia,
     PlatformThread,
@@ -231,6 +237,66 @@ class InstagramAdapter:
             raise for_write(error) from error.__cause__
         reply_id = body.get("id") if isinstance(body, dict) else None
         return str(reply_id) if reply_id else None
+
+    # ---- P6: comment backfill (T6.1, comments.py), moderation (T6.3, moderation.py), live counts
+    # and insights (T6.5, insights.py)
+
+    async def list_comments(
+        self, acct: SocialAccount, media_ref: str, *, cursor: str | None = None
+    ) -> CommentPage:
+        from socialhood.platforms.instagram import comments
+
+        return await comments.list_comments(
+            self.http, self._graph, self._token(acct), acct, media_ref, cursor=cursor
+        )
+
+    async def hide_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        from socialhood.platforms.instagram import moderation
+
+        await moderation.set_hidden(
+            self.http, self._graph, self._token(acct), comment_ref, hidden=True
+        )
+
+    async def unhide_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        from socialhood.platforms.instagram import moderation
+
+        await moderation.set_hidden(
+            self.http, self._graph, self._token(acct), comment_ref, hidden=False
+        )
+
+    async def delete_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        from socialhood.platforms.instagram import moderation
+
+        await moderation.delete(self.http, self._graph, self._token(acct), comment_ref)
+
+    async def get_media_counts(self, acct: SocialAccount, media_ref: str) -> MediaCounts | None:
+        from socialhood.platforms.instagram import insights
+
+        return await insights.media_counts(self.http, self._graph, self._token(acct), media_ref)
+
+    async def get_media_insights(
+        self, acct: SocialAccount, media_ref: str, *, media_type: str
+    ) -> MediaInsights:
+        from socialhood.platforms.instagram import insights
+
+        return await insights.media_insights(
+            self.http, self._graph, self._token(acct), media_ref, media_type=media_type
+        )
+
+    async def get_account_insights(
+        self, acct: SocialAccount, day: date, *, tz: str = "UTC"
+    ) -> AccountInsights:
+        from socialhood.platforms.instagram import insights
+
+        return await insights.account_insights(
+            self.http,
+            self._graph,
+            self._token(acct),
+            acct,
+            day,
+            tz=tz,
+            with_insights=Capability.ACCOUNT_INSIGHTS in self.capabilities_for(acct),
+        )
 
 
 # The button template's limits (Meta's Instagram Messaging docs, checked 2026-09-29; T0.9 item 10

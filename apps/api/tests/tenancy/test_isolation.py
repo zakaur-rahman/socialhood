@@ -31,8 +31,9 @@ from tests.support.ai import (
     make_source,
     make_suggestion,
 )
+from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
 from tests.support.api import Clerk, sign_in
-from tests.support.automations import make_automation
+from tests.support.automations import make_automation, make_comment, make_media_item
 from tests.support.inbox import make_asset, make_scheduled, make_thread
 
 METHODS = ("get", "post", "put", "patch", "delete")
@@ -51,6 +52,8 @@ PARAM_TO_SEED: dict[str, str] = {
     "source_id": "source_id",
     "gap_id": "gap_id",
     "decision_id": "decision_id",
+    "post_id": "post_id",
+    "comment_id": "comment_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -127,9 +130,21 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# Comments (T6.3): replying to, hiding or deleting B's comment from A's workspace must be 404.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/comments/{comment_id}/reply"): {"text": "Replied into B"},
+        ("POST", "/v1/w/{wid}/comments/{comment_id}/private-reply"): {"text": "DM into B"},
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
+        "Idempotency-Key": "isolation-test-key"
+    },
+    ("POST", "/v1/w/{wid}/comments/{comment_id}/reply"): {"Idempotency-Key": "isolation-test-key"},
+    ("POST", "/v1/w/{wid}/comments/{comment_id}/private-reply"): {
         "Idempotency-Key": "isolation-test-key"
     },
 }
@@ -159,6 +174,10 @@ B_TABLES = (
     "knowledge_gaps",
     "ai_decisions",
     "ai_usage_events",
+    "media_items",
+    "comment_analyses",
+    "post_metric_snapshots",
+    "account_daily_metrics",
 )
 
 
@@ -176,6 +195,8 @@ class Seed:
     source_id: str = ""
     gap_id: str = ""
     decision_id: str = ""
+    post_id: str = ""
+    comment_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -276,6 +297,13 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     decision = await make_decision(engine, **on)
     source = await make_source(engine, workspace_id=wid)
     gap = await make_gap(engine, workspace_id=wid)
+    post = await make_media_item(engine, workspace_id=wid, account_id=account_id)
+    comment = await make_comment(
+        engine, workspace_id=wid, account_id=account_id, media_item_id=post
+    )
+    await make_comment_analysis(engine, workspace_id=wid, comment_id=comment)
+    await make_snapshot(engine, workspace_id=wid, media_item_id=post)
+    await make_account_day(engine, workspace_id=wid, account_id=account_id)
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -289,6 +317,8 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         source_id=str(source),
         gap_id=str(gap),
         decision_id=str(decision),
+        post_id=str(post),
+        comment_id=str(comment),
     )
 
 

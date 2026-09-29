@@ -31,6 +31,8 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.analysis",
     "socialhood.jobs.tasks.suggestions",
     "socialhood.jobs.tasks.knowledge",
+    "socialhood.jobs.tasks.comments",
+    "socialhood.jobs.tasks.insights",
 ]
 
 configure_logging(get_settings().log_level)

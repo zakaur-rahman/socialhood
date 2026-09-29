@@ -5,12 +5,16 @@ SANDBOX_PLATFORM_ENABLED=true; production refuses to start with it on (SEC-14)."
 from __future__ import annotations
 
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from socialhood.models.connections import SocialAccount
 from socialhood.platforms.base import (
+    AccountInsights,
+    CommentPage,
     ContactProfile,
+    MediaCounts,
     MediaDownload,
+    MediaInsights,
     OutboundMessage,
     PlatformMedia,
     PlatformThread,
@@ -128,3 +132,47 @@ class SandboxAdapter:
         if failure is not None:
             raise failure
         return outbox.record_comment_reply(acct.platform_account_id, comment_ref, text)
+
+    # ---- P6: comment backfill (T6.1, comments.py), moderation (T6.3, moderation.py), live counts
+    # and insights (T6.5, insights.py)
+
+    async def list_comments(
+        self, acct: SocialAccount, media_ref: str, *, cursor: str | None = None
+    ) -> CommentPage:
+        from socialhood.platforms.sandbox import comments
+
+        return comments.page(acct, media_ref, cursor=cursor)
+
+    async def hide_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        from socialhood.platforms.sandbox import moderation
+
+        moderation.set_hidden(acct, comment_ref, hidden=True)
+
+    async def unhide_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        from socialhood.platforms.sandbox import moderation
+
+        moderation.set_hidden(acct, comment_ref, hidden=False)
+
+    async def delete_comment(self, acct: SocialAccount, comment_ref: str) -> None:
+        from socialhood.platforms.sandbox import moderation
+
+        moderation.delete(acct, comment_ref)
+
+    async def get_media_counts(self, acct: SocialAccount, media_ref: str) -> MediaCounts | None:
+        from socialhood.platforms.sandbox import insights
+
+        return insights.media_counts(acct, media_ref)
+
+    async def get_media_insights(
+        self, acct: SocialAccount, media_ref: str, *, media_type: str
+    ) -> MediaInsights:
+        from socialhood.platforms.sandbox import insights
+
+        return insights.media_insights(acct, media_ref, media_type=media_type)
+
+    async def get_account_insights(
+        self, acct: SocialAccount, day: date, *, tz: str = "UTC"
+    ) -> AccountInsights:
+        from socialhood.platforms.sandbox import insights
+
+        return insights.account_insights(acct, day, tz=tz)

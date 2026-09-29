@@ -325,3 +325,19 @@ The escalation banner and "AI paused" show only in Auto. The first draft shows a
 30 s after an analysis that needs a reply. Brand voice opens as a form until a description exists.
 Plan gating reads the billing entitlements. The web refetches a conversation on
 conversation.updated for summary and AI state (the event carries list fields only).
+
+## C-039 · P6 foundation decisions (contract)
+comment_analyses also stores media_item_id (not in §5.6) so per-post figures read one table; its
+topic may be null (no topic) and is at most 60 characters, lowercased by the writer.
+post_metric_snapshots keeps the column name "window", a reserved word: raw SQL quotes it. Added
+indexes media_items (social_account_id, posted_at DESC) for baselines and comments (workspace_id,
+commented_at DESC) for sentiment over a date range. The comparison route is
+…/analytics/posts/{id}/compare (§2.15 lists …/analytics/compare); ranges are since and until dates
+in the workspace time zone, both included, defaulting to the last 30 days. Percentages are 0 to
+100, engagement rate included. Comment stats: positive + neutral + negative count analysed comments
+that are not spam; spam is counted apart. Filter chips: questions = pricing, product_inquiry,
+shipping, order_status, support; buying = purchase, pricing. Comment actions: a public reply
+answers 200 with the comment once Instagram accepts it; a private reply answers 202 with the
+comment (the DM is queued); hide and unhide answer 200; delete answers 204 and keeps deleted_at.
+post.updated carries a PostDetail. The adapter's get_media_insights takes the media type (Instagram's
+metrics differ by format) and get_account_insights the workspace time zone.

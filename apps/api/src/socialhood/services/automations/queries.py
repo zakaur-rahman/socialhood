@@ -40,10 +40,8 @@ from socialhood.schemas.automations import (
     LinkButton,
     MatchModeName,
     OverlapWarning,
-    PostList,
     PostRef,
     PostScopeName,
-    PostSummary,
     RunContact,
     RunError,
     RunResultName,
@@ -53,6 +51,7 @@ from socialhood.schemas.automations import (
 )
 from socialhood.schemas.automations import Automation as AutomationOut
 from socialhood.schemas.automations import AutomationRun as AutomationRunOut
+from socialhood.schemas.posts import CommentStats, PostList, PostSummary
 from socialhood.services.automations import matching, stats, validation, windows
 from socialhood.services.automations.definitions import definition_of
 from socialhood.services.conversations import decode_cursor, encode_cursor
@@ -393,6 +392,7 @@ async def list_posts(
                 posted_at=item.posted_at,
                 like_count=item.like_count,
                 comments_count=item.comments_count,
+                stats=CommentStats.from_stored(item.comment_stats),
             )
             for item in page
         ],

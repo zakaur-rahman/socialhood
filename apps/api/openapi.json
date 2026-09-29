@@ -1856,6 +1856,73 @@
         "title": "AutomationsSummary",
         "type": "object"
       },
+      "Baseline": {
+        "description": "What the post was compared with, as requested and as found.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "previous",
+              "range"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "n": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "N"
+          },
+          "post_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Post Ids",
+            "type": "array"
+          },
+          "same_format": {
+            "title": "Same Format",
+            "type": "boolean"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          }
+        },
+        "required": [
+          "kind",
+          "same_format",
+          "post_ids"
+        ],
+        "title": "Baseline",
+        "type": "object"
+      },
       "BillingPrice": {
         "properties": {
           "amount_minor": {
@@ -2057,6 +2124,352 @@
           "done"
         ],
         "title": "ChecklistStep",
+        "type": "object"
+      },
+      "Comment": {
+        "description": "A comment row (UX-SCR-05). Replies to other comments carry the parent's platform id.",
+        "properties": {
+          "analysis": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommentAnalysis"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "analysis_status": {
+            "enum": [
+              "pending",
+              "done",
+              "skipped"
+            ],
+            "title": "Analysis Status",
+            "type": "string"
+          },
+          "author_profile_picture_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Profile Picture Url"
+          },
+          "author_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Username"
+          },
+          "commented_at": {
+            "format": "date-time",
+            "title": "Commented At",
+            "type": "string"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "deleted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deleted At"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "like_count": {
+            "title": "Like Count",
+            "type": "integer"
+          },
+          "parent_platform_comment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Platform Comment Id"
+          },
+          "platform_comment_id": {
+            "title": "Platform Comment Id",
+            "type": "string"
+          },
+          "post_id": {
+            "format": "uuid",
+            "title": "Post Id",
+            "type": "string"
+          },
+          "private_reply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommentPrivateReply"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "public_reply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CommentPublicReply"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "post_id",
+          "social_account_id",
+          "platform_comment_id",
+          "text",
+          "like_count",
+          "hidden",
+          "commented_at",
+          "analysis_status"
+        ],
+        "title": "Comment",
+        "type": "object"
+      },
+      "CommentAnalysis": {
+        "description": "analyze_comments' reading of one comment (TR-AI-11).",
+        "properties": {
+          "intent": {
+            "enum": [
+              "pricing",
+              "product_inquiry",
+              "purchase",
+              "order_status",
+              "shipping",
+              "support",
+              "complaint",
+              "refund",
+              "feedback",
+              "collaboration",
+              "greeting",
+              "spam",
+              "other"
+            ],
+            "title": "Intent",
+            "type": "string"
+          },
+          "is_spam": {
+            "title": "Is Spam",
+            "type": "boolean"
+          },
+          "sentiment": {
+            "enum": [
+              "positive",
+              "neutral",
+              "negative"
+            ],
+            "title": "Sentiment",
+            "type": "string"
+          },
+          "sentiment_score": {
+            "title": "Sentiment Score",
+            "type": "number"
+          },
+          "topic": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Topic"
+          }
+        },
+        "required": [
+          "sentiment",
+          "sentiment_score",
+          "intent",
+          "is_spam"
+        ],
+        "title": "CommentAnalysis",
+        "type": "object"
+      },
+      "CommentList": {
+        "description": "Newest first.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Comment"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "CommentList",
+        "type": "object"
+      },
+      "CommentPrivateReply": {
+        "description": "The one private reply Instagram allows per comment: a DM in the commenter's\nconversation.",
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "conversation_id"
+        ],
+        "title": "CommentPrivateReply",
+        "type": "object"
+      },
+      "CommentPublicReply": {
+        "description": "The account's public reply under the comment (a member's or an automation's).",
+        "properties": {
+          "platform_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform Id"
+          },
+          "replied_at": {
+            "format": "date-time",
+            "title": "Replied At",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "replied_at"
+        ],
+        "title": "CommentPublicReply",
+        "type": "object"
+      },
+      "CommentReplyCreate": {
+        "additionalProperties": false,
+        "description": "POST \u2026/comments/{comment_id}/reply: a public reply under the comment.",
+        "properties": {
+          "text": {
+            "maxLength": 2200,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "CommentReplyCreate",
+        "type": "object"
+      },
+      "CommentStats": {
+        "description": "A post's comment counts (``media_items.comment_stats``), kept by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. While ``analysed < total`` the page shows \"Analysing {analysed} of {total}\ncomments\" (FR-CMT-02). Deleted comments are not counted.",
+        "properties": {
+          "analysed": {
+            "title": "Analysed",
+            "type": "integer"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "neutral": {
+            "title": "Neutral",
+            "type": "integer"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          },
+          "spam": {
+            "title": "Spam",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "analysed",
+          "positive",
+          "neutral",
+          "negative",
+          "spam"
+        ],
+        "title": "CommentStats",
         "type": "object"
       },
       "ConnectStart": {
@@ -4252,6 +4665,89 @@
         "title": "MessageList",
         "type": "object"
       },
+      "MetricComparison": {
+        "description": "One metric of the post against the baseline at the same age.",
+        "properties": {
+          "baseline_mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Mean"
+          },
+          "baseline_median": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Median"
+          },
+          "diff_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff Pct"
+          },
+          "metric": {
+            "enum": [
+              "reach",
+              "views",
+              "likes",
+              "comments",
+              "shares",
+              "saves",
+              "engagement_rate"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "z_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Z Score"
+          }
+        },
+        "required": [
+          "metric",
+          "sample_size"
+        ],
+        "title": "MetricComparison",
+        "type": "object"
+      },
       "NotificationList": {
         "properties": {
           "items": {
@@ -4407,111 +4903,57 @@
         "title": "Overview",
         "type": "object"
       },
-      "PostList": {
+      "PostComparison": {
+        "description": "GET \u2026/analytics/posts/{post_id}/compare (TR-AGT-05; agent-architecture \u00a76 \"Fair\ncomparison\"): the post against its account's earlier posts at the same age.\n\n``age`` is the window compared, chosen as in PostPerformance. Posts published before the\naccount was connected have no early snapshots, so they join a baseline only at ages they have:\n``baseline_size`` counts the posts actually compared. ``enough_history`` is False below\nMIN_COMPARABLE_POSTS; the UI and the agent then say there is not enough history and draw no\nconclusion.",
         "properties": {
-          "items": {
+          "age": {
+            "enum": [
+              "1h",
+              "6h",
+              "24h",
+              "72h",
+              "7d",
+              "30d",
+              "lifetime"
+            ],
+            "title": "Age",
+            "type": "string"
+          },
+          "baseline": {
+            "$ref": "#/components/schemas/Baseline"
+          },
+          "baseline_size": {
+            "title": "Baseline Size",
+            "type": "integer"
+          },
+          "enough_history": {
+            "title": "Enough History",
+            "type": "boolean"
+          },
+          "metrics": {
             "items": {
-              "$ref": "#/components/schemas/PostSummary"
+              "$ref": "#/components/schemas/MetricComparison"
             },
-            "title": "Items",
+            "title": "Metrics",
             "type": "array"
           },
-          "next_cursor": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Next Cursor"
+          "post": {
+            "$ref": "#/components/schemas/PostPerformance"
           }
         },
         "required": [
-          "items"
+          "post",
+          "age",
+          "baseline",
+          "baseline_size",
+          "enough_history",
+          "metrics"
         ],
-        "title": "PostList",
+        "title": "PostComparison",
         "type": "object"
       },
-      "PostRef": {
-        "description": "A post an automation is scoped to: a synced post, or a scheduled one not yet published.",
-        "properties": {
-          "caption": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Caption"
-          },
-          "media_item_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Media Item Id"
-          },
-          "media_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Media Type"
-          },
-          "posted_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Posted At"
-          },
-          "scheduled_post_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scheduled Post Id"
-          },
-          "thumbnail_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Thumbnail Url"
-          }
-        },
-        "title": "PostRef",
-        "type": "object"
-      },
-      "PostSummary": {
-        "description": "A synced post, for the automation post picker (and the Comments page from P6).",
+      "PostDetail": {
+        "description": "GET \u2026/posts/{post_id} (FR-CMT-04): the post, its counts and sentiment split (``stats``),\nthe summary of two or three sentences and the topics, largest first.",
         "properties": {
           "caption": {
             "anyOf": [
@@ -4591,6 +5033,420 @@
             "title": "Social Account Id",
             "type": "string"
           },
+          "stats": {
+            "$ref": "#/components/schemas/CommentStats"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "summary_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary Updated At"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/PostTopic"
+            },
+            "title": "Topics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "social_account_id",
+          "platform_media_id",
+          "media_type",
+          "posted_at",
+          "stats",
+          "topics"
+        ],
+        "title": "PostDetail",
+        "type": "object"
+      },
+      "PostList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PostSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PostList",
+        "type": "object"
+      },
+      "PostMetrics": {
+        "description": "FR-ANL-02's figures at one age. ``engagement_rate`` = (likes + comments + shares + saves)\n\u00f7 reach, as a percentage, at the same age; only when reach is known.",
+        "properties": {
+          "comments": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments"
+          },
+          "engagement_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Rate"
+          },
+          "likes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Likes"
+          },
+          "reach": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reach"
+          },
+          "saves": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saves"
+          },
+          "shares": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shares"
+          },
+          "views": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Views"
+          }
+        },
+        "title": "PostMetrics",
+        "type": "object"
+      },
+      "PostPerformance": {
+        "description": "GET \u2026/analytics/posts/{post_id}/performance: one post's figures at an age.\n\n``age`` is the age the figures are at: the requested one or, when the post is younger, the\nlatest window it has reached (``requested_age`` then differs and the UI says so). Without\n``age`` in the request, the latest window the post has reached is used.",
+        "properties": {
+          "age": {
+            "enum": [
+              "1h",
+              "6h",
+              "24h",
+              "72h",
+              "7d",
+              "30d",
+              "lifetime"
+            ],
+            "title": "Age",
+            "type": "string"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "insights_final": {
+            "title": "Insights Final",
+            "type": "boolean"
+          },
+          "insights_granted": {
+            "title": "Insights Granted",
+            "type": "boolean"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "metrics": {
+            "$ref": "#/components/schemas/PostMetrics"
+          },
+          "post_id": {
+            "format": "uuid",
+            "title": "Post Id",
+            "type": "string"
+          },
+          "posted_at": {
+            "format": "date-time",
+            "title": "Posted At",
+            "type": "string"
+          },
+          "requested_age": {
+            "anyOf": [
+              {
+                "enum": [
+                  "1h",
+                  "6h",
+                  "24h",
+                  "72h",
+                  "7d",
+                  "30d",
+                  "lifetime"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Age"
+          }
+        },
+        "required": [
+          "post_id",
+          "media_type",
+          "posted_at",
+          "age",
+          "insights_granted",
+          "insights_final",
+          "metrics"
+        ],
+        "title": "PostPerformance",
+        "type": "object"
+      },
+      "PostRef": {
+        "description": "A post an automation is scoped to: a synced post, or a scheduled one not yet published.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "media_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Item Id"
+          },
+          "media_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Type"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
+          "scheduled_post_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled Post Id"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          }
+        },
+        "title": "PostRef",
+        "type": "object"
+      },
+      "PostSummary": {
+        "description": "A synced post: the automation post picker (P4) and the Comments grid (FR-CMT-03).",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "comments_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comments Count"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "like_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Like Count"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "media_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Url"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "platform_media_id": {
+            "title": "Platform Media Id",
+            "type": "string"
+          },
+          "posted_at": {
+            "format": "date-time",
+            "title": "Posted At",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/CommentStats"
+          },
           "thumbnail_url": {
             "anyOf": [
               {
@@ -4608,9 +5464,44 @@
           "social_account_id",
           "platform_media_id",
           "media_type",
-          "posted_at"
+          "posted_at",
+          "stats"
         ],
         "title": "PostSummary",
+        "type": "object"
+      },
+      "PostTopic": {
+        "description": "One of a post's topic labels (TR-AI-11): the model merges the most frequent comment topics\ninto at most 6 labels; code counts each label's comments and their sentiment.",
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "neutral": {
+            "title": "Neutral",
+            "type": "integer"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "label",
+          "count",
+          "positive",
+          "neutral",
+          "negative"
+        ],
+        "title": "PostTopic",
         "type": "object"
       },
       "PrioritiesUpdate": {
@@ -4637,6 +5528,23 @@
           "ordered_ids"
         ],
         "title": "PrioritiesUpdate",
+        "type": "object"
+      },
+      "PrivateReplyCreate": {
+        "additionalProperties": false,
+        "description": "POST \u2026/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's\nprivate replies carry no attachments). Instagram's limit is 1,000 bytes; the service checks\nbytes.",
+        "properties": {
+          "text": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "PrivateReplyCreate",
         "type": "object"
       },
       "Problem": {
@@ -5244,6 +6152,126 @@
         "title": "SendMessage",
         "type": "object"
       },
+      "SentimentDistribution": {
+        "description": "GET \u2026/analytics/sentiment: comment sentiment for one post, or for comments made in a date\nrange (optionally one account's). Unanalysed comments are counted, not guessed.\n\n``positive + neutral + negative`` are analysed comments that are not spam; the percentages\nare shares of that sum (None when it is 0).",
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "analysed": {
+            "title": "Analysed",
+            "type": "integer"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "negative_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negative Pct"
+          },
+          "neutral": {
+            "title": "Neutral",
+            "type": "integer"
+          },
+          "neutral_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neutral Pct"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          },
+          "positive_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positive Pct"
+          },
+          "post_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Post Id"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "spam": {
+            "title": "Spam",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          },
+          "until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Until"
+          }
+        },
+        "required": [
+          "total",
+          "analysed",
+          "positive",
+          "neutral",
+          "negative",
+          "spam"
+        ],
+        "title": "SentimentDistribution",
+        "type": "object"
+      },
       "SkippedCounts": {
         "properties": {
           "cooldown": {
@@ -5676,6 +6704,99 @@
           "language"
         ],
         "title": "TemplateSend",
+        "type": "object"
+      },
+      "TopPost": {
+        "properties": {
+          "age": {
+            "enum": [
+              "1h",
+              "6h",
+              "24h",
+              "72h",
+              "7d",
+              "30d",
+              "lifetime"
+            ],
+            "title": "Age",
+            "type": "string"
+          },
+          "post": {
+            "$ref": "#/components/schemas/PostSummary"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "post",
+          "value",
+          "age"
+        ],
+        "title": "TopPost",
+        "type": "object"
+      },
+      "TopPosts": {
+        "description": "GET \u2026/analytics/top-posts: posts published in the range, ranked by a metric at an age\n(each post at the requested age, or at the latest window it has reached when younger).",
+        "properties": {
+          "considered": {
+            "title": "Considered",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TopPost"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "metric": {
+            "enum": [
+              "reach",
+              "views",
+              "likes",
+              "comments",
+              "shares",
+              "saves",
+              "engagement_rate"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "requested_age": {
+            "enum": [
+              "1h",
+              "6h",
+              "24h",
+              "72h",
+              "7d",
+              "30d",
+              "lifetime"
+            ],
+            "title": "Requested Age",
+            "type": "string"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "metric",
+          "requested_age",
+          "since",
+          "until",
+          "considered",
+          "items"
+        ],
+        "title": "TopPosts",
         "type": "object"
       },
       "UploadSignature": {
@@ -6509,6 +7630,535 @@
         "tags": [
           "ai"
         ]
+      }
+    },
+    "/v1/w/{wid}/analytics/posts/{post_id}/compare": {
+      "get": {
+        "description": "The post against its account's earlier posts at the same age (TR-AGT-05): the previous\n``n`` posts, or (``baseline=range``, which needs ``since`` and ``until``) the posts published\nin that range, this post left out. ``same_format`` compares Reels with Reels and feed posts\nwith feed posts.",
+        "operationId": "compare_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "baseline",
+            "required": false,
+            "schema": {
+              "default": "previous",
+              "enum": [
+                "previous",
+                "range"
+              ],
+              "title": "Baseline",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "default": 10,
+              "maximum": 50,
+              "minimum": 3,
+              "title": "N",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "1h",
+                    "6h",
+                    "24h",
+                    "72h",
+                    "7d",
+                    "30d",
+                    "lifetime"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age"
+            }
+          },
+          {
+            "in": "query",
+            "name": "same_format",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Same Format",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostComparison"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Compare Post",
+        "tags": [
+          "analytics"
+        ],
+        "x-pending": "T6.5"
+      }
+    },
+    "/v1/w/{wid}/analytics/posts/{post_id}/performance": {
+      "get": {
+        "description": "Reach, views, likes, comments, shares, saves and engagement rate at ``age`` (FR-ANL-02).\nWithout ``age``: the latest window the post has reached.",
+        "operationId": "get_post_performance",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "1h",
+                    "6h",
+                    "24h",
+                    "72h",
+                    "7d",
+                    "30d",
+                    "lifetime"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Age"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostPerformance"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Post Performance",
+        "tags": [
+          "analytics"
+        ],
+        "x-pending": "T6.5"
+      }
+    },
+    "/v1/w/{wid}/analytics/sentiment": {
+      "get": {
+        "description": "Comment sentiment for one post (``post_id``; the range is then ignored), or for comments\nmade in the range, optionally on one account's posts.",
+        "operationId": "get_sentiment_distribution",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "post_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Post Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentimentDistribution"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Sentiment Distribution",
+        "tags": [
+          "analytics"
+        ],
+        "x-pending": "T6.5"
+      }
+    },
+    "/v1/w/{wid}/analytics/top-posts": {
+      "get": {
+        "description": "Posts published in the range ranked by ``metric`` at ``age``, best first; posts without\nthe metric at that age are left out (``considered`` is the sample size).",
+        "operationId": "list_top_posts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "default": "reach",
+              "enum": [
+                "reach",
+                "views",
+                "likes",
+                "comments",
+                "shares",
+                "saves",
+                "engagement_rate"
+              ],
+              "title": "Metric",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "n",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "N",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "age",
+            "required": false,
+            "schema": {
+              "default": "lifetime",
+              "enum": [
+                "1h",
+                "6h",
+                "24h",
+                "72h",
+                "7d",
+                "30d",
+                "lifetime"
+              ],
+              "title": "Age",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TopPosts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Top Posts",
+        "tags": [
+          "analytics"
+        ],
+        "x-pending": "T6.5"
       }
     },
     "/v1/w/{wid}/automation-templates": {
@@ -7641,6 +9291,366 @@
         "tags": [
           "billing"
         ]
+      }
+    },
+    "/v1/w/{wid}/comments/{comment_id}": {
+      "delete": {
+        "description": "Delete the comment on Instagram (admins). The row keeps ``deleted_at`` and leaves every\nlist and count; comment.updated (with ``deleted_at`` set) tells open pages to drop it.",
+        "operationId": "delete_comment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Comment",
+        "tags": [
+          "comments"
+        ],
+        "x-pending": "T6.3"
+      }
+    },
+    "/v1/w/{wid}/comments/{comment_id}/hide": {
+      "post": {
+        "description": "Hide the comment on Instagram (others no longer see it; the commenter still does).\nHiding a hidden comment returns it as it is.",
+        "operationId": "hide_comment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Hide Comment",
+        "tags": [
+          "comments"
+        ],
+        "x-pending": "T6.3"
+      }
+    },
+    "/v1/w/{wid}/comments/{comment_id}/private-reply": {
+      "post": {
+        "description": "A DM to the commenter, addressed by the comment: queued as an outbound message in their\nconversation (created if needed), which message.* events follow. The answer is the comment\nwith ``private_reply`` set. Instagram allows one per comment within 7 days: a second is 409\nconflict. Idempotency-Key as for ``reply_to_comment``.",
+        "operationId": "private_reply_to_comment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PrivateReplyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Private Reply To Comment",
+        "tags": [
+          "comments"
+        ],
+        "x-pending": "T6.3"
+      }
+    },
+    "/v1/w/{wid}/comments/{comment_id}/reply": {
+      "post": {
+        "description": "A public reply under the comment, posted on Instagram before the answer (the comment's\n``public_reply`` holds it). The same Idempotency-Key with the same body returns the first\nanswer and posts nothing more (TR-API-05).",
+        "operationId": "reply_to_comment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "maxLength": 128,
+              "minLength": 8,
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentReplyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Reply To Comment",
+        "tags": [
+          "comments"
+        ],
+        "x-pending": "T6.3"
+      }
+    },
+    "/v1/w/{wid}/comments/{comment_id}/unhide": {
+      "post": {
+        "description": "Show a hidden comment again.",
+        "operationId": "unhide_comment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "comment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Comment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Comment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Unhide Comment",
+        "tags": [
+          "comments"
+        ],
+        "x-pending": "T6.3"
       }
     },
     "/v1/w/{wid}/conversations": {
@@ -9771,7 +11781,7 @@
     },
     "/v1/w/{wid}/posts": {
       "get": {
-        "description": "Newest first; ``q`` searches captions. Stories are left out (they take no comments).",
+        "description": "Newest first; ``q`` searches captions. Stories are left out (they take no comments).\nEach post carries its comment counts and sentiment split (``stats``, FR-CMT-03).",
         "operationId": "list_posts",
         "parameters": [
           {
@@ -9884,6 +11894,248 @@
         "tags": [
           "posts"
         ]
+      }
+    },
+    "/v1/w/{wid}/posts/{post_id}": {
+      "get": {
+        "description": "FR-CMT-04: the post with its counts, sentiment split, summary and topics (at most 6,\nlargest first). post.updated carries the same shape when any of them change.",
+        "operationId": "get_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Post",
+        "tags": [
+          "posts"
+        ],
+        "x-pending": "T6.3"
+      }
+    },
+    "/v1/w/{wid}/posts/{post_id}/comments": {
+      "get": {
+        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py). Deleted comments are left out.",
+        "operationId": "list_post_comments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "all",
+                "positive",
+                "neutral",
+                "negative",
+                "questions",
+                "buying",
+                "spam",
+                "hidden"
+              ],
+              "title": "Filter",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Post Comments",
+        "tags": [
+          "posts"
+        ],
+        "x-pending": "T6.3"
+      }
+    },
+    "/v1/w/{wid}/posts/{post_id}/summary": {
+      "post": {
+        "description": "The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated\ncarries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post\nhas no analysed comments yet.",
+        "operationId": "refresh_post_summary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "post_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Post Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Refresh Post Summary",
+        "tags": [
+          "posts"
+        ],
+        "x-pending": "T6.3"
       }
     },
     "/v1/w/{wid}/scheduled-messages": {
