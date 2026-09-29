@@ -3983,6 +3983,20 @@
         "title": "CommentAnalysis",
         "type": "object"
       },
+      "CommentCounts": {
+        "description": "The Comments nav badge: comments waiting for a reply (services/comments/queries.py\n``comment_counts`` has the rule).",
+        "properties": {
+          "needs_reply": {
+            "title": "Needs Reply",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "needs_reply"
+        ],
+        "title": "CommentCounts",
+        "type": "object"
+      },
       "CommentList": {
         "description": "Newest first.",
         "properties": {
@@ -13058,6 +13072,60 @@
         "summary": "Get Calendar",
         "tags": [
           "publishing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/comments/counts": {
+      "get": {
+        "description": "The Comments nav badge: comments from the last 7 days that are waiting for a reply (not\nreplied to publicly or privately, not spam, hidden or deleted). comment.created and\ncomment.updated tell the web to fetch it again.",
+        "operationId": "get_comment_counts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommentCounts"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Comment Counts",
+        "tags": [
+          "comments"
         ]
       }
     },

@@ -75,6 +75,7 @@ describe("runEventStream (TR-FE-04)", () => {
     const delays: number[] = [];
     const events: string[] = [];
     const infos: { reconnect: boolean; resumed: boolean }[] = [];
+    const states: string[] = [];
     const bodies = [
       () => stream(["retry: 3000\n\n", "id: 1-0\nevent: message.created\ndata: {}\n\n"], { error: true }),
       () => {
@@ -95,7 +96,11 @@ describe("runEventStream (TR-FE-04)", () => {
         }
         return next();
       },
-      onOpen: (info) => infos.push(info),
+      onOpen: (info) => {
+        infos.push(info);
+        states.push("open");
+      },
+      onReconnecting: () => states.push("reconnecting"),
       onEvent: (event) => events.push(`${event.id} ${event.event}`),
       sleep: async (ms) => {
         delays.push(ms);
@@ -110,6 +115,8 @@ describe("runEventStream (TR-FE-04)", () => {
     ]);
     // The server's retry (3 s) is the base; the failed open doubles it; a good open resets.
     expect(delays).toEqual([3000, 6000, 3000]);
+    // Every drop or failed attempt says so before the wait; an abort does not.
+    expect(states).toEqual(["open", "reconnecting", "reconnecting", "open", "reconnecting"]);
   });
 
   it("stops when aborted", async () => {

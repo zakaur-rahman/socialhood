@@ -162,6 +162,13 @@ class CommentList(ResponseModel):
     next_cursor: str | None = None
 
 
+class CommentCounts(ResponseModel):
+    """The Comments nav badge: comments waiting for a reply (services/comments/queries.py
+    ``comment_counts`` has the rule)."""
+
+    needs_reply: int
+
+
 class CommentReplyCreate(RequestModel):
     """POST …/comments/{comment_id}/reply: a public reply under the comment."""
 

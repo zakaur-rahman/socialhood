@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,6 +25,7 @@ from socialhood.repositories.automations import escape_like
 from socialhood.repositories.comments import CommentRow
 from socialhood.schemas.posts import (
     COMMENT_FILTER_INTENTS,
+    CommentCounts,
     CommentFilter,
     CommentList,
     PostDetail,
@@ -164,6 +165,28 @@ async def find_comments(session: AsyncSession, query: CommentQuery, *, limit: in
         pending=int(counts[1] or 0),
         skipped=int(counts[2] or 0),
     )
+
+
+# Instagram's private-reply window (actions.PRIVATE_REPLY_LIMIT): the badge counts what can still be
+# answered in every way.
+NEEDS_REPLY_WINDOW = timedelta(days=7)
+
+
+async def comment_counts(session: AsyncSession, *, now: datetime) -> CommentCounts:
+    """The Comments nav badge. A comment needs a reply when the account has not replied to it,
+    publicly or privately (``CommentQuery.replied``), it is not spam (unanalysed included, as
+    ``CommentQuery.spam=False``), it is neither hidden nor deleted, and it came in the last 7 days
+    (Instagram's private-reply window). The window keeps the count to what can still be answered:
+    the backfill on connect brings in older comments, and replies made in the Instagram app are
+    never stored, so those would otherwise wait forever."""
+    query = CommentQuery(start=now - NEEDS_REPLY_WINDOW, replied=False)
+    needs_reply = await session.scalar(
+        select(func.count())
+        .select_from(Comment)
+        .outerjoin(CommentAnalysis, CommentAnalysis.comment_id == Comment.id)
+        .where(*_scope(query), *_analysis_filters(query), Comment.hidden.is_(False))
+    )
+    return CommentCounts(needs_reply=int(needs_reply or 0))
 
 
 @dataclass(frozen=True)

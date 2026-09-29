@@ -1,8 +1,9 @@
 """T6.3: the posts and comments API (FR-CMT-03, FR-CMT-04, UX-SCR-05, TR-API-05). Done when: a
 second private reply to the same comment is refused. Plus: post detail, the comment list and its
-filter chips, the summary refresh, public replies with Idempotency-Key, private replies through the
-private-reply bucket, hide, unhide and delete, and platform refusals. Other workspaces' posts and
-comments are covered by the tenancy suite (tests/tenancy)."""
+filter chips, the Comments badge's count, the summary refresh, public replies with
+Idempotency-Key, private replies through the private-reply bucket, hide, unhide and delete, and
+platform refusals. Other workspaces' posts and comments are covered by the tenancy suite
+(tests/tenancy)."""
 
 from __future__ import annotations
 
@@ -238,6 +239,37 @@ async def test_the_comment_list_is_newest_first_and_narrowed_by_each_chip(shop: 
     assert bad.status_code == 422
     assert (await shop.get(f"/posts/{post}/comments", filter="loud")).status_code == 422
     assert (await shop.get(f"/posts/{uuid.uuid4()}/comments")).status_code == 404
+
+
+async def test_the_comments_badge_counts_recent_comments_waiting_for_a_reply(shop: Shop) -> None:
+    post = await shop.post()
+    now = datetime.now(UTC)
+    made: dict[str, uuid.UUID] = {}
+    for name in ("pending", "analysed", "spam", "hidden", "deleted", "public", "private"):
+        made[name] = await shop.comment(post, name, commented_at=now - timedelta(hours=1))
+    made["old"] = await shop.comment(post, "old", commented_at=now - timedelta(days=8))
+    await shop.analyse(made["analysed"], sentiment="neutral", intent="pricing")
+    await shop.analyse(made["spam"], intent="spam", is_spam=True)
+    await shop.execute("UPDATE comments SET hidden = true WHERE id = :id", id=made["hidden"])
+    await shop.execute("UPDATE comments SET deleted_at = now() WHERE id = :id", id=made["deleted"])
+
+    async def needs_reply() -> int:
+        response = await shop.get("/comments/counts")
+        assert response.status_code == 200, response.text
+        return int(response.json()["needs_reply"])
+
+    # pending, analysed, public and private: spam, hidden, deleted and old ones are left out.
+    assert await needs_reply() == 4
+    public = await shop.post_json(
+        f"/comments/{made['public']}/reply", {"text": "Hi!"}, key="count-key-1"
+    )
+    assert public.status_code == 200, public.text
+    assert await needs_reply() == 3
+    private = await shop.post_json(
+        f"/comments/{made['private']}/private-reply", {"text": "Sent you a DM"}, key="count-key-2"
+    )
+    assert private.status_code == 202, private.text
+    assert await needs_reply() == 2
 
 
 async def test_the_summary_refresh_queues_the_job_or_says_why_not(shop: Shop) -> None:

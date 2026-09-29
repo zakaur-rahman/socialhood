@@ -15,8 +15,8 @@ type Props = Omit<ComponentProps<typeof AppSidebar>, "collapsed" | "onNavigate" 
 
 /**
  * UX-SH-02: below 768 px, a 56 px top bar with the logo, page title, Ask Social Hood and a menu
- * button. The drawer is closed on load and closes when a link is tapped (v1 opened on load and
- * stayed open).
+ * button. The drawer holds the expanded sidebar; it is closed on load and closes when a link is
+ * tapped (v1 opened on load and stayed open).
  */
 export function MobileNav({ title, ask, ...sidebar }: Props) {
   const [open, setOpen] = useState(false);
@@ -32,10 +32,11 @@ export function MobileNav({ title, ask, ...sidebar }: Props) {
         >
           <Menu className="size-5" aria-hidden />
         </SheetTrigger>
+        {/* The expanded sidebar's layout at its 232 px width; rows are 40 px for touch. */}
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="w-[240px] gap-0 border-line bg-canvas p-2 sm:max-w-[240px]"
+          className="w-[256px] gap-0 border-line bg-canvas p-3 data-[side=left]:w-[256px] sm:max-w-[256px] data-[side=left]:sm:max-w-[256px]"
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <AppSidebar {...sidebar} collapsed={false} onNavigate={() => setOpen(false)} className="w-full" />

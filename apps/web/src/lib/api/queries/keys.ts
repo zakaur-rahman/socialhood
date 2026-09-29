@@ -59,6 +59,7 @@ export const keys = {
   postLists: (wid: string) => ["w", wid, "posts"] as const,
   posts: (wid: string, accountId: string | null, q: string) => ["w", wid, "posts", accountId, q] as const,
   // comments and post analytics (P6)
+  commentCounts: (wid: string) => ["w", wid, "comment-counts"] as const,
   post: (wid: string, postId: string) => ["w", wid, "post", postId] as const,
   postCommentLists: (wid: string, postId: string) => ["w", wid, "post-comments", postId] as const,
   postComments: (wid: string, postId: string, filter: CommentFilter) =>

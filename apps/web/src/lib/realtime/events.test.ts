@@ -7,7 +7,7 @@ import type { ConversationPages, MessagePages, ScheduledPages } from "@/lib/inbo
 import { flattenMessages } from "@/lib/inbox/cache";
 import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
 import { runDetail } from "@/test/agent";
-import { analysis, conversation, listItem, message, suggestion } from "@/test/api";
+import { analysis, comment, conversation, listItem, message, suggestion } from "@/test/api";
 
 import { applyRealtimeEvent } from "./events";
 
@@ -263,6 +263,14 @@ describe("other events", () => {
     expect(queryClient.getQueryData<ScheduledPages>(keys.scheduled(wid))!.pages[0].items[0].status).toBe("sent");
     send(queryClient, "scheduled_message.updated", { scheduled_message: { ...pending, status: "canceled" } });
     expect(queryClient.getQueryData<ScheduledPages>(keys.scheduled(wid))!.pages[0].items).toEqual([]);
+  });
+
+  it("comment.created and comment.updated refresh the Comments badge", () => {
+    for (const event of ["comment.created", "comment.updated"]) {
+      queryClient.setQueryData(keys.commentCounts(wid), { needs_reply: 2 });
+      send(queryClient, event, { comment: comment() });
+      expect(queryClient.getQueryState(keys.commentCounts(wid))?.isInvalidated).toBe(true);
+    }
   });
 
   it("ignores malformed payloads and unknown events", () => {
