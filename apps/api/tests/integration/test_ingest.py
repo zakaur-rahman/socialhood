@@ -157,7 +157,8 @@ async def test_a_replayed_event_creates_nothing_and_triggers_nothing(
         return (counts[0], len(await jobs()), len(await stream(redis, workspace)))
 
     before = await snapshot()
-    assert before[1:] == (2, 2)  # profile + media jobs; message.created + conversation.updated
+    # profile, media and analysis jobs; message.created + conversation.updated
+    assert before[1:] == (3, 2)
 
     assert await replay_all(engine, maker, redis) == PROCESSED
     assert await deliver(maker, redis, "webhook_message_image.json", copy=":again") == PROCESSED

@@ -7591,6 +7591,7 @@
     },
     "/v1/w/{wid}/billing": {
       "get": {
+        "description": "Plan, status, entitlements, usage (AI credits, knowledge characters) and trial\neligibility (TR-BIL-05). Prices are empty until P8.",
         "operationId": "get_billing",
         "parameters": [
           {
@@ -7639,8 +7640,7 @@
         "summary": "Get Billing",
         "tags": [
           "billing"
-        ],
-        "x-pending": "T5.1"
+        ]
       }
     },
     "/v1/w/{wid}/conversations": {
@@ -7668,6 +7668,7 @@
                 "unread",
                 "needs_reply",
                 "leads",
+                "closing_soon",
                 "ai_handled",
                 "archived"
               ],
@@ -8436,7 +8437,7 @@
     },
     "/v1/w/{wid}/conversations/{conversation_id}/summary": {
       "post": {
-        "description": "FR-AI-03 on request; conversation.updated carries the new summary.",
+        "description": "FR-AI-03 on request; conversation.updated carries the new summary (its ``summary`` key).\n402 quota_exceeded without credits; 409 when AI analysis is off for the account.",
         "operationId": "refresh_summary",
         "parameters": [
           {
@@ -8493,8 +8494,7 @@
         "summary": "Refresh Summary",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.7"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/{conversation_id}/unread": {
@@ -9370,7 +9370,7 @@
     },
     "/v1/w/{wid}/message-analyses/{analysis_id}": {
       "patch": {
-        "description": "FR-AI-04: change a message's intent or sentiment.",
+        "description": "FR-AI-04: change a message's intent or sentiment. The answer shows the corrected values\nwith ``corrected: true``; the conversation's chips follow a correction of its latest\nanalysis (conversation.updated).",
         "operationId": "correct_message_analysis",
         "parameters": [
           {
@@ -9439,8 +9439,7 @@
         "summary": "Correct Message Analysis",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.2"
+        ]
       }
     },
     "/v1/w/{wid}/messages/{message_id}/ai-decision": {

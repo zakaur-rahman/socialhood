@@ -2,7 +2,7 @@
 
 Only retryable PlatformErrors are retried: 10 s times 2^attempt, capped at 10 minutes. Rate limits
 wait for the platform's reported regain time and are not limited by ``max_attempts`` (TR-PL-03),
-with a hard ceiling so a job can never loop forever.
+with a hard ceiling so a job can never loop forever. AI jobs retry retryable AIErrors the same way.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from __future__ import annotations
 from procrastinate import BaseRetryStrategy, RetryDecision
 from procrastinate.jobs import Job
 
+from socialhood.ai.provider import AIError
 from socialhood.platforms.errors import PlatformError
 
 BASE_DELAY_S = 10
@@ -34,6 +35,23 @@ class PlatformRetry(BaseRetryStrategy):
         if job.attempts + 1 >= limit:
             return None
         return RetryDecision(retry_in={"seconds": self.delay_for(exception, job.attempts)})
+
+
+class AIRetry(BaseRetryStrategy):
+    """Retry retryable AIErrors (timeouts, 429s, 5xx; TR-AI-03) with the same backoff. The
+    metering refunded the failed call's credits, so a retry reserves them again."""
+
+    def __init__(self, max_attempts: int = 2) -> None:
+        self.max_attempts = max_attempts
+
+    def get_retry_decision(self, *, exception: BaseException, job: Job) -> RetryDecision | None:
+        if not isinstance(exception, AIError) or not exception.retryable:
+            return None
+        if job.attempts + 1 >= self.max_attempts:
+            return None
+        return RetryDecision(
+            retry_in={"seconds": min(MAX_DELAY_S, BASE_DELAY_S << min(job.attempts, 16))}
+        )
 
 
 class BackoffRetry(BaseRetryStrategy):

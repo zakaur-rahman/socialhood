@@ -403,11 +403,17 @@ async def test_a_conversation_without_an_inbound_message_is_closed(
 
 
 async def test_closing_soon_signal(owner: Owner, engine: AsyncEngine) -> None:
+    """FR-INB-14: the signal follows the follow-up reminder for this window (T5.11)."""
     thread = await make_thread(
         engine, workspace_id=owner.wid, account_id=owner.account_id, last_inbound_at=T0
     )
+    await set_conversation(engine, thread.conversation_id, lead_score=70)
     with time_machine.travel(T0 + timedelta(hours=22), tick=False):
+        assert (await owner.detail(thread.conversation_id))["signal"] == "lead"
+        await set_conversation(engine, thread.conversation_id, window_reminder_for=T0)
         assert (await owner.detail(thread.conversation_id))["signal"] == "closing_soon"
+    with time_machine.travel(T0 + timedelta(hours=24, seconds=1), tick=False):
+        assert (await owner.detail(thread.conversation_id))["signal"] == "lead"  # closed
 
 
 async def test_conversation_detail(owner: Owner, engine: AsyncEngine) -> None:

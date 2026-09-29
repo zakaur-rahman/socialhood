@@ -62,6 +62,51 @@ async def notify_admins(
     return len((await session.execute(statement)).all())
 
 
+async def notify_members(
+    session: AsyncSession,
+    *,
+    type: str,
+    severity: str,
+    title: str,
+    body: str,
+    link: str | None = None,
+    dedupe_key: str | None = None,
+    channels: tuple[str, ...] = ("in_app",),
+) -> int:
+    """Notify every member of the current workspace (inbox events anyone answering conversations
+    needs, e.g. a closing reply window, F-18); a repeated dedupe_key is a no-op. ``push`` in
+    ``channels`` marks it for push delivery (T8.6)."""
+    workspace_id = require_workspace()
+    recipients = (await session.scalars(select(WorkspaceMember.user_id))).all()
+    if not recipients:
+        return 0
+    statement = (
+        insert(Notification)
+        .values(
+            [
+                {
+                    "workspace_id": workspace_id,
+                    "user_id": user_id,
+                    "type": type,
+                    "severity": severity,
+                    "title": title,
+                    "body": body,
+                    "link": link,
+                    "dedupe_key": dedupe_key,
+                    "channels": list(channels),
+                }
+                for user_id in recipients
+            ]
+        )
+        .on_conflict_do_nothing(
+            index_elements=[Notification.user_id, Notification.dedupe_key],
+            index_where=text("dedupe_key IS NOT NULL"),
+        )
+        .returning(Notification.id)
+    )
+    return len((await session.execute(statement)).all())
+
+
 async def list_for(
     session: AsyncSession, user_id: uuid.UUID, *, limit: int, before: datetime | None
 ) -> tuple[list[Notification], int]:

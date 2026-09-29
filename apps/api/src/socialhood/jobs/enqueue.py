@@ -33,3 +33,28 @@ async def enqueue(
     except exceptions.AlreadyEnqueued:
         return False
     return True
+
+
+async def enqueue_named(
+    name: str,
+    *,
+    lane: str,
+    key: str | None = None,
+    delay_s: float = 0,
+    lock: str | None = None,
+    **kwargs: Any,
+) -> bool:
+    """Defer a task by its registered name, resolved when the job is deferred: for tasks another
+    module owns (e.g. analysis queues ``suggest_reply``) without importing it. ``lane`` is
+    required so the job lands on the right queue even before that task is registered."""
+    from socialhood.jobs.app import app
+
+    schedule_in = TimeDeltaParams(milliseconds=round(delay_s * 1000)) if delay_s else None
+    job = app.configure_task(
+        name, queueing_lock=key, lock=lock, queue=lane, schedule_in=schedule_in
+    )
+    try:
+        await job.defer_async(**kwargs)
+    except exceptions.AlreadyEnqueued:
+        return False
+    return True

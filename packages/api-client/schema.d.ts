@@ -343,7 +343,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Billing */
+        /**
+         * Get Billing
+         * @description Plan, status, entitlements, usage (AI credits, knowledge characters) and trial
+         *     eligibility (TR-BIL-05). Prices are empty until P8.
+         */
         get: operations["get_billing"];
         put?: never;
         post?: never;
@@ -510,7 +514,8 @@ export interface paths {
         put?: never;
         /**
          * Refresh Summary
-         * @description FR-AI-03 on request; conversation.updated carries the new summary.
+         * @description FR-AI-03 on request; conversation.updated carries the new summary (its ``summary`` key).
+         *     402 quota_exceeded without credits; 409 when AI analysis is off for the account.
          */
         post: operations["refresh_summary"];
         delete?: never;
@@ -746,7 +751,9 @@ export interface paths {
         head?: never;
         /**
          * Correct Message Analysis
-         * @description FR-AI-04: change a message's intent or sentiment.
+         * @description FR-AI-04: change a message's intent or sentiment. The answer shows the corrected values
+         *     with ``corrected: true``; the conversation's chips follow a correction of its latest
+         *     analysis (conversation.updated).
          */
         patch: operations["correct_message_analysis"];
         trace?: never;
@@ -3997,7 +4004,7 @@ export interface operations {
     list_conversations: {
         parameters: {
             query?: {
-                view?: "all" | "unread" | "needs_reply" | "leads" | "ai_handled" | "archived";
+                view?: "all" | "unread" | "needs_reply" | "leads" | "closing_soon" | "ai_handled" | "archived";
                 platform?: ("instagram" | "whatsapp") | null;
                 account_id?: string | null;
                 q?: string | null;

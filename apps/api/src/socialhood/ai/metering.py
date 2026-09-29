@@ -131,7 +131,11 @@ async def metered(
     at = now or datetime.now(UTC)
     with workspace_scope(workspace_id):
         async with sessionmaker() as session:
-            period_start = await reserve(session, cost=cost, now=at)
+            try:
+                period_start = await reserve(session, cost=cost, now=at)
+            except QuotaExceeded:
+                await session.commit()  # keeps the 100% notification (FR-AI-05)
+                raise
             await session.commit()
     meter = Meter()
     try:
