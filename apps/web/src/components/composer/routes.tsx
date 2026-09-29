@@ -8,22 +8,35 @@ import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { AdminOnly, NewPost } from "./NewPost";
 import { PostComposer } from "./PostComposer";
 
-/** /w/{slug}/schedule/{id} (UX-SCR-13). Keyed by id, so no draft state survives a switch of post. */
-export function ComposerRoute() {
+function ComposerWithParams() {
   const { id } = useParams<{ id: string }>();
+  const when = useSearchParams().get("when") === "queue" ? "queue" : "time";
+  return <PostComposer key={id} id={id} initialWhen={when} />;
+}
+
+/**
+ * /w/{slug}/schedule/{id}[?when=queue] (UX-SCR-13). Keyed by id, so no draft state survives a
+ * switch of post; ?when=queue opens a draft on Add to queue.
+ */
+export function ComposerRoute() {
   return (
     <AdminOnly>
-      <PostComposer key={id} id={id} />
+      <Suspense fallback={<PageSkeleton />}>
+        <ComposerWithParams />
+      </Suspense>
     </AdminOnly>
   );
 }
 
 function NewPostWithParams() {
   const params = useSearchParams();
-  return <NewPost at={params.get("at")} />;
+  return <NewPost at={params.get("at")} when={params.get("when")} />;
 }
 
-/** /w/{slug}/schedule/new[?at=ISO instant]: New post, or a click on an empty calendar time (F-13). */
+/**
+ * /w/{slug}/schedule/new[?at=ISO instant][&when=queue]: New post, or a click on an empty calendar
+ * time (F-13).
+ */
 export function NewPostRoute() {
   return (
     <AdminOnly>

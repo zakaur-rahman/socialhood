@@ -45,7 +45,7 @@ export type MediaLibraryFilters = {
 export type MediaLibraryPages = InfiniteData<MediaAssetList, string | null>;
 
 /** Query keys (TR-FE-03): everything under ["w", workspaceId]. */
-export const scheduledPostKeys = {
+export const composerKeys = {
   post: (wid: string, id: string) => ["w", wid, "scheduled-post", id] as const,
   /** Every list and calendar range that shows posts: refreshed after a change. */
   lists: (wid: string) => ["w", wid, "scheduled-posts"] as const,
@@ -60,19 +60,19 @@ export const scheduledPostKeys = {
  * A post changed (a save, a lifecycle action, or scheduled_post.updated): the composer's copy is
  * replaced and the Schedule page's lists and calendar refetch.
  */
-export function applyScheduledPost(queryClient: QueryClient, wid: string, post: ScheduledPost): void {
-  queryClient.setQueryData(scheduledPostKeys.post(wid, post.id), post);
-  void queryClient.invalidateQueries({ queryKey: scheduledPostKeys.lists(wid) });
-  void queryClient.invalidateQueries({ queryKey: scheduledPostKeys.calendar(wid) });
+export function applyComposerPost(queryClient: QueryClient, wid: string, post: ScheduledPost): void {
+  queryClient.setQueryData(composerKeys.post(wid, post.id), post);
+  void queryClient.invalidateQueries({ queryKey: composerKeys.lists(wid) });
+  void queryClient.invalidateQueries({ queryKey: composerKeys.calendar(wid) });
 }
 
 // ---- reading
 
 /** GET …/scheduled-posts/{id}: the post with its checklist and linked automations. */
-export function useScheduledPost(wid: string, id: string) {
+export function useComposerPost(wid: string, id: string) {
   const api = useApi();
   return useQuery<ScheduledPost>({
-    queryKey: scheduledPostKeys.post(wid, id),
+    queryKey: composerKeys.post(wid, id),
     queryFn: () =>
       unwrap(
         api.GET("/v1/w/{wid}/scheduled-posts/{scheduled_post_id}", {
@@ -83,10 +83,10 @@ export function useScheduledPost(wid: string, id: string) {
 }
 
 /** FR-PUB-12: the workspace's hashtag groups, by name. */
-export function useHashtagGroups(wid: string) {
+export function useComposerHashtagGroups(wid: string) {
   const api = useApi();
   return useQuery<HashtagGroup[]>({
-    queryKey: scheduledPostKeys.hashtagGroups(wid),
+    queryKey: composerKeys.hashtagGroups(wid),
     queryFn: async () =>
       (await unwrap(api.GET("/v1/w/{wid}/hashtag-groups", { params: { path: { wid } } }))).items,
   });
@@ -99,10 +99,10 @@ export function useMediaLibrary(wid: string, filters: MediaLibraryFilters, enabl
     MediaAssetList,
     Error,
     MediaLibraryPages,
-    ReturnType<typeof scheduledPostKeys.mediaLibrary>,
+    ReturnType<typeof composerKeys.mediaLibrary>,
     string | null
   >({
-    queryKey: scheduledPostKeys.mediaLibrary(wid, filters),
+    queryKey: composerKeys.mediaLibrary(wid, filters),
     enabled,
     initialPageParam: null,
     placeholderData: (previous) => previous,
@@ -126,11 +126,11 @@ export function useMediaLibrary(wid: string, filters: MediaLibraryFilters, enabl
 }
 
 /** FR-PUB-09: each selected account's posting times and next free times, for Add to queue. */
-export function usePostingSlots(wid: string, accountIds: string[], enabled = true) {
+export function useComposerPostingSlots(wid: string, accountIds: string[], enabled = true) {
   const api = useApi();
   return useQueries({
     queries: accountIds.map((accountId) => ({
-      queryKey: scheduledPostKeys.postingSlots(wid, accountId),
+      queryKey: composerKeys.postingSlots(wid, accountId),
       enabled,
       queryFn: () =>
         unwrap(
@@ -145,17 +145,17 @@ export function usePostingSlots(wid: string, accountIds: string[], enabled = tru
 // ---- changing the post
 
 /** New post (F-13): a draft, empty or with a time from a calendar click. The composer opens on it. */
-export function useCreateScheduledPost(wid: string) {
+export function useCreatePostDraft(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation<ScheduledPost, Error, ScheduledPostDraft>({
     mutationFn: (body) => unwrap(api.POST("/v1/w/{wid}/scheduled-posts", { params: { path: { wid } }, body })),
-    onSuccess: (post) => applyScheduledPost(queryClient, wid, post),
+    onSuccess: (post) => applyComposerPost(queryClient, wid, post),
   });
 }
 
 /** PUT: the autosave of a draft, Update schedule, and Edit and retry (a failed post becomes a draft). */
-export function useSaveScheduledPost(wid: string, id: string) {
+export function useSaveComposerPost(wid: string, id: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation<ScheduledPost, Error, ScheduledPostDraft>({
@@ -166,12 +166,12 @@ export function useSaveScheduledPost(wid: string, id: string) {
           body,
         }),
       ),
-    onSuccess: (post) => applyScheduledPost(queryClient, wid, post),
+    onSuccess: (post) => applyComposerPost(queryClient, wid, post),
   });
 }
 
 /** F-13 Schedule: 422 lists every failing field; 402 past the monthly limit. */
-export function useSchedulePost(wid: string, id: string) {
+export function useComposerSchedule(wid: string, id: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation<ScheduledPost, Error, string>({
@@ -182,7 +182,7 @@ export function useSchedulePost(wid: string, id: string) {
           body: { publish_at: publishAt },
         }),
       ),
-    onSuccess: (post) => applyScheduledPost(queryClient, wid, post),
+    onSuccess: (post) => applyComposerPost(queryClient, wid, post),
   });
 }
 
@@ -203,27 +203,27 @@ function usePostAction(wid: string, id: string, action: BodylessAction) {
           return unwrap(api.POST("/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/unschedule", { params }));
       }
     },
-    onSuccess: (post) => applyScheduledPost(queryClient, wid, post),
+    onSuccess: (post) => applyComposerPost(queryClient, wid, post),
   });
 }
 
 /** FR-PUB-09 Add to queue: the first posting time free for every selected account. */
-export function useQueuePost(wid: string, id: string) {
+export function useComposerQueue(wid: string, id: string) {
   return usePostAction(wid, id, "queue");
 }
 
 /** F-13 Publish now (202): scheduled_post.updated follows each step. */
-export function usePublishNow(wid: string, id: string) {
+export function useComposerPublishNow(wid: string, id: string) {
   return usePostAction(wid, id, "publish-now");
 }
 
 /** Back to draft, keeping the time (FR-PUB-04). */
-export function useUnschedulePost(wid: string, id: string) {
+export function useComposerUnschedule(wid: string, id: string) {
   return usePostAction(wid, id, "unschedule");
 }
 
 /** FR-PUB-14: a new draft with the same accounts, captions, media and first comment. */
-export function useDuplicateScheduledPost(wid: string) {
+export function useComposerDuplicate(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation<ScheduledPost, Error, string>({
@@ -233,11 +233,11 @@ export function useDuplicateScheduledPost(wid: string) {
           params: { path: { wid, scheduled_post_id: id } },
         }),
       ),
-    onSuccess: (post) => applyScheduledPost(queryClient, wid, post),
+    onSuccess: (post) => applyComposerPost(queryClient, wid, post),
   });
 }
 
-export function useDeleteScheduledPost(wid: string) {
+export function useComposerDelete(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
   return useMutation<void, Error, string>({
@@ -248,9 +248,9 @@ export function useDeleteScheduledPost(wid: string) {
         }),
       ),
     onSuccess: (_, id) => {
-      queryClient.removeQueries({ queryKey: scheduledPostKeys.post(wid, id) });
-      void queryClient.invalidateQueries({ queryKey: scheduledPostKeys.lists(wid) });
-      void queryClient.invalidateQueries({ queryKey: scheduledPostKeys.calendar(wid) });
+      queryClient.removeQueries({ queryKey: composerKeys.post(wid, id) });
+      void queryClient.invalidateQueries({ queryKey: composerKeys.lists(wid) });
+      void queryClient.invalidateQueries({ queryKey: composerKeys.calendar(wid) });
     },
   });
 }
@@ -325,7 +325,7 @@ export function useAddCommentAutomation(wid: string, scheduledPostId: string) {
     onSuccess: (automation) => {
       queryClient.setQueryData(keys.automation(wid, automation.id), automation);
       void queryClient.invalidateQueries({ queryKey: keys.automationLists(wid) });
-      void queryClient.invalidateQueries({ queryKey: scheduledPostKeys.post(wid, scheduledPostId) });
+      void queryClient.invalidateQueries({ queryKey: composerKeys.post(wid, scheduledPostId) });
     },
   });
 }

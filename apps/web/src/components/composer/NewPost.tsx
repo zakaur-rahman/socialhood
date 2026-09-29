@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { useSocialAccounts } from "@/lib/api/queries";
-import { useCreateScheduledPost } from "@/lib/api/queries/scheduledPosts";
+import { useCreatePostDraft } from "@/lib/api/queries/scheduledPosts";
 import type { SocialAccount } from "@/lib/api/types";
 import { cannotPublishReason, MIN_SCHEDULE_LEAD_MS, publishingAccounts } from "@/lib/publishing/rules";
 import type { ScheduledPostDraft } from "@/lib/publishing/types";
@@ -37,22 +37,25 @@ export function newDraftBody(accounts: SocialAccount[], at: string | null, now: 
 /**
  * /schedule/new: creates the draft, then replaces the URL with the composer's, so Back returns
  * to where New post was clicked. The Schedule page can also create the draft itself with
- * useCreateScheduledPost and open composerHref.
+ * useCreatePostDraft and open composerHref. ``when=queue`` opens the composer on Add to queue.
  */
-export function NewPost({ at }: { at: string | null }) {
+export function NewPost({ at, when = null }: { at: string | null; when?: string | null }) {
   const workspace = useCurrentWorkspace();
   const router = useRouter();
   const accounts = useSocialAccounts(workspace.id);
-  const create = useCreateScheduledPost(workspace.id);
+  const create = useCreatePostDraft(workspace.id);
   const { mutate } = create;
   const started = useRef(false);
 
   const start = useCallback(
     (list: SocialAccount[]) =>
       mutate(newDraftBody(list, at, new Date()), {
-        onSuccess: (post) => router.replace(composerHref(workspace.slug, post.id)),
+        onSuccess: (post) => {
+          const href = composerHref(workspace.slug, post.id);
+          router.replace(when === "queue" ? (`${href}?when=queue` as Route) : href);
+        },
       }),
-    [at, mutate, router, workspace.slug],
+    [at, mutate, router, when, workspace.slug],
   );
 
   const loaded = accounts.isSuccess || accounts.isError;

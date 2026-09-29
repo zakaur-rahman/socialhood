@@ -33,17 +33,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError, toApiError } from "@/lib/api/errors";
 import { useSocialAccounts } from "@/lib/api/queries";
 import {
-  scheduledPostKeys,
-  useDeleteScheduledPost,
-  useDuplicateScheduledPost,
-  useHashtagGroups,
-  usePostingSlots,
-  usePublishNow,
-  useQueuePost,
-  useSaveScheduledPost,
-  useSchedulePost,
-  useScheduledPost,
-  useUnschedulePost,
+  composerKeys,
+  useComposerDelete,
+  useComposerDuplicate,
+  useComposerHashtagGroups,
+  useComposerPostingSlots,
+  useComposerPost,
+  useComposerPublishNow,
+  useComposerQueue,
+  useComposerSchedule,
+  useComposerUnschedule,
+  useSaveComposerPost,
 } from "@/lib/api/queries/scheduledPosts";
 import type { MediaAsset } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
@@ -102,9 +102,18 @@ export function composerHref(slug: string, id: string): Route {
  * between editable (draft, scheduled) and read-only (publishing and after), so what shows is
  * always the stored post in read-only states and the user's draft while editing.
  */
-export function PostComposer({ id, upload, cropper }: { id: string } & ComposerDeps) {
+export function PostComposer({
+  id,
+  initialWhen = "time",
+  upload,
+  cropper,
+}: {
+  id: string;
+  /** ?when=queue: the Schedule page's Add to queue opens a new draft in queue mode. */
+  initialWhen?: WhenMode;
+} & ComposerDeps) {
   const workspace = useCurrentWorkspace();
-  const post = useScheduledPost(workspace.id, id);
+  const post = useComposerPost(workspace.id, id);
   if (post.isPending) return <ComposerSkeleton />;
   if (post.isError) {
     if (post.error instanceof ApiError && post.error.status === 404) {
@@ -124,7 +133,7 @@ export function PostComposer({ id, upload, cropper }: { id: string } & ComposerD
     return <ErrorState error={post.error} onRetry={() => void post.refetch()} />;
   }
   const phase = isEditable(post.data.status) ? "edit" : "view";
-  return <Composer key={`${id}-${phase}`} initial={post.data} upload={upload} cropper={cropper} />;
+  return <Composer key={`${id}-${phase}`} initial={post.data} initialWhen={initialWhen} upload={upload} cropper={cropper} />;
 }
 
 function ComposerSkeleton() {
@@ -154,7 +163,12 @@ const PLACEHOLDER_ASSET = (id: string): AssetInfo => ({
   name: null,
 });
 
-function Composer({ initial, upload, cropper = renderCrop }: { initial: ScheduledPost } & ComposerDeps) {
+function Composer({
+  initial,
+  initialWhen,
+  upload,
+  cropper = renderCrop,
+}: { initial: ScheduledPost; initialWhen: WhenMode } & ComposerDeps) {
   const workspace = useCurrentWorkspace();
   const wid = workspace.id;
   const slug = workspace.slug;
@@ -163,12 +177,12 @@ function Composer({ initial, upload, cropper = renderCrop }: { initial: Schedule
   const queryClient = useQueryClient();
   const now = useNow(30_000);
 
-  const server = useScheduledPost(wid, initial.id).data ?? initial;
+  const server = useComposerPost(wid, initial.id).data ?? initial;
   const postId = initial.id;
   const accountsQuery = useSocialAccounts(wid);
   const allAccounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
   const igAccounts = useMemo(() => publishingAccounts(allAccounts), [allAccounts]);
-  const groupsQuery = useHashtagGroups(wid);
+  const groupsQuery = useComposerHashtagGroups(wid);
   const groups = groupsQuery.data ?? [];
 
   const editable = isEditable(server.status);
@@ -316,7 +330,7 @@ function Composer({ initial, upload, cropper = renderCrop }: { initial: Schedule
   const captionsDiffer = perAccount && new Set(draft.targets.map((target) => target.caption_override ?? draft.caption)).size > 1;
 
   // ---- when
-  const [whenMode, setWhenMode] = useState<WhenMode>("time");
+  const [whenMode, setWhenMode] = useState<WhenMode>(initialWhen === "queue" && initial.status === "draft" ? "queue" : "time");
   const [when, setWhen] = useState<ScheduleValue>(() =>
     initial.publish_at ? toZonedInputs(new Date(initial.publish_at), timeZone) : { date: "", time: "" },
   );
@@ -337,7 +351,7 @@ function Composer({ initial, upload, cropper = renderCrop }: { initial: Schedule
   };
 
   const queueWanted = editable && isDraft && whenMode === "queue";
-  const slotQueries = usePostingSlots(wid, selectedIds, queueWanted);
+  const slotQueries = useComposerPostingSlots(wid, selectedIds, queueWanted);
   let queue: QueuePreview;
   if (selectedIds.length === 0) queue = { state: "no-accounts" };
   else if (slotQueries.some((query) => query.isError)) queue = { state: "error" };
@@ -392,13 +406,13 @@ function Composer({ initial, upload, cropper = renderCrop }: { initial: Schedule
   };
 
   // ---- actions
-  const schedule = useSchedulePost(wid, postId);
-  const queuePost = useQueuePost(wid, postId);
-  const publishNow = usePublishNow(wid, postId);
-  const unschedule = useUnschedulePost(wid, postId);
-  const put = useSaveScheduledPost(wid, postId);
-  const duplicate = useDuplicateScheduledPost(wid);
-  const remove = useDeleteScheduledPost(wid);
+  const schedule = useComposerSchedule(wid, postId);
+  const queuePost = useComposerQueue(wid, postId);
+  const publishNow = useComposerPublishNow(wid, postId);
+  const unschedule = useComposerUnschedule(wid, postId);
+  const put = useSaveComposerPost(wid, postId);
+  const duplicate = useComposerDuplicate(wid);
+  const remove = useComposerDelete(wid);
   const [confirmPublish, setConfirmPublish] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const acting = schedule.isPending || queuePost.isPending || publishNow.isPending || unschedule.isPending || put.isPending;
@@ -414,7 +428,7 @@ function Composer({ initial, upload, cropper = renderCrop }: { initial: Schedule
     }
     toast.error(errorMessage(apiError));
     // Publishing started elsewhere, or the post changed: show what is stored now.
-    if (apiError.status === 409) void queryClient.invalidateQueries({ queryKey: scheduledPostKeys.post(wid, postId) });
+    if (apiError.status === 409) void queryClient.invalidateQueries({ queryKey: composerKeys.post(wid, postId) });
   };
 
   /** Stored post after a lifecycle action: it becomes the draft, and its time fills When. */

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { toApiError, type ApiError } from "@/lib/api/errors";
-import { useSaveScheduledPost } from "@/lib/api/queries/scheduledPosts";
+import { useSaveComposerPost } from "@/lib/api/queries/scheduledPosts";
 import type { ScheduledPost, ScheduledPostDraft } from "@/lib/publishing/types";
 
 export const AUTOSAVE_DELAY_MS = 1000;
@@ -61,7 +61,7 @@ export function usePostDraft(
   initial: ScheduledPost,
   { autosave, delay = AUTOSAVE_DELAY_MS }: { autosave: boolean; delay?: number },
 ) {
-  const save = useSaveScheduledPost(wid, initial.id);
+  const save = useSaveComposerPost(wid, initial.id);
   const [draft, setDraft] = useState<Draft>(() => toDraft(initial));
   const [status, setStatus] = useState<PostSaveStatus>("saved");
   const [error, setError] = useState<ApiError | null>(null);

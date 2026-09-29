@@ -5,30 +5,30 @@ import { applyRealtimeEvent } from "@/lib/realtime/events";
 import { automation } from "@/test/api";
 import { readyPost } from "@/test/composer-fixtures";
 
-import { applyScheduledPost, linkedDefinition, scheduledPostKeys } from "./scheduledPosts";
+import { applyComposerPost, composerKeys, linkedDefinition } from "./scheduledPosts";
 
 describe("scheduled post cache", () => {
   it("scheduled_post.updated replaces the composer's copy and refreshes lists and the calendar", () => {
     const queryClient = new QueryClient();
-    queryClient.setQueryData(scheduledPostKeys.post("w1", "sp1"), readyPost());
-    queryClient.setQueryData([...scheduledPostKeys.lists("w1"), "scheduled"], { items: [] });
-    queryClient.setQueryData([...scheduledPostKeys.calendar("w1"), "2026-09-28"], { posts: [] });
+    queryClient.setQueryData(composerKeys.post("w1", "sp1"), readyPost());
+    queryClient.setQueryData([...composerKeys.lists("w1"), "scheduled"], { items: [] });
+    queryClient.setQueryData([...composerKeys.calendar("w1"), "2026-09-28"], { posts: [] });
     applyRealtimeEvent(queryClient, "w1", {
       id: "1-0",
       event: "scheduled_post.updated",
       data: JSON.stringify({ scheduled_post: readyPost({ status: "published" }) }),
     });
-    expect(queryClient.getQueryData<{ status: string }>(scheduledPostKeys.post("w1", "sp1"))?.status).toBe("published");
-    expect(queryClient.getQueryState([...scheduledPostKeys.lists("w1"), "scheduled"])?.isInvalidated).toBe(true);
-    expect(queryClient.getQueryState([...scheduledPostKeys.calendar("w1"), "2026-09-28"])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryData<{ status: string }>(composerKeys.post("w1", "sp1"))?.status).toBe("published");
+    expect(queryClient.getQueryState([...composerKeys.lists("w1"), "scheduled"])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState([...composerKeys.calendar("w1"), "2026-09-28"])?.isInvalidated).toBe(true);
   });
 
   it("ignores a malformed event", () => {
     const queryClient = new QueryClient();
     applyRealtimeEvent(queryClient, "w1", { id: "1-0", event: "scheduled_post.updated", data: "{" });
-    expect(queryClient.getQueryData(scheduledPostKeys.post("w1", "sp1"))).toBeUndefined();
-    applyScheduledPost(queryClient, "w1", readyPost());
-    expect(queryClient.getQueryData(scheduledPostKeys.post("w1", "sp1"))).toBeDefined();
+    expect(queryClient.getQueryData(composerKeys.post("w1", "sp1"))).toBeUndefined();
+    applyComposerPost(queryClient, "w1", readyPost());
+    expect(queryClient.getQueryData(composerKeys.post("w1", "sp1"))).toBeDefined();
   });
 });
 

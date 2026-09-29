@@ -57,6 +57,16 @@ describe("NewPost", () => {
     expect(calls[0].body).toMatchObject({ targets: [{ social_account_id: "a1", caption_override: null }], caption: "" });
   });
 
+  it("passes when=queue on to the composer", async () => {
+    renderWithApi(<NewPost at={null} when="queue" />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [ready] }),
+        "POST /v1/w/:wid/scheduled-posts": () => json(scheduledPost({ id: "sp9" }), 201),
+      },
+    });
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/w/maple/schedule/sp9?when=queue"));
+  });
+
   it("offers Try again when the draft can't be created", async () => {
     const user = userEvent.setup();
     let count = 0;

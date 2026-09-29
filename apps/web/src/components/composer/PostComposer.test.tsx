@@ -23,11 +23,11 @@ import { PostComposer } from "./PostComposer";
 import { ComposerRoute } from "./routes";
 import type { Uploader } from "./use-media-uploads";
 
-const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+const nav = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), search: "" }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: nav.push, replace: nav.replace }),
   useParams: () => ({ slug: "maple", id: "sp1" }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams(nav.search),
   usePathname: () => "/w/maple/schedule/sp1",
 }));
 
@@ -109,6 +109,7 @@ const checklist = () => screen.getByRole("list", { name: "Checks before scheduli
 beforeEach(() => {
   nav.push.mockReset();
   nav.replace.mockReset();
+  nav.search = "";
   toast.success.mockReset();
   toast.error.mockReset();
 });
@@ -503,6 +504,22 @@ describe("PostComposer When (FR-PUB-04, FR-PUB-09)", () => {
     await waitFor(() => expect(calls).toEqual(["queue"]));
     expect(toast.success).toHaveBeenCalledWith(`Added to the queue for ${formatDayTime(free, TZ)}.`);
     await waitFor(() => expect(screen.getByTestId("status-pill")).toHaveTextContent("Scheduled"));
+  });
+
+  it("opens on Add to queue from the Schedule page's ?when=queue", async () => {
+    nav.search = "when=queue";
+    renderWithApi(<ComposerRoute />, {
+      handlers: {
+        "GET /v1/w/:wid/scheduled-posts/:id": () => json(readyPost()),
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [maple] }),
+        "GET /v1/w/:wid/hashtag-groups": () => json({ items: [] }),
+        "GET /v1/w/:wid/posts": () => json({ items: [], next_cursor: null }),
+        "GET /v1/w/:wid/social-accounts/:id/posting-slots": () =>
+          json({ social_account_id: "a1", timezone: TZ, slots: [{ weekday: 2, local_time: "18:00:00" }], next_free_at: ["2027-03-03T12:30:00Z"] }),
+      },
+    });
+    expect(await screen.findByRole("radio", { name: "Add to queue" })).toHaveAttribute("aria-checked", "true");
+    expect(await screen.findByRole("button", { name: "Add to queue" })).toBeEnabled();
   });
 
   it("an account without posting times can't be queued", async () => {

@@ -5,7 +5,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { keys } from "@/lib/api/queries/keys";
-import { applyScheduledPost } from "@/lib/api/queries/scheduledPosts";
+import { applyComposerPost } from "@/lib/api/queries/scheduledPosts";
 import type {
   ConversationListItem,
   Message,
@@ -164,7 +164,7 @@ export function applyRealtimeEvent(
     case "scheduled_post.updated": {
       const payload = parse<EventPayloads["scheduled_post.updated"]>(event.data);
       if (!payload?.scheduled_post) return;
-      applyScheduledPost(queryClient, wid, payload.scheduled_post);
+      applyComposerPost(queryClient, wid, payload.scheduled_post);
       return;
     }
     case "resync":
