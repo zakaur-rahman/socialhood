@@ -446,3 +446,66 @@ intent becomes "other", decided in code after the model answers, so it is never 
 - Web: the composer checks the checklist locally for instant feedback and the API's wins once saved;
   scheduled posts don't autosave (changes wait for Update schedule); calendar drags snap to 15
   minutes, published and publishing posts can't move, and "Move to…" is the keyboard alternative.
+
+## C-045 · PA foundation decisions (Ask Social Hood)
+- Framework: pydantic-ai-slim[google] 2.51 for the model-and-tool loop only (TR-AGT-02); tests
+  forbid real model requests (ALLOW_MODEL_REQUESTS = False) and use FunctionModel. The agent's
+  model is AI_MODEL_AGENT, else AI_MODEL_REPLY.
+- Four tables (migration 0012): agent_runs, agent_steps, agent_approvals (R2), agent_policies (one
+  per workspace, read_only with every capability off; backfilled and created with new
+  workspaces). Every model call costs 1 credit (agent_turn); tools that call AI charge their own
+  feature with the run as ref.
+- The registry refuses a tool without a tier, a write without a capability switch, and any write
+  in R1 (FR-AGT-02). Tiers are fixed in code; arguments can only raise them; there are no policy
+  tools. Events carry ids, statuses and plain-word steps only, never answer text.
+
+## C-046 · PA runtime and tools decisions (TA.1–TA.4)
+- Tools are bound to Pydantic AI from the registry for the member's role, run one at a time on the
+  run's session, and every call is a stored step (running before the handler, then succeeded or
+  failed). Invalid arguments go back to the model once (ModelRetry) and never become a step; a
+  failed tool makes the run partial; a transient error is retried once.
+- Caps: tools are withheld on the last model turn, past the tool-call cap, one turn before the
+  credit cap and with under 20 s of wall time left; past a cap or out of credits no model writes
+  the answer and the run is partial with the steps' own summaries and citations.
+- Citations: refs are numbered in step order and cited as [n]; cite() keeps only what the answer
+  cites, renumbered by first use, expands short ranges, and drops markers that name no record and
+  brackets written in place of a citation. AnswerRef.parent_id names a comment's post and a
+  scheduled message's conversation, so the web opens them.
+- Recovery: finished steps are replayed, not re-run; a read left running is marked interrupted.
+  The sweeper (every 5 min) resumes runs untouched for 10 min without a live job, and fails
+  instead past 30 min or with a write step left running.
+- Visibility: threads are personal for every role; admins see every run in Settings → Agent.
+- Time phrases: a time alone is its next occurrence, a day without a time is refused (the model
+  asks), "last week" is the previous Monday–Sunday, "past week" the last 7 days, a month is 30
+  days for ages; daylight-saving gaps move forward, repeats take the first.
+- A draft reply has no "use this reply" card in R1, so draft_reply returns a schedule_message card
+  with no time. prepare_scheduled_message refuses an ambiguous contact (listing matches) and a
+  closed reply window; a time past the window leaves send_at empty with the latest allowed time.
+- Not built in R1: engagement_trend, account_metrics, lead_metrics, above_average_posts,
+  sentiment_trend and compare_sentiment (no read query in services/analytics yet).
+
+## C-047 · PA web and evaluation decisions (TA.5, TA.6)
+- Web: Ctrl/⌘ K opens the panel (inbox shortcuts are unmodified letters); pre-fills reach the
+  target screen through a client hand-off store, not search params; the automation draft card
+  creates a saved draft only when the member confirms "Open in editor". Follow-up chips are chosen
+  in the browser from the cited kinds; no API call. While a run works the member can type and
+  the send button becomes Stop.
+- Evaluation (tests/evals, scripts/agent_eval.py): 120 cases in English, Hindi and Hinglish on a
+  seeded workspace with a pinned clock. v1 baseline: every check passed in 113/120, tool choice
+  100%, grounding 98.3%, exact numbers 98.2%. Prompt agent.v2 adds the member's role, brackets
+  only for [n], dates from labels, and customer text only from results; it passed 46/48 before
+  the free-tier Gemini quota ran out (500 requests a day). A full run needs about 330 requests
+  (paid key, or one run a day). The acceptable tool sets are generous, so 100% tool choice
+  overstates precision.
+
+## C-048 · Sidebar redesign
+- Groups: Home; Engage (Inbox, Comments); Grow (Schedule, Automations, Knowledge; owners and
+  admins only, so the agent role sees no Grow heading). Width 232 px expanded, 64 px collapsed;
+  Ctrl/⌘ [ toggles it (on a Mac ⌘[ may stay the browser's Back).
+- The Comments badge (GET …/comments/counts, needs_reply) counts comments from the last 7 days
+  (Instagram's private-reply window) that aren't spam, hidden, deleted or replied to; without the
+  window the connect backfill and replies made in the Instagram app would pin it at 99+. The
+  Inbox badge stays unread conversations (FR-INB-04).
+- The usage card shows AI credits; Upgrade shows only to owners and admins on Free or at 80% or
+  more used, never on Max. The "Reconnecting…" pill appears only after 5 s without the event
+  stream (each stream closes every 30 minutes and reconnects in about 3 s).
