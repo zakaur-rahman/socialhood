@@ -6,7 +6,7 @@ import type { Conversation, ScheduledMessage } from "@/lib/api/types";
 import type { ConversationPages, MessagePages, ScheduledPages } from "@/lib/inbox/cache";
 import { flattenMessages } from "@/lib/inbox/cache";
 import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
-import { conversation, listItem, message } from "@/test/api";
+import { analysis, conversation, listItem, message, suggestion } from "@/test/api";
 
 import { applyRealtimeEvent } from "./events";
 
@@ -157,6 +157,80 @@ describe("conversation.updated patches every list (TR-FE-04)", () => {
     queryClient.setQueryData(keys.inboxCounts(wid), { unread: 1, needs_reply: 1, needs_you: 0 });
     send(queryClient, "conversation.updated", { conversation: listItem({ id: "c1", unread_count: 1 }) });
     expect(queryClient.getQueryState(keys.inboxCounts(wid))?.isInvalidated).toBe(true);
+  });
+});
+
+describe("AI events patch the conversation detail (P5)", () => {
+  const detailOf = () => queryClient.getQueryData<Conversation>(keys.conversation(wid, "c1"))!;
+
+  it("suggestion.created shows the new draft; an update to it (sent, dismissed) clears it", () => {
+    queryClient.setQueryData(keys.conversation(wid, "c1"), conversation({ id: "c1" }));
+    send(queryClient, "suggestion.created", { conversation_id: "c1", suggestion: suggestion({ id: "s1" }) });
+    expect(detailOf().pending_suggestion?.id).toBe("s1");
+    send(queryClient, "suggestion.updated", { conversation_id: "c1", suggestion: suggestion({ id: "s1", status: "sent" }) });
+    expect(detailOf().pending_suggestion).toBeNull();
+  });
+
+  it("an older suggestion superseded after a newer one arrived leaves the newer one alone", () => {
+    queryClient.setQueryData(keys.conversation(wid, "c1"), conversation({ id: "c1" }));
+    send(queryClient, "suggestion.created", { conversation_id: "c1", suggestion: suggestion({ id: "s2" }) });
+    send(queryClient, "suggestion.updated", { conversation_id: "c1", suggestion: suggestion({ id: "s1", status: "superseded" }) });
+    expect(detailOf().pending_suggestion?.id).toBe("s2");
+  });
+
+  it("analysis.created sets the latest analysis, never replacing a newer one with an older one", () => {
+    queryClient.setQueryData(keys.conversation(wid, "c1"), conversation({ id: "c1" }));
+    send(queryClient, "analysis.created", {
+      conversation_id: "c1",
+      analysis: analysis({ id: "an2", created_at: "2026-09-28T12:00:00Z" }),
+    });
+    expect(detailOf().latest_analysis?.id).toBe("an2");
+    send(queryClient, "analysis.created", {
+      conversation_id: "c1",
+      analysis: analysis({ id: "an1", created_at: "2026-09-28T11:00:00Z" }),
+    });
+    expect(detailOf().latest_analysis?.id).toBe("an2");
+  });
+
+  it("usage.updated refreshes the billing state (FR-AI-05 banner)", () => {
+    queryClient.setQueryData(keys.billing(wid), { plan: "free" });
+    send(queryClient, "usage.updated", { metric: "ai_credits" });
+    expect(queryClient.getQueryState(keys.billing(wid))?.isInvalidated).toBe(true);
+  });
+
+  it("conversation.updated that changes nothing the list shows refetches the detail (a new summary)", () => {
+    const detail = conversation({ id: "c1" });
+    queryClient.setQueryData(keys.conversation(wid, "c1"), detail);
+    send(queryClient, "conversation.updated", { conversation: listItem({ id: "c1" }) });
+    expect(queryClient.getQueryState(keys.conversation(wid, "c1"))?.isInvalidated).toBe(true);
+  });
+
+  it("a person's reply refetches the detail (Auto pauses, FR-SUG-05); a customer's does not", () => {
+    queryClient.setQueryData(keys.conversation(wid, "c1"), conversation({ id: "c1" }));
+    send(queryClient, "conversation.updated", {
+      conversation: listItem({ id: "c1", last_message_at: "2026-09-28T12:10:00Z", unread_count: 1 }),
+    });
+    expect(queryClient.getQueryState(keys.conversation(wid, "c1"))?.isInvalidated).toBe(false);
+
+    send(queryClient, "conversation.updated", {
+      conversation: listItem({
+        id: "c1",
+        last_message_at: "2026-09-28T12:20:00Z",
+        last_message_direction: "outbound",
+        last_message_source: "native_app",
+        unread_count: 0,
+      }),
+    });
+    expect(queryClient.getQueryState(keys.conversation(wid, "c1"))?.isInvalidated).toBe(true);
+  });
+
+  it("a payload that carries the AI state is merged without a refetch", () => {
+    queryClient.setQueryData(keys.conversation(wid, "c1"), conversation({ id: "c1" }));
+    send(queryClient, "conversation.updated", {
+      conversation: { ...listItem({ id: "c1" }), ai: { effective_mode: "auto", override: "auto", paused_until: null } },
+    });
+    expect(detailOf().ai.effective_mode).toBe("auto");
+    expect(queryClient.getQueryState(keys.conversation(wid, "c1"))?.isInvalidated).toBe(false);
   });
 });
 

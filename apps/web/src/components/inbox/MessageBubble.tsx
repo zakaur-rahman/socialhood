@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,10 @@ type Props = {
   onDiscard?: () => void;
   onChooseTemplate?: () => void;
   reconnectHref?: Route;
+  /** An AI auto reply's "why" button, in the "Sent by AI" label row (F-09). */
+  aiInfo?: ReactNode;
+  /** Under the bubble: the analysis chips of an analysed customer message (FR-AI-02). */
+  below?: ReactNode;
 };
 
 /** UX-INB-06: one message, in the variant its direction, source and status call for. */
@@ -67,6 +72,8 @@ export function MessageBubble({
   onDiscard,
   onChooseTemplate,
   reconnectHref,
+  aiInfo,
+  below,
 }: Props) {
   if (message.direction === "system" || message.kind === "system") {
     return <SystemNote>{message.text ?? "Conversation updated"}</SystemNote>;
@@ -129,6 +136,7 @@ export function MessageBubble({
             <p className={cn("mb-1 flex items-center gap-1 text-xs font-medium", nativeApp ? "text-fg-secondary" : "text-white/90")}>
               {label.icon ? <label.icon className="size-3" aria-hidden /> : null}
               {label.text}
+              {message.source === "ai_auto" && aiInfo ? aiInfo : null}
             </p>
           ) : null}
           {message.kind === "template" && message.template ? (
@@ -245,6 +253,7 @@ export function MessageBubble({
             </div>
           </div>
         ) : null}
+        {below}
       </div>
     </div>
   );

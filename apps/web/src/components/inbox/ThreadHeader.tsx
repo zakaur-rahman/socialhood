@@ -3,6 +3,7 @@
 import { ArrowLeft, Clock, EllipsisVertical, PanelRight } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,8 @@ type Props = {
   onSchedule: () => void;
   onArchive: (archived: boolean) => void;
   onMarkUnread: () => void;
+  /** The AI mode menu and pause state (P5); without it the header shows a read-only chip. */
+  aiControl?: ReactNode;
 };
 
 /** UX-INB-05: who, where, the reply window and AI state, and the conversation's actions. */
@@ -49,6 +52,7 @@ export function ThreadHeader({
   onSchedule,
   onArchive,
   onMarkUnread,
+  aiControl,
 }: Props) {
   const name = contactName(conversation.contact, conversation.platform);
   const platform = PLATFORM_LABEL[conversation.platform];
@@ -75,7 +79,16 @@ export function ThreadHeader({
           <h2 className="truncate text-sm font-semibold">{name}</h2>
           <ReplyWindowChip window={conversation.reply_window} now={now} />
           <span className="hidden min-w-0 items-center gap-1.5 overflow-hidden sm:flex">
-            {conversation.needs_human ? (
+            {aiControl ? (
+              <>
+                {conversation.needs_human ? (
+                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.danger)}>
+                    Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
+                  </span>
+                ) : null}
+                {aiControl}
+              </>
+            ) : conversation.needs_human ? (
               <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.danger)}>
                 Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
               </span>

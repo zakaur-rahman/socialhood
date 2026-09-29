@@ -56,6 +56,8 @@ type Props = {
   canAttach: boolean;
   /** Tests inject a fake; the app uploads through the API and Cloudinary. */
   upload?: Uploader;
+  /** With a suggestion showing: Ctrl/⌘ Enter sends it and Esc dismisses it from an empty composer (UX-INB-08). */
+  suggestionKeys?: { send: () => void; dismiss: () => void } | null;
 };
 
 type Mode = "reply" | "blocked" | "closed" | "template_only";
@@ -78,10 +80,14 @@ export function Composer({
   onChooseTemplate,
   canAttach,
   upload,
+  suggestionKeys = null,
 }: Props) {
   const conversationId = conversation.id;
   const draft = useInboxStore((state) => state.drafts[conversationId] ?? "");
   const setDraft = useInboxStore((state) => state.setDraft);
+  // F-08 Edit: the suggestion whose text is in the box goes with the reply as suggestion_id.
+  const editingSuggestion = useInboxStore((state) => state.suggestionEdits[conversationId] ?? null);
+  const setSuggestionEdit = useInboxStore((state) => state.setSuggestionEdit);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [emojiOpen, setEmojiOpen] = useState(false);
@@ -133,7 +139,9 @@ export function Composer({
       text: draft,
       assets: ready.map((item) => item.asset!).filter(Boolean),
       humanAgent: replyWindow.state === "human_agent",
+      ...(editingSuggestion ? { suggestionId: editingSuggestion } : {}),
     });
+    if (editingSuggestion) setSuggestionEdit(conversationId, null);
     resetAfterSend();
     textRef.current?.focus();
   };
@@ -149,6 +157,18 @@ export function Composer({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (suggestionKeys && draft.trim() === "" && !event.nativeEvent.isComposing) {
+      if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+        event.preventDefault();
+        suggestionKeys.send();
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        suggestionKeys.dismiss();
+        return;
+      }
+    }
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
     if (scheduleOpen) return; // with the schedule popover open, Enter does not send

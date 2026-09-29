@@ -48,6 +48,14 @@ export const emptyStates = {
     title: "No runs yet",
     body: "Each time this automation answers someone, it shows here.",
   },
+  knowledge: {
+    title: "Teach the AI your business",
+    body: "Add prices, shipping and FAQs so suggested replies are accurate.",
+  },
+  knowledgeGaps: {
+    title: "No unanswered questions",
+    body: "When customers ask something your knowledge doesn't cover, it shows up here.",
+  },
 } as const;
 
 /** "All caught up" when a view or search has no results (§4.7). */
@@ -236,3 +244,35 @@ export function greeting(now: Date, firstName?: string | null): string {
   const part = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   return firstName ? `${part}, ${firstName}` : part;
 }
+
+// ---- AI and knowledge (P5, §4.7)
+
+const count = new Intl.NumberFormat("en-US");
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** A calendar date from the API ("2026-10-01") as "1 Oct", with the year when it isn't this one. */
+export function shortDate(value: string, now: Date = new Date()): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+  if (!match) return value;
+  const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+  const label = `${day} ${MONTHS[month - 1]}`;
+  return year === now.getFullYear() ? label : `${label} ${year}`;
+}
+
+/** quota_exceeded for AI credits (FR-AI-05). */
+export function aiCreditsExhausted(limit: number, resetsOn: string | null | undefined, now?: Date): string {
+  const reset = resetsOn ? ` They reset on ${shortDate(resetsOn, now)}.` : "";
+  return `You've used all ${count.format(limit)} AI credits for this month.${reset}`;
+}
+
+/** quota_exceeded for knowledge (F-14). */
+export function knowledgeLimitReached(limit: number | null | undefined): string {
+  return limit ? `Your plan includes ${count.format(limit)} characters of knowledge.` : "Your plan's knowledge limit is reached.";
+}
+
+export const aiCopy = {
+  autoIsPro: "Auto mode is part of Pro.",
+  businessDescriptionHint: "Two or three sentences about what you sell and who buys it.",
+  notInKnowledge: "Not in your knowledge",
+  drafting: "Drafting a reply…",
+} as const;

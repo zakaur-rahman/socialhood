@@ -49,6 +49,7 @@ export type ScheduledMessagePatch = Schemas["ScheduledMessagePatch"];
 export type UploadSignature = Schemas["UploadSignature"];
 export type MediaAsset = Schemas["MediaAssetOut"];
 export type ResourceType = MediaAsset["resource_type"];
+export type AssetPurpose = Schemas["UploadSignatureRequest"]["purpose"];
 export type WhatsAppTemplate = Schemas["WhatsAppTemplate"];
 export type EmbeddedSignup = Schemas["EmbeddedSignup"];
 
@@ -85,6 +86,41 @@ export type TemplateCategory = AutomationTemplate["category"];
 export type AutomationSort = NonNullable<
   NonNullable<operations["list_automations"]["parameters"]["query"]>["sort"]
 >;
+
+// ---- AI (P5: FR-AI-01…05, FR-SUG-01…06, FR-KB-04)
+
+export type Intent = MessageAnalysis["intent"];
+export type Sentiment = MessageAnalysis["sentiment"];
+export type Priority = MessageAnalysis["priority"];
+export type SuggestionSource = Schemas["SuggestionSource"];
+export type ConversationSummary = Schemas["ConversationSummary"];
+export type ConversationAi = Schemas["ConversationAi"];
+export type AiSettings = Schemas["AiSettings"];
+export type AiSettingsUpdate = Schemas["AiSettingsUpdate"];
+export type BrandTone = AiSettings["tone"];
+export type EmojiPolicy = AiSettings["emoji_policy"];
+export type TakeoverMinutes = AiSettings["takeover_minutes"];
+export type AnalysisCorrection = Schemas["AnalysisCorrection"];
+export type AiDecision = Schemas["AiDecision"];
+export type AiDecisionCheck = Schemas["AiDecisionCheck"];
+
+// ---- knowledge (P5: FR-KB-01…06, UX-SCR-06)
+
+export type KnowledgeSource = Schemas["KnowledgeSource"];
+export type KnowledgeSourceList = Schemas["KnowledgeSourceList"];
+export type KnowledgeSourceCreate = Schemas["KnowledgeSourceCreate"];
+export type KnowledgeSourcePatch = Schemas["KnowledgeSourcePatch"];
+export type KnowledgeType = KnowledgeSource["type"];
+export type KnowledgeStatus = KnowledgeSource["status"];
+export type KnowledgeUsage = Schemas["KnowledgeUsage"];
+export type KnowledgeTestResult = Schemas["KnowledgeTestResult"];
+export type KnowledgeGap = Schemas["KnowledgeGap"];
+export type KnowledgeGapList = Schemas["KnowledgeGapList"];
+
+// ---- billing state (TR-BIL-04; P5 reads usage for the AI credit banner)
+
+export type BillingState = Schemas["BillingState"];
+export type UsageMeter = Schemas["UsageMeter"];
 
 /** The inbox views the list endpoint accepts (FR-INB-01). */
 export type InboxView = NonNullable<

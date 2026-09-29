@@ -6,7 +6,6 @@ import type { QueryClient } from "@tanstack/react-query";
 
 import { keys } from "@/lib/api/queries/keys";
 import type {
-  Conversation,
   ConversationListItem,
   Message,
   MessageAnalysis,
@@ -16,7 +15,13 @@ import type {
   SocialAccount,
   Suggestion,
 } from "@/lib/api/types";
-import { applyConversation, applyMessage, applyScheduled } from "@/lib/inbox/cache";
+import {
+  applyConversation,
+  applyMessage,
+  applyScheduled,
+  setLatestAnalysis,
+  setPendingSuggestion,
+} from "@/lib/inbox/cache";
 import { useInboxStore } from "@/lib/inbox/store";
 
 import type { SseEvent } from "./sse";
@@ -31,6 +36,8 @@ export type EventPayloads = {
   "scheduled_message.updated": { scheduled_message: ScheduledMessage };
   "social_account.updated": { social_account: SocialAccount };
   "notification.created": { notification: NotificationItem };
+  /** Only the fact matters: the billing state is refetched. */
+  "usage.updated": Record<string, unknown>;
   resync: Record<string, never>;
 };
 
@@ -79,9 +86,7 @@ export function applyRealtimeEvent(
     case "analysis.created": {
       const payload = parse<EventPayloads["analysis.created"]>(event.data);
       if (!payload?.analysis) return;
-      queryClient.setQueryData<Conversation>(keys.conversation(wid, payload.conversation_id), (detail) =>
-        detail ? { ...detail, latest_analysis: payload.analysis } : detail,
-      );
+      setLatestAnalysis(queryClient, wid, payload.conversation_id, payload.analysis);
       return;
     }
     case "suggestion.created":
@@ -89,15 +94,15 @@ export function applyRealtimeEvent(
       const payload = parse<EventPayloads["suggestion.created"]>(event.data);
       if (!payload?.suggestion) return;
       const { suggestion } = payload;
-      const pending = suggestion.status === "pending" ? suggestion : null;
-      queryClient.setQueryData(keys.suggestion(wid, payload.conversation_id), pending);
-      queryClient.setQueryData<Conversation>(keys.conversation(wid, payload.conversation_id), (detail) => {
-        if (!detail) return detail;
-        if (pending) return { ...detail, pending_suggestion: pending };
-        return detail.pending_suggestion?.id === suggestion.id ? { ...detail, pending_suggestion: null } : detail;
-      });
+      const conversationId = payload.conversation_id ?? suggestion.conversation_id;
+      if (suggestion.status === "pending") setPendingSuggestion(queryClient, wid, conversationId, suggestion);
+      else setPendingSuggestion(queryClient, wid, conversationId, null, suggestion.id);
       return;
     }
+    case "usage.updated":
+      // FR-AI-05: credits used or reset; the banner and meters read GET …/billing.
+      void queryClient.invalidateQueries({ queryKey: keys.billing(wid) });
+      return;
     case "scheduled_message.updated": {
       const payload = parse<EventPayloads["scheduled_message.updated"]>(event.data);
       if (!payload?.scheduled_message) return;
@@ -135,7 +140,7 @@ export function applyRealtimeEvent(
       void invalidateWorkspace(queryClient, wid);
       return;
     default:
-      // Events for pages built in later phases (comments, posts, usage) have no cache yet.
+      // Events for pages built in later phases (comments, posts) have no cache yet.
       return;
   }
 }

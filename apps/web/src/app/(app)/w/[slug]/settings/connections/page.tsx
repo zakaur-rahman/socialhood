@@ -2,9 +2,11 @@
 
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useCallback, useEffect, useRef } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { isEntitlementError } from "@/components/ai/AiModeControl";
+import { AutoConfirmDialog, UpgradeDialog } from "@/components/ai/AiModeDialogs";
 import { AccountCard } from "@/components/connections/AccountCard";
 import { ConnectWhatsAppButton, useWhatsAppConnect } from "@/components/connections/ConnectWhatsAppButton";
 import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
@@ -48,6 +50,8 @@ function Connections() {
   const disconnect = useDisconnectAccount(wid);
   const sandbox = useCreateSandboxAccount(wid);
   const whatsapp = useWhatsAppConnect(wid);
+  const [confirmAuto, setConfirmAuto] = useState<SocialAccount | null>(null);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const startConnect = useCallback(() => {
     connect.mutate(undefined, {
@@ -126,7 +130,16 @@ function Connections() {
               }}
               actions={{
                 onChange: (patch) =>
-                  update.mutate({ id: account.id, patch }, { onError: (error) => toast.error(errorMessage(error)) }),
+                  // F-09: Auto is confirmed first, with the escalation rules.
+                  patch.ai_mode === "auto"
+                    ? setConfirmAuto(account)
+                    : update.mutate(
+                        { id: account.id, patch },
+                        {
+                          onError: (error) =>
+                            isEntitlementError(error) ? setUpgradeOpen(true) : toast.error(errorMessage(error)),
+                        },
+                      ),
                 onReconnect: account.platform === "whatsapp" ? whatsapp.connect : startConnect,
                 onRetrySubscribe: () =>
                   resubscribe.mutate(account.id, {
@@ -149,6 +162,24 @@ function Connections() {
           ))}
         </div>
       )}
+      <AutoConfirmDialog
+        open={Boolean(confirmAuto)}
+        onOpenChange={(open) => (open ? undefined : setConfirmAuto(null))}
+        target={confirmAuto ? handleOf(confirmAuto) : "this account"}
+        onConfirm={() => {
+          if (confirmAuto) {
+            update.mutate(
+              { id: confirmAuto.id, patch: { ai_mode: "auto" } },
+              {
+                onError: (error) =>
+                  isEntitlementError(error) ? setUpgradeOpen(true) : toast.error(errorMessage(error)),
+              },
+            );
+          }
+          setConfirmAuto(null);
+        }}
+      />
+      <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
     </PageFrame>
   );
 }

@@ -46,4 +46,10 @@ export const keys = {
     ["w", wid, "automation", id, "runs", result] as const,
   automationStats: (wid: string, id: string, days: 7 | 30) => ["w", wid, "automation", id, "stats", days] as const,
   posts: (wid: string, accountId: string | null, q: string) => ["w", wid, "posts", accountId, q] as const,
+  // AI and knowledge (P5)
+  aiSettings: (wid: string) => ["w", wid, "ai-settings"] as const,
+  aiDecision: (wid: string, messageId: string) => ["w", wid, "ai-decision", messageId] as const,
+  knowledgeSources: (wid: string) => ["w", wid, "knowledge-sources"] as const,
+  knowledgeGaps: (wid: string) => ["w", wid, "knowledge-gaps"] as const,
+  billing: (wid: string) => ["w", wid, "billing"] as const,
 };

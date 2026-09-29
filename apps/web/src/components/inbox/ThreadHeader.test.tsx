@@ -78,6 +78,16 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(screen.getByText("Needs you: refund")).toBeInTheDocument();
   });
 
+  it("with the AI control (P5): the control replaces the chip, beside Needs you", () => {
+    renderHeader(
+      { needs_human: true, needs_human_reason: "refund" },
+      { aiControl: <button type="button">AI control</button> },
+    );
+    expect(screen.getByText("Needs you: refund")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "AI control" })).toBeInTheDocument();
+    expect(screen.queryByText("AI: Suggest")).not.toBeInTheDocument();
+  });
+
   it("names the account when several are connected, and offers Back on phones", () => {
     renderHeader({}, { showAccount: true, backHref: "/w/maple/inbox" as Route });
     expect(screen.getByText("@priya.styles · Instagram · @maple.bakery")).toBeInTheDocument();

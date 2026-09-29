@@ -104,6 +104,8 @@ function useAccountMutation<TVars>(
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: keys.accounts(wid) }),
         queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] }),
+        // An account's AI mode is its conversations' default (FR-SUG-01): open ones refetch.
+        queryClient.invalidateQueries({ queryKey: ["w", wid, "conversation"] }),
       ]);
     },
   });

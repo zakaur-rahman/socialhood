@@ -11,9 +11,11 @@ import type {
   ConversationList,
   ConversationListItem,
   Message,
+  MessageAnalysis,
   MessageList,
   ScheduledMessage,
   ScheduledMessageList,
+  Suggestion,
 } from "@/lib/api/types";
 
 export type ConversationPages = InfiniteData<ConversationList, string | null>;
@@ -154,15 +156,84 @@ export function applyConversation(
   const detail = queryClient.getQueryData<Conversation>(detailKey);
   if (detail) {
     queryClient.setQueryData<Conversation>(detailKey, mergeDetail(detail, item));
-    // The list shape has no reply window state; refetch the detail when the window moved.
-    if (!sameTime(detail.reply_window_closes_at, item.reply_window_closes_at)) {
-      void queryClient.invalidateQueries({ queryKey: detailKey, exact: true });
-    }
+    if (needsDetailRefetch(detail, item)) void queryClient.invalidateQueries({ queryKey: detailKey, exact: true });
   }
 }
 
 export function mergeDetail(detail: Conversation, item: ConversationListItem): Conversation {
   return { ...detail, ...item, contact: { ...detail.contact, ...item.contact } };
+}
+
+function sameValue(a: unknown, b: unknown): boolean {
+  return JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+}
+
+/** Whether any field the list projection carries differs from the detail's copy. */
+function listFieldsChanged(detail: Conversation, item: ConversationListItem): boolean {
+  for (const [key, value] of Object.entries(item)) {
+    if (key === "contact") {
+      const contact = value as ConversationListItem["contact"];
+      for (const [field, fieldValue] of Object.entries(contact)) {
+        if (!sameValue(detail.contact[field as keyof typeof detail.contact], fieldValue)) return true;
+      }
+    } else if (!sameValue(detail[key as keyof Conversation], value)) return true;
+  }
+  return false;
+}
+
+/**
+ * conversation.updated carries the list projection, which has no reply window state, AI state
+ * (mode, takeover pause) or summary. Refetch the detail when one of those may have changed: the
+ * window moved; a person on the business side replied (Auto pauses, FR-SUG-05); or the event
+ * changed nothing the list shows, so what changed is detail-only (a new summary, FR-AI-03, or
+ * the AI mode set elsewhere). A payload that already carries the detail fields is merged as is.
+ */
+export function needsDetailRefetch(detail: Conversation, item: ConversationListItem): boolean {
+  if (!sameTime(detail.reply_window_closes_at, item.reply_window_closes_at)) return true;
+  if ("ai" in item || "summary" in item) return false;
+  const personReplied =
+    item.last_message_direction === "outbound" &&
+    (item.last_message_source === "human" || item.last_message_source === "native_app") &&
+    !sameTime(detail.last_message_at, item.last_message_at);
+  return personReplied || !listFieldsChanged(detail, item);
+}
+
+// ---- AI state on the conversation detail (P5)
+
+/**
+ * The pending suggestion shown above the composer (F-08). With `onlyIfId`, clearing leaves a
+ * newer suggestion alone (events can arrive out of order).
+ */
+export function setPendingSuggestion(
+  queryClient: QueryClient,
+  wid: string,
+  conversationId: string,
+  suggestion: Suggestion | null,
+  onlyIfId?: string,
+): void {
+  queryClient.setQueryData<Conversation>(keys.conversation(wid, conversationId), (detail) => {
+    if (!detail) return detail;
+    if (suggestion) return { ...detail, pending_suggestion: suggestion };
+    if (onlyIfId && detail.pending_suggestion?.id !== onlyIfId) return detail;
+    return { ...detail, pending_suggestion: null };
+  });
+  const current = queryClient.getQueryData<Conversation>(keys.conversation(wid, conversationId));
+  queryClient.setQueryData(keys.suggestion(wid, conversationId), current ? current.pending_suggestion : suggestion);
+}
+
+export function setLatestAnalysis(
+  queryClient: QueryClient,
+  wid: string,
+  conversationId: string,
+  analysis: MessageAnalysis,
+): void {
+  queryClient.setQueryData<Conversation>(keys.conversation(wid, conversationId), (detail) => {
+    if (!detail) return detail;
+    // An older analysis (a correction racing a new message) never replaces a newer one.
+    const current = detail.latest_analysis;
+    if (current && current.id !== analysis.id && current.created_at > analysis.created_at) return detail;
+    return { ...detail, latest_analysis: analysis };
+  });
 }
 
 /** Local change to a conversation's fields in every list and the detail, without moving it. */
