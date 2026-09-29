@@ -36,6 +36,18 @@ export const emptyStates = {
     title: "No scheduled messages",
     body: "Schedule a reply from any conversation's composer.",
   },
+  automations: {
+    title: "Reply automatically",
+    body: 'Send a DM when someone writes or comments a keyword like "price" or "link". Start from a template in a minute.',
+  },
+  automationsFiltered: {
+    title: "No automations match",
+    body: "Try another search or clear the filters.",
+  },
+  automationRuns: {
+    title: "No runs yet",
+    body: "Each time this automation answers someone, it shows here.",
+  },
 } as const;
 
 /** "All caught up" when a view or search has no results (§4.7). */

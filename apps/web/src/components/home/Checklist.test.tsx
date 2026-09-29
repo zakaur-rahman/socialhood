@@ -28,6 +28,17 @@ describe("Checklist (FR-ACC-04)", () => {
     expect(screen.getByRole("link", { name: "Add knowledge" })).toBeInTheDocument();
   });
 
+  it("sends Create an automation straight to the template gallery (F-11)", () => {
+    render(
+      <Checklist
+        steps={steps({ connect_account: true, add_knowledge: true, choose_ai_mode: true })}
+        slug="aria"
+        onDismiss={() => {}}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Browse templates" })).toHaveAttribute("href", "/w/aria/automations/new");
+  });
+
   it("calls onDismiss", async () => {
     const onDismiss = vi.fn();
     render(<Checklist steps={steps()} slug="aria" onDismiss={onDismiss} />);

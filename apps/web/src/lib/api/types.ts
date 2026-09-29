@@ -52,6 +52,40 @@ export type ResourceType = MediaAsset["resource_type"];
 export type WhatsAppTemplate = Schemas["WhatsAppTemplate"];
 export type EmbeddedSignup = Schemas["EmbeddedSignup"];
 
+// ---- automations (P4: FR-AUT-01…19, UX-SCR-02, 03, 11, 12)
+
+export type Automation = Schemas["Automation"];
+export type AutomationList = Schemas["AutomationList"];
+export type AutomationCreate = Schemas["AutomationCreate"];
+export type AutomationDefinition = Schemas["AutomationDefinition"];
+export type AutomationsSummary = Schemas["AutomationsSummary"];
+export type AutomationTemplate = Schemas["AutomationTemplate"];
+export type AutomationTemplateList = Schemas["AutomationTemplateList"];
+export type AutomationRun = Schemas["AutomationRun"];
+export type AutomationRunList = Schemas["AutomationRunList"];
+export type AutomationStats = Schemas["AutomationStats"];
+export type AutomationTest = Schemas["AutomationTest"];
+export type AutomationTestResult = Schemas["AutomationTestResult"];
+export type OverlapWarning = Schemas["OverlapWarning"];
+export type QueueInfo = Schemas["QueueInfo"];
+export type LinkButton = Schemas["LinkButtonIn"];
+export type PostRef = Schemas["PostRef"];
+export type PostSummary = Schemas["PostSummary"];
+export type PostList = Schemas["PostList"];
+export type AutomationStatus = Automation["status"];
+export type DisplayStatus = Automation["display_status"];
+export type TriggerName = NonNullable<Automation["trigger"]>;
+export type ActionName = NonNullable<Automation["action"]>;
+export type MatchMode = Automation["match_mode"];
+export type PostScope = Automation["post_scope"];
+export type SurgeOrder = Automation["surge_order"];
+export type RunResult = AutomationRun["result"];
+export type TemplateCategory = AutomationTemplate["category"];
+/** The list endpoint's sort (FR-AUT-19). */
+export type AutomationSort = NonNullable<
+  NonNullable<operations["list_automations"]["parameters"]["query"]>["sort"]
+>;
+
 /** The inbox views the list endpoint accepts (FR-INB-01). */
 export type InboxView = NonNullable<
   NonNullable<operations["list_conversations"]["parameters"]["query"]>["view"]

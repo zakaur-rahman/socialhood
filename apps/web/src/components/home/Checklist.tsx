@@ -34,7 +34,8 @@ const COPY: Record<ChecklistStep["key"], StepCopy> = {
     title: "Create an automation",
     why: "Send a DM automatically when someone comments a keyword.",
     action: "Browse templates",
-    href: (s) => `/w/${s}/automations` as Route,
+    // F-11: straight to the template gallery.
+    href: (s) => `/w/${s}/automations/new` as Route,
   },
 };
 
