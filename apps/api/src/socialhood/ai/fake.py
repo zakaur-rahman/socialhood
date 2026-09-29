@@ -91,6 +91,8 @@ DEFAULTS: dict[str, Any] = {
     "summary": {"summary": "The customer asked a question.", "next_step": None},
     "comment_analysis": neutral_comments,
     "post_summary": {"summary": "Commenters like the post.", "labels": []},
+    "caption": {"caption": "New this week, made for sunny days. Which one is yours? #newarrivals"},
+    "hashtags": {"hashtags": ["newarrivals", "shoplocal", "smallbusiness"]},
 }
 
 

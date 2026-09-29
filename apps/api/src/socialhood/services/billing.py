@@ -3,8 +3,9 @@ for the plan, its entitlements and usage. P5 serves it for the AI credit banner 
 limit; prices come from Dodo in P8 (TR-BIL-06), so they are empty until then.
 
 Usage: ``ai_credits`` is the current credit period's counter (it resets on the billing anchor day,
-``period_end``); ``knowledge_characters`` is counted live from the knowledge sources (§5.8:
-capacity limits are not stored).
+``period_end``); ``scheduled_posts`` counts the posts scheduled this period (T7.1, each post once
+per period); ``knowledge_characters`` is counted live from the knowledge sources (§5.8: capacity
+limits are not stored).
 """
 
 from __future__ import annotations
@@ -18,9 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socialhood.ai.metering import quota
 from socialhood.billing.plans import ENTITLEMENTS, entitlement
 from socialhood.models.ai import KnowledgeSource
-from socialhood.models.billing import Subscription
+from socialhood.models.billing import Subscription, UsageMetric
 from socialhood.models.identity import Workspace
-from socialhood.repositories import workspaces
+from socialhood.repositories import usage, workspaces
 from socialhood.schemas.billing import BillingState, EntitlementValue, UsageMeter
 
 
@@ -35,6 +36,11 @@ async def billing_state(
     sub = await session.scalar(select(Subscription))
     plan = sub.plan if sub is not None else "free"
     credits = await quota(session, now=now)
+    posts_limit = entitlement(plan, "scheduled_posts_monthly")
+    posts_start, posts_end = await usage.ensure_counter(
+        session, today=now.date(), limit=posts_limit, metric=UsageMetric.SCHEDULED_POSTS
+    )
+    posts = await usage.counter(session, posts_start, metric=UsageMetric.SCHEDULED_POSTS)
     characters = await session.scalar(
         select(func.coalesce(func.sum(KnowledgeSource.char_count), 0))
     )
@@ -56,6 +62,12 @@ async def billing_state(
                 used=credits.used,
                 limit=credits.limit,
                 period_end=credits.period_end,
+            ),
+            UsageMeter(
+                metric="scheduled_posts",
+                used=posts.used if posts else 0,
+                limit=posts.limit if posts else posts_limit,
+                period_end=posts_end,
             ),
             UsageMeter(
                 metric="knowledge_characters",

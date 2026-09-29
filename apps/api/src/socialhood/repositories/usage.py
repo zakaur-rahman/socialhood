@@ -1,5 +1,6 @@
-"""AI credit counters and usage events (TR-AI-09, §5.8). One ``usage_counters`` row per
-workspace, metric and period; the period starts on the subscription's billing anchor day."""
+"""Usage counters and AI usage events (TR-AI-09, §5.8). One ``usage_counters`` row per
+workspace, metric and period; the period starts on the subscription's billing anchor day. The
+metric is ``ai_credits`` unless given (``scheduled_posts``: scheduled_posts_monthly, T7.1)."""
 
 from __future__ import annotations
 
@@ -48,15 +49,15 @@ async def anchor_day(session: AsyncSession) -> int:
 
 
 async def ensure_counter(
-    session: AsyncSession, *, today: date, limit: int | None
+    session: AsyncSession, *, today: date, limit: int | None, metric: str = AI
 ) -> tuple[date, date]:
-    """The current period's AI counter exists (limit as the plan says now); returns the period."""
+    """The current period's counter exists (limit as the plan says now); returns the period."""
     start, end = period_for(await anchor_day(session), today)
     await session.execute(
         insert(UsageCounter)
         .values(
             workspace_id=require_workspace(),
-            metric=AI,
+            metric=metric,
             period_start=start,
             period_end=end,
             used=0,
@@ -67,10 +68,10 @@ async def ensure_counter(
     return start, end
 
 
-async def counter(session: AsyncSession, period_start: date) -> Counter | None:
+async def counter(session: AsyncSession, period_start: date, *, metric: str = AI) -> Counter | None:
     row = await session.scalar(
         select(UsageCounter).where(
-            UsageCounter.metric == AI, UsageCounter.period_start == period_start
+            UsageCounter.metric == metric, UsageCounter.period_start == period_start
         )
     )
     if row is None:
@@ -85,12 +86,14 @@ async def counter(session: AsyncSession, period_start: date) -> Counter | None:
     )
 
 
-async def reserve(session: AsyncSession, *, period_start: date, cost: int) -> int | None:
+async def reserve(
+    session: AsyncSession, *, period_start: date, cost: int, metric: str = AI
+) -> int | None:
     """Atomically add ``cost`` if it fits under the limit (TR-AI-09); the new total, or None
-    when the credits would run out."""
+    when the credits (or scheduled posts) would run out."""
     fits = (UsageCounter.limit.is_(None)) | (UsageCounter.used + cost <= UsageCounter.limit)
     used = await session.scalar(
-        scoped_update(UsageCounter, metric=AI, period_start=period_start)
+        scoped_update(UsageCounter, metric=metric, period_start=period_start)
         .where(fits)
         .values(used=UsageCounter.used + cost, updated_at=func.now())
         .returning(UsageCounter.used)

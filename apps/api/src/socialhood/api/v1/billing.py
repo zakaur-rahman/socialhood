@@ -18,6 +18,6 @@ router = APIRouter(prefix="/v1/w/{wid}", tags=["billing"])
 
 @router.get("/billing", operation_id="get_billing")
 async def get_billing(ctx: AnyMember, session: Session) -> BillingState:
-    """Plan, status, entitlements, usage (AI credits, knowledge characters) and trial
-    eligibility (TR-BIL-05). Prices are empty until P8."""
+    """Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters) and
+    trial eligibility (TR-BIL-05). Prices are empty until P8."""
     return await billing_state(session, ctx.workspace, now=datetime.now(UTC))
