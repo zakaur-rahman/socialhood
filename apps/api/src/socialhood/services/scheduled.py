@@ -278,6 +278,36 @@ def _field_error(field: str, message: str) -> ApiError:
     return ApiError("validation_error", errors=[FieldError(field, message)])
 
 
+@dataclass(frozen=True)
+class SendWindow:
+    """The times ``create`` accepts for a conversation now (F-10), whole minutes: from
+    ``earliest`` to ``latest``; ``closes_at`` is when the reply window itself closes."""
+
+    earliest: datetime
+    latest: datetime
+    closes_at: datetime
+
+
+def send_window(
+    conv: Conversation, *, human_agent_enabled: bool, now: datetime
+) -> SendWindow | None:
+    """What the schedule popover allows now (Ask Social Hood's prepare_scheduled_message, TA.4),
+    by the same rules as ``_check_send_at``; None when no human reply is allowed now or no whole
+    minute fits before the window closes."""
+    human_agent = _human_agent(conv.platform, human_agent_enabled)
+    window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now)
+    if not may_send(window, "human") or window.closes_at is None:
+        return None
+    earliest = (now + 2 * MIN_LEAD).replace(second=0, microsecond=0) + MIN_LEAD
+    # The last whole minute that is still 5 minutes before the window closes.
+    latest = (window.closes_at - WINDOW_MARGIN - timedelta(microseconds=1)).replace(
+        second=0, microsecond=0
+    )
+    if latest < earliest:
+        return None
+    return SendWindow(earliest=earliest, latest=latest, closes_at=window.closes_at)
+
+
 def _check_send_at(
     conv: Conversation, send_at: datetime, *, human_agent_enabled: bool, now: datetime
 ) -> datetime:
