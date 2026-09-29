@@ -1,9 +1,11 @@
-"""run_automation(kind, id) and drain_private_replies(account_id) (T4.4, T4.6; F-11 runtime,
-TR-JOB-07). Thin tasks: the work is in services/automations/runtime.py and queue.py.
+"""run_automation(kind, id) and drain_private_replies(account_id) (T4.4, T4.6, T4.8; F-11
+runtime, TR-JOB-07, FR-AUT-22). Thin tasks: the work is in services/automations/runtime.py and
+queue.py.
 
-run_automation: 3 tries (job catalogue). A retry is safe: a run recorded for the event means it
-was handled, so it sends nothing twice. drain_private_replies: 1 try; it re-defers itself while
-runs are queued, and after a crash it comes back in a minute.
+run_automation: a DM, a comment, or (kind "nudge", a run's id) a run's follow nudge; 3 tries
+(job catalogue). A retry is safe: a run recorded for the event (or a handled DM, or a queued
+nudge) means it was handled, so it sends nothing twice. drain_private_replies: 1 try; it
+re-defers itself while runs are queued, and after a crash it comes back in a minute.
 """
 
 from __future__ import annotations

@@ -337,6 +337,9 @@ async def list_runs(
             private_reply_message_id=run.private_reply_message_id,
             public_reply_platform_id=run.public_reply_platform_id,
             contact_replied_at=run.contact_replied_at,
+            confirmed_at=run.confirmed_at,
+            follows_business=run.follows_business,
+            nudge_message_id=run.nudge_message_id,
             error=(
                 RunError(code=run.error_code, message=run.error_message or "")
                 if run.error_code

@@ -134,11 +134,17 @@ def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object
     sender = body.from_id or f"sandbox_user_{secrets.token_hex(3)}"
     now_ms = int(time.time() * 1000)
     if body.kind == "dm":
+        message: dict[str, object] = {
+            "mid": f"sandbox_mid_{secrets.token_hex(8)}",
+            "text": body.text,
+        }
+        if body.quick_reply_payload:
+            message["quick_reply"] = {"payload": body.quick_reply_payload}
         item: dict[str, object] = {
             "sender": {"id": sender},
             "recipient": {"id": account_ref},
             "timestamp": now_ms,
-            "message": {"mid": f"sandbox_mid_{secrets.token_hex(8)}", "text": body.text},
+            "message": message,
         }
         entry: dict[str, object] = {"id": account_ref, "time": now_ms // 1000, "messaging": [item]}
     else:

@@ -1,5 +1,5 @@
-"""What activation needs (FR-AUT-02, FR-AUT-13, FR-AUT-14, FR-AUT-17; TR-PL-10). Pure: no
-database, no clock.
+"""What activation needs (FR-AUT-02, FR-AUT-13, FR-AUT-14, FR-AUT-17, FR-AUT-21, FR-AUT-22;
+TR-PL-10). Pure: no database, no clock.
 
 ``activation_errors`` returns every missing or invalid field at once, so the editor can mark each
 step: an account (a connected Instagram account), a trigger, keywords (except any-comment, which
@@ -10,6 +10,12 @@ Instagram in its longest rendering with the workspace's disclosure line, public 
 buttons the text is Instagram's button template, at most 640 characters in its longest rendering.
 A comment automation's DM is a private reply, which Instagram sends as text (and buttons) only,
 so it cannot carry an image; one set to public reply only needs a public reply.
+
+Tap first (FR-AUT-21, comment triggers sending a message): the private reply is the opening, so
+it needs its text (1,000 bytes at most in its longest rendering with the disclosure line) and a
+button title of 1 to 20 characters; the message follows their answer as a normal DM, so it may
+carry an image. On a DM trigger the setting is ignored. The follow nudge (FR-AUT-22) needs its
+text, at most 300 characters as typed. AI replies ignore both settings.
 
 AI replies need the knowledge base and suggestions (P5), so an AI-reply automation cannot be
 activated yet; the error says so on the action field.
@@ -31,6 +37,7 @@ PUBLIC_REPLY_CHARS = 300  # FR-AUT-14
 BUTTON_TITLE_CHARS = 20  # FR-AUT-13
 BUTTON_TEXT_CHARS = 640  # the button template's text (services/sending.BUTTON_TEXT_LIMITS)
 KEYWORD_CHARS = 100  # automation_keywords.keyword
+NUDGE_CHARS = 300  # FR-AUT-22, automations.follow_nudge_text
 COMMENT_TRIGGERS = frozenset({"comment_keyword", "comment_any"})
 KEYWORD_TRIGGERS = frozenset({"dm_keyword", "comment_keyword"})
 
@@ -54,6 +61,10 @@ COPY = {
         "a button."
     ),
     "public_only_needs_reply": "Add a public reply. This automation only replies publicly.",
+    "opening_missing": "Write the opening message people get first.",
+    "opening_button": "Give the button a title of up to 20 characters.",
+    "nudge_missing": "Write the follow line, or turn the follow nudge off.",
+    "nudge_long": "Keep the follow line to 300 characters.",
     "reply_empty": "Write this reply or remove it.",
     "reply_long": "Keep public replies to 300 characters.",
     "window_order": "The end must be after the start.",
@@ -98,6 +109,26 @@ class Definition:
     ends_at: datetime | None
     surge_order: str = "oldest_first"
     has_image: bool = False
+    confirm_first: bool = False
+    opening_text: str | None = None
+    opening_button: str | None = None
+    follow_nudge: bool = False
+    follow_nudge_text: str | None = None
+
+    @property
+    def taps_first(self) -> bool:
+        """Tap first applies: a comment trigger sending a message (FR-AUT-21)."""
+        return (
+            self.confirm_first
+            and self.trigger in COMMENT_TRIGGERS
+            and self.action == "send_message"
+        )
+
+    @property
+    def nudges(self) -> bool:
+        """The follow nudge applies: an automation sending a message (FR-AUT-22); AI replies
+        ignore it."""
+        return self.follow_nudge and self.action == "send_message"
 
 
 def is_https_url(url: str) -> bool:
@@ -176,6 +207,10 @@ def _action_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
         errors.append(FieldError("action", COPY["ai_reply_later"]))
     elif d.action == "send_message":
         errors += _message_errors(d, disclosure)
+    if d.taps_first:
+        errors += _opening_errors(d, disclosure)
+    if d.nudges:
+        errors += _nudge_errors(d)
     if d.trigger in COMMENT_TRIGGERS:
         errors += _public_reply_errors(d.public_reply_texts)
         if d.surge_order == "public_only" and not d.public_reply_texts:
@@ -202,7 +237,7 @@ def _message_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
         longest = render.with_disclosure(render.longest_render(text), disclosure)
         if d.message_buttons and len(longest) > BUTTON_TEXT_CHARS:
             errors.append(FieldError("message_text", COPY["button_text_long"]))
-    if d.has_image and d.trigger in COMMENT_TRIGGERS:
+    if d.has_image and d.trigger in COMMENT_TRIGGERS and not d.taps_first:
         errors.append(FieldError("message_media_asset_id", COPY["image_in_private_reply"]))
     for i, button in enumerate(d.message_buttons):
         if not 1 <= len(button.title.strip()) <= BUTTON_TITLE_CHARS:
@@ -210,6 +245,37 @@ def _message_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
         if not is_https_url(button.url.strip()):
             errors.append(FieldError(f"message_buttons.{i}.url", COPY["button_url"]))
     return errors
+
+
+def _opening_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
+    errors: list[FieldError] = []
+    text = (d.opening_text or "").strip()
+    if not text:
+        errors.append(FieldError("opening_text", COPY["opening_missing"]))
+    else:
+        size = message_bytes(text, disclosure)
+        if size > INSTAGRAM_MESSAGE_BYTES:
+            errors.append(
+                FieldError(
+                    "opening_text",
+                    f"Instagram allows {INSTAGRAM_MESSAGE_BYTES:,} bytes. With a long name"
+                    f"{' and the disclosure line' if disclosure else ''} this opening is "
+                    f"{size:,}. Shorten it.",
+                )
+            )
+    if not 1 <= len((d.opening_button or "").strip()) <= BUTTON_TITLE_CHARS:
+        errors.append(FieldError("opening_button", COPY["opening_button"]))
+    return errors
+
+
+def _nudge_errors(d: Definition) -> list[FieldError]:
+    """The follow line as typed: required, at most 300 characters (personal fields and the
+    disclosure line are added when it is sent)."""
+    if not (d.follow_nudge_text or "").strip():
+        return [FieldError("follow_nudge_text", COPY["nudge_missing"])]
+    if len(d.follow_nudge_text or "") > NUDGE_CHARS:
+        return [FieldError("follow_nudge_text", COPY["nudge_long"])]
+    return []
 
 
 def _public_reply_errors(texts: Sequence[str]) -> list[FieldError]:

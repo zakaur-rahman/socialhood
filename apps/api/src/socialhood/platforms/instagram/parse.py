@@ -176,6 +176,8 @@ def _message(
         text = _template_text(message.get("attachments"))
     reply_to = _dict(message.get("reply_to"))
     story = reply_to.get("story")
+    # A tapped quick reply is a normal message with its payload (tap first, FR-AUT-21).
+    quick_reply = None if is_echo else _str(_dict(message.get("quick_reply")).get("payload"))
     if message.get("is_unsupported"):
         kind = "unsupported"  # e.g. ephemeral media: shown as "Open in Instagram"
     elif isinstance(story, dict):
@@ -197,6 +199,7 @@ def _message(
         attachments=tuple(refs),
         reply_to_id=_str(reply_to.get("mid")),
         is_echo=is_echo,
+        quick_reply_payload=quick_reply,
     )
 
 

@@ -23,7 +23,8 @@ What each event does:
 
 A new customer message (not backfill) also sets ``contact_replied_at`` on automation runs that
 DMed the contact in the 24 h before (FR-AUT-16) and enqueues ``run_automation("dm", id)`` when
-the account has DM automations (F-06 step 8).
+the account has DM automations or a tap-first opening awaits the contact's answer (F-06 step 8,
+FR-AUT-21). A tapped quick reply keeps its payload (``quick_reply_payload``).
 
 Follow-ups are deferred by a couple of seconds: the caller commits after this returns, and a job
 that finds no row (its transaction rolled back) does nothing. ``backfill=True`` (history from
@@ -142,12 +143,13 @@ async def _follow_scheduled(session: AsyncSession, msg: Message) -> None:
 
 
 async def _automations(session: AsyncSession, contact: Contact, msg: Message) -> None:
-    """A new customer DM: count it as a reply to recent automation DMs (FR-AUT-16) and let DM
-    automations answer it (F-11 runtime, before the AI's analysis)."""
+    """A new customer DM: count it as a reply to recent automation DMs (FR-AUT-16) and let
+    automations answer it (F-11 runtime, before the AI's analysis): a tap-first opening waiting
+    for this contact (FR-AUT-21), or DM keyword automations."""
     from socialhood.services.automations import runtime
 
     await runtime.contact_replied(session, contact.id, at=msg.occurred_at)
-    await runtime.enqueue_for_message(session, msg)
+    await runtime.enqueue_for_message(session, msg, contact_id=contact.id)
 
 
 def _later(current: datetime | None, candidate: datetime) -> datetime:
@@ -250,6 +252,7 @@ class _Ingest:
             "status": MessageStatus.SENT if echo else MessageStatus.RECEIVED,
             "sent_at": event.occurred_at if echo else None,
             "reply_to_platform_message_id": event.reply_to_id,
+            "quick_reply_payload": None if echo else event.quick_reply_payload,
         }
 
     def _newest(self, conv: Conversation, msg: Message) -> bool:

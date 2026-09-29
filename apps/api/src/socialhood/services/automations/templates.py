@@ -3,6 +3,9 @@
 Each template fills the trigger, keywords, messages and settings of a new draft, which the user
 then edits; the draft stores the template's key. Link buttons start with the address "https://"
 so the editor shows where the link goes, and activation asks for it (FR-AUT-13).
+
+Tap first (FR-AUT-21) is on for the comment templates that send a message; every draft gets the
+default opening and follow line (FR-AUT-22), and the link template has the nudge on.
 """
 
 from __future__ import annotations
@@ -19,6 +22,14 @@ from socialhood.schemas.automations import (
 )
 
 LINK_PLACEHOLDER = "https://"
+# FR-AUT-21 and FR-AUT-22 defaults. The opening asks for a reply too: quick replies are not shown
+# on desktop, and an opening Instagram refuses with its quick reply goes out as text.
+OPENING_TEXT = (
+    "Hi {first_name|there}! Tap the button below, or just reply here, and I'll send it right over "
+    "\N{WHITE DOWN POINTING BACKHAND INDEX}"
+)
+OPENING_BUTTON = "Send me the link"
+FOLLOW_NUDGE_TEXT = "Enjoying this? Follow us for more like it."
 
 
 @dataclass(frozen=True)
@@ -43,6 +54,8 @@ class Template:
     public_reply_texts: tuple[str, ...] = ()
     post_scope: PostScopeName = "all"
     cooldown_hours: int = 24
+    confirm_first: bool = False  # FR-AUT-21
+    follow_nudge: bool = False  # FR-AUT-22
 
     @property
     def requires_paid_plan(self) -> bool:
@@ -78,6 +91,8 @@ TEMPLATES: tuple[Template, ...] = (
             "Check your DMs, {first_name|friend}!",
             "Just sent it to your inbox.",
         ),
+        confirm_first=True,
+        follow_nudge=True,
     ),
     Template(
         key="giveaway",
@@ -98,6 +113,7 @@ TEMPLATES: tuple[Template, ...] = (
             "Entry counted, {first_name|friend}! The rules are in your DMs.",
             "Good luck! Check your DMs for the rules.",
         ),
+        confirm_first=True,
     ),
     Template(
         key="price_on_request",

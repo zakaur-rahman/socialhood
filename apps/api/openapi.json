@@ -3779,6 +3779,18 @@
             "title": "Kind",
             "type": "string"
           },
+          "quick_reply_payload": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quick Reply Payload"
+          },
           "text": {
             "maxLength": 1000,
             "minLength": 1,

@@ -1,10 +1,13 @@
-"""The editor's Test tab (T4.3; UX-SCR-03): what would happen for a DM or comment. Sends nothing
-and writes nothing.
+"""The editor's Test tab (T4.3, T4.8; UX-SCR-03, FR-AUT-21, FR-AUT-22): what would happen for a
+DM or comment. Sends nothing and writes nothing.
 
 It says whether this automation matches the text (and, for a comment on a chosen post, whether
 the post is in its scope), which automation of the account would actually answer, why this one
 would not, and the message and public reply it would send, rendered with a sample name (or the
-name given; an empty name shows the fallback).
+name given; an empty name shows the fallback). For a comment with tap first it adds the opening;
+with the follow nudge, the nudge a non-follower would get after the message (none for a comment
+automation without tap first, which never hears back from the person). Messages, the opening and
+the nudge carry the disclosure line.
 
 The automation under test is treated as live, so a draft can be tried before it is activated; the
 other candidates are the account's active automations inside their run window, as the runtime
@@ -14,6 +17,7 @@ loads them. Cooldowns are not applied (there is no contact).
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -24,7 +28,7 @@ from socialhood.models.media import MediaItem
 from socialhood.repositories import automations as repo
 from socialhood.repositories.automations import PostRow
 from socialhood.schemas.automations import AutomationTest, AutomationTestResult, WinningAutomation
-from socialhood.services.automations import matching, render, windows
+from socialhood.services.automations import actions, matching, render, windows
 from socialhood.services.automations.queries import candidate
 from socialhood.services.automations.validation import COMMENT_TRIGGERS
 
@@ -39,22 +43,38 @@ def _sample(body: AutomationTest) -> tuple[str | None, str | None]:
     return body.first_name or None, body.username or None
 
 
-def _rendered(
-    automation: Automation, body: AutomationTest, disclosure: str | None
-) -> tuple[str | None, str | None]:
+@dataclass(frozen=True)
+class _Rendered:
+    message: str | None = None
+    public: str | None = None
+    opening: str | None = None
+    nudge: str | None = None
+
+
+def _rendered(automation: Automation, body: AutomationTest, disclosure: str | None) -> _Rendered:
     first_name, username = _sample(body)
+
+    def message_like(text: str) -> str:
+        return render.with_disclosure(
+            render.render(text, first_name=first_name, username=username), disclosure
+        )
+
     message = None
     if automation.action == "send_message" and automation.message_text:
-        message = render.with_disclosure(
-            render.render(automation.message_text, first_name=first_name, username=username),
-            disclosure,
-        )
-    public = None
+        message = message_like(automation.message_text)
+    public = opening = None
     if body.kind == "comment" and automation.trigger in COMMENT_TRIGGERS:
         texts = [t for t in automation.public_reply_texts or [] if t.strip()]
         if texts:
             public = render.render(texts[0], first_name=first_name, username=username)
-    return message, public
+        if actions.opens_first(automation):
+            opening = message_like(automation.opening_text or "")
+    nudge = None
+    # The nudge needs an answer from the person: a DM, or a tap-first comment's tap or reply.
+    answered = automation.trigger not in COMMENT_TRIGGERS or actions.opens_first(automation)
+    if answered and actions.render_nudge(automation, None, disclosure_line=None) is not None:
+        nudge = message_like(automation.follow_nudge_text or "")
+    return _Rendered(message, public, opening, nudge)
 
 
 def _in_scope(automation: Automation, posts: Sequence[PostRow], item: MediaItem | None) -> bool:
@@ -83,7 +103,7 @@ async def run(
                 "validation_error",
                 errors=[FieldError("media_item_id", "That post wasn't found.")],
             )
-    message, public = _rendered(automation, body, disclosure)
+    rendered = _rendered(automation, body, disclosure)
 
     def result(
         reason: str | None,
@@ -97,8 +117,10 @@ async def run(
             matched_keyword=keyword,
             winner=WinningAutomation(id=winner.id, name=winner.name) if winner else None,
             reason=reason,
-            rendered_message=message,
-            rendered_public_reply=public,
+            rendered_message=rendered.message,
+            rendered_public_reply=rendered.public,
+            rendered_opening=rendered.opening,
+            rendered_nudge=rendered.nudge,
         )
 
     account_id, trigger = automation.social_account_id, automation.trigger

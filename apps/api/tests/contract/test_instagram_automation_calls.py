@@ -1,7 +1,8 @@
-"""The Instagram calls automations make (T4.4; FR-AUT-08, FR-AUT-13, FR-AUT-14, F-12): link
-buttons as the button template, private replies addressed by comment, public comment replies and
-one post by id. Shapes follow Meta's docs (checked 2026-09-29); T0.9 items 4 and 10 confirm them
-on a real account."""
+"""The Instagram calls automations make (T4.4, T4.8; FR-AUT-08, FR-AUT-13, FR-AUT-14,
+FR-AUT-21, FR-AUT-22, F-12): link buttons as the button template, quick replies, private replies
+addressed by comment, public comment replies, one post by id, and the profile's follow status.
+Shapes follow Meta's docs (checked 2026-09-29); T0.9 items 4 and 10 confirm them on a real
+account."""
 
 from __future__ import annotations
 
@@ -13,7 +14,12 @@ import pytest
 import respx
 
 from socialhood.models.connections import SocialAccount
-from socialhood.platforms.base import OutboundAttachment, OutboundButton, OutboundMessage
+from socialhood.platforms.base import (
+    OutboundAttachment,
+    OutboundButton,
+    OutboundMessage,
+    OutboundQuickReply,
+)
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.instagram.adapter import InstagramAdapter
@@ -116,6 +122,69 @@ async def test_a_private_reply_is_addressed_by_the_comment(
 
     await ig.private_reply(acct, COMMENT, OutboundMessage(text="Here's the link", buttons=BUTTONS))
     assert body(route) == {"recipient": {"comment_id": COMMENT}, "message": BUTTON_TEMPLATE}
+
+
+QUICK_REPLY = OutboundQuickReply(title="Send me the link", payload="shr:run-1")
+
+
+@respx.mock
+async def test_quick_replies_go_with_the_text(
+    adapter: tuple[InstagramAdapter, SocialAccount],
+) -> None:
+    """T4.8 (FR-AUT-21): Meta's quick_replies, content_type text, on a DM and on a private
+    reply (Meta's private-reply docs show text only: the runtime falls back when refused)."""
+    ig, acct = adapter
+    route = respx.post(SEND).respond(200, json={"recipient_id": IGSID, "message_id": "mid.3"})
+    opening = OutboundMessage(text="Hi there! Tap below", quick_replies=(QUICK_REPLY,))
+    quick = {
+        "text": "Hi there! Tap below",
+        "quick_replies": [
+            {"content_type": "text", "title": "Send me the link", "payload": "shr:run-1"}
+        ],
+    }
+
+    await ig.private_reply(acct, COMMENT, opening)
+    assert body(route) == {"recipient": {"comment_id": COMMENT}, "message": quick}
+    await ig.send_message(acct, IGSID, opening)
+    assert body(route) == {"recipient": {"id": IGSID}, "message": quick}
+
+
+async def test_quick_reply_limits(adapter: tuple[InstagramAdapter, SocialAccount]) -> None:
+    ig, acct = adapter
+    for message in (
+        OutboundMessage(text="Hi", quick_replies=(QUICK_REPLY,), buttons=BUTTONS),
+        OutboundMessage(text="Hi", quick_replies=(QUICK_REPLY,) * 14),
+        OutboundMessage(quick_replies=(QUICK_REPLY,)),
+    ):
+        with pytest.raises(PlatformError) as raised:
+            await ig.send_message(acct, IGSID, message)
+        assert raised.value.code == "platform_rejected"
+
+
+@respx.mock
+async def test_the_profile_asks_whether_they_follow_the_account(
+    adapter: tuple[InstagramAdapter, SocialAccount],
+) -> None:
+    """T4.8 (FR-AUT-22): is_user_follow_business, True, False or absent (unknown)."""
+    ig, acct = adapter
+    route = respx.get(f"{BASE}/{IGSID}")
+    route.respond(200, json=fixture("user_profile.json"))
+    profile = await ig.fetch_contact_profile(acct, IGSID)
+    request = route.calls.last.request
+    assert request.headers["authorization"] == f"Bearer {TOKEN}"
+    assert request.url.params["fields"] == "name,username,profile_pic,is_user_follow_business"
+    assert profile is not None
+    assert (profile.name, profile.follows_business) == ("Priya Shah", True)
+
+    route.respond(200, json={**fixture("user_profile.json"), "is_user_follow_business": False})
+    profile = await ig.fetch_contact_profile(acct, IGSID)
+    assert profile is not None
+    assert profile.follows_business is False
+
+    route.respond(200, json={"name": "Priya Shah", "username": "priya.shah"})
+    profile = await ig.fetch_contact_profile(acct, IGSID)
+    assert profile is not None
+    assert profile.follows_business is None
 
 
 async def test_a_private_reply_carries_no_attachment(

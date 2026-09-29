@@ -1,6 +1,9 @@
-"""Automation definitions (T4.3; FR-AUT-01, 02, 12, 13, 15, 19; F-11): create a draft (blank or
-from a template), replace the whole definition (the editor's autosave), activate, pause, order,
-duplicate and delete. Admins only; nothing here commits.
+"""Automation definitions (T4.3, T4.8; FR-AUT-01, 02, 12, 13, 15, 19, 21, 22; F-11): create a
+draft (blank or from a template), replace the whole definition (the editor's autosave), activate,
+pause, order, duplicate and delete. Admins only; nothing here commits.
+
+A blank draft and the comment templates start with tap first on and its default opening; the
+follow nudge starts off (on for "Send a link to commenters") with its default line ready.
 
 Rules:
 - A draft may be incomplete. Activation checks everything at once (services/automations/
@@ -112,6 +115,11 @@ def definition_of(
         ends_at=automation.ends_at,
         surge_order=automation.surge_order,
         has_image=automation.message_media_asset_id is not None,
+        confirm_first=automation.confirm_first,
+        opening_text=automation.opening_text,
+        opening_button=automation.opening_button,
+        follow_nudge=automation.follow_nudge,
+        follow_nudge_text=automation.follow_nudge_text,
     )
 
 
@@ -160,6 +168,13 @@ async def create(
         cooldown_hours=24,
         public_reply_texts=[],
         message_buttons=[],
+        # FR-AUT-21: tap first is on for new comment automations; the opening and the follow
+        # line (FR-AUT-22, off) start with their default copy, ready to switch on.
+        confirm_first=True,
+        opening_text=templates.OPENING_TEXT,
+        opening_button=templates.OPENING_BUTTON,
+        follow_nudge=False,
+        follow_nudge_text=templates.FOLLOW_NUDGE_TEXT,
         created_by_user_id=user_id,
     )
     if template is not None:
@@ -184,6 +199,8 @@ def _fill_from_template(automation: Automation, template: templates.Template) ->
     automation.public_reply_texts = list(template.public_reply_texts)
     automation.post_scope = template.post_scope
     automation.cooldown_hours = template.cooldown_hours
+    automation.confirm_first = template.confirm_first
+    automation.follow_nudge = template.follow_nudge
 
 
 def _keywords(typed: Iterable[str]) -> list[Keyword]:
@@ -335,6 +352,11 @@ def _definition_from_body(
         ends_at=body.ends_at,
         surge_order=body.surge_order,
         has_image=body.message_media_asset_id is not None,
+        confirm_first=body.confirm_first,
+        opening_text=body.opening_text,
+        opening_button=body.opening_button,
+        follow_nudge=body.follow_nudge,
+        follow_nudge_text=body.follow_nudge_text,
     )
 
 
@@ -354,6 +376,11 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.starts_at = body.starts_at
     automation.ends_at = body.ends_at
     automation.surge_order = body.surge_order
+    automation.confirm_first = body.confirm_first
+    automation.opening_text = body.opening_text or None
+    automation.opening_button = body.opening_button or None
+    automation.follow_nudge = body.follow_nudge
+    automation.follow_nudge_text = body.follow_nudge_text or None
 
 
 # ---------------------------------------------------------------- activate and pause
@@ -487,6 +514,11 @@ async def duplicate(
         surge_order=source.surge_order,
         post_scope=source.post_scope,
         cooldown_hours=source.cooldown_hours,
+        confirm_first=source.confirm_first,
+        opening_text=source.opening_text,
+        opening_button=source.opening_button,
+        follow_nudge=source.follow_nudge,
+        follow_nudge_text=source.follow_nudge_text,
         created_by_user_id=user_id,
     )
     session.add(copy)

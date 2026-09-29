@@ -53,6 +53,7 @@ from socialhood.platforms.base import (
     OutboundAttachment,
     OutboundButton,
     OutboundMessage,
+    OutboundQuickReply,
     OutboundTemplate,
     PlatformAdapter,
 )
@@ -144,6 +145,9 @@ SEND_RULES: dict[str, dict[str, SendRule]] = {
 # (Meta's docs, checked 2026-09-29; T0.9 item 10). Platforms not listed have no link buttons.
 BUTTON_TEXT_LIMITS: dict[str, int] = {"instagram": 640}
 MAX_BUTTONS = 3
+# Quick replies (FR-AUT-21): Instagram takes up to 13 with a text message (Meta's docs, checked
+# 2026-09-29). Platforms not listed have none.
+QUICK_REPLY_LIMITS: dict[str, int] = {"instagram": 13}
 HEART = "\u2764\ufe0f"  # Instagram's built-in heart sticker, stored as its emoji
 STICKER_SIZE = 512  # WhatsApp stickers are 512 x 512
 
@@ -244,14 +248,16 @@ async def queue_outbound(
     scheduled_message_id: uuid.UUID | None = None,
     suggestion_id: uuid.UUID | None = None,
     buttons: Sequence[OutboundButton] = (),
+    quick_replies: Sequence[OutboundQuickReply] = (),
     automation_run_id: uuid.UUID | None = None,
     deps: PlatformDeps | None = None,
     now: datetime | None = None,
 ) -> Message:
     """Insert a queued outbound message and enqueue its send (see the module docstring).
 
-    ``buttons`` are link buttons sent with the text (automation DMs, FR-AUT-13). ``deps``
-    defaults to the worker's (jobs use that); the API passes its own.
+    ``buttons`` are link buttons sent with the text (automation DMs, FR-AUT-13);
+    ``quick_replies`` are offered with the text instead (FR-AUT-21). ``deps`` defaults to the
+    worker's (jobs use that); the API passes its own.
     """
     now = now or datetime.now(UTC)
     text = text if text is not None and text.strip() else None
@@ -285,6 +291,10 @@ async def queue_outbound(
     )
     if buttons:
         _check_buttons(conv.platform, text=None if sticker else text, buttons=buttons)
+    if quick_replies:
+        _check_quick_replies(
+            conv.platform, text=None if sticker else text, buttons=buttons, replies=quick_replies
+        )
     if template is not None:
         require(caps, Capability.TEMPLATES)
     assets = await media_assets.load(session, asset_ids)
@@ -326,6 +336,7 @@ async def queue_outbound(
         scheduled_message_id=scheduled_message_id,
         suggestion_id=suggestion_id,
         buttons=[{"title": b.title, "url": b.url} for b in buttons],
+        quick_replies=[{"title": q.title, "payload": q.payload} for q in quick_replies],
         automation_run_id=automation_run_id,
         reactions=[],
     )
@@ -420,6 +431,27 @@ def _check_buttons(platform: str, *, text: str | None, buttons: Sequence[Outboun
             f"{platform_name(platform)} messages with buttons can be up to {limit:,} characters; "
             f"this one is {len(text):,}.",
         )
+
+
+def _check_quick_replies(
+    platform: str,
+    *,
+    text: str | None,
+    buttons: Sequence[OutboundButton],
+    replies: Sequence[OutboundQuickReply],
+) -> None:
+    """Quick replies go out with the text, never with link buttons (FR-AUT-21)."""
+    limit = QUICK_REPLY_LIMITS.get(platform)
+    if limit is None:
+        raise ApiError(
+            "unsupported_media", f"{platform_name(platform)} messages can't include quick replies."
+        )
+    if not text:
+        raise _invalid("text", "Quick replies need a message to go with them.")
+    if buttons:
+        raise _invalid("quick_replies", "Send quick replies or link buttons, not both.")
+    if len(replies) > limit:
+        raise _invalid("quick_replies", f"Add up to {limit} quick replies.")
 
 
 def _check_attachments(platform: str, assets: Sequence[Any]) -> None:
@@ -800,10 +832,20 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
         buttons = tuple(
             OutboundButton(title=str(b["title"]), url=str(b["url"])) for b in msg.buttons or []
         )
+        quick_replies = tuple(
+            OutboundQuickReply(title=str(q["title"]), payload=str(q["payload"]))
+            for q in msg.quick_replies or []
+            if q.get("title") and q.get("payload")
+        )
         parts.append(
             Part(
                 None,
-                OutboundMessage(text=msg.text, buttons=buttons, human_agent=human_agent),
+                OutboundMessage(
+                    text=msg.text,
+                    buttons=buttons,
+                    quick_replies=quick_replies,
+                    human_agent=human_agent,
+                ),
                 _bucket(platform, media=False),
             )
         )

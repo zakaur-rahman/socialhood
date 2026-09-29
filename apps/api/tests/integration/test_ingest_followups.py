@@ -3,10 +3,11 @@ with Instagram's Graph and CDN and Cloudinary mocked."""
 
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import AsyncIterator, Iterator
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -25,6 +26,7 @@ from socialhood.platforms.events import InboundMediaRef, InboundMessage
 from socialhood.services.ingest import ingest
 from socialhood.services.ingest_followups import (
     copy_inbound_media,
+    follow_status,
     profile_cache_key,
     refresh_contact_profile,
 )
@@ -355,3 +357,68 @@ async def test_a_refused_profile_waits_a_week_and_an_outage_retries(
     assert await run() is True
     [row] = await rows(engine, "SELECT * FROM contacts")
     assert (row["profile_fetched_at"], row["display_name"]) == (NOW, None)
+
+
+# ---------------------------------------------------------------- follow status (FR-AUT-22)
+
+
+async def test_the_follow_status_is_cached_and_read_fresh_for_automations(
+    engine: AsyncEngine, redis: Redis, instagram_account: Setup, mock: respx.MockRouter
+) -> None:
+    """T4.8: is_user_follow_business is kept on the contact and in the 24 h cache; the runtime's
+    ``follow_status`` bypasses the cache and refreshes both."""
+    setup = instagram_account
+    await inbound(engine, setup)
+    [contact] = await rows(engine, "SELECT id FROM contacts")
+    route = mock.get(f"{GRAPH}/{setup.deps.settings.ig_graph_version}/{CUSTOMER}").respond(
+        200, json=fixture("user_profile.json")
+    )
+    assert await refresh_contact_profile(
+        sessions(engine),
+        redis,
+        setup.deps,
+        workspace_id=setup.workspace_id,
+        contact_id=contact["id"],
+        now=NOW,
+    )
+    [row] = await rows(engine, "SELECT * FROM contacts")
+    assert (row["follows_business"], row["follows_checked_at"]) == (True, NOW)
+    cached = json.loads(await redis.get(profile_cache_key(setup.account_id, CUSTOMER)))
+    assert cached["follows_business"] is True
+
+    later = NOW + timedelta(hours=1)
+    route.respond(200, json={**fixture("user_profile.json"), "is_user_follow_business": False})
+
+    async def fresh() -> bool | None:
+        with workspace_scope(setup.workspace_id):
+            return await follow_status(
+                sessions(engine), redis, setup.deps, contact_id=contact["id"], now=later
+            )
+
+    assert await fresh() is False
+    assert route.call_count == 2  # the cache was bypassed
+    [row] = await rows(engine, "SELECT * FROM contacts")
+    assert (row["follows_business"], row["follows_checked_at"]) == (False, later)
+    cached = json.loads(await redis.get(profile_cache_key(setup.account_id, CUSTOMER)))
+    assert cached["follows_business"] is False
+
+    # A cached read keeps the time Instagram said it.
+    assert await refresh_contact_profile(
+        sessions(engine),
+        redis,
+        setup.deps,
+        workspace_id=setup.workspace_id,
+        contact_id=contact["id"],
+        now=later + timedelta(hours=1),
+    )
+    assert route.call_count == 2
+    [row] = await rows(engine, "SELECT * FROM contacts")
+    assert (row["follows_business"], row["follows_checked_at"]) == (False, later)
+
+    # Refused or down: unknown, and what we knew stays.
+    route.respond(400, json={"error": {"code": 230, "message": "User consent is required"}})
+    assert await fresh() is None
+    route.respond(500, json={"error": {"code": 2, "message": "Service temporarily unavailable"}})
+    assert await fresh() is None
+    [row] = await rows(engine, "SELECT * FROM contacts")
+    assert (row["follows_business"], row["display_name"]) == (False, "Priya Shah")

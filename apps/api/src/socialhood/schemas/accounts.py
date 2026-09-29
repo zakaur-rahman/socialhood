@@ -67,6 +67,8 @@ class SandboxInbound(RequestModel):
     text: str = Field(min_length=1, max_length=1000)
     from_id: str | None = Field(default=None, max_length=64)
     from_username: str | None = Field(default=None, max_length=64)
+    # A DM that is a tapped quick reply (tap first, FR-AUT-21): its payload, e.g. "shr:{run_id}".
+    quick_reply_payload: str | None = Field(default=None, max_length=1000)
 
 
 class SandboxInboundResult(ResponseModel):

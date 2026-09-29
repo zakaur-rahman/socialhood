@@ -9,6 +9,8 @@ account (docs/verification.md); tests that use a file must keep passing when it 
   one delivery per payload type the parser handles (T3.2), all from customer `990000000000001`
   to account `17841400000000001`. `webhook_message_deleted.json` uses `is_deleted`, which Meta
   documents for unsent messages but no real payload has shown yet.
+  `webhook_message_quick_reply.json` is a tapped quick reply (`message.quick_reply.payload`,
+  T4.8) in the shape Meta documents; no real tap has been recorded yet.
 - `webhook_comment_*.json`: both comment shapes (the `changes[]` one is confirmed by a real
   delivery, T0.9 item 2).
 - `media_list.json`: `GET /me/media` for sync_media; `conversations_list.json` and

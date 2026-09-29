@@ -1,10 +1,11 @@
-"""Automation runs and the runtime's lookups (T4.4, T4.6; F-11 runtime, FR-AUT-05, FR-AUT-10,
-FR-AUT-16, TR-JOB-07). Tenant-scoped: reads are filtered by the session's workspace, inserts are
-stamped with it, and bulk updates go through ``scoped_update``.
+"""Automation runs and the runtime's lookups (T4.4, T4.6, T4.8; F-11 runtime, FR-AUT-05,
+FR-AUT-10, FR-AUT-16, FR-AUT-21, TR-JOB-07). Tenant-scoped: reads are filtered by the session's
+workspace, inserts are stamped with it, and bulk updates go through ``scoped_update``.
 
 The private-reply queue is the account's runs with result ``queued``, found through their trigger
 comment (a run keeps the account it matched on even if its automation moves to another). A run is
-claimed by linking its private-reply message, so a claimed run is never sent twice.
+claimed by linking its private-reply message, so a claimed run is never sent twice. A tap-first
+run whose opening went out waits as ``awaiting_reply`` until its contact answers.
 """
 
 from __future__ import annotations
@@ -50,8 +51,14 @@ from socialhood.services.automations.matching import Candidate, MatchModeName, T
 _FRESH = {"populate_existing": True}
 
 # Runs that reached (or are reaching) the contact count toward the cooldown (FR-AUT-05); a
-# failed or skipped run does not.
-COOLDOWN_RESULTS = (RunResult.QUEUED, RunResult.SENT, RunResult.PARTIAL, RunResult.ESCALATED)
+# failed or skipped run does not. A tap-first run waiting for its answer (FR-AUT-21) counts.
+COOLDOWN_RESULTS = (
+    RunResult.QUEUED,
+    RunResult.SENT,
+    RunResult.PARTIAL,
+    RunResult.ESCALATED,
+    RunResult.AWAITING_REPLY,
+)
 DELIVERED = (MessageStatus.SENT, MessageStatus.DELIVERED, MessageStatus.READ)
 
 
@@ -273,6 +280,80 @@ async def mark_contact_replied(
         .returning(AutomationRun.id)
     )
     return len(result.all())
+
+
+# ---------------------------------------------------------------- tap first (FR-AUT-21)
+
+
+def opened_since(since: datetime) -> ColumnElement[bool]:
+    """The run's opening (its private reply) went out at or after ``since``."""
+    return exists().where(
+        Message.id == AutomationRun.private_reply_message_id,
+        Message.occurred_at >= since,
+    )
+
+
+def _awaiting(contact_id: uuid.UUID, since: datetime) -> list[ColumnElement[bool]]:
+    """The contact's runs waiting for an answer to an opening sent since ``since``
+    (ix_automation_runs_awaiting; a run is created before its opening goes out)."""
+    return [
+        AutomationRun.contact_id == contact_id,
+        AutomationRun.result == RunResult.AWAITING_REPLY,
+        AutomationRun.confirmed_at.is_(None),
+        AutomationRun.created_at >= since - timedelta(days=7),
+        opened_since(since),
+    ]
+
+
+async def has_awaiting(session: AsyncSession, contact_id: uuid.UUID, *, since: datetime) -> bool:
+    found = await session.scalar(
+        select(AutomationRun.id).where(*_awaiting(contact_id, since)).limit(1)
+    )
+    return found is not None
+
+
+async def awaiting_for(
+    session: AsyncSession,
+    contact_id: uuid.UUID,
+    social_account_id: uuid.UUID,
+    *,
+    since: datetime,
+    limit: int,
+) -> list[uuid.UUID]:
+    """The contact's runs on this account waiting for an answer, oldest first."""
+    result = await session.scalars(
+        select(AutomationRun.id)
+        .where(*_awaiting(contact_id, since), _on_account(social_account_id))
+        .order_by(AutomationRun.created_at, AutomationRun.id)
+        .limit(limit)
+    )
+    return list(result.all())
+
+
+async def tapped_run(
+    session: AsyncSession,
+    run_id: uuid.UUID,
+    contact_id: uuid.UUID,
+    social_account_id: uuid.UUID,
+) -> AutomationRun | None:
+    """The run a quick-reply payload names, if it is this contact's comment run on this
+    account (whatever its state)."""
+    return (
+        await session.scalars(
+            select(AutomationRun).where(
+                AutomationRun.id == run_id,
+                AutomationRun.contact_id == contact_id,
+                _on_account(social_account_id),
+            )
+        )
+    ).one_or_none()
+
+
+async def opening_sent_since(session: AsyncSession, run_id: uuid.UUID, since: datetime) -> bool:
+    found = await session.scalar(
+        select(AutomationRun.id).where(AutomationRun.id == run_id, opened_since(since))
+    )
+    return found is not None
 
 
 # ---------------------------------------------------------------- the private-reply queue

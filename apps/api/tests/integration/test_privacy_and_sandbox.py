@@ -161,6 +161,35 @@ async def test_sandbox_account_and_inbound_events(
     assert [str(w) for w in routed] == [wid]
 
 
+async def test_the_sandbox_can_inject_a_tapped_quick_reply(
+    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, queue: None
+) -> None:
+    """T4.8: a sandbox DM can carry a quick reply's payload, as a tap on a tap-first opening."""
+    clerk_id, me = await sign_in(client, clerk)
+    wid = me["workspaces"][0]["id"]
+    headers = clerk.headers(clerk_id)
+    acct = (await client.post(f"/v1/w/{wid}/dev/sandbox/accounts", headers=headers)).json()
+    injected = await client.post(
+        f"/v1/w/{wid}/dev/sandbox/inbound",
+        json={
+            "account_id": acct["id"],
+            "kind": "dm",
+            "text": "Send me the link",
+            "from_id": "sandbox_user_tapper",
+            "quick_reply_payload": "shr:00000000-0000-0000-0000-000000000001",
+        },
+        headers=headers,
+    )
+    assert injected.json() == {"stored": 1}
+    event_id = (await one(engine, "SELECT id FROM webhook_events"))["id"]
+    assert await process_event(app.state.sessionmaker, event_id) is WebhookStatus.PROCESSED
+    tap = await one(engine, "SELECT text, quick_reply_payload FROM messages")
+    assert tap == {
+        "text": "Send me the link",
+        "quick_reply_payload": "shr:00000000-0000-0000-0000-000000000001",
+    }
+
+
 async def test_sandbox_is_hidden_when_disabled(
     app: FastAPI, client: httpx.AsyncClient, clerk: Clerk
 ) -> None:
