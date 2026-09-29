@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.identity import SLUG_PATTERN, Workspace
-from socialhood.repositories import automations, social_accounts, workspaces
+from socialhood.repositories import automations, knowledge, social_accounts, workspaces
 from socialhood.schemas.workspaces import Checklist, ChecklistKey, ChecklistStep, WorkspacePatch
 
 _SLUG = re.compile(SLUG_PATTERN)
@@ -87,9 +87,10 @@ async def update_workspace(
 
 
 # Each checklist step is computed from data (FR-ACC-04). Steps whose tables arrive in later
-# phases report False until then: add_knowledge and choose_ai_mode (T5.x). See docs/QUESTIONS.md
-# Q-008. create_automation is done once an automation has been activated (a draft is not yet an
-# automation that answers anyone; pausing or ending it later keeps the step done).
+# phases report False until then: choose_ai_mode (T5.x). See docs/QUESTIONS.md Q-008.
+# add_knowledge is done once the workspace has any knowledge source (T5.3). create_automation is
+# done once an automation has been activated (a draft is not yet an automation that answers
+# anyone; pausing or ending it later keeps the step done).
 StepCheck = Callable[[AsyncSession, uuid.UUID], Awaitable[bool]]
 
 
@@ -105,9 +106,13 @@ async def _automation_created(session: AsyncSession, workspace_id: uuid.UUID) ->
     return await automations.any_activated(session)
 
 
+async def _knowledge_added(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
+    return await knowledge.any_source(session)
+
+
 CHECKLIST: dict[ChecklistKey, StepCheck] = {
     "connect_account": _account_connected,
-    "add_knowledge": _not_available_yet,
+    "add_knowledge": _knowledge_added,
     "choose_ai_mode": _not_available_yet,
     "create_automation": _automation_created,
 }

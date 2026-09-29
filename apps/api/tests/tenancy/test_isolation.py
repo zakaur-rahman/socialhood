@@ -113,6 +113,19 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# Knowledge (T5.3, T5.10): answering B's gap from A's workspace must be 404 and leave it open.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/knowledge-sources"): {
+            "type": "faq",
+            "question": "Do you ship to Dubai?",
+            "body": "Yes.",
+            "gap_id": "{gap_id}",
+        },
+        ("POST", "/v1/w/{wid}/knowledge/test"): {"question": "Do you ship to Dubai?"},
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {

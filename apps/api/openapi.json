@@ -8739,7 +8739,7 @@
     },
     "/v1/w/{wid}/knowledge-gaps": {
       "get": {
-        "description": "Open gaps from the last 30 days, most asked first (TR-AI-12).",
+        "description": "Gaps asked in the last 30 days, most asked first, with up to three example messages\n(FR-KB-06, TR-AI-12).",
         "operationId": "list_knowledge_gaps",
         "parameters": [
           {
@@ -8799,12 +8799,12 @@
         "summary": "List Knowledge Gaps",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.10"
+        ]
       }
     },
     "/v1/w/{wid}/knowledge-gaps/{gap_id}/dismiss": {
       "post": {
+        "description": "Hidden until a customer asks again (FR-KB-06); 409 conflict once answered.",
         "operationId": "dismiss_knowledge_gap",
         "parameters": [
           {
@@ -8863,12 +8863,12 @@
         "summary": "Dismiss Knowledge Gap",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.10"
+        ]
       }
     },
     "/v1/w/{wid}/knowledge-sources": {
       "get": {
+        "description": "Every source, newest first, with characters used of the plan's knowledge_characters.",
         "operationId": "list_knowledge_sources",
         "parameters": [
           {
@@ -8917,11 +8917,10 @@
         "summary": "List Knowledge Sources",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.3"
+        ]
       },
       "post": {
-        "description": "402 quota_exceeded over knowledge_characters; ingestion runs in the background.",
+        "description": "FR-KB-01: an FAQ (question, body), note (title, body), web page (url) or file\n(file_asset_id). 422 lists missing or foreign fields; 402 quota_exceeded over\nknowledge_characters; 415 for a file that isn't PDF, DOCX, TXT or MD up to 10 MB; 404 for a\ngap_id that isn't this workspace's. Ingestion runs in the background (status pending).",
         "operationId": "create_knowledge_source",
         "parameters": [
           {
@@ -8980,8 +8979,7 @@
         "summary": "Create Knowledge Source",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.3"
+        ]
       }
     },
     "/v1/w/{wid}/knowledge-sources/{source_id}": {
@@ -9037,8 +9035,7 @@
         "summary": "Delete Knowledge Source",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.3"
+        ]
       },
       "get": {
         "operationId": "get_knowledge_source",
@@ -9099,10 +9096,10 @@
         "summary": "Get Knowledge Source",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.3"
+        ]
       },
       "patch": {
+        "description": "Any change (or ``reingest``) adds 1 to the version and ingests the source again.",
         "operationId": "update_knowledge_source",
         "parameters": [
           {
@@ -9171,13 +9168,12 @@
         "summary": "Update Knowledge Source",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.3"
+        ]
       }
     },
     "/v1/w/{wid}/knowledge/test": {
       "post": {
-        "description": "FR-KB-03: 1 credit; nothing is stored or sent.",
+        "description": "FR-KB-03: the answer a suggestion would draft, with its sources, or can_answer false\n(\"Not in your knowledge\"). 1 credit; nothing is stored or sent. 402 quota_exceeded without\ncredits; 503 when the AI is unavailable.",
         "operationId": "test_knowledge",
         "parameters": [
           {
@@ -9236,8 +9232,7 @@
         "summary": "Test Knowledge",
         "tags": [
           "knowledge"
-        ],
-        "x-pending": "T5.3"
+        ]
       }
     },
     "/v1/w/{wid}/media-assets": {

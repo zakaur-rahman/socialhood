@@ -79,6 +79,11 @@ DOCUMENT = Limit(
 # Posts publish only images and video, video up to 90 s (TR-MED-02, R1).
 POST_VIDEO = Limit("video", "Videos", frozenset({"mp4", "mov"}), 100 * MB, max_duration_s=90)
 POST_UNSUPPORTED = "Posts use JPEG, PNG, WEBP or HEIC images, or MP4 or MOV video up to 90 seconds."
+# Knowledge files (FR-KB-01): the formats ingestion reads, up to 10 MB.
+KNOWLEDGE_FILE = Limit(
+    "document", "Knowledge files", frozenset({"pdf", "docx", "txt", "md"}), 10 * MB
+)
+KNOWLEDGE_UNSUPPORTED = "Knowledge files can be PDF, Word (DOCX), TXT or Markdown, up to 10 MB."
 UNSUPPORTED = (
     "Use JPEG, PNG, WEBP or HEIC images; MP4, MOV or WEBM video; MP3, M4A, AAC, WAV or OGG "
     "audio; or PDF, Word, Excel, PowerPoint or text files."
@@ -104,6 +109,7 @@ MIME_TYPES = {
     "amr": "audio/amr",
     "pdf": "application/pdf",
     "txt": "text/plain",
+    "md": "text/markdown",
     "doc": "application/msword",
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     "xls": "application/vnd.ms-excel",
@@ -145,6 +151,10 @@ def purpose_of(public_id: str, workspace_id: uuid.UUID) -> str:
 def check_limits(resource: StoredResource, purpose: str = "message") -> Limit:
     """The limit the asset falls under; 415 unsupported_media when it breaks one."""
     fmt = file_format(resource.format, resource.public_id)
+    if purpose == AssetPurpose.KNOWLEDGE:
+        if fmt in KNOWLEDGE_FILE.formats:
+            return _within(resource, KNOWLEDGE_FILE)
+        raise ApiError("unsupported_media", KNOWLEDGE_UNSUPPORTED)
     if purpose == AssetPurpose.POST:
         if resource.resource_type == "image" and fmt in IMAGE.formats:
             return _within(resource, IMAGE)

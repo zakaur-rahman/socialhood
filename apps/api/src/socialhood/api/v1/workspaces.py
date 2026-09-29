@@ -1,7 +1,9 @@
-"""Workspace settings (FR-ACC-03) and the Home overview (FR-ACC-04; metrics arrive in T9.1)."""
+"""Workspace settings (FR-ACC-03) and the Home overview (FR-ACC-04, FR-KB-06's open questions;
+metrics arrive in T9.1)."""
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter
@@ -12,6 +14,7 @@ from socialhood.models.billing import Subscription
 from socialhood.repositories import users
 from socialhood.schemas.workspaces import Overview, WorkspaceOut, WorkspacePatch
 from socialhood.services import workspaces as service
+from socialhood.services.knowledge import gaps
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["workspaces"])
 
@@ -54,4 +57,8 @@ async def update_workspace(body: WorkspacePatch, ctx: Admin, session: Session) -
 async def get_overview(
     ctx: AnyMember, session: Session, range: Literal["7d", "30d"] = "7d"
 ) -> Overview:
-    return Overview(range=range, checklist=await service.checklist(session, ctx.workspace))
+    return Overview(
+        range=range,
+        checklist=await service.checklist(session, ctx.workspace),
+        knowledge_gaps_open=await gaps.count_open(session, now=datetime.now(UTC)),
+    )
