@@ -18,7 +18,10 @@ type InboxState = {
   /** Drafts per conversation id, for the session (FR-INB-06, TR-FE-06). */
   drafts: Record<string, string>;
   outbox: Record<string, OutboxEntry>;
+  /** The suggestion whose text is being edited in the composer, per conversation (F-08 Edit). */
+  suggestionEdits: Record<string, string>;
   setDraft: (conversationId: string, text: string) => void;
+  setSuggestionEdit: (conversationId: string, suggestionId: string | null) => void;
   putOutbox: (entry: OutboxEntry) => void;
   patchOutbox: (clientId: string, patch: Partial<Message>) => void;
   removeOutbox: (clientId: string) => void;
@@ -31,6 +34,14 @@ type InboxState = {
 export const useInboxStore = create<InboxState>()((set) => ({
   drafts: {},
   outbox: {},
+  suggestionEdits: {},
+  setSuggestionEdit: (conversationId, suggestionId) =>
+    set((state) => {
+      const suggestionEdits = { ...state.suggestionEdits };
+      if (suggestionId) suggestionEdits[conversationId] = suggestionId;
+      else delete suggestionEdits[conversationId];
+      return { suggestionEdits };
+    }),
   setDraft: (conversationId, text) =>
     set((state) => {
       const drafts = { ...state.drafts };
@@ -55,5 +66,5 @@ export const useInboxStore = create<InboxState>()((set) => ({
 }));
 
 export function resetInboxStore(): void {
-  useInboxStore.setState({ drafts: {}, outbox: {} });
+  useInboxStore.setState({ drafts: {}, outbox: {}, suggestionEdits: {} });
 }

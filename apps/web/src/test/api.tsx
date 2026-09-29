@@ -10,12 +10,18 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { makeApi } from "@/lib/api/client";
 import { ApiClientProvider, makeQueryClient } from "@/lib/api/provider";
 import type {
+  AiSettings,
   Automation,
   AutomationTemplate,
+  BillingState,
   Conversation,
   ConversationListItem,
+  KnowledgeGap,
+  KnowledgeSource,
   Message,
+  MessageAnalysis,
   SocialAccount,
+  Suggestion,
   WorkspaceSummary,
 } from "@/lib/api/types";
 import { WorkspaceProvider } from "@/lib/workspace";
@@ -36,6 +42,11 @@ export function problem(status: number, code: string, detail?: string): Response
 
 export function noContent(): Response {
   return new Response(null, { status: 204 });
+}
+
+/** 202 with no body: the work continues in the background (regenerate, summary refresh). */
+export function accepted(): Response {
+  return new Response(null, { status: 202 });
 }
 
 export function fakeApi(handlers: Record<string, Handler>) {
@@ -196,6 +207,119 @@ export function message(overrides: Partial<Message> = {}): Message {
     suggestion_id: null,
     human_agent_tag: false,
     reactions: [],
+    ...overrides,
+  };
+}
+
+// ---- AI and knowledge (P5)
+
+export function analysis(overrides: Partial<MessageAnalysis> = {}): MessageAnalysis {
+  return {
+    id: "an1",
+    message_id: "m1",
+    intent: "shipping",
+    sentiment: "positive",
+    sentiment_score: 0.4,
+    priority: "medium",
+    lead_score: 72,
+    language: "en",
+    topics: ["shipping to uae"],
+    needs_reply: true,
+    needs_human: false,
+    needs_human_reason: null,
+    corrected: false,
+    created_at: "2026-09-28T11:55:05Z",
+    ...overrides,
+  };
+}
+
+export function suggestion(overrides: Partial<Suggestion> = {}): Suggestion {
+  return {
+    id: "s1",
+    conversation_id: "c1",
+    message_id: "m1",
+    status: "pending",
+    can_answer: true,
+    reply_text: "Yes, we ship to the UAE! Delivery to Dubai takes 5–7 business days.",
+    missing_info: null,
+    low_confidence: false,
+    sources: [{ id: "k1", title: "Shipping policy" }],
+    regenerations_left: 5,
+    created_at: "2026-09-28T11:55:10Z",
+    ...overrides,
+  };
+}
+
+export function aiSettings(overrides: Partial<AiSettings> = {}): AiSettings {
+  return {
+    business_name: null,
+    business_description: null,
+    tone: "friendly",
+    emoji_policy: "light",
+    do_list: [],
+    dont_list: [],
+    escalation_phrases: [],
+    sign_off: null,
+    takeover_minutes: 120,
+    updated_at: "2026-09-28T10:00:00Z",
+    ...overrides,
+  };
+}
+
+export function knowledgeSource(overrides: Partial<KnowledgeSource> = {}): KnowledgeSource {
+  return {
+    id: "ks1",
+    type: "faq",
+    title: "Do you ship to Dubai?",
+    question: "Do you ship to Dubai?",
+    body: "Yes, 5–7 business days.",
+    url: null,
+    file_asset_id: null,
+    file_name: null,
+    status: "ready",
+    error: null,
+    version: 1,
+    char_count: 1240,
+    chunk_count: 1,
+    last_ingested_at: "2026-09-28T10:00:00Z",
+    created_at: "2026-09-28T10:00:00Z",
+    updated_at: "2026-09-28T10:00:00Z",
+    ...overrides,
+  };
+}
+
+export function knowledgeGap(overrides: Partial<KnowledgeGap> = {}): KnowledgeGap {
+  return {
+    id: "g1",
+    topic: "shipping to uae",
+    status: "open",
+    occurrences: 14,
+    first_seen_at: "2026-09-20T10:00:00Z",
+    last_seen_at: "2026-09-28T10:00:00Z",
+    examples: [
+      {
+        message_id: "m1",
+        conversation_id: "c1",
+        text: "Do you ship to Dubai?",
+        occurred_at: "2026-09-28T10:00:00Z",
+      },
+    ],
+    ...overrides,
+  };
+}
+
+export function billingState(overrides: Partial<BillingState> = {}): BillingState {
+  return {
+    plan: "pro",
+    status: "active",
+    current_period_end: "2026-10-01T00:00:00Z",
+    trial_ends_at: null,
+    cancel_at_period_end: false,
+    grace_until: null,
+    trial_eligible: false,
+    prices: [],
+    entitlements: [{ key: "ai_modes", value: ["off", "suggest", "auto"] }],
+    usage: [{ metric: "ai_credits", used: 120, limit: 5000, period_end: "2026-10-01" }],
     ...overrides,
   };
 }

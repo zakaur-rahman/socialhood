@@ -6,9 +6,9 @@ import type { ReactNode } from "react";
 
 import type { Route } from "next";
 
-import { useInboxCounts, useMe, useSocialAccounts } from "@/lib/api/queries";
-import type { SocialAccount } from "@/lib/api/types";
-import { reconnectBanner } from "@/lib/copy";
+import { exhaustedAiCredits, useBilling, useInboxCounts, useMe, useSocialAccounts } from "@/lib/api/queries";
+import type { BillingState, Role, SocialAccount } from "@/lib/api/types";
+import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
 import { useMediaQuery, useStoredFlag } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -16,7 +16,7 @@ import { AppSidebar } from "./AppSidebar";
 import { BannerSlot, type Banner } from "./BannerSlot";
 import { MobileNav } from "./MobileNav";
 import { NotificationsButton } from "./NotificationsButton";
-import { activeSegment, pageTitle } from "./nav";
+import { activeSegment, BILLING_HREF, pageTitle } from "./nav";
 
 /**
  * The signed-in frame: sidebar on desktop (collapsed below 1024 px, 1280 px in the inbox;
@@ -27,7 +27,12 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
   const workspace = useCurrentWorkspace();
   const me = useMe();
   const accounts = useSocialAccounts(workspace.id);
-  const allBanners = [...accountBanners(accounts.data ?? [], workspace.slug), ...banners];
+  const billing = useBilling(workspace.id);
+  const allBanners = [
+    ...accountBanners(accounts.data ?? [], workspace.slug),
+    ...creditBanners(billing.data, workspace.slug, workspace.role),
+    ...banners,
+  ];
   const counts = useInboxCounts(workspace.id);
   const pathname = usePathname();
   // UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there.
@@ -64,6 +69,23 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
       </main>
     </div>
   );
+}
+
+/**
+ * FR-AI-05: when the AI credits are used up, analysis, suggestions and auto replies stop and a
+ * banner says when they reset, with an upgrade link for those who can upgrade. Messaging goes on.
+ */
+export function creditBanners(billing: BillingState | undefined, slug: string, role: Role, now?: Date): Banner[] {
+  const meter = exhaustedAiCredits(billing);
+  if (!meter || meter.limit === null || meter.limit === undefined) return [];
+  return [
+    {
+      id: "ai-credits",
+      tone: "warning",
+      message: aiCreditsExhausted(meter.limit, meter.period_end, now),
+      action: role === "agent" ? undefined : { label: "Upgrade", href: BILLING_HREF(slug) },
+    },
+  ];
 }
 
 /** F-05 / FR-CON-04: every account that needs reconnecting gets a banner until it is fixed. */

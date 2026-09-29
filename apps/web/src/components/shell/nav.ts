@@ -34,7 +34,7 @@ function route(path: string): Route {
 }
 
 /** A page built in a later phase: the link exists before the page does. */
-function later(path: string, phase: "P5" | "P6" | "P7" | "P8"): Route {
+function later(path: string, phase: "P6" | "P7" | "P8"): Route {
   void phase; // documents where the page arrives
   return route(path);
 }
@@ -46,7 +46,7 @@ export const PRIMARY_NAV: readonly NavItem[] = [
   { key: "comments", label: "Comments", icon: MessageSquare, segment: "comments", roles: EVERYONE, href: (s) => later(`/w/${s}/comments`, "P6") },
   { key: "automations", label: "Automations", icon: Zap, segment: "automations", roles: ADMINS, href: (s) => route(`/w/${s}/automations`) },
   { key: "schedule", label: "Schedule", icon: CalendarDays, segment: "schedule", roles: ADMINS, href: (s) => later(`/w/${s}/schedule`, "P7") },
-  { key: "knowledge", label: "Knowledge", icon: BookOpen, segment: "knowledge", roles: ADMINS, href: (s) => later(`/w/${s}/knowledge`, "P5") },
+  { key: "knowledge", label: "Knowledge", icon: BookOpen, segment: "knowledge", roles: ADMINS, href: (s) => route(`/w/${s}/knowledge`) },
 ];
 
 export const SETTINGS_NAV: NavItem = {

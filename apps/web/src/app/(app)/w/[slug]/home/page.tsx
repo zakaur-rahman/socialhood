@@ -3,6 +3,7 @@
 import { toast } from "sonner";
 
 import { Checklist } from "@/components/home/Checklist";
+import { KnowledgeGapsRow } from "@/components/home/KnowledgeGapsRow";
 import { PageFrame } from "@/components/shell/PageFrame";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -59,6 +60,10 @@ export default function HomePage() {
             </div>
           ))}
         </section>
+
+        {overview.data && workspace.role !== "agent" ? (
+          <KnowledgeGapsRow count={overview.data.knowledge_gaps_open ?? 0} slug={workspace.slug} />
+        ) : null}
       </div>
     </PageFrame>
   );

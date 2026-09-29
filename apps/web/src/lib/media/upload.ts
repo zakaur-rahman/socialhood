@@ -5,7 +5,7 @@
  */
 import type { Api } from "@/lib/api/client";
 import { unwrap } from "@/lib/api/queries/unwrap";
-import type { MediaAsset, Platform, ResourceType, UploadSignature } from "@/lib/api/types";
+import type { AssetPurpose, MediaAsset, Platform, ResourceType, UploadSignature } from "@/lib/api/types";
 
 const KB = 1024;
 const MB = 1024 * KB;
@@ -175,15 +175,34 @@ export function sendToStorage(
   });
 }
 
+type AssetOptions = UploadOptions & {
+  /** What the file is for: a message attachment (default) or a knowledge file (F-14). */
+  purpose?: AssetPurpose;
+  /** Overrides the type from the extension; knowledge files are always "raw". */
+  resourceType?: ResourceType;
+};
+
 /** The whole flow for one file: signature, direct upload, registration. */
-export async function uploadAsset(api: Api, wid: string, file: File, options: UploadOptions = {}): Promise<MediaAsset> {
-  const resource_type = resourceTypeFor(file);
+export async function uploadAsset(api: Api, wid: string, file: File, options: AssetOptions = {}): Promise<MediaAsset> {
+  const resource_type = options.resourceType ?? resourceTypeFor(file);
   const signature = await unwrap(
     api.POST("/v1/w/{wid}/media-assets/upload-signature", {
       params: { path: { wid } },
-      body: { resource_type, purpose: "message" },
+      body: { resource_type, purpose: options.purpose ?? "message" },
     }),
   );
   const { public_id } = await sendToStorage(signature, file, options);
   return unwrap(api.POST("/v1/w/{wid}/media-assets", { params: { path: { wid } }, body: { public_id, resource_type } }));
 }
+
+// ---- knowledge files (FR-KB-01): PDF, DOCX, TXT, MD up to 10 MB, stored as raw
+
+export const KNOWLEDGE_FILE_RULE = {
+  accept: ".pdf,.docx,.txt,.md",
+  maxBytes: 10 * MB,
+  check(file: File): string | null {
+    if (!["pdf", "docx", "txt", "md"].includes(extensionOf(file.name))) return "Use a PDF, DOCX, TXT or MD file.";
+    if (file.size > 10 * MB) return "Files can be up to 10 MB.";
+    return null;
+  },
+};

@@ -22,6 +22,8 @@ export type ReplyInput = {
   /** A WhatsApp sticker: an uploaded 512 x 512 WebP, sent on its own. */
   sticker?: MediaAsset;
   humanAgent?: boolean;
+  /** The suggestion this text came from, sent as is or edited (F-08). */
+  suggestionId?: string;
 };
 
 export const HEART = "\u2764\ufe0f";
@@ -77,7 +79,7 @@ export function optimisticMessage(conversationId: string, clientId: string, inpu
     read_at: null,
     sent_by: null,
     automation: null,
-    suggestion_id: null,
+    suggestion_id: input.suggestionId ?? null,
     human_agent_tag: Boolean(input.humanAgent),
     reactions: [],
   };
@@ -146,6 +148,7 @@ export function useSendReply(wid: string, conversationId: string) {
           : null,
         sticker: input.heart ? "like_heart" : null,
         sticker_asset_id: input.sticker?.id ?? null,
+        suggestion_id: input.suggestionId ?? null,
       };
       useInboxStore.getState().putOutbox({
         clientId,

@@ -8,9 +8,10 @@ import type { ReactNode } from "react";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
 
-// UX-SCR-07 sections in the spec's order; AI, Notifications and Billing join as they are built.
+// UX-SCR-07 sections in the spec's order; Notifications and Billing join as they are built.
 const SECTIONS = [
   { segment: "connections", label: "Connections" },
+  { segment: "ai", label: "AI" },
   { segment: "workspace", label: "Workspace" },
 ] as const;
 

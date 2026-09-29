@@ -2,27 +2,36 @@
 
 import { ExternalLink } from "lucide-react";
 
+import { AiModeSegments } from "@/components/ai/AiModeControl";
+import { AnalysisDetails } from "@/components/ai/AnalysisChips";
+import { SummarySection } from "@/components/ai/SummarySection";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useConversation } from "@/lib/api/queries";
 import { contactName, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
 import { formatDay } from "@/lib/tz";
+import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { ContactAvatar } from "./ContactAvatar";
 
-function MicroLabel({ children }: { children: string }) {
-  return <h2 className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">{children}</h2>;
+function MicroLabel({ children, id }: { children: string; id?: string }) {
+  return (
+    <h2 id={id} className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">
+      {children}
+    </h2>
+  );
 }
 
 /**
- * UX-INB-09 / FR-INB-11: the customer. The analysis, summary and AI sections join with P5
- * (T5.2, T5.5, T5.7); nothing is shown for them until their data exists.
+ * UX-INB-09 / FR-INB-11: the customer, the latest message's analysis (FR-AI-02, FR-AI-04), the
+ * summary (FR-AI-03) and the AI mode of this conversation (FR-SUG-01, FR-SUG-05).
  */
 export function DetailsPanel({ conversationId }: { conversationId: string }) {
   const workspace = useCurrentWorkspace();
   const conversation = useConversation(workspace.id, conversationId);
+  const now = useNow();
 
   if (!conversation.data) {
     return (
@@ -87,6 +96,21 @@ export function DetailsPanel({ conversationId }: { conversationId: string }) {
         >
           Open in {platform} <ExternalLink className="size-3.5" aria-hidden />
         </a>
+      </section>
+
+      <section aria-labelledby="details-analysis" className="space-y-3">
+        <MicroLabel id="details-analysis">Latest message</MicroLabel>
+        <AnalysisDetails analysis={c.latest_analysis} conversationId={c.id} />
+      </section>
+
+      <section aria-labelledby="details-summary" className="space-y-3">
+        <MicroLabel id="details-summary">Summary</MicroLabel>
+        <SummarySection conversation={c} now={now} />
+      </section>
+
+      <section aria-labelledby="details-ai" className="space-y-3">
+        <MicroLabel id="details-ai">AI in this conversation</MicroLabel>
+        <AiModeSegments conversation={c} now={now} />
       </section>
     </div>
   );

@@ -1,9 +1,15 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { CalendarClock } from "lucide-react";
 import type { Route } from "next";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
+import { AiModeMenu } from "@/components/ai/AiModeControl";
+import { AnalysisChips } from "@/components/ai/AnalysisChips";
+import { DecisionInfo } from "@/components/ai/DecisionInfo";
+import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
+import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -14,10 +20,11 @@ import {
   useMessages,
   useSendReply,
   useSocialAccounts,
+  type ReplyInput,
 } from "@/lib/api/queries";
 import type { Conversation, Message } from "@/lib/api/types";
 import { sendFailure, type SendFailure } from "@/lib/copy";
-import { flattenMessages } from "@/lib/inbox/cache";
+import { flattenMessages, setPendingSuggestion } from "@/lib/inbox/cache";
 import { contactName } from "@/lib/inbox/format";
 import { useInboxStore } from "@/lib/inbox/store";
 import { formatDayTime } from "@/lib/tz";
@@ -54,7 +61,16 @@ function compareOldestFirst(a: Message, b: Message): number {
  * unsent replies come from the store by conversation id, so nothing from the previous
  * conversation can show (TR-FE-06, FR-INB-02).
  */
-export function ThreadView({ conversationId, upload }: { conversationId: string; upload?: Uploader }) {
+export function ThreadView({
+  conversationId,
+  upload,
+  knowledgeUpload,
+}: {
+  conversationId: string;
+  upload?: Uploader;
+  /** Tests inject a fake for "Add to knowledge" file sources. */
+  knowledgeUpload?: KnowledgeUploader;
+}) {
   const workspace = useCurrentWorkspace();
   const wid = workspace.id;
   const conversation = useConversation(wid, conversationId);
@@ -73,10 +89,18 @@ export function ThreadView({ conversationId, upload }: { conversationId: string;
       </div>
     );
   }
-  return <Thread conversation={conversation.data} upload={upload} />;
+  return <Thread conversation={conversation.data} upload={upload} knowledgeUpload={knowledgeUpload} />;
 }
 
-function Thread({ conversation, upload }: { conversation: Conversation; upload?: Uploader }) {
+function Thread({
+  conversation,
+  upload,
+  knowledgeUpload,
+}: {
+  conversation: Conversation;
+  upload?: Uploader;
+  knowledgeUpload?: KnowledgeUploader;
+}) {
   const workspace = useCurrentWorkspace();
   const wid = workspace.id;
   const conversationId = conversation.id;
@@ -85,7 +109,17 @@ function Thread({ conversation, upload }: { conversation: Conversation; upload?:
   const messages = useMessages(wid, conversationId);
   const accounts = useSocialAccounts(wid);
   const outbox = useInboxStore((state) => state.outbox);
-  const { send, retry, discard } = useSendReply(wid, conversationId);
+  const queryClient = useQueryClient();
+  const { send: sendReply, retry, discard } = useSendReply(wid, conversationId);
+  const pendingSuggestionId = conversation.pending_suggestion?.id ?? null;
+  // Any reply retires the pending suggestion: sent as is, edited, or typed instead (F-08).
+  const send = useCallback(
+    (input: ReplyInput) => {
+      sendReply(input);
+      if (pendingSuggestionId) setPendingSuggestion(queryClient, wid, conversationId, null, pendingSuggestionId);
+    },
+    [sendReply, pendingSuggestionId, queryClient, wid, conversationId],
+  );
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
 
@@ -123,6 +157,11 @@ function Thread({ conversation, upload }: { conversation: Conversation; upload?:
       : (conversation.social_account.display_name ?? account?.phone_number);
   const reconnectHref = `/w/${workspace.slug}/settings/connections` as Route;
   const canSchedule = conversation.reply_window.state === "open" || conversation.reply_window.state === "human_agent";
+  const accountStatus = conversation.social_account.status;
+  // As the composer decides: replies need an open window and a connected account.
+  const canReply = canSchedule && accountStatus !== "needs_reconnect" && accountStatus !== "disconnected";
+  const suggestionUi = useSuggestionSlot({ conversation, messages: all, canReply, onSend: send, upload: knowledgeUpload });
+  const analysis = conversation.latest_analysis ?? null;
 
   const failureFor = useCallback(
     (message: Message): SendFailure | null => {
@@ -154,6 +193,7 @@ function Thread({ conversation, upload }: { conversation: Conversation; upload?:
         onSchedule={() => setScheduleOpen(true)}
         onArchive={(archived) => ui?.archive(conversationId, archived)}
         onMarkUnread={() => ui?.markUnread(conversationId)}
+        aiControl={<AiModeMenu conversation={conversation} now={now} />}
       />
       <MessageLog
         messages={all}
@@ -177,6 +217,12 @@ function Thread({ conversation, upload }: { conversation: Conversation; upload?:
             onDiscard={isLocalMessage(message) ? () => discard(message) : undefined}
             onChooseTemplate={() => setTemplateOpen(true)}
             reconnectHref={reconnectHref}
+            aiInfo={message.source === "ai_auto" && !isLocalMessage(message) ? <DecisionInfo messageId={message.id} /> : undefined}
+            below={
+              analysis && message.id === analysis.message_id && message.direction === "inbound" ? (
+                <AnalysisChips analysis={analysis} conversationId={conversationId} />
+              ) : undefined
+            }
           />
         )}
       />
@@ -186,7 +232,9 @@ function Thread({ conversation, upload }: { conversation: Conversation; upload?:
         </div>
       ) : null}
       <ScheduledChip conversation={conversation} now={now} onOpen={() => ui?.setTab("scheduled")} />
+      <div className="shrink-0 bg-canvas">{suggestionUi.slot}</div>
       <Composer
+        suggestionKeys={suggestionUi.keys}
         wid={wid}
         slug={workspace.slug}
         timeZone={workspace.timezone}
