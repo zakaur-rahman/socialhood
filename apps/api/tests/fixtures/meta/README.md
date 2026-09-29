@@ -15,3 +15,11 @@ account (docs/verification.md); tests that use a file must keep passing when it 
   delivery, T0.9 item 2).
 - `media_list.json`: `GET /me/media` for sync_media; `conversations_list.json` and
   `conversation_messages.json`: the Conversations API for backfill (T3.14, T0.9 item 7).
+- Metric snapshots (T6.5, FR-ANL-01), in the shapes of Meta's Media Insights and Account Insights
+  references (checked 2026-09-29), none recorded yet: `media_counts.json` (`GET /{media_id}?
+  fields=like_count,comments_count`), `media_insights_feed.json` and `media_insights_reel.json`
+  (`GET /{media_id}/insights`, lifetime `values[]`), `me_followers.json`,
+  `user_insights_day.json` (`GET /{ig_user_id}/insights?period=day&metric_type=total_value`),
+  `user_insights_follows.json` (`follows_and_unfollows` with the `follow_type` breakdown), and
+  the refusals `error_100_incompatible_metric.json`, `error_100_33_missing_media.json`,
+  `error_10_insights_permission.json`.

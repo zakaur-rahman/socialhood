@@ -7788,8 +7788,7 @@
         "summary": "Compare Post",
         "tags": [
           "analytics"
-        ],
-        "x-pending": "T6.5"
+        ]
       }
     },
     "/v1/w/{wid}/analytics/posts/{post_id}/performance": {
@@ -7878,8 +7877,7 @@
         "summary": "Get Post Performance",
         "tags": [
           "analytics"
-        ],
-        "x-pending": "T6.5"
+        ]
       }
     },
     "/v1/w/{wid}/analytics/sentiment": {
@@ -8001,8 +7999,7 @@
         "summary": "Get Sentiment Distribution",
         "tags": [
           "analytics"
-        ],
-        "x-pending": "T6.5"
+        ]
       }
     },
     "/v1/w/{wid}/analytics/top-posts": {
@@ -8157,8 +8154,7 @@
         "summary": "List Top Posts",
         "tags": [
           "analytics"
-        ],
-        "x-pending": "T6.5"
+        ]
       }
     },
     "/v1/w/{wid}/automation-templates": {

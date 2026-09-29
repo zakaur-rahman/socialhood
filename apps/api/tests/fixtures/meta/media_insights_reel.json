@@ -1,0 +1,88 @@
+{
+  "data": [
+    {
+      "name": "reach",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 5120
+        }
+      ],
+      "title": "Accounts reached",
+      "description": "The number of unique accounts that have seen your reel at least once.",
+      "id": "18100000000000003/insights/reach/lifetime"
+    },
+    {
+      "name": "views",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 8800
+        }
+      ],
+      "title": "Views",
+      "description": "The number of times your reel was played or displayed.",
+      "id": "18100000000000003/insights/views/lifetime"
+    },
+    {
+      "name": "likes",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 212
+        }
+      ],
+      "title": "Likes",
+      "description": "The number of likes on your reel.",
+      "id": "18100000000000003/insights/likes/lifetime"
+    },
+    {
+      "name": "comments",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 19
+        }
+      ],
+      "title": "Comments",
+      "description": "The number of comments on your reel.",
+      "id": "18100000000000003/insights/comments/lifetime"
+    },
+    {
+      "name": "shares",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 41
+        }
+      ],
+      "title": "Shares",
+      "description": "The number of shares of your reel.",
+      "id": "18100000000000003/insights/shares/lifetime"
+    },
+    {
+      "name": "saved",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 64
+        }
+      ],
+      "title": "Saved",
+      "description": "The number of saves of your reel.",
+      "id": "18100000000000003/insights/saved/lifetime"
+    },
+    {
+      "name": "total_interactions",
+      "period": "lifetime",
+      "values": [
+        {
+          "value": 336
+        }
+      ],
+      "title": "Reel interactions",
+      "description": "The number of likes, saves, comments and shares on your reel minus the number of unlikes, unsaves and deleted comments.",
+      "id": "18100000000000003/insights/total_interactions/lifetime"
+    }
+  ]
+}

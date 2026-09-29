@@ -2,23 +2,20 @@
 analytics service for the UI, the same functions Ask Social Hood's tools call. Any member.
 
 Figures come from the FR-ANL-01 snapshots; comparisons are at the same age (see
-schemas/analytics.py for the conventions). An unknown or another workspace's post or account is
-404 not_found; a ``since`` after ``until`` is 422.
-
-The routes below are the P6 contract; T6.5 implements their bodies and removes each
-``openapi_extra`` marker so the tenancy suite covers the route.
+schemas/analytics.py for the conventions and services/analytics for the rules). An unknown or
+another workspace's post or account is 404 not_found; a ``since`` after ``until`` is 422.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Request
 
-from socialhood.api.v1.ai import pending
-from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.deps import AnyMember, Session, WorkspaceContext
+from socialhood.platforms.deps import deps_from
 from socialhood.schemas.analytics import (
     AgeName,
     BaselineKind,
@@ -28,16 +25,24 @@ from socialhood.schemas.analytics import (
     SentimentDistribution,
     TopPosts,
 )
+from socialhood.services.analytics import queries, sentiment
+from socialhood.services.analytics.common import View, capabilities_from
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["analytics"])
 
 
-@router.get(
-    "/analytics/posts/{post_id}/performance",
-    operation_id="get_post_performance",
-    openapi_extra=pending("T6.5"),
-)
+def _view(request: Request, ctx: WorkspaceContext) -> View:
+    deps = deps_from(request.app.state.http, request.app.state.settings)
+    return View(
+        timezone=ctx.workspace.timezone,
+        now=datetime.now(UTC),
+        capabilities=capabilities_from(deps),
+    )
+
+
+@router.get("/analytics/posts/{post_id}/performance", operation_id="get_post_performance")
 async def get_post_performance(
+    request: Request,
     post_id: uuid.UUID,
     ctx: AnyMember,
     session: Session,
@@ -45,15 +50,12 @@ async def get_post_performance(
 ) -> PostPerformance:
     """Reach, views, likes, comments, shares, saves and engagement rate at ``age`` (FR-ANL-02).
     Without ``age``: the latest window the post has reached."""
-    raise NotImplementedError("T6.5")
+    return await queries.post_performance(session, _view(request, ctx), post_id, age)
 
 
-@router.get(
-    "/analytics/posts/{post_id}/compare",
-    operation_id="compare_post",
-    openapi_extra=pending("T6.5"),
-)
+@router.get("/analytics/posts/{post_id}/compare", operation_id="compare_post")
 async def compare_post(
+    request: Request,
     post_id: uuid.UUID,
     ctx: AnyMember,
     session: Session,
@@ -68,15 +70,20 @@ async def compare_post(
     ``n`` posts, or (``baseline=range``, which needs ``since`` and ``until``) the posts published
     in that range, this post left out. ``same_format`` compares Reels with Reels and feed posts
     with feed posts."""
-    raise NotImplementedError("T6.5")
+    return await queries.compare_post(
+        session,
+        _view(request, ctx),
+        post_id,
+        queries.BaselineQuery(
+            kind=baseline, n=n, since=since, until=until, same_format=same_format
+        ),
+        age,
+    )
 
 
-@router.get(
-    "/analytics/sentiment",
-    operation_id="get_sentiment_distribution",
-    openapi_extra=pending("T6.5"),
-)
+@router.get("/analytics/sentiment", operation_id="get_sentiment_distribution")
 async def get_sentiment_distribution(
+    request: Request,
     ctx: AnyMember,
     session: Session,
     post_id: Annotated[uuid.UUID | None, Query()] = None,
@@ -86,15 +93,19 @@ async def get_sentiment_distribution(
 ) -> SentimentDistribution:
     """Comment sentiment for one post (``post_id``; the range is then ignored), or for comments
     made in the range, optionally on one account's posts."""
-    raise NotImplementedError("T6.5")
+    return await sentiment.sentiment_distribution(
+        session,
+        _view(request, ctx),
+        post_id=post_id,
+        account_id=account_id,
+        since=since,
+        until=until,
+    )
 
 
-@router.get(
-    "/analytics/top-posts",
-    operation_id="list_top_posts",
-    openapi_extra=pending("T6.5"),
-)
+@router.get("/analytics/top-posts", operation_id="list_top_posts")
 async def list_top_posts(
+    request: Request,
     ctx: AnyMember,
     session: Session,
     metric: Annotated[MetricName, Query()] = "reach",
@@ -106,4 +117,13 @@ async def list_top_posts(
 ) -> TopPosts:
     """Posts published in the range ranked by ``metric`` at ``age``, best first; posts without
     the metric at that age are left out (``considered`` is the sample size)."""
-    raise NotImplementedError("T6.5")
+    return await queries.top_posts(
+        session,
+        _view(request, ctx),
+        metric=metric,
+        since=since,
+        until=until,
+        n=n,
+        age=age,
+        account_id=account_id,
+    )
