@@ -4,11 +4,12 @@ names: they get an adapter and check its capabilities (TR-PL-11).
 Methods arrive with the phase that needs them: P2 tokens, webhooks and profiles; P3 sending,
 read receipts, media download, and the post and conversation lists used by sync and backfill;
 P4 link buttons, private replies, public comment replies and single posts for comment intake;
-P6 comment backfill and moderation, live counts and insights.
+P6 comment backfill and moderation, live counts and insights; P7 publishing.
 """
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from datetime import date, datetime
 from typing import Literal, Protocol
@@ -185,6 +186,44 @@ class AccountInsights:
         return _known(values)
 
 
+# ---- P7 publishing (T7.2; FR-PUB-05)
+
+
+@dataclass(frozen=True, kw_only=True)
+class ContainerMedia:
+    """One image or video for a container: a public URL the platform fetches (our storage's
+    delivery URL: JPEG images, H.264 MP4 video; TR-MED-02)."""
+
+    kind: Literal["image", "video"]
+    url: str
+
+
+# A container's processing state (Instagram's status_code). FINISHED: ready to publish; ERROR and
+# EXPIRED (not published within 24 h) are final; PUBLISHED: already published.
+ContainerStatusCode = Literal["IN_PROGRESS", "FINISHED", "ERROR", "EXPIRED", "PUBLISHED"]
+
+
+@dataclass(frozen=True, kw_only=True)
+class ContainerStatus:
+    status_code: ContainerStatusCode
+    # Instagram's ``status`` text: why an ERROR happened, when it says (the target's error).
+    detail: str | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
+class PublishingQuota:
+    """The account's content_publishing_limit: posts published through the API in the rolling
+    window (24 h) against its limit. A carousel counts once."""
+
+    used: int
+    limit: int
+    window_s: int = 86_400
+
+    @property
+    def remaining(self) -> int:
+        return max(0, self.limit - self.used)
+
+
 class PlatformAdapter(Protocol):
     platform: str
 
@@ -271,4 +310,73 @@ class PlatformAdapter(Protocol):
         """The account's followers now and its insights for ``day``, a date in the IANA time
         zone ``tz`` (the workspace's). Insights need Capability.ACCOUNT_INSIGHTS; without it only
         ``followers_count`` is filled."""
+        ...
+
+    # ---- P7: publishing (T7.2; FR-PUB-05, F-13). Accounts without Capability.PUBLISH raise
+    # capability_unavailable. Creating a container may be retried (an unpublished container expires
+    # after 24 h); publishing and commenting are writes: a lost answer is delivery_unknown
+    # (platforms.outcome.for_write), never retried blindly.
+
+    async def get_publishing_quota(self, acct: SocialAccount) -> PublishingQuota:
+        """The account's publishing quota now, read before creating containers (FR-PUB-05)."""
+        ...
+
+    async def create_image_container(
+        self, acct: SocialAccount, *, image_url: str, caption: str
+    ) -> str:
+        """A single-image post's container; returns its id."""
+        ...
+
+    async def create_reel_container(
+        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+    ) -> str:
+        """A Reel's container (single videos publish as Reels, shown in the feed too); returns
+        its id. The video processes on the platform: poll ``get_container_status``."""
+        ...
+
+    async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        """One child of a carousel, image or video; returns its id. Children are created in
+        order, before the carousel."""
+        ...
+
+    async def create_carousel_container(
+        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+    ) -> str:
+        """The carousel's container from its 2 to 10 children, in order; returns its id."""
+        ...
+
+    async def get_container_status(
+        self, acct: SocialAccount, container_ref: str
+    ) -> ContainerStatus:
+        """A container's processing state (at most one call a minute per container)."""
+        ...
+
+    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+        """Publish a FINISHED container; returns the new post's platform media id. After
+        delivery_unknown, ``get_container_status`` tells whether it went out (PUBLISHED: find the
+        post with ``find_published_media``; FINISHED: publishing again is safe)."""
+        ...
+
+    async def get_published_media(
+        self, acct: SocialAccount, media_ref: str
+    ) -> PlatformMedia | None:
+        """The post just published, read back: its permalink and the fields media_items stores.
+        None when the platform does not return it (yet)."""
+        ...
+
+    async def find_published_media(
+        self,
+        acct: SocialAccount,
+        container_ref: str,
+        *,
+        caption: str,
+        published_after: datetime,
+    ) -> PlatformMedia | None:
+        """The post a PUBLISHED container became, when the publish answer was lost: the account's
+        recent posts matched on caption and time. None when it is not found."""
+        ...
+
+    async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:
+        """A comment by the account on its own post (the first comment, FR-PUB-11); returns the
+        comment's platform id."""
         ...

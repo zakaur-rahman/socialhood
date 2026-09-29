@@ -5,6 +5,7 @@ SANDBOX_PLATFORM_ENABLED=true; production refuses to start with it on (SEC-14)."
 from __future__ import annotations
 
 import secrets
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 
 from socialhood.models.connections import SocialAccount
@@ -12,12 +13,15 @@ from socialhood.platforms.base import (
     AccountInsights,
     CommentPage,
     ContactProfile,
+    ContainerMedia,
+    ContainerStatus,
     MediaCounts,
     MediaDownload,
     MediaInsights,
     OutboundMessage,
     PlatformMedia,
     PlatformThread,
+    PublishingQuota,
     SendResult,
     TokenGrant,
 )
@@ -176,3 +180,76 @@ class SandboxAdapter:
         from socialhood.platforms.sandbox import insights
 
         return insights.account_insights(acct, day, tz=tz)
+
+    # ---- P7: publishing (T7.2, publishing.py)
+
+    async def get_publishing_quota(self, acct: SocialAccount) -> PublishingQuota:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.publishing_quota(acct)
+
+    async def create_image_container(
+        self, acct: SocialAccount, *, image_url: str, caption: str
+    ) -> str:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.create_image_container(acct, image_url=image_url, caption=caption)
+
+    async def create_reel_container(
+        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+    ) -> str:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.create_reel_container(
+            acct, video_url=video_url, caption=caption, share_to_feed=share_to_feed
+        )
+
+    async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.create_carousel_item(acct, media)
+
+    async def create_carousel_container(
+        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+    ) -> str:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.create_carousel_container(acct, children=children, caption=caption)
+
+    async def get_container_status(
+        self, acct: SocialAccount, container_ref: str
+    ) -> ContainerStatus:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.container_status(acct, container_ref)
+
+    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.publish_container(acct, container_ref)
+
+    async def get_published_media(
+        self, acct: SocialAccount, media_ref: str
+    ) -> PlatformMedia | None:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.published_media(acct, media_ref)
+
+    async def find_published_media(
+        self,
+        acct: SocialAccount,
+        container_ref: str,
+        *,
+        caption: str,
+        published_after: datetime,
+    ) -> PlatformMedia | None:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.find_published_media(
+            acct, container_ref, caption=caption, published_after=published_after
+        )
+
+    async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.post_comment(acct, media_ref, text)

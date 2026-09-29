@@ -13,6 +13,7 @@ from socialhood.api.v1 import (
     analytics,
     automations,
     billing,
+    captions,
     comments,
     conversations,
     events,
@@ -24,6 +25,7 @@ from socialhood.api.v1 import (
     oauth,
     posts,
     privacy,
+    publishing,
     scheduled,
     whatsapp,
     workspaces,
@@ -49,4 +51,6 @@ ROUTERS: tuple[APIRouter, ...] = (
     billing.router,
     comments.router,
     analytics.router,
+    publishing.router,
+    captions.router,
 )

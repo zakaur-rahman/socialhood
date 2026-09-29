@@ -13,6 +13,7 @@ When a phase adds a resource, extend ``Seed`` with B's id for it, map the path p
 
 from __future__ import annotations
 
+import copy
 import json
 import re
 from dataclasses import dataclass, replace
@@ -35,6 +36,7 @@ from tests.support.analytics import make_account_day, make_comment_analysis, mak
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation, make_comment, make_media_item
 from tests.support.inbox import make_asset, make_scheduled, make_thread
+from tests.support.publishing import make_hashtag_group, make_posting_slot, make_scheduled_post
 
 METHODS = ("get", "post", "put", "patch", "delete")
 
@@ -54,6 +56,8 @@ PARAM_TO_SEED: dict[str, str] = {
     "decision_id": "decision_id",
     "post_id": "post_id",
     "comment_id": "comment_id",
+    "scheduled_post_id": "scheduled_post_id",
+    "hashtag_group_id": "hashtag_group_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -138,6 +142,32 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# Publishing (T7.1, T7.4): B's posts, posting times and hashtag groups are 404 from A's workspace;
+# a bulk action naming one of B's posts is 404 as a whole and changes nothing.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/scheduled-posts"): {"caption": "Taken over"},
+        ("PUT", "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}"): {"caption": "Taken over"},
+        ("POST", "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/schedule"): {
+            "publish_at": "2030-01-01T09:00:00Z"
+        },
+        ("POST", "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/reschedule"): {
+            "publish_at": "2030-01-01T09:00:00Z"
+        },
+        ("POST", "/v1/w/{wid}/scheduled-posts/bulk"): {
+            "ids": ["{scheduled_post_id}"],
+            "action": "delete",
+        },
+        ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/posting-slots"): {
+            "slots": [{"weekday": 2, "local_time": "18:00"}]
+        },
+        ("POST", "/v1/w/{wid}/hashtag-groups"): {"name": "Taken over", "hashtags": ["taken"]},
+        ("PATCH", "/v1/w/{wid}/hashtag-groups/{hashtag_group_id}"): {"name": "Taken over"},
+        ("POST", "/v1/w/{wid}/ai/caption"): {"brief": "New arrivals"},
+        ("POST", "/v1/w/{wid}/ai/hashtags"): {"caption": "New arrivals"},
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
@@ -165,6 +195,7 @@ B_TABLES = (
     "media_assets",
     "automations",
     "automation_keywords",
+    "automation_posts",
     "automation_runs",
     "comments",
     "message_analyses",
@@ -178,6 +209,11 @@ B_TABLES = (
     "comment_analyses",
     "post_metric_snapshots",
     "account_daily_metrics",
+    "scheduled_posts",
+    "scheduled_post_assets",
+    "scheduled_post_targets",
+    "posting_slots",
+    "hashtag_groups",
 )
 
 
@@ -197,6 +233,8 @@ class Seed:
     decision_id: str = ""
     post_id: str = ""
     comment_id: str = ""
+    scheduled_post_id: str = ""
+    hashtag_group_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -218,6 +256,8 @@ def _fill(body: dict[str, Any] | None, seed: Seed) -> tuple[dict[str, Any] | Non
         nonlocal refers
         if isinstance(value, list):
             return [resolve(item) for item in value]
+        if isinstance(value, dict):
+            return {key: resolve(item) for key, item in value.items()}
         match = re.fullmatch(r"{(\w+)}", value) if isinstance(value, str) else None
         if match:
             refers = True
@@ -304,6 +344,11 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     await make_comment_analysis(engine, workspace_id=wid, comment_id=comment)
     await make_snapshot(engine, workspace_id=wid, media_item_id=post)
     await make_account_day(engine, workspace_id=wid, account_id=account_id)
+    scheduled_post = await make_scheduled_post(
+        engine, workspace_id=wid, account_ids=[account_id], first_comment="#summer"
+    )
+    await make_posting_slot(engine, workspace_id=wid, account_id=account_id)
+    hashtag_group = await make_hashtag_group(engine, workspace_id=wid)
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -319,6 +364,8 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         decision_id=str(decision),
         post_id=str(post),
         comment_id=str(comment),
+        scheduled_post_id=str(scheduled_post.id),
+        hashtag_group_id=str(hashtag_group),
     )
 
 
@@ -344,6 +391,18 @@ async def test_every_route_with_a_path_id_hides_other_workspaces(
         assert response.status_code == 404, f"{call.method} {call.url}: {response.text}"
         assert response.json()["code"] == "not_found"
         assert await snapshot(engine, seed.workspace_id) == before, f"{call.method} {call.url}"
+
+
+async def test_stubbed_routes_already_have_seed_data(app: FastAPI) -> None:
+    """Routes marked x-pending are skipped above until their task builds them; their seeds and
+    example bodies are ready, so removing the marker needs nothing more here."""
+    openapi = copy.deepcopy(app.openapi())
+    for operations in openapi["paths"].values():
+        for operation in operations.values():
+            if isinstance(operation, dict):
+                operation.pop("x-pending", None)
+    _, uncovered = plan_calls(openapi, Seed(workspace_id="b"))
+    assert not uncovered, "Stubbed routes without isolation seed data:\n" + "\n".join(uncovered)
 
 
 def test_a_new_route_without_seed_data_fails_the_suite() -> None:

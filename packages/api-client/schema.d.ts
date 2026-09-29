@@ -107,6 +107,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/ai/caption": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Generate Caption
+         * @description Write a caption from a brief, or improve the caption given (422 on ``brief`` or
+         *     ``caption`` when the one the mode needs is missing). At most 2,200 characters, 30 hashtags
+         *     and 20 mentions, so it passes the checklist.
+         */
+        post: operations["generate_caption"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai/hashtags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest Hashtags
+         * @description Up to ``count`` (at most 20) hashtags for the caption, none already in it or in
+         *     ``exclude``.
+         */
+        post: operations["suggest_hashtags"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/analytics/posts/{post_id}/compare": {
         parameters: {
             query?: never;
@@ -445,6 +488,28 @@ export interface paths {
          *     eligibility (TR-BIL-05). Prices are empty until P8.
          */
         get: operations["get_billing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Calendar
+         * @description FR-PUB-08: posts, scheduled DMs (the Messages layer) and free posting times from ``from``
+         *     to ``to`` (dates in the workspace time zone, both included, at most 42 days: else 422 on
+         *     ``to``). ``account_ids`` narrows every layer; ``layers`` defaults to all three.
+         */
+        get: operations["get_calendar"];
         put?: never;
         post?: never;
         delete?: never;
@@ -804,6 +869,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/hashtag-groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Hashtag Groups
+         * @description FR-PUB-12: every group, by name.
+         */
+        get: operations["list_hashtag_groups"];
+        put?: never;
+        /**
+         * Create Hashtag Group
+         * @description Save a group (rules in ``HashtagGroupCreate``).
+         */
+        post: operations["create_hashtag_group"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/hashtag-groups/{hashtag_group_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Hashtag Group
+         * @description Delete a group; captions that used it keep their hashtags.
+         */
+        delete: operations["delete_hashtag_group"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Hashtag Group
+         * @description Rename a group or replace its hashtags.
+         */
+        patch: operations["update_hashtag_group"];
+        trace?: never;
+    };
     "/v1/w/{wid}/knowledge-gaps": {
         parameters: {
             query?: never;
@@ -923,7 +1036,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List Media Assets
+         * @description The media library (FR-PUB-13): images and videos uploaded for posts, newest first,
+         *     narrowed by type and by upload date (``since`` and ``until`` in the workspace time zone, both
+         *     included).
+         */
+        get: operations["list_media_assets"];
         put?: never;
         /**
          * Register Media Asset
@@ -1201,6 +1320,214 @@ export interface paths {
         patch: operations["update_scheduled_message"];
         trace?: never;
     };
+    "/v1/w/{wid}/scheduled-posts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Scheduled Posts
+         * @description The List view's tabs (UX-SCR-04; orders in ``ScheduledPostView``). ``account_ids`` keeps
+         *     posts with a target on any of those accounts.
+         */
+        get: operations["list_scheduled_posts"];
+        put?: never;
+        /**
+         * Create Scheduled Post
+         * @description New post (F-13): a draft, empty or pre-filled (a calendar click sends ``publish_at``).
+         */
+        post: operations["create_scheduled_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Update Scheduled Posts
+         * @description FR-PUB-14: shift, unschedule or delete several posts. Any id that is not this workspace's
+         *     makes the whole request 404 and changes nothing. Otherwise each post the action can't apply to
+         *     is reported in ``skipped`` and the rest are changed; 422 when ``shift`` comes without a
+         *     non-zero ``shift_minutes``.
+         */
+        post: operations["bulk_update_scheduled_posts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Scheduled Post
+         * @description The composer's post with its checklist (FR-PUB-10) and linked automations.
+         */
+        get: operations["get_scheduled_post"];
+        /**
+         * Replace Scheduled Post
+         * @description Replace the editable post (autosave, Update schedule, Edit and retry): the format is
+         *     derived from the assets again and the checklist recomputed. Rules in ``ScheduledPostDraft``.
+         */
+        put: operations["replace_scheduled_post"];
+        post?: never;
+        /**
+         * Delete Scheduled Post
+         * @description Delete a post in any status but publishing (409). A published post stays on Instagram and
+         *     in Posts; automations linked to it keep their post (C-043).
+         */
+        delete: operations["delete_scheduled_post"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Duplicate Scheduled Post
+         * @description FR-PUB-14: a new draft with the same accounts, captions, media and first comment, without a
+         *     time or automations. Any post can be duplicated.
+         */
+        post: operations["duplicate_scheduled_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/publish-now": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish Post Now
+         * @description F-13 Publish now: the Schedule checks without the 5-minute rule, ``publish_at`` = now, and
+         *     publish_target is enqueued for every target at once (202; scheduled_post.updated follows
+         *     each step). 402 quota_exceeded past scheduled_posts_monthly.
+         */
+        post: operations["publish_post_now"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/queue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue Post
+         * @description Add to queue (FR-PUB-09): schedule at the earliest time that is a free posting time of
+         *     every selected account (C-043), then as /schedule. 422 on ``targets.{i}`` when an account has
+         *     no posting times, or on ``targets`` when the accounts share no free time in the next 8
+         *     weeks.
+         */
+        post: operations["queue_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/reschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reschedule Post
+         * @description A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 5
+         *     minutes away (422 on ``publish_at``: "Pick a time at least 5 minutes from now."). A draft is
+         *     409 (drafts are scheduled with /schedule).
+         */
+        post: operations["reschedule_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Schedule Post
+         * @description F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and
+         *     ``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are
+         *     pending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly.
+         */
+        post: operations["schedule_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/unschedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unschedule Post
+         * @description Back to draft, keeping its time (FR-PUB-04). A draft is returned as it is.
+         */
+        post: operations["unschedule_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/social-accounts": {
         parameters: {
             query?: never;
@@ -1272,6 +1599,31 @@ export interface paths {
         head?: never;
         /** Update Social Account */
         patch: operations["update_social_account"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/{account_id}/posting-slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Posting Slots
+         * @description The account's weekly posting times and its next 5 free times (UX-SCR-14).
+         */
+        get: operations["get_posting_slots"];
+        /**
+         * Replace Posting Slots
+         * @description Replace the weekly times (FR-PUB-09). An account that can't publish (WhatsApp) is 409
+         *     capability_unavailable; a time with seconds is 422 on ``slots.{i}.local_time``.
+         */
+        put: operations["replace_posting_slots"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/social-accounts/{account_id}/resubscribe": {
@@ -2001,6 +2353,174 @@ export interface components {
             /** Ids */
             ids: string[];
         };
+        /**
+         * BulkScheduledPostRequest
+         * @description POST …/scheduled-posts/bulk (FR-PUB-14): ``shift`` moves each post by ``shift_minutes``
+         *     (required, not 0), ``unschedule`` returns scheduled posts to draft, ``delete`` deletes.
+         */
+        BulkScheduledPostRequest: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "shift" | "unschedule" | "delete";
+            /** Ids */
+            ids: string[];
+            /** Shift Minutes */
+            shift_minutes?: number | null;
+        };
+        /** BulkScheduledPostResult */
+        BulkScheduledPostResult: {
+            /** Deleted Ids */
+            deleted_ids: string[];
+            /** Skipped */
+            skipped: components["schemas"]["BulkSkipped"][];
+            /** Updated */
+            updated: components["schemas"]["ScheduledPostSummary"][];
+        };
+        /**
+         * BulkSkipped
+         * @description A post the action could not apply to, and why (``conflict``: publishing started or
+         *     published; ``validation_error``: the shifted time would be less than 5 minutes away).
+         */
+        BulkSkipped: {
+            /** Code */
+            code: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Message */
+            message: string;
+        };
+        /**
+         * Calendar
+         * @description GET …/calendar: the range's items, ``start`` to ``end`` (dates in the workspace time zone,
+         *     both included). Layers not asked for come back empty.
+         */
+        Calendar: {
+            /** Accounts */
+            accounts: components["schemas"]["CalendarAccount"][];
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Messages */
+            messages: components["schemas"]["CalendarMessage"][];
+            /** Posts */
+            posts: components["schemas"]["ScheduledPostSummary"][];
+            /** Slots */
+            slots: components["schemas"]["CalendarSlot"][];
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+            /** Timezone */
+            timezone: string;
+        };
+        /**
+         * CalendarAccount
+         * @description The right rail (UX-SCR-04): posts published in the last 24 hours against the account's
+         *     publishing limit, and its next free posting time (None without posting times).
+         */
+        CalendarAccount: {
+            /** Next Free At */
+            next_free_at?: string | null;
+            /** Published 24H */
+            published_24h: number;
+            /** Publishing Limit */
+            publishing_limit: number;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+        };
+        /**
+         * CalendarMessage
+         * @description A scheduled DM on the Messages layer (FR-SMS-02), with its account for the filter.
+         */
+        CalendarMessage: {
+            /** Attachment Asset Ids */
+            attachment_asset_ids: string[];
+            contact: components["schemas"]["ScheduledContact"];
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            error?: components["schemas"]["ErrorInfo"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
+            /**
+             * Send At
+             * Format: date-time
+             */
+            send_at: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "scheduled" | "sending" | "sent" | "failed" | "canceled" | "expired";
+            /** Text */
+            text: string;
+        };
+        /**
+         * CalendarSlot
+         * @description A free posting time (FR-PUB-09): a dashed queue slot in the Week view. A slot is free when
+         *     no scheduled or publishing post of the account is within 30 minutes of it.
+         */
+        CalendarSlot: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+        };
+        /**
+         * CaptionRequest
+         * @description POST …/ai/caption: ``write`` a caption from ``brief`` (what the post is about), or
+         *     ``improve`` the ``caption`` given (required then). Written in the workspace's brand voice;
+         *     costs AI credits (caption_generation).
+         */
+        CaptionRequest: {
+            /** Brief */
+            brief?: string | null;
+            /** Caption */
+            caption?: string | null;
+            /**
+             * Mode
+             * @default write
+             * @enum {string}
+             */
+            mode: "write" | "improve";
+        };
+        /** CaptionSuggestion */
+        CaptionSuggestion: {
+            /** Caption */
+            caption: string;
+        };
         /** Checklist */
         Checklist: {
             /** Completed */
@@ -2009,6 +2529,25 @@ export interface components {
             dismissed: boolean;
             /** Steps */
             steps: components["schemas"]["ChecklistStep"][];
+        };
+        /**
+         * ChecklistItem
+         * @description One line of the checklist (FR-PUB-10). A check that passes appears once; a failing check
+         *     appears once per failing element, ``field`` naming it (for example ``asset_ids.2``), so each
+         *     item links to its fix.
+         */
+        ChecklistItem: {
+            /** Field */
+            field?: string | null;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "publishing_limit" | "publish_at";
+            /** Message */
+            message: string;
+            /** Ok */
+            ok: boolean;
         };
         /** ChecklistStep */
         ChecklistStep: {
@@ -2435,6 +2974,91 @@ export interface components {
             message: string;
         };
         /**
+         * FirstCommentResult
+         * @description FR-PUB-11 for one account: the first comment is posted right after the post; a failure
+         *     leaves the post published and is shown on it.
+         */
+        FirstCommentResult: {
+            /** Error */
+            error?: string | null;
+            /** Platform Comment Id */
+            platform_comment_id?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "posted" | "failed";
+        };
+        /** HashtagGroup */
+        HashtagGroup: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Hashtags */
+            hashtags: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * HashtagGroupCreate
+         * @description A name unique in the workspace ignoring case (else 422 on ``name``); 1 to 30 hashtags
+         *     (duplicates collapse).
+         */
+        HashtagGroupCreate: {
+            /** Hashtags */
+            hashtags: string[];
+            /** Name */
+            name: string;
+        };
+        /**
+         * HashtagGroupList
+         * @description Every group of the workspace, by name.
+         */
+        HashtagGroupList: {
+            /** Items */
+            items: components["schemas"]["HashtagGroup"][];
+        };
+        /** HashtagGroupPatch */
+        HashtagGroupPatch: {
+            /** Hashtags */
+            hashtags?: string[] | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** HashtagSuggestion */
+        HashtagSuggestion: {
+            /** Hashtags */
+            hashtags: string[];
+        };
+        /**
+         * HashtagSuggestionRequest
+         * @description POST …/ai/hashtags: hashtags for the caption, leaving out those already in it and in
+         *     ``exclude``; costs AI credits (caption_generation).
+         */
+        HashtagSuggestionRequest: {
+            /** Caption */
+            caption: string;
+            /**
+             * Count
+             * @default 20
+             */
+            count: number;
+            /** Exclude */
+            exclude?: string[];
+        };
+        /**
          * InboxCounts
          * @description The Inbox nav badge (FR-INB-04) and view chips.
          */
@@ -2640,6 +3264,26 @@ export interface components {
             /** Url */
             url: string;
         };
+        /**
+         * LinkedAutomation
+         * @description A comment automation scoped to this post (FR-AUT-18, the composer's Automation step).
+         */
+        LinkedAutomation: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "active" | "paused";
+            /** Trigger */
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+        };
         /** MarkRead */
         MarkRead: {
             /**
@@ -2677,6 +3321,16 @@ export interface components {
              * @enum {string}
              */
             resource_type: "image" | "video" | "raw";
+        };
+        /**
+         * MediaAssetList
+         * @description Newest first.
+         */
+        MediaAssetList: {
+            /** Items */
+            items: components["schemas"]["MediaAssetOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
         };
         /** MediaAssetOut */
         MediaAssetOut: {
@@ -2936,6 +3590,35 @@ export interface components {
             range: "7d" | "30d";
         };
         /**
+         * PostAsset
+         * @description One image or video of the post (§5.10), in order. ``id`` is the media asset's id: the
+         *     composer sends these ids back, reordered, in ``asset_ids``.
+         */
+        PostAsset: {
+            /** Duration S */
+            duration_s?: number | null;
+            /** Height */
+            height?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Position */
+            position: number;
+            /**
+             * Resource Type
+             * @enum {string}
+             */
+            resource_type: "image" | "video";
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+            /** Url */
+            url: string;
+            /** Width */
+            width?: number | null;
+        };
+        /**
          * PostComparison
          * @description GET …/analytics/posts/{post_id}/compare (TR-AGT-05; agent-architecture §6 "Fair
          *     comparison"): the post against its account's earlier posts at the same age.
@@ -3143,6 +3826,49 @@ export interface components {
             /** Positive */
             positive: number;
         };
+        /** PostingSlot */
+        PostingSlot: {
+            /**
+             * Local Time
+             * Format: time
+             */
+            local_time: string;
+            /** Weekday */
+            weekday: number;
+        };
+        /** PostingSlotIn */
+        PostingSlotIn: {
+            /**
+             * Local Time
+             * Format: time
+             */
+            local_time: string;
+            /** Weekday */
+            weekday: number;
+        };
+        /** PostingSlots */
+        PostingSlots: {
+            /** Next Free At */
+            next_free_at: string[];
+            /** Slots */
+            slots: components["schemas"]["PostingSlot"][];
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Timezone */
+            timezone: string;
+        };
+        /**
+         * PostingSlotsUpdate
+         * @description PUT …/social-accounts/{id}/posting-slots replaces the account's weekly times (duplicates
+         *     collapse). Posts already scheduled keep their times.
+         */
+        PostingSlotsUpdate: {
+            /** Slots */
+            slots: components["schemas"]["PostingSlotIn"][];
+        };
         /** PrioritiesUpdate */
         PrioritiesUpdate: {
             /** Ordered Ids */
@@ -3280,6 +4006,18 @@ export interface components {
             /** Stored */
             stored: number;
         };
+        /**
+         * ScheduleRequest
+         * @description POST …/schedule and …/reschedule: at least 5 minutes from now (else 422 on
+         *     ``publish_at``).
+         */
+        ScheduleRequest: {
+            /**
+             * Publish At
+             * Format: date-time
+             */
+            publish_at: string;
+        };
         /** ScheduledContact */
         ScheduledContact: {
             /** Display Name */
@@ -3348,6 +4086,159 @@ export interface components {
             send_at?: string | null;
             /** Text */
             text?: string | null;
+        };
+        /**
+         * ScheduledPost
+         * @description GET …/scheduled-posts/{id} (§5.10 ScheduledPost, UX-SCR-13): the composer's post.
+         */
+        ScheduledPost: {
+            /** Asset Count */
+            asset_count: number;
+            /** Assets */
+            assets: components["schemas"]["PostAsset"][];
+            /** Automations */
+            automations: components["schemas"]["LinkedAutomation"][];
+            /** Caption */
+            caption: string;
+            /** Checklist */
+            checklist: components["schemas"]["ChecklistItem"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By User Id */
+            created_by_user_id?: string | null;
+            /** First Comment */
+            first_comment?: string | null;
+            /** Format */
+            format?: ("image" | "carousel" | "reel") | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Publish At */
+            publish_at?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /** Ready */
+            ready: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "scheduled" | "publishing" | "published" | "partially_published" | "failed" | "canceled";
+            /** Targets */
+            targets: components["schemas"]["ScheduledPostTarget"][];
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ScheduledPostDraft
+         * @description POST …/scheduled-posts (a new draft) and PUT …/scheduled-posts/{id} (replace the whole
+         *     editable post; the composer autosaves). Everything may be empty on a draft: the checklist says
+         *     what is missing. Accounts must be this workspace's (else 422 on ``targets.{i}``), assets this
+         *     workspace's post uploads (else 422 on ``asset_ids.{i}``).
+         *
+         *     On a scheduled post (Update schedule) the saved result must still pass the checklist and
+         *     ``publish_at`` must be set and at least 5 minutes away (else 422 with every failing field);
+         *     its targets stay pending.
+         */
+        ScheduledPostDraft: {
+            /** Asset Ids */
+            asset_ids?: string[];
+            /**
+             * Caption
+             * @default
+             */
+            caption: string;
+            /** First Comment */
+            first_comment?: string | null;
+            /** Publish At */
+            publish_at?: string | null;
+            /** Targets */
+            targets?: components["schemas"]["TargetIn"][];
+        };
+        /** ScheduledPostList */
+        ScheduledPostList: {
+            /** Items */
+            items: components["schemas"]["ScheduledPostSummary"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * ScheduledPostSummary
+         * @description A post in the List view, on the calendar and in bulk results (UX-SCR-04).
+         */
+        ScheduledPostSummary: {
+            /** Asset Count */
+            asset_count: number;
+            /** Caption */
+            caption: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Format */
+            format?: ("image" | "carousel" | "reel") | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Publish At */
+            publish_at?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "scheduled" | "publishing" | "published" | "partially_published" | "failed" | "canceled";
+            /** Targets */
+            targets: components["schemas"]["ScheduledPostTarget"][];
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * ScheduledPostTarget
+         * @description One account the post publishes to (§5.10 ScheduledPost.targets).
+         */
+        ScheduledPostTarget: {
+            /** Caption Override */
+            caption_override?: string | null;
+            error?: components["schemas"]["ErrorInfo"] | null;
+            first_comment?: components["schemas"]["FirstCommentResult"] | null;
+            /** Permalink */
+            permalink?: string | null;
+            /** Platform Media Id */
+            platform_media_id?: string | null;
+            /** Post Id */
+            post_id?: string | null;
+            /** Published At */
+            published_at?: string | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "publishing" | "container_created" | "published" | "failed" | "canceled";
         };
         /**
          * SendMessage
@@ -3534,6 +4425,19 @@ export interface components {
             id: string;
             /** Title */
             title: string;
+        };
+        /**
+         * TargetIn
+         * @description An account to publish to, with an optional caption for it alone.
+         */
+        TargetIn: {
+            /** Caption Override */
+            caption_override?: string | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
         };
         /** TemplateInfo */
         TemplateInfo: {
@@ -4022,6 +4926,94 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AiSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    generate_caption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CaptionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptionSuggestion"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    suggest_hashtags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HashtagSuggestionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HashtagSuggestion"];
                 };
             };
             /** @description Validation error */
@@ -4902,6 +5894,51 @@ export interface operations {
             };
         };
     };
+    get_calendar: {
+        parameters: {
+            query: {
+                from: string;
+                to: string;
+                account_ids?: string[] | null;
+                layers?: ("posts" | "messages" | "slots")[] | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Calendar"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     delete_comment: {
         parameters: {
             query?: never;
@@ -5755,6 +6792,174 @@ export interface operations {
             };
         };
     };
+    list_hashtag_groups: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HashtagGroupList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_hashtag_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HashtagGroupCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HashtagGroup"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_hashtag_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hashtag_group_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_hashtag_group: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                hashtag_group_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HashtagGroupPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HashtagGroup"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_knowledge_gaps: {
         parameters: {
             query?: {
@@ -6069,6 +7274,52 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KnowledgeTestResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_media_assets: {
+        parameters: {
+            query?: {
+                type?: ("image" | "video") | null;
+                since?: string | null;
+                until?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAssetList"];
                 };
             };
             /** @description Validation error */
@@ -6732,6 +7983,518 @@ export interface operations {
             };
         };
     };
+    list_scheduled_posts: {
+        parameters: {
+            query?: {
+                view?: "scheduled" | "drafts" | "published" | "failed";
+                account_ids?: string[] | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPostList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_scheduled_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduledPostDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    bulk_update_scheduled_posts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkScheduledPostRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkScheduledPostResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_scheduled_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    replace_scheduled_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduledPostDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_scheduled_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    duplicate_scheduled_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    publish_post_now: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    queue_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reschedule_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    schedule_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    unschedule_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                scheduled_post_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduledPost"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_social_accounts: {
         parameters: {
             query?: never;
@@ -6920,6 +8683,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_posting_slots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingSlots"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    replace_posting_slots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PostingSlotsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingSlots"];
                 };
             };
             /** @description Validation error */

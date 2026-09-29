@@ -188,9 +188,12 @@ class AutomationPost(IdMixin, TimestampMixin, TenantScoped, Base):
     media_item_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("media_items.id", ondelete="CASCADE")
     )
-    # scheduled_posts arrives in P7; its FK is added then. media_item_id is filled when the
-    # scheduled post publishes (FR-AUT-18).
-    scheduled_post_id: Mapped[uuid.UUID | None] = mapped_column()
+    # media_item_id is filled when the scheduled post publishes (FR-AUT-18). Deleting the
+    # scheduled post deletes the link, so a published post's delete clears scheduled_post_id on
+    # links that already have their media item first (C-043).
+    scheduled_post_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("scheduled_posts.id", ondelete="CASCADE")
+    )
 
     __table_args__ = (
         Index(
@@ -205,6 +208,13 @@ class AutomationPost(IdMixin, TimestampMixin, TenantScoped, Base):
             "automation_id",
             "scheduled_post_id",
             unique=True,
+            postgresql_where=sql("scheduled_post_id IS NOT NULL"),
+        ),
+        # A scheduled post's automations: the composer, publishing (link_scheduled_post) and the
+        # cascade when the post is deleted.
+        Index(
+            "ix_automation_posts_scheduled_post_id",
+            "scheduled_post_id",
             postgresql_where=sql("scheduled_post_id IS NOT NULL"),
         ),
         CheckConstraint(

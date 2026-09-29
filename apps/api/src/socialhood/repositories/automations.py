@@ -25,6 +25,7 @@ from socialhood.models.automations import (
 )
 from socialhood.models.connections import AccountStatus, Platform, SocialAccount
 from socialhood.models.media import MediaAsset, MediaItem, MediaType
+from socialhood.models.publishing import ScheduledPost
 from socialhood.repositories.base import scoped_delete
 
 ACTIVE = AutomationStatus.ACTIVE
@@ -247,6 +248,16 @@ async def media_items(session: AsyncSession, ids: Sequence[uuid.UUID]) -> list[M
     if not ids:
         return []
     return list((await session.scalars(select(MediaItem).where(MediaItem.id.in_(ids)))).all())
+
+
+async def existing_scheduled_posts(
+    session: AsyncSession, ids: Sequence[uuid.UUID]
+) -> set[uuid.UUID]:
+    """Which of the ids are this workspace's scheduled posts."""
+    if not ids:
+        return set()
+    rows = await session.scalars(select(ScheduledPost.id).where(ScheduledPost.id.in_(ids)))
+    return set(rows.all())
 
 
 async def get_media_item(session: AsyncSession, media_item_id: uuid.UUID) -> MediaItem | None:

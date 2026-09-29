@@ -380,3 +380,49 @@ The first real comment analysis read the comments "Link" (the keyword of a comme
 automation) as spam. With auto-hide on, that would hide the very comments automations answer. A
 comment that triggered an automation (any run result) is stored with is_spam false and a "spam"
 intent becomes "other", decided in code after the model answers, so it is never auto-hidden.
+
+## C-043 · P7 foundation decisions (contract)
+- A draft's accounts are its scheduled_post_targets rows, `pending` from the start (§3.6 has
+  Schedule create them); the dispatcher claims only pending targets of due posts that are
+  scheduled or publishing. A post has one `publish_at` (§5.7), so Add to queue takes the earliest
+  time that is a free posting time of every selected account within 8 weeks (FR-PUB-09 says "for
+  each selected account"), else 422. A draft may keep a time (a calendar click; drawn muted);
+  unschedule keeps it.
+- Added to §5.7: `scheduled_posts.counted_at`, so a post counts once per billing period against
+  scheduled_posts_monthly (unschedule and schedule again costs nothing). Checks: format, status,
+  "schedulable" (past draft needs a time and a format), caption, override and first-comment
+  lengths, asset position 0–9, at most 10 carousel children, a published target has its media id,
+  posting times in whole minutes, hashtag groups with 1–30 hashtags stored lowercase without "#".
+  Indexes: (workspace_id, publish_at) for the calendar, (publish_at) WHERE scheduled or publishing
+  for the dispatcher, targets (social_account_id, status), assets (media_asset_id),
+  automation_posts (scheduled_post_id).
+- media_items.published_target_id gets a unique FK ON DELETE SET NULL (§5.6 names no FK);
+  automation_posts.scheduled_post_id gets §5.6's FK ON DELETE CASCADE, so deleting a published post
+  must first clear scheduled_post_id on links that already have their media item (T7.1), or the
+  automation would lose its post. Migration 0011 drops the orphan references P4 could store.
+  Automation PUT now checks that scheduled_post_ids are this workspace's (422
+  `scheduled_post_ids`): the FK alone would accept another workspace's post.
+- §5.10 ScheduledPost is extended: first_comment, published_at, thumbnail_url, asset_count,
+  created and updated times; targets with platform_media_id, post_id (the media item), published_at
+  and the first-comment result; linked automations; the checklist (FR-PUB-10) with `ready`.
+  `assets[].id` is the media asset's id. Lists, the calendar and bulk results return
+  ScheduledPostSummary (no checklist). Checklist items and 422 errors name the same fields
+  (`targets.{i}`, `asset_ids.{i}`, `caption`, `first_comment`, `publish_at`).
+- Lifecycle: editable (PUT, unschedule, reschedule, delete) while draft or scheduled, 409 once
+  publishing; PUT on a failed or canceled post makes it a draft again (Edit and retry); PUT on a
+  scheduled post (Update schedule) re-checks everything including the time; reschedule is for
+  scheduled posts only; publish-now answers 202; duplicate copies without the time or automations.
+  Bulk: any id not in the workspace is 404 for the whole request; the rest report `skipped`.
+- Calendar: `from` and `to` are dates in the workspace time zone, both included, at most 42 days;
+  layers default to all; slots are free future times only; an `accounts` block feeds the right rail
+  (published in 24 h, limit, next free time). Posting times answer with the next 5 free times.
+  The media library lists post uploads only. AI caption and hashtags store nothing.
+- Adapter: one method per container type (image, Reel, carousel item, carousel), status, publish
+  (returns the media id), get_published_media (permalink), find_published_media (a lost publish
+  answer), quota, post_comment. Creating containers may be retried; publish and comment are writes
+  (delivery_unknown). The 24 h limit falls back to 100 when the quota can't be read (T0.9 to
+  confirm). The publish dispatcher is its own task, dispatch_due_posts (every 30 s), with
+  sweep_stuck_posts, not TR-JOB-03's shared dispatch_due.
+- Routes sit in api/v1/publishing.py (T7.1), api/v1/captions.py (T7.4) and api/v1/media.py (the
+  library, T7.1); adapters in platforms/*/publishing.py (T7.2); jobs in jobs/tasks/publishing.py
+  (T7.3), so the four tasks touch different files.

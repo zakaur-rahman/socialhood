@@ -6,7 +6,8 @@ WhatsApp Business Account. Calls use the business token from Embedded Signup.
 
 from __future__ import annotations
 
-from datetime import date
+from collections.abc import Sequence
+from datetime import date, datetime
 from typing import Any
 
 from socialhood.models.connections import SocialAccount
@@ -15,6 +16,8 @@ from socialhood.platforms.base import (
     AccountInsights,
     CommentPage,
     ContactProfile,
+    ContainerMedia,
+    ContainerStatus,
     MediaCounts,
     MediaDownload,
     MediaInsights,
@@ -23,6 +26,7 @@ from socialhood.platforms.base import (
     OutboundTemplate,
     PlatformMedia,
     PlatformThread,
+    PublishingQuota,
     SendResult,
     TokenGrant,
 )
@@ -50,6 +54,7 @@ MEDIA_TYPES = {
     "file": "document",
     "sticker": "sticker",
 }
+NO_PUBLISHING = "WhatsApp numbers can't publish posts"
 TEMPLATE_FIELDS = "name,language,status,category,components"
 TEMPLATE_PAGE = 100
 TEMPLATE_MAX_PAGES = 5
@@ -274,3 +279,52 @@ class WhatsAppAdapter:
         self, acct: SocialAccount, day: date, *, tz: str = "UTC"
     ) -> AccountInsights:
         raise PlatformError("capability_unavailable", message="WhatsApp has no account insights")
+
+    # ---- P7: WhatsApp numbers don't publish posts (TR-PL-11)
+
+    async def get_publishing_quota(self, acct: SocialAccount) -> PublishingQuota:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def create_image_container(
+        self, acct: SocialAccount, *, image_url: str, caption: str
+    ) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def create_reel_container(
+        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+    ) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def create_carousel_container(
+        self, acct: SocialAccount, *, children: Sequence[str], caption: str
+    ) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def get_container_status(
+        self, acct: SocialAccount, container_ref: str
+    ) -> ContainerStatus:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def get_published_media(
+        self, acct: SocialAccount, media_ref: str
+    ) -> PlatformMedia | None:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def find_published_media(
+        self,
+        acct: SocialAccount,
+        container_ref: str,
+        *,
+        caption: str,
+        published_after: datetime,
+    ) -> PlatformMedia | None:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:
+        raise PlatformError("capability_unavailable", message="WhatsApp has no comments")

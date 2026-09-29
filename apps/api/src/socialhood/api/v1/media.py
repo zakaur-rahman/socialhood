@@ -1,10 +1,19 @@
 """Media uploads (T3.7; TR-MED-01, TR-MED-02): a signature for a direct browser upload to
-Cloudinary, then registration of the uploaded asset after checking its folder and limits."""
+Cloudinary, then registration of the uploaded asset after checking its folder and limits. The
+media library (FR-PUB-13) lists the uploads for posts.
+
+The library route is the P7 contract; T7.1 implements its body and removes the ``openapi_extra``
+marker so the tenancy suite covers the route.
+"""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Request
+from datetime import date
+from typing import Annotated, Literal
 
+from fastapi import APIRouter, Query, Request
+
+from socialhood.api.v1.ai import pending
 from socialhood.auth.deps import AnyMember, Session
 from socialhood.media.cloudinary import Cloudinary
 from socialhood.schemas.inbox import (
@@ -13,6 +22,7 @@ from socialhood.schemas.inbox import (
     UploadSignature,
     UploadSignatureRequest,
 )
+from socialhood.schemas.publishing import MediaAssetList
 from socialhood.services import media_assets
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["media"])
@@ -50,3 +60,19 @@ async def register_media_asset(
         resource_type=body.resource_type,
     )
     return media_assets.asset_out(asset)
+
+
+@router.get("/media-assets", operation_id="list_media_assets", openapi_extra=pending("T7.1"))
+async def list_media_assets(
+    ctx: AnyMember,
+    session: Session,
+    asset_type: Annotated[Literal["image", "video"] | None, Query(alias="type")] = None,
+    since: Annotated[date | None, Query()] = None,
+    until: Annotated[date | None, Query()] = None,
+    cursor: Annotated[str | None, Query(max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 40,
+) -> MediaAssetList:
+    """The media library (FR-PUB-13): images and videos uploaded for posts, newest first,
+    narrowed by type and by upload date (``since`` and ``until`` in the workspace time zone, both
+    included)."""
+    raise NotImplementedError("T7.1")

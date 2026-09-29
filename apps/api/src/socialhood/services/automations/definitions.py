@@ -269,7 +269,8 @@ def _typed_keywords(keywords: Sequence[str]) -> tuple[list[Keyword], list[FieldE
 async def _check_references(
     session: AsyncSession, body: AutomationDefinition
 ) -> tuple[SocialAccount | None, dict[uuid.UUID, MediaItem], list[FieldError]]:
-    """The account, posts and image the definition names must be this workspace's."""
+    """The account, posts, scheduled posts and image the definition names must be this
+    workspace's."""
     errors: list[FieldError] = []
     account = None
     if body.social_account_id is not None:
@@ -280,6 +281,13 @@ async def _check_references(
     items = {item.id: item for item in await repo.media_items(session, wanted)}
     if len(items) != len(wanted):
         errors.append(FieldError("media_item_ids", "A post wasn't found. Choose it again."))
+    scheduled = (
+        list(dict.fromkeys(body.scheduled_post_ids)) if body.post_scope == "selected" else []
+    )
+    if len(await repo.existing_scheduled_posts(session, scheduled)) != len(scheduled):
+        errors.append(
+            FieldError("scheduled_post_ids", "A scheduled post wasn't found. Choose it again.")
+        )
     if body.message_media_asset_id is not None:
         asset = await repo.get_asset(session, body.message_media_asset_id)
         if asset is None:

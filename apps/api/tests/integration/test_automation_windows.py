@@ -2,7 +2,7 @@
 
 Done when: one past its end time stops and notifies; a next-post automation links itself to the
 post published after it was activated; an automation scoped to a scheduled post gets its media
-item when the post publishes (the scheduled posts table arrives in P7, so a made-up id stands in).
+item when the post publishes.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from tests.support.automation_api import Ws, workspace
 from tests.support.automations import make_automation, make_media_item
 from tests.support.inbox import make_account, make_workspace
 from tests.support.ingest import rows, sessions
+from tests.support.publishing import make_scheduled_post
 
 
 @pytest.fixture
@@ -238,7 +239,13 @@ async def test_post_sync_links_the_earliest_new_post(
 async def test_a_scheduled_post_automation_gets_its_post_when_it_publishes(
     ws: Ws, engine: AsyncEngine
 ) -> None:
-    scheduled_post_id = str(uuid.uuid4())  # scheduled_posts arrives in P7
+    scheduled_post_id = str(
+        (
+            await make_scheduled_post(
+                engine, workspace_id=ws.wid, account_ids=[ws.account_id], status="scheduled"
+            )
+        ).id
+    )
     draft = await ws.draft(
         trigger="comment_keyword", post_scope="selected", scheduled_post_ids=[scheduled_post_id]
     )
@@ -290,3 +297,28 @@ async def test_a_scheduled_post_automation_gets_its_post_when_it_publishes(
     )
     kept = await ws.ok("PUT", f"/automations/{draft['id']}", json=body)
     assert kept["posts"][0]["media_item_id"] == str(item.id)
+
+
+async def test_a_scheduled_post_must_be_this_workspaces(
+    ws: Ws, engine: AsyncEngine, client: httpx.AsyncClient, clerk: Clerk
+) -> None:
+    other = await workspace(client, clerk, email="other@example.com")
+    theirs = await make_scheduled_post(
+        engine, workspace_id=other.wid, account_ids=[other.account_id]
+    )
+    created = await ws.ok("POST", "/automations", 201, json={"name": "Draft"})
+    for scheduled_post_id in (str(uuid.uuid4()), str(theirs.id)):
+        body = ws.definition(
+            trigger="comment_keyword",
+            post_scope="selected",
+            scheduled_post_ids=[scheduled_post_id],
+        )
+        response = await ws.call("PUT", f"/automations/{created['id']}", json=body)
+        assert response.status_code == 422, response.text
+        assert response.json()["errors"] == [
+            {
+                "field": "scheduled_post_ids",
+                "message": "A scheduled post wasn't found. Choose it again.",
+            }
+        ]
+    assert str(created["id"]) not in await links(engine)
