@@ -4,6 +4,28 @@
  */
 
 export interface paths {
+    "/v1/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Billing Plans
+         * @description Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their §1.7
+         *     entitlements and Dodo prices (cached 1 h), for the /pricing page and the upgrade dialog's
+         *     comparison. The same numbers as GET …/billing.
+         */
+        get: operations["list_billing_plans"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/data-deletion/{code}": {
         parameters: {
             query?: never;
@@ -15,6 +37,30 @@ export interface paths {
         get: operations["get_data_deletion_status"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/digest/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unsubscribe Digest
+         * @description Public, no sign-in (FR-NOT-04 one click): the signed token (notify/unsubscribe.py) turns
+         *     the weekly digest off for its member and workspace. Also the target of the email's
+         *     List-Unsubscribe-Post (RFC 8058), whose form body is ignored. 404 not_found for a token that
+         *     doesn't verify or a membership that no longer exists. Never a GET, so link scanners can't
+         *     unsubscribe anyone: the email links to the web's /unsubscribe page, which posts here.
+         */
+        post: operations["unsubscribe_digest"];
         delete?: never;
         options?: never;
         head?: never;
@@ -33,6 +79,53 @@ export interface paths {
          * @description The current user, provisioned on first sight (TR-AUTH-03), with their workspaces.
          */
         get: operations["get_me"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/push-subscriptions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Push Subscription
+         * @description Register this browser (F-19), or refresh it: the endpoint is unique, so registering it
+         *     again updates its keys, clears a failure count or disabled state, and gives it to the caller.
+         */
+        post: operations["create_push_subscription"];
+        /**
+         * Delete Push Subscription
+         * @description Remove this browser's subscription (push turned off). Only the caller's own row is
+         *     removed; an unknown endpoint, or another user's, is 204 all the same and changes nothing.
+         */
+        delete: operations["delete_push_subscription"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/push/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Push Config
+         * @description The VAPID public key the browser subscribes with (TR-FE-09); ``enabled`` is false when
+         *     the API has no VAPID keys, and the page shows push as unavailable.
+         */
+        get: operations["get_push_config"];
         put?: never;
         post?: never;
         delete?: never;
@@ -665,12 +758,100 @@ export interface paths {
         };
         /**
          * Get Billing
-         * @description Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters) and
-         *     trial eligibility (TR-BIL-05). Prices are empty until P8.
+         * @description Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters),
+         *     trial eligibility (TR-BIL-05) and, from T8.2, the paid plans' prices from Dodo (cached 1 h;
+         *     empty when Dodo can't be reached).
          */
         get: operations["get_billing"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/billing/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Billing
+         * @description FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's
+         *     cancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays
+         *     until the period ends (subscription.cancelled, then expired). 409 on the Free plan.
+         */
+        post: operations["cancel_billing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Billing Checkout
+         * @description F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to
+         *     /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial
+         *     only when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan
+         *     (active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo
+         *     isn't configured or doesn't answer.
+         */
+        post: operations["create_billing_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/billing/portal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Billing Portal
+         * @description FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened
+         *     in a new tab. 409 conflict when the workspace has never had a Dodo customer.
+         */
+        post: operations["create_billing_portal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/billing/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Billing
+         * @description Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``.
+         */
+        post: operations["resume_billing"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1337,6 +1518,30 @@ export interface paths {
          *     returned as it is, so a second click never sends it twice.
          */
         post: operations["retry_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Notification Preferences
+         * @description The signed-in member's weekly digest switch and push switches in this workspace.
+         */
+        get: operations["get_notification_preferences"];
+        /**
+         * Update Notification Preferences
+         * @description Replace the member's preferences (their own only; any role).
+         */
+        put: operations["update_notification_preferences"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3223,6 +3428,29 @@ export interface components {
             key: "connect_account" | "add_knowledge" | "choose_ai_mode" | "create_automation";
         };
         /**
+         * CheckoutRequest
+         * @description POST …/billing/checkout (F-15). Max is R2: "max" is refused with 422 until then.
+         */
+        CheckoutRequest: {
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "pro" | "max";
+        };
+        /**
+         * CheckoutSession
+         * @description Where to send the browser: Dodo's hosted checkout. Coming back to
+         *     /w/{slug}/settings/billing?checkout=return changes nothing by itself; the plan changes when
+         *     Dodo's signed webhook arrives (FR-BIL-02).
+         */
+        CheckoutSession: {
+            /** Checkout Url */
+            checkout_url: string;
+            /** Trial */
+            trial: boolean;
+        };
+        /**
          * Comment
          * @description A comment row (UX-SCR-05). Replies to other comments carry the parent's platform id.
          */
@@ -3656,6 +3884,17 @@ export interface components {
              * @enum {string}
              */
             status: "received" | "processing" | "completed";
+        };
+        /**
+         * DigestUnsubscribed
+         * @description POST /v1/digest/unsubscribe?token=…: the digest is off for that member of that workspace
+         *     (idempotent). The page names the workspace and links to Settings → Notifications.
+         */
+        DigestUnsubscribed: {
+            /** Email Digest */
+            email_digest: boolean;
+            /** Workspace Name */
+            workspace_name: string;
         };
         /**
          * EmbeddedSignup
@@ -4271,6 +4510,17 @@ export interface components {
             /** Type */
             type: string;
         };
+        /**
+         * NotificationPreferences
+         * @description GET and PUT …/notification-preferences: the signed-in member's settings in this
+         *     workspace (workspace_members.notification_prefs). PUT sends the whole object and gets it
+         *     back. Fields are required both ways, so the request and response share one schema.
+         */
+        NotificationPreferences: {
+            /** Email Digest */
+            email_digest: boolean;
+            push: components["schemas"]["PushPreferences"];
+        };
         /** OverlapWarning */
         OverlapWarning: {
             /**
@@ -4298,6 +4548,38 @@ export interface components {
              * @enum {string}
              */
             range: "7d" | "30d";
+        };
+        /** PlanList */
+        PlanList: {
+            /** Items */
+            items: components["schemas"]["PlanOffer"][];
+        };
+        /**
+         * PlanOffer
+         * @description One plan for the pricing page and the upgrade dialog: its entitlements (billing/plans.py)
+         *     and, for a paid plan, its price from Dodo (cached 1 h; null when Dodo can't be reached).
+         */
+        PlanOffer: {
+            /** Available */
+            available: boolean;
+            /** Entitlements */
+            entitlements: components["schemas"]["EntitlementValue"][];
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "free" | "pro" | "max";
+            price?: components["schemas"]["BillingPrice"] | null;
+            /** Trial Days */
+            trial_days: number;
+        };
+        /**
+         * PortalSession
+         * @description Dodo's customer portal (payment method, invoices; FR-BIL-04), opened in a new tab.
+         */
+        PortalSession: {
+            /** Portal Url */
+            portal_url: string;
         };
         /**
          * PostAsset
@@ -4605,6 +4887,8 @@ export interface components {
             code: string;
             /** Detail */
             detail?: string;
+            /** Entitlement */
+            entitlement?: string;
             /** Errors */
             errors?: {
                 /** Field */
@@ -4612,6 +4896,8 @@ export interface components {
                 /** Message */
                 message: string;
             }[];
+            /** Limit */
+            limit?: number | null;
             /** Request Id */
             request_id?: string | null;
             /** Status */
@@ -4620,6 +4906,72 @@ export interface components {
             title: string;
             /** Type */
             type: string;
+        };
+        /**
+         * PushConfig
+         * @description GET /v1/push/config: what the browser needs to subscribe. The web reads the VAPID public
+         *     key here rather than from a build-time variable, so one deploy serves any key.
+         */
+        PushConfig: {
+            /** Enabled */
+            enabled: boolean;
+            /** Vapid Public Key */
+            vapid_public_key?: string | null;
+        };
+        /**
+         * PushDevice
+         * @description A registered browser; never its keys.
+         */
+        PushDevice: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** User Agent */
+            user_agent?: string | null;
+        };
+        /** PushKeys */
+        PushKeys: {
+            /** Auth */
+            auth: string;
+            /** P256Dh */
+            p256dh: string;
+        };
+        /**
+         * PushPreferences
+         * @description One switch per push event (models/notifications.PushEvent); all on by default
+         *     (models/identity.DEFAULT_NOTIFICATION_PREFS).
+         */
+        PushPreferences: {
+            /** Account */
+            account: boolean;
+            /** Needs You */
+            needs_you: boolean;
+            /** New Lead */
+            new_lead: boolean;
+            /** Window Closing */
+            window_closing: boolean;
+        };
+        /**
+         * PushSubscriptionCreate
+         * @description POST /v1/me/push-subscriptions: the browser's ``PushSubscription.toJSON()`` (endpoint and
+         *     keys) plus the user agent, shown as the device name. Registering an endpoint again updates it
+         *     (and moves it to the caller if another user had it: the browser now belongs to them).
+         */
+        PushSubscriptionCreate: {
+            /** Endpoint */
+            endpoint: string;
+            keys: components["schemas"]["PushKeys"];
+            /** User Agent */
+            user_agent?: string | null;
         };
         /**
          * QueueInfo
@@ -5420,6 +5772,35 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_billing_plans: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanList"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_data_deletion_status: {
         parameters: {
             query?: never;
@@ -5460,6 +5841,46 @@ export interface operations {
             };
         };
     };
+    unsubscribe_digest: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DigestUnsubscribed"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_me: {
         parameters: {
             query?: never;
@@ -5476,6 +5897,115 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_push_subscription: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushSubscriptionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushDevice"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_push_subscription: {
+        parameters: {
+            query: {
+                endpoint: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_push_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushConfig"];
                 };
             };
             /** @description Problem details (application/problem+json) */
@@ -7036,6 +7566,170 @@ export interface operations {
         };
     };
     get_billing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingState"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_billing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingState"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_billing_checkout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CheckoutRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CheckoutSession"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_billing_portal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PortalSession"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resume_billing: {
         parameters: {
             query?: never;
             header?: never;
@@ -8756,6 +9450,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_notification_preferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferences"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_notification_preferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationPreferences"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferences"];
                 };
             };
             /** @description Validation error */

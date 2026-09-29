@@ -23,6 +23,7 @@ async def store(
     event_type: str,
     payload: dict[str, Any],
     platform_account_id: str | None = None,
+    occurred_at: datetime | None = None,
 ) -> uuid.UUID | None:
     """Insert once per (provider, dedupe_key); return the new id, or None for a re-delivery."""
     statement = (
@@ -33,6 +34,7 @@ async def store(
             event_type=event_type,
             payload=payload,
             platform_account_id=platform_account_id,
+            occurred_at=occurred_at,
         )
         .on_conflict_do_nothing(index_elements=[WebhookEvent.provider, WebhookEvent.dedupe_key])
         .returning(WebhookEvent.id)

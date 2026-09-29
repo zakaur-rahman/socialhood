@@ -9,7 +9,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from socialhood.errors import STATUS_TO_CODE, ApiError, FieldError, problem_body
+from socialhood.errors import STATUS_TO_CODE, ApiError, FieldError, PlanLimit, problem_body
 from socialhood.observability.request_id import current_request_id
 
 PROBLEM_JSON = "application/problem+json"
@@ -21,8 +21,15 @@ def problem_response(
     detail: str | None = None,
     errors: list[FieldError] | None = None,
     headers: dict[str, str] | None = None,
+    plan_limit: PlanLimit | None = None,
 ) -> JSONResponse:
-    body = problem_body(code, detail=detail, errors=errors, request_id=current_request_id.get())
+    body = problem_body(
+        code,
+        detail=detail,
+        errors=errors,
+        request_id=current_request_id.get(),
+        plan_limit=plan_limit,
+    )
     return JSONResponse(body, status_code=body["status"], media_type=PROBLEM_JSON, headers=headers)
 
 
@@ -35,7 +42,13 @@ def _field_name(loc: tuple[Any, ...]) -> str:
 
 async def _api_error(request: Request, exc: Exception) -> JSONResponse:
     assert isinstance(exc, ApiError)
-    return problem_response(exc.code, detail=exc.detail, errors=exc.errors, headers=exc.headers)
+    return problem_response(
+        exc.code,
+        detail=exc.detail,
+        errors=exc.errors,
+        headers=exc.headers,
+        plan_limit=exc.plan_limit,
+    )
 
 
 async def _validation_error(request: Request, exc: Exception) -> JSONResponse:

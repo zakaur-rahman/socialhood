@@ -3773,6 +3773,44 @@
         "title": "ChecklistStep",
         "type": "object"
       },
+      "CheckoutRequest": {
+        "additionalProperties": false,
+        "description": "POST \u2026/billing/checkout (F-15). Max is R2: \"max\" is refused with 422 until then.",
+        "properties": {
+          "plan": {
+            "enum": [
+              "pro",
+              "max"
+            ],
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan"
+        ],
+        "title": "CheckoutRequest",
+        "type": "object"
+      },
+      "CheckoutSession": {
+        "description": "Where to send the browser: Dodo's hosted checkout. Coming back to\n/w/{slug}/settings/billing?checkout=return changes nothing by itself; the plan changes when\nDodo's signed webhook arrives (FR-BIL-02).",
+        "properties": {
+          "checkout_url": {
+            "title": "Checkout Url",
+            "type": "string"
+          },
+          "trial": {
+            "title": "Trial",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "checkout_url",
+          "trial"
+        ],
+        "title": "CheckoutSession",
+        "type": "object"
+      },
       "Comment": {
         "description": "A comment row (UX-SCR-05). Replies to other comments carry the parent's platform id.",
         "properties": {
@@ -5060,6 +5098,25 @@
           "created_at"
         ],
         "title": "DataDeletionStatus",
+        "type": "object"
+      },
+      "DigestUnsubscribed": {
+        "description": "POST /v1/digest/unsubscribe?token=\u2026: the digest is off for that member of that workspace\n(idempotent). The page names the workspace and links to Settings \u2192 Notifications.",
+        "properties": {
+          "email_digest": {
+            "title": "Email Digest",
+            "type": "boolean"
+          },
+          "workspace_name": {
+            "title": "Workspace Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_name",
+          "email_digest"
+        ],
+        "title": "DigestUnsubscribed",
         "type": "object"
       },
       "EmbeddedSignup": {
@@ -6867,6 +6924,25 @@
         "title": "NotificationOut",
         "type": "object"
       },
+      "NotificationPreferences": {
+        "additionalProperties": false,
+        "description": "GET and PUT \u2026/notification-preferences: the signed-in member's settings in this\nworkspace (workspace_members.notification_prefs). PUT sends the whole object and gets it\nback. Fields are required both ways, so the request and response share one schema.",
+        "properties": {
+          "email_digest": {
+            "title": "Email Digest",
+            "type": "boolean"
+          },
+          "push": {
+            "$ref": "#/components/schemas/PushPreferences"
+          }
+        },
+        "required": [
+          "email_digest",
+          "push"
+        ],
+        "title": "NotificationPreferences",
+        "type": "object"
+      },
       "OverlapWarning": {
         "properties": {
           "automation_id": {
@@ -6920,6 +6996,84 @@
           "checklist"
         ],
         "title": "Overview",
+        "type": "object"
+      },
+      "PlanList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlanOffer"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PlanList",
+        "type": "object"
+      },
+      "PlanOffer": {
+        "description": "One plan for the pricing page and the upgrade dialog: its entitlements (billing/plans.py)\nand, for a paid plan, its price from Dodo (cached 1 h; null when Dodo can't be reached).",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "entitlements": {
+            "items": {
+              "$ref": "#/components/schemas/EntitlementValue"
+            },
+            "title": "Entitlements",
+            "type": "array"
+          },
+          "plan": {
+            "enum": [
+              "free",
+              "pro",
+              "max"
+            ],
+            "title": "Plan",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BillingPrice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "trial_days": {
+            "minimum": 0.0,
+            "title": "Trial Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan",
+          "trial_days",
+          "entitlements",
+          "available"
+        ],
+        "title": "PlanOffer",
+        "type": "object"
+      },
+      "PortalSession": {
+        "description": "Dodo's customer portal (payment method, invoices; FR-BIL-04), opened in a new tab.",
+        "properties": {
+          "portal_url": {
+            "title": "Portal Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "portal_url"
+        ],
+        "title": "PortalSession",
         "type": "object"
       },
       "PostAsset": {
@@ -7750,6 +7904,10 @@
             "title": "Detail",
             "type": "string"
           },
+          "entitlement": {
+            "title": "Entitlement",
+            "type": "string"
+          },
           "errors": {
             "items": {
               "properties": {
@@ -7770,6 +7928,17 @@
             },
             "title": "Errors",
             "type": "array"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
           },
           "request_id": {
             "anyOf": [
@@ -7802,6 +7971,162 @@
           "code"
         ],
         "title": "Problem",
+        "type": "object"
+      },
+      "PushConfig": {
+        "description": "GET /v1/push/config: what the browser needs to subscribe. The web reads the VAPID public\nkey here rather than from a build-time variable, so one deploy serves any key.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "vapid_public_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vapid Public Key"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "PushConfig",
+        "type": "object"
+      },
+      "PushDevice": {
+        "description": "A registered browser; never its keys.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          }
+        },
+        "required": [
+          "id",
+          "created_at"
+        ],
+        "title": "PushDevice",
+        "type": "object"
+      },
+      "PushKeys": {
+        "additionalProperties": false,
+        "properties": {
+          "auth": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Auth",
+            "type": "string"
+          },
+          "p256dh": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "P256Dh",
+            "type": "string"
+          }
+        },
+        "required": [
+          "p256dh",
+          "auth"
+        ],
+        "title": "PushKeys",
+        "type": "object"
+      },
+      "PushPreferences": {
+        "additionalProperties": false,
+        "description": "One switch per push event (models/notifications.PushEvent); all on by default\n(models/identity.DEFAULT_NOTIFICATION_PREFS).",
+        "properties": {
+          "account": {
+            "title": "Account",
+            "type": "boolean"
+          },
+          "needs_you": {
+            "title": "Needs You",
+            "type": "boolean"
+          },
+          "new_lead": {
+            "title": "New Lead",
+            "type": "boolean"
+          },
+          "window_closing": {
+            "title": "Window Closing",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "needs_you",
+          "new_lead",
+          "window_closing",
+          "account"
+        ],
+        "title": "PushPreferences",
+        "type": "object"
+      },
+      "PushSubscriptionCreate": {
+        "additionalProperties": false,
+        "description": "POST /v1/me/push-subscriptions: the browser's ``PushSubscription.toJSON()`` (endpoint and\nkeys) plus the user agent, shown as the device name. Registering an endpoint again updates it\n(and moves it to the caller if another user had it: the browser now belongs to them).",
+        "properties": {
+          "endpoint": {
+            "maxLength": 2000,
+            "minLength": 12,
+            "pattern": "^https://",
+            "title": "Endpoint",
+            "type": "string"
+          },
+          "keys": {
+            "$ref": "#/components/schemas/PushKeys"
+          },
+          "user_agent": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Agent"
+          }
+        },
+        "required": [
+          "endpoint",
+          "keys"
+        ],
+        "title": "PushSubscriptionCreate",
         "type": "object"
       },
       "QueueInfo": {
@@ -10050,6 +10375,39 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/v1/billing/plans": {
+      "get": {
+        "description": "Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their \u00a71.7\nentitlements and Dodo prices (cached 1 h), for the /pricing page and the upgrade dialog's\ncomparison. The same numbers as GET \u2026/billing.",
+        "operationId": "list_billing_plans",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Billing Plans",
+        "tags": [
+          "billing"
+        ],
+        "x-pending": "T8.2"
+      }
+    },
     "/v1/data-deletion/{code}": {
       "get": {
         "operationId": "get_data_deletion_status",
@@ -10104,6 +10462,62 @@
         ]
       }
     },
+    "/v1/digest/unsubscribe": {
+      "post": {
+        "description": "Public, no sign-in (FR-NOT-04 one click): the signed token (notify/unsubscribe.py) turns\nthe weekly digest off for its member and workspace. Also the target of the email's\nList-Unsubscribe-Post (RFC 8058), whose form body is ignored. 404 not_found for a token that\ndoesn't verify or a membership that no longer exists. Never a GET, so link scanners can't\nunsubscribe anyone: the email links to the web's /unsubscribe page, which posts here.",
+        "operationId": "unsubscribe_digest",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "token",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Token",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DigestUnsubscribed"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Unsubscribe Digest",
+        "tags": [
+          "notifications"
+        ],
+        "x-pending": "T8.7"
+      }
+    },
     "/v1/me": {
       "get": {
         "description": "The current user, provisioned on first sight (TR-AUTH-03), with their workspaces.",
@@ -10133,6 +10547,138 @@
         "summary": "Get Me",
         "tags": [
           "me"
+        ]
+      }
+    },
+    "/v1/me/push-subscriptions": {
+      "delete": {
+        "description": "Remove this browser's subscription (push turned off). Only the caller's own row is\nremoved; an unknown endpoint, or another user's, is 204 all the same and changes nothing.",
+        "operationId": "delete_push_subscription",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "endpoint",
+            "required": true,
+            "schema": {
+              "maxLength": 2000,
+              "minLength": 12,
+              "title": "Endpoint",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Push Subscription",
+        "tags": [
+          "notifications"
+        ],
+        "x-pending": "T8.6"
+      },
+      "post": {
+        "description": "Register this browser (F-19), or refresh it: the endpoint is unique, so registering it\nagain updates its keys, clears a failure count or disabled state, and gives it to the caller.",
+        "operationId": "create_push_subscription",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushSubscriptionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDevice"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Push Subscription",
+        "tags": [
+          "notifications"
+        ],
+        "x-pending": "T8.6"
+      }
+    },
+    "/v1/push/config": {
+      "get": {
+        "description": "The VAPID public key the browser subscribes with (TR-FE-09); ``enabled`` is false when\nthe API has no VAPID keys, and the page shows push as unavailable.",
+        "operationId": "get_push_config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushConfig"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Push Config",
+        "tags": [
+          "notifications"
         ]
       }
     },
@@ -12905,7 +13451,7 @@
     },
     "/v1/w/{wid}/billing": {
       "get": {
-        "description": "Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters) and\ntrial eligibility (TR-BIL-05). Prices are empty until P8.",
+        "description": "Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters),\ntrial eligibility (TR-BIL-05) and, from T8.2, the paid plans' prices from Dodo (cached 1 h;\nempty when Dodo can't be reached).",
         "operationId": "get_billing",
         "parameters": [
           {
@@ -12955,6 +13501,236 @@
         "tags": [
           "billing"
         ]
+      }
+    },
+    "/v1/w/{wid}/billing/cancel": {
+      "post": {
+        "description": "FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's\ncancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays\nuntil the period ends (subscription.cancelled, then expired). 409 on the Free plan.",
+        "operationId": "cancel_billing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Cancel Billing",
+        "tags": [
+          "billing"
+        ],
+        "x-pending": "T8.2"
+      }
+    },
+    "/v1/w/{wid}/billing/checkout": {
+      "post": {
+        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to\n/w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial\nonly when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan\n(active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo\nisn't configured or doesn't answer.",
+        "operationId": "create_billing_checkout",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CheckoutSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Billing Checkout",
+        "tags": [
+          "billing"
+        ],
+        "x-pending": "T8.2"
+      }
+    },
+    "/v1/w/{wid}/billing/portal": {
+      "post": {
+        "description": "FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened\nin a new tab. 409 conflict when the workspace has never had a Dodo customer.",
+        "operationId": "create_billing_portal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalSession"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Billing Portal",
+        "tags": [
+          "billing"
+        ],
+        "x-pending": "T8.2"
+      }
+    },
+    "/v1/w/{wid}/billing/resume": {
+      "post": {
+        "description": "Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``.",
+        "operationId": "resume_billing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Resume Billing",
+        "tags": [
+          "billing"
+        ],
+        "x-pending": "T8.2"
       }
     },
     "/v1/w/{wid}/calendar": {
@@ -15783,6 +16559,124 @@
         "tags": [
           "inbox"
         ]
+      }
+    },
+    "/v1/w/{wid}/notification-preferences": {
+      "get": {
+        "description": "The signed-in member's weekly digest switch and push switches in this workspace.",
+        "operationId": "get_notification_preferences",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferences"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Notification Preferences",
+        "tags": [
+          "notifications"
+        ],
+        "x-pending": "T8.6"
+      },
+      "put": {
+        "description": "Replace the member's preferences (their own only; any role).",
+        "operationId": "update_notification_preferences",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationPreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationPreferences"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Notification Preferences",
+        "tags": [
+          "notifications"
+        ],
+        "x-pending": "T8.6"
       }
     },
     "/v1/w/{wid}/notifications": {

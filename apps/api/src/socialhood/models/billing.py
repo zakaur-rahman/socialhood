@@ -1,4 +1,10 @@
-"""Subscriptions, usage counters and AI usage events (§5.8)."""
+"""Subscriptions, usage counters, payments and AI usage events (§5.8).
+
+Billing state is mirrored from Dodo (D9, TR-BIL-02): only a signed webhook (or the reconcile job,
+TR-BIL-03) changes ``subscriptions.plan`` or ``status``; ``last_event_at`` is the ordering guard
+(an event older than it is ignored). ``payments`` records payment.* events and never changes the
+plan on its own. Trial use is ``workspaces.trial_used_at`` (TR-BIL-05).
+"""
 
 from __future__ import annotations
 
@@ -42,6 +48,16 @@ class SubscriptionStatus(StrEnum):
 class UsageMetric(StrEnum):
     AI_CREDITS = "ai_credits"
     SCHEDULED_POSTS = "scheduled_posts"
+
+
+class PaymentStatus(StrEnum):
+    """§5.8 payments.status. Dodo's payment.processing is ``pending``; payment.cancelled is
+    ``failed``."""
+
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    REFUNDED = "refunded"
+    PENDING = "pending"
 
 
 class AiFeature(StrEnum):
@@ -103,6 +119,29 @@ class UsageCounter(IdMixin, TimestampMixin, TenantScoped, Base):
     __table_args__ = (
         UniqueConstraint("workspace_id", "metric", "period_start"),
         CheckConstraint(_in("metric", UsageMetric), name="metric"),
+    )
+
+
+class Payment(IdMixin, TimestampMixin, TenantScoped, Base):
+    """One Dodo payment (payment.succeeded, payment.failed; TR-BIL-02), upserted by
+    ``dodo_payment_id``. ``invoice_url`` comes from Dodo only and is never constructed."""
+
+    __tablename__ = "payments"
+
+    dodo_payment_id: Mapped[str] = mapped_column(Text, unique=True)
+    dodo_subscription_id: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    amount_minor: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(Text)  # ISO 4217
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    invoice_url: Mapped[str | None] = mapped_column(Text)
+    failure_reason: Mapped[str | None] = mapped_column(Text)  # Dodo's reason, shown to the owner
+
+    __table_args__ = (
+        Index("ix_payments_recent", "workspace_id", text("occurred_at DESC")),
+        CheckConstraint(_in("status", PaymentStatus), name="status"),
+        CheckConstraint("currency ~ '^[A-Z]{3}$'", name="currency"),
+        CheckConstraint("amount_minor >= 0", name="amount_minor"),
     )
 
 

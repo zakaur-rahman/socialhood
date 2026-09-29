@@ -34,6 +34,10 @@ PROBLEM_SCHEMA: dict[str, Any] = {
                 },
             },
         },
+        # 402 only (entitlement_required, quota_exceeded; errors.PlanLimit): the §1.7 key and,
+        # for quota_exceeded, the plan's limit (null = the plan has none, e.g. a missing feature).
+        "entitlement": {"type": "string", "title": "Entitlement"},
+        "limit": {"anyOf": [{"type": "integer"}, {"type": "null"}], "title": "Limit"},
         "request_id": {"anyOf": [{"type": "string"}, {"type": "null"}], "title": "Request Id"},
     },
 }

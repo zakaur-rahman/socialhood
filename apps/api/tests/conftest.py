@@ -20,6 +20,9 @@ pydantic_ai.models.ALLOW_MODEL_REQUESTS = False
 
 pytest_plugins = [
     "tests.support.db",
+    # Before api, which imports their constants: Dodo, email and push are fakes in every test.
+    "tests.support.billing",
+    "tests.support.notify",
     "tests.support.api",
     "tests.support.instagram",
     "tests.support.ai",

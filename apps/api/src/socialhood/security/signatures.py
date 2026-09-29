@@ -6,7 +6,42 @@ import base64
 import hashlib
 import hmac
 import json
+from collections.abc import Mapping
+from datetime import datetime
 from typing import Any
+
+from standardwebhooks.webhooks import Webhook
+
+# Standard Webhooks (https://standardwebhooks.com), which Dodo follows: the message id, the Unix
+# timestamp and ``v1,<base64 HMAC-SHA256>`` signatures (space-separated) in these headers.
+STANDARD_WEBHOOK_HEADERS = ("webhook-id", "webhook-timestamp", "webhook-signature")
+
+
+def verify_standard_webhook(raw: bytes, headers: Mapping[str, str], secret: str) -> bool:
+    """TR-WH-02 for Dodo (TR-BIL-02, SEC-04): True only when a ``v1`` signature in
+    ``webhook-signature`` is HMAC-SHA256 of ``{webhook-id}.{webhook-timestamp}.{raw body}`` with
+    the secret (``whsec_`` + base64 key), and the timestamp is within 5 minutes of now (replays).
+    Anything else is False: a missing header, a malformed signature, an empty or invalid secret,
+    a body that is not UTF-8. Never raises, so a caller cannot fail open by accident."""
+    if not secret:
+        return False
+    wanted = {name.lower(): value for name, value in headers.items()}
+    picked = {name: wanted.get(name, "") for name in STANDARD_WEBHOOK_HEADERS}
+    if not all(picked.values()):
+        return False
+    try:
+        Webhook(secret).verify(raw, picked, json_parse=False)
+    except Exception:
+        # WebhookVerificationError, and what the library lets through: ValueError for a
+        # signature without a comma or a non-UTF-8 body, binascii.Error for bad base64,
+        # EmptyWebhookSecretError for a secret that decodes to nothing.
+        return False
+    return True
+
+
+def sign_standard_webhook(msg_id: str, timestamp: datetime, raw: bytes, secret: str) -> str:
+    """The ``webhook-signature`` value for a body (tests and the sandbox)."""
+    return Webhook(secret).sign(msg_id=msg_id, timestamp=timestamp, data=raw.decode())
 
 
 def verify_hub_signature(raw: bytes, header: str | None, secret: str) -> bool:

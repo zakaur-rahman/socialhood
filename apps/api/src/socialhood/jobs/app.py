@@ -35,6 +35,10 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.insights",
     "socialhood.jobs.tasks.publishing",
     "socialhood.jobs.tasks.agent",
+    "socialhood.jobs.tasks.billing",
+    "socialhood.jobs.tasks.emails",
+    "socialhood.jobs.tasks.push",
+    "socialhood.jobs.tasks.digests",
 ]
 
 configure_logging(get_settings().log_level)
