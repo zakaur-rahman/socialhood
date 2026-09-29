@@ -11,11 +11,13 @@ Contract (shared by the Instagram and WhatsApp handlers):
 What each event does:
 - a message is inserted once per (account, platform message id). Inbound: the conversation gets
   the last-message fields, ``last_inbound_at``, one more unread, ``awaiting_reply`` and leaves
-  the archive (FR-INB-05). An echo (sent from the platform's own app) is stored as outbound with
-  source ``native_app`` (FR-INB-09) and clears ``awaiting_reply`` and ``needs_human`` (F-09); an
-  echo of our own send, whose id we already stored, changes nothing. An echo of a send that timed
-  out (failed, ``delivery_unknown``) with the same text within 2 minutes completes that message
-  instead (TR-JOB-05). Out-of-order arrivals never move the last-message fields backwards;
+  the archive (FR-INB-05), and supersedes the unused suggestion (FR-SUG-02). An echo (sent from
+  the platform's own app) is stored as outbound with source ``native_app`` (FR-INB-09), clears
+  ``awaiting_reply`` and ``needs_human``, pauses Auto for the takeover period and dismisses the
+  unused suggestion (F-08, F-09); an echo of our own send, whose id we already stored, changes
+  nothing. An echo of a send that timed out (failed, ``delivery_unknown``) with the same text
+  within 2 minutes completes that message instead (TR-JOB-05). Out-of-order arrivals never move
+  the last-message fields backwards;
 - a reaction replaces the customer's reaction on the message (one per person);
 - a read receipt marks the account's sent and delivered messages read up to the one read;
 - an edit replaces the text and sets ``edited_at``;
@@ -154,6 +156,23 @@ async def _automations(session: AsyncSession, contact: Contact, msg: Message) ->
     await runtime.enqueue_for_message(session, msg, contact_id=contact.id)
 
 
+async def _supersede_suggestion(session: AsyncSession, conv: Conversation, msg: Message) -> None:
+    """FR-SUG-02: a new customer message replaces the unused suggestion."""
+    from socialhood.services.suggestions import service as suggestions
+
+    await suggestions.supersede_for_inbound(session, conv, msg)
+
+
+async def _replied_natively(session: AsyncSession, conv: Conversation, now: datetime) -> None:
+    """A reply from the native app is a person's reply (F-09): Auto pauses for the takeover
+    period (with its note) and the unused suggestion is dismissed (F-08)."""
+    from socialhood.services import sending
+    from socialhood.services.suggestions import service as suggestions
+
+    await sending.human_takeover(session, conv, now=now)
+    await suggestions.dismiss_pending(session, conv.id)
+
+
 def _later(current: datetime | None, candidate: datetime) -> datetime:
     return candidate if current is None or candidate > current else current
 
@@ -227,10 +246,13 @@ class _Ingest:
             return  # stored by a concurrent worker between our check and insert
         if event.is_echo:
             self._outbound(conv, msg)
+            if not self.backfill:
+                await _replied_natively(self.session, conv, self.now)
         else:
             self._inbound(conv, contact, msg, event)
             if not self.backfill:
                 await _automations(self.session, contact, msg)
+                await _supersede_suggestion(self.session, conv, msg)
                 if self.acct.ai_analysis_enabled:  # FR-PRV-02
                     self.analyze[conv.id] = None
         self.touched[conv.id] = (conv, contact)

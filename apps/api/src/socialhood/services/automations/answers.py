@@ -147,7 +147,7 @@ async def _send(
     from socialhood.services import sending  # sending → … → ingest → the runtime
 
     if automation.action != AutomationAction.SEND_MESSAGE:
-        results.answered_failed(run, *actions.AI_UNAVAILABLE)
+        results.answered_failed(run, *actions.NOT_A_MESSAGE)
         return
     text = actions.render_message(automation, contact, username=None, disclosure_line=disclosure)
     if text is None:

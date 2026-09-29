@@ -54,9 +54,10 @@ def normalize_topic(topic: str) -> str:
 
 
 async def record_gap(
-    session: AsyncSession, *, missing_topic: str, message_id: uuid.UUID, now: datetime
+    session: AsyncSession, *, missing_topic: str, message_id: uuid.UUID | None, now: datetime
 ) -> GapRow:
-    """Count a question the AI couldn't answer from knowledge (TR-AI-12); returns its gap."""
+    """Count a question the AI couldn't answer from knowledge (TR-AI-12); returns its gap.
+    ``message_id`` is None for a comment's automation reply: counted, with no example."""
     label = " ".join(missing_topic.split())[:TOPIC_CHARS]
     normalized = normalize_topic(label)
     if not normalized:
@@ -75,7 +76,7 @@ async def record_gap(
 
 
 async def _upsert(
-    session: AsyncSession, label: str, normalized: str, message_id: uuid.UUID, now: datetime
+    session: AsyncSession, label: str, normalized: str, message_id: uuid.UUID | None, now: datetime
 ) -> GapRow:
     gap = await repo.gap_matching(
         session, normalized, status=GapStatus.OPEN, min_similarity=MIN_SIMILARITY
@@ -92,20 +93,21 @@ async def _upsert(
             occurrences=1,
             first_seen_at=now,
             last_seen_at=now,
-            example_message_ids=[message_id],
+            example_message_ids=[message_id] if message_id else [],
         )
         session.add(gap)
         await session.flush()
         return gap
     examples = list(gap.example_message_ids or [])
-    if message_id in examples:
+    if message_id is not None and message_id in examples:
         return gap  # this message was counted already (a regenerated suggestion)
     if gap.status == GapStatus.DISMISSED:
         gap.status = GapStatus.OPEN  # asked again (FR-KB-06)
         gap.dismissed_at = None
     gap.occurrences += 1
     gap.last_seen_at = max(gap.last_seen_at, now)
-    gap.example_message_ids = [message_id, *examples][:MAX_EXAMPLES]
+    if message_id is not None:
+        gap.example_message_ids = [message_id, *examples][:MAX_EXAMPLES]
     await session.flush()
     return gap
 

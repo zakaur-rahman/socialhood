@@ -120,6 +120,7 @@ def definition_of(
         opening_button=automation.opening_button,
         follow_nudge=automation.follow_nudge,
         follow_nudge_text=automation.follow_nudge_text,
+        ai_instructions=automation.ai_instructions,
     )
 
 
@@ -357,6 +358,7 @@ def _definition_from_body(
         opening_button=body.opening_button,
         follow_nudge=body.follow_nudge,
         follow_nudge_text=body.follow_nudge_text,
+        ai_instructions=body.ai_instructions,
     )
 
 

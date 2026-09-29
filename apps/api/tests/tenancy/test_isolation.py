@@ -110,6 +110,7 @@ EXAMPLE_BODIES.update(
         ("PATCH", "/v1/w/{wid}/message-analyses/{analysis_id}"): {"intent": "complaint"},
         ("PATCH", "/v1/w/{wid}/knowledge-sources/{source_id}"): {"title": "Taken over"},
         ("POST", "/v1/w/{wid}/ai-decisions/{decision_id}/feedback"): {"feedback": "bad"},
+        ("PUT", "/v1/w/{wid}/ai-settings"): {"tone": "playful", "takeover_minutes": 30},
     }
 )
 

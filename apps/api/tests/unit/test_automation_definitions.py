@@ -109,7 +109,9 @@ def test_every_invalid_field_is_listed_at_once() -> None:
         ({"account": AccountInfo("whatsapp", "active")}, ["social_account_id"]),
         ({"account": AccountInfo("instagram", "disconnected")}, ["social_account_id"]),
         ({"account": AccountInfo("instagram", "needs_reconnect")}, []),
-        ({"action": "ai_reply"}, ["action"]),
+        ({"action": "ai_reply"}, ["ai_instructions"]),
+        ({"action": "ai_reply", "ai_instructions": "Answer from the price list"}, []),
+        ({"action": "ai_reply", "ai_instructions": "   "}, ["ai_instructions"]),
         ({"message_text": None}, ["message_text"]),
         ({"ends_at": NOW - timedelta(minutes=1)}, ["ends_at"]),
         ({"starts_at": NOW + timedelta(days=1), "ends_at": NOW + timedelta(days=3)}, []),
@@ -130,11 +132,14 @@ def test_activation_rules(change: dict[str, Any], expected: list[str]) -> None:
     assert fields(replace(COMPLETE, **change)) == expected
 
 
-def test_ai_replies_wait_for_the_knowledge_base() -> None:
+def test_ai_replies_need_their_instructions() -> None:
+    """T5.8 lifts P4's refusal: an AI reply activates once it has instructions."""
     errors = activation_errors(replace(COMPLETE, action="ai_reply"), disclosure=None, now=NOW)
     assert [(e.field, e.message) for e in errors] == [
-        ("action", "AI replies arrive with the knowledge base. Send a message for now.")
+        ("ai_instructions", "Tell the AI how to reply, for example what to offer or link to.")
     ]
+    ready = replace(COMPLETE, action="ai_reply", message_text=None, ai_instructions="Be brief.")
+    assert activation_errors(ready, disclosure=None, now=NOW) == []
 
 
 def test_the_byte_limit_counts_the_longest_name_and_the_disclosure_line() -> None:
@@ -202,12 +207,11 @@ def test_each_template_needs_only_what_the_user_must_supply(
         public_reply_texts=list(template.public_reply_texts),
         starts_at=None,
         ends_at=None,
+        ai_instructions=template.ai_instructions,
     )
     expected = [f"message_buttons.{i}.url" for i in range(len(template.message_buttons))]
     if template.post_scope == "selected":
         expected.insert(0, "media_item_ids")
-    if template.action == "ai_reply":
-        expected.append("action")
     assert sorted(fields(definition)) == sorted(expected)
 
 
@@ -286,8 +290,13 @@ TAPS = replace(
         # A DM trigger ignores tap first; an AI reply ignores tap first and the nudge.
         ({"trigger": "dm_keyword", "opening_text": None}, []),
         (
-            {"action": "ai_reply", "opening_text": None, "follow_nudge": True},
-            ["action"],
+            {
+                "action": "ai_reply",
+                "ai_instructions": "Answer from the price list",
+                "opening_text": None,
+                "follow_nudge": True,
+            },
+            [],
         ),
         ({"follow_nudge": True}, ["follow_nudge_text"]),
         ({"follow_nudge": True, "follow_nudge_text": "Follow us!"}, []),

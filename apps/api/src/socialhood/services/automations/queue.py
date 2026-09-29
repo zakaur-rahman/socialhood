@@ -13,6 +13,11 @@ account at a time). Each drain:
 4. says when to drain again while sendable runs remain: when the bucket has a batch of tokens,
    or at once after a full pass; the job re-defers itself for then.
 
+AI replies (T5.8): an AI automation's runs are taken one at a time: a token, then the reply is
+drafted outside any transaction (services/automations/ai_reply), then the run is claimed and sent
+like the others. A draft that cannot answer escalates and settles the run instead; at most 10
+drafts per pass.
+
 A paused automation holds its runs (they still expire); one whose run window ended keeps sending
 what matched inside it. A reconnect-needed account holds the whole queue. Each private reply is
 stored as an outbound message (source ``automation``) in the commenter's conversation, created if
@@ -49,6 +54,7 @@ from socialhood.models.automations import (
     AutomationRun,
     AutomationStatus,
     Comment,
+    RunResult,
     SurgeOrder,
 )
 from socialhood.models.connections import SocialAccount
@@ -88,6 +94,7 @@ PRIVATE_REPLY_LIMIT = timedelta(days=7)
 EXPIRED = ("expired", "Instagram's 7-day limit passed")
 NO_CONTACT = ("nothing_to_send", "The commenter is unknown, so no DM could be sent.")
 MAX_SENDS = 50  # private replies per drain run
+MAX_AI_DRAFTS = 10  # AI replies drafted per drain run (each is a model call, T5.8)
 BATCH = PRIVATE_REPLY_BURST  # claimed and settled together, one transaction each
 HOLD_RETRY_S = 600.0  # a held queue (paused automation, account to reconnect) looks again
 RETRY_AFTER_S = 60.0  # after a temporary platform error or a Valkey outage
@@ -101,6 +108,7 @@ class DrainResult:
     failed: int = 0
     expired: int = 0
     settled: int = 0  # public-reply-only runs settled without a DM
+    escalated: int = 0  # AI replies not sent: escalated, or the draft failed (T5.8)
     remaining: int = 0  # queued runs the queue will still send
     next_in_s: float | None = None  # when to drain again; None: nothing left to do
 
@@ -191,12 +199,15 @@ class _Pass:
     acct: SocialAccount
     now: datetime
     disclosure: str | None
+    drafts: dict[uuid.UUID, str] = field(default_factory=dict)  # AI replies to send (T5.8)
 
 
 @dataclass
 class _Tally:
     sent: int = 0
     failed: int = 0
+    escalated: int = 0  # AI replies settled without a DM
+    drafted: int = 0  # AI drafts made in this pass
     wait: float | None = None  # the bucket is empty for this long
     retry_in: float | None = None  # a temporary platform error
     blocked: bool = False  # the account needs reconnecting
@@ -237,7 +248,8 @@ async def drain(
                 settled += await _settle_public_only(session, automation, acct.id, cutoff)
         disclosure = await actions.disclosure(session)
         await session.commit()
-    sendable = [a for a in queued if _sends(a, now)]
+    ai = [a for a in queued if _sends(a, now) and a.action == AutomationAction.AI_REPLY]
+    sendable = [a for a in queued if _sends(a, now) and a.action != AutomationAction.AI_REPLY]
     held = any(not _sends(a, now) and a.surge_order != SurgeOrder.PUBLIC_ONLY for a in queued)
 
     adapter: PlatformAdapter | None = None
@@ -250,12 +262,18 @@ async def drain(
     tally = _Tally()
     if adapter is not None:
         run = _Pass(sessionmaker, redis, TokenBuckets(redis), adapter, acct, now, disclosure)
-        while sendable and tally.sent + tally.failed < max_sends:
-            limit = min(BATCH, max_sends - tally.sent - tally.failed)
-            claimed = await _claim(run, sendable, limit, tally)
-            if claimed:
-                await _send_batch(run, claimed, tally)
-            if tally.wait is not None or tally.retry_in is not None or tally.blocked:
+        while (sendable or ai) and _done(tally) < max_sends:
+            limit = min(BATCH, max_sends - _done(tally))
+            if sendable:
+                claimed = await _claim(run, sendable, limit, tally)
+                if claimed:
+                    await _send_batch(run, claimed, tally)
+            for automation in list(ai):
+                if _stopped(tally) or tally.drafted >= MAX_AI_DRAFTS:
+                    break
+                if not await _drain_ai(run, automation, limit, tally):
+                    ai.remove(automation)
+            if _stopped(tally) or tally.drafted >= MAX_AI_DRAFTS:
                 break
 
     async with sessionmaker() as session:
@@ -265,6 +283,7 @@ async def drain(
         failed=tally.failed,
         expired=expired,
         settled=settled,
+        escalated=tally.escalated,
         remaining=remaining,
         next_in_s=_next_in(
             remaining=remaining,
@@ -272,9 +291,17 @@ async def drain(
             blocked=adapter is None,
             wait=tally.wait,
             retry_in=tally.retry_in,
-            progressed=tally.sent + tally.failed > 0,
+            progressed=_done(tally) > 0,
         ),
     )
+
+
+def _done(tally: _Tally) -> int:
+    return tally.sent + tally.failed + tally.escalated
+
+
+def _stopped(tally: _Tally) -> bool:
+    return tally.wait is not None or tally.retry_in is not None or tally.blocked
 
 
 def _next_in(
@@ -412,10 +439,14 @@ async def _prepare(
         if comment is None or contact is None:
             tally.failed += _give_up(queued, NO_CONTACT)
             continue
-        if automation.action != AutomationAction.SEND_MESSAGE:
-            tally.failed += _give_up(queued, actions.AI_UNAVAILABLE)
-            continue
-        outbound = _private_reply(automation, queued, comment, contact, run.disclosure)
+        outbound: OutboundMessage | None
+        if automation.action == AutomationAction.AI_REPLY:
+            text = run.drafts.pop(queued.id, None)
+            if text is None:
+                continue  # not drafted yet: it stays queued for _drain_ai (T5.8)
+            outbound = OutboundMessage(text=text)
+        else:
+            outbound = _private_reply(automation, queued, comment, contact, run.disclosure)
         if outbound is None:
             tally.failed += _give_up(queued, actions.NO_MESSAGE)
             continue
@@ -523,6 +554,70 @@ async def _commenter(
     )
     contacts[contact.id] = contact
     return contact
+
+
+# ---------------------------------------------------------------- AI replies (T5.8)
+
+
+async def _drain_ai(run: _Pass, automation: Automation, limit: int, tally: _Tally) -> bool:
+    """An AI automation's queued private replies, one at a time: take a token, draft the reply
+    outside any transaction (services/automations/ai_reply; an escalation or a failed draft
+    settles the run there), then claim the run and send it like any private reply. False when
+    the automation has none left."""
+    from socialhood.services.automations import ai_reply
+
+    async with run.sessionmaker() as session:
+        peeked = await runs.claim(
+            session,
+            automation,
+            run.acct.id,
+            commented_after=run.now - PRIVATE_REPLY_LIMIT,
+            limit=max(1, min(limit, MAX_AI_DRAFTS - tally.drafted)),
+        )
+        ids = [q.id for q in peeked]
+        await session.rollback()
+    if not ids:
+        return False
+    for run_id in ids:
+        taken, wait = await _take(run, 1)
+        if not taken:
+            tally.wait = wait
+            return True
+        if wait > 0:
+            tally.wait = wait  # the bucket's last token: this is the pass's last send
+        tally.drafted += 1
+        drafted = await ai_reply.draft_for_comment(
+            run.sessionmaker, run.redis, run_id=run_id, disclosure=run.disclosure, now=run.now
+        )
+        if drafted.settled:
+            tally.escalated += 1
+        elif drafted.text is not None:
+            run.drafts[run_id] = drafted.text
+            claimed = await _claim_drafted(run, automation, run_id, tally)
+            if claimed:
+                await _send_batch(run, claimed, tally)
+        if _stopped(tally) or tally.drafted >= MAX_AI_DRAFTS:
+            return True
+    return True
+
+
+async def _claim_drafted(
+    run: _Pass, automation: Automation, run_id: uuid.UUID, tally: _Tally
+) -> list[_Claimed]:
+    """Claim one drafted run (still queued and unclaimed) and store its reply as sending."""
+    async with run.sessionmaker() as session:
+        queued = await runs.lock(session, run_id)
+        if (
+            queued is None
+            or queued.result != RunResult.QUEUED
+            or queued.private_reply_message_id is not None
+        ):
+            run.drafts.pop(run_id, None)
+            await session.rollback()
+            return []
+        claimed = await _prepare(session, run, [queued], {automation.id: automation}, tally)
+        await session.commit()
+        return claimed
 
 
 def _give_up(queued: AutomationRun, reason: tuple[str, str]) -> int:

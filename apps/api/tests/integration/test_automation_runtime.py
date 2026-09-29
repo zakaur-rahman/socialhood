@@ -306,7 +306,9 @@ async def test_the_run_window(world: World) -> None:
     )
 
 
-async def test_an_ai_reply_automation_sends_nothing_yet(world: World) -> None:
+async def test_an_ai_reply_automation_on_free_sends_nothing(world: World) -> None:
+    """T5.8: the plan is checked again at runtime (an automation activated on Pro keeps
+    running after a downgrade): the run fails and the inbox AI may take the message."""
     await make_automation(
         world.engine,
         workspace_id=world.wid,
@@ -318,7 +320,7 @@ async def test_an_ai_reply_automation_sends_nothing_yet(world: World) -> None:
     thread = await dm_thread(world, "link?")
     assert await world.run("dm", thread.message_ids[0]) is Outcome.FIRED
     run = await world.run_row()
-    assert (run["result"], run["error_code"]) == ("failed", "ai_reply_unavailable")
+    assert (run["result"], run["error_code"]) == ("failed", "entitlement_required")
     assert await outbound(world) == []
     [msg] = await world.rows("SELECT automation_handled FROM messages")
     assert msg["automation_handled"] is False
