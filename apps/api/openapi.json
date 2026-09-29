@@ -9058,8 +9058,7 @@
         "summary": "Generate Caption",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.4"
+        ]
       }
     },
     "/v1/w/{wid}/ai/hashtags": {
@@ -9123,8 +9122,7 @@
         "summary": "Suggest Hashtags",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.4"
+        ]
       }
     },
     "/v1/w/{wid}/analytics/posts/{post_id}/compare": {
@@ -10732,7 +10730,7 @@
     },
     "/v1/w/{wid}/billing": {
       "get": {
-        "description": "Plan, status, entitlements, usage (AI credits, knowledge characters) and trial\neligibility (TR-BIL-05). Prices are empty until P8.",
+        "description": "Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters) and\ntrial eligibility (TR-BIL-05). Prices are empty until P8.",
         "operationId": "get_billing",
         "parameters": [
           {
@@ -10899,8 +10897,7 @@
         "summary": "Get Calendar",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/comments/{comment_id}": {
@@ -12402,8 +12399,7 @@
         "summary": "List Hashtag Groups",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       },
       "post": {
         "description": "Save a group (rules in ``HashtagGroupCreate``).",
@@ -12465,8 +12461,7 @@
         "summary": "Create Hashtag Group",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/hashtag-groups/{hashtag_group_id}": {
@@ -12523,8 +12518,7 @@
         "summary": "Delete Hashtag Group",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       },
       "patch": {
         "description": "Rename a group or replace its hashtags.",
@@ -12596,8 +12590,7 @@
         "summary": "Update Hashtag Group",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/knowledge-gaps": {
@@ -13100,7 +13093,7 @@
     },
     "/v1/w/{wid}/media-assets": {
       "get": {
-        "description": "The media library (FR-PUB-13): images and videos uploaded for posts, newest first,\nnarrowed by type and by upload date (``since`` and ``until`` in the workspace time zone, both\nincluded).",
+        "description": "The media library (FR-PUB-13): images and videos uploaded for posts, newest first,\nnarrowed by type and by upload date (``since`` and ``until`` in the workspace time zone, both\nincluded; 422 on ``until`` before ``since``).",
         "operationId": "list_media_assets",
         "parameters": [
           {
@@ -13232,8 +13225,7 @@
         "summary": "List Media Assets",
         "tags": [
           "media"
-        ],
-        "x-pending": "T7.1"
+        ]
       },
       "post": {
         "description": "Register an uploaded file: it must be in this workspace's folder (else 422 on public_id)\nand within the limits (else 415 unsupported_media). Registering it again returns it.",
@@ -14453,8 +14445,7 @@
         "summary": "List Scheduled Posts",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       },
       "post": {
         "description": "New post (F-13): a draft, empty or pre-filled (a calendar click sends ``publish_at``).",
@@ -14516,13 +14507,12 @@
         "summary": "Create Scheduled Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/bulk": {
       "post": {
-        "description": "FR-PUB-14: shift, unschedule or delete several posts. Any id that is not this workspace's\nmakes the whole request 404 and changes nothing. Otherwise each post the action can't apply to\nis reported in ``skipped`` and the rest are changed; 422 when ``shift`` comes without a\nnon-zero ``shift_minutes``.",
+        "description": "FR-PUB-14: shift, unschedule or delete several posts. Any id that is not this workspace's\nmakes the whole request 404 and changes nothing. Otherwise each post the action can't apply to\nis reported in ``skipped`` and the rest are changed; 422 when ``shift`` comes without a\nnon-zero ``shift_minutes``. Unscheduling a draft leaves it as it is (in ``updated``).",
         "operationId": "bulk_update_scheduled_posts",
         "parameters": [
           {
@@ -14581,8 +14571,7 @@
         "summary": "Bulk Update Scheduled Posts",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}": {
@@ -14639,8 +14628,7 @@
         "summary": "Delete Scheduled Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       },
       "get": {
         "description": "The composer's post with its checklist (FR-PUB-10) and linked automations.",
@@ -14702,8 +14690,7 @@
         "summary": "Get Scheduled Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       },
       "put": {
         "description": "Replace the editable post (autosave, Update schedule, Edit and retry): the format is\nderived from the assets again and the checklist recomputed. Rules in ``ScheduledPostDraft``.",
@@ -14775,8 +14762,7 @@
         "summary": "Replace Scheduled Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/duplicate": {
@@ -14840,8 +14826,7 @@
         "summary": "Duplicate Scheduled Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/publish-now": {
@@ -14905,8 +14890,7 @@
         "summary": "Publish Post Now",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/queue": {
@@ -14970,8 +14954,7 @@
         "summary": "Queue Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/reschedule": {
@@ -15045,13 +15028,12 @@
         "summary": "Reschedule Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/schedule": {
       "post": {
-        "description": "F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and\n``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are\npending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly.",
+        "description": "F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and\n``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are\npending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A\nscheduled post takes the new time the same way.",
         "operationId": "schedule_post",
         "parameters": [
           {
@@ -15120,8 +15102,7 @@
         "summary": "Schedule Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-posts/{scheduled_post_id}/unschedule": {
@@ -15185,8 +15166,7 @@
         "summary": "Unschedule Post",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/social-accounts": {
@@ -15557,8 +15537,7 @@
         "summary": "Get Posting Slots",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       },
       "put": {
         "description": "Replace the weekly times (FR-PUB-09). An account that can't publish (WhatsApp) is 409\ncapability_unavailable; a time with seconds is 422 on ``slots.{i}.local_time``.",
@@ -15630,8 +15609,7 @@
         "summary": "Replace Posting Slots",
         "tags": [
           "publishing"
-        ],
-        "x-pending": "T7.1"
+        ]
       }
     },
     "/v1/w/{wid}/social-accounts/{account_id}/resubscribe": {

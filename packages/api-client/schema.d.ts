@@ -484,8 +484,8 @@ export interface paths {
         };
         /**
          * Get Billing
-         * @description Plan, status, entitlements, usage (AI credits, knowledge characters) and trial
-         *     eligibility (TR-BIL-05). Prices are empty until P8.
+         * @description Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters) and
+         *     trial eligibility (TR-BIL-05). Prices are empty until P8.
          */
         get: operations["get_billing"];
         put?: never;
@@ -1040,7 +1040,7 @@ export interface paths {
          * List Media Assets
          * @description The media library (FR-PUB-13): images and videos uploaded for posts, newest first,
          *     narrowed by type and by upload date (``since`` and ``until`` in the workspace time zone, both
-         *     included).
+         *     included; 422 on ``until`` before ``since``).
          */
         get: operations["list_media_assets"];
         put?: never;
@@ -1359,7 +1359,7 @@ export interface paths {
          * @description FR-PUB-14: shift, unschedule or delete several posts. Any id that is not this workspace's
          *     makes the whole request 404 and changes nothing. Otherwise each post the action can't apply to
          *     is reported in ``skipped`` and the rest are changed; 422 when ``shift`` comes without a
-         *     non-zero ``shift_minutes``.
+         *     non-zero ``shift_minutes``. Unscheduling a draft leaves it as it is (in ``updated``).
          */
         post: operations["bulk_update_scheduled_posts"];
         delete?: never;
@@ -1499,7 +1499,8 @@ export interface paths {
          * Schedule Post
          * @description F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and
          *     ``publish_at`` be at least 5 minutes away (422 with every failing field); then the targets are
-         *     pending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly.
+         *     pending and the post is scheduled. 402 quota_exceeded past scheduled_posts_monthly. A
+         *     scheduled post takes the new time the same way.
          */
         post: operations["schedule_post"];
         delete?: never;

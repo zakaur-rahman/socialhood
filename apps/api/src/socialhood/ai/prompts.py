@@ -18,6 +18,9 @@ CURRENT = {
     "summary": 1,
     "comment_analysis": 1,
     "post_summary": 1,
+    # The composer's Write with AI and Suggest hashtags (FR-PUB-02, T7.4).
+    "caption": 1,
+    "hashtags": 1,
 }
 
 

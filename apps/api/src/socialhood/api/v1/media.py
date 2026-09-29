@@ -1,9 +1,6 @@
 """Media uploads (T3.7; TR-MED-01, TR-MED-02): a signature for a direct browser upload to
 Cloudinary, then registration of the uploaded asset after checking its folder and limits. The
-media library (FR-PUB-13) lists the uploads for posts.
-
-The library route is the P7 contract; T7.1 implements its body and removes the ``openapi_extra``
-marker so the tenancy suite covers the route.
+media library (FR-PUB-13, T7.1) lists the uploads for posts.
 """
 
 from __future__ import annotations
@@ -13,7 +10,6 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
 
-from socialhood.api.v1.ai import pending
 from socialhood.auth.deps import AnyMember, Session
 from socialhood.media.cloudinary import Cloudinary
 from socialhood.schemas.inbox import (
@@ -24,6 +20,7 @@ from socialhood.schemas.inbox import (
 )
 from socialhood.schemas.publishing import MediaAssetList
 from socialhood.services import media_assets
+from socialhood.services.scheduled_posts import library
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["media"])
 
@@ -62,7 +59,7 @@ async def register_media_asset(
     return media_assets.asset_out(asset)
 
 
-@router.get("/media-assets", operation_id="list_media_assets", openapi_extra=pending("T7.1"))
+@router.get("/media-assets", operation_id="list_media_assets")
 async def list_media_assets(
     ctx: AnyMember,
     session: Session,
@@ -74,5 +71,13 @@ async def list_media_assets(
 ) -> MediaAssetList:
     """The media library (FR-PUB-13): images and videos uploaded for posts, newest first,
     narrowed by type and by upload date (``since`` and ``until`` in the workspace time zone, both
-    included)."""
-    raise NotImplementedError("T7.1")
+    included; 422 on ``until`` before ``since``)."""
+    return await library.list_library(
+        session,
+        asset_type=asset_type,
+        since=since,
+        until=until,
+        cursor=cursor,
+        limit=limit,
+        timezone=ctx.workspace.timezone,
+    )
