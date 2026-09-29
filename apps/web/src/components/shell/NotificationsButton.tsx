@@ -15,6 +15,8 @@ import { relativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { sidebarIconClass, sidebarRowClass } from "./sidebar-styles";
+
 /** UX-SH-04: the bell opens a 360 px panel of the member's notifications (FR-NOT-01). */
 export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
   const workspace = useCurrentWorkspace();
@@ -27,16 +29,18 @@ export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-        className={cn(
-          "relative flex items-center gap-3 rounded-lg px-3 py-2.5 text-[15px] font-medium text-fg-secondary hover:bg-white/5 hover:text-fg",
-          collapsed && "size-10 justify-center px-0 py-0",
-        )}
+        className={cn(sidebarRowClass({ collapsed }), "data-[state=open]:bg-white/5 data-[state=open]:text-fg")}
       >
-        <Bell className="size-5 shrink-0" aria-hidden />
+        <span className="relative shrink-0">
+          <Bell className={sidebarIconClass()} aria-hidden />
+          {unread > 0 ? (
+            <span
+              className="bg-brand-gradient absolute -top-0.5 -right-0.5 size-2 rounded-full ring-2 ring-panel"
+              aria-hidden
+            />
+          ) : null}
+        </span>
         {collapsed ? null : <span>Notifications</span>}
-        {unread > 0 ? (
-          <span className="bg-brand-gradient absolute right-2 top-2 size-2 rounded-full" aria-hidden />
-        ) : null}
       </PopoverTrigger>
       <PopoverContent side="right" align="end" className="w-[360px] border-line bg-panel p-0 shadow-xl">
         <NotificationsPanel

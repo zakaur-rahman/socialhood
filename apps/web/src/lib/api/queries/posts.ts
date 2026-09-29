@@ -6,7 +6,7 @@ import { applyComment, removeComment, type CommentPages, type PostPages } from "
 
 import type { Api } from "../client";
 import { useApi } from "../provider";
-import type { CommentFilter, CommentList, PostComment, PostDetail, PostList } from "../types";
+import type { CommentCounts, CommentFilter, CommentList, PostComment, PostDetail, PostList } from "../types";
 import { keys } from "./keys";
 import { expectOk, unwrap } from "./unwrap";
 
@@ -38,6 +38,15 @@ function postsQuery(api: Api, wid: string, accountId: string | null, q: string) 
 }
 
 // ---- reading
+
+/** The Comments nav badge: comments waiting for a reply; kept fresh by comment.* events. */
+export function useCommentCounts(wid: string) {
+  const api = useApi();
+  return useQuery<CommentCounts>({
+    queryKey: keys.commentCounts(wid),
+    queryFn: () => unwrap(api.GET("/v1/w/{wid}/comments/counts", { params: { path: { wid } } })),
+  });
+}
 
 /** The automation post picker (UX-SCR-03): one account's synced posts, newest first, searchable. */
 export function usePosts(wid: string, accountId: string | null, q: string, enabled = true) {

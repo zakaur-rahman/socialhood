@@ -22,6 +22,14 @@ export type NavItem = {
   href: (slug: string) => Route;
 };
 
+export type NavGroup = {
+  key: string;
+  /** The small section label; null for Home, which stands alone at the top. */
+  label: string | null;
+  roles: readonly Role[];
+  items: readonly NavItem[];
+};
+
 const EVERYONE = ["owner", "admin", "agent"] as const;
 const ADMINS = ["owner", "admin"] as const;
 
@@ -39,15 +47,22 @@ function later(path: string, phase: "P8"): Route {
   return route(path);
 }
 
-// §3.1: Home, Inbox, Comments, Automations, Schedule, Knowledge. Agents see the first three.
-export const PRIMARY_NAV: readonly NavItem[] = [
-  { key: "home", label: "Home", icon: House, segment: "home", roles: EVERYONE, href: (s) => route(`/w/${s}/home`) },
-  { key: "inbox", label: "Inbox", icon: Inbox, segment: "inbox", roles: EVERYONE, href: (s) => route(`/w/${s}/inbox`) },
-  { key: "comments", label: "Comments", icon: MessageSquare, segment: "comments", roles: EVERYONE, href: (s) => route(`/w/${s}/comments`) },
-  { key: "automations", label: "Automations", icon: Zap, segment: "automations", roles: ADMINS, href: (s) => route(`/w/${s}/automations`) },
-  { key: "schedule", label: "Schedule", icon: CalendarDays, segment: "schedule", roles: ADMINS, href: (s) => route(`/w/${s}/schedule`) },
-  { key: "knowledge", label: "Knowledge", icon: BookOpen, segment: "knowledge", roles: ADMINS, href: (s) => route(`/w/${s}/knowledge`) },
+const HOME: NavItem = { key: "home", label: "Home", icon: House, segment: "home", roles: EVERYONE, href: (s) => route(`/w/${s}/home`) };
+const INBOX: NavItem = { key: "inbox", label: "Inbox", icon: Inbox, segment: "inbox", roles: EVERYONE, href: (s) => route(`/w/${s}/inbox`) };
+const COMMENTS: NavItem = { key: "comments", label: "Comments", icon: MessageSquare, segment: "comments", roles: EVERYONE, href: (s) => route(`/w/${s}/comments`) };
+const SCHEDULE: NavItem = { key: "schedule", label: "Schedule", icon: CalendarDays, segment: "schedule", roles: ADMINS, href: (s) => route(`/w/${s}/schedule`) };
+const AUTOMATIONS: NavItem = { key: "automations", label: "Automations", icon: Zap, segment: "automations", roles: ADMINS, href: (s) => route(`/w/${s}/automations`) };
+const KNOWLEDGE: NavItem = { key: "knowledge", label: "Knowledge", icon: BookOpen, segment: "knowledge", roles: ADMINS, href: (s) => route(`/w/${s}/knowledge`) };
+
+// §3.1's sections, grouped: Home alone; Engage (Inbox, Comments); Grow, for owners and admins.
+// Agents see Home, Inbox and Comments.
+export const NAV_GROUPS: readonly NavGroup[] = [
+  { key: "home", label: null, roles: EVERYONE, items: [HOME] },
+  { key: "engage", label: "Engage", roles: EVERYONE, items: [INBOX, COMMENTS] },
+  { key: "grow", label: "Grow", roles: ADMINS, items: [SCHEDULE, AUTOMATIONS, KNOWLEDGE] },
 ];
+
+export const PRIMARY_NAV: readonly NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
 
 export const SETTINGS_NAV: NavItem = {
   key: "settings",
@@ -59,9 +74,19 @@ export const SETTINGS_NAV: NavItem = {
 };
 
 export const BILLING_HREF = (slug: string): Route => later(`/w/${slug}/settings/billing`, "P8");
+export const WORKSPACE_SETTINGS_HREF = (slug: string): Route => route(`/w/${slug}/settings/workspace`);
+/** Where switching to another workspace lands. */
+export const WORKSPACE_HOME_HREF = (slug: string): Route => route(`/w/${slug}/home`);
+
+/** The groups a role sees, each with the items it may open; a group left empty is dropped. */
+export function navGroupsFor(role: Role): NavGroup[] {
+  return NAV_GROUPS.filter((group) => group.roles.includes(role))
+    .map((group) => ({ ...group, items: group.items.filter((item) => item.roles.includes(role)) }))
+    .filter((group) => group.items.length > 0);
+}
 
 export function navFor(role: Role): NavItem[] {
-  return PRIMARY_NAV.filter((item) => item.roles.includes(role));
+  return navGroupsFor(role).flatMap((group) => group.items);
 }
 
 export function activeSegment(pathname: string, slug: string): string | null {

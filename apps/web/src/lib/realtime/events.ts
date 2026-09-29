@@ -170,6 +170,7 @@ export function applyRealtimeEvent(
       const payload = parse<EventPayloads["comment.updated"]>(event.data);
       if (!payload?.comment) return;
       applyComment(queryClient, wid, payload.comment);
+      void queryClient.invalidateQueries({ queryKey: keys.commentCounts(wid) });
       return;
     }
     case "post.updated": {

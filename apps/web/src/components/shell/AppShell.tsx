@@ -7,9 +7,18 @@ import type { ReactNode } from "react";
 import type { Route } from "next";
 
 import { AskButton, AskRoot } from "@/components/agent/AskPanel";
-import { exhaustedAiCredits, useBilling, useInboxCounts, useMe, useSocialAccounts } from "@/lib/api/queries";
+import {
+  exhaustedAiCredits,
+  useBilling,
+  useCommentCounts,
+  useInboxCounts,
+  useMe,
+  useSocialAccounts,
+  useWorkspaces,
+} from "@/lib/api/queries";
 import type { BillingState, Role, SocialAccount } from "@/lib/api/types";
 import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
+import { useReconnecting } from "@/lib/realtime/status";
 import { useMediaQuery, useStoredFlag } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -18,11 +27,13 @@ import { BannerSlot, type Banner } from "./BannerSlot";
 import { MobileNav } from "./MobileNav";
 import { NotificationsButton } from "./NotificationsButton";
 import { activeSegment, BILLING_HREF, pageTitle } from "./nav";
+import { creditsUsage } from "./usage";
 
 /**
  * The signed-in frame: sidebar on desktop (collapsed below 1024 px, 1280 px in the inbox;
  * remembered per browser above it), top bar and drawer on phones (UX-SH-01…04). The Inbox
- * item carries the unread count (FR-INB-04), kept fresh by real-time events.
+ * item carries the unread count (FR-INB-04) and Comments the comments waiting for a reply, both
+ * kept fresh by real-time events.
  */
 export function AppShell({ children, banners = [] }: { children: ReactNode; banners?: Banner[] }) {
   const workspace = useCurrentWorkspace();
@@ -35,6 +46,9 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
     ...banners,
   ];
   const counts = useInboxCounts(workspace.id);
+  const commentCounts = useCommentCounts(workspace.id);
+  const workspaces = useWorkspaces(); // already loaded by the workspace layout
+  const reconnecting = useReconnecting();
   const pathname = usePathname();
   // UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there.
   const inbox = activeSegment(pathname, workspace.slug) === "inbox";
@@ -44,9 +58,14 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
 
   const shared = {
     workspace,
+    workspaces: workspaces.data,
     userName: me.data?.name ?? null,
+    userEmail: me.data?.email ?? null,
     account: <UserButton />,
     unreadCount: counts.data?.unread ?? 0,
+    commentsCount: commentCounts.data?.needs_reply ?? 0,
+    credits: creditsUsage(billing.data, billing.isPending),
+    reconnecting,
   };
 
   return (

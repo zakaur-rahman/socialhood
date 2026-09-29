@@ -127,6 +127,8 @@ export type PostComment = Schemas["Comment"];
 export type CommentList = Schemas["CommentList"];
 export type CommentAnalysis = Schemas["CommentAnalysis"];
 export type CommentAnalysisStatus = PostComment["analysis_status"];
+/** The Comments nav badge: comments waiting for a reply. */
+export type CommentCounts = Schemas["CommentCounts"];
 /** The post detail's filter chips (UX-SCR-05). */
 export type CommentFilter = NonNullable<
   NonNullable<operations["list_post_comments"]["parameters"]["query"]>["filter"]

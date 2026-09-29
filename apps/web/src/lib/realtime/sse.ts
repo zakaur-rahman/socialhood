@@ -104,6 +104,8 @@ export type EventStreamOptions = {
   onEvent: (event: SseEvent) => void;
   onOpen?: (info: StreamOpenInfo) => void;
   onError?: (error: unknown) => void;
+  /** The stream dropped, or an attempt failed: it waits, then tries again. */
+  onReconnecting?: () => void;
   signal: AbortSignal;
   minDelayMs?: number;
   maxDelayMs?: number;
@@ -133,7 +135,7 @@ export function reconnectDelay(attempt: number, baseMs: number, maxMs: number, r
 
 /** Keep a stream open until the signal aborts, reconnecting with Last-Event-ID after any drop. */
 export async function runEventStream(options: EventStreamOptions): Promise<void> {
-  const { open, onEvent, onOpen, onError, signal } = options;
+  const { open, onEvent, onOpen, onError, onReconnecting, signal } = options;
   const minDelay = options.minDelayMs ?? 1_000;
   const maxDelay = options.maxDelayMs ?? 30_000;
   const sleep = options.sleep ?? abortableSleep;
@@ -178,6 +180,7 @@ export async function runEventStream(options: EventStreamOptions): Promise<void>
       onError?.(error);
     }
     if (signal.aborted) return;
+    onReconnecting?.();
     const base = Math.max(minDelay, serverRetry ?? minDelay);
     await sleep(reconnectDelay(attempt, base, maxDelay, random), signal);
     attempt++;
