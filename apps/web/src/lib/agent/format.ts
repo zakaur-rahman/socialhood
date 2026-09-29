@@ -4,6 +4,7 @@
  */
 import type { AgentMode, AgentRunStatus, AgentStepStatus, AnswerRefKind, ErrorInfo, RiskTier } from "@/lib/api/types";
 import type { Tone } from "@/lib/inbox/format";
+import { dayKey } from "@/lib/tz";
 
 /** A run in one of these statuses won't change again (agent-architecture.html §9). */
 export const FINAL_STATUSES: readonly AgentRunStatus[] = ["succeeded", "partial", "failed", "cancelled", "expired"];
@@ -78,12 +79,74 @@ export const REF_KIND_LABEL: Record<AnswerRefKind, string> = {
   knowledge_source: "Knowledge",
 };
 
-/** FR-AGT-01 / agent-architecture.html §12: what a member can ask to begin with. */
-export const SUGGESTED_PROMPTS = [
-  "How did my latest post do?",
-  "What are people complaining about this week?",
-  "Which posts beat my average this month?",
-] as const;
+export type PromptArea = "inbox" | "comments" | "posts" | "automations";
+
+/** FR-AGT-01 / agent-architecture.html §12: what a member can ask to begin with, one per area. */
+export const SUGGESTED_PROMPTS: readonly { area: PromptArea; text: string }[] = [
+  { area: "posts", text: "How did my latest post do?" },
+  { area: "comments", text: "What are people complaining about this week?" },
+  { area: "inbox", text: "Which conversations need a reply today?" },
+  { area: "automations", text: "Which automation sent the most DMs this week?" },
+];
+
+/** Follow-up questions by what an answer cited (picked in the browser; no API involved). */
+const FOLLOW_UPS: Record<AnswerRefKind, readonly string[]> = {
+  post: ["Show the negative comments on this post", "Compare it with my previous post"],
+  comment: ["Summarise the other complaints", "Which post gets comments like these?"],
+  conversation: ["Which conversations need a reply today?", "Summarise this conversation"],
+  automation: ["How is this automation doing this week?", "Which automations failed recently?"],
+  scheduled_message: ["What else is scheduled this week?"],
+  scheduled_post: ["What's scheduled to post this week?", "Which posts beat my average this month?"],
+  knowledge_source: ["What questions couldn't the AI answer this week?"],
+};
+const GENERAL_FOLLOW_UPS = ["Which posts beat my average this month?", "What are people complaining about this week?"];
+
+/**
+ * Two or three follow-ups for an answer: taken in turn from each kind it cited (in citation order),
+ * never repeating the question just asked; general ones when it cited nothing.
+ */
+export function followUpsFor(refs: readonly { kind: AnswerRefKind }[], request: string, max = 3): string[] {
+  const kinds = [...new Set(refs.map((ref) => ref.kind))];
+  const pools = kinds.length > 0 ? kinds.map((kind) => [...FOLLOW_UPS[kind]]) : [[...GENERAL_FOLLOW_UPS]];
+  const asked = request.trim().toLowerCase();
+  const out: string[] = [];
+  for (let round = 0; out.length < max && pools.some((pool) => pool.length > round); round++) {
+    for (const pool of pools) {
+      const prompt = pool[round];
+      if (prompt && prompt.toLowerCase() !== asked && !out.includes(prompt)) out.push(prompt);
+      if (out.length === max) break;
+    }
+  }
+  return out;
+}
+
+export type ThreadGroup = "Today" | "Yesterday" | "Previous 7 days" | "Older";
+
+function dayNumber(iso: string | Date, timeZone: string): number {
+  const [year, month, day] = dayKey(iso, timeZone).split("-").map(Number);
+  return Date.UTC(year, month - 1, day) / 86_400_000;
+}
+
+/** Which group a thread's latest activity falls in, by calendar day in the workspace zone. */
+export function threadGroup(lastRunAt: string, timeZone: string, now: Date): ThreadGroup {
+  const days = dayNumber(now, timeZone) - dayNumber(lastRunAt, timeZone);
+  if (days <= 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days <= 7) return "Previous 7 days";
+  return "Older";
+}
+
+/** Items grouped in that order, keeping their order within each group; empty groups left out. */
+export function groupThreads<T extends { last_run_at: string }>(
+  items: readonly T[],
+  timeZone: string,
+  now: Date,
+): { group: ThreadGroup; items: T[] }[] {
+  const order: ThreadGroup[] = ["Today", "Yesterday", "Previous 7 days", "Older"];
+  const groups = new Map<ThreadGroup, T[]>(order.map((group) => [group, []]));
+  for (const item of items) groups.get(threadGroup(item.last_run_at, timeZone, now))!.push(item);
+  return order.filter((group) => groups.get(group)!.length > 0).map((group) => ({ group, items: groups.get(group)! }));
+}
 
 /** POST …/agent/runs caps the request (schemas/agent.py REQUEST_MAX_CHARS). */
 export const REQUEST_MAX_CHARS = 2000;
@@ -153,6 +216,25 @@ export function runDuration(run: {
   const end = new Date(run.completed_at).getTime();
   return Number.isFinite(start) && Number.isFinite(end) ? Math.max(0, end - start) : null;
 }
+
+/** "8 s", "1 min 5 s": whole seconds, at least one. */
+export function secondsText(ms: number): string {
+  const seconds = Math.max(1, Math.round(ms / 1000));
+  if (seconds < 60) return `${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds - minutes * 60;
+  return rest ? `${minutes} min ${rest} s` : `${minutes} min`;
+}
+
+/** How long a run worked, only when it has both a start and an end. */
+export function workedFor(run: { started_at?: string | null; completed_at?: string | null }): string | null {
+  if (!run.started_at || !run.completed_at) return null;
+  const ms = new Date(run.completed_at).getTime() - new Date(run.started_at).getTime();
+  return Number.isFinite(ms) && ms >= 0 ? secondsText(ms) : null;
+}
+
+/** A queued run waiting longer than this says so instead of "Starting". */
+export const WAITING_AFTER_MS = 20_000;
 
 /** The Ctrl or ⌘ key's name for the shortcut hint. */
 export function modifierKey(platform: string | undefined): "⌘" | "Ctrl" {

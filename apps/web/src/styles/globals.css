@@ -70,6 +70,32 @@
   to { background-position: 0 20px, 0 0; }
 }
 
+/* Ask Social Hood: the label of the step a run is on, a light sweeping across the secondary text
+   (1.6 s per sweep); plain secondary text under reduced motion. Built from tokens only. */
+@utility text-shimmer {
+  color: var(--color-fg-secondary);
+  @media (prefers-reduced-motion: no-preference) {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-fg-secondary) 0%,
+      var(--color-fg-secondary) 40%,
+      var(--color-fg) 50%,
+      var(--color-fg-secondary) 60%,
+      var(--color-fg-secondary) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: text-shimmer 1.6s linear infinite;
+  }
+}
+
+@keyframes text-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
 :root {
   color-scheme: dark;
   /* shadcn/ui semantic variables mapped onto the tokens */

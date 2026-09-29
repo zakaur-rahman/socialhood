@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { citedNumbers, parseAnswer, parseInline, plainText, splitRow, type Block } from "./answer";
+import { answerToPlainText, citedNumbers, parseAnswer, parseInline, plainText, splitRow, type Block } from "./answer";
 
 describe("answer inline markup (the markdown subset)", () => {
   it("reads **bold** and [n] citations within the answer's references", () => {
@@ -96,5 +96,37 @@ describe("answer blocks", () => {
 
   it("a line with bars but no separator row is a paragraph", () => {
     expect(parseAnswer("a | b\nc | d", 0)[0].type).toBe("paragraph");
+  });
+});
+
+describe("the answer as plain text (Copy)", () => {
+  it("drops bold markers and every [n], tidying the space they leave, and keeps lists and tables readable", () => {
+    const answer = [
+      "Reach was **4,120** [1], up 42% [2] [3].",
+      "",
+      "- too expensive: 31 [1]",
+      "- shipping cost: 14",
+      "",
+      "2. second",
+      "3. third",
+      "",
+      "| Metric | Value |",
+      "|---|---:|",
+      "| Reach | 4,120 [2] |",
+    ].join("\n");
+    expect(answerToPlainText(answer)).toBe(
+      [
+        "Reach was 4,120, up 42%.",
+        "",
+        "- too expensive: 31",
+        "- shipping cost: 14",
+        "",
+        "2. second",
+        "3. third",
+        "",
+        "Metric\tValue",
+        "Reach\t4,120",
+      ].join("\n"),
+    );
   });
 });
