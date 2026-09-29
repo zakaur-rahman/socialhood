@@ -1,6 +1,7 @@
-"""Instagram reads for inbound media, post sync and conversation backfill (T3.3, T3.14;
-TR-MED-02, TR-MED-03, TR-PL-05, FR-CON-01). The adapter's ``download_media``, ``list_media`` and
-``list_threads`` delegate here; payload shapes are parsed in ``parse.py``.
+"""Instagram reads for inbound media, post sync, comment intake and conversation backfill (T3.3,
+T3.14, T4.4; TR-MED-02, TR-MED-03, TR-PL-05, FR-CON-01, F-12). The adapter's ``download_media``,
+``list_media``, ``get_media`` and ``list_threads`` delegate here; payload shapes are parsed in
+``parse.py``.
 
 Unverified until T0.9 (item 7 and the echo items): the Conversations API fields, how the account
 itself appears in ``from`` and ``participants``, and whether CDN media URLs need a token (they
@@ -125,6 +126,22 @@ async def list_media(
         params={"fields": MEDIA_FIELDS, "limit": limit},
     )
     return [m for m in map(parse.media_item, _items(body)) if m is not None][:limit]
+
+
+async def get_media(
+    http: PlatformHttp, graph: Callable[[str], str], token: str, media_ref: str
+) -> PlatformMedia | None:
+    """One post (``GET /{media_id}``), for a comment on a post not synced yet (F-12)."""
+    if not GRAPH_ID.match(media_ref):
+        raise PlatformError("platform_rejected", message="Not an Instagram media id")
+    body = await http.request(
+        "GET",
+        graph(media_ref),
+        endpoint="media",
+        token=token,
+        params={"fields": MEDIA_FIELDS},
+    )
+    return parse.media_item(body) if isinstance(body, dict) else None
 
 
 # ---------------------------------------------------------------- conversations (backfill)

@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+import pytest
 from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -12,7 +13,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.tasks.privacy import delete_user_data
 from socialhood.models.platform import WebhookStatus
+from socialhood.platforms.deps import deps_from
 from socialhood.security.signatures import sign_request
+from socialhood.services.webhook_handlers import instagram as instagram_handler
 from socialhood.services.webhook_processing import process_event
 from tests.support.api import IG_APP_SECRET, META_APP_SECRET, WEB, Clerk, sign_in
 from tests.support.instagram import FakeInstagram, connect, fixture, signed_delivery
@@ -109,7 +112,12 @@ async def test_an_unknown_deletion_code(client: httpx.AsyncClient) -> None:
 
 
 async def test_sandbox_account_and_inbound_events(
-    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, queue: None
+    app: FastAPI,
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    engine: AsyncEngine,
+    queue: None,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     clerk_id, me = await sign_in(client, clerk)
     wid = me["workspaces"][0]["id"]
@@ -131,7 +139,9 @@ async def test_sandbox_account_and_inbound_events(
 
     async with engine.connect() as conn:
         stored = (await conn.execute(text("SELECT id, event_type FROM webhook_events"))).all()
-    expected = {"message": WebhookStatus.PROCESSED, "comment": WebhookStatus.IGNORED}  # P6
+    expected = {"message": WebhookStatus.PROCESSED, "comment": WebhookStatus.PROCESSED}
+    deps = deps_from(app.state.http, app.state.settings)  # comment intake fetches the post
+    monkeypatch.setattr(instagram_handler, "platform_deps", lambda: deps)
     for event_id, event_type in stored:
         assert await process_event(app.state.sessionmaker, event_id) is expected[event_type]
     dm = await one(engine, "SELECT direction, text FROM messages")

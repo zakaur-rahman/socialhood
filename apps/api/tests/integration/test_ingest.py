@@ -482,12 +482,10 @@ async def test_events_we_do_not_act_on_are_ignored_with_the_reason(
     assert await deliver(maker, redis, "webhook_reaction.json") == IGNORED
     assert await deliver(maker, redis, "webhook_message_deleted.json") == IGNORED
     assert await deliver(maker, redis, "webhook_seen.json") == IGNORED
-    assert await deliver(maker, redis, "webhook_comment_changes.json") == IGNORED
     assert [r["last_error"] for r in await webhook_rows(engine)] == [
         "reaction to a message we don't have",
         "unsent message we don't have",
         "read receipt from an unknown contact",
-        "comments arrive in P6",
     ]
     assert await messages(engine) == []
 

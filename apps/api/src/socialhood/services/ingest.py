@@ -21,6 +21,10 @@ What each event does:
 - an edit replaces the text and sets ``edited_at``;
 - a delivery status (WhatsApp) moves an outbound message forward, never back.
 
+A new customer message (not backfill) also sets ``contact_replied_at`` on automation runs that
+DMed the contact in the 24 h before (FR-AUT-16) and enqueues ``run_automation("dm", id)`` when
+the account has DM automations (F-06 step 8).
+
 Follow-ups are deferred by a couple of seconds: the caller commits after this returns, and a job
 that finds no row (its transaction rolled back) does nothing. ``backfill=True`` (history from
 FR-CON-01) leaves unread counts and the archive alone and sends one ``conversation.updated`` per
@@ -128,10 +132,22 @@ def attachment_record(ref: InboundMediaRef) -> dict[str, Any] | None:
 
 
 async def _follow_scheduled(session: AsyncSession, msg: Message) -> None:
+    """A send's result was decided here (echo): scheduled messages and automation runs follow."""
     # Imported here: scheduled → sending → connections → sync → ingest would be a cycle.
     from socialhood.services import scheduled
+    from socialhood.services.automations import results
 
     await scheduled.follow_message(session, msg)
+    await results.follow_message(session, msg)
+
+
+async def _automations(session: AsyncSession, contact: Contact, msg: Message) -> None:
+    """A new customer DM: count it as a reply to recent automation DMs (FR-AUT-16) and let DM
+    automations answer it (F-11 runtime, before the AI's analysis)."""
+    from socialhood.services.automations import runtime
+
+    await runtime.contact_replied(session, contact.id, at=msg.occurred_at)
+    await runtime.enqueue_for_message(session, msg)
 
 
 def _later(current: datetime | None, candidate: datetime) -> datetime:
@@ -166,7 +182,8 @@ class _Ingest:
         elif isinstance(event, DeliveryStatus):
             await self._status(event)
         elif isinstance(event, InboundComment):
-            self.result.ignored.append("comments arrive in P6")
+            # Comments are taken in by services/automations/comments (F-12), not here.
+            self.result.ignored.append("comments are not messages")
         elif isinstance(event, Unsupported):
             self.result.ignored.append(event.reason)
         # Sessions do not autoflush, and the next event's row locks reload from the database.
@@ -207,6 +224,8 @@ class _Ingest:
             self._outbound(conv, msg)
         else:
             self._inbound(conv, contact, msg, event)
+            if not self.backfill:
+                await _automations(self.session, contact, msg)
         self.touched[conv.id] = (conv, contact)
         self.result.created_message_ids.append(msg.id)
         if not self.backfill:

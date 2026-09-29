@@ -16,7 +16,15 @@ from procrastinate import App
 # it never retries them (TR-JOB-05). Users retry sends from the app after checking Instagram.
 # Add each sending task here when it is written (P3 send_message, P5 publish_target, P6 replies).
 PLATFORM_WRITE_TASKS = frozenset(
-    {"send_message", "send_scheduled", "publish_target", "reply_to_comment", "private_reply"}
+    {
+        "send_message",
+        "send_scheduled",
+        "publish_target",
+        "reply_to_comment",
+        "private_reply",
+        "run_automation",
+        "drain_private_replies",
+    }
 )
 
 _LIST_FAILED = """

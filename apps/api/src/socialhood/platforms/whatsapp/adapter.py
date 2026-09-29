@@ -225,6 +225,9 @@ class WhatsAppAdapter:
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
         return []  # WhatsApp numbers have no posts
 
+    async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
+        return None  # no posts, so no comments on them
+
     async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
         return []  # no history API: the inbox fills as customers write (F-04)
 

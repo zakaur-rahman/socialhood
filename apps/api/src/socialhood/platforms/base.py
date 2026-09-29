@@ -2,7 +2,8 @@
 names: they get an adapter and check its capabilities (TR-PL-11).
 
 Methods arrive with the phase that needs them: P2 tokens, webhooks and profiles; P3 sending,
-read receipts, media download, and the post and conversation lists used by sync and backfill.
+read receipts, media download, and the post and conversation lists used by sync and backfill;
+P4 link buttons, private replies, public comment replies and single posts for comment intake.
 """
 
 from __future__ import annotations
@@ -127,6 +128,10 @@ class PlatformAdapter(Protocol):
 
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]: ...
 
+    async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
+        """One of the account's posts, for a comment on a post we have not synced (F-12)."""
+        ...
+
     async def list_threads(
         self, acct: SocialAccount, *, limit: int = 20
     ) -> list[PlatformThread]: ...
@@ -135,7 +140,7 @@ class PlatformAdapter(Protocol):
         self, acct: SocialAccount, comment_ref: str, message: OutboundMessage
     ) -> SendResult:
         """A DM to a comment's author, addressed by the comment (Instagram: one per comment,
-        within 7 days; FR-AUT-10)."""
+        within 7 days; FR-AUT-10). Text, with link buttons if any; no attachments."""
         ...
 
     async def reply_to_comment(

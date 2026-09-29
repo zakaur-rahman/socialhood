@@ -51,6 +51,7 @@ from socialhood.models.inbox import (
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.base import (
     OutboundAttachment,
+    OutboundButton,
     OutboundMessage,
     OutboundTemplate,
     PlatformAdapter,
@@ -139,6 +140,10 @@ SEND_RULES: dict[str, dict[str, SendRule]] = {
         "sticker": SendRule("Stickers", 500 * KB, frozenset({"webp"})),
     },
 }
+# Link buttons (FR-AUT-13) are Instagram's button template: its text is at most 640 characters
+# (Meta's docs, checked 2026-09-29; T0.9 item 10). Platforms not listed have no link buttons.
+BUTTON_TEXT_LIMITS: dict[str, int] = {"instagram": 640}
+MAX_BUTTONS = 3
 HEART = "\u2764\ufe0f"  # Instagram's built-in heart sticker, stored as its emoji
 STICKER_SIZE = 512  # WhatsApp stickers are 512 x 512
 
@@ -238,12 +243,15 @@ async def queue_outbound(
     sent_by_user_id: uuid.UUID | None = None,
     scheduled_message_id: uuid.UUID | None = None,
     suggestion_id: uuid.UUID | None = None,
+    buttons: Sequence[OutboundButton] = (),
+    automation_run_id: uuid.UUID | None = None,
     deps: PlatformDeps | None = None,
     now: datetime | None = None,
 ) -> Message:
     """Insert a queued outbound message and enqueue its send (see the module docstring).
 
-    ``deps`` defaults to the worker's (jobs use that); the API passes its own.
+    ``buttons`` are link buttons sent with the text (automation DMs, FR-AUT-13). ``deps``
+    defaults to the worker's (jobs use that); the API passes its own.
     """
     now = now or datetime.now(UTC)
     text = text if text is not None and text.strip() else None
@@ -275,6 +283,8 @@ async def queue_outbound(
             (sticker or sticker_asset_id) and (typed_text or attachment_asset_ids or template)
         ),
     )
+    if buttons:
+        _check_buttons(conv.platform, text=None if sticker else text, buttons=buttons)
     if template is not None:
         require(caps, Capability.TEMPLATES)
     assets = await media_assets.load(session, asset_ids)
@@ -315,6 +325,8 @@ async def queue_outbound(
         sent_by_user_id=sent_by_user_id,
         scheduled_message_id=scheduled_message_id,
         suggestion_id=suggestion_id,
+        buttons=[{"title": b.title, "url": b.url} for b in buttons],
+        automation_run_id=automation_run_id,
         reactions=[],
     )
     try:
@@ -389,6 +401,25 @@ def _check_content(
         problem = text_limit_error(platform, text)
         if problem:
             raise _invalid("text", problem)
+
+
+def _check_buttons(platform: str, *, text: str | None, buttons: Sequence[OutboundButton]) -> None:
+    """Link buttons go out with the text as one button-template message (FR-AUT-13)."""
+    limit = BUTTON_TEXT_LIMITS.get(platform)
+    if limit is None:
+        raise ApiError(
+            "unsupported_media", f"{platform_name(platform)} messages can't include link buttons."
+        )
+    if not text:
+        raise _invalid("text", "Link buttons need a message to go with them.")
+    if len(buttons) > MAX_BUTTONS:
+        raise _invalid("buttons", f"Add up to {MAX_BUTTONS} buttons.")
+    if len(text) > limit:
+        raise _invalid(
+            "text",
+            f"{platform_name(platform)} messages with buttons can be up to {limit:,} characters; "
+            f"this one is {len(text):,}.",
+        )
 
 
 def _check_attachments(platform: str, assets: Sequence[Any]) -> None:
@@ -766,10 +797,13 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
         )
         parts.append(Part(None, OutboundMessage(template=template), _bucket(platform, media=False)))
     elif msg.text:
+        buttons = tuple(
+            OutboundButton(title=str(b["title"]), url=str(b["url"])) for b in msg.buttons or []
+        )
         parts.append(
             Part(
                 None,
-                OutboundMessage(text=msg.text, human_agent=human_agent),
+                OutboundMessage(text=msg.text, buttons=buttons, human_agent=human_agent),
                 _bucket(platform, media=False),
             )
         )
@@ -883,6 +917,7 @@ async def _commit(send: _Send, *, publish: bool) -> None:
     await send.session.refresh(send.msg)
     if publish:
         from socialhood.services import scheduled  # scheduled calls queue_outbound
+        from socialhood.services.automations import results  # so does the automation runtime
 
         events.queue_message(
             send.session,
@@ -891,6 +926,7 @@ async def _commit(send: _Send, *, publish: bool) -> None:
             sent_by_name=await sender_name(send.session, send.msg.sent_by_user_id),
         )
         await scheduled.follow_message(send.session, send.msg)
+        await results.follow_message(send.session, send.msg)
         await events.commit_and_publish(send.session, send.redis)
     else:
         await send.session.commit()
