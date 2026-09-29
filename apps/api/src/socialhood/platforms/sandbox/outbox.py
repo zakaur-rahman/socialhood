@@ -16,7 +16,8 @@ not follow, so the nudge can be seen in development.
 
 Comment moderation (T6.2, T6.3): hides, unhides and deletes are recorded in ``MODERATION``;
 ``fail_next(code, kind="moderation")`` makes the next one fail. ``reset()`` also forgets comments
-seeded with ``sandbox.comments.seed``.
+seeded with ``sandbox.comments.seed``, and everything sandbox publishing holds (containers,
+published posts, first comments and injected publishing failures; ``sandbox.publishing``).
 """
 
 from __future__ import annotations
@@ -109,7 +110,7 @@ def fail_next(
 
 
 def reset() -> None:
-    from socialhood.platforms.sandbox import comments
+    from socialhood.platforms.sandbox import comments, publishing
 
     SENT.clear()
     PRIVATE_REPLIES.clear()
@@ -120,6 +121,7 @@ def reset() -> None:
     FOLLOWS.clear()
     _REJECT_QUICK_REPLIES[0] = False
     comments.SEEDED.clear()
+    publishing.reset()
 
 
 def failure_for(message: OutboundMessage, kind: SendKind = "send") -> PlatformError | None:

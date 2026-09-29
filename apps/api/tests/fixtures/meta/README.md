@@ -29,3 +29,13 @@ account (docs/verification.md); tests that use a file must keep passing when it 
   page.
 - `error_100_33_not_found.json`: the error Meta documents for a write on an object that no longer
   exists, such as a deleted comment (T6.3); not yet seen from a real account.
+- Content publishing (T7.2, FR-PUB-05), in the shapes of Meta's Content Publishing guide and the
+  IG User Media, IG Container and Content Publishing Limit references (checked 2026-09-29), none
+  recorded yet: `publishing_limit.json` (`GET /{ig}/content_publishing_limit?fields=quota_usage,
+  config`), `container_created.json` (`POST /{ig}/media`), `container_status_finished.json`,
+  `container_status_in_progress.json` and `container_status_error.json` (`GET /{container}?
+  fields=status_code,status`; the ERROR text with its subcode is a guess at the wording),
+  `media_publish.json` (`POST /{ig}/media_publish`), `published_media.json` (the read-back),
+  `comment_created.json` (`POST /{media_id}/comments`) and the refusals
+  `error_2207042_publishing_limit.json`, `error_2207027_not_ready.json`,
+  `error_2207009_aspect_ratio.json` (codes and subcodes from Meta's error-code reference).

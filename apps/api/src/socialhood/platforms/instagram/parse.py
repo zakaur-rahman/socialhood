@@ -9,7 +9,8 @@ changes, and an echo arrives under the sending account's own ``entry.id``. Parsi
 a missing field falls back, it never fails the event.
 
 Graph reads for sync and backfill live here too: ``/me/media`` items, Conversations API threads
-and a post's comments (T6.1). Their shapes are unverified until T0.9 item 7.
+and a post's comments (T6.1). Their shapes are unverified until T0.9 item 7. So do the content
+publishing answers (T7.2): created ids, the publishing quota and container status.
 """
 
 from __future__ import annotations
@@ -18,7 +19,15 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from socialhood.platforms.base import CommentPage, PlatformComment, PlatformMedia, PlatformThread
+from socialhood.platforms.base import (
+    CommentPage,
+    ContainerStatus,
+    ContainerStatusCode,
+    PlatformComment,
+    PlatformMedia,
+    PlatformThread,
+    PublishingQuota,
+)
 from socialhood.platforms.events import (
     InboundComment,
     InboundEvent,
@@ -476,3 +485,45 @@ def _ref_kind(value: str) -> RefKind:
     """image, video or audio; anything else is a file."""
     kinds: dict[str, RefKind] = {"image": "image", "video": "video", "audio": "audio"}
     return kinds.get(value, "file")
+
+
+# ---------------------------------------------------------------- Graph: content publishing (T7.2)
+
+CONTAINER_STATUS_CODES: frozenset[ContainerStatusCode] = frozenset(
+    {"IN_PROGRESS", "FINISHED", "ERROR", "EXPIRED", "PUBLISHED"}
+)
+
+
+def created_id(body: object) -> str | None:
+    """``{"id": "…"}``: a new container (``POST /{ig}/media``), a published post
+    (``POST /{ig}/media_publish``) or a comment (``POST /{media_id}/comments``)."""
+    return _id(body)
+
+
+def publishing_quota(body: object, *, default_limit: int) -> PublishingQuota:
+    """``GET /{ig}/content_publishing_limit?fields=quota_usage,config``:
+    ``{"data": [{"quota_usage": 2, "config": {"quota_total": 100, "quota_duration": 86400}}]}``.
+    A missing limit falls back to ``default_limit`` (FR-PUB-10), a missing usage to 0."""
+    first = next(iter(_data(body)), {})
+    config = _dict(first.get("config"))
+    used = _count(first.get("quota_usage"))
+    total = _count(config.get("quota_total"))
+    duration = _count(config.get("quota_duration"))
+    return PublishingQuota(
+        used=max(0, used or 0),
+        limit=total if total is not None and total > 0 else default_limit,
+        window_s=duration if duration is not None and duration > 0 else 86_400,
+    )
+
+
+def container_status(body: object) -> ContainerStatus:
+    """``GET /{container_id}?fields=status_code,status``. ``status`` explains an ERROR (Meta
+    documents an error subcode there). An unknown or missing status_code reads as IN_PROGRESS, so
+    the poll keeps going until its timeout rather than failing on a value Meta adds later."""
+    raw = _dict(body)
+    code = str(raw.get("status_code") or "").upper()
+    status_code: ContainerStatusCode = "IN_PROGRESS"
+    for known in CONTAINER_STATUS_CODES:
+        if code == known:
+            status_code = known
+    return ContainerStatus(status_code=status_code, detail=_str(raw.get("status")))
