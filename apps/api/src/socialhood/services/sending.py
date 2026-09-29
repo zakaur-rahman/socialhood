@@ -8,7 +8,9 @@ message as ``queued``, updates the conversation, queues real-time events and enq
 the caller commits with ``realtime.events.commit_and_publish``. Rule failures raise ``ApiError``
 with the §4.7 codes (reply_window_closed, account_needs_reconnect, capability_unavailable,
 validation_error, unsupported_media). Calling it again with the same client_id in the
-conversation returns the existing message and sends nothing more.
+conversation returns the existing message and sends nothing more. A ``suggestion_id`` must name
+a suggestion of the conversation (422 otherwise); it becomes sent or edited_sent, and a person's
+reply without one dismisses the pending suggestion (services/suggestions, FR-SUG-02).
 
 ``deliver`` is the send_message job: queued → sending → sent, or failed with a TR-PL-03 code and
 a readable reason. Retryable errors keep the row ``sending`` and let the queue retry; the row
@@ -272,6 +274,9 @@ async def queue_outbound(
     if existing is not None:
         return _same_request(existing, text=text, asset_ids=asset_ids, template=template)
 
+    from socialhood.services.suggestions import service as suggestions  # it imports this module
+
+    suggestion = await suggestions.for_send(session, conv, suggestion_id)
     acct = await accounts.get(session, conv.social_account_id)
     if acct is None:
         raise ApiError("not_found")
@@ -351,10 +356,11 @@ async def queue_outbound(
             raise
         return _same_request(existing, text=text, asset_ids=asset_ids, template=template)
 
-    await _touch_conversation(session, conv, msg, now=now, takeover=source == "human")
     events.queue_message(
         session, msg, created=True, sent_by_name=await sender_name(session, sent_by_user_id)
     )
+    await _touch_conversation(session, conv, msg, now=now, takeover=source == "human")
+    await suggestions.after_send(session, conv, msg, suggestion)  # FR-SUG-02, F-08
     await events.queue_conversation(session, conv, now=now, human_agent=human_agent)
     await enqueue_send(msg.id, conv.id, msg.workspace_id)
     return msg
@@ -520,19 +526,27 @@ async def _touch_conversation(
 async def human_takeover(session: AsyncSession, conv: Conversation, *, now: datetime) -> None:
     """A person replied (Social Hood, a scheduled message, or the native app): clear needs_human
     and pause Auto for the workspace's takeover period, 0 meaning until resumed (FR-SUG-05, F-09).
-    Sets the attributes on ``conv``; the caller flushes. The system note arrives with T5.6."""
+    Sets the attributes on ``conv``; the caller flushes. When the pause starts in an Auto
+    conversation, the system note "AI paused until 16:40 because you replied" is added
+    (services/takeover, T5.6); a reply during a pause extends it without another note."""
+    from socialhood.services import takeover
+
     conv.needs_human = False
     conv.needs_human_reason = None
     minutes = await session.scalar(select(AiSettings.takeover_minutes))
     minutes = DEFAULT_TAKEOVER_MINUTES if minutes is None else minutes
     until = UNTIL_RESUMED if minutes == 0 else now + timedelta(minutes=minutes)
     current = conv.ai_paused_until
+    was_paused = False
     if current is not None:
         # 'infinity' comes back from asyncpg as a naive datetime.max.
         current = current if current.tzinfo else current.replace(tzinfo=UTC)
+        was_paused = current > now
         if current > until:  # never shorten a longer pause (or "until resumed")
             until = current
     conv.ai_paused_until = until
+    if not was_paused:
+        await takeover.paused_note(session, conv, until=until, now=now)
 
 
 async def sender_name(session: AsyncSession, user_id: uuid.UUID | None) -> str | None:

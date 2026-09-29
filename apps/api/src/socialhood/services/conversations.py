@@ -65,9 +65,10 @@ from socialhood.schemas.inbox import (
     MessageList,
 )
 from socialhood.schemas.inbox import Conversation as ConversationOut
-from socialhood.services import read_receipts
+from socialhood.services import read_receipts, takeover
 from socialhood.services.inbox_views import LEAD_SCORE, human_agent_allowed, list_item, message_out
 from socialhood.services.reply_window import reply_window
+from socialhood.services.suggestions import service as suggestions
 
 CURSOR_INVALID = "This cursor is not valid. Load the list again."
 
@@ -287,7 +288,7 @@ async def conversation_detail(
         )
     )
     paused = conv.ai_paused_until if conv.ai_paused_until and conv.ai_paused_until > now else None
-    return ConversationOut.model_validate(
+    out = ConversationOut.model_validate(
         {
             **list_item(conv, contact, now=now, human_agent=human_agent).model_dump(),
             "contact": ContactDetail(
@@ -328,6 +329,8 @@ async def conversation_detail(
             "last_inbound_at": conv.last_inbound_at,
         }
     )
+    out.pending_suggestion = await suggestions.pending_out(session, conv.id)  # T5.4, F-08
+    return out
 
 
 # ---------------------------------------------------------------- messages (FR-INB-02)
@@ -392,7 +395,9 @@ async def update_conversation(
     ig_human_agent_enabled: bool,
     now: datetime,
 ) -> bool:
-    """Archive or unarchive; set or clear the AI mode override (auto needs the plan's ai_modes)."""
+    """Archive or unarchive; set or clear the AI mode override (auto needs the plan's ai_modes,
+    FR-SUG-01); ``resume_ai`` ends a takeover pause now with the system note "AI resumed"
+    (FR-SUG-05, F-09)."""
     if patch.clear_ai_mode_override and patch.ai_mode_override is not None:
         raise ApiError(
             "validation_error",
@@ -408,9 +413,14 @@ async def update_conversation(
             values["ai_mode_override"] = patch.ai_mode_override
     elif patch.clear_ai_mode_override and conv.ai_mode_override is not None:
         values["ai_mode_override"] = None
+    resumed = patch.resume_ai and conv.ai_paused_until is not None
+    if resumed:
+        values["ai_paused_until"] = None
     if not values or not await writes.update(session, conv.id, **values):
         return False
     await _changed(session, conv, ig_human_agent_enabled=ig_human_agent_enabled, now=now)
+    if resumed:
+        await takeover.resumed_note(session, conv, now=now)
     return True
 
 

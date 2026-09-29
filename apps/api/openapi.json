@@ -6323,6 +6323,7 @@
     },
     "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {
       "post": {
+        "description": "Mark an auto reply \"should not have sent\" (\"bad\"), or clear the mark (null). Only a\ndecision that sent a reply takes feedback (409 otherwise).",
         "operationId": "give_ai_decision_feedback",
         "parameters": [
           {
@@ -6391,12 +6392,12 @@
         "summary": "Give Ai Decision Feedback",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.6"
+        ]
       }
     },
     "/v1/w/{wid}/ai-settings": {
       "get": {
+        "description": "FR-KB-04, FR-SUG-05, FR-SUG-06: brand voice, takeover period and escalation phrases.",
         "operationId": "get_ai_settings",
         "parameters": [
           {
@@ -6445,10 +6446,10 @@
         "summary": "Get Ai Settings",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.5"
+        ]
       },
       "put": {
+        "description": "Replace the whole settings object.",
         "operationId": "update_ai_settings",
         "parameters": [
           {
@@ -6507,8 +6508,7 @@
         "summary": "Update Ai Settings",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.5"
+        ]
       }
     },
     "/v1/w/{wid}/automation-templates": {
@@ -7913,7 +7913,7 @@
         ]
       },
       "patch": {
-        "description": "Archive or unarchive; set or clear the conversation's AI mode override.",
+        "description": "Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid\nplan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).",
         "operationId": "update_conversation",
         "parameters": [
           {
@@ -8373,7 +8373,7 @@
     },
     "/v1/w/{wid}/conversations/{conversation_id}/suggestions": {
       "post": {
-        "description": "F-08 Regenerate: up to 5 per message; suggestion.created carries the result.",
+        "description": "F-08 Regenerate: up to 5 per message; suggestion.created carries the result. 409 when\nthe conversation's AI mode is off, there is no customer message, or the 5 are used; 402\nquota_exceeded when AI credits are used up.",
         "operationId": "regenerate_suggestion",
         "parameters": [
           {
@@ -8430,8 +8430,7 @@
         "summary": "Regenerate Suggestion",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.4"
+        ]
       }
     },
     "/v1/w/{wid}/conversations/{conversation_id}/summary": {
@@ -9445,7 +9444,7 @@
     },
     "/v1/w/{wid}/messages/{message_id}/ai-decision": {
       "get": {
-        "description": "The latest decision for an inbound message, or the one that sent this AI message.",
+        "description": "The latest decision for an inbound message, or the one that sent this AI message\n(FR-SUG-04: the \"Sent by AI\" popover and the escalation banner). 404 when there is none.",
         "operationId": "get_ai_decision",
         "parameters": [
           {
@@ -9504,8 +9503,7 @@
         "summary": "Get Ai Decision",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.6"
+        ]
       }
     },
     "/v1/w/{wid}/messages/{message_id}/retry": {
@@ -10543,6 +10541,7 @@
     },
     "/v1/w/{wid}/suggestions/{suggestion_id}/dismiss": {
       "post": {
+        "description": "F-08 Dismiss: a pending suggestion becomes dismissed (suggestion.updated); any other is\nreturned as it is.",
         "operationId": "dismiss_suggestion",
         "parameters": [
           {
@@ -10601,8 +10600,7 @@
         "summary": "Dismiss Suggestion",
         "tags": [
           "ai"
-        ],
-        "x-pending": "T5.4"
+        ]
       }
     },
     "/v1/workspaces": {

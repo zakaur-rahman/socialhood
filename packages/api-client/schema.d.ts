@@ -71,7 +71,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Give Ai Decision Feedback */
+        /**
+         * Give Ai Decision Feedback
+         * @description Mark an auto reply "should not have sent" ("bad"), or clear the mark (null). Only a
+         *     decision that sent a reply takes feedback (409 otherwise).
+         */
         post: operations["give_ai_decision_feedback"];
         delete?: never;
         options?: never;
@@ -86,9 +90,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Ai Settings */
+        /**
+         * Get Ai Settings
+         * @description FR-KB-04, FR-SUG-05, FR-SUG-06: brand voice, takeover period and escalation phrases.
+         */
         get: operations["get_ai_settings"];
-        /** Update Ai Settings */
+        /**
+         * Update Ai Settings
+         * @description Replace the whole settings object.
+         */
         put: operations["update_ai_settings"];
         post?: never;
         delete?: never;
@@ -403,7 +413,8 @@ export interface paths {
         head?: never;
         /**
          * Update Conversation
-         * @description Archive or unarchive; set or clear the conversation's AI mode override.
+         * @description Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid
+         *     plan: 402 entitlement_required); resume_ai ends a takeover pause (FR-SUG-05).
          */
         patch: operations["update_conversation"];
         trace?: never;
@@ -490,7 +501,9 @@ export interface paths {
         put?: never;
         /**
          * Regenerate Suggestion
-         * @description F-08 Regenerate: up to 5 per message; suggestion.created carries the result.
+         * @description F-08 Regenerate: up to 5 per message; suggestion.created carries the result. 409 when
+         *     the conversation's AI mode is off, there is no customer message, or the 5 are used; 402
+         *     quota_exceeded when AI credits are used up.
          */
         post: operations["regenerate_suggestion"];
         delete?: never;
@@ -760,7 +773,8 @@ export interface paths {
         };
         /**
          * Get Ai Decision
-         * @description The latest decision for an inbound message, or the one that sent this AI message.
+         * @description The latest decision for an inbound message, or the one that sent this AI message
+         *     (FR-SUG-04: the "Sent by AI" popover and the escalation banner). 404 when there is none.
          */
         get: operations["get_ai_decision"];
         put?: never;
@@ -1029,7 +1043,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Dismiss Suggestion */
+        /**
+         * Dismiss Suggestion
+         * @description F-08 Dismiss: a pending suggestion becomes dismissed (suggestion.updated); any other is
+         *     returned as it is.
+         */
         post: operations["dismiss_suggestion"];
         delete?: never;
         options?: never;

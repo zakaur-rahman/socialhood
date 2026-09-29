@@ -30,8 +30,10 @@ sends nothing.
   public-reply-only automation never DMs. A reply in a comment thread triggers keyword
   automations only: "any comment" automations answer top-level comments.
 
-AI replies arrive in P5: an ``ai_reply`` automation that runs anyway records a failed run and sends
-nothing.
+AI replies (T5.8, services/automations/ai_reply): a DM's run is recorded ``queued`` with the
+trigger marked automation_handled and committed, then the reply is drafted and sent (``sent``) or
+the conversation escalated (``escalated``); a retried job resumes a run left queued. A comment's
+run is queued like any private reply and the queue drafts it before sending.
 """
 
 from __future__ import annotations
@@ -65,7 +67,7 @@ from socialhood.repositories import automation_runs as runs
 from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import inbox
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, matching, results
+from socialhood.services.automations import actions, ai_reply, matching, results
 
 log = get_logger(__name__)
 
@@ -80,7 +82,6 @@ NOT_FOUND_DELAY_S = 1.0
 REPLY_WINDOW = timedelta(hours=24)  # FR-AUT-16
 PRIVATE_REPLY_LIMIT = timedelta(days=7)  # FR-AUT-10
 EXPIRED = ("expired", "Instagram's 7-day limit passed")
-AI_UNAVAILABLE = actions.AI_UNAVAILABLE
 NO_MESSAGE = actions.NO_MESSAGE
 
 
@@ -240,12 +241,23 @@ async def _run_dm(env: _Env, message_id: uuid.UUID) -> Outcome:
         contact = await inbox.get_contact(session, conv.contact_id) if conv else None
         if conv is None or contact is None:
             return Outcome.IGNORED
-        if msg.automation_handled or await runs.event_runs(session, message_id=msg.id):
-            return Outcome.ALREADY_RAN
-        # Tap first (FR-AUT-21): an answer to a waiting opening comes before any keyword.
-        answer = await answers.find(session, msg, contact.id, now=env.now)
-        if answer is None:
-            return await _match_dm(session, env, msg, conv, contact)
+        earlier = await runs.event_runs(session, message_id=msg.id)
+        drafting = ai_reply.drafting_run(earlier)
+        answer = None
+        if drafting is None:
+            if msg.automation_handled or earlier:
+                return Outcome.ALREADY_RAN
+            # Tap first (FR-AUT-21): an answer to a waiting opening comes before any keyword.
+            answer = await answers.find(session, msg, contact.id, now=env.now)
+            if answer is None:
+                return await _match_dm(session, env, msg, conv, contact)
+    if drafting is not None:
+        # A retry of a run whose AI reply was being drafted (T5.8): finish it.
+        await ai_reply.answer_dm(
+            env.sessionmaker, env.redis, env.deps, run_id=drafting.id, now=env.now
+        )
+        return Outcome.FIRED
+    assert answer is not None
     released = await answers.release(
         env.sessionmaker,
         env.redis,
@@ -282,12 +294,14 @@ async def _match_dm(
                 _run_row(automation, match.keyword, result=RunResult.SKIPPED_COOLDOWN, **common),
             )
             continue
+        ai = automation.action == AutomationAction.AI_REPLY
         run = await runs.insert_run(
             session,
             _run_row(
                 automation,
                 match.keyword,
-                result=RunResult.SENT,
+                # An AI reply's run waits while the reply is drafted (T5.8).
+                result=RunResult.QUEUED if ai else RunResult.SENT,
                 conversation_id=conv.id,
                 **common,
             ),
@@ -296,6 +310,8 @@ async def _match_dm(
             await session.rollback()
             return Outcome.ALREADY_RAN
         automation.last_run_at = env.now
+        if ai:
+            return await _answer_with_ai(session, env, automation, run, msg)
         await _send_dm(session, env, automation, run, msg, conv, contact)
         await session.flush()
         await events.commit_and_publish(session, env.redis)
@@ -308,6 +324,26 @@ async def _match_dm(
         return Outcome.FIRED
     await session.commit()
     return Outcome.SKIPPED
+
+
+async def _answer_with_ai(
+    session: AsyncSession, env: _Env, automation: Automation, run: AutomationRun, msg: Message
+) -> Outcome:
+    """T5.8: the run (queued) and automation_handled are committed first, so no lock is held
+    while the reply is drafted; then services/automations/ai_reply sends or escalates."""
+    msg.automation_handled = True  # FR-AUT-07: the inbox AI leaves it alone
+    await session.flush()
+    await events.commit_and_publish(session, env.redis)
+    result = await ai_reply.answer_dm(
+        env.sessionmaker, env.redis, env.deps, run_id=run.id, now=env.now
+    )
+    log.info(
+        "automation_fired",
+        automation_id=str(automation.id),
+        run_id=str(run.id),
+        result=str(result),
+    )
+    return Outcome.FIRED
 
 
 # ---- the follow nudge (FR-AUT-22)
@@ -336,10 +372,6 @@ async def _send_dm(
 ) -> None:
     from socialhood.services import sending  # sending → … → ingest → this module
 
-    if automation.action != AutomationAction.SEND_MESSAGE:
-        run.result = RunResult.FAILED
-        run.error_code, run.error_message = AI_UNAVAILABLE
-        return
     text = await actions.message_text(session, automation, contact)
     if text is None:
         run.result = RunResult.FAILED
@@ -377,6 +409,11 @@ class _Plan:
 
 
 def _plan(automation: Automation) -> _Plan:
+    if automation.action == AutomationAction.AI_REPLY:  # the queue drafts the DM (T5.8)
+        return _Plan(
+            dm=automation.surge_order != SurgeOrder.PUBLIC_ONLY,
+            public=bool(automation.public_reply_texts),
+        )
     if automation.action != AutomationAction.SEND_MESSAGE:
         return _Plan(dm=False, public=False)
     has_dm = bool(automation.message_text and automation.message_text.strip())
@@ -484,13 +521,7 @@ async def _first_passing(
             public_reply_variant=variant,
             **common,
         )
-        if automation.action != AutomationAction.SEND_MESSAGE:
-            values.update(
-                result=RunResult.FAILED,
-                error_code=AI_UNAVAILABLE[0],
-                error_message=AI_UNAVAILABLE[1],
-            )
-        elif not plan.dm and not plan.public:
+        if not plan.dm and not plan.public:
             values.update(
                 result=RunResult.FAILED, error_code=NO_MESSAGE[0], error_message=NO_MESSAGE[1]
             )

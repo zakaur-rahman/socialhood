@@ -353,8 +353,10 @@ async def test_two_activations_at_once_cannot_pass_the_limit(ws: Ws, engine: Asy
     assert len(active) == 3
 
 
-async def test_ai_replies_need_pro_and_then_the_knowledge_base(ws: Ws, engine: AsyncEngine) -> None:
-    faq = await ws.ok("POST", "/automations", 201, json={"template_key": "answer_faqs"})
+async def test_ai_replies_need_pro_and_their_instructions(ws: Ws, engine: AsyncEngine) -> None:
+    """T5.8: the ai_reply_automations entitlement stays; with it, instructions are required."""
+    body = ws.definition(action="ai_reply", message_text=None, message_buttons=[])
+    faq = await ws.draft(**body)
     response = await ws.call("POST", f"/automations/{faq['id']}/activate")
     assert response.status_code == 402
     assert response.json()["code"] == "entitlement_required"
@@ -364,10 +366,14 @@ async def test_ai_replies_need_pro_and_then_the_knowledge_base(ws: Ws, engine: A
     assert response.status_code == 422
     assert response.json()["errors"] == [
         {
-            "field": "action",
-            "message": "AI replies arrive with the knowledge base. Send a message for now.",
+            "field": "ai_instructions",
+            "message": "Tell the AI how to reply, for example what to offer or link to.",
         }
     ]
+    body["ai_instructions"] = "Answer questions about our cakes from the FAQ."
+    await ws.ok("PUT", f"/automations/{faq['id']}", json=body)
+    active = await ws.ok("POST", f"/automations/{faq['id']}/activate")
+    assert (active["status"], active["action"]) == ("active", "ai_reply")
 
 
 async def test_an_active_automation_stays_complete(ws: Ws) -> None:

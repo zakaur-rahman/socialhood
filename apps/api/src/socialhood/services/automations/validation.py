@@ -17,8 +17,9 @@ button title of 1 to 20 characters; the message follows their answer as a normal
 carry an image. On a DM trigger the setting is ignored. The follow nudge (FR-AUT-22) needs its
 text, at most 300 characters as typed. AI replies ignore both settings.
 
-AI replies need the knowledge base and suggestions (P5), so an AI-reply automation cannot be
-activated yet; the error says so on the action field.
+An AI reply (T5.8, FR-AUT-01) needs its instructions: what the business wants the reply to do
+(at most 2,000 characters, enforced by the request schema). Its plan entitlement is checked
+before these rules (definitions.activate).
 """
 
 from __future__ import annotations
@@ -51,7 +52,7 @@ COPY = {
     "posts_missing": "Choose at least one post.",
     "posts_other_account": "Choose posts from this automation's account.",
     "action_missing": "Choose what the automation does.",
-    "ai_reply_later": "AI replies arrive with the knowledge base. Send a message for now.",
+    "ai_instructions_missing": "Tell the AI how to reply, for example what to offer or link to.",
     "message_missing": "Write the message to send.",
     "button_url": "Use a full link that starts with https://.",
     "button_title": "Give the button a title of up to 20 characters.",
@@ -114,6 +115,7 @@ class Definition:
     opening_button: str | None = None
     follow_nudge: bool = False
     follow_nudge_text: str | None = None
+    ai_instructions: str | None = None
 
     @property
     def taps_first(self) -> bool:
@@ -204,7 +206,8 @@ def _action_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
         return [FieldError("action", COPY["action_missing"])]
     errors: list[FieldError] = []
     if d.action == "ai_reply":
-        errors.append(FieldError("action", COPY["ai_reply_later"]))
+        if not (d.ai_instructions or "").strip():
+            errors.append(FieldError("ai_instructions", COPY["ai_instructions_missing"]))
     elif d.action == "send_message":
         errors += _message_errors(d, disclosure)
     if d.taps_first:

@@ -36,9 +36,10 @@ NUDGE_BUTTON = "View profile"
 PROFILE_URL = "https://www.instagram.com/{}/"
 
 # (error_code, error_message) for runs that send nothing.
-AI_UNAVAILABLE = (
-    "ai_reply_unavailable",
-    "AI replies aren't available yet, so this automation sent nothing.",
+# Tap first opens only automations that send a message (FR-AUT-21); an AI reply never waits.
+NOT_A_MESSAGE = (
+    "nothing_to_send",
+    "Only automations that send a message can wait for an answer.",
 )
 NO_MESSAGE = ("nothing_to_send", "The automation has no message to send.")
 
