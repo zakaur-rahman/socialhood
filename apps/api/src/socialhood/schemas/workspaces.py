@@ -77,3 +77,4 @@ class Checklist(ResponseModel):
 class Overview(ResponseModel):
     range: Literal["7d", "30d"]
     checklist: Checklist
+    knowledge_gaps_open: int = 0  # FR-KB-06: Home's "Questions the AI couldn't answer" (T5.10)

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from enum import StrEnum
 from functools import lru_cache
-from typing import Annotated
+from typing import Annotated, Literal
 
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -106,6 +106,7 @@ class Settings(BaseSettings):
     whatsapp_webhook_verify_token: SecretStr | None = None
 
     gemini_api_key: SecretStr | None = None
+    ai_provider: Literal["gemini", "fake"] = "gemini"  # fake: run without a key (TR-AI-01)
     ai_model_analysis: str = "gemini-3.5-flash-lite"
     ai_model_reply: str = "gemini-3.5-flash-lite"
     ai_model_reply_complex: str = "gemini-3.8-flash"

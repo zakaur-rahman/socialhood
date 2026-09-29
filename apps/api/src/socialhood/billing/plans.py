@@ -28,6 +28,20 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
 }
 
 
+# AI credit costs per feature (§1.7); keys match models.billing.AiFeature.
+CREDIT_COSTS: dict[str, int] = {
+    "message_analysis": 1,
+    "reply_suggestion": 2,
+    "auto_reply": 2,
+    "conversation_summary": 1,
+    "comment_analysis": 1,
+    "post_summary": 2,
+    "caption_generation": 1,
+    "knowledge_test": 1,
+    "automation_ai_reply": 2,
+}
+
+
 def entitlement(plan: str, key: str) -> Any:
     values = ENTITLEMENTS[key]
     return values.get(plan, values["free"])  # type: ignore[call-overload]

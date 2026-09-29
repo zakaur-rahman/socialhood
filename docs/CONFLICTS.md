@@ -262,3 +262,13 @@ following; never before it, never instead of it). Details:
 - Runs still waiting after 7 days stay `awaiting_reply` in the log but are never released and are
   not counted in "Waiting now". Stats: tapped = runs answered in the period, nudged = nudges sent in
   the period.
+
+## C-032 · Gemini SDK option names (resolved in code, T5.1)
+TR-AI-03's sample passes `response_format={"text": {...}}` to `GenerateContentConfig`. The
+installed google-genai (2.25.0) has no `response_format`; structured output uses
+`response_mime_type="application/json"` with `response_json_schema` (or `response_schema`), and
+thinking uses `ThinkingConfig(thinking_level=...)`. Every option still goes inside the config, as
+TR-AI-03 requires. `EmbedContentConfig` has `task_type` and `output_dimensionality`; T0.9 item 17
+confirms whether gemini-embedding-2 accepts `task_type` or needs the task written into the text.
+The model ids in TR-AI-02 are to be checked against Google's list with a valid key (the configured
+key was rejected on 2026-09-29).

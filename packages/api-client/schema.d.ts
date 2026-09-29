@@ -62,6 +62,41 @@ export interface paths {
         patch: operations["update_workspace"];
         trace?: never;
     };
+    "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Give Ai Decision Feedback */
+        post: operations["give_ai_decision_feedback"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ai-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ai Settings */
+        get: operations["get_ai_settings"];
+        /** Update Ai Settings */
+        put: operations["update_ai_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/automation-templates": {
         parameters: {
             query?: never;
@@ -301,6 +336,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/billing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Billing */
+        get: operations["get_billing"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations": {
         parameters: {
             query?: never;
@@ -427,6 +479,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/conversations/{conversation_id}/suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Regenerate Suggestion
+         * @description F-08 Regenerate: up to 5 per message; suggestion.created carries the result.
+         */
+        post: operations["regenerate_suggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/conversations/{conversation_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Summary
+         * @description FR-AI-03 on request; conversation.updated carries the new summary.
+         */
+        post: operations["refresh_summary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations/{conversation_id}/unread": {
         parameters: {
             query?: never;
@@ -501,6 +593,103 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/knowledge-gaps": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Knowledge Gaps
+         * @description Open gaps from the last 30 days, most asked first (TR-AI-12).
+         */
+        get: operations["list_knowledge_gaps"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-gaps/{gap_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss Knowledge Gap */
+        post: operations["dismiss_knowledge_gap"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Knowledge Sources */
+        get: operations["list_knowledge_sources"];
+        put?: never;
+        /**
+         * Create Knowledge Source
+         * @description 402 quota_exceeded over knowledge_characters; ingestion runs in the background.
+         */
+        post: operations["create_knowledge_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Knowledge Source */
+        get: operations["get_knowledge_source"];
+        put?: never;
+        post?: never;
+        /** Delete Knowledge Source */
+        delete: operations["delete_knowledge_source"];
+        options?: never;
+        head?: never;
+        /** Update Knowledge Source */
+        patch: operations["update_knowledge_source"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Test Knowledge
+         * @description FR-KB-03: 1 credit; nothing is stored or sent.
+         */
+        post: operations["test_knowledge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/media-assets": {
         parameters: {
             query?: never;
@@ -536,6 +725,46 @@ export interface paths {
          * @description Parameters for uploading one file from the browser into ws/{workspace_id}/{purpose}.
          */
         post: operations["create_upload_signature"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/message-analyses/{analysis_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct Message Analysis
+         * @description FR-AI-04: change a message's intent or sentiment.
+         */
+        patch: operations["correct_message_analysis"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/messages/{message_id}/ai-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ai Decision
+         * @description The latest decision for an inbound message, or the one that sent this AI message.
+         */
+        get: operations["get_ai_decision"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -791,6 +1020,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/suggestions/{suggestion_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss Suggestion */
+        post: operations["dismiss_suggestion"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces": {
         parameters: {
             query?: never;
@@ -821,6 +1067,151 @@ export interface components {
             id: string;
             /** Name */
             name?: string | null;
+        };
+        /**
+         * AiDecision
+         * @description Why the AI did or did not reply (FR-SUG-04): the popover on an AI-sent bubble and the
+         *     escalation banner.
+         */
+        AiDecision: {
+            /** Checks */
+            checks: components["schemas"]["AiDecisionCheck"][];
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "auto_sent" | "escalated" | "skipped";
+            /** Reason */
+            reason?: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | ("mode_not_auto" | "quota_exhausted" | "paused" | "automation_handled" | "rate_capped" | "not_needed") | null;
+            /** Sent Message Id */
+            sent_message_id?: string | null;
+            /** Suggestion Id */
+            suggestion_id?: string | null;
+            /** User Feedback */
+            user_feedback?: "bad" | null;
+        };
+        /** AiDecisionCheck */
+        AiDecisionCheck: {
+            /** N */
+            n: number;
+            /** Name */
+            name: string;
+            /** Passed */
+            passed: boolean;
+            /** Value */
+            value?: string | number | boolean | null;
+        };
+        /**
+         * AiDecisionFeedback
+         * @description POST …/ai-decisions/{id}/feedback: "bad" = should not have sent; null clears it.
+         */
+        AiDecisionFeedback: {
+            /** Feedback */
+            feedback: "bad" | null;
+        };
+        /**
+         * AiSettings
+         * @description FR-KB-04 brand voice, FR-SUG-06 escalation phrases, FR-SUG-05 takeover period.
+         */
+        AiSettings: {
+            /** Business Description */
+            business_description?: string | null;
+            /** Business Name */
+            business_name?: string | null;
+            /** Do List */
+            do_list: string[];
+            /** Dont List */
+            dont_list: string[];
+            /**
+             * Emoji Policy
+             * @enum {string}
+             */
+            emoji_policy: "none" | "light" | "lots";
+            /** Escalation Phrases */
+            escalation_phrases: string[];
+            /** Sign Off */
+            sign_off?: string | null;
+            /**
+             * Takeover Minutes
+             * @enum {integer}
+             */
+            takeover_minutes: 0 | 30 | 120 | 1440;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "friendly" | "professional" | "playful" | "concise";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * AiSettingsUpdate
+         * @description PUT …/ai-settings: the whole settings object.
+         */
+        AiSettingsUpdate: {
+            /** Business Description */
+            business_description?: string | null;
+            /** Business Name */
+            business_name?: string | null;
+            /** Do List */
+            do_list?: string[];
+            /** Dont List */
+            dont_list?: string[];
+            /**
+             * Emoji Policy
+             * @default light
+             * @enum {string}
+             */
+            emoji_policy: "none" | "light" | "lots";
+            /** Escalation Phrases */
+            escalation_phrases?: string[];
+            /** Sign Off */
+            sign_off?: string | null;
+            /**
+             * Takeover Minutes
+             * @default 120
+             * @enum {integer}
+             */
+            takeover_minutes: 0 | 30 | 120 | 1440;
+            /**
+             * Tone
+             * @default friendly
+             * @enum {string}
+             */
+            tone: "friendly" | "professional" | "playful" | "concise";
+        };
+        /**
+         * AnalysisCorrection
+         * @description PATCH …/message-analyses/{id} (FR-AI-04): at least one of the two.
+         */
+        AnalysisCorrection: {
+            /** Intent */
+            intent?: ("pricing" | "product_inquiry" | "purchase" | "order_status" | "shipping" | "support" | "complaint" | "refund" | "feedback" | "collaboration" | "greeting" | "spam" | "other") | null;
+            /** Sentiment */
+            sentiment?: ("positive" | "neutral" | "negative") | null;
         };
         /** Attachment */
         Attachment: {
@@ -1240,6 +1631,52 @@ export interface components {
             /** Waiting */
             waiting: number;
         };
+        /** BillingPrice */
+        BillingPrice: {
+            /** Amount Minor */
+            amount_minor: number;
+            /** Currency */
+            currency: string;
+            /**
+             * Interval
+             * @constant
+             */
+            interval: "month";
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "pro" | "max";
+        };
+        /** BillingState */
+        BillingState: {
+            /** Cancel At Period End */
+            cancel_at_period_end: boolean;
+            /** Current Period End */
+            current_period_end?: string | null;
+            /** Entitlements */
+            entitlements: components["schemas"]["EntitlementValue"][];
+            /** Grace Until */
+            grace_until?: string | null;
+            /**
+             * Plan
+             * @enum {string}
+             */
+            plan: "free" | "pro" | "max";
+            /** Prices */
+            prices: components["schemas"]["BillingPrice"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "free" | "trialing" | "active" | "on_hold" | "expired";
+            /** Trial Eligible */
+            trial_eligible: boolean;
+            /** Trial Ends At */
+            trial_ends_at?: string | null;
+            /** Usage */
+            usage: components["schemas"]["UsageMeter"][];
+        };
         /** BulkPause */
         BulkPause: {
             /** Ids */
@@ -1454,6 +1891,11 @@ export interface components {
              * @default false
              */
             clear_ai_mode_override: boolean;
+            /**
+             * Resume Ai
+             * @default false
+             */
+            resume_ai: boolean;
             /** Status */
             status?: ("open" | "archived") | null;
         };
@@ -1510,6 +1952,13 @@ export interface components {
             /** Waba Id */
             waba_id: string;
         };
+        /** EntitlementValue */
+        EntitlementValue: {
+            /** Key */
+            key: string;
+            /** Value */
+            value: number | boolean | string[] | null;
+        };
         /** ErrorInfo */
         ErrorInfo: {
             /** Code */
@@ -1528,6 +1977,186 @@ export interface components {
             needs_you: number;
             /** Unread */
             unread: number;
+        };
+        /** KnowledgeGap */
+        KnowledgeGap: {
+            /** Examples */
+            examples: components["schemas"]["KnowledgeGapExample"][];
+            /**
+             * First Seen At
+             * Format: date-time
+             */
+            first_seen_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /** Occurrences */
+            occurrences: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "answered" | "dismissed";
+            /** Topic */
+            topic: string;
+        };
+        /** KnowledgeGapExample */
+        KnowledgeGapExample: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /**
+             * Message Id
+             * Format: uuid
+             */
+            message_id: string;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Text */
+            text: string;
+        };
+        /** KnowledgeGapList */
+        KnowledgeGapList: {
+            /** Items */
+            items: components["schemas"]["KnowledgeGap"][];
+        };
+        /** KnowledgeSource */
+        KnowledgeSource: {
+            /** Body */
+            body?: string | null;
+            /** Char Count */
+            char_count: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error?: string | null;
+            /** File Asset Id */
+            file_asset_id?: string | null;
+            /** File Name */
+            file_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Ingested At */
+            last_ingested_at?: string | null;
+            /** Question */
+            question?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "processing" | "ready" | "failed";
+            /** Title */
+            title: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "faq" | "text" | "url" | "file";
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Url */
+            url?: string | null;
+            /** Version */
+            version: number;
+        };
+        /**
+         * KnowledgeSourceCreate
+         * @description POST …/knowledge-sources. FAQ: question + body (title = question). Note: title + body.
+         *     Web page: url (SEC-09). File: file_asset_id of an uploaded raw asset (PDF, DOCX, TXT, MD up to
+         *     10 MB). ``gap_id`` answers a knowledge gap (FR-KB-06).
+         */
+        KnowledgeSourceCreate: {
+            /** Body */
+            body?: string | null;
+            /** File Asset Id */
+            file_asset_id?: string | null;
+            /** Gap Id */
+            gap_id?: string | null;
+            /** Question */
+            question?: string | null;
+            /** Title */
+            title?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "faq" | "text" | "url" | "file";
+            /** Url */
+            url?: string | null;
+        };
+        /** KnowledgeSourceList */
+        KnowledgeSourceList: {
+            /** Items */
+            items: components["schemas"]["KnowledgeSource"][];
+            usage: components["schemas"]["KnowledgeUsage"];
+        };
+        /**
+         * KnowledgeSourcePatch
+         * @description PATCH …/knowledge-sources/{id}: edits re-ingest the source (version + 1).
+         */
+        KnowledgeSourcePatch: {
+            /** Body */
+            body?: string | null;
+            /** Question */
+            question?: string | null;
+            /**
+             * Reingest
+             * @default false
+             */
+            reingest: boolean;
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** KnowledgeTest */
+        KnowledgeTest: {
+            /** Question */
+            question: string;
+        };
+        /**
+         * KnowledgeTestResult
+         * @description FR-KB-03: the drafted answer with the sources it used, or "Not in your knowledge".
+         */
+        KnowledgeTestResult: {
+            /** Answer */
+            answer?: string | null;
+            /** Can Answer */
+            can_answer: boolean;
+            /** Missing Info */
+            missing_info?: string | null;
+            /** Sources */
+            sources: components["schemas"]["SuggestionSource"][];
+        };
+        /** KnowledgeUsage */
+        KnowledgeUsage: {
+            /** Characters Limit */
+            characters_limit?: number | null;
+            /** Characters Used */
+            characters_used: number;
         };
         /** LinkButton */
         LinkButton: {
@@ -1804,6 +2433,11 @@ export interface components {
         /** Overview */
         Overview: {
             checklist: components["schemas"]["Checklist"];
+            /**
+             * Knowledge Gaps Open
+             * @default 0
+             */
+            knowledge_gaps_open: number;
             /**
              * Range
              * @enum {string}
@@ -2264,6 +2898,17 @@ export interface components {
              */
             resource_type: "image" | "video" | "raw";
         };
+        /** UsageMeter */
+        UsageMeter: {
+            /** Limit */
+            limit?: number | null;
+            /** Metric */
+            metric: string;
+            /** Period End */
+            period_end?: string | null;
+            /** Used */
+            used: number;
+        };
         /** WhatsAppTemplate */
         WhatsAppTemplate: {
             /** Body */
@@ -2523,6 +3168,135 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    give_ai_decision_feedback: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                decision_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiDecisionFeedback"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiDecision"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_ai_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_ai_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSettings"];
                 };
             };
             /** @description Validation error */
@@ -3180,6 +3954,46 @@ export interface operations {
             };
         };
     };
+    get_billing: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillingState"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_conversations: {
         parameters: {
             query?: {
@@ -3571,6 +4385,88 @@ export interface operations {
             };
         };
     };
+    regenerate_suggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    refresh_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     mark_conversation_unread: {
         parameters: {
             query?: never;
@@ -3736,6 +4632,342 @@ export interface operations {
             };
         };
     };
+    list_knowledge_gaps: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeGapList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    dismiss_knowledge_gap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gap_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeGap"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_knowledge_sources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSourceList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_knowledge_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeSourceCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_knowledge_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_knowledge_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_knowledge_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeSourcePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    test_knowledge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KnowledgeTest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeTestResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     register_media_asset: {
         parameters: {
             query?: never;
@@ -3802,6 +5034,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UploadSignature"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    correct_message_analysis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                analysis_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnalysisCorrection"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageAnalysis"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_ai_decision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiDecision"];
                 };
             };
             /** @description Validation error */
@@ -4434,6 +5752,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WhatsAppTemplateList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    dismiss_suggestion: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                suggestion_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Suggestion"];
                 };
             };
             /** @description Validation error */

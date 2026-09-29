@@ -13,7 +13,12 @@ from collections.abc import Callable, Mapping
 
 import pytest
 
-pytest_plugins = ["tests.support.db", "tests.support.api", "tests.support.instagram"]
+pytest_plugins = [
+    "tests.support.db",
+    "tests.support.api",
+    "tests.support.instagram",
+    "tests.support.ai",
+]
 
 os.environ["APP_ENV"] = "test"
 os.environ["DATABASE_URL"] = os.environ.get(

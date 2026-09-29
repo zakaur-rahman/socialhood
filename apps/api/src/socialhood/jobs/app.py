@@ -28,6 +28,9 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.whatsapp",
     "socialhood.jobs.tasks.automations",
     "socialhood.jobs.tasks.automation_windows",
+    "socialhood.jobs.tasks.analysis",
+    "socialhood.jobs.tasks.suggestions",
+    "socialhood.jobs.tasks.knowledge",
 ]
 
 configure_logging(get_settings().log_level)

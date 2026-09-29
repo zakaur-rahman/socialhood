@@ -24,6 +24,13 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from tests.support.ai import (
+    make_analysis,
+    make_decision,
+    make_gap,
+    make_source,
+    make_suggestion,
+)
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation
 from tests.support.inbox import make_asset, make_scheduled, make_thread
@@ -39,6 +46,11 @@ PARAM_TO_SEED: dict[str, str] = {
     "scheduled_message_id": "scheduled_message_id",
     "asset_id": "asset_id",
     "automation_id": "automation_id",
+    "analysis_id": "analysis_id",
+    "suggestion_id": "suggestion_id",
+    "source_id": "source_id",
+    "gap_id": "gap_id",
+    "decision_id": "decision_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -93,6 +105,14 @@ EXAMPLE_BODIES.update(
     }
 )
 
+EXAMPLE_BODIES.update(
+    {
+        ("PATCH", "/v1/w/{wid}/message-analyses/{analysis_id}"): {"intent": "complaint"},
+        ("PATCH", "/v1/w/{wid}/knowledge-sources/{source_id}"): {"title": "Taken over"},
+        ("POST", "/v1/w/{wid}/ai-decisions/{decision_id}/feedback"): {"feedback": "bad"},
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
@@ -118,6 +138,13 @@ B_TABLES = (
     "automation_keywords",
     "automation_runs",
     "comments",
+    "message_analyses",
+    "reply_suggestions",
+    "knowledge_sources",
+    "knowledge_chunks",
+    "knowledge_gaps",
+    "ai_decisions",
+    "ai_usage_events",
 )
 
 
@@ -130,6 +157,11 @@ class Seed:
     scheduled_message_id: str = ""
     asset_id: str = ""
     automation_id: str = ""
+    analysis_id: str = ""
+    suggestion_id: str = ""
+    source_id: str = ""
+    gap_id: str = ""
+    decision_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -220,6 +252,16 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     )
     asset = await make_asset(engine, workspace_id=wid)
     automation = await make_automation(engine, workspace_id=wid, account_id=account_id)
+    on = {
+        "workspace_id": wid,
+        "conversation_id": thread.conversation_id,
+        "message_id": thread.message_ids[0],
+    }
+    analysis = await make_analysis(engine, **on)
+    suggestion = await make_suggestion(engine, **on)
+    decision = await make_decision(engine, **on)
+    source = await make_source(engine, workspace_id=wid)
+    gap = await make_gap(engine, workspace_id=wid)
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -228,6 +270,11 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         scheduled_message_id=str(scheduled),
         asset_id=str(asset),
         automation_id=str(automation),
+        analysis_id=str(analysis),
+        suggestion_id=str(suggestion),
+        source_id=str(source),
+        gap_id=str(gap),
+        decision_id=str(decision),
     )
 
 

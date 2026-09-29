@@ -26,6 +26,452 @@
         "title": "Actor",
         "type": "object"
       },
+      "AiDecision": {
+        "description": "Why the AI did or did not reply (FR-SUG-04): the popover on an AI-sent bubble and the\nescalation banner.",
+        "properties": {
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/AiDecisionCheck"
+            },
+            "title": "Checks",
+            "type": "array"
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "outcome": {
+            "enum": [
+              "auto_sent",
+              "escalated",
+              "skipped"
+            ],
+            "title": "Outcome",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "refund",
+                  "legal",
+                  "complaint",
+                  "negative_sentiment",
+                  "abuse",
+                  "account_or_payment",
+                  "human_requested",
+                  "low_confidence",
+                  "out_of_knowledge",
+                  "window_closed",
+                  "policy_keyword",
+                  "output_blocked"
+                ],
+                "type": "string"
+              },
+              {
+                "enum": [
+                  "mode_not_auto",
+                  "quota_exhausted",
+                  "paused",
+                  "automation_handled",
+                  "rate_capped",
+                  "not_needed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "sent_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent Message Id"
+          },
+          "suggestion_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion Id"
+          },
+          "user_feedback": {
+            "anyOf": [
+              {
+                "const": "bad",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Feedback"
+          }
+        },
+        "required": [
+          "id",
+          "conversation_id",
+          "message_id",
+          "outcome",
+          "checks",
+          "created_at"
+        ],
+        "title": "AiDecision",
+        "type": "object"
+      },
+      "AiDecisionCheck": {
+        "properties": {
+          "n": {
+            "title": "N",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "passed": {
+            "title": "Passed",
+            "type": "boolean"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "n",
+          "name",
+          "passed"
+        ],
+        "title": "AiDecisionCheck",
+        "type": "object"
+      },
+      "AiDecisionFeedback": {
+        "additionalProperties": false,
+        "description": "POST \u2026/ai-decisions/{id}/feedback: \"bad\" = should not have sent; null clears it.",
+        "properties": {
+          "feedback": {
+            "anyOf": [
+              {
+                "const": "bad",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          }
+        },
+        "required": [
+          "feedback"
+        ],
+        "title": "AiDecisionFeedback",
+        "type": "object"
+      },
+      "AiSettings": {
+        "description": "FR-KB-04 brand voice, FR-SUG-06 escalation phrases, FR-SUG-05 takeover period.",
+        "properties": {
+          "business_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Description"
+          },
+          "business_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Name"
+          },
+          "do_list": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Do List",
+            "type": "array"
+          },
+          "dont_list": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Dont List",
+            "type": "array"
+          },
+          "emoji_policy": {
+            "enum": [
+              "none",
+              "light",
+              "lots"
+            ],
+            "title": "Emoji Policy",
+            "type": "string"
+          },
+          "escalation_phrases": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Escalation Phrases",
+            "type": "array"
+          },
+          "sign_off": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sign Off"
+          },
+          "takeover_minutes": {
+            "enum": [
+              0,
+              30,
+              120,
+              1440
+            ],
+            "title": "Takeover Minutes",
+            "type": "integer"
+          },
+          "tone": {
+            "enum": [
+              "friendly",
+              "professional",
+              "playful",
+              "concise"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tone",
+          "emoji_policy",
+          "do_list",
+          "dont_list",
+          "escalation_phrases",
+          "takeover_minutes",
+          "updated_at"
+        ],
+        "title": "AiSettings",
+        "type": "object"
+      },
+      "AiSettingsUpdate": {
+        "additionalProperties": false,
+        "description": "PUT \u2026/ai-settings: the whole settings object.",
+        "properties": {
+          "business_description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Description"
+          },
+          "business_name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Business Name"
+          },
+          "do_list": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Do List",
+            "type": "array"
+          },
+          "dont_list": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Dont List",
+            "type": "array"
+          },
+          "emoji_policy": {
+            "default": "light",
+            "enum": [
+              "none",
+              "light",
+              "lots"
+            ],
+            "title": "Emoji Policy",
+            "type": "string"
+          },
+          "escalation_phrases": {
+            "items": {
+              "maxLength": 120,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Escalation Phrases",
+            "type": "array"
+          },
+          "sign_off": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sign Off"
+          },
+          "takeover_minutes": {
+            "default": 120,
+            "enum": [
+              0,
+              30,
+              120,
+              1440
+            ],
+            "title": "Takeover Minutes",
+            "type": "integer"
+          },
+          "tone": {
+            "default": "friendly",
+            "enum": [
+              "friendly",
+              "professional",
+              "playful",
+              "concise"
+            ],
+            "title": "Tone",
+            "type": "string"
+          }
+        },
+        "title": "AiSettingsUpdate",
+        "type": "object"
+      },
+      "AnalysisCorrection": {
+        "additionalProperties": false,
+        "description": "PATCH \u2026/message-analyses/{id} (FR-AI-04): at least one of the two.",
+        "properties": {
+          "intent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "pricing",
+                  "product_inquiry",
+                  "purchase",
+                  "order_status",
+                  "shipping",
+                  "support",
+                  "complaint",
+                  "refund",
+                  "feedback",
+                  "collaboration",
+                  "greeting",
+                  "spam",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intent"
+          },
+          "sentiment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "positive",
+                  "neutral",
+                  "negative"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sentiment"
+          }
+        },
+        "title": "AnalysisCorrection",
+        "type": "object"
+      },
       "Attachment": {
         "properties": {
           "duration_s": {
@@ -1410,6 +1856,139 @@
         "title": "AutomationsSummary",
         "type": "object"
       },
+      "BillingPrice": {
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "interval": {
+            "const": "month",
+            "title": "Interval",
+            "type": "string"
+          },
+          "plan": {
+            "enum": [
+              "pro",
+              "max"
+            ],
+            "title": "Plan",
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan",
+          "amount_minor",
+          "currency",
+          "interval"
+        ],
+        "title": "BillingPrice",
+        "type": "object"
+      },
+      "BillingState": {
+        "properties": {
+          "cancel_at_period_end": {
+            "title": "Cancel At Period End",
+            "type": "boolean"
+          },
+          "current_period_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Period End"
+          },
+          "entitlements": {
+            "items": {
+              "$ref": "#/components/schemas/EntitlementValue"
+            },
+            "title": "Entitlements",
+            "type": "array"
+          },
+          "grace_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grace Until"
+          },
+          "plan": {
+            "enum": [
+              "free",
+              "pro",
+              "max"
+            ],
+            "title": "Plan",
+            "type": "string"
+          },
+          "prices": {
+            "items": {
+              "$ref": "#/components/schemas/BillingPrice"
+            },
+            "title": "Prices",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "free",
+              "trialing",
+              "active",
+              "on_hold",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "trial_eligible": {
+            "title": "Trial Eligible",
+            "type": "boolean"
+          },
+          "trial_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trial Ends At"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageMeter"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "plan",
+          "status",
+          "cancel_at_period_end",
+          "trial_eligible",
+          "prices",
+          "entitlements",
+          "usage"
+        ],
+        "title": "BillingState",
+        "type": "object"
+      },
       "BulkPause": {
         "additionalProperties": false,
         "properties": {
@@ -2220,6 +2799,11 @@
             "title": "Clear Ai Mode Override",
             "type": "boolean"
           },
+          "resume_ai": {
+            "default": false,
+            "title": "Resume Ai",
+            "type": "boolean"
+          },
           "status": {
             "anyOf": [
               {
@@ -2365,6 +2949,40 @@
         "title": "EmbeddedSignup",
         "type": "object"
       },
+      "EntitlementValue": {
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "title": "EntitlementValue",
+        "type": "object"
+      },
       "ErrorInfo": {
         "properties": {
           "code": {
@@ -2405,6 +3023,520 @@
           "needs_you"
         ],
         "title": "InboxCounts",
+        "type": "object"
+      },
+      "KnowledgeGap": {
+        "properties": {
+          "examples": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeGapExample"
+            },
+            "title": "Examples",
+            "type": "array"
+          },
+          "first_seen_at": {
+            "format": "date-time",
+            "title": "First Seen At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "occurrences": {
+            "title": "Occurrences",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "open",
+              "answered",
+              "dismissed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topic",
+          "status",
+          "occurrences",
+          "first_seen_at",
+          "last_seen_at",
+          "examples"
+        ],
+        "title": "KnowledgeGap",
+        "type": "object"
+      },
+      "KnowledgeGapExample": {
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "message_id": {
+            "format": "uuid",
+            "title": "Message Id",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "message_id",
+          "conversation_id",
+          "text",
+          "occurred_at"
+        ],
+        "title": "KnowledgeGapExample",
+        "type": "object"
+      },
+      "KnowledgeGapList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeGap"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "KnowledgeGapList",
+        "type": "object"
+      },
+      "KnowledgeSource": {
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "char_count": {
+            "title": "Char Count",
+            "type": "integer"
+          },
+          "chunk_count": {
+            "title": "Chunk Count",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "file_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Asset Id"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_ingested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Ingested At"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "processing",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "faq",
+              "text",
+              "url",
+              "file"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "title",
+          "status",
+          "version",
+          "char_count",
+          "chunk_count",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "KnowledgeSource",
+        "type": "object"
+      },
+      "KnowledgeSourceCreate": {
+        "additionalProperties": false,
+        "description": "POST \u2026/knowledge-sources. FAQ: question + body (title = question). Note: title + body.\nWeb page: url (SEC-09). File: file_asset_id of an uploaded raw asset (PDF, DOCX, TXT, MD up to\n10 MB). ``gap_id`` answers a knowledge gap (FR-KB-06).",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "file_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Asset Id"
+          },
+          "gap_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gap Id"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "enum": [
+              "faq",
+              "text",
+              "url",
+              "file"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "KnowledgeSourceCreate",
+        "type": "object"
+      },
+      "KnowledgeSourceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/KnowledgeSource"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "usage": {
+            "$ref": "#/components/schemas/KnowledgeUsage"
+          }
+        },
+        "required": [
+          "items",
+          "usage"
+        ],
+        "title": "KnowledgeSourceList",
+        "type": "object"
+      },
+      "KnowledgeSourcePatch": {
+        "additionalProperties": false,
+        "description": "PATCH \u2026/knowledge-sources/{id}: edits re-ingest the source (version + 1).",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "question": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Question"
+          },
+          "reingest": {
+            "default": false,
+            "title": "Reingest",
+            "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "KnowledgeSourcePatch",
+        "type": "object"
+      },
+      "KnowledgeTest": {
+        "additionalProperties": false,
+        "properties": {
+          "question": {
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "KnowledgeTest",
+        "type": "object"
+      },
+      "KnowledgeTestResult": {
+        "description": "FR-KB-03: the drafted answer with the sources it used, or \"Not in your knowledge\".",
+        "properties": {
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "can_answer": {
+            "title": "Can Answer",
+            "type": "boolean"
+          },
+          "missing_info": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Missing Info"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionSource"
+            },
+            "title": "Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "can_answer",
+          "sources"
+        ],
+        "title": "KnowledgeTestResult",
+        "type": "object"
+      },
+      "KnowledgeUsage": {
+        "properties": {
+          "characters_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Characters Limit"
+          },
+          "characters_used": {
+            "title": "Characters Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "characters_used"
+        ],
+        "title": "KnowledgeUsage",
         "type": "object"
       },
       "LinkButton": {
@@ -3253,6 +4385,11 @@
         "properties": {
           "checklist": {
             "$ref": "#/components/schemas/Checklist"
+          },
+          "knowledge_gaps_open": {
+            "default": 0,
+            "title": "Knowledge Gaps Open",
+            "type": "integer"
           },
           "range": {
             "enum": [
@@ -4608,6 +5745,47 @@
         "title": "UploadSignatureRequest",
         "type": "object"
       },
+      "UsageMeter": {
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "metric",
+          "used"
+        ],
+        "title": "UsageMeter",
+        "type": "object"
+      },
       "WhatsAppTemplate": {
         "properties": {
           "body": {
@@ -5141,6 +6319,196 @@
         "tags": [
           "workspaces"
         ]
+      }
+    },
+    "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {
+      "post": {
+        "operationId": "give_ai_decision_feedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "decision_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Decision Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiDecisionFeedback"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecision"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Give Ai Decision Feedback",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.6"
+      }
+    },
+    "/v1/w/{wid}/ai-settings": {
+      "get": {
+        "operationId": "get_ai_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Ai Settings",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.5"
+      },
+      "put": {
+        "operationId": "update_ai_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Ai Settings",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.5"
       }
     },
     "/v1/w/{wid}/automation-templates": {
@@ -6221,6 +7589,60 @@
         ]
       }
     },
+    "/v1/w/{wid}/billing": {
+      "get": {
+        "operationId": "get_billing",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Billing",
+        "tags": [
+          "billing"
+        ],
+        "x-pending": "T5.1"
+      }
+    },
     "/v1/w/{wid}/conversations": {
       "get": {
         "operationId": "list_conversations",
@@ -6949,6 +8371,132 @@
         ]
       }
     },
+    "/v1/w/{wid}/conversations/{conversation_id}/suggestions": {
+      "post": {
+        "description": "F-08 Regenerate: up to 5 per message; suggestion.created carries the result.",
+        "operationId": "regenerate_suggestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Regenerate Suggestion",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.4"
+      }
+    },
+    "/v1/w/{wid}/conversations/{conversation_id}/summary": {
+      "post": {
+        "description": "FR-AI-03 on request; conversation.updated carries the new summary.",
+        "operationId": "refresh_summary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Refresh Summary",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.7"
+      }
+    },
     "/v1/w/{wid}/conversations/{conversation_id}/unread": {
       "post": {
         "operationId": "mark_conversation_unread",
@@ -7189,6 +8737,509 @@
         ]
       }
     },
+    "/v1/w/{wid}/knowledge-gaps": {
+      "get": {
+        "description": "Open gaps from the last 30 days, most asked first (TR-AI-12).",
+        "operationId": "list_knowledge_gaps",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "pattern": "^(open|answered|dismissed)$",
+              "title": "Status",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeGapList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Knowledge Gaps",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.10"
+      }
+    },
+    "/v1/w/{wid}/knowledge-gaps/{gap_id}/dismiss": {
+      "post": {
+        "operationId": "dismiss_knowledge_gap",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "gap_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Gap Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeGap"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Dismiss Knowledge Gap",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.10"
+      }
+    },
+    "/v1/w/{wid}/knowledge-sources": {
+      "get": {
+        "operationId": "list_knowledge_sources",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSourceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Knowledge Sources",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.3"
+      },
+      "post": {
+        "description": "402 quota_exceeded over knowledge_characters; ingestion runs in the background.",
+        "operationId": "create_knowledge_source",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeSourceCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Knowledge Source",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.3"
+      }
+    },
+    "/v1/w/{wid}/knowledge-sources/{source_id}": {
+      "delete": {
+        "operationId": "delete_knowledge_source",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Knowledge Source",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.3"
+      },
+      "get": {
+        "operationId": "get_knowledge_source",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Knowledge Source",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.3"
+      },
+      "patch": {
+        "operationId": "update_knowledge_source",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "source_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeSourcePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeSource"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Knowledge Source",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.3"
+      }
+    },
+    "/v1/w/{wid}/knowledge/test": {
+      "post": {
+        "description": "FR-KB-03: 1 credit; nothing is stored or sent.",
+        "operationId": "test_knowledge",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KnowledgeTest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Test Knowledge",
+        "tags": [
+          "knowledge"
+        ],
+        "x-pending": "T5.3"
+      }
+    },
     "/v1/w/{wid}/media-assets": {
       "post": {
         "description": "Register an uploaded file: it must be in this workspace's folder (else 422 on public_id)\nand within the limits (else 415 unsupported_media). Registering it again returns it.",
@@ -7315,6 +9366,146 @@
         "tags": [
           "media"
         ]
+      }
+    },
+    "/v1/w/{wid}/message-analyses/{analysis_id}": {
+      "patch": {
+        "description": "FR-AI-04: change a message's intent or sentiment.",
+        "operationId": "correct_message_analysis",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "analysis_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Analysis Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalysisCorrection"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageAnalysis"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Correct Message Analysis",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.2"
+      }
+    },
+    "/v1/w/{wid}/messages/{message_id}/ai-decision": {
+      "get": {
+        "description": "The latest decision for an inbound message, or the one that sent this AI message.",
+        "operationId": "get_ai_decision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiDecision"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Ai Decision",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.6"
       }
     },
     "/v1/w/{wid}/messages/{message_id}/retry": {
@@ -8348,6 +10539,70 @@
         "tags": [
           "whatsapp"
         ]
+      }
+    },
+    "/v1/w/{wid}/suggestions/{suggestion_id}/dismiss": {
+      "post": {
+        "operationId": "dismiss_suggestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "suggestion_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Suggestion Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Suggestion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Dismiss Suggestion",
+        "tags": [
+          "ai"
+        ],
+        "x-pending": "T5.4"
       }
     },
     "/v1/workspaces": {

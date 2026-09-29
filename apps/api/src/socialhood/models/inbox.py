@@ -247,8 +247,9 @@ class Message(IdMixin, TimestampMixin, TenantScoped, Base):
     sent_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
-    # The suggestions table arrives in P5; its FK is added then.
-    suggestion_id: Mapped[uuid.UUID | None] = mapped_column()
+    suggestion_id: Mapped[uuid.UUID | None] = mapped_column(  # the suggestion sent (FR-SUG-02)
+        ForeignKey("reply_suggestions.id", ondelete="SET NULL", use_alter=True)
+    )
     automation_run_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("automation_runs.id", ondelete="SET NULL", use_alter=True)
     )

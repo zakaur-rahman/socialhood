@@ -201,6 +201,7 @@ class ConversationPatch(RequestModel):
     status: Literal["open", "archived"] | None = None
     ai_mode_override: AiModeName | None = None
     clear_ai_mode_override: bool = False
+    resume_ai: bool = False  # FR-SUG-05: end a takeover pause now (T5.6)
 
 
 # ---- messages

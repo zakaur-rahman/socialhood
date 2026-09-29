@@ -9,9 +9,12 @@ from fastapi import APIRouter
 
 from socialhood.api.v1 import (
     accounts,
+    ai,
     automations,
+    billing,
     conversations,
     events,
+    knowledge,
     me,
     media,
     messages,
@@ -39,4 +42,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     whatsapp.router,
     automations.router,
     posts.router,
+    ai.router,
+    knowledge.router,
+    billing.router,
 )

@@ -120,7 +120,7 @@ export function useUpdateConversation(wid: string) {
       unwrap(
         api.PATCH("/v1/w/{wid}/conversations/{conversation_id}", {
           params: { path: { wid, conversation_id: id } },
-          body: { clear_ai_mode_override: false, ...patch },
+          body: { clear_ai_mode_override: false, resume_ai: false, ...patch },
         }),
       ),
     onSuccess: (conversation) => {
