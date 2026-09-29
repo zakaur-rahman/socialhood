@@ -4,9 +4,12 @@
  */
 import type { QueryClient } from "@tanstack/react-query";
 
+import { applyAgentRunEvent, applyAgentStepEvent } from "@/lib/agent/cache";
 import { keys } from "@/lib/api/queries/keys";
 import { applyComposerPost } from "@/lib/api/queries/scheduledPosts";
 import type {
+  AgentRunEvent,
+  AgentStepEvent,
   ConversationListItem,
   Message,
   MessageAnalysis,
@@ -49,6 +52,11 @@ export type EventPayloads = {
   "comment.updated": { comment: PostComment };
   /** F-12: a post's counts, sentiment split, summary or topics changed. */
   "post.updated": { post: PostDetail };
+  /** PA: a run's status or progress changed; agent.completed when it reached a final status. */
+  "agent.run.updated": { run: AgentRunEvent };
+  "agent.completed": { run: AgentRunEvent };
+  /** PA: a step started (running) or ended, in plain words. */
+  "agent.step": AgentStepEvent;
   /** Only the fact matters: the billing state is refetched. */
   "usage.updated": Record<string, unknown>;
   resync: Record<string, never>;
@@ -168,6 +176,19 @@ export function applyRealtimeEvent(
       const payload = parse<EventPayloads["post.updated"]>(event.data);
       if (!payload?.post) return;
       applyPost(queryClient, wid, payload.post);
+      return;
+    }
+    case "agent.run.updated":
+    case "agent.completed": {
+      const payload = parse<EventPayloads["agent.run.updated"]>(event.data);
+      if (!payload?.run?.id) return;
+      applyAgentRunEvent(queryClient, wid, payload.run, event.event === "agent.completed");
+      return;
+    }
+    case "agent.step": {
+      const payload = parse<EventPayloads["agent.step"]>(event.data);
+      if (!payload?.run_id || !payload.step?.id) return;
+      applyAgentStepEvent(queryClient, wid, payload);
       return;
     }
     case "resync":

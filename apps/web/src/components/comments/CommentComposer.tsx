@@ -29,6 +29,7 @@ export function CommentComposer({
   error,
   onSend,
   onCancel,
+  initialText = "",
 }: {
   kind: ComposerKind;
   comment: PostComment;
@@ -36,9 +37,11 @@ export function CommentComposer({
   error: string | null;
   onSend: (text: string, idempotencyKey: string) => void;
   onCancel: () => void;
+  /** A reply prepared by Ask Social Hood (FR-AGT-03); the member edits and sends it. */
+  initialText?: string;
 }) {
   const id = useId();
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const last = useRef<{ text: string; key: string } | null>(null);
   const name = authorName(comment);
   const trimmed = text.trim();

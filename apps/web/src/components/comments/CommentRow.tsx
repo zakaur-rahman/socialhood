@@ -54,6 +54,7 @@ export function CommentRow({
   now,
   canDelete,
   accountUsername,
+  prepared,
 }: {
   comment: PostComment;
   wid: string;
@@ -63,8 +64,16 @@ export function CommentRow({
   canDelete: boolean;
   /** The post's account, for error copy ("@maple needs reconnecting…"). */
   accountUsername?: string | null;
+  /**
+   * A reply Ask Social Hood prepared (FR-AGT-03): the row opens with that composer and text. The
+   * column remounts the row (by key) for each new one. A DM opens only if none was sent yet.
+   */
+  prepared?: { kind: ComposerKind; text: string };
 }) {
-  const [composer, setComposer] = useState<ComposerKind | null>(null);
+  const [initial] = useState(() =>
+    prepared && !(prepared.kind === "dm" && comment.private_reply) ? prepared : null,
+  );
+  const [composer, setComposer] = useState<ComposerKind | null>(initial?.kind ?? null);
   const [composerError, setComposerError] = useState<string | null>(null);
   const reply = useReplyToComment(wid);
   const dm = usePrivateReply(wid);
@@ -247,6 +256,7 @@ export function CommentRow({
           <CommentComposer
             key={composer}
             kind={composer}
+            initialText={initial && composer === initial.kind ? initial.text : ""}
             comment={comment}
             pending={composer === "dm" ? dm.isPending : reply.isPending}
             error={composerError}

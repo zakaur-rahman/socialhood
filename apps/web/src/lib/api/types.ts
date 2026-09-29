@@ -169,6 +169,55 @@ export type HashtagGroup = Schemas["HashtagGroup"];
 export type HashtagGroupCreate = Schemas["HashtagGroupCreate"];
 export type HashtagGroupPatch = Schemas["HashtagGroupPatch"];
 
+// ---- Ask Social Hood: the read-only agent (PA: FR-AGT-01…07, agent-architecture.html §11, §12)
+
+export type AgentRun = Schemas["AgentRun"];
+export type AgentRunDetail = Schemas["AgentRunDetail"];
+export type AgentRunList = Schemas["AgentRunList"];
+export type AgentRunCreate = Schemas["AgentRunCreate"];
+export type AgentStep = Schemas["AgentStep"];
+export type AgentThread = Schemas["AgentThread"];
+export type AgentThreadList = Schemas["AgentThreadList"];
+export type AgentPolicy = Schemas["AgentPolicy"];
+export type AgentPermissions = Schemas["AgentPermissions"];
+export type AgentRunStatus = AgentRun["status"];
+export type AgentMode = AgentRun["mode"];
+export type AgentStepStatus = AgentStep["status"];
+export type RiskTier = NonNullable<AgentStep["tier"]>;
+export type StepVerification = Schemas["StepVerification"];
+/** A record an answer used: `[n]` in the answer is item n of answer_refs (1-based). */
+export type AnswerRef = Schemas["AnswerRef"];
+export type AnswerRefKind = AnswerRef["kind"];
+/** A prepared action (FR-AGT-03): it opens an existing screen pre-filled. */
+export type ActionCard = AgentRun["action_cards"][number];
+export type ActionKind = ActionCard["kind"];
+export type ScheduleMessageAction = Schemas["ScheduleMessageAction"];
+export type CommentReplyAction = Schemas["CommentReplyAction"];
+export type AutomationDraftAction = Schemas["AutomationDraftAction"];
+export type ScheduleMessagePrefill = Schemas["ScheduleMessagePrefill"];
+export type CommentReplyPrefill = Schemas["CommentReplyPrefill"];
+export type AutomationDraftPrefill = Schemas["AutomationDraftPrefill"];
+
+/**
+ * Real-time agent events aren't in the OpenAPI document; their fields are picks of AgentRun and
+ * AgentStep (schemas/agent.py AgentRunEvent, AgentStepEvent). They carry ids, statuses and
+ * plain-word steps only, never the request or the answer.
+ */
+export type AgentRunEvent = Pick<AgentRun, "id" | "thread_id" | "status" | "error"> & {
+  requested_by_user_id?: string | null;
+  /** Steps so far. */
+  step_count: number;
+};
+export type AgentStepProgress = Pick<
+  AgentStep,
+  "id" | "ordinal" | "kind" | "tool" | "label" | "status" | "summary" | "latency_ms"
+>;
+export type AgentStepEvent = {
+  run_id: string;
+  requested_by_user_id?: string | null;
+  step: AgentStepProgress;
+};
+
 /** The inbox views the list endpoint accepts (FR-INB-01). */
 export type InboxView = NonNullable<
   NonNullable<operations["list_conversations"]["parameters"]["query"]>["view"]

@@ -13,6 +13,7 @@ import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAgentHandoff } from "@/lib/agent/handoff";
 import {
   isLocalMessage,
   useConversation,
@@ -126,6 +127,24 @@ function Thread({
   const pathname = usePathname();
   // F-18: the "reply window closing" notification links here with ?schedule=1.
   const [scheduleOpen, setScheduleOpen] = useState(() => searchParams.get("schedule") === "1");
+  // FR-AGT-03: an Ask Social Hood action card put the message in the composer and hands over its
+  // time; the popover opens with it (also when this conversation is already open).
+  const scheduleHandoff = useAgentHandoff((state) => state.schedule[conversationId] ?? null);
+  const takeSchedule = useAgentHandoff((state) => state.takeSchedule);
+  const [handoffTaken, setHandoffTaken] = useState<string | null>(null);
+  const [scheduleAt, setScheduleAt] = useState<string | null>(null);
+  if (scheduleHandoff && scheduleHandoff.nonce !== handoffTaken) {
+    setHandoffTaken(scheduleHandoff.nonce);
+    setScheduleAt(scheduleHandoff.sendAt);
+    setScheduleOpen(true);
+  }
+  useEffect(() => {
+    if (scheduleHandoff) takeSchedule(conversationId);
+  }, [scheduleHandoff, takeSchedule, conversationId]);
+  const changeScheduleOpen = useCallback((open: boolean) => {
+    setScheduleOpen(open);
+    if (!open) setScheduleAt(null); // the prepared time applies to the popover it opened
+  }, []);
   useEffect(() => {
     if (searchParams.get("schedule") !== "1") return;
     const rest = new URLSearchParams(searchParams.toString());
@@ -255,7 +274,8 @@ function Thread({
         now={now}
         onSend={send}
         scheduleOpen={scheduleOpen}
-        onScheduleOpenChange={setScheduleOpen}
+        onScheduleOpenChange={changeScheduleOpen}
+        scheduleAt={scheduleAt}
         onChooseTemplate={() => setTemplateOpen(true)}
         canAttach={canAttach}
         upload={upload}
