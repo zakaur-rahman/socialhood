@@ -5,6 +5,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { keys } from "@/lib/api/queries/keys";
+import { applyScheduledPost } from "@/lib/api/queries/scheduledPosts";
 import type {
   ConversationListItem,
   Message,
@@ -18,6 +19,7 @@ import type {
   Suggestion,
 } from "@/lib/api/types";
 import { applyComment, applyPost } from "@/lib/comments/cache";
+import type { ScheduledPost } from "@/lib/publishing/types";
 import {
   applyConversation,
   applyMessage,
@@ -44,6 +46,8 @@ export type EventPayloads = {
   "comment.updated": { comment: PostComment };
   /** F-12: a post's counts, sentiment split, summary or topics changed. */
   "post.updated": { post: PostDetail };
+  /** F-13: a scheduled post was saved, scheduled, or moved through publishing (TR-RT-03). */
+  "scheduled_post.updated": { scheduled_post: ScheduledPost };
   /** Only the fact matters: the billing state is refetched. */
   "usage.updated": Record<string, unknown>;
   resync: Record<string, never>;
@@ -157,11 +161,16 @@ export function applyRealtimeEvent(
       applyPost(queryClient, wid, payload.post);
       return;
     }
+    case "scheduled_post.updated": {
+      const payload = parse<EventPayloads["scheduled_post.updated"]>(event.data);
+      if (!payload?.scheduled_post) return;
+      applyScheduledPost(queryClient, wid, payload.scheduled_post);
+      return;
+    }
     case "resync":
       void invalidateWorkspace(queryClient, wid);
       return;
     default:
-      // Events for pages built in later phases (scheduled posts) have no cache yet.
       return;
   }
 }
