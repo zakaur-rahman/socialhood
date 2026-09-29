@@ -5,6 +5,8 @@ over the services Social Hood already has, beside ai/ (model plumbing), not insi
 - planner.py: the Pydantic AI loop on Gemini (answer loop in R1, plan first for writes in R2)
 - plan.py: Plan, Step, Condition and Ref; condition evaluation by code (R2)
 - executor.py: runs one step: tool router, retries, persistence, receipts
+- report.py: citations numbered from tool results, and the answer of a run stopped by a cap
+- progress.py: agent.run.updated, agent.step and agent.completed payloads; steps in plain words
 - gateway.py: R2, risk tier, role, permissions, mode and limits → execute, approval or refuse
 - verify.py: R2, read-back verifiers per write tool
 - context.py: memory: workspace facts, brand voice, the thread's earlier exchanges
