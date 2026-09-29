@@ -65,6 +65,7 @@ export const RESULT_LABEL: Record<RunResult, string> = {
   skipped_cooldown: "Skipped: cooldown",
   skipped_expired: "Skipped: 7-day limit passed",
   escalated: "Escalated",
+  awaiting_reply: "Waiting for tap",
 };
 
 const numberFormat = new Intl.NumberFormat("en-US");

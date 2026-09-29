@@ -860,6 +860,8 @@ export interface components {
             activated_at?: string | null;
             /** Ai Instructions */
             ai_instructions?: string | null;
+            /** Confirm First */
+            confirm_first: boolean;
             /** Cooldown Hours */
             cooldown_hours: number;
             /**
@@ -874,6 +876,10 @@ export interface components {
             display_status: "draft" | "scheduled" | "active" | "paused" | "ended";
             /** Ends At */
             ends_at?: string | null;
+            /** Follow Nudge */
+            follow_nudge: boolean;
+            /** Follow Nudge Text */
+            follow_nudge_text?: string | null;
             /**
              * Id
              * Format: uuid
@@ -900,6 +906,10 @@ export interface components {
             missing_for_activation: string[];
             /** Name */
             name: string;
+            /** Opening Button */
+            opening_button?: string | null;
+            /** Opening Text */
+            opening_text?: string | null;
             /** Overlaps */
             overlaps: components["schemas"]["OverlapWarning"][];
             /** Paused At */
@@ -964,12 +974,24 @@ export interface components {
             /** Ai Instructions */
             ai_instructions?: string | null;
             /**
+             * Confirm First
+             * @default false
+             */
+            confirm_first: boolean;
+            /**
              * Cooldown Hours
              * @default 24
              */
             cooldown_hours: number;
             /** Ends At */
             ends_at?: string | null;
+            /**
+             * Follow Nudge
+             * @default false
+             */
+            follow_nudge: boolean;
+            /** Follow Nudge Text */
+            follow_nudge_text?: string | null;
             /** Keywords */
             keywords?: string[];
             /**
@@ -988,6 +1010,10 @@ export interface components {
             message_text?: string | null;
             /** Name */
             name: string;
+            /** Opening Button */
+            opening_button?: string | null;
+            /** Opening Text */
+            opening_text?: string | null;
             /**
              * Post Scope
              * @default all
@@ -1039,6 +1065,8 @@ export interface components {
         };
         /** AutomationRun */
         AutomationRun: {
+            /** Confirmed At */
+            confirmed_at?: string | null;
             contact?: components["schemas"]["RunContact"] | null;
             /** Contact Replied At */
             contact_replied_at?: string | null;
@@ -1050,6 +1078,8 @@ export interface components {
              */
             created_at: string;
             error?: components["schemas"]["RunError"] | null;
+            /** Follows Business */
+            follows_business?: boolean | null;
             /**
              * Id
              * Format: uuid
@@ -1057,6 +1087,8 @@ export interface components {
             id: string;
             /** Matched Keyword */
             matched_keyword: string;
+            /** Nudge Message Id */
+            nudge_message_id?: string | null;
             /** Private Reply Message Id */
             private_reply_message_id?: string | null;
             /** Public Reply Platform Id */
@@ -1065,7 +1097,7 @@ export interface components {
              * Result
              * @enum {string}
              */
-            result: "queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated";
+            result: "queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated" | "awaiting_reply";
             /**
              * Trigger Kind
              * @enum {string}
@@ -1086,6 +1118,11 @@ export interface components {
          * @description FR-AUT-16 / UX-SCR-12, for the last 7 or 30 days.
          */
         AutomationStats: {
+            /**
+             * Awaiting Now
+             * @default 0
+             */
+            awaiting_now: number;
             /** Daily */
             daily: components["schemas"]["DailyRuns"][];
             /**
@@ -1097,6 +1134,11 @@ export interface components {
             dms_sent: number;
             /** Failures */
             failures: number;
+            /**
+             * Nudged
+             * @default 0
+             */
+            nudged: number;
             /** Public Replies */
             public_replies: number;
             /** Queued Now */
@@ -1106,6 +1148,11 @@ export interface components {
             /** Runs */
             runs: number;
             skipped: components["schemas"]["SkippedCounts"];
+            /**
+             * Tapped
+             * @default 0
+             */
+            tapped: number;
         };
         /** AutomationTemplate */
         AutomationTemplate: {
@@ -1169,6 +1216,10 @@ export interface components {
             reason?: string | null;
             /** Rendered Message */
             rendered_message?: string | null;
+            /** Rendered Nudge */
+            rendered_nudge?: string | null;
+            /** Rendered Opening */
+            rendered_opening?: string | null;
             /** Rendered Public Reply */
             rendered_public_reply?: string | null;
             winner?: components["schemas"]["WinningAutomation"] | null;
@@ -1227,6 +1278,8 @@ export interface components {
              * Format: date-time
              */
             first_seen_at: string;
+            /** Follows Business */
+            follows_business?: boolean | null;
             /**
              * Id
              * Format: uuid
@@ -1609,6 +1662,8 @@ export interface components {
              * Format: date-time
              */
             occurred_at: string;
+            /** Quick Replies */
+            quick_replies?: components["schemas"]["QuickReplyOut"][];
             /** Reactions */
             reactions: components["schemas"]["Reaction"][];
             /** Read At */
@@ -1863,6 +1918,14 @@ export interface components {
             order: "oldest_first" | "newest_first" | "public_only";
             /** Waiting */
             waiting: number;
+        };
+        /**
+         * QuickReplyOut
+         * @description A quick reply offered with the text (tap first, FR-AUT-21); shown, not tappable, here.
+         */
+        QuickReplyOut: {
+            /** Title */
+            title: string;
         };
         /** Reaction */
         Reaction: {
@@ -2985,7 +3048,7 @@ export interface operations {
     list_automation_runs: {
         parameters: {
             query?: {
-                result?: ("queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated") | null;
+                result?: ("queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated" | "awaiting_reply") | null;
                 cursor?: string | null;
                 limit?: number;
             };

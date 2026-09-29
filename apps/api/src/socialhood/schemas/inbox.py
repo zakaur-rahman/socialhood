@@ -87,6 +87,7 @@ class ContactSummary(ResponseModel):
 class ContactDetail(ContactSummary):
     first_seen_at: datetime
     platform_user_id: str
+    follows_business: bool | None = None  # FR-AUT-22; None until known
 
 
 class ConversationListItem(ResponseModel):
@@ -241,6 +242,12 @@ class MessageButton(ResponseModel):
     url: str
 
 
+class QuickReplyOut(ResponseModel):
+    """A quick reply offered with the text (tap first, FR-AUT-21); shown, not tappable, here."""
+
+    title: str
+
+
 class Reaction(ResponseModel):
     emoji: str
     by: Literal["customer", "business"]
@@ -258,6 +265,7 @@ class Message(ResponseModel):
     attachments: list[Attachment]
     template: TemplateInfo | None = None
     buttons: list[MessageButton] = Field(default_factory=list)  # link buttons (automation DMs)
+    quick_replies: list[QuickReplyOut] = Field(default_factory=list)  # tap first openings
     status: MessageStatusName | None = None
     error: ErrorInfo | None = None
     occurred_at: datetime

@@ -111,6 +111,9 @@ class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
     display_name: Mapped[str | None] = mapped_column(Text)
     profile_picture_url: Mapped[str | None] = mapped_column(Text)
     profile_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Instagram's is_user_follow_business (FR-AUT-22), known once they have messaged the account.
+    follows_business: Mapped[bool | None] = mapped_column(Boolean)
+    follows_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     first_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -224,6 +227,12 @@ class Message(IdMixin, TimestampMixin, TenantScoped, Base):
     template: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     # Link buttons sent with the text (automation DMs, FR-AUT-13): [{title, url}], at most 3.
     buttons: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, server_default=sql("'[]'::jsonb"))
+    # Quick replies offered with the text (tap first, FR-AUT-21): [{title, payload}].
+    quick_replies: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, server_default=sql("'[]'::jsonb")
+    )
+    # The quick reply the customer tapped (its payload; Instagram's message.quick_reply).
+    quick_reply_payload: Mapped[str | None] = mapped_column(Text)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     platform_message_id: Mapped[str | None] = mapped_column(Text)
     client_id: Mapped[uuid.UUID | None] = mapped_column()

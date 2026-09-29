@@ -27,6 +27,7 @@ const RESULT_TONE: Record<RunResult, string> = {
   skipped_cooldown: "bg-raised text-fg-secondary",
   skipped_expired: "bg-raised text-fg-secondary",
   escalated: "bg-warning/15 text-warning",
+  awaiting_reply: "bg-brand-soft text-brand-fg",
 };
 
 function contactLabel(run: AutomationRun): string {

@@ -197,6 +197,10 @@
             ],
             "title": "Ai Instructions"
           },
+          "confirm_first": {
+            "title": "Confirm First",
+            "type": "boolean"
+          },
           "cooldown_hours": {
             "title": "Cooldown Hours",
             "type": "integer"
@@ -228,6 +232,21 @@
               }
             ],
             "title": "Ends At"
+          },
+          "follow_nudge": {
+            "title": "Follow Nudge",
+            "type": "boolean"
+          },
+          "follow_nudge_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Nudge Text"
           },
           "id": {
             "format": "uuid",
@@ -313,6 +332,28 @@
           "name": {
             "title": "Name",
             "type": "string"
+          },
+          "opening_button": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Button"
+          },
+          "opening_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Text"
           },
           "overlaps": {
             "items": {
@@ -454,6 +495,8 @@
           "posts",
           "cooldown_hours",
           "surge_order",
+          "confirm_first",
+          "follow_nudge",
           "priority",
           "created_at",
           "updated_at",
@@ -541,6 +584,11 @@
             ],
             "title": "Ai Instructions"
           },
+          "confirm_first": {
+            "default": false,
+            "title": "Confirm First",
+            "type": "boolean"
+          },
           "cooldown_hours": {
             "default": 24,
             "maximum": 72.0,
@@ -559,6 +607,23 @@
               }
             ],
             "title": "Ends At"
+          },
+          "follow_nudge": {
+            "default": false,
+            "title": "Follow Nudge",
+            "type": "boolean"
+          },
+          "follow_nudge_text": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follow Nudge Text"
           },
           "keywords": {
             "items": {
@@ -624,6 +689,30 @@
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "opening_button": {
+            "anyOf": [
+              {
+                "maxLength": 20,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Button"
+          },
+          "opening_text": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Text"
           },
           "post_scope": {
             "default": "all",
@@ -790,6 +879,18 @@
       },
       "AutomationRun": {
         "properties": {
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
           "contact": {
             "anyOf": [
               {
@@ -839,6 +940,17 @@
               }
             ]
           },
+          "follows_business": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Business"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -847,6 +959,18 @@
           "matched_keyword": {
             "title": "Matched Keyword",
             "type": "string"
+          },
+          "nudge_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nudge Message Id"
           },
           "private_reply_message_id": {
             "anyOf": [
@@ -879,7 +1003,8 @@
               "failed",
               "skipped_cooldown",
               "skipped_expired",
-              "escalated"
+              "escalated",
+              "awaiting_reply"
             ],
             "title": "Result",
             "type": "string"
@@ -944,6 +1069,11 @@
       "AutomationStats": {
         "description": "FR-AUT-16 / UX-SCR-12, for the last 7 or 30 days.",
         "properties": {
+          "awaiting_now": {
+            "default": 0,
+            "title": "Awaiting Now",
+            "type": "integer"
+          },
           "daily": {
             "items": {
               "$ref": "#/components/schemas/DailyRuns"
@@ -967,6 +1097,11 @@
             "title": "Failures",
             "type": "integer"
           },
+          "nudged": {
+            "default": 0,
+            "title": "Nudged",
+            "type": "integer"
+          },
           "public_replies": {
             "title": "Public Replies",
             "type": "integer"
@@ -985,6 +1120,11 @@
           },
           "skipped": {
             "$ref": "#/components/schemas/SkippedCounts"
+          },
+          "tapped": {
+            "default": 0,
+            "title": "Tapped",
+            "type": "integer"
           }
         },
         "required": [
@@ -1180,6 +1320,28 @@
             ],
             "title": "Rendered Message"
           },
+          "rendered_nudge": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendered Nudge"
+          },
+          "rendered_opening": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rendered Opening"
+          },
           "rendered_public_reply": {
             "anyOf": [
               {
@@ -1348,6 +1510,17 @@
             "format": "date-time",
             "title": "First Seen At",
             "type": "string"
+          },
+          "follows_business": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Follows Business"
           },
           "id": {
             "format": "uuid",
@@ -2643,6 +2816,13 @@
             "title": "Occurred At",
             "type": "string"
           },
+          "quick_replies": {
+            "items": {
+              "$ref": "#/components/schemas/QuickReplyOut"
+            },
+            "title": "Quick Replies",
+            "type": "array"
+          },
           "reactions": {
             "items": {
               "$ref": "#/components/schemas/Reaction"
@@ -3419,6 +3599,20 @@
           "order"
         ],
         "title": "QueueInfo",
+        "type": "object"
+      },
+      "QuickReplyOut": {
+        "description": "A quick reply offered with the text (tap first, FR-AUT-21); shown, not tappable, here.",
+        "properties": {
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "QuickReplyOut",
         "type": "object"
       },
       "Reaction": {
@@ -5783,7 +5977,8 @@
                     "failed",
                     "skipped_cooldown",
                     "skipped_expired",
-                    "escalated"
+                    "escalated",
+                    "awaiting_reply"
                   ],
                   "type": "string"
                 },

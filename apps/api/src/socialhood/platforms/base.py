@@ -28,6 +28,7 @@ class ContactProfile:
     name: str | None
     username: str | None
     profile_picture_url: str | None
+    follows_business: bool | None = None  # Instagram's is_user_follow_business (FR-AUT-22)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -54,6 +55,15 @@ class OutboundButton:
 
 
 @dataclass(frozen=True, kw_only=True)
+class OutboundQuickReply:
+    """A quick reply (tap first, FR-AUT-21): Instagram's quick_replies, content_type text.
+    Not shown on desktop, so a typed reply must work too."""
+
+    title: str  # up to 20 characters
+    payload: str  # comes back as message.quick_reply.payload
+
+
+@dataclass(frozen=True, kw_only=True)
 class OutboundMessage:
     """One platform send: text, one attachment, a built-in sticker (Instagram's heart) or
     (WhatsApp) a template."""
@@ -63,6 +73,7 @@ class OutboundMessage:
     template: OutboundTemplate | None = None
     sticker: Literal["like_heart"] | None = None
     buttons: tuple[OutboundButton, ...] = ()  # with text: sent as one button-template message
+    quick_replies: tuple[OutboundQuickReply, ...] = ()  # with text, not with buttons
     human_agent: bool = False  # Instagram HUMAN_AGENT tag (TR-PL-04)
 
 

@@ -71,6 +71,8 @@ class RunResult(StrEnum):
     SKIPPED_COOLDOWN = "skipped_cooldown"
     SKIPPED_EXPIRED = "skipped_expired"  # the comment passed Instagram's 7-day limit
     ESCALATED = "escalated"  # an AI reply could not answer from knowledge (P5)
+    # Tap first (FR-AUT-21): the opening went out; the message follows their tap or reply.
+    AWAITING_REPLY = "awaiting_reply"
 
 
 class AnalysisStatus(StrEnum):
@@ -105,6 +107,15 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     surge_order: Mapped[str] = mapped_column(Text, server_default=sql("'oldest_first'"))
     post_scope: Mapped[str] = mapped_column(Text, server_default=sql("'all'"))
     cooldown_hours: Mapped[int] = mapped_column(SmallInteger, server_default=sql("24"))
+    # Tap first (FR-AUT-21, comment triggers): the private reply is this opening text with a
+    # quick-reply button; the message above follows their tap or reply.
+    confirm_first: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    opening_text: Mapped[str | None] = mapped_column(Text)
+    opening_button: Mapped[str | None] = mapped_column(Text)
+    # Follow nudge (FR-AUT-22): after the message, a line for people who don't follow the account.
+    # The message is never held back (Meta's Spam standard forbids follow-gating).
+    follow_nudge: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    follow_nudge_text: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[int] = mapped_column(Integer, server_default=sql("100"))
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -135,6 +146,14 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(
             "ai_instructions IS NULL OR char_length(ai_instructions) <= 2000",
             name="ai_instructions_length",
+        ),
+        CheckConstraint(
+            "opening_button IS NULL OR char_length(opening_button) <= 20",
+            name="opening_button_length",
+        ),
+        CheckConstraint(
+            "follow_nudge_text IS NULL OR char_length(follow_nudge_text) <= 300",
+            name="follow_nudge_text_length",
         ),
         # T4.1 done-when: an incomplete automation cannot be stored as active.
         CheckConstraint(
@@ -262,6 +281,14 @@ class AutomationRun(IdMixin, TimestampMixin, TenantScoped, Base):
     public_reply_platform_id: Mapped[str | None] = mapped_column(Text)
     public_reply_variant: Mapped[int | None] = mapped_column(SmallInteger)
     contact_replied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Tap first (FR-AUT-21): when their tap or reply released the message.
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Follow nudge (FR-AUT-22): whether they followed the account when the message went out
+    # (None: not checked or unknown), and the nudge message if one was sent.
+    follows_business: Mapped[bool | None] = mapped_column(Boolean)
+    nudge_message_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL")
+    )
     error_code: Mapped[str | None] = mapped_column(Text)
     error_message: Mapped[str | None] = mapped_column(Text)
 
@@ -287,6 +314,12 @@ class AutomationRun(IdMixin, TimestampMixin, TenantScoped, Base):
             "automation_id",
             "created_at",
             postgresql_where=sql("result = 'queued'"),
+        ),
+        Index(
+            "ix_automation_runs_awaiting",
+            "contact_id",
+            "created_at",
+            postgresql_where=sql("result = 'awaiting_reply'"),
         ),
         CheckConstraint(_in("result", RunResult), name="result"),
         CheckConstraint(

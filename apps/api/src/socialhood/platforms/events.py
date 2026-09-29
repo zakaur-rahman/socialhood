@@ -33,6 +33,7 @@ class InboundMessage(Inbound):
     attachments: tuple[InboundMediaRef, ...] = field(default_factory=tuple)
     reply_to_id: str | None = None
     is_echo: bool = False  # sent by the business outside Social Hood
+    quick_reply_payload: str | None = None  # the quick reply they tapped (FR-AUT-21)
 
 
 @dataclass(frozen=True, kw_only=True)

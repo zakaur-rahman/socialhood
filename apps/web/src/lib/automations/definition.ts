@@ -38,6 +38,11 @@ export function toDefinition(automation: Automation): AutomationDefinition {
     starts_at: automation.starts_at ?? null,
     ends_at: automation.ends_at ?? null,
     surge_order: automation.surge_order,
+    confirm_first: automation.confirm_first,
+    opening_text: automation.opening_text ?? null,
+    opening_button: automation.opening_button ?? null,
+    follow_nudge: automation.follow_nudge,
+    follow_nudge_text: automation.follow_nudge_text ?? null,
   };
 }
 

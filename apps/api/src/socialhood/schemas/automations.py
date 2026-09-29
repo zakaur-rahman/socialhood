@@ -23,7 +23,14 @@ StatusName = Literal["draft", "active", "paused"]
 # What the list and editor show: Scheduled before starts_at, Ended after ends_at (FR-AUT-17).
 DisplayStatus = Literal["draft", "scheduled", "active", "paused", "ended"]
 RunResultName = Literal[
-    "queued", "sent", "partial", "failed", "skipped_cooldown", "skipped_expired", "escalated"
+    "queued",
+    "sent",
+    "partial",
+    "failed",
+    "skipped_cooldown",
+    "skipped_expired",
+    "escalated",
+    "awaiting_reply",  # tap first: the opening went out; the message follows their tap or reply
 ]
 TemplateCategory = Literal["grow", "sell", "support"]
 
@@ -92,6 +99,12 @@ class Automation(ResponseModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     surge_order: SurgeOrderName
+    # Tap first (FR-AUT-21, comment triggers) and the follow nudge (FR-AUT-22).
+    confirm_first: bool
+    opening_text: str | None = None
+    opening_button: str | None = None
+    follow_nudge: bool
+    follow_nudge_text: str | None = None
     priority: int
     template_key: str | None = None
     activated_at: datetime | None = None
@@ -150,6 +163,14 @@ class AutomationDefinition(RequestModel):
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     surge_order: SurgeOrderName = "oldest_first"
+    # Tap first (FR-AUT-21): the private reply is the opening with a quick-reply button; the
+    # message follows their tap or reply. Comment triggers only.
+    confirm_first: bool = False
+    opening_text: str | None = Field(default=None, max_length=2000)  # bytes checked on activation
+    opening_button: str | None = Field(default=None, max_length=20)
+    # Follow nudge (FR-AUT-22): after the message, only to people who don't follow the account.
+    follow_nudge: bool = False
+    follow_nudge_text: str | None = Field(default=None, max_length=300)
 
 
 class PrioritiesUpdate(RequestModel):
@@ -200,6 +221,9 @@ class AutomationRun(ResponseModel):
     private_reply_message_id: uuid.UUID | None = None
     public_reply_platform_id: str | None = None
     contact_replied_at: datetime | None = None
+    confirmed_at: datetime | None = None  # tap first: when their tap or reply released it
+    follows_business: bool | None = None  # when the message went out; None: unknown
+    nudge_message_id: uuid.UUID | None = None
     error: RunError | None = None
 
 
@@ -232,6 +256,11 @@ class AutomationStats(ResponseModel):
     skipped: SkippedCounts
     queued_now: int
     daily: list[DailyRuns]
+    # Tap first and the follow nudge (FR-AUT-21, 22): runs whose opening was answered, runs
+    # still waiting for an answer now, and nudges sent.
+    tapped: int = 0
+    awaiting_now: int = 0
+    nudged: int = 0
 
 
 class AutomationTest(RequestModel):
@@ -256,6 +285,8 @@ class AutomationTestResult(ResponseModel):
     reason: str | None = None  # why this one would not run, in plain words
     rendered_message: str | None = None
     rendered_public_reply: str | None = None
+    rendered_opening: str | None = None  # tap first: the private reply before the message
+    rendered_nudge: str | None = None  # the follow nudge, as a non-follower would get it
 
 
 class PostSummary(ResponseModel):

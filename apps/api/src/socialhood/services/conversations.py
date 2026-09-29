@@ -297,6 +297,7 @@ async def conversation_detail(
                 profile_picture_url=contact.profile_picture_url,
                 first_seen_at=contact.first_seen_at or contact.created_at,
                 platform_user_id=contact.platform_user_id,
+                follows_business=contact.follows_business,
             ),
             "reply_window": reply_window(
                 conv.platform, conv.last_inbound_at, human_agent=human_agent, now=now
