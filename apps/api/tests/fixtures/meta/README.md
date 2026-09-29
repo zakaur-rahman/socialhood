@@ -15,3 +15,9 @@ account (docs/verification.md); tests that use a file must keep passing when it 
   delivery, T0.9 item 2).
 - `media_list.json`: `GET /me/media` for sync_media; `conversations_list.json` and
   `conversation_messages.json`: the Conversations API for backfill (T3.14, T0.9 item 7).
+- `media_comments_page1.json` and `media_comments_page2.json`: `GET /{media_id}/comments` with
+  replies expanded, for the comment backfill (T6.1): a question with the account's own reply and a
+  customer's, hidden spam, a comment without `from` (left out), and the `after` cursor to the last
+  page.
+- `error_100_33_not_found.json`: the error Meta documents for a write on an object that no longer
+  exists, such as a deleted comment (T6.3); not yet seen from a real account.

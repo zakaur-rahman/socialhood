@@ -1,10 +1,11 @@
 """After a connect: the account's recent posts and conversation history (T3.14, FR-CON-01).
 
-``sync_account_media`` upserts the 25 most recent posts into media_items (comments on them are
-backfilled from P6). ``backfill_account`` stores recent threads through the same ingest as
-webhooks, with each message's real direction; conversations appear in the inbox as each thread
-commits. Both depend on the adapter's capabilities, never on platform names (TR-PL-11), and both
-are safe to run again: rows are keyed by their platform ids.
+``sync_account_media`` upserts the 25 most recent posts into media_items, then queues the comment
+backfill for posts missing comments (T6.1, TR-WH-08: services/comments/backfill).
+``backfill_account`` stores recent threads through the same ingest as webhooks, with each
+message's real direction; conversations appear in the inbox as each thread commits. Both depend
+on the adapter's capabilities, never on platform names (TR-PL-11), and both are safe to run
+again: rows are keyed by their platform ids.
 """
 
 from __future__ import annotations
@@ -27,6 +28,7 @@ from socialhood.realtime.events import commit_and_publish, queue_conversation
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services.automations import posts as automation_posts
+from socialhood.services.comments import backfill as comment_backfill
 from socialhood.services.ingest import ingest
 
 log = get_logger(__name__)
@@ -112,6 +114,7 @@ async def sync_account_media(
             await automation_posts.link_next_posts(session, acct.id)  # FR-AUT-18
             await accounts.update(session, acct.id, media_synced_at=now)
             await session.commit()
+            await comment_backfill.after_media_sync(session, acct)  # T6.1, TR-WH-08
     log.info("media_synced", account_id=str(account_id), posts=len(media))
     return len(media)
 

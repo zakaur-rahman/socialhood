@@ -1148,7 +1148,7 @@ export interface paths {
          * Refresh Post Summary
          * @description The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated
          *     carries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post
-         *     has no analysed comments yet.
+         *     has no analysed comments yet, or AI analysis is off for its account.
          */
         post: operations["refresh_post_summary"];
         delete?: never;
@@ -2146,11 +2146,14 @@ export interface components {
         };
         /**
          * CommentStats
-         * @description A post's comment counts (``media_items.comment_stats``), kept by the analysis job.
+         * @description A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,
+         *     the rest are recounted by the analysis job.
          *
          *     ``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts
-         *     analysed spam. While ``analysed < total`` the page shows "Analysing {analysed} of {total}
-         *     comments" (FR-CMT-02). Deleted comments are not counted.
+         *     analysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI
+         *     analysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <
+         *     total`` the page shows "Analysing {analysed} of {total} comments" (FR-CMT-02) and the progress
+         *     always ends. Deleted comments are not counted.
          */
         CommentStats: {
             /** Analysed */
