@@ -1,12 +1,14 @@
 """Scheduling tools (FR-AGT-02, FR-AGT-03, FR-AGT-05, TA.4; agent-architecture.html §5, §19).
 
 R1:
-- list_scheduled_messages(range) / list_scheduled_posts(range): read; services/scheduled and
-  publishing (P7), in the workspace's time zone. Without a range: what is still to be sent or
-  published, soonest first; with one (resolved looking forward: "this week" runs to Sunday): the
-  messages or posts timed in it (canceled messages left out; posts of every status, drafts with
-  a time included). Scheduled posts are for owners and admins, as on the Schedule page
-  (``min_role`` admin).
+- list_scheduled_messages(range, status) / list_scheduled_posts(range, status): read;
+  services/scheduled and publishing (P7), in the workspace's time zone. Without a range: what is
+  still to be sent or published, soonest first; with one (resolved looking forward: "this week"
+  runs to Sunday): the messages or posts timed in it (canceled messages left out; posts of every
+  status, drafts with a time included). A status narrows either: sent or failed messages and
+  published or failed posts look back (default the last 30 days), so "did anything fail?" finds
+  failures instead of the pending list; drafts without a period are every draft. Scheduled posts
+  are for owners and admins, as on the Schedule page (``min_role`` admin).
 - prepare_scheduled_message(contact, text, when): draft; resolves the contact, the time
   (agent/timeparse.py) and the reply window (services/scheduled.send_window, the popover's own
   rules), and returns a schedule_message action card: the conversation's schedule popover limited
@@ -23,6 +25,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -46,7 +49,8 @@ from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.agent import RiskTier
 from socialhood.models.identity import Role
-from socialhood.models.inbox import Contact, Conversation, ScheduledMessage
+from socialhood.models.inbox import Contact, Conversation, ScheduledMessage, ScheduledStatus
+from socialhood.models.publishing import ScheduledPostStatus as PostStatus
 from socialhood.repositories import inbox, social_accounts
 from socialhood.repositories import scheduled as scheduled_repo
 from socialhood.repositories import scheduled_posts as posts_repo
@@ -66,12 +70,27 @@ class _Input(BaseModel):
 # ---------------------------------------------------------------- list_scheduled_messages
 
 
+MessageStatusName = Literal["pending", "sent", "failed"]
+# failed: not sent, whether the send failed or the reply window closed first (expired).
+MESSAGE_STATUSES: dict[str, tuple[str, ...]] = {
+    "pending": (ScheduledStatus.SCHEDULED, ScheduledStatus.SENDING),
+    "sent": (ScheduledStatus.SENT,),
+    "failed": (ScheduledStatus.FAILED, ScheduledStatus.EXPIRED),
+}
+LOOKING_BACK = "the last 30 days"  # sent and failed without a period
+
+
 class ListScheduledMessagesInput(_Input):
     range: str | None = Field(
         default=None,
         max_length=80,
         description="When they send, e.g. “tomorrow”, “this week”; omitted: every message "
-        "still to be sent.",
+        "still to be sent (with a status: sent or failed ones of the last 30 days).",
+    )
+    status: MessageStatusName | None = Field(
+        default=None,
+        description="pending (still to be sent), sent, or failed (not sent: the send failed or "
+        "the reply window closed first). Omitted: pending ones, or every status in the period.",
     )
     limit: int = limit_field()
 
@@ -115,8 +134,9 @@ def _message_item(
     name="list_scheduled_messages",
     label="Checking your scheduled messages",
     description=(
-        "Scheduled DMs: without a period, every message still to be sent (soonest first); "
-        "with one, the messages timed in it, with their status."
+        "Scheduled DMs with their status: without a period, every message still to be sent "
+        "(soonest first); with one, the messages timed in it. Pass a status to find the sent or "
+        "failed ones."
     ),
     input_model=ListScheduledMessagesInput,
     result_model=ScheduledMessagesResult,
@@ -124,8 +144,14 @@ def _message_item(
 async def list_scheduled_messages(
     ctx: ToolContext, args: ListScheduledMessagesInput
 ) -> ScheduledMessagesResult:
-    span = period(ctx, args.range, default=None, upcoming=True)
-    if span is None:
+    looking_back = args.status in ("sent", "failed")
+    span = period(
+        ctx,
+        args.range,
+        default=LOOKING_BACK if looking_back else None,
+        upcoming=not looking_back,
+    )
+    if span is None:  # still to be sent (the status, if any, is "pending")
         pending = await scheduled_repo.list_pending(ctx.session, limit=args.limit)
         total = await scheduled_repo.count_pending(ctx.session)
         items = [_message_item(ctx, r.scheduled, r.contact, r.platform) for r in pending]
@@ -134,10 +160,13 @@ async def list_scheduled_messages(
         rows = await posts_repo.scheduled_messages(
             ctx.session, start=span.start, end=span.end, account_ids=None, limit=MAX_ROWS
         )
+        if args.status is not None:
+            rows = [r for r in rows if r.scheduled.status in MESSAGE_STATUSES[args.status]]
         shown, _ = capped(rows, args.limit)
         total = len(rows)
         items = [_message_item(ctx, r.scheduled, r.contact, r.platform) for r in shown]
-        summary = f"{more_words(total, 0, 'scheduled message')}, {span.label}"
+        noun = f"{args.status} scheduled message" if args.status else "scheduled message"
+        summary = f"{more_words(total, 0, noun)}, {span.label}"
     return ScheduledMessagesResult(
         summary=clip(summary[0].upper() + summary[1:], 300) or "Checked scheduled messages",
         period=Period.of(span) if span else None,
@@ -154,12 +183,28 @@ async def list_scheduled_messages(
 # ---------------------------------------------------------------- list_scheduled_posts
 
 
+PostStatusName = Literal["scheduled", "published", "failed", "draft"]
+# failed: nothing published, or some accounts failed (partially published).
+POST_STATUSES: dict[str, tuple[str, ...]] = {
+    "scheduled": (PostStatus.SCHEDULED, PostStatus.PUBLISHING),
+    "published": (PostStatus.PUBLISHED, PostStatus.PARTIALLY_PUBLISHED),
+    "failed": (PostStatus.FAILED, PostStatus.PARTIALLY_PUBLISHED),
+    "draft": (PostStatus.DRAFT,),
+}
+
+
 class ListScheduledPostsInput(_Input):
     range: str | None = Field(
         default=None,
         max_length=80,
         description="When they publish, e.g. “next week”; omitted: every post still to be "
-        "published.",
+        "published (with a status: published or failed ones of the last 30 days, or every "
+        "draft).",
+    )
+    status: PostStatusName | None = Field(
+        default=None,
+        description="scheduled, published, failed (on at least one account) or draft. "
+        "Omitted: scheduled ones, or every status in the period.",
     )
     account: str | None = Field(default=None, max_length=100)
     limit: int = limit_field()
@@ -179,6 +224,7 @@ class ScheduledPostItem(BaseModel):
     publish_at: datetime | None = None
     publish_at_label: str | None = None
     published_at: datetime | None = None
+    published_at_label: str | None = None
     targets: list[Target]
 
 
@@ -193,9 +239,9 @@ class ScheduledPostsResult(ToolResult):
     name="list_scheduled_posts",
     label="Checking your scheduled posts",
     description=(
-        "Scheduled posts: without a period, every post still to be published (soonest first); "
-        "with one, the posts timed in it, drafts with a time included, with each account's "
-        "status."
+        "Scheduled posts with each account's status: without a period, every post still to be "
+        "published (soonest first); with one, the posts timed in it, drafts with a time "
+        "included. Pass a status to find the published, failed or draft ones."
     ),
     input_model=ListScheduledPostsInput,
     result_model=ScheduledPostsResult,
@@ -206,15 +252,24 @@ async def list_scheduled_posts(
 ) -> ScheduledPostsResult:
     acct = await find_account(ctx, args.account)
     account_ids = [acct.id] if acct else None
-    span = period(ctx, args.range, default=None, upcoming=True)
+    looking_back = args.status in ("published", "failed")
+    span = period(
+        ctx,
+        args.range,
+        default=LOOKING_BACK if looking_back else None,
+        upcoming=not looking_back,
+    )
     if span is None:
+        view = "drafts" if args.status == "draft" else "scheduled"
         rows = await posts_repo.list_view(
-            ctx.session, view="scheduled", account_ids=account_ids, after=None, limit=MAX_ROWS
+            ctx.session, view=view, account_ids=account_ids, after=None, limit=MAX_ROWS
         )
     else:
         rows = await posts_repo.in_range(
             ctx.session, start=span.start, end=span.end, account_ids=account_ids, limit=MAX_ROWS
         )
+        if args.status is not None:
+            rows = [p for p in rows if p.status in POST_STATUSES[args.status]]
     shown, more = capped(rows, args.limit)
     accounts = {a.id: a for a in await social_accounts.list_all(ctx.session)}
     items = []
@@ -228,6 +283,7 @@ async def list_scheduled_posts(
                 publish_at=post.publish_at,
                 publish_at_label=when(ctx, post.publish_at),
                 published_at=post.published_at,
+                published_at_label=when(ctx, post.published_at),
                 targets=[
                     Target(
                         account=(
@@ -243,11 +299,16 @@ async def list_scheduled_posts(
             )
         )
     noun = "post" if len(rows) == 1 else "posts"
-    summary = (
-        f"{len(rows)} {noun} still to be published"
-        if span is None
-        else f"{len(rows)} {noun} timed {span.label}"
-    )
+    if span is None:
+        summary = (
+            f"{len(rows)} draft {noun}"
+            if args.status == "draft"
+            else f"{len(rows)} {noun} still to be published"
+        )
+    elif args.status is not None:
+        summary = f"{len(rows)} {args.status} {noun}, {span.label}"
+    else:
+        summary = f"{len(rows)} {noun} timed {span.label}"
     return ScheduledPostsResult(
         summary=clip(summary, 300) or "Checked scheduled posts",
         period=Period.of(span) if span else None,
@@ -378,13 +439,19 @@ async def prepare_scheduled_message(
         note = f"{name}'s reply window closes {closes_label}."
         summary = f"Prepared a message to {name} for {requested.label}"
     elif requested.at > allowed.latest:
-        send_at = None
-        note = f"{name}'s window closes {closes_label}, so the latest time is {latest_label}."
-        summary = f"{requested.label} is after {name}'s reply window closes ({closes_label})"
+        send_at = None  # never moved silently: the member picks the time
+        note = f"{name}'s window closes {closes_label}: pick a time up to {latest_label}."
+        summary = (
+            f"{requested.label} is after {name}'s reply window closes ({closes_label}); the card "
+            f"has no time, so pick one up to {latest_label}"
+        )
     else:
         send_at = None
         note = f"Pick a time from {when(ctx, allowed.earliest)} to {latest_label}."
-        summary = f"{requested.label} is too soon or has passed; the message needs a later time"
+        summary = (
+            f"{requested.label} is too soon or has passed; the card has no time, so pick one "
+            f"from {when(ctx, allowed.earliest)} to {latest_label}"
+        )
     caveats = []
     limit = entitlement(await current_plan(ctx.session), "pending_scheduled_messages")
     if limit is not None and await scheduled_repo.count_pending(ctx.session) >= limit:

@@ -307,10 +307,11 @@ async def test_a_time_after_the_window_is_not_moved_silently(shop: Shop) -> None
     assert got.action_card.prefill.send_at is None
     assert got.action_card.prefill.window_closes_at == datetime(2026, 9, 30, 2, 36, tzinfo=UTC)
     assert got.action_card.note == (
-        "Priya Shah's window closes Wed 30 Sep, 8:12 AM, so the latest time is Wed 30 Sep, 8:06 AM."
+        "Priya Shah's window closes Wed 30 Sep, 8:12 AM: pick a time up to Wed 30 Sep, 8:06 AM."
     )
     assert got.summary == (
-        "Wed 30 Sep, 10:00 AM is after Priya Shah's reply window closes (Wed 30 Sep, 8:12 AM)"
+        "Wed 30 Sep, 10:00 AM is after Priya Shah's reply window closes (Wed 30 Sep, 8:12 AM); "
+        "the card has no time, so pick one up to Wed 30 Sep, 8:06 AM"
     )
 
     soon = await shop.call(
@@ -393,6 +394,33 @@ async def test_list_scheduled_messages_pending_and_by_range(shop: Shop) -> None:
     assert (len(capped.items), capped.total, capped.more) == (1, 2, 1)
 
 
+async def test_failed_and_sent_scheduled_messages_look_back(shop: Shop) -> None:
+    """ "Did anything fail?" finds the failures (the pending list never shows them)."""
+    t = await thread(shop)
+    now = datetime.now(UTC)
+    on = {"workspace_id": shop.wid, "conversation_id": t.conversation_id}
+    failed = await make_scheduled(
+        shop.engine, send_at=now - timedelta(days=1), status="failed", **on
+    )
+    expired = await make_scheduled(
+        shop.engine, send_at=now - timedelta(days=2), status="expired", **on
+    )
+    sent = await make_scheduled(shop.engine, send_at=now - timedelta(hours=5), status="sent", **on)
+    await make_scheduled(shop.engine, send_at=now - timedelta(days=40), status="failed", **on)
+    pending = await make_scheduled(shop.engine, send_at=now + timedelta(hours=2), **on)
+
+    failures = await shop.call("list_scheduled_messages", {"status": "failed"})
+    assert {i.id for i in failures.items} == {failed, expired}  # the last 30 days
+    assert failures.period is not None
+    assert failures.summary.startswith("2 failed scheduled messages, ")
+    week = await shop.call(
+        "list_scheduled_messages", {"status": "sent", "range": "the last 7 days"}
+    )
+    assert [i.id for i in week.items] == [sent]
+    waiting = await shop.call("list_scheduled_messages", {"status": "pending"})
+    assert [i.id for i in waiting.items] == [pending]
+
+
 async def test_list_scheduled_posts_for_admins(shop: Shop) -> None:
     now = datetime.now(UTC)
     post = await make_scheduled_post(
@@ -412,6 +440,23 @@ async def test_list_scheduled_posts_for_admins(shop: Shop) -> None:
     assert upcoming.refs[0].kind == "scheduled_post"
     week = await shop.call("list_scheduled_posts", {"range": "next 7 days"})
     assert [i.id for i in week.items] == [post.id]
+
+    failed = await make_scheduled_post(
+        shop.engine,
+        workspace_id=shop.wid,
+        account_ids=[shop.account_id],
+        status="failed",
+        publish_at=now - timedelta(days=2),
+        caption="Sunday offer",
+        target_status="failed",
+        target_values={"error_code": "platform_rejected", "error_message": "Unsupported ratio"},
+    )
+    failures = await shop.call("list_scheduled_posts", {"status": "failed"})
+    assert [i.id for i in failures.items] == [failed.id]  # the last 30 days
+    assert failures.items[0].targets[0].error == "Unsupported ratio"
+    assert failures.summary.startswith("1 failed post, ")
+    drafts = await shop.call("list_scheduled_posts", {"status": "draft"})
+    assert (drafts.total, drafts.summary) == (1, "1 draft post")
 
     error = await refused(shop, "list_scheduled_posts", {}, role=Role.AGENT)
     assert error.code == "forbidden"

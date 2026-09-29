@@ -40,7 +40,13 @@ class _Input(BaseModel):
 
 
 class SearchKnowledgeInput(_Input):
-    q: str = Field(min_length=1, max_length=500, description="What to look for, in plain words.")
+    q: str = Field(
+        min_length=1,
+        max_length=500,
+        description="A few words for what to look for, in the language the knowledge base is "
+        "written in (usually English: put Hindi or Hinglish into it), e.g. “opening hours”, "
+        "“delivery charges”.",
+    )
     limit: int = limit_field(default=5, maximum=retrieval.MAX_RESULTS)
 
 
@@ -164,6 +170,7 @@ class GapExample(BaseModel):
     conversation_id: uuid.UUID
     text: str | None = None
     at: datetime
+    at_label: str | None = None
 
 
 class Gap(BaseModel):
@@ -206,7 +213,10 @@ async def list_knowledge_gaps(ctx: ToolContext, args: ListGapsInput) -> GapsResu
             last_asked_label=when(ctx, g.last_seen_at),
             examples=[
                 GapExample(
-                    conversation_id=e.conversation_id, text=clip(e.text, 200), at=e.occurred_at
+                    conversation_id=e.conversation_id,
+                    text=clip(e.text, 200),
+                    at=e.occurred_at,
+                    at_label=when(ctx, e.occurred_at),
                 )
                 for e in g.examples[:2]
             ],

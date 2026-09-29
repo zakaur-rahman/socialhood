@@ -37,6 +37,7 @@ from socialhood.agent.tools.common import (
     quoted,
     ref,
     tool,
+    when,
 )
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
@@ -109,14 +110,22 @@ class AutomationItem(BaseModel):
     account: str | None = None
     runs_7d: int
     last_run_at: datetime | None = None
+    last_run_at_label: str | None = None
     queued: int  # private replies waiting in the account's queue
     missing_for_activation: list[str]
 
 
 class AutomationsResult(ToolResult):
+    runs_period: str  # the days runs_7d counts, e.g. "the last 7 days (24-30 Sep 2026)"
     items: list[AutomationItem]
     total: int
     more: int
+
+
+def runs_period(ctx: ToolContext) -> str:
+    """The calendar days an automation's recent runs count (FR-AUT-03), in words."""
+    days = stats.period(ctx.timezone.key, stats.LIST_DAYS, ctx.now).days
+    return f"the last {stats.LIST_DAYS} days ({span_label(days[0], days[-1])})"
 
 
 @tool(
@@ -157,6 +166,7 @@ async def list_automations(ctx: ToolContext, args: ListAutomationsInput) -> Auto
             ),
             runs_7d=a.stats.runs_7d,
             last_run_at=a.stats.last_run_at,
+            last_run_at_label=when(ctx, a.stats.last_run_at),
             queued=a.queue.waiting,
             missing_for_activation=a.missing_for_activation,
         )
@@ -166,6 +176,7 @@ async def list_automations(ctx: ToolContext, args: ListAutomationsInput) -> Auto
     noun = "automation" if len(found.items) == 1 else "automations"
     return AutomationsResult(
         summary=f"Found {len(found.items)} {noun}, {active} active",
+        runs_period=runs_period(ctx),
         items=items,
         total=len(found.items),
         more=more,
@@ -207,7 +218,9 @@ class AutomationResult(ToolResult):
     tap_first: bool
     follow_nudge: bool
     runs_7d: int
+    runs_period: str  # the days runs_7d counts
     last_run_at: datetime | None = None
+    last_run_at_label: str | None = None
     queued: int
     missing_for_activation: list[str]
     overlaps: list[Overlap]
@@ -261,7 +274,9 @@ async def get_automation(ctx: ToolContext, args: GetAutomationInput) -> Automati
         tap_first=a.confirm_first,
         follow_nudge=a.follow_nudge,
         runs_7d=a.stats.runs_7d,
+        runs_period=runs_period(ctx),
         last_run_at=a.stats.last_run_at,
+        last_run_at_label=when(ctx, a.stats.last_run_at),
         queued=a.queue.waiting,
         missing_for_activation=a.missing_for_activation,
         overlaps=[

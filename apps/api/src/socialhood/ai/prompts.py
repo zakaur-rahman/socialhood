@@ -21,8 +21,10 @@ CURRENT = {
     # The composer's Write with AI and Suggest hashtags (FR-PUB-02, T7.4).
     "caption": 1,
     "hashtags": 1,
-    # Ask Social Hood's planner and report (TR-AGT-02, TA.2).
-    "agent": 1,
+    # Ask Social Hood's planner and report (TR-AGT-02, TA.2). agent.v2: the TA.6 eval (the
+    # member's role, answering the question asked, brackets only for citations, drafted text only
+    # from results; docs/ai-eval-log.md).
+    "agent": 2,
 }
 
 

@@ -398,7 +398,11 @@ async def test_post_performance_at_an_age(shop: Shop, history: History) -> None:
 async def test_compare_posts_at_the_same_age(shop: Shop, history: History) -> None:
     got = await shop.call("compare_posts", {"post_id": str(history.reel), "at_age": "24h"})
     assert got.enough_history
-    assert (got.age, got.baseline.size, got.baseline.label) == ("24h", 3, "the previous 10 reels")
+    assert (got.age, got.baseline.size, got.baseline.label) == (
+        "24h",
+        3,
+        "the previous 3 reels (of 10 asked for)",  # the posts compared, not the number asked
+    )
     reach = next(m for m in got.metrics if m.metric == "reach")
     assert (reach.value, reach.baseline_median, reach.diff_pct, reach.sample_size) == (
         4120,
@@ -407,8 +411,8 @@ async def test_compare_posts_at_the_same_age(shop: Shop, history: History) -> No
         3,
     )
     assert got.summary == (
-        f"Compared the {history.label} with the previous 10 reels at 24 hours: reach +42.1% "
-        "against the median"
+        f"Compared the {history.label} with the previous 3 reels (of 10 asked for) at 24 hours: "
+        "reach +42.1% against the median"
     )
     assert got.caveats == []
 

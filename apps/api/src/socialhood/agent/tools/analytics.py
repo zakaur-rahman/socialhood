@@ -59,7 +59,7 @@ from socialhood.agent.tools.common import (
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.ai import Sentiment
 from socialhood.models.analytics import LIVE_COUNT_WINDOWS, WINDOW_AGES, SnapshotWindow
-from socialhood.models.connections import SocialAccount
+from socialhood.models.connections import Platform, SocialAccount
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import social_accounts
 from socialhood.schemas.analytics import (
@@ -209,6 +209,7 @@ class PerformanceResult(ToolResult):
     post: str  # "Reel of 26 Sep"
     format: str
     posted_at: datetime
+    posted_at_label: str | None = None
     requested_age: AgeName | None = None
     age: AgeName  # the age the figures are at
     age_label: str
@@ -248,6 +249,7 @@ async def post_performance(ctx: ToolContext, args: PerformanceInput) -> Performa
         post=label,
         format=format_of(item.media_type),
         posted_at=item.posted_at,
+        posted_at_label=when(ctx, item.posted_at),
         requested_age=perf.requested_age,
         age=perf.age,
         age_label=AGE_WORDS[perf.age],
@@ -267,8 +269,9 @@ class CompareInput(_Input):
     post_id: uuid.UUID
     baseline: BaselineKind = Field(
         default="previous",
-        description="previous: the account's N posts before this one; range: its posts in a "
-        "period.",
+        description="previous: the account's N posts before this one; range: its posts "
+        "published in a period (“compared with my posts from the last 30 days”), given in "
+        "`range`.",
     )
     n: int = Field(default=10, ge=1, le=50, description="How many previous posts.")
     range: str | None = Field(
@@ -349,7 +352,13 @@ async def compare_posts(ctx: ToolContext, args: CompareInput) -> CompareResult:
     posts_word = kind_words if args.same_format else "posts"
     base = result.baseline
     if base.kind == "previous":
-        base_label = f"the previous {args.n} {posts_word}"
+        # The baseline is the posts actually compared, not the number asked for.
+        size = result.baseline_size
+        base_label = (
+            f"the previous {args.n} {posts_word}"
+            if size == args.n
+            else f"the previous {size} {posts_word} (of {args.n} asked for)"
+        )
     else:
         assert base.since is not None
         assert base.until is not None
@@ -484,8 +493,9 @@ async def top_posts(ctx: ToolContext, args: TopPostsInput) -> TopPostsResult:
     if covered.rule:
         caveats.append(covered.rule[0].upper() + covered.rule[1:] + ".")
     if args.metric in INSIGHT_METRICS:
+        # Accounts that publish posts: a WhatsApp number has no posts, so no insights to grant.
         accounts = [acct] if acct else await social_accounts.list_all(ctx.session)
-        missing = [a for a in accounts if not _granted(ctx, a)]
+        missing = [a for a in accounts if a.platform == Platform.INSTAGRAM and not _granted(ctx, a)]
         caveats += [insights_caveat(a) for a in missing]
     if not ranked.considered:
         caveats.append(f"No post published {covered.label} has {args.metric} at that age.")

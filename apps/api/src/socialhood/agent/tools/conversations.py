@@ -124,6 +124,7 @@ class ConversationItem(BaseModel):
     signal: str | None = None  # needs_you, complaint, closing_soon, lead, negative
     lead_score: int | None = None
     window_closes_at: datetime | None = None
+    window_closes_at_label: str | None = None
 
 
 class ConversationsResult(ToolResult):
@@ -191,6 +192,7 @@ async def search_conversations(
             signal=c.signal,
             lead_score=c.lead_score,
             window_closes_at=c.reply_window_closes_at,
+            window_closes_at_label=when(ctx, c.reply_window_closes_at),
         )
         for c in page.items
     ]
@@ -363,6 +365,7 @@ class ContactMatch(BaseModel):
     account: str
     conversation_id: uuid.UUID | None = None  # None: no messages yet (for example a commenter)
     last_message_at: datetime | None = None
+    last_message_at_label: str | None = None
     lead_score: int | None = None
 
 
@@ -399,6 +402,7 @@ async def find_contact(ctx: ToolContext, args: FindContactInput) -> FindContactR
                 account=handle(acct) if acct else "",
                 conversation_id=conv.id if conv else None,
                 last_message_at=conv.last_message_at if conv else None,
+                last_message_at_label=when(ctx, conv.last_message_at) if conv else None,
                 lead_score=conv.lead_score if conv else None,
             )
         )
@@ -431,6 +435,7 @@ class CustomerComment(BaseModel):
     post_id: uuid.UUID
     text: str | None = None
     at: datetime
+    at_label: str | None = None
 
 
 class CustomerResult(ToolResult):
@@ -444,6 +449,7 @@ class CustomerResult(ToolResult):
     conversation_id: uuid.UUID | None = None
     conversation_status: str | None = None
     last_message_at: datetime | None = None
+    last_message_at_label: str | None = None
     summary_text: str | None = None
     next_step: str | None = None
     analysis: Analysis | None = None
@@ -499,6 +505,7 @@ async def get_customer(ctx: ToolContext, args: GetCustomerInput) -> CustomerResu
         conversation_id=conv.id if conv else None,
         conversation_status=conv.status if conv else None,
         last_message_at=conv.last_message_at if conv else None,
+        last_message_at_label=when(ctx, conv.last_message_at) if conv else None,
         summary_text=conv.summary if conv else None,
         next_step=conv.summary_next_step if conv else None,
         analysis=(
@@ -521,6 +528,7 @@ async def get_customer(ctx: ToolContext, args: GetCustomerInput) -> CustomerResu
                 post_id=r.comment.media_item_id,
                 text=clip(r.comment.text, 200),
                 at=r.comment.commented_at,
+                at_label=when(ctx, r.comment.commented_at),
             )
             for r in comments.rows
         ],

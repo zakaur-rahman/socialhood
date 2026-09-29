@@ -25,9 +25,10 @@ credits and audit are ours (models/agent.py); nothing here stores anything itsel
   are out) and records the model, tokens and latency in ai_usage_events.
 - Failures (§15): a timeout, a 429 or a 5xx is retried once, then ``ModelUnavailable``; the
   credits of each failed call are refunded by ``metered``.
-- Prompt: ai/prompts/agent.v1.md (versioned like the other prompts) with trusted settings only:
-  the workspace, brand voice, connected accounts and the time. The request and the thread's
-  earlier exchanges travel as messages; tool results as tool returns (data, TR-AI-04).
+- Prompt: ai/prompts/agent.v{n}.md (versioned like the other prompts; agent.v2 from the TA.6
+  eval) with trusted settings only: the workspace, brand voice, connected accounts, the time and
+  the asking member's role. The request and the thread's earlier exchanges travel as messages;
+  tool results as tool returns (data, TR-AI-04).
 - Plan first (R2): not built. Writes will be deferred (``ApprovalRequired``), decided by our
   gateway and resumed with ``DeferredToolResults``.
 
@@ -90,6 +91,7 @@ from socialhood.ai.metering import metered
 from socialhood.ai.provider import AIError
 from socialhood.models.agent import MAX_MODEL_TURNS, MAX_TOOL_CALLS, RUN_CREDIT_CAP
 from socialhood.models.billing import AiFeature
+from socialhood.models.identity import Role
 from socialhood.observability.logging import get_logger
 from socialhood.repositories.agent import REF_TYPE
 from socialhood.settings import Settings
@@ -295,7 +297,16 @@ def toolset(specs: Sequence[ToolSpec[Any, Any]], state: RunState) -> AbstractToo
 # ---------------------------------------------------------------- prompt and messages
 
 
-def system_prompt(context: AgentContext) -> str:
+# The principal's role in the prompt (§8): a team member has no tools for the admin areas, and
+# the answer says why instead of answering something else.
+ROLE_WORDS: dict[Role, str] = {
+    Role.OWNER: "an owner of the workspace",
+    Role.ADMIN: "an admin of the workspace",
+    Role.AGENT: "a team member (not an owner or admin)",
+}
+
+
+def system_prompt(context: AgentContext, role: Role | None = None) -> str:
     local = context.now.astimezone(context.timezone)
     offset = local.strftime("%z")
     return prompts.load(PROMPT_TASK).render(
@@ -305,6 +316,7 @@ def system_prompt(context: AgentContext) -> str:
         now=f"{local:%a %d %b %Y, %H:%M}",
         timezone=f"{context.timezone.key}, UTC{offset[:3]}:{offset[3:]}",
         max_tool_calls=str(MAX_TOOL_CALLS),
+        member_role=ROLE_WORDS[role] if role is not None else "a member of the team",
     )
 
 
@@ -355,7 +367,7 @@ async def answer(
     specs = state.tools.available(release=CURRENT_RELEASE, role=deps.principal.role)
     agent: Agent[ToolContext, str] = Agent(
         output_type=str,
-        instructions=system_prompt(context),
+        instructions=system_prompt(context, deps.principal.role),
         deps_type=ToolContext,
         toolsets=[toolset(specs, state)],
         retries=1,
