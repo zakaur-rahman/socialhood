@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { insertAt, renderFields, utf8Bytes, withDisclosure, worstCaseBytes } from "./render";
+import { insertAt, renderFields, utf8Bytes, withDisclosure, worstCaseBytes, worstCaseChars } from "./render";
 
 describe("renderFields (FR-AUT-13), as the API renders", () => {
   it("fills known fields", () => {
@@ -36,6 +36,13 @@ describe("byte counter (TR-PL-10)", () => {
     // "\n\n" + "Sent automatically" (18)
     expect(worstCaseBytes("Hi", "Sent automatically")).toBe(2 + 2 + 18);
     expect(withDisclosure("Hi", "Sent automatically")).toBe("Hi\n\nSent automatically");
+  });
+
+  it("counts characters as the API does, for the button template's 640", () => {
+    expect(worstCaseChars("Hi {first_name}!", null)).toBe(34);
+    // Code points, not UTF-16 units: an emoji is one character, Devanagari one per code point.
+    expect(worstCaseChars("😍", null)).toBe(1);
+    expect(worstCaseChars("नमस्ते", "Sent automatically")).toBe(6 + 2 + 18);
   });
 });
 

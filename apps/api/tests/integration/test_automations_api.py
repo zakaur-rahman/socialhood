@@ -164,7 +164,8 @@ async def test_put_replaces_the_whole_definition(ws: Ws, engine: AsyncEngine) ->
     assert updated["message_media_url"].endswith("/image/upload/sample.jpg")
     assert (updated["cooldown_hours"], updated["surge_order"]) == (12, "newest_first")
     assert updated["queue"]["order"] == "newest_first"
-    assert updated["missing_for_activation"] == []
+    # A comment's DM is a private reply, which Instagram sends without images (C-030).
+    assert updated["missing_for_activation"] == ["message_media_asset_id"]
     assert updated["status"] == "draft"
     stored = await rows(
         engine,
@@ -262,7 +263,8 @@ async def test_activation_lists_every_missing_field(ws: Ws, engine: AsyncEngine)
 
 async def test_the_byte_limit_includes_the_disclosure_line(ws: Ws) -> None:
     await ws.ok("PATCH", "", json={"automation_disclosure": "Sent automatically"})
-    draft = await ws.draft(message_text="a" * 990)
+    # No link buttons: with them the button template's 640 characters would apply first.
+    draft = await ws.draft(message_text="a" * 990, message_buttons=[])
     response = await ws.call("POST", f"/automations/{draft['id']}/activate")
     assert response.status_code == 422
     assert response.json()["errors"] == [
@@ -573,6 +575,40 @@ async def test_the_figures_strip_and_the_queue(ws: Ws, engine: AsyncEngine) -> N
     }
     shown = await ws.ok("GET", f"/automations/{first}")
     assert shown["queue"] == {"waiting": 3, "eta_minutes": 1, "order": "oldest_first"}
+
+
+async def test_resuming_a_paused_automation_restarts_its_queue(
+    ws: Ws, engine: AsyncEngine, queue: None
+) -> None:
+    held = await make_automation(
+        engine,
+        workspace_id=ws.wid,
+        account_id=ws.account_id,
+        status="paused",
+        trigger="comment_keyword",
+    )
+    idle = await make_automation(
+        engine, workspace_id=ws.wid, account_id=ws.account_id, status="paused", keywords=("menu",)
+    )
+    media = await make_media_item(engine, workspace_id=ws.wid, account_id=ws.account_id)
+    comment = await make_comment(
+        engine, workspace_id=ws.wid, account_id=ws.account_id, media_item_id=media
+    )
+    await make_run(
+        engine,
+        workspace_id=ws.wid,
+        automation_id=held,
+        created_at=datetime.now(UTC),
+        result="queued",
+        trigger_comment_id=comment,
+    )
+
+    await ws.ok("POST", f"/automations/{idle}/activate")
+    assert await jobs("drain_private_replies") == []
+
+    await ws.ok("POST", f"/automations/{held}/activate")
+    [drain] = await jobs("drain_private_replies")
+    assert drain["queueing_lock"] == f"prq:{ws.account_id}"
 
 
 # ---------------------------------------------------------------- runs and stats (FR-AUT-04, 16)

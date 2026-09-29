@@ -143,7 +143,7 @@ async def project(
     asset_ids = [a.message_media_asset_id for a in automations if a.message_media_asset_id]
     urls = await repo.asset_urls(session, asset_ids)
     figures = await stats.list_stats(session, automations, timezone=view.timezone, now=view.now)
-    queue = await stats.queued_counts(session)
+    queue = await stats.queued_counts(session, now=view.now)
     overlaps = await _overlaps(session, automations, keywords)
     out: list[AutomationOut] = []
     for a in automations:

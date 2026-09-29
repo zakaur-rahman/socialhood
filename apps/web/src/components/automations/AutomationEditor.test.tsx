@@ -221,6 +221,23 @@ describe("AutomationEditor steps (UX-SCR-03)", () => {
     expect(url).not.toHaveAttribute("aria-invalid");
   });
 
+  it("offers an image only for DM triggers: replies to comments are text and buttons", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+    await screen.findByRole("textbox", { name: "Message" });
+    expect(screen.queryByRole("button", { name: "Add an image" })).toBeNull();
+    expect(screen.getByText(/Replies to comments are text and link buttons/)).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: "DM keyword" }));
+    expect(screen.getByRole("button", { name: "Add an image" })).toBeInTheDocument();
+  });
+
+  it("holds a message with link buttons to 640 characters", async () => {
+    renderEditor({ initial: automation({ message_text: "a".repeat(641) }) });
+    const message = await screen.findByRole("textbox", { name: "Message" });
+    expect(message).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByText(/With link buttons Instagram allows 640 characters/)).toBeInTheDocument();
+  });
+
   it("shows only the steps the trigger uses", async () => {
     const user = userEvent.setup();
     renderEditor();

@@ -20,6 +20,7 @@ import { buttonProblems, errorsFor, isCommentTrigger, type FieldErrors } from "@
 import { formatCount } from "@/lib/automations/format";
 import {
   AI_INSTRUCTIONS_MAX,
+  BUTTON_TEXT_MAX_CHARS,
   BUTTON_TITLE_MAX,
   insertAt,
   INSERTABLE_FIELDS,
@@ -29,6 +30,7 @@ import {
   MESSAGE_MAX_CHARS,
   PUBLIC_REPLY_MAX,
   worstCaseBytes,
+  worstCaseChars,
 } from "@/lib/automations/render";
 import { ATTACHMENT_RULES, UploadError, uploadAsset } from "@/lib/media/upload";
 import { cn } from "@/lib/utils";
@@ -104,6 +106,7 @@ export function ThenStep({
         {draft.action === "send_message" ? (
           <DmBuilder
             wid={wid}
+            comment={comment}
             draft={draft}
             change={change}
             errors={errors}
@@ -206,6 +209,7 @@ function ReplyVariations({ texts, onChange }: { texts: string[]; onChange: (text
 
 function DmBuilder({
   wid,
+  comment,
   draft,
   change,
   errors,
@@ -215,6 +219,7 @@ function DmBuilder({
   upload,
 }: {
   wid: string;
+  comment: boolean;
   draft: AutomationDefinition;
   change: Change;
   errors: FieldErrors;
@@ -227,6 +232,8 @@ function DmBuilder({
   const text = draft.message_text ?? "";
   const bytes = worstCaseBytes(text, disclosure);
   const over = bytes > MESSAGE_LIMIT_BYTES;
+  const buttons = draft.message_buttons ?? [];
+  const overButtonText = buttons.length > 0 && worstCaseChars(text, disclosure) > BUTTON_TEXT_MAX_CHARS;
   const textError = errorsFor(errors, "message_text")[0];
 
   const insert = (token: string) => {
@@ -274,7 +281,7 @@ function DmBuilder({
           rows={4}
           onChange={(event) => change({ message_text: event.target.value })}
           placeholder="Hi {first_name|there}! Here's the link you asked for."
-          aria-invalid={over || textError ? true : undefined}
+          aria-invalid={over || overButtonText || textError ? true : undefined}
           aria-describedby="automation-message-help automation-message-bytes"
         />
         <div className="flex items-start justify-between gap-3 text-xs">
@@ -293,19 +300,31 @@ function DmBuilder({
           <p className="text-xs text-danger-fg">
             Instagram allows {formatCount(MESSAGE_LIMIT_BYTES)} bytes in a DM, counting the longest name. Shorten the message.
           </p>
+        ) : overButtonText ? (
+          <p className="text-xs text-danger-fg">
+            With link buttons Instagram allows {formatCount(BUTTON_TEXT_MAX_CHARS)} characters, counting the longest name.
+            Shorten the message.
+          </p>
         ) : null}
       </div>
 
-      <ImageAttach
-        wid={wid}
-        assetId={draft.message_media_asset_id ?? null}
-        url={mediaUrl}
-        onChange={(asset) => {
-          change({ message_media_asset_id: asset?.id ?? null });
-          onMediaChange(asset?.secure_url ?? null);
-        }}
-        upload={upload}
-      />
+      {comment && !draft.message_media_asset_id ? (
+        // A comment's DM is a private reply, which Instagram sends as text and buttons only.
+        <p className="text-xs text-fg-secondary">
+          Replies to comments are text and link buttons. To share an image, link to it with a button.
+        </p>
+      ) : (
+        <ImageAttach
+          wid={wid}
+          assetId={draft.message_media_asset_id ?? null}
+          url={mediaUrl}
+          onChange={(asset) => {
+            change({ message_media_asset_id: asset?.id ?? null });
+            onMediaChange(asset?.secure_url ?? null);
+          }}
+          upload={upload}
+        />
+      )}
 
       <LinkButtons
         buttons={draft.message_buttons ?? []}

@@ -11,6 +11,7 @@ from socialhood.models.inbox import Contact, Conversation, Message
 from socialhood.schemas.inbox import (
     Actor,
     Attachment,
+    AutomationRef,
     ContactSummary,
     ConversationListItem,
     ErrorInfo,
@@ -86,7 +87,9 @@ def list_item(
     )
 
 
-def message_out(msg: Message, *, sent_by_name: str | None = None) -> MessageOut:
+def message_out(
+    msg: Message, *, sent_by_name: str | None = None, automation: AutomationRef | None = None
+) -> MessageOut:
     return MessageOut(
         id=msg.id,
         conversation_id=msg.conversation_id,
@@ -111,7 +114,7 @@ def message_out(msg: Message, *, sent_by_name: str | None = None) -> MessageOut:
         edited_at=msg.edited_at,
         deleted_at=msg.deleted_at,
         sent_by=Actor(id=msg.sent_by_user_id, name=sent_by_name) if msg.sent_by_user_id else None,
-        automation=None,  # P4
+        automation=automation,
         suggestion_id=msg.suggestion_id,
         human_agent_tag=msg.human_agent_tag,
         reactions=[Reaction.model_validate(r) for r in msg.reactions or []],

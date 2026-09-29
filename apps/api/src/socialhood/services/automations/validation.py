@@ -6,7 +6,10 @@ step: an account (a connected Instagram account), a trigger, keywords (except an
 needs selected posts or the next post instead), an action, the message text for "send a message",
 https link buttons with titles of at most 20 characters, a message of at most 1,000 bytes on
 Instagram in its longest rendering with the workspace's disclosure line, public replies of at most
-300 characters, and a run window that ends after it starts and has not ended yet.
+300 characters, and a run window that ends after it starts and has not ended yet. With link
+buttons the text is Instagram's button template, at most 640 characters in its longest rendering.
+A comment automation's DM is a private reply, which Instagram sends as text (and buttons) only,
+so it cannot carry an image; one set to public reply only needs a public reply.
 
 AI replies need the knowledge base and suggestions (P5), so an AI-reply automation cannot be
 activated yet; the error says so on the action field.
@@ -26,6 +29,7 @@ from socialhood.services.automations import render
 INSTAGRAM_MESSAGE_BYTES = 1000  # TR-PL-10
 PUBLIC_REPLY_CHARS = 300  # FR-AUT-14
 BUTTON_TITLE_CHARS = 20  # FR-AUT-13
+BUTTON_TEXT_CHARS = 640  # the button template's text (services/sending.BUTTON_TEXT_LIMITS)
 KEYWORD_CHARS = 100  # automation_keywords.keyword
 COMMENT_TRIGGERS = frozenset({"comment_keyword", "comment_any"})
 KEYWORD_TRIGGERS = frozenset({"dm_keyword", "comment_keyword"})
@@ -44,6 +48,12 @@ COPY = {
     "message_missing": "Write the message to send.",
     "button_url": "Use a full link that starts with https://.",
     "button_title": "Give the button a title of up to 20 characters.",
+    "button_text_long": "With link buttons Instagram allows 640 characters. Shorten the message.",
+    "image_in_private_reply": (
+        "Instagram's replies to comments can't include an image. Remove it, or link to it with "
+        "a button."
+    ),
+    "public_only_needs_reply": "Add a public reply. This automation only replies publicly.",
     "reply_empty": "Write this reply or remove it.",
     "reply_long": "Keep public replies to 300 characters.",
     "window_order": "The end must be after the start.",
@@ -86,6 +96,8 @@ class Definition:
     public_reply_texts: Sequence[str]
     starts_at: datetime | None
     ends_at: datetime | None
+    surge_order: str = "oldest_first"
+    has_image: bool = False
 
 
 def is_https_url(url: str) -> bool:
@@ -166,6 +178,8 @@ def _action_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
         errors += _message_errors(d, disclosure)
     if d.trigger in COMMENT_TRIGGERS:
         errors += _public_reply_errors(d.public_reply_texts)
+        if d.surge_order == "public_only" and not d.public_reply_texts:
+            errors.append(FieldError("public_reply_texts", COPY["public_only_needs_reply"]))
     return errors
 
 
@@ -185,6 +199,11 @@ def _message_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
                     f"{size:,}. Shorten it.",
                 )
             )
+        longest = render.with_disclosure(render.longest_render(text), disclosure)
+        if d.message_buttons and len(longest) > BUTTON_TEXT_CHARS:
+            errors.append(FieldError("message_text", COPY["button_text_long"]))
+    if d.has_image and d.trigger in COMMENT_TRIGGERS:
+        errors.append(FieldError("message_media_asset_id", COPY["image_in_private_reply"]))
     for i, button in enumerate(d.message_buttons):
         if not 1 <= len(button.title.strip()) <= BUTTON_TITLE_CHARS:
             errors.append(FieldError(f"message_buttons.{i}.title", COPY["button_title"]))

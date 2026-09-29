@@ -5555,7 +5555,7 @@
     },
     "/v1/w/{wid}/automations/{automation_id}/activate": {
       "post": {
-        "description": "Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field.",
+        "description": "Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field. Resuming\nan automation that held private replies restarts its account's queue (FR-AUT-10).",
         "operationId": "activate_automation",
         "parameters": [
           {

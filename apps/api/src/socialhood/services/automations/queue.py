@@ -57,7 +57,6 @@ from socialhood.models.inbox import (
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.base import OutboundMessage, PlatformAdapter, SendResult
 from socialhood.platforms.buckets import (
-    PRIVATE_REPLIES_PER_HOUR,
     PRIVATE_REPLY_BURST,
     SPECS,
     Bucket,
@@ -73,7 +72,7 @@ from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import messages as messages_repo
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, results
+from socialhood.services.automations import actions, results, stats
 from socialhood.services.inbox_views import conversation_touch
 
 log = get_logger(__name__)
@@ -110,7 +109,7 @@ async def account_queue(
     waiting = await runs.waiting(session, social_account_id, now=now or datetime.now(UTC))
     if not waiting:
         return 0, None
-    return waiting, -(-waiting * 60 // PRIVATE_REPLIES_PER_HOUR)
+    return waiting, stats.eta_minutes(waiting)
 
 
 async def automation_waiting(session: AsyncSession, automation_id: uuid.UUID) -> int:

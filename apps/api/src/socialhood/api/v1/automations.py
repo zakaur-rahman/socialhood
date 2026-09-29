@@ -34,7 +34,14 @@ from socialhood.schemas.automations import (
     StatusName,
     TriggerName,
 )
-from socialhood.services.automations import definitions, dry_run, queries, stats, templates
+from socialhood.services.automations import (
+    definitions,
+    dry_run,
+    queries,
+    queue,
+    stats,
+    templates,
+)
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["automations"])
 
@@ -148,9 +155,10 @@ async def delete_automation(automation_id: uuid.UUID, ctx: Admin, session: Sessi
 
 @router.post("/automations/{automation_id}/activate", operation_id="activate_automation")
 async def activate_automation(automation_id: uuid.UUID, ctx: Admin, session: Session) -> Automation:
-    """Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field."""
+    """Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field. Resuming
+    an automation that held private replies restarts its account's queue (FR-AUT-10)."""
     now = datetime.now(UTC)
-    await definitions.activate(
+    automation = await definitions.activate(
         session,
         automation_id,
         plan=await current_plan(session),
@@ -158,6 +166,9 @@ async def activate_automation(automation_id: uuid.UUID, ctx: Admin, session: Ses
         now=now,
     )
     await session.commit()
+    account_id = automation.social_account_id
+    if account_id and await queue.automation_waiting(session, automation_id):
+        await queue.enqueue_drain(account_id, ctx.workspace.id)
     return await queries.one(session, automation_id, _view(ctx, now))
 
 

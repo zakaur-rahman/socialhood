@@ -184,3 +184,44 @@ automation past `ends_at` and notifies owners and admins once per end time ("{na
 to it). Disconnecting an account, or Meta's deauthorize, pauses its active automations (F-15);
 drafts stay drafts. The disclosure line (FR-AUT-11) is set in Settings → Workspace: off by default
 (null), "Sent automatically" when switched on, up to 60 characters.
+
+## C-029 · The private-reply bucket keeps every hour under 750 (resolved in code)
+TR-JOB-07's bucket with a 750-token burst would allow up to 1,500 private replies in the first hour
+of a surge (750 at once, then 750 refilled), against FR-AUT-10's "never exceeds 750 private replies
+in any hour". The IG_PRIVATE_REPLY bucket is a burst of 20 refilling at 730 an hour. The ETA uses
+the same rate: the account's sendable queued runs (active or ended automations, not public-only,
+comment inside 7 days) × 60 ÷ 730, one formula for the queue, the list and the summary. An
+automation's `waiting` is all its queued runs (a paused one holds them). Resuming a paused
+automation with queued runs enqueues its account's drain at once; held queues are rechecked every
+10 minutes anyway.
+
+## C-030 · Automation runtime rules (decision)
+- A DM run is `sent` when handed to the send pipeline, then mirrors the send (as scheduled messages
+  do, Q-015); `private_reply_message_id` holds the DM for DM runs too.
+- Cooldown (FR-AUT-05) counts queued, sent, partial and escalated runs, not failed or skipped ones.
+  A match on cooldown records `skipped_cooldown` and the next matching automation may answer; a
+  match outside the post scope is passed over without a run; a comment already past 7 days when it
+  matches records `skipped_expired`. `automation_handled` is set only when a DM was queued.
+- Any-comment automations answer top-level comments only; keyword automations also answer replies
+  in threads. The account's own comments (by its Instagram user id, app-scoped id or username) are
+  skipped, which also skips our public replies coming back. Comment verbs other than "add" are
+  ignored.
+- If Instagram refuses the post fetch, the post is stored as a placeholder (posted_at = the
+  comment's time) and is not offered to next-post automations. Commenter profiles are not fetched
+  (the profile API needs the person to have messaged first), so `{first_name}` usually falls back in
+  comment replies.
+- The disclosure line goes on DMs and private replies, not on public comment replies. A private
+  reply carries text and buttons, never an image, so activation refuses an image on a comment
+  automation and the editor offers none (it suggests a link button). With link buttons the text is
+  Instagram's button template: at most 640 characters in its longest rendering, checked at
+  activation and in the editor. Public reply only needs at least one public reply.
+- A paused automation holds its queued runs (they still expire); one whose run window ended still
+  sends what matched inside it. The account's automations take turns in the queue. Temporary
+  platform errors put a private reply back in the queue; `delivery_unknown` is never retried; a
+  failed public reply is not retried. Run log errors are prefixed "Public reply: " or "DM: ".
+- `contact_replied_at` (FR-AUT-16) is set on the first customer message within 24 h of an
+  automation DM or private reply that reached sent, delivered or read.
+- `run_automation` is deferred 1 s and retries up to 5 times while the trigger row is not yet
+  visible. `matched_keyword` stores the normalised keyword.
+- Messages an automation sent carry `automation {id, name}` in the conversation's messages and in
+  `message.created` / `message.updated` events (the bubble says "Automation · {name}").

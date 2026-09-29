@@ -421,6 +421,40 @@ async def waiting(
     return int(count or 0)
 
 
+async def waiting_by_account(
+    session: AsyncSession, *, now: datetime, expires_after: timedelta = timedelta(days=7)
+) -> dict[uuid.UUID, int]:
+    """``waiting`` for every account of the workspace in one query (the automations list and
+    summary): queued runs of sendable automations whose comment is inside the 7-day limit."""
+    rows = await session.execute(
+        select(Comment.social_account_id, func.count())
+        .select_from(AutomationRun)
+        .join(Automation, Automation.id == AutomationRun.automation_id)
+        .join(Comment, Comment.id == AutomationRun.trigger_comment_id)
+        .where(
+            AutomationRun.result == RunResult.QUEUED,
+            Comment.commented_at >= now - expires_after,
+            sendable(now),
+        )
+        .group_by(Comment.social_account_id)
+    )
+    return {account_id: int(count) for account_id, count in rows.all()}
+
+
+async def automation_names(
+    session: AsyncSession, run_ids: Sequence[uuid.UUID]
+) -> dict[uuid.UUID, tuple[uuid.UUID, str]]:
+    """The automation (id, name) behind each run, for "Automation · {name}" on its messages."""
+    if not run_ids:
+        return {}
+    rows = await session.execute(
+        select(AutomationRun.id, Automation.id, Automation.name)
+        .join(Automation, Automation.id == AutomationRun.automation_id)
+        .where(AutomationRun.id.in_(set(run_ids)))
+    )
+    return {run_id: (automation_id, name) for run_id, automation_id, name in rows.all()}
+
+
 async def queued_for(session: AsyncSession, automation_id: uuid.UUID) -> int:
     """The automation's runs waiting in the private-reply queue (ix_automation_runs_queued)."""
     count = await session.scalar(

@@ -115,6 +115,15 @@ def test_every_invalid_field_is_listed_at_once() -> None:
         ({"starts_at": NOW + timedelta(days=1), "ends_at": NOW + timedelta(days=3)}, []),
         # DM triggers have no posts or public replies to check.
         ({"trigger": "dm_keyword", "public_reply_texts": ["z" * 400]}, []),
+        # With buttons the text is a button template: 640 characters at most.
+        ({"message_text": "a" * 641}, ["message_text"]),
+        ({"message_text": "a" * 641, "message_buttons": []}, []),
+        # A private reply carries no image; a DM automation's message can.
+        ({"has_image": True}, ["message_media_asset_id"]),
+        ({"has_image": True, "trigger": "dm_keyword"}, []),
+        # Public reply only needs a public reply.
+        ({"surge_order": "public_only", "public_reply_texts": []}, ["public_reply_texts"]),
+        ({"surge_order": "public_only"}, []),
     ],
 )
 def test_activation_rules(change: dict[str, Any], expected: list[str]) -> None:
@@ -130,14 +139,15 @@ def test_ai_replies_wait_for_the_knowledge_base() -> None:
 
 def test_the_byte_limit_counts_the_longest_name_and_the_disclosure_line() -> None:
     # 940 bytes of text plus {first_name} (30 bytes at its longest) fits; the disclosure doesn't.
+    plain = replace(COMPLETE, message_buttons=[])  # buttons have their own 640-character limit
     text = "a" * 940 + "{first_name}"
     assert message_bytes(text, None) == 970
-    assert fields(replace(COMPLETE, message_text=text)) == []
+    assert fields(replace(plain, message_text=text)) == []
     assert message_bytes(text, "Sent automatically") == 970 + 2 + 18
-    assert fields(replace(COMPLETE, message_text=text), disclosure="x" * 40) == ["message_text"]
+    assert fields(replace(plain, message_text=text), disclosure="x" * 40) == ["message_text"]
     # Devanagari is 3 bytes a character: 334 characters are over the limit.
-    assert fields(replace(COMPLETE, message_text="क" * 334)) == ["message_text"]
-    assert fields(replace(COMPLETE, message_text="क" * 333)) == []
+    assert fields(replace(plain, message_text="क" * 334)) == ["message_text"]
+    assert fields(replace(plain, message_text="क" * 333)) == []
 
 
 @pytest.mark.parametrize(
@@ -244,11 +254,11 @@ def test_copy_names_stay_within_80_characters() -> None:
     assert long.endswith(" (copy)")
 
 
-def test_queue_eta_is_750_an_hour() -> None:
+def test_queue_eta_is_the_private_reply_rate() -> None:
     assert stats.eta_minutes(0) is None
     assert stats.eta_minutes(1) == 1
-    assert stats.eta_minutes(750) == 60
-    assert stats.eta_minutes(2140) == 172  # "about 3 h"
+    assert stats.eta_minutes(730) == 60  # the bucket's rate, so no hour exceeds 750
+    assert stats.eta_minutes(2140) == 176  # "about 3 h"
 
 
 def test_periods_are_the_workspaces_calendar_days() -> None:

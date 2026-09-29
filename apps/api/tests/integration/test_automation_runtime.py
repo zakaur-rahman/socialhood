@@ -15,16 +15,18 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.db.tenancy import workspace_scope
+from socialhood.models.inbox import Conversation
 from socialhood.platforms.events import InboundMessage
 from socialhood.platforms.sandbox import outbox
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services.automations.runtime import Outcome
+from socialhood.services.conversations import list_messages
 from socialhood.services.ingest import ingest
 from socialhood.services.sending import Delivery
 from socialhood.settings import Settings
 from tests.support.automations import make_automation
 from tests.support.inbox import Thread, make_account, make_asset, make_thread, make_workspace
-from tests.support.ingest import ACCOUNT_REF, deliver, jobs, sessions
+from tests.support.ingest import ACCOUNT_REF, deliver, jobs, sessions, stream
 from tests.support.runtime import World, make_world, platform_deps
 from tests.support.sending import clean_outbox
 
@@ -95,6 +97,24 @@ async def test_a_dm_keyword_sends_the_message_once(world: World) -> None:
     )
     assert dm["automation_run_id"] == run["id"]
     assert run["private_reply_message_id"] == dm["id"]
+    # The bubble says "Automation · Send the link", live and when the conversation loads.
+    named = {"id": str(automation_id), "name": "Send the link"}
+    [created] = [
+        data
+        for kind, data in await stream(world.redis, world.wid)
+        if kind == "message.created" and data["message"]["id"] == str(dm["id"])
+    ]
+    assert created["message"]["automation"] == named
+    assert "_automation_run_id" not in created
+    with workspace_scope(world.wid):
+        async with world.maker() as session:
+            conv = await session.get(Conversation, thread.conversation_id)
+            assert conv is not None
+            page = await list_messages(session, conv, cursor=None, limit=50)
+    by_id = {str(m.id): m for m in page.items}
+    assert by_id[str(dm["id"])].automation is not None
+    assert by_id[str(dm["id"])].automation.model_dump(mode="json") == named
+    assert by_id[str(trigger)].automation is None
     [handled] = await world.rows(
         "SELECT automation_handled FROM messages WHERE id = :id", id=trigger
     )

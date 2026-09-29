@@ -13,8 +13,10 @@ from automation_runs so they agree with the run log.
 
 Days are the workspace's calendar days, oldest first, the last one being today.
 
-The queue ETA is waiting ÷ 750 per hour over the whole account queue (FR-AUT-10). The runtime's
-private-reply queue (T4.6) owns that figure; ``queued_counts`` computes it here the same way.
+The queue (FR-AUT-10): an automation's ``waiting`` is all its queued runs (a paused one holds
+them); the account's ETA counts what the private-reply queue will actually send
+(automation_runs.waiting: sendable automations, comments inside the 7-day limit) at the
+IG_PRIVATE_REPLY bucket's rate, the same figure as services/automations/queue.account_queue.
 """
 
 from __future__ import annotations
@@ -34,6 +36,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.automations import Automation, AutomationRun, AutomationStatus, RunResult
 from socialhood.models.inbox import Message
+from socialhood.platforms.buckets import PRIVATE_REPLIES_PER_HOUR
+from socialhood.repositories import automation_runs
 from socialhood.schemas.automations import (
     AutomationListStats,
     AutomationsSummary,
@@ -44,7 +48,6 @@ from socialhood.schemas.automations import (
     SurgeOrderName,
 )
 
-PRIVATE_REPLIES_PER_HOUR = 750  # Instagram's cap per account (FR-AUT-10)
 LIST_DAYS = 7
 SENT_STATUSES = ("sent", "delivered", "read")
 FAILED_RESULTS = (RunResult.FAILED, RunResult.PARTIAL)
@@ -52,7 +55,8 @@ _ZONE_KEY = re.compile(r"[A-Za-z0-9_+\-]+(?:/[A-Za-z0-9_+\-]+)*")
 
 
 def eta_minutes(waiting: int) -> int | None:
-    """Minutes until ``waiting`` private replies are sent at 750 per hour; None when none wait."""
+    """Minutes until ``waiting`` private replies are sent at the bucket's rate (just under 750
+    an hour, so no hour exceeds 750); None when none wait."""
     if waiting <= 0:
         return None
     return math.ceil(waiting * 60 / PRIVATE_REPLIES_PER_HOUR)
@@ -103,7 +107,7 @@ class QueueCounts:
         order: SurgeOrderName = automation.surge_order  # type: ignore[assignment]
         return QueueInfo(
             waiting=waiting,
-            eta_minutes=eta_minutes(max(account_waiting, waiting)) if waiting else None,
+            eta_minutes=eta_minutes(account_waiting) if waiting else None,
             order=order,
         )
 
@@ -116,20 +120,17 @@ class QueueCounts:
         return eta_minutes(max(self.by_account.values(), default=0))
 
 
-async def queued_counts(session: AsyncSession) -> QueueCounts:
-    """Queued runs per automation and per account, for the whole workspace."""
+async def queued_counts(session: AsyncSession, *, now: datetime) -> QueueCounts:
+    """Queued runs per automation, and what each account's queue will send, for the workspace."""
     rows = await session.execute(
-        select(AutomationRun.automation_id, Automation.social_account_id, func.count())
-        .join(Automation, Automation.id == AutomationRun.automation_id)
+        select(AutomationRun.automation_id, func.count())
         .where(AutomationRun.result == RunResult.QUEUED)
-        .group_by(AutomationRun.automation_id, Automation.social_account_id)
+        .group_by(AutomationRun.automation_id)
     )
-    counts = QueueCounts()
-    for automation_id, account_id, count in rows.all():
-        counts.by_automation[automation_id] = int(count)
-        if account_id is not None:
-            counts.by_account[account_id] = counts.by_account.get(account_id, 0) + int(count)
-    return counts
+    return QueueCounts(
+        by_automation={automation_id: int(count) for automation_id, count in rows.all()},
+        by_account=await automation_runs.waiting_by_account(session, now=now),
+    )
 
 
 # ---------------------------------------------------------------- the list (FR-AUT-03)
@@ -245,7 +246,7 @@ async def summary(session: AsyncSession, *, timezone: str, now: datetime) -> Aut
             .where(AutomationRun.created_at >= p.since)
         )
     ).one()
-    queue = await queued_counts(session)
+    queue = await queued_counts(session, now=now)
     return AutomationsSummary(
         active=int(active or 0),
         runs_7d=int(runs or 0),

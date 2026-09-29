@@ -24,6 +24,7 @@ log = get_logger(__name__)
 STREAM_MAXLEN = 10_000
 MAX_EVENT_BYTES = 64 * 1024
 _QUEUE_KEY = "realtime_events"
+_AUTOMATION_RUN = "_automation_run_id"  # set by queue_message, removed before publishing
 
 EventType = Literal[
     "message.created",
@@ -89,8 +90,28 @@ async def commit_and_publish(session: AsyncSession, redis: Redis) -> None:
         discard(session)
         raise
     pending = session.info.pop(_QUEUE_KEY, [])
+    await _name_automations(session, [payload for _, _, payload in pending])
     for workspace_id, event_type, payload in pending:
         await publish(redis, workspace_id, event_type, payload)
+
+
+async def _name_automations(session: AsyncSession, payloads: list[dict[str, Any]]) -> None:
+    """Fill ``message.automation`` for messages an automation sent, in one query; an event
+    without the name still says "Automation", so a failed lookup never stops publishing."""
+    marked = [p for p in payloads if _AUTOMATION_RUN in p]
+    if not marked:
+        return
+    from socialhood.repositories.automation_runs import automation_names
+
+    try:
+        names = await automation_names(session, [p[_AUTOMATION_RUN] for p in marked])
+    except Exception:
+        log.warning("realtime_automation_names_failed")
+        names = {}
+    for p in marked:
+        found = names.get(p.pop(_AUTOMATION_RUN))
+        if found:
+            p["message"]["automation"] = {"id": str(found[0]), "name": found[1]}
 
 
 # ---- builders for the inbox events every producer emits
@@ -103,10 +124,12 @@ def queue_message(
     created: bool,
     sent_by_name: str | None = None,
 ) -> None:
-    payload = {
+    payload: dict[str, Any] = {
         "conversation_id": str(msg.conversation_id),
         "message": message_out(msg, sent_by_name=sent_by_name).model_dump(mode="json"),
     }
+    if msg.automation_run_id:  # named in commit_and_publish ("Automation · {name}")
+        payload[_AUTOMATION_RUN] = msg.automation_run_id
     queue(session, msg.workspace_id, "message.created" if created else "message.updated", payload)
 
 

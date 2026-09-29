@@ -110,6 +110,8 @@ def definition_of(
         public_reply_texts=list(automation.public_reply_texts or []),
         starts_at=automation.starts_at,
         ends_at=automation.ends_at,
+        surge_order=automation.surge_order,
+        has_image=automation.message_media_asset_id is not None,
     )
 
 
@@ -331,6 +333,8 @@ def _definition_from_body(
         public_reply_texts=body.public_reply_texts,
         starts_at=body.starts_at,
         ends_at=body.ends_at,
+        surge_order=body.surge_order,
+        has_image=body.message_media_asset_id is not None,
     )
 
 

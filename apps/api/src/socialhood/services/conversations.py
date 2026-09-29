@@ -50,9 +50,10 @@ from socialhood.models.inbox import (
     ScheduledStatus,
 )
 from socialhood.realtime import events
+from socialhood.repositories import automation_runs, inbox, social_accounts
 from socialhood.repositories import conversations as writes
-from socialhood.repositories import inbox, social_accounts
 from socialhood.schemas.inbox import (
+    AutomationRef,
     ContactDetail,
     ConversationAccount,
     ConversationAi,
@@ -346,9 +347,21 @@ async def list_messages(
     rows = list((await session.scalars(query)).all())
     page = rows[:limit]
     names = await _user_names(session, {m.sent_by_user_id for m in page if m.sent_by_user_id})
+    automations = await automation_runs.automation_names(
+        session, [m.automation_run_id for m in page if m.automation_run_id]
+    )
+
+    def automation(m: Message) -> AutomationRef | None:
+        found = automations.get(m.automation_run_id) if m.automation_run_id else None
+        return AutomationRef(id=found[0], name=found[1]) if found else None
+
     return MessageList(
         items=[
-            message_out(m, sent_by_name=names.get(m.sent_by_user_id) if m.sent_by_user_id else None)
+            message_out(
+                m,
+                sent_by_name=names.get(m.sent_by_user_id) if m.sent_by_user_id else None,
+                automation=automation(m),
+            )
             for m in page
         ],
         next_cursor=(

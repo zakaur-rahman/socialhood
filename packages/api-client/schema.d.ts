@@ -194,7 +194,8 @@ export interface paths {
         put?: never;
         /**
          * Activate Automation
-         * @description Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field.
+         * @description Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field. Resuming
+         *     an automation that held private replies restarts its account's queue (FR-AUT-10).
          */
         post: operations["activate_automation"];
         delete?: never;

@@ -59,7 +59,7 @@ class QueueInfo(ResponseModel):
     """FR-AUT-10: private replies waiting in the account's 750/hour queue for this automation."""
 
     waiting: int
-    eta_minutes: int | None = None  # waiting ÷ 750 per hour, over the whole account queue
+    eta_minutes: int | None = None  # the account queue at the private-reply bucket's rate
     order: SurgeOrderName
 
 

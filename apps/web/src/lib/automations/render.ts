@@ -18,6 +18,8 @@ export const PUBLIC_REPLY_MAX = 300;
 export const MAX_PUBLIC_REPLIES = 5;
 export const MAX_BUTTONS = 3;
 export const BUTTON_TITLE_MAX = 20;
+/** With link buttons the message is Instagram's button template: 640 characters of text. */
+export const BUTTON_TEXT_MAX_CHARS = 640;
 /** The API's long sample for the worst case: Instagram usernames are at most 30 characters. */
 const SAMPLE_LENGTH = 30;
 
@@ -38,16 +40,25 @@ export function utf8Bytes(text: string): number {
 }
 
 /**
- * The byte counter's worst case: each field as a 30-character value (the API's sample), or its
+ * The worst case the counters use: each field as a 30-character value (the API's sample), or its
  * fallback when that is longer, plus the disclosure line, which counts toward the limit.
  */
-export function worstCaseBytes(text: string, disclosure: string | null | undefined): number {
+function longestRender(text: string, disclosure: string | null | undefined): string {
   const longest = text.replace(FIELD, (_, field: FieldName, fallback: string | undefined) => {
     const sample = "x".repeat(SAMPLE_LENGTH);
     const alternative = fallback ?? DEFAULT_FALLBACK[field];
     return utf8Bytes(alternative) > SAMPLE_LENGTH ? alternative : sample;
   });
-  return utf8Bytes(withDisclosure(longest, disclosure));
+  return withDisclosure(longest, disclosure);
+}
+
+export function worstCaseBytes(text: string, disclosure: string | null | undefined): number {
+  return utf8Bytes(longestRender(text, disclosure));
+}
+
+/** Characters as the API counts them (code points), for the button template's limit. */
+export function worstCaseChars(text: string, disclosure: string | null | undefined): number {
+  return [...longestRender(text, disclosure)].length;
 }
 
 /** What "Insert field" puts at the cursor. */
