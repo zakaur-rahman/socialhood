@@ -25,6 +25,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from tests.support.agent import make_agent_approval, make_agent_run
 from tests.support.ai import (
     make_analysis,
     make_decision,
@@ -58,6 +59,9 @@ PARAM_TO_SEED: dict[str, str] = {
     "comment_id": "comment_id",
     "scheduled_post_id": "scheduled_post_id",
     "hashtag_group_id": "hashtag_group_id",
+    "run_id": "run_id",
+    "approval_id": "approval_id",
+    "thread_id": "thread_id",  # in bodies only: POST …/agent/runs continues a thread
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -168,6 +172,32 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# Ask Social Hood (TA.1, R2): continuing B's thread from A's workspace is 404 and starts no run;
+# B's policy and approvals can't be changed or decided from A's workspace.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/agent/runs"): {
+            "request": "What did Ben ask?",
+            "thread_id": "{thread_id}",
+        },
+        ("PUT", "/v1/w/{wid}/agent/policy"): {
+            "mode": "copilot",
+            "permissions": {
+                "send_replies": True,
+                "schedule_messages": True,
+                "schedule_posts": True,
+                "create_automations": True,
+                "delete_automations": True,
+                "bulk_actions": True,
+            },
+            "limits": {"bulk_max": 50, "writes_per_hour": 30, "writes_per_day": 200},
+        },
+        ("POST", "/v1/w/{wid}/agent/approvals/{approval_id}/approve"): {
+            "args": {"text": "Taken over"}
+        },
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
@@ -214,6 +244,10 @@ B_TABLES = (
     "scheduled_post_targets",
     "posting_slots",
     "hashtag_groups",
+    "agent_runs",
+    "agent_steps",
+    "agent_approvals",
+    "agent_policies",
 )
 
 
@@ -235,6 +269,9 @@ class Seed:
     comment_id: str = ""
     scheduled_post_id: str = ""
     hashtag_group_id: str = ""
+    run_id: str = ""
+    approval_id: str = ""
+    thread_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -349,6 +386,31 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     )
     await make_posting_slot(engine, workspace_id=wid, account_id=account_id)
     hashtag_group = await make_hashtag_group(engine, workspace_id=wid)
+    run = await make_agent_run(engine, workspace_id=wid, requested_by_user_id=b["id"])
+    waiting = await make_agent_run(
+        engine,
+        workspace_id=wid,
+        requested_by_user_id=b["id"],
+        request="Reply Thank you! to the positive comments on my latest post",
+        status="awaiting_approval",
+        answer=None,
+        answer_refs=[],
+        completed_at=None,
+        steps=[
+            {
+                "tool": "reply_to_comments",
+                "tier": "high",
+                "args": {"text": "Thank you!", "max": 12},
+                "status": "awaiting_approval",
+                "decision": "approval",
+                "attempts": 0,
+                "completed_at": None,
+            }
+        ],
+    )
+    approval = await make_agent_approval(
+        engine, workspace_id=wid, run_id=waiting.id, step_id=waiting.step_ids[0]
+    )
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -366,6 +428,9 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         comment_id=str(comment),
         scheduled_post_id=str(scheduled_post.id),
         hashtag_group_id=str(hashtag_group),
+        run_id=str(run.id),
+        approval_id=str(approval),
+        thread_id=str(run.thread_id),
     )
 
 

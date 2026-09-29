@@ -10,6 +10,7 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
+from socialhood.models.agent import AgentPolicy
 from socialhood.models.ai import AiSettings
 from socialhood.models.billing import Plan, Subscription, SubscriptionStatus
 from socialhood.models.identity import Role, User, Workspace, WorkspaceMember
@@ -27,7 +28,8 @@ async def owned_by(session: AsyncSession, user_id: uuid.UUID) -> list[Workspace]
 def new_workspace_rows(
     *, name: str, slug: str, owner_id: uuid.UUID, today: date
 ) -> tuple[Workspace, list[object]]:
-    """A workspace and the rows every workspace starts with (TR-AUTH-03, FR-ACC-02)."""
+    """A workspace and the rows every workspace starts with (TR-AUTH-03, FR-ACC-02, §5.5
+    agent_policies)."""
     workspace = Workspace(id=uuid.uuid4(), name=name, slug=slug, owner_user_id=owner_id)
     children: list[object] = [
         WorkspaceMember(workspace_id=workspace.id, user_id=owner_id, role=Role.OWNER),
@@ -38,6 +40,7 @@ def new_workspace_rows(
             billing_anchor_day=min(today.day, 28),
         ),
         AiSettings(workspace_id=workspace.id),
+        AgentPolicy(workspace_id=workspace.id),  # read_only, every capability off (FR-AGT-10)
     ]
     return workspace, children
 

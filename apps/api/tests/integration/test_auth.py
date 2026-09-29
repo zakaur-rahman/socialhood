@@ -82,11 +82,12 @@ async def test_first_request_creates_user_workspace_and_defaults(
                 text(
                     "SELECT (SELECT count(*) FROM workspace_members),"
                     " (SELECT count(*) FROM subscriptions WHERE status = 'free'),"
-                    " (SELECT count(*) FROM ai_settings)"
+                    " (SELECT count(*) FROM ai_settings),"
+                    " (SELECT count(*) FROM agent_policies WHERE mode = 'read_only')"
                 )
             )
         ).one()
-    assert tuple(counts) == (1, 1, 1)
+    assert tuple(counts) == (1, 1, 1, 1)
 
 
 async def test_a_user_without_a_name_gets_my_workspace(

@@ -26,6 +26,7 @@ dependencies = [
     "trafilatura>=2.2.0",
     "pypdf>=6.19.0",
     "python-docx>=1.2.0",
+    "pydantic-ai-slim[google]>=2.51.0",
 ]
 
 [dependency-groups]

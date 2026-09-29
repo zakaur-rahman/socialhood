@@ -9,6 +9,7 @@ from fastapi import APIRouter
 
 from socialhood.api.v1 import (
     accounts,
+    agent,
     ai,
     analytics,
     automations,
@@ -53,4 +54,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     analytics.router,
     publishing.router,
     captions.router,
+    agent.router,
 )

@@ -41,6 +41,9 @@ CREDIT_COSTS: dict[str, int] = {
     "caption_generation": 1,
     "knowledge_test": 1,
     "automation_ai_reply": 2,
+    # Each model call of an agent run (TR-AGT-02; agent-architecture §17): a typical question
+    # takes 2-4. Tools that call AI charge their own feature (a draft reply is reply_suggestion).
+    "agent_turn": 1,
 }
 
 

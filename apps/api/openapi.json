@@ -26,6 +26,1026 @@
         "title": "Actor",
         "type": "object"
       },
+      "AgentApproval": {
+        "description": "A write waiting for a person: exactly what will happen (recipients, text, scope, count).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "request": {
+            "title": "Request",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "approved",
+              "rejected",
+              "expired",
+              "superseded"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_id": {
+            "format": "uuid",
+            "title": "Step Id",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "tier": {
+            "enum": [
+              "read",
+              "draft",
+              "low",
+              "high",
+              "destructive"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "tool": {
+            "title": "Tool",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "run_id",
+          "step_id",
+          "request",
+          "tool",
+          "label",
+          "tier",
+          "summary",
+          "payload",
+          "status",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "AgentApproval",
+        "type": "object"
+      },
+      "AgentApprovalList": {
+        "description": "Soonest to expire first; ``next_cursor`` fetches more.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentApproval"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AgentApprovalList",
+        "type": "object"
+      },
+      "AgentLimits": {
+        "description": "Read like the permissions: ``{**DEFAULT_LIMITS, **row.limits}``.",
+        "properties": {
+          "bulk_max": {
+            "title": "Bulk Max",
+            "type": "integer"
+          },
+          "writes_per_day": {
+            "title": "Writes Per Day",
+            "type": "integer"
+          },
+          "writes_per_hour": {
+            "title": "Writes Per Hour",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bulk_max",
+          "writes_per_hour",
+          "writes_per_day"
+        ],
+        "title": "AgentLimits",
+        "type": "object"
+      },
+      "AgentLimitsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "bulk_max": {
+            "maximum": 200.0,
+            "minimum": 1.0,
+            "title": "Bulk Max",
+            "type": "integer"
+          },
+          "writes_per_day": {
+            "maximum": 5000.0,
+            "minimum": 1.0,
+            "title": "Writes Per Day",
+            "type": "integer"
+          },
+          "writes_per_hour": {
+            "maximum": 500.0,
+            "minimum": 1.0,
+            "title": "Writes Per Hour",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "bulk_max",
+          "writes_per_hour",
+          "writes_per_day"
+        ],
+        "title": "AgentLimitsUpdate",
+        "type": "object"
+      },
+      "AgentPermissions": {
+        "description": "Per-capability switches (models/agent.AgentCapability), all off until an owner or admin\nturns them on (R2). A key missing from the stored row reads as its default\n(``{**DEFAULT_PERMISSIONS, **row.permissions}``).",
+        "properties": {
+          "bulk_actions": {
+            "title": "Bulk Actions",
+            "type": "boolean"
+          },
+          "create_automations": {
+            "title": "Create Automations",
+            "type": "boolean"
+          },
+          "delete_automations": {
+            "title": "Delete Automations",
+            "type": "boolean"
+          },
+          "schedule_messages": {
+            "title": "Schedule Messages",
+            "type": "boolean"
+          },
+          "schedule_posts": {
+            "title": "Schedule Posts",
+            "type": "boolean"
+          },
+          "send_replies": {
+            "title": "Send Replies",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "send_replies",
+          "schedule_messages",
+          "schedule_posts",
+          "create_automations",
+          "delete_automations",
+          "bulk_actions"
+        ],
+        "title": "AgentPermissions",
+        "type": "object"
+      },
+      "AgentPermissionsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "bulk_actions": {
+            "title": "Bulk Actions",
+            "type": "boolean"
+          },
+          "create_automations": {
+            "title": "Create Automations",
+            "type": "boolean"
+          },
+          "delete_automations": {
+            "title": "Delete Automations",
+            "type": "boolean"
+          },
+          "schedule_messages": {
+            "title": "Schedule Messages",
+            "type": "boolean"
+          },
+          "schedule_posts": {
+            "title": "Schedule Posts",
+            "type": "boolean"
+          },
+          "send_replies": {
+            "title": "Send Replies",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "send_replies",
+          "schedule_messages",
+          "schedule_posts",
+          "create_automations",
+          "delete_automations",
+          "bulk_actions"
+        ],
+        "title": "AgentPermissionsUpdate",
+        "type": "object"
+      },
+      "AgentPolicy": {
+        "description": "The workspace's agent mode, switches and limits. R1: always read_only, all off.",
+        "properties": {
+          "limits": {
+            "$ref": "#/components/schemas/AgentLimits"
+          },
+          "mode": {
+            "enum": [
+              "read_only",
+              "copilot",
+              "supervised",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/AgentPermissions"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "mode",
+          "permissions",
+          "limits",
+          "updated_at"
+        ],
+        "title": "AgentPolicy",
+        "type": "object"
+      },
+      "AgentPolicyUpdate": {
+        "additionalProperties": false,
+        "description": "PUT \u2026/agent/policy (R2): the whole policy. ``autonomous`` is refused until R3 (409).",
+        "properties": {
+          "limits": {
+            "$ref": "#/components/schemas/AgentLimitsUpdate"
+          },
+          "mode": {
+            "enum": [
+              "read_only",
+              "copilot",
+              "supervised",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "permissions": {
+            "$ref": "#/components/schemas/AgentPermissionsUpdate"
+          }
+        },
+        "required": [
+          "mode",
+          "permissions",
+          "limits"
+        ],
+        "title": "AgentPolicyUpdate",
+        "type": "object"
+      },
+      "AgentRun": {
+        "description": "A run in the history and a thread's exchanges (FR-AGT-01, FR-AGT-07); also the 202 answer\nof POST \u2026/agent/runs.",
+        "properties": {
+          "action_cards": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "automation_draft": "#/components/schemas/AutomationDraftAction",
+                  "reply_to_comment": "#/components/schemas/CommentReplyAction",
+                  "schedule_message": "#/components/schemas/ScheduleMessageAction"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ScheduleMessageAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CommentReplyAction"
+                },
+                {
+                  "$ref": "#/components/schemas/AutomationDraftAction"
+                }
+              ]
+            },
+            "title": "Action Cards",
+            "type": "array"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "answer_refs": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerRef"
+            },
+            "title": "Answer Refs",
+            "type": "array"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "read_only",
+              "copilot",
+              "supervised",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "request": {
+            "title": "Request",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "enum": [
+              "ask",
+              "standing"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "planning",
+              "running",
+              "awaiting_approval",
+              "succeeded",
+              "partial",
+              "failed",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "thread_id",
+          "request",
+          "source",
+          "mode",
+          "status",
+          "answer_refs",
+          "action_cards",
+          "credits",
+          "created_at"
+        ],
+        "title": "AgentRun",
+        "type": "object"
+      },
+      "AgentRunCreate": {
+        "additionalProperties": false,
+        "description": "POST \u2026/agent/runs: a question in plain language (English, Hindi or Hinglish).",
+        "properties": {
+          "request": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Request",
+            "type": "string"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          }
+        },
+        "required": [
+          "request"
+        ],
+        "title": "AgentRunCreate",
+        "type": "object"
+      },
+      "AgentRunDetail": {
+        "description": "GET \u2026/agent/runs/{run_id}: the run with every step (TR-AGT-08).",
+        "properties": {
+          "action_cards": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "automation_draft": "#/components/schemas/AutomationDraftAction",
+                  "reply_to_comment": "#/components/schemas/CommentReplyAction",
+                  "schedule_message": "#/components/schemas/ScheduleMessageAction"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ScheduleMessageAction"
+                },
+                {
+                  "$ref": "#/components/schemas/CommentReplyAction"
+                },
+                {
+                  "$ref": "#/components/schemas/AutomationDraftAction"
+                }
+              ]
+            },
+            "title": "Action Cards",
+            "type": "array"
+          },
+          "answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answer"
+          },
+          "answer_refs": {
+            "items": {
+              "$ref": "#/components/schemas/AnswerRef"
+            },
+            "title": "Answer Refs",
+            "type": "array"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "credits": {
+            "title": "Credits",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "read_only",
+              "copilot",
+              "supervised",
+              "autonomous"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan"
+          },
+          "prompt_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Version"
+          },
+          "request": {
+            "title": "Request",
+            "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source": {
+            "enum": [
+              "ask",
+              "standing"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "planning",
+              "running",
+              "awaiting_approval",
+              "succeeded",
+              "partial",
+              "failed",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/AgentStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "thread_id": {
+            "format": "uuid",
+            "title": "Thread Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "thread_id",
+          "request",
+          "source",
+          "mode",
+          "status",
+          "answer_refs",
+          "action_cards",
+          "credits",
+          "created_at",
+          "steps"
+        ],
+        "title": "AgentRunDetail",
+        "type": "object"
+      },
+      "AgentRunList": {
+        "description": "Newest first; ``next_cursor`` fetches older runs.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentRun"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AgentRunList",
+        "type": "object"
+      },
+      "AgentStep": {
+        "description": "One tool call, condition or report (TR-AGT-08), for the live steps and run history.",
+        "properties": {
+          "args": {
+            "additionalProperties": true,
+            "title": "Args",
+            "type": "object"
+          },
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "decision": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "tool",
+              "condition",
+              "report"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "latency_ms": {
+            "title": "Latency Ms",
+            "type": "integer"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "running",
+              "succeeded",
+              "failed",
+              "skipped",
+              "blocked",
+              "awaiting_approval"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read",
+                  "draft",
+                  "low",
+                  "high",
+                  "destructive"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool"
+          },
+          "verification": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StepVerification"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "ordinal",
+          "kind",
+          "label",
+          "status",
+          "args",
+          "attempts",
+          "latency_ms"
+        ],
+        "title": "AgentStep",
+        "type": "object"
+      },
+      "AgentThread": {
+        "description": "An Ask panel thread: the caller's runs that share context.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_run_at": {
+            "format": "date-time",
+            "title": "Last Run At",
+            "type": "string"
+          },
+          "last_status": {
+            "enum": [
+              "queued",
+              "planning",
+              "running",
+              "awaiting_approval",
+              "succeeded",
+              "partial",
+              "failed",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Last Status",
+            "type": "string"
+          },
+          "run_count": {
+            "title": "Run Count",
+            "type": "integer"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "run_count",
+          "last_status",
+          "created_at",
+          "last_run_at"
+        ],
+        "title": "AgentThread",
+        "type": "object"
+      },
+      "AgentThreadList": {
+        "description": "Most recent activity first; ``next_cursor`` fetches older threads.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentThread"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "AgentThreadList",
+        "type": "object"
+      },
       "AiDecision": {
         "description": "Why the AI did or did not reply (FR-SUG-04): the popover on an AI-sent bubble and the\nescalation banner.",
         "properties": {
@@ -470,6 +1490,60 @@
           }
         },
         "title": "AnalysisCorrection",
+        "type": "object"
+      },
+      "AnswerRef": {
+        "description": "A record an answer used (FR-AGT-01): ``[n]`` in the answer is item n of answer_refs.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "post",
+              "conversation",
+              "comment",
+              "automation",
+              "scheduled_message",
+              "scheduled_post",
+              "knowledge_source"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "label"
+        ],
+        "title": "AnswerRef",
+        "type": "object"
+      },
+      "ApprovalApprove": {
+        "additionalProperties": false,
+        "description": "Approve as shown, or with edited arguments (Edit): the edit replaces the payload and is\nchecked by the gateway again (TR-AGT-04).",
+        "properties": {
+          "args": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Args"
+          }
+        },
+        "title": "ApprovalApprove",
         "type": "object"
       },
       "Attachment": {
@@ -1242,6 +2316,167 @@
           "name"
         ],
         "title": "AutomationDefinition",
+        "type": "object"
+      },
+      "AutomationDraftAction": {
+        "properties": {
+          "kind": {
+            "const": "automation_draft",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "prefill": {
+            "$ref": "#/components/schemas/AutomationDraftPrefill"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "route",
+          "kind",
+          "prefill"
+        ],
+        "title": "AutomationDraftAction",
+        "type": "object"
+      },
+      "AutomationDraftPrefill": {
+        "description": "The automation editor, new and unsaved, filled with a draft (F-11). Field names and rules\nare AutomationDefinition's (schemas/automations.py); the editor saves it like any draft.",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "enum": [
+                  "send_message",
+                  "ai_reply"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Action"
+          },
+          "ai_instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Instructions"
+          },
+          "keywords": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Keywords",
+            "type": "array"
+          },
+          "media_item_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Media Item Ids",
+            "type": "array"
+          },
+          "message_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Text"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "post_scope": {
+            "default": "all",
+            "enum": [
+              "all",
+              "selected",
+              "next_post"
+            ],
+            "title": "Post Scope",
+            "type": "string"
+          },
+          "public_reply_texts": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Public Reply Texts",
+            "type": "array"
+          },
+          "social_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Account Id"
+          },
+          "template_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Key"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "enum": [
+                  "dm_keyword",
+                  "comment_keyword",
+                  "comment_any"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "AutomationDraftPrefill",
         "type": "object"
       },
       "AutomationList": {
@@ -2816,6 +4051,45 @@
         "title": "CommentPublicReply",
         "type": "object"
       },
+      "CommentReplyAction": {
+        "properties": {
+          "kind": {
+            "const": "reply_to_comment",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "prefill": {
+            "$ref": "#/components/schemas/CommentReplyPrefill"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "route",
+          "kind",
+          "prefill"
+        ],
+        "title": "CommentReplyAction",
+        "type": "object"
+      },
       "CommentReplyCreate": {
         "additionalProperties": false,
         "description": "POST \u2026/comments/{comment_id}/reply: a public reply under the comment.",
@@ -2831,6 +4105,37 @@
           "text"
         ],
         "title": "CommentReplyCreate",
+        "type": "object"
+      },
+      "CommentReplyPrefill": {
+        "description": "The post detail's reply box on one comment (FR-CMT-04).",
+        "properties": {
+          "comment_id": {
+            "format": "uuid",
+            "title": "Comment Id",
+            "type": "string"
+          },
+          "post_id": {
+            "format": "uuid",
+            "title": "Post Id",
+            "type": "string"
+          },
+          "private": {
+            "default": false,
+            "title": "Private",
+            "type": "boolean"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "comment_id",
+          "post_id",
+          "text"
+        ],
+        "title": "CommentReplyPrefill",
         "type": "object"
       },
       "CommentStats": {
@@ -6726,6 +8031,89 @@
         "title": "SandboxInboundResult",
         "type": "object"
       },
+      "ScheduleMessageAction": {
+        "properties": {
+          "kind": {
+            "const": "schedule_message",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "prefill": {
+            "$ref": "#/components/schemas/ScheduleMessagePrefill"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "route",
+          "kind",
+          "prefill"
+        ],
+        "title": "ScheduleMessageAction",
+        "type": "object"
+      },
+      "ScheduleMessagePrefill": {
+        "description": "The conversation's schedule popover (F-06), limited to the reply window.",
+        "properties": {
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "send_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Send At"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "window_closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Closes At"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "text"
+        ],
+        "title": "ScheduleMessagePrefill",
+        "type": "object"
+      },
       "ScheduleRequest": {
         "additionalProperties": false,
         "description": "POST \u2026/schedule and \u2026/reschedule: at least 5 minutes from now (else 422 on\n``publish_at``).",
@@ -7876,6 +9264,36 @@
         "title": "SocialAccountPatch",
         "type": "object"
       },
+      "StepVerification": {
+        "description": "R2 (TR-AGT-06): what the verifier read back after a write.",
+        "properties": {
+          "checked": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Checked",
+            "type": "array"
+          },
+          "external_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "External Ids",
+            "type": "array"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "verified",
+          "checked",
+          "external_ids"
+        ],
+        "title": "StepVerification",
+        "type": "object"
+      },
       "Suggestion": {
         "properties": {
           "can_answer": {
@@ -8805,6 +10223,743 @@
         "tags": [
           "workspaces"
         ]
+      }
+    },
+    "/v1/w/{wid}/agent/approvals": {
+      "get": {
+        "description": "R2: approvals across runs; a member sees the ones they may decide (their own runs' writes\ntheir role allows), owners and admins all.",
+        "operationId": "list_agent_approvals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "pending",
+              "enum": [
+                "pending",
+                "approved",
+                "rejected",
+                "expired",
+                "superseded"
+              ],
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentApprovalList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Agent Approvals",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "R2"
+      }
+    },
+    "/v1/w/{wid}/agent/approvals/{approval_id}/approve": {
+      "post": {
+        "description": "R2: run the write as shown, or with edited ``args`` (re-checked by the gateway). The\ncaller's role must allow the tool (403 forbidden); 409 when it is no longer pending.",
+        "operationId": "approve_agent_approval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApprovalApprove"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentApproval"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Approve Agent Approval",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "R2"
+      }
+    },
+    "/v1/w/{wid}/agent/approvals/{approval_id}/reject": {
+      "post": {
+        "description": "R2: cancel the write; the step is skipped and the run continues without it. 409 when it\nis no longer pending.",
+        "operationId": "reject_agent_approval",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "approval_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Approval Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentApproval"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Reject Agent Approval",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "R2"
+      }
+    },
+    "/v1/w/{wid}/agent/policy": {
+      "get": {
+        "description": "The workspace's agent mode, capability switches and limits. In R1 the mode is always\nread_only and every switch is off.",
+        "operationId": "get_agent_policy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPolicy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Agent Policy",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "TA.1"
+      },
+      "put": {
+        "description": "R2: replace the policy (owners and admins). 409 for ``autonomous`` until R3.",
+        "operationId": "update_agent_policy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentPolicyUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentPolicy"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Agent Policy",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "R2"
+      }
+    },
+    "/v1/w/{wid}/agent/runs": {
+      "get": {
+        "description": "FR-AGT-07 run history, newest first: the caller's runs, or every run for owners and\nadmins. ``thread_id`` keeps one thread's runs (the Ask panel reverses them into a\nconversation); a thread that isn't the caller's lists nothing.",
+        "operationId": "list_agent_runs",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "thread_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Thread Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Agent Runs",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "TA.1"
+      },
+      "post": {
+        "description": "FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent\nis enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing\nis reserved yet. 404 when ``thread_id`` isn't one of the caller's threads; 402 quota_exceeded\nwhen the workspace has no AI credits left (nothing is stored).",
+        "operationId": "create_agent_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Agent Run",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "TA.1"
+      }
+    },
+    "/v1/w/{wid}/agent/runs/{run_id}": {
+      "get": {
+        "description": "One run with every step: the tool in plain words, arguments, status, result summary,\nverification, latency; the run's credits, model and prompt version (TR-AGT-08).",
+        "operationId": "get_agent_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRunDetail"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Agent Run",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "TA.1"
+      }
+    },
+    "/v1/w/{wid}/agent/runs/{run_id}/cancel": {
+      "post": {
+        "description": "Stop at the next step (\u00a79): an unfinished run becomes ``cancelled`` at once and run_agent\nstops before its next step or model turn; a step already running finishes and is kept. A\nfinished run is returned as it is. Only the member who asked, or an owner or admin.",
+        "operationId": "cancel_agent_run",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Cancel Agent Run",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "TA.1"
+      }
+    },
+    "/v1/w/{wid}/agent/threads": {
+      "get": {
+        "description": "The caller's Ask panel threads, most recent activity first (owners and admins too: threads\nare personal; other members' runs are in the run history).",
+        "operationId": "list_agent_threads",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentThreadList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Agent Threads",
+        "tags": [
+          "agent"
+        ],
+        "x-pending": "TA.1"
       }
     },
     "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {
