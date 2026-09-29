@@ -1,4 +1,13 @@
-import type { AutomationSort, AutomationStatus, InboxView, Platform, RunResult, TriggerName } from "../types";
+import type {
+  AgeName,
+  AutomationSort,
+  AutomationStatus,
+  CommentFilter,
+  InboxView,
+  Platform,
+  RunResult,
+  TriggerName,
+} from "../types";
 
 /** Filters of one conversation list (FR-INB-01). Part of its query key. */
 export type ConversationFilters = {
@@ -45,7 +54,18 @@ export const keys = {
   automationRuns: (wid: string, id: string, result: RunResult | null) =>
     ["w", wid, "automation", id, "runs", result] as const,
   automationStats: (wid: string, id: string, days: 7 | 30) => ["w", wid, "automation", id, "stats", days] as const,
+  // posts: the automation post picker (P4) and the Comments grid (P6) share these lists
+  postLists: (wid: string) => ["w", wid, "posts"] as const,
   posts: (wid: string, accountId: string | null, q: string) => ["w", wid, "posts", accountId, q] as const,
+  // comments and post analytics (P6)
+  post: (wid: string, postId: string) => ["w", wid, "post", postId] as const,
+  postCommentLists: (wid: string, postId: string) => ["w", wid, "post-comments", postId] as const,
+  postComments: (wid: string, postId: string, filter: CommentFilter) =>
+    ["w", wid, "post-comments", postId, filter] as const,
+  postPerformance: (wid: string, postId: string, age: AgeName | null) =>
+    ["w", wid, "analytics", "performance", postId, age] as const,
+  postComparison: (wid: string, postId: string, age: AgeName | null) =>
+    ["w", wid, "analytics", "compare", postId, age] as const,
   // AI and knowledge (P5)
   aiSettings: (wid: string) => ["w", wid, "ai-settings"] as const,
   aiDecision: (wid: string, messageId: string) => ["w", wid, "ai-decision", messageId] as const,

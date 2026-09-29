@@ -21,14 +21,12 @@ import type {
   AutomationTemplate,
   AutomationTest,
   AutomationTestResult,
-  PostList,
   RunResult,
 } from "../types";
 import { keys, type AutomationFilters } from "./keys";
 import { expectOk, unwrap } from "./unwrap";
 
 export type RunPages = InfiniteData<AutomationRunList, string | null>;
-export type PostPages = InfiniteData<PostList, string | null>;
 
 /** Every cached list (all filter combinations) of the workspace's automations. */
 function listsKey(wid: string) {
@@ -145,30 +143,7 @@ export function useAutomationStats(wid: string, id: string, days: 7 | 30, enable
   });
 }
 
-/** The post picker (UX-SCR-03): the account's synced posts, newest first, searchable by caption. */
-export function usePosts(wid: string, accountId: string | null, q: string, enabled = true) {
-  const api = useApi();
-  return useInfiniteQuery<PostList, Error, PostPages, ReturnType<typeof keys.posts>, string | null>({
-    queryKey: keys.posts(wid, accountId, q.trim()),
-    enabled: enabled && Boolean(accountId),
-    initialPageParam: null,
-    queryFn: ({ pageParam }) =>
-      unwrap(
-        api.GET("/v1/w/{wid}/posts", {
-          params: {
-            path: { wid },
-            query: {
-              account_id: accountId ?? undefined,
-              q: q.trim() || undefined,
-              cursor: pageParam ?? undefined,
-              limit: 24,
-            },
-          },
-        }),
-      ),
-    getNextPageParam: (last) => last.next_cursor ?? null,
-  });
-}
+// The post picker's query (usePosts) is in posts.ts, beside the Comments grid it shares lists with.
 
 // ---- changing
 

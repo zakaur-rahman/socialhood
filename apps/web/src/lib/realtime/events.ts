@@ -11,10 +11,13 @@ import type {
   MessageAnalysis,
   NotificationItem,
   NotificationList,
+  PostComment,
+  PostDetail,
   ScheduledMessage,
   SocialAccount,
   Suggestion,
 } from "@/lib/api/types";
+import { applyComment, applyPost } from "@/lib/comments/cache";
 import {
   applyConversation,
   applyMessage,
@@ -36,6 +39,11 @@ export type EventPayloads = {
   "scheduled_message.updated": { scheduled_message: ScheduledMessage };
   "social_account.updated": { social_account: SocialAccount };
   "notification.created": { notification: NotificationItem };
+  /** F-12: a comment arrived, or its analysis, reply, hidden state or deletion changed. */
+  "comment.created": { comment: PostComment };
+  "comment.updated": { comment: PostComment };
+  /** F-12: a post's counts, sentiment split, summary or topics changed. */
+  "post.updated": { post: PostDetail };
   /** Only the fact matters: the billing state is refetched. */
   "usage.updated": Record<string, unknown>;
   resync: Record<string, never>;
@@ -136,11 +144,24 @@ export function applyRealtimeEvent(
       );
       return;
     }
+    case "comment.created":
+    case "comment.updated": {
+      const payload = parse<EventPayloads["comment.updated"]>(event.data);
+      if (!payload?.comment) return;
+      applyComment(queryClient, wid, payload.comment);
+      return;
+    }
+    case "post.updated": {
+      const payload = parse<EventPayloads["post.updated"]>(event.data);
+      if (!payload?.post) return;
+      applyPost(queryClient, wid, payload.post);
+      return;
+    }
     case "resync":
       void invalidateWorkspace(queryClient, wid);
       return;
     default:
-      // Events for pages built in later phases (comments, posts) have no cache yet.
+      // Events for pages built in later phases (scheduled posts) have no cache yet.
       return;
   }
 }

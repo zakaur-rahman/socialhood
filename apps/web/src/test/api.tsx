@@ -20,6 +20,12 @@ import type {
   KnowledgeSource,
   Message,
   MessageAnalysis,
+  MetricComparison,
+  PostComment,
+  PostComparison,
+  PostDetail,
+  PostPerformance,
+  PostSummary,
   SocialAccount,
   Suggestion,
   WorkspaceSummary,
@@ -379,6 +385,121 @@ export function template(overrides: Partial<AutomationTemplate> = {}): Automatio
     trigger: "comment_keyword",
     action: "send_message",
     requires_paid_plan: false,
+    ...overrides,
+  };
+}
+
+// ---- comments and post analytics (P6)
+
+export function post(overrides: Partial<PostSummary> = {}): PostSummary {
+  return {
+    id: "po1",
+    social_account_id: "a1",
+    platform_media_id: "17900000000000001",
+    media_type: "image",
+    caption: "New linen dresses are here",
+    media_url: "https://scontent.cdninstagram.com/po1.jpg",
+    thumbnail_url: null,
+    permalink: "https://www.instagram.com/p/po1/",
+    posted_at: "2026-09-27T12:00:00Z",
+    like_count: 1204,
+    comments_count: 212,
+    stats: { total: 12, analysed: 12, positive: 7, neutral: 3, negative: 1, spam: 1 },
+    ...overrides,
+  };
+}
+
+export function postDetail(overrides: Partial<PostDetail> = {}): PostDetail {
+  return {
+    ...post(),
+    summary: "People love the colours and ask about sizes. A few want shipping to the UAE.",
+    summary_updated_at: "2026-09-28T10:00:00Z",
+    topics: [
+      { label: "sizes", count: 5, positive: 3, neutral: 2, negative: 0 },
+      { label: "shipping to uae", count: 3, positive: 1, neutral: 1, negative: 1 },
+    ],
+    ...overrides,
+  };
+}
+
+let commentSeq = 0;
+
+export function comment(overrides: Partial<PostComment> = {}): PostComment {
+  commentSeq += 1;
+  return {
+    id: `cm${commentSeq}`,
+    post_id: "po1",
+    social_account_id: "a1",
+    contact_id: "p1",
+    platform_comment_id: `1790000000000${commentSeq}`,
+    parent_platform_comment_id: null,
+    author_username: "priya.styles",
+    author_profile_picture_url: null,
+    text: "What sizes do you have?",
+    like_count: 0,
+    hidden: false,
+    commented_at: "2026-09-28T11:00:00Z",
+    deleted_at: null,
+    analysis_status: "done",
+    analysis: { sentiment: "positive", sentiment_score: 0.6, intent: "product_inquiry", is_spam: false, topic: "sizes" },
+    public_reply: null,
+    private_reply: null,
+    ...overrides,
+  };
+}
+
+export function performance(overrides: Partial<PostPerformance> = {}): PostPerformance {
+  return {
+    post_id: "po1",
+    media_type: "image",
+    posted_at: "2026-09-27T12:00:00Z",
+    requested_age: null,
+    age: "24h",
+    captured_at: "2026-09-28T12:05:00Z",
+    insights_granted: true,
+    insights_final: false,
+    metrics: {
+      reach: 1240,
+      views: 3100,
+      likes: 180,
+      comments: 12,
+      shares: 9,
+      saves: 21,
+      engagement_rate: 17.8,
+    },
+    ...overrides,
+  };
+}
+
+export function metricRow(overrides: Partial<MetricComparison> = {}): MetricComparison {
+  return {
+    metric: "reach",
+    value: 1240,
+    baseline_median: 1050,
+    baseline_mean: 1100,
+    diff_pct: 18.1,
+    z_score: 0.6,
+    sample_size: 8,
+    ...overrides,
+  };
+}
+
+export function comparison(overrides: Partial<PostComparison> = {}): PostComparison {
+  return {
+    post: performance(),
+    age: "24h",
+    baseline: { kind: "previous", n: 10, since: null, until: null, same_format: true, post_ids: [] },
+    baseline_size: 8,
+    enough_history: true,
+    metrics: [
+      metricRow(),
+      metricRow({ metric: "views", value: 3100, baseline_median: 3400, baseline_mean: 3500, diff_pct: -8.8 }),
+      metricRow({ metric: "likes", value: 180, baseline_median: 180, baseline_mean: 170, diff_pct: 0 }),
+      metricRow({ metric: "comments", value: 12, baseline_median: 9, baseline_mean: 10, diff_pct: 33.3 }),
+      metricRow({ metric: "shares", value: 9, baseline_median: 0, baseline_mean: 1, diff_pct: null, sample_size: 6 }),
+      metricRow({ metric: "saves", value: 21, baseline_median: 15, baseline_mean: 16, diff_pct: 40 }),
+      metricRow({ metric: "engagement_rate", value: 17.8, baseline_median: 15.2, baseline_mean: 15, diff_pct: 17.1 }),
+    ],
     ...overrides,
   };
 }
