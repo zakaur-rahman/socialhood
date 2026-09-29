@@ -145,6 +145,30 @@ export type MetricName = MetricComparison["metric"];
 export type BillingState = Schemas["BillingState"];
 export type UsageMeter = Schemas["UsageMeter"];
 
+// ---- publishing: the Schedule page (P7: FR-PUB-08, 09, 12, 14, UX-SCR-04, UX-SCR-14)
+
+export type ScheduledPostSummary = Schemas["ScheduledPostSummary"];
+export type ScheduledPostDetail = Schemas["ScheduledPost"];
+export type ScheduledPostList = Schemas["ScheduledPostList"];
+export type ScheduledPostTarget = Schemas["ScheduledPostTarget"];
+export type ScheduledPostStatus = ScheduledPostSummary["status"];
+export type PostFormat = NonNullable<ScheduledPostSummary["format"]>;
+/** The List view's tabs (UX-SCR-04). */
+export type ScheduledPostView = NonNullable<
+  NonNullable<operations["list_scheduled_posts"]["parameters"]["query"]>["view"]
+>;
+export type BulkScheduledPostRequest = Schemas["BulkScheduledPostRequest"];
+export type BulkScheduledPostResult = Schemas["BulkScheduledPostResult"];
+export type Calendar = Schemas["Calendar"];
+export type CalendarMessage = Schemas["CalendarMessage"];
+export type CalendarSlot = Schemas["CalendarSlot"];
+export type CalendarAccount = Schemas["CalendarAccount"];
+export type PostingSlot = Schemas["PostingSlot"];
+export type PostingSlots = Schemas["PostingSlots"];
+export type HashtagGroup = Schemas["HashtagGroup"];
+export type HashtagGroupCreate = Schemas["HashtagGroupCreate"];
+export type HashtagGroupPatch = Schemas["HashtagGroupPatch"];
+
 /** The inbox views the list endpoint accepts (FR-INB-01). */
 export type InboxView = NonNullable<
   NonNullable<operations["list_conversations"]["parameters"]["query"]>["view"]

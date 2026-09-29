@@ -12,3 +12,4 @@ export * from "./knowledge";
 export * from "./billing";
 export * from "./posts";
 export * from "./analytics";
+export * from "./calendar";

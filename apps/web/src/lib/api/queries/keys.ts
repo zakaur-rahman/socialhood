@@ -6,6 +6,7 @@ import type {
   InboxView,
   Platform,
   RunResult,
+  ScheduledPostView,
   TriggerName,
 } from "../types";
 
@@ -72,4 +73,12 @@ export const keys = {
   knowledgeSources: (wid: string) => ["w", wid, "knowledge-sources"] as const,
   knowledgeGaps: (wid: string) => ["w", wid, "knowledge-gaps"] as const,
   billing: (wid: string) => ["w", wid, "billing"] as const,
+  // publishing: the Schedule page (P7)
+  calendars: (wid: string) => ["w", wid, "calendar"] as const,
+  calendar: (wid: string, from: string, to: string) => ["w", wid, "calendar", from, to] as const,
+  scheduledPostLists: (wid: string) => ["w", wid, "scheduled-posts"] as const,
+  scheduledPosts: (wid: string, view: ScheduledPostView, accountIds: readonly string[] | null) =>
+    ["w", wid, "scheduled-posts", view, accountIds] as const,
+  postingSlots: (wid: string, accountId: string) => ["w", wid, "posting-slots", accountId] as const,
+  hashtagGroups: (wid: string) => ["w", wid, "hashtag-groups"] as const,
 };
