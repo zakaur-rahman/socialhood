@@ -3,7 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Automation } from "@/lib/api/types";
-import { toDefinition, toRequestBody } from "@/lib/automations/definition";
+import {
+  DEFAULT_FOLLOW_NUDGE,
+  DEFAULT_OPENING_BUTTON,
+  DEFAULT_OPENING_TEXT,
+  toDefinition,
+  toRequestBody,
+} from "@/lib/automations/definition";
 import { account, automation, json, problem, renderWithApi, type Call } from "@/test/api";
 
 import { AutomationEditor } from "./AutomationEditor";
@@ -249,5 +255,187 @@ describe("AutomationEditor steps (UX-SCR-03)", () => {
     await user.click(screen.getByRole("radio", { name: "Any comment" }));
     expect(step("keywords")).toBeNull();
     expect(step("posts")).toBeInTheDocument();
+  });
+});
+
+const tapFirstSwitch = () => screen.queryByRole("switch", { name: /Tap first/ });
+const NUDGE_SWITCH = "Suggest following to people who don't follow you yet";
+
+describe("AutomationEditor tap first (FR-AUT-21)", () => {
+  it("is recommended and explained; switching it on fills the default opening, frees the image and saves", async () => {
+    const user = userEvent.setup();
+    const { puts } = renderEditor();
+    await screen.findByRole("textbox", { name: "Message" });
+    const tap = tapFirstSwitch() as HTMLElement;
+    expect(tap).toHaveAccessibleName("Tap first Recommended");
+    expect(tap).toHaveAccessibleDescription(/^Instagram allows one text-only reply to a comment until the person answers\./);
+    expect(tap).not.toBeChecked();
+    expect(screen.queryByRole("textbox", { name: "Opening message" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Add an image" })).toBeNull();
+
+    await user.click(tap);
+    expect(tap).toBeChecked();
+    expect(screen.getByRole("textbox", { name: "Opening message" })).toHaveValue(DEFAULT_OPENING_TEXT);
+    expect(screen.getByRole("textbox", { name: "Button title" })).toHaveValue(DEFAULT_OPENING_BUTTON);
+    const after = screen.getByRole("group", { name: "Sent after they tap or reply" });
+    expect(after).toContainElement(screen.getByRole("textbox", { name: "Message" }));
+    expect(within(after).getByRole("button", { name: "Add an image" })).toBeInTheDocument();
+    expect(screen.queryByText(/Replies to comments are text and link buttons/)).toBeNull();
+
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 3000 });
+    expect(puts[0].body).toMatchObject({
+      confirm_first: true,
+      opening_text: DEFAULT_OPENING_TEXT,
+      opening_button: DEFAULT_OPENING_BUTTON,
+    });
+    expect(step("then")).toHaveAttribute("data-state", "complete");
+  });
+
+  it("counts the opening's bytes with the disclosure line and the button's 20 characters as you type", async () => {
+    const user = userEvent.setup();
+    renderEditor({
+      initial: automation({ confirm_first: true, opening_text: "", opening_button: "" }),
+      disclosure: "Sent automatically",
+    });
+    const opening = await screen.findByRole("textbox", { name: "Opening message" });
+    expect(opening).toHaveAttribute("aria-invalid", "true");
+    expect(opening).toHaveAccessibleDescription(/Write the opening message\.$/);
+    expect(step("then")).toHaveAttribute("data-state", "incomplete");
+
+    await user.type(opening, "Hi {{first_name}!");
+    // 30 (longest name) + "Hi !" (4) + "\n\n" (2) + "Sent automatically" (18)
+    expect(opening).toHaveAccessibleDescription(/54 \/ 1,000 bytes$/);
+    expect(opening).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByTestId("preview-opening")).toHaveTextContent("Hi Priya!");
+
+    const button = screen.getByRole("textbox", { name: "Button title" });
+    expect(button).toHaveAttribute("aria-invalid", "true");
+    expect(button).toHaveAccessibleDescription("Add a button title.");
+    await user.type(button, "Send");
+    expect(button).toHaveAccessibleDescription("4 / 20");
+    expect(button).not.toHaveAttribute("aria-invalid");
+    await user.type(button, " me the link, please");
+    expect(button).toHaveValue("Send me the link, pl");
+    expect(button).toHaveAccessibleDescription("20 / 20");
+    expect(screen.getByTestId("preview-quick-reply")).toHaveTextContent("Send me the link, pl");
+    expect(step("then")).toHaveAttribute("data-state", "complete");
+  });
+
+  it("marks an opening over 1,000 bytes, counting the disclosure line", async () => {
+    renderEditor({
+      initial: automation({ confirm_first: true, opening_text: "x".repeat(990), opening_button: "Send it" }),
+      disclosure: "Sent automatically",
+    });
+    const opening = await screen.findByRole("textbox", { name: "Opening message" });
+    // 990 bytes fit until the workspace's disclosure line loads and counts too.
+    await waitFor(() => expect(opening).toHaveAttribute("aria-invalid", "true"));
+    expect(opening).toHaveAccessibleDescription(/1,010 \/ 1,000 bytes Instagram allows 1,000 bytes in a DM/);
+    expect(step("then")).toHaveAttribute("data-state", "incomplete");
+  });
+
+  it("is off: no image on a comment's reply, and an attached one says what to do", async () => {
+    const user = userEvent.setup();
+    renderEditor({ initial: automation({ message_media_asset_id: "ma1", message_media_url: null }) });
+    expect(
+      await screen.findByText("Replies to comments can't carry an image. Turn on Tap first, or remove the image."),
+    ).toBeInTheDocument();
+    expect(step("then")).toHaveAttribute("data-state", "incomplete");
+    await user.click(tapFirstSwitch() as HTMLElement);
+    expect(screen.queryByText(/can't carry an image/)).toBeNull();
+    expect(step("then")).toHaveAttribute("data-state", "complete");
+  });
+
+  it("is hidden for DM triggers and Reply with AI, and starts on when a DM automation becomes a comment one", async () => {
+    const user = userEvent.setup();
+    renderEditor({ initial: automation({ trigger: "dm_keyword", public_reply_texts: [] }) });
+    await screen.findByRole("textbox", { name: "Message" });
+    expect(tapFirstSwitch()).toBeNull();
+
+    await user.click(screen.getByRole("radio", { name: "Comment keyword" }));
+    expect(tapFirstSwitch()).toBeChecked();
+    expect(screen.getByRole("textbox", { name: "Opening message" })).toHaveValue(DEFAULT_OPENING_TEXT);
+
+    await user.click(screen.getByRole("radio", { name: /AI reply/ }));
+    expect(tapFirstSwitch()).toBeNull();
+    expect(screen.queryByRole("switch", { name: NUDGE_SWITCH })).toBeNull();
+  });
+});
+
+describe("AutomationEditor follow nudge (FR-AUT-22)", () => {
+  it("says it is never a gate; on, it fills the example, counts to 300 and shows the View profile button", async () => {
+    const user = userEvent.setup();
+    const { puts } = renderEditor();
+    const nudge = await screen.findByRole("switch", { name: NUDGE_SWITCH });
+    expect(nudge).toHaveAccessibleDescription(
+      "Sent after your message, only to people who don't follow you. Your message is never held back: Instagram's rules don't allow asking for a follow or a share in exchange for content.",
+    );
+    expect(nudge).not.toBeChecked();
+
+    await user.click(nudge);
+    const text = screen.getByRole("textbox", { name: "Follow message" });
+    expect(text).toHaveValue(DEFAULT_FOLLOW_NUDGE);
+    expect(text).toHaveAccessibleDescription(`${DEFAULT_FOLLOW_NUDGE.length} / 300`);
+    expect(screen.getByTestId("nudge-button-preview")).toHaveTextContent("View profile");
+    expect(screen.getByTestId("preview-nudge")).toHaveTextContent(DEFAULT_FOLLOW_NUDGE);
+
+    await user.clear(text);
+    expect(text).toHaveAttribute("aria-invalid", "true");
+    expect(text).toHaveAccessibleDescription("0 / 300 Write the follow message.");
+    expect(step("then")).toHaveAttribute("data-state", "incomplete");
+
+    await user.click(text);
+    await user.paste("a".repeat(310));
+    expect(text).toHaveValue("a".repeat(300));
+    expect(text).toHaveAccessibleDescription("300 / 300");
+    expect(step("then")).toHaveAttribute("data-state", "complete");
+    await waitFor(() => expect(puts.at(-1)?.body).toMatchObject({ follow_nudge: true, follow_nudge_text: "a".repeat(300) }), {
+      timeout: 3000,
+    });
+  });
+
+  it("shows for DM triggers too", async () => {
+    renderEditor({ initial: automation({ trigger: "dm_keyword", public_reply_texts: [] }) });
+    expect(await screen.findByRole("switch", { name: NUDGE_SWITCH })).toBeInTheDocument();
+  });
+});
+
+describe("AutomationEditor activation errors for tap first and the nudge", () => {
+  it("marks Then with the opening's, the button's and the nudge's problems; switches settle theirs", async () => {
+    const user = userEvent.setup();
+    renderEditor({
+      initial: automation({
+        confirm_first: true,
+        opening_text: DEFAULT_OPENING_TEXT,
+        opening_button: DEFAULT_OPENING_BUTTON,
+        follow_nudge: true,
+        follow_nudge_text: "Follow us",
+      }),
+      activate: () =>
+        validation([
+          { field: "opening_text", message: "Shorten the opening to 1,000 bytes." },
+          { field: "opening_button", message: "Use 20 characters or fewer." },
+          { field: "follow_nudge_text", message: "Use 300 characters or fewer." },
+        ]),
+    });
+    await user.click(await screen.findByRole("button", { name: "Activate" }));
+
+    await waitFor(() => expect(step("then")).toHaveAttribute("data-state", "error"));
+    expect(step("keywords")).toHaveAttribute("data-state", "complete");
+    const then = within(step("then"));
+    expect(then.getAllByText("Shorten the opening to 1,000 bytes.").length).toBeGreaterThan(0);
+    expect(then.getAllByText("Use 20 characters or fewer.").length).toBeGreaterThan(0);
+    expect(then.getAllByText("Use 300 characters or fewer.").length).toBeGreaterThan(0);
+    expect(screen.getByRole("textbox", { name: "Opening message" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Button title" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Follow message" })).toHaveAttribute("aria-invalid", "true");
+    await waitFor(() => expect(step("then")).toHaveFocus());
+
+    // Tap first off settles the opening's problems; the nudge's stays until its text changes.
+    await user.click(tapFirstSwitch() as HTMLElement);
+    expect(then.queryByText("Shorten the opening to 1,000 bytes.")).toBeNull();
+    expect(then.queryByText("Use 20 characters or fewer.")).toBeNull();
+    expect(step("then")).toHaveAttribute("data-state", "error");
+    await user.type(screen.getByRole("textbox", { name: "Follow message" }), "!");
+    expect(step("then")).toHaveAttribute("data-state", "complete");
   });
 });

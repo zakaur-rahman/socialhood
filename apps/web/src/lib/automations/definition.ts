@@ -5,14 +5,66 @@
 import type { ProblemField } from "@/lib/api/errors";
 import type { Automation, AutomationDefinition, LinkButton, TriggerName } from "@/lib/api/types";
 
-import { BUTTON_TITLE_MAX, MESSAGE_LIMIT_BYTES, worstCaseBytes } from "./render";
+import {
+  BUTTON_TITLE_MAX,
+  charCount,
+  clampChars,
+  FOLLOW_NUDGE_MAX,
+  MESSAGE_LIMIT_BYTES,
+  OPENING_BUTTON_MAX,
+  worstCaseBytes,
+} from "./render";
 
 export type StepId = "when" | "posts" | "keywords" | "then" | "settings";
 
 export const DEFAULT_NAME = "Untitled automation";
 
+/** Tap first (FR-AUT-21): the API's defaults for new comment automations. */
+export const DEFAULT_OPENING_TEXT =
+  "Hi {first_name|there}! Tap the button below, or just reply here, and I'll send it right over 👇";
+export const DEFAULT_OPENING_BUTTON = "Send me the link";
+/** The follow nudge (FR-AUT-22): the spec's example. */
+export const DEFAULT_FOLLOW_NUDGE = "Enjoying this? Follow us for more like it.";
+
 export function isCommentTrigger(trigger: TriggerName | null | undefined): boolean {
   return trigger === "comment_keyword" || trigger === "comment_any";
+}
+
+type TapFirstFields = Pick<AutomationDefinition, "trigger" | "action" | "confirm_first">;
+
+/** Tap first applies to comment triggers that send a message (FR-AUT-21). */
+export function usesTapFirst(draft: TapFirstFields): boolean {
+  return isCommentTrigger(draft.trigger) && draft.action === "send_message" && draft.confirm_first;
+}
+
+/** The follow nudge applies to automations that send a message, on either trigger (FR-AUT-22). */
+export function usesFollowNudge(draft: Pick<AutomationDefinition, "action" | "follow_nudge">): boolean {
+  return draft.action === "send_message" && draft.follow_nudge;
+}
+
+/** Switching tap first on: the default opening and button fill whatever is still empty. */
+export function tapFirstOn(
+  draft: Pick<AutomationDefinition, "opening_text" | "opening_button">,
+): Pick<AutomationDefinition, "confirm_first" | "opening_text" | "opening_button"> {
+  return {
+    confirm_first: true,
+    opening_text: draft.opening_text?.trim() ? draft.opening_text : DEFAULT_OPENING_TEXT,
+    opening_button: draft.opening_button?.trim() ? draft.opening_button : DEFAULT_OPENING_BUTTON,
+  };
+}
+
+/**
+ * A trigger change. Any comment needs chosen posts or the next post (FR-AUT-02), so it starts on
+ * chosen posts. An automation that becomes a comment automation for the first time (it has never
+ * had an opening) starts with tap first on, as new comment automations do (FR-AUT-21).
+ */
+export function triggerPatch(draft: AutomationDefinition, trigger: TriggerName): Partial<AutomationDefinition> {
+  const patch: Partial<AutomationDefinition> = { trigger };
+  if (trigger === "comment_any" && draft.post_scope === "all") patch.post_scope = "selected";
+  const firstComment = isCommentTrigger(trigger) && !isCommentTrigger(draft.trigger);
+  const neverOpened = draft.opening_text == null && draft.opening_button == null;
+  if (firstComment && neverOpened) Object.assign(patch, tapFirstOn(draft));
+  return patch;
 }
 
 /** The editable definition of a stored automation. */
@@ -48,14 +100,18 @@ export function toDefinition(automation: Automation): AutomationDefinition {
 
 /**
  * What the autosave sends. The editor keeps everything the user typed, but the request carries
- * only what the trigger uses (no keywords for Any comment, no posts or public replies for DMs),
- * and leaves out blank reply variations and link buttons until they have a title and a URL.
+ * only what the trigger uses (no keywords for Any comment, no posts, public replies or tap first
+ * for DMs), and leaves out blank reply variations and link buttons until they have a title and a
+ * URL. Tap first and the follow nudge go with a message: Reply with AI turns them off, while an
+ * automation with no action yet keeps the API's defaults.
  */
 export function toRequestBody(draft: AutomationDefinition): AutomationDefinition {
   const comment = isCommentTrigger(draft.trigger);
+  const ai = draft.action === "ai_reply";
   const buttons = (draft.message_buttons ?? [])
     .map((button) => ({ title: button.title.trim().slice(0, BUTTON_TITLE_MAX), url: button.url.trim() }))
     .filter((button) => button.title && button.url);
+  const openingButton = clampChars(draft.opening_button?.trim() ?? "", OPENING_BUTTON_MAX);
   return {
     ...draft,
     name: draft.name.trim() || DEFAULT_NAME,
@@ -65,6 +121,11 @@ export function toRequestBody(draft: AutomationDefinition): AutomationDefinition
     post_scope: comment ? draft.post_scope : "all",
     media_item_ids: comment && draft.post_scope === "selected" ? (draft.media_item_ids ?? []) : [],
     scheduled_post_ids: comment && draft.post_scope === "selected" ? (draft.scheduled_post_ids ?? []) : [],
+    confirm_first: comment && !ai ? draft.confirm_first : false,
+    opening_text: comment ? draft.opening_text || null : null,
+    opening_button: comment ? openingButton || null : null,
+    follow_nudge: ai ? false : draft.follow_nudge,
+    follow_nudge_text: draft.follow_nudge_text || null,
   };
 }
 
@@ -104,6 +165,33 @@ export function buttonProblems(button: LinkButton): ButtonProblems {
   return problems;
 }
 
+export type OpeningProblems = { text?: string; button?: string };
+
+/** Tap first's opening (FR-AUT-21): required text within 1,000 bytes, and a 1–20 character button. */
+export function openingProblems(
+  draft: Pick<AutomationDefinition, "opening_text" | "opening_button">,
+  disclosure: string | null = null,
+): OpeningProblems {
+  const problems: OpeningProblems = {};
+  const text = draft.opening_text ?? "";
+  if (!text.trim()) problems.text = "Write the opening message.";
+  else if (worstCaseBytes(text, disclosure) > MESSAGE_LIMIT_BYTES) {
+    const limit = MESSAGE_LIMIT_BYTES.toLocaleString("en-US");
+    problems.text = `Instagram allows ${limit} bytes in a DM, counting the longest name. Shorten the opening.`;
+  }
+  const button = draft.opening_button ?? "";
+  if (!button.trim()) problems.button = "Add a button title.";
+  else if (charCount(button) > OPENING_BUTTON_MAX) problems.button = `Use ${OPENING_BUTTON_MAX} characters or fewer.`;
+  return problems;
+}
+
+/** The follow nudge's text (FR-AUT-22): required, up to 300 characters. */
+export function followNudgeProblem(text: string | null | undefined): string | null {
+  if (!text?.trim()) return "Write the follow message.";
+  if (charCount(text) > FOLLOW_NUDGE_MAX) return `Use ${FOLLOW_NUDGE_MAX} characters or fewer.`;
+  return null;
+}
+
 /** The run window's end must come after its start (FR-AUT-17). */
 export function runWindowProblem(draft: Pick<AutomationDefinition, "starts_at" | "ends_at">): string | null {
   if (!draft.starts_at || !draft.ends_at) return null;
@@ -129,7 +217,13 @@ export function stepComplete(step: StepId, draft: AutomationDefinition, disclosu
       const text = draft.message_text ?? "";
       const hasContent = Boolean(text.trim() || draft.message_media_asset_id);
       const buttonsOk = (draft.message_buttons ?? []).every((button) => Object.keys(buttonProblems(button)).length === 0);
-      return hasContent && buttonsOk && worstCaseBytes(text, disclosure) <= MESSAGE_LIMIT_BYTES;
+      const messageOk = hasContent && buttonsOk && worstCaseBytes(text, disclosure) <= MESSAGE_LIMIT_BYTES;
+      // A private reply carries no image (C-030): only tap first's message, a normal DM, can.
+      const tapFirst = usesTapFirst(draft);
+      const imageOk = !isCommentTrigger(draft.trigger) || tapFirst || !draft.message_media_asset_id;
+      const openingOk = !tapFirst || Object.keys(openingProblems(draft, disclosure)).length === 0;
+      const nudgeOk = !usesFollowNudge(draft) || followNudgeProblem(draft.follow_nudge_text) === null;
+      return messageOk && imageOk && openingOk && nudgeOk;
     }
     case "settings":
       return runWindowProblem(draft) === null;
@@ -158,6 +252,11 @@ const FIELD_STEP: Record<string, StepId | "name"> = {
   message_media_asset_id: "then",
   ai_instructions: "then",
   public_reply_texts: "then",
+  confirm_first: "then",
+  opening_text: "then",
+  opening_button: "then",
+  follow_nudge: "then",
+  follow_nudge_text: "then",
   cooldown_hours: "settings",
   starts_at: "settings",
   ends_at: "settings",
@@ -194,13 +293,23 @@ export function errorsFor(errors: FieldErrors, prefix: string): string[] {
     .map(([, message]) => message);
 }
 
+/**
+ * Switches that settle other fields' problems: turning tap first off drops the opening's, and on
+ * allows the image (C-030); turning the nudge off drops its text's.
+ */
+const SETTLES: Record<string, string[]> = {
+  confirm_first: ["opening_text", "opening_button", "message_media_asset_id"],
+  follow_nudge: ["follow_nudge_text"],
+};
+
 /** The errors left after the user edits some fields: editing a field clears its messages. */
 export function clearFieldErrors(errors: FieldErrors, changed: string[]): FieldErrors {
   if (changed.length === 0) return errors;
+  const cleared = new Set(changed.flatMap((field) => [field, ...(SETTLES[field] ?? [])]));
   const out: FieldErrors = {};
   for (const [field, message] of Object.entries(errors)) {
     const root = field.split(".")[0];
-    if (!changed.includes(root)) out[field] = message;
+    if (!cleared.has(root)) out[field] = message;
   }
   return out;
 }

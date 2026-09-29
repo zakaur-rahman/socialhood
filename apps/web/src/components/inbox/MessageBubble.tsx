@@ -103,6 +103,9 @@ export function MessageBubble({
 
   const statusInfo = outbound && status ? STATUS[status] : undefined;
   const reactions = message.reactions ?? [];
+  const quickReplies = outbound && !unsent ? (message.quick_replies ?? []) : [];
+  // White chips on the gradient, failed and sending fills; neutral ones on a native-app bubble.
+  const tinted = !nativeApp || failed || pending;
 
   return (
     <div
@@ -160,6 +163,22 @@ export function MessageBubble({
             <p>Shared a location</p>
           ) : message.text ? (
             <p>{message.text}</p>
+          ) : null}
+          {quickReplies.length > 0 ? (
+            // Tap first's button (FR-AUT-21): shown as it was offered; the customer taps it in Instagram.
+            <ul aria-label="Quick replies" className="mt-2 flex flex-wrap gap-1.5 whitespace-normal">
+              {quickReplies.map((reply, index) => (
+                <li
+                  key={`${reply.title}-${index}`}
+                  className={cn(
+                    "rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                    tinted ? "border-white/60 text-white" : "border-line-strong text-fg",
+                  )}
+                >
+                  {reply.title}
+                </li>
+              ))}
+            </ul>
           ) : null}
           <p className={cn("mt-1 flex items-center justify-end gap-1 text-xs tabular-nums", metaClass)}>
             {message.edited_at && !unsent ? <span>Edited ·</span> : null}

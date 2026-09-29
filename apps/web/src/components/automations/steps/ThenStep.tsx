@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, Loader2, Plus, Sparkles, X } from "lucide-react";
-import { useRef, useState, type ChangeEvent } from "react";
+import { useRef, useState, type ChangeEvent, type RefObject } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,22 +12,40 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useApi } from "@/lib/api/provider";
 import type { ActionName, AutomationDefinition, LinkButton, MediaAsset, Plan } from "@/lib/api/types";
-import { buttonProblems, errorsFor, isCommentTrigger, type FieldErrors } from "@/lib/automations/definition";
+import {
+  buttonProblems,
+  DEFAULT_FOLLOW_NUDGE,
+  DEFAULT_OPENING_BUTTON,
+  DEFAULT_OPENING_TEXT,
+  errorsFor,
+  followNudgeProblem,
+  isCommentTrigger,
+  openingProblems,
+  tapFirstOn,
+  usesTapFirst,
+  type FieldErrors,
+} from "@/lib/automations/definition";
 import { formatCount } from "@/lib/automations/format";
 import {
   AI_INSTRUCTIONS_MAX,
   BUTTON_TEXT_MAX_CHARS,
   BUTTON_TITLE_MAX,
+  charCount,
+  clampChars,
+  FOLLOW_NUDGE_MAX,
   insertAt,
   INSERTABLE_FIELDS,
   MAX_BUTTONS,
   MAX_PUBLIC_REPLIES,
   MESSAGE_LIMIT_BYTES,
   MESSAGE_MAX_CHARS,
+  OPENING_BUTTON_MAX,
+  OPENING_MAX_CHARS,
   PUBLIC_REPLY_MAX,
   worstCaseBytes,
   worstCaseChars,
@@ -45,9 +63,13 @@ export type Uploader = (
 
 type Change = (patch: Partial<AutomationDefinition>) => void;
 
+/** Element ids for aria-describedby, skipping the ones that don't apply. */
+const ids = (...values: (string | false | null | undefined)[]) => values.filter(Boolean).join(" ");
+
 /**
  * UX-SCR-03 Then: public reply variations for comment triggers (FR-AUT-14), then the DM
- * builder (FR-AUT-13) or Reply with AI.
+ * builder (FR-AUT-13) or Reply with AI. A message on a comment trigger can open with tap first
+ * (FR-AUT-21); a message on either trigger can end with the follow nudge (FR-AUT-22).
  */
 export function ThenStep({
   wid,
@@ -73,9 +95,19 @@ export function ThenStep({
   upload?: Uploader;
 }) {
   const comment = isCommentTrigger(draft.trigger);
-  const stepErrors = ["action", "message_text", "message_media_asset_id", "ai_instructions", "public_reply_texts"]
+  const stepErrors = [
+    "action",
+    "confirm_first",
+    "opening_text",
+    "opening_button",
+    "message_text",
+    "message_media_asset_id",
+    "ai_instructions",
+    "public_reply_texts",
+  ]
     .flatMap((field) => errorsFor(errors, field))
-    .concat(errorsFor(errors, "message_buttons"));
+    .concat(errorsFor(errors, "message_buttons"))
+    .concat(["follow_nudge", "follow_nudge_text"].flatMap((field) => errorsFor(errors, field)));
 
   return (
     <StepCard id="then" label="Then" state={state} errors={[...new Set(stepErrors)]}>
@@ -104,17 +136,21 @@ export function ThenStep({
         </div>
 
         {draft.action === "send_message" ? (
-          <DmBuilder
-            wid={wid}
-            comment={comment}
-            draft={draft}
-            change={change}
-            errors={errors}
-            disclosure={disclosure}
-            mediaUrl={mediaUrl}
-            onMediaChange={onMediaChange}
-            upload={upload}
-          />
+          <>
+            {comment ? <TapFirst draft={draft} change={change} errors={errors} disclosure={disclosure} /> : null}
+            <DmBuilder
+              wid={wid}
+              comment={comment}
+              draft={draft}
+              change={change}
+              errors={errors}
+              disclosure={disclosure}
+              mediaUrl={mediaUrl}
+              onMediaChange={onMediaChange}
+              upload={upload}
+            />
+            <FollowNudge draft={draft} change={change} errors={errors} />
+          </>
         ) : null}
         {draft.action === "ai_reply" ? <AiReplyFields draft={draft} change={change} plan={plan} errors={errors} /> : null}
       </div>
@@ -235,43 +271,30 @@ function DmBuilder({
   const buttons = draft.message_buttons ?? [];
   const overButtonText = buttons.length > 0 && worstCaseChars(text, disclosure) > BUTTON_TEXT_MAX_CHARS;
   const textError = errorsFor(errors, "message_text")[0];
-
-  const insert = (token: string) => {
-    const el = textarea.current;
-    const start = el?.selectionStart ?? text.length;
-    const end = el?.selectionEnd ?? start;
-    const result = insertAt(text, token, start, end);
-    change({ message_text: result.text });
-    requestAnimationFrame(() => {
-      el?.focus();
-      el?.setSelectionRange(result.caret, result.caret);
-    });
-  };
+  // Tap first's message is a normal DM, which can carry an image; a private reply can't (C-030).
+  const tapFirst = usesTapFirst(draft);
+  const imageAllowed = !comment || tapFirst;
 
   return (
-    <div className="space-y-5">
+    <div
+      role={tapFirst ? "group" : undefined}
+      aria-labelledby={tapFirst ? "automation-after-tap" : undefined}
+      className="space-y-5"
+    >
+      {tapFirst ? (
+        <div className="space-y-0.5">
+          <p id="automation-after-tap" className="text-sm font-medium">
+            Sent after they tap or reply
+          </p>
+          <p className="text-xs text-fg-secondary">
+            A normal DM: their real first name, an image and link buttons all work.
+          </p>
+        </div>
+      ) : null}
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
           <Label htmlFor="automation-message">Message</Label>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm">
-                Insert field <ChevronDown aria-hidden />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="end"
-              className="w-56 border-line bg-panel shadow-xl"
-              onCloseAutoFocus={(event) => event.preventDefault()}
-            >
-              {INSERTABLE_FIELDS.map((field) => (
-                <DropdownMenuItem key={field.token} onSelect={() => insert(field.token)}>
-                  <span>{field.label}</span>
-                  <code className="ml-auto text-xs text-fg-secondary">{field.token}</code>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <InsertFieldMenu target={textarea} text={text} onChange={(next) => change({ message_text: next })} />
         </div>
         <Textarea
           ref={textarea}
@@ -308,22 +331,30 @@ function DmBuilder({
         ) : null}
       </div>
 
-      {comment && !draft.message_media_asset_id ? (
+      {!imageAllowed && !draft.message_media_asset_id ? (
         // A comment's DM is a private reply, which Instagram sends as text and buttons only.
         <p className="text-xs text-fg-secondary">
-          Replies to comments are text and link buttons. To share an image, link to it with a button.
+          Replies to comments are text and link buttons. To share an image, link to it with a button, or turn on Tap
+          first.
         </p>
       ) : (
-        <ImageAttach
-          wid={wid}
-          assetId={draft.message_media_asset_id ?? null}
-          url={mediaUrl}
-          onChange={(asset) => {
-            change({ message_media_asset_id: asset?.id ?? null });
-            onMediaChange(asset?.secure_url ?? null);
-          }}
-          upload={upload}
-        />
+        <div className="space-y-2">
+          <ImageAttach
+            wid={wid}
+            assetId={draft.message_media_asset_id ?? null}
+            url={mediaUrl}
+            onChange={(asset) => {
+              change({ message_media_asset_id: asset?.id ?? null });
+              onMediaChange(asset?.secure_url ?? null);
+            }}
+            upload={upload}
+          />
+          {!imageAllowed ? (
+            <p className="text-xs text-danger-fg">
+              Replies to comments can&apos;t carry an image. Turn on Tap first, or remove the image.
+            </p>
+          ) : null}
+        </div>
       )}
 
       <LinkButtons
@@ -331,6 +362,249 @@ function DmBuilder({
         onChange={(buttons) => change({ message_buttons: buttons })}
         errors={errors}
       />
+    </div>
+  );
+}
+
+/** "Insert field" for a text area: puts {first_name|there} or {username} at the cursor. */
+function InsertFieldMenu({
+  target,
+  text,
+  onChange,
+  label,
+}: {
+  target: RefObject<HTMLTextAreaElement | null>;
+  text: string;
+  onChange: (text: string) => void;
+  /** An accessible name when two menus share a step; it starts with the visible "Insert field". */
+  label?: string;
+}) {
+  const insert = (token: string) => {
+    const el = target.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? start;
+    const result = insertAt(text, token, start, end);
+    onChange(result.text);
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(result.caret, result.caret);
+    });
+  };
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="sm" aria-label={label}>
+          Insert field <ChevronDown aria-hidden />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-56 border-line bg-panel shadow-xl"
+        onCloseAutoFocus={(event) => event.preventDefault()}
+      >
+        {INSERTABLE_FIELDS.map((field) => (
+          <DropdownMenuItem key={field.token} onSelect={() => insert(field.token)}>
+            <span>{field.label}</span>
+            <code className="ml-auto text-xs text-fg-secondary">{field.token}</code>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+// ---- tap first (FR-AUT-21)
+
+/**
+ * Comment triggers: open with a short text and one quick-reply button, and send the message once
+ * they tap it or reply. A private reply is one text-only message until they answer.
+ */
+function TapFirst({
+  draft,
+  change,
+  errors,
+  disclosure,
+}: {
+  draft: AutomationDefinition;
+  change: Change;
+  errors: FieldErrors;
+  disclosure: string | null;
+}) {
+  const textarea = useRef<HTMLTextAreaElement>(null);
+  const on = draft.confirm_first;
+  const text = draft.opening_text ?? "";
+  const button = draft.opening_button ?? "";
+  const bytes = worstCaseBytes(text, disclosure);
+  const problems = openingProblems(draft, disclosure);
+  const textProblem = errorsFor(errors, "opening_text")[0] ?? problems.text;
+  const buttonProblem = errorsFor(errors, "opening_button")[0] ?? problems.button;
+
+  return (
+    <div className="space-y-4 rounded-lg border border-line p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="automation-tap-first">
+            Tap first{" "}
+            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-fg">
+              Recommended
+            </span>
+          </Label>
+          <p id="automation-tap-first-hint" className="text-xs text-fg-secondary">
+            Instagram allows one text-only reply to a comment until the person answers. Once they tap the button or
+            reply, your message can use their real first name, an image and link buttons, and you can follow up.
+          </p>
+        </div>
+        <Switch
+          id="automation-tap-first"
+          checked={on}
+          onCheckedChange={(checked) => change(checked ? tapFirstOn(draft) : { confirm_first: false })}
+          aria-describedby="automation-tap-first-hint"
+          className="mt-0.5"
+        />
+      </div>
+
+      {on ? (
+        <>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="automation-opening">Opening message</Label>
+              <InsertFieldMenu
+                target={textarea}
+                text={text}
+                onChange={(next) => change({ opening_text: next })}
+                label="Insert field in the opening message"
+              />
+            </div>
+            <Textarea
+              ref={textarea}
+              id="automation-opening"
+              value={text}
+              maxLength={OPENING_MAX_CHARS}
+              rows={3}
+              onChange={(event) => change({ opening_text: event.target.value })}
+              placeholder={DEFAULT_OPENING_TEXT}
+              aria-invalid={textProblem ? true : undefined}
+              aria-describedby={ids(
+                "automation-opening-help",
+                "automation-opening-bytes",
+                textProblem && "automation-opening-error",
+              )}
+            />
+            <div className="flex items-start justify-between gap-3 text-xs">
+              <p id="automation-opening-help" className="text-fg-secondary">
+                The reply to their comment, sent as text with the button below.
+                {disclosure ? " The disclosure line is added at the end and counts toward the limit." : ""}
+              </p>
+              <p
+                id="automation-opening-bytes"
+                className={cn(
+                  "shrink-0 tabular-nums",
+                  bytes > MESSAGE_LIMIT_BYTES ? "text-danger-fg" : "text-fg-secondary",
+                )}
+              >
+                {formatCount(bytes)} / {formatCount(MESSAGE_LIMIT_BYTES)} bytes
+              </p>
+            </div>
+            {textProblem ? (
+              <p id="automation-opening-error" className="text-xs text-danger-fg">
+                {textProblem}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="automation-opening-button">Button title</Label>
+            <Input
+              id="automation-opening-button"
+              value={button}
+              onChange={(event) => change({ opening_button: clampChars(event.target.value, OPENING_BUTTON_MAX) })}
+              placeholder={DEFAULT_OPENING_BUTTON}
+              aria-invalid={buttonProblem ? true : undefined}
+              aria-describedby="automation-opening-button-count"
+              className="h-9 bg-field sm:max-w-xs"
+            />
+            <p
+              id="automation-opening-button-count"
+              className={cn("text-xs tabular-nums", buttonProblem ? "text-danger-fg" : "text-fg-secondary")}
+            >
+              {buttonProblem ?? `${charCount(button)} / ${OPENING_BUTTON_MAX}`}
+            </p>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// ---- follow nudge (FR-AUT-22)
+
+/**
+ * One more message after the automation's, only to people Instagram reports as not following the
+ * account. Never a gate: the message goes to everyone either way.
+ */
+function FollowNudge({ draft, change, errors }: { draft: AutomationDefinition; change: Change; errors: FieldErrors }) {
+  const on = draft.follow_nudge;
+  const text = draft.follow_nudge_text ?? "";
+  const problem = errorsFor(errors, "follow_nudge_text")[0] ?? (on ? followNudgeProblem(text) : null);
+
+  return (
+    <div className="space-y-4 rounded-lg border border-line p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor="automation-follow-nudge" className="leading-snug">
+            Suggest following to people who don&apos;t follow you yet
+          </Label>
+          <p id="automation-follow-nudge-note" className="text-xs text-fg-secondary">
+            Sent after your message, only to people who don&apos;t follow you. Your message is never held back:
+            Instagram&apos;s rules don&apos;t allow asking for a follow or a share in exchange for content.
+          </p>
+        </div>
+        <Switch
+          id="automation-follow-nudge"
+          checked={on}
+          onCheckedChange={(checked) =>
+            change(
+              checked
+                ? { follow_nudge: true, follow_nudge_text: text.trim() ? text : DEFAULT_FOLLOW_NUDGE }
+                : { follow_nudge: false },
+            )
+          }
+          aria-describedby="automation-follow-nudge-note"
+          className="mt-0.5"
+        />
+      </div>
+
+      {on ? (
+        <div className="space-y-2">
+          <Label htmlFor="automation-follow-nudge-text">Follow message</Label>
+          <Textarea
+            id="automation-follow-nudge-text"
+            value={text}
+            rows={2}
+            onChange={(event) => change({ follow_nudge_text: clampChars(event.target.value, FOLLOW_NUDGE_MAX) })}
+            placeholder={DEFAULT_FOLLOW_NUDGE}
+            aria-invalid={problem ? true : undefined}
+            aria-describedby={ids("automation-follow-nudge-count", problem && "automation-follow-nudge-error")}
+          />
+          <div className="flex items-start justify-between gap-3 text-xs">
+            <p id="automation-follow-nudge-error" className="text-danger-fg">
+              {problem ?? ""}
+            </p>
+            <p id="automation-follow-nudge-count" className="shrink-0 text-fg-secondary tabular-nums">
+              {charCount(text)} / {FOLLOW_NUDGE_MAX}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-fg-secondary">
+            <span>Sent with a button to your profile:</span>
+            <span
+              data-testid="nudge-button-preview"
+              className="inline-flex h-8 items-center rounded-lg border border-line bg-raised px-4 font-medium text-fg"
+            >
+              View profile
+            </span>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

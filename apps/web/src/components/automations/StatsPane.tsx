@@ -21,8 +21,23 @@ export function dayLabel(date: string): string {
   return `${weekday} ${d} ${MONTHS[m - 1]}`;
 }
 
-/** UX-SCR-12 stats: four figures for 7 or 30 days, daily runs with failures stacked, skipped by reason. */
-export function StatsPane({ wid, automationId }: { wid: string; automationId: string }) {
+type Features = {
+  /** Tap first is on (FR-AUT-21): taps and who is waiting to tap. */
+  tapFirst?: boolean;
+  /** The follow nudge is on (FR-AUT-22): nudges sent. */
+  followNudge?: boolean;
+};
+
+/**
+ * UX-SCR-12 stats: four figures for 7 or 30 days, plus taps and nudges when those are on, daily
+ * runs with failures stacked, skipped by reason.
+ */
+export function StatsPane({
+  wid,
+  automationId,
+  tapFirst = false,
+  followNudge = false,
+}: { wid: string; automationId: string } & Features) {
   const [days, setDays] = useState<7 | 30>(7);
   const stats = useAutomationStats(wid, automationId, days);
 
@@ -44,18 +59,29 @@ export function StatsPane({ wid, automationId }: { wid: string; automationId: st
       ) : stats.isError ? (
         <ErrorState error={stats.error} onRetry={() => void stats.refetch()} />
       ) : (
-        <StatsView stats={stats.data} />
+        <StatsView stats={stats.data} tapFirst={tapFirst} followNudge={followNudge} />
       )}
     </div>
   );
 }
 
-export function StatsView({ stats }: { stats: AutomationStats }) {
+export function StatsView({ stats, tapFirst = false, followNudge = false }: { stats: AutomationStats } & Features) {
+  // Shown while the feature is on, or while the period still has some (it was on before).
+  const tapped = stats.tapped ?? 0;
+  const awaiting = stats.awaiting_now ?? 0;
+  const nudged = stats.nudged ?? 0;
   const figures = [
     { label: "Runs", value: formatCount(stats.runs) },
     { label: "DMs sent", value: formatCount(stats.dms_sent) },
     { label: "Replied within 24 h", value: repliedShare(stats.replied_24h, stats.dms_sent) },
     { label: "Failures", value: formatCount(stats.failures) },
+    ...(tapFirst || tapped > 0 || awaiting > 0
+      ? [
+          { label: "Tapped", value: formatCount(tapped) },
+          { label: "Waiting now", value: formatCount(awaiting) },
+        ]
+      : []),
+    ...(followNudge || nudged > 0 ? [{ label: "Nudged", value: formatCount(nudged) }] : []),
   ];
   return (
     <div className="space-y-4">

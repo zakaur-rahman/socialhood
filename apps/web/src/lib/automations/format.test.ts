@@ -11,6 +11,7 @@ import {
   queueBadge,
   queueBanner,
   repliedShare,
+  runMarkers,
   settingsSummary,
   statusText,
   triggerSummary,
@@ -81,6 +82,24 @@ describe("editor copy (UX-SCR-03)", () => {
   it("shows replies as a share of DMs", () => {
     expect(repliedShare(38, 100)).toBe("38%");
     expect(repliedShare(0, 0)).toBe("—");
+  });
+});
+
+describe("run markers (UX-SCR-12, FR-AUT-21, FR-AUT-22)", () => {
+  const now = new Date("2026-09-28T12:00:00Z");
+
+  it("names the tap time, the follow status and the nudge", () => {
+    expect(
+      runMarkers({ confirmed_at: "2026-09-28T08:35:00Z", follows_business: false, nudge_message_id: "m9" }, TZ, now),
+    ).toEqual(["Tapped Today 14:05", "Not following", "Nudged"]);
+    expect(runMarkers({ confirmed_at: null, follows_business: true, nudge_message_id: null }, TZ, now)).toEqual([
+      "Follower",
+    ]);
+  });
+
+  it("says nothing while the follow status is unknown", () => {
+    expect(runMarkers({ confirmed_at: null, follows_business: null, nudge_message_id: null }, TZ, now)).toEqual([]);
+    expect(runMarkers({}, TZ, now)).toEqual([]);
   });
 });
 

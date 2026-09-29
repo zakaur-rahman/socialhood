@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useConversation } from "@/lib/api/queries";
 import { contactName, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
 import { formatDay } from "@/lib/tz";
+import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { ContactAvatar } from "./ContactAvatar";
@@ -50,6 +51,18 @@ export function DetailsPanel({ conversationId }: { conversationId: string }) {
               {c.contact.username ? `@${c.contact.username} · ` : ""}
               {platform}
             </p>
+            {typeof c.contact.follows_business === "boolean" ? (
+              // FR-AUT-22: as Instagram reported it at the last check; nothing while unknown.
+              <span
+                data-testid="follow-status"
+                className={cn(
+                  "mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium",
+                  c.contact.follows_business ? "bg-brand-soft text-brand-fg" : "bg-raised text-fg-secondary",
+                )}
+              >
+                {c.contact.follows_business ? "Follows you" : "Doesn't follow you"}
+              </span>
+            ) : null}
           </div>
         </div>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
