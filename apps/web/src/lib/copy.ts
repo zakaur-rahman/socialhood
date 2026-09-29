@@ -56,6 +56,10 @@ export const emptyStates = {
     title: "No unanswered questions",
     body: "When customers ask something your knowledge doesn't cover, it shows up here.",
   },
+  comments: {
+    title: "No posts yet",
+    body: "Your Instagram posts and their comments appear here after you connect.",
+  },
 } as const;
 
 /** "All caught up" when a view or search has no results (§4.7). */

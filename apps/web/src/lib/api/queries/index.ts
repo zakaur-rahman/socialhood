@@ -10,3 +10,5 @@ export * from "./automations";
 export * from "./ai";
 export * from "./knowledge";
 export * from "./billing";
+export * from "./posts";
+export * from "./analytics";

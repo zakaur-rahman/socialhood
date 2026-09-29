@@ -117,6 +117,29 @@ export type KnowledgeTestResult = Schemas["KnowledgeTestResult"];
 export type KnowledgeGap = Schemas["KnowledgeGap"];
 export type KnowledgeGapList = Schemas["KnowledgeGapList"];
 
+// ---- comments and post analytics (P6: FR-CMT-02…04, FR-ANL-02, UX-SCR-05)
+
+export type PostDetail = Schemas["PostDetail"];
+export type PostTopic = Schemas["PostTopic"];
+export type CommentStats = Schemas["CommentStats"];
+/** A comment on a post ("Comment" alone would shadow the DOM's Comment node type). */
+export type PostComment = Schemas["Comment"];
+export type CommentList = Schemas["CommentList"];
+export type CommentAnalysis = Schemas["CommentAnalysis"];
+export type CommentAnalysisStatus = PostComment["analysis_status"];
+/** The post detail's filter chips (UX-SCR-05). */
+export type CommentFilter = NonNullable<
+  NonNullable<operations["list_post_comments"]["parameters"]["query"]>["filter"]
+>;
+export type PostPerformance = Schemas["PostPerformance"];
+export type PostComparison = Schemas["PostComparison"];
+export type PostMetrics = Schemas["PostMetrics"];
+export type MetricComparison = Schemas["MetricComparison"];
+export type Baseline = Schemas["Baseline"];
+/** A post's age after publishing: a snapshot window, or its latest known values. */
+export type AgeName = PostPerformance["age"];
+export type MetricName = MetricComparison["metric"];
+
 // ---- billing state (TR-BIL-04; P5 reads usage for the AI credit banner)
 
 export type BillingState = Schemas["BillingState"];
