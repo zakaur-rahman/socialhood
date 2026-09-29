@@ -5,6 +5,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 
 import { keys } from "@/lib/api/queries/keys";
+import { applyComposerPost } from "@/lib/api/queries/scheduledPosts";
 import type {
   ConversationListItem,
   Message,
@@ -125,7 +126,8 @@ export function applyRealtimeEvent(
     case "scheduled_post.updated": {
       const payload = parse<EventPayloads["scheduled_post.updated"]>(event.data);
       if (!payload?.scheduled_post) return;
-      applyScheduledPost(queryClient, wid, payload.scheduled_post);
+      applyScheduledPost(queryClient, wid, payload.scheduled_post); // calendar and lists
+      applyComposerPost(queryClient, wid, payload.scheduled_post); // an open composer
       return;
     }
     case "social_account.updated": {
@@ -172,7 +174,6 @@ export function applyRealtimeEvent(
       void invalidateWorkspace(queryClient, wid);
       return;
     default:
-      // Events for pages built in later phases have no cache yet.
       return;
   }
 }
