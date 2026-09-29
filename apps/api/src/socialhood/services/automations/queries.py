@@ -308,7 +308,7 @@ async def list_runs(
             _after_cursor(AutomationRun.created_at, AutomationRun.id, cursor)
         )
     statement = statement.order_by(AutomationRun.created_at.desc(), AutomationRun.id.desc())
-    rows = (await session.execute(statement.limit(limit + 1))).tuples().all()
+    rows = (await session.execute(statement.limit(limit + 1))).all()
     page = rows[:limit]
     items = [
         AutomationRunOut(

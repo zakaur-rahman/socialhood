@@ -144,8 +144,11 @@ async def count_active(session: AsyncSession, *, excluding: uuid.UUID | None = N
 
 
 async def any_activated(session: AsyncSession) -> bool:
-    """Whether an automation of the workspace has ever been activated (FR-ACC-04)."""
-    statement = select(exists().where(Automation.activated_at.is_not(None)))
+    """Whether an automation of the workspace has ever been activated (FR-ACC-04). A count
+    over the entity (not EXISTS), so the tenant filter applies as it does to any_live."""
+    statement = (
+        select(func.count()).select_from(Automation).where(Automation.activated_at.is_not(None))
+    )
     return bool(await session.scalar(statement))
 
 
@@ -215,7 +218,7 @@ async def posts_for(
             AutomationPost.id,
         )
     )
-    for link, item in rows.tuples().all():
+    for link, item in rows.all():
         found[link.automation_id].append(PostRow(link, item))
     return found
 
@@ -254,7 +257,7 @@ async def asset_urls(session: AsyncSession, ids: Sequence[uuid.UUID]) -> dict[uu
     rows = await session.execute(
         select(MediaAsset.id, MediaAsset.secure_url).where(MediaAsset.id.in_(ids))
     )
-    return {asset_id: url for asset_id, url in rows.tuples().all() if url}
+    return {asset_id: url for asset_id, url in rows.all() if url}
 
 
 # ---------------------------------------------------------------- upcoming posts (FR-AUT-18)

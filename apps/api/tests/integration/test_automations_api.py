@@ -656,6 +656,9 @@ async def test_stats_agree_with_the_run_log(ws: Ws, engine: AsyncEngine) -> None
     assert week["daily"][-1] == {"date": noon.date().isoformat(), "runs": 4, "failures": 2}
     assert month["runs"] == len(log["items"]) == 8
     assert len(month["daily"]) == 30
+    for days in ("5", "seven"):
+        other = await ws.call("GET", f"/automations/{automation}/stats", params={"days": days})
+        assert other.status_code == 422
 
     failed = next(r for r in log["items"] if r["result"] == "failed")
     assert failed["error"] == {

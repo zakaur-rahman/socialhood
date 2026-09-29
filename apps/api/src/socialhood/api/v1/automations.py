@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Response
+from pydantic import BeforeValidator
 
 from socialhood.auth.deps import Admin, Session, WorkspaceContext
 from socialhood.billing.plans import current_plan
@@ -38,6 +39,15 @@ from socialhood.services.automations import definitions, dry_run, queries, stats
 router = APIRouter(prefix="/v1/w/{wid}", tags=["automations"])
 
 SortName = Literal["recent_runs", "name", "created"]
+
+
+def _whole_number(value: object) -> object:
+    """Query strings arrive as text, and a Literal of ints does not coerce "7"; the schema
+    stays the enum [7, 30]."""
+    return int(value) if isinstance(value, str) and value.isdigit() else value
+
+
+StatsDays = Annotated[Literal[7, 30], BeforeValidator(_whole_number)]
 
 
 def _view(ctx: WorkspaceContext, now: datetime) -> queries.View:
@@ -195,7 +205,7 @@ async def get_automation_stats(
     automation_id: uuid.UUID,
     ctx: Admin,
     session: Session,
-    days: Annotated[Literal[7, 30], Query()] = 7,
+    days: Annotated[StatsDays, Query()] = 7,
 ) -> AutomationStats:
     """Figures and the daily series for the last 7 or 30 days (FR-AUT-16)."""
     automation = await definitions.get_or_404(session, automation_id)

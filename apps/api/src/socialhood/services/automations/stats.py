@@ -125,7 +125,7 @@ async def queued_counts(session: AsyncSession) -> QueueCounts:
         .group_by(AutomationRun.automation_id, Automation.social_account_id)
     )
     counts = QueueCounts()
-    for automation_id, account_id, count in rows.tuples().all():
+    for automation_id, account_id, count in rows.all():
         counts.by_automation[automation_id] = int(count)
         if account_id is not None:
             counts.by_account[account_id] = counts.by_account.get(account_id, 0) + int(count)
@@ -150,14 +150,14 @@ async def list_stats(
             .where(AutomationRun.automation_id.in_(ids), AutomationRun.created_at >= p.since)
             .group_by(AutomationRun.automation_id, day)
         )
-        for automation_id, on, count in rows.tuples().all():
+        for automation_id, on, count in rows.all():
             daily[automation_id][on] = int(count)
         latest = await session.execute(
             select(AutomationRun.automation_id, func.max(AutomationRun.created_at))
             .where(AutomationRun.automation_id.in_(ids))
             .group_by(AutomationRun.automation_id)
         )
-        last = {automation_id: at for automation_id, at in latest.tuples().all() if at}
+        last = {automation_id: at for automation_id, at in latest.all() if at}
     out: dict[uuid.UUID, AutomationListStats] = {}
     for a in automations:
         series = [daily[a.id].get(d, 0) for d in p.days]
@@ -205,7 +205,7 @@ async def automation_stats(
         .where(*in_period)
         .group_by(day)
     )
-    by_day = {on: (int(n), int(f)) for on, n, f in per_day.tuples().all()}
+    by_day = {on: (int(n), int(f)) for on, n, f in per_day.all()}
     queued = await session.scalar(
         select(func.count())
         .select_from(run)
