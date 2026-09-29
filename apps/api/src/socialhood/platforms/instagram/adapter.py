@@ -104,14 +104,12 @@ class InstagramAdapter:
     async def send_message(
         self, acct: SocialAccount, recipient_ref: str, message: OutboundMessage
     ) -> SendResult:
-        """One Send API call: text, one attachment by URL (image, video, audio or PDF file),
-        or the heart sticker (Instagram has no templates).
+        """One Send API call: text, text with link buttons (the button template), one
+        attachment by URL (image, video, audio or PDF file), or the heart sticker.
 
         Human Agent replies carry ``messaging_type: MESSAGE_TAG`` and ``tag: HUMAN_AGENT``
         (TR-PL-04). A failure after the request went out is ``delivery_unknown`` (TR-JOB-05).
         """
-        from socialhood.platforms.outcome import for_write
-
         content: dict[str, object]
         if message.sticker == "like_heart":
             content = {"attachment": {"type": "like_heart"}}
@@ -126,21 +124,24 @@ class InstagramAdapter:
                     "payload": {"url": message.attachment.url},
                 }
             }
-        elif message.text:
-            content = {"text": message.text}
         else:
-            raise PlatformError(
-                "platform_rejected", message="Instagram messages need text or one attachment"
-            )
+            content = _text_content(message)
         payload: dict[str, object] = {"recipient": {"id": recipient_ref}, "message": content}
         if message.human_agent:
             payload["messaging_type"] = "MESSAGE_TAG"
             payload["tag"] = "HUMAN_AGENT"
+        return await self._send(acct, payload, endpoint="me.messages")
+
+    async def _send(
+        self, acct: SocialAccount, payload: dict[str, object], *, endpoint: str
+    ) -> SendResult:
+        from socialhood.platforms.outcome import for_write
+
         try:
             body = await self.http.request(
                 "POST",
                 self._graph("me/messages"),
-                endpoint="me.messages",
+                endpoint=endpoint,
                 token=self._token(acct),
                 json=payload,
             )
@@ -171,6 +172,11 @@ class InstagramAdapter:
 
         return await reads.list_media(self.http, self._graph, self._token(acct), limit=limit)
 
+    async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
+        from socialhood.platforms.instagram import reads
+
+        return await reads.get_media(self.http, self._graph, self._token(acct), media_ref)
+
     async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
         from socialhood.platforms.instagram import reads
 
@@ -178,14 +184,86 @@ class InstagramAdapter:
             self.http, self._graph, self._token(acct), acct, limit=limit
         )
 
-    # ---- P4 (filled by T4.4)
+    # ---- P4 (T4.4): private replies and public comment replies
 
     async def private_reply(
         self, acct: SocialAccount, comment_ref: str, message: OutboundMessage
     ) -> SendResult:
-        raise NotImplementedError("T4.4")
+        """Meta's private reply: the Send API addressed by ``recipient.comment_id`` (one per
+        comment, within 7 days). Text, or text with link buttons; nothing else."""
+        if message.attachment is not None or message.sticker or message.template:
+            raise PlatformError(
+                "platform_rejected", message="A private reply can only carry text and link buttons"
+            )
+        payload: dict[str, object] = {
+            "recipient": {"comment_id": _graph_id(comment_ref)},
+            "message": _text_content(message),
+        }
+        return await self._send(acct, payload, endpoint="me.messages.private_reply")
 
     async def reply_to_comment(
         self, acct: SocialAccount, comment_ref: str, text: str
     ) -> str | None:
-        raise NotImplementedError("T4.4")
+        """A public reply: ``POST /{comment_id}/replies?message=…`` (a reply to a reply lands
+        under the top-level comment). Returns the new comment's id."""
+        from socialhood.platforms.outcome import for_write
+
+        if not text.strip():
+            raise PlatformError("platform_rejected", message="A comment reply needs text")
+        try:
+            body = await self.http.request(
+                "POST",
+                self._graph(f"{_graph_id(comment_ref)}/replies"),
+                endpoint="comment.replies",
+                token=self._token(acct),
+                params={"message": text},
+            )
+        except PlatformError as error:
+            raise for_write(error) from error.__cause__
+        reply_id = body.get("id") if isinstance(body, dict) else None
+        return str(reply_id) if reply_id else None
+
+
+# The button template's limits (Meta's Instagram Messaging docs, checked 2026-09-29; T0.9 item 10
+# confirms them on a real account).
+BUTTON_TEXT_MAX_CHARS = 640
+MAX_BUTTONS = 3
+
+
+def _text_content(message: OutboundMessage) -> dict[str, object]:
+    """Text, or text with link buttons as Instagram's button template."""
+    if not message.text:
+        raise PlatformError(
+            "platform_rejected", message="Instagram messages need text or one attachment"
+        )
+    if not message.buttons:
+        return {"text": message.text}
+    if len(message.buttons) > MAX_BUTTONS:
+        raise PlatformError("platform_rejected", message="Instagram allows up to 3 buttons")
+    if len(message.text) > BUTTON_TEXT_MAX_CHARS:
+        raise PlatformError(
+            "platform_rejected",
+            message=f"Messages with buttons can be up to {BUTTON_TEXT_MAX_CHARS} characters",
+        )
+    return {
+        "attachment": {
+            "type": "template",
+            "payload": {
+                "template_type": "button",
+                "text": message.text,
+                "buttons": [
+                    {"type": "web_url", "url": button.url, "title": button.title}
+                    for button in message.buttons
+                ],
+            },
+        }
+    }
+
+
+def _graph_id(ref: str) -> str:
+    """A platform id placed in a Graph path; anything else could change the path."""
+    from socialhood.platforms.instagram.reads import GRAPH_ID
+
+    if not GRAPH_ID.match(ref):
+        raise PlatformError("platform_rejected", message="Not an Instagram id")
+    return ref

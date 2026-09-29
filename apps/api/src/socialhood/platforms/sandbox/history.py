@@ -58,6 +58,29 @@ def posts(acct: SocialAccount, *, limit: int, now: datetime | None = None) -> li
     return items
 
 
+def post(acct: SocialAccount, media_ref: str, *, now: datetime | None = None) -> PlatformMedia:
+    """One post by id: a known sandbox post, or (for an injected comment on any other id) a post
+    that has just been published."""
+    now = now or datetime.now(UTC)
+    known = next(
+        (p for p in posts(acct, limit=len(POSTS), now=now) if p.platform_media_id == media_ref),
+        None,
+    )
+    if known is not None:
+        return known
+    return PlatformMedia(
+        platform_media_id=media_ref,
+        media_type="image",
+        caption="A new post",
+        media_url=f"https://picsum.photos/seed/{media_ref}/1080/1080",
+        thumbnail_url=None,
+        permalink=f"https://www.instagram.com/p/{media_ref}/",
+        posted_at=now,
+        like_count=0,
+        comments_count=1,
+    )
+
+
 def threads(
     acct: SocialAccount, *, limit: int, now: datetime | None = None
 ) -> list[PlatformThread]:

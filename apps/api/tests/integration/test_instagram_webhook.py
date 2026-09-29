@@ -16,11 +16,20 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.tasks.maintenance import sweep_webhook_events
 from socialhood.models.platform import WebhookStatus
+from socialhood.platforms.deps import deps_from
 from socialhood.repositories.webhook_events import MAX_ATTEMPTS
 from socialhood.services import webhook_processing
+from socialhood.services.webhook_handlers import instagram as instagram_handler
 from socialhood.services.webhook_processing import process_event
 from tests.support.api import IG_VERIFY_TOKEN, Clerk, sign_in
-from tests.support.instagram import FakeInstagram, connect, fixture, hub_signature, signed_delivery
+from tests.support.instagram import (
+    GRAPH,
+    FakeInstagram,
+    connect,
+    fixture,
+    hub_signature,
+    signed_delivery,
+)
 
 URL = "/webhooks/instagram"
 
@@ -123,19 +132,27 @@ async def test_events_route_to_the_connected_workspace(
     instagram: FakeInstagram,
     engine: AsyncEngine,
     queue: None,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     clerk_id, me = await sign_in(client, clerk)
     wid = me["workspaces"][0]["id"]
     await connect(client, clerk, clerk_id, wid)
+    # A comment on a post not synced yet: comment intake fetches the post (F-12).
+    post = fixture("media_list.json")["data"][0] | {"id": "18100000000000001"}
+    clerk.router.get(url__regex=rf"{GRAPH}/v[\d.]+/18100000000000001(\?.*)?$").respond(
+        200, json=post
+    )
+    deps = deps_from(app.state.http, app.state.settings)
+    monkeypatch.setattr(instagram_handler, "platform_deps", lambda: deps)
 
     raw, headers = signed_delivery(fixture("webhook_comment_changes.json"))
     await client.post(URL, content=raw, headers=headers)
     [event] = await events(engine)
-    assert await process_event(app.state.sessionmaker, event["id"]) is WebhookStatus.IGNORED
+    assert await process_event(app.state.sessionmaker, event["id"]) is WebhookStatus.PROCESSED
 
     [event] = await events(engine)
     assert str(event["workspace_id"]) == wid
-    assert event["last_error"] == "comments arrive in P6"
+    assert event["last_error"] is None
     assert event["attempts"] == 1
 
 

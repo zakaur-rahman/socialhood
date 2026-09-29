@@ -170,6 +170,10 @@ def _message(
     kinds, refs = _attachments(message.get("attachments"))
     if not text and _has_heart(message.get("attachments")):
         text = HEART  # the heart sticker has no image to show
+    if not text:
+        # The echo of a button template (an automation DM with link buttons) carries its text in
+        # the template payload; with it, the echo matches our send (T4.4, C-011).
+        text = _template_text(message.get("attachments"))
     reply_to = _dict(message.get("reply_to"))
     story = reply_to.get("story")
     if message.get("is_unsupported"):
@@ -201,6 +205,15 @@ HEART = "\u2764\ufe0f"
 
 def _has_heart(raw: object) -> bool:
     return any(_dict(a).get("type") == "like_heart" for a in (raw if isinstance(raw, list) else []))
+
+
+def _template_text(raw: object) -> str | None:
+    for attachment in raw if isinstance(raw, list) else []:
+        if _dict(attachment).get("type") == "template":
+            text = _str(_dict(attachment.get("payload")).get("text"))
+            if text:
+                return text
+    return None
 
 
 def _attachments(raw: object) -> tuple[list[str], list[InboundMediaRef]]:
@@ -268,6 +281,11 @@ def _change(entry_id: str, at: datetime, field: str, value: dict[str, Any]) -> I
         return Unsupported(
             account_ref=entry_id, occurred_at=at, reason=f"{field or 'unknown'} changes"
         )
+    verb = _str(value.get("verb"))
+    if verb is not None and verb != "add":
+        # Instagram documents only new comments; should an edit or removal ever arrive, it must
+        # not be taken for a new comment (and fire automations).
+        return Unsupported(account_ref=entry_id, occurred_at=at, reason=f"comment {verb} events")
     comment_id = _str(value.get("id"))
     author = _dict(value.get("from"))
     media_id = _id(value.get("media"))

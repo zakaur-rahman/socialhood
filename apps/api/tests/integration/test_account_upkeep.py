@@ -172,13 +172,22 @@ async def test_buckets_never_grant_more_than_the_rate(redis: Redis) -> None:
     assert await buckets.take(Bucket.IG_SEND, "acct-2", now=now) == 0
 
 
-async def test_private_replies_refill_slowly(redis: Redis) -> None:
+async def test_private_replies_never_exceed_750_in_an_hour(redis: Redis) -> None:
+    """FR-AUT-10: a small burst, then 730 an hour, so no hour can hold more than 750."""
     buckets = TokenBuckets(redis)
-    now = 2_000_000.0
-    for _ in range(750):
-        assert await buckets.take(Bucket.IG_PRIVATE_REPLY, "a", now=now) == 0
-    wait = await buckets.take(Bucket.IG_PRIVATE_REPLY, "a", now=now)
-    assert 4.7 < wait < 4.9  # one token per 3600 / 750 = 4.8 seconds
+    start = 2_000_000.0
+    for _ in range(20):
+        assert await buckets.take(Bucket.IG_PRIVATE_REPLY, "a", now=start) == 0
+    wait = await buckets.take(Bucket.IG_PRIVATE_REPLY, "a", now=start)
+    assert 4.9 < wait < 5.0  # one token per 3600 / 730 seconds
+
+    granted, now = 20, start
+    while now < start + 3600:
+        wait = await buckets.take(Bucket.IG_PRIVATE_REPLY, "a", now=now)
+        if wait == 0:
+            granted += 1
+        now += max(wait, 0.5)
+    assert 745 <= granted <= 750
 
 
 async def test_key_rotation_re_encrypts_every_token(

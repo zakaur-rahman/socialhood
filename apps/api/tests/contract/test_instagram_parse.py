@@ -127,13 +127,46 @@ def test_an_unsend_has_its_own_dedupe_key() -> None:
     assert unsend.event_type == "unsend"
 
 
-def test_comments_parse_for_p6() -> None:
+def test_comments_parse() -> None:
     for name in ("webhook_comment_changes.json", "webhook_comment_field_value.json"):
         event = parsed(name)
         assert isinstance(event, InboundComment)
         assert event.media_id == "18100000000000001"
         # Changes carry entry.time in seconds (T0.9 item 2).
         assert event.occurred_at.year == 2026
+
+
+@pytest.mark.parametrize("verb", ["remove", "edited", "hide"])
+def test_a_comment_edit_or_removal_is_not_a_new_comment(verb: str) -> None:
+    body = fixture("webhook_comment_changes.json")
+    body["entry"][0]["changes"][0]["value"]["verb"] = verb
+    [raw] = split_payload(body)
+    event = parse(raw.payload)
+    assert isinstance(event, Unsupported)
+    assert event.reason == f"comment {verb} events"
+
+
+def test_the_echo_of_a_button_template_carries_its_text() -> None:
+    """So it matches the automation DM being sent (C-011); the payload shape is T0.9 item 10."""
+    event = _messaging(
+        {
+            "sender": {"id": ACCOUNT},
+            "recipient": {"id": CUSTOMER},
+            "timestamp": 1790000000000,
+            "message": {
+                "mid": "mid.template",
+                "is_echo": True,
+                "attachments": [
+                    {
+                        "type": "template",
+                        "payload": {"template_type": "button", "text": "Here's the link"},
+                    }
+                ],
+            },
+        }
+    )
+    assert isinstance(event, InboundMessage)
+    assert (event.is_echo, event.kind, event.text) == (True, "text", "Here's the link")
 
 
 def _messaging(item: dict[str, Any]) -> InboundEvent:
