@@ -1,6 +1,6 @@
-"""Helpers for the automation runtime and private-reply queue tests (T4.4, T4.6): a workspace
-with a sandbox account, comments taken in through the real intake, and the jobs' bodies run
-in-process at a chosen time."""
+"""Helpers for the automation runtime and private-reply queue tests (T4.4, T4.6, T4.8): a
+workspace with a sandbox account, comments and customer DMs (taps too) taken in through the real
+intake and ingest, and the jobs' bodies run in-process at a chosen time."""
 
 from __future__ import annotations
 
@@ -20,10 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.platforms.deps import PlatformDeps, deps_from
-from socialhood.platforms.events import InboundComment
+from socialhood.platforms.events import InboundComment, InboundMessage
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services import sending
 from socialhood.services.automations import comments, queue, runtime
+from socialhood.services.ingest import ingest
 from socialhood.services.webhook_handlers import instagram as instagram_handler
 from socialhood.settings import Settings
 from tests.support.inbox import make_account, make_workspace
@@ -122,6 +123,35 @@ class World:
                 taken = await comments.intake(session, acct, event, deps=lambda: self.deps)
                 await session.commit()
         return taken.comment.id if taken.comment else None
+
+    async def dm(
+        self,
+        contact_ref: str,
+        text_: str,
+        *,
+        payload: str | None = None,
+        mid: str | None = None,
+        at: datetime | None = None,
+    ) -> uuid.UUID | None:
+        """A customer DM (a tapped quick reply with ``payload``) through the real ingest; its
+        id, or None when nothing new was stored (a redelivery)."""
+        event = InboundMessage(
+            account_ref="sandbox",
+            occurred_at=at or datetime.now(UTC),
+            contact_ref=contact_ref,
+            contact_name=None,
+            platform_message_id=mid or f"mid_{uuid.uuid4().hex}",
+            kind="text",
+            text=text_,
+            quick_reply_payload=payload,
+        )
+        with workspace_scope(self.wid):
+            async with self.maker() as session:
+                acct = await accounts.get(session, self.account_id)
+                assert acct is not None
+                result = await ingest(session, acct, [event])
+                await session.commit()
+        return result.created_message_ids[0] if result.created_message_ids else None
 
     async def rows(self, sql: str, **params: Any) -> list[dict[str, Any]]:
         async with self.engine.connect() as conn:

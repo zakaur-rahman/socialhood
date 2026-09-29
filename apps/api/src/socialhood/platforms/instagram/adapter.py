@@ -25,6 +25,9 @@ INSTAGRAM_SENDABLE = frozenset({"image", "video", "audio", "file"})
 # Fields every connected account is subscribed to (@mentions arrive inside comments).
 SUBSCRIBED_FIELDS = "messages,messaging_seen,message_reactions,message_edit,comments"
 
+# The User Profile API fields we read (TR-PL-06; FR-AUT-22 for the follow status).
+PROFILE_FIELDS = "name,username,profile_pic,is_user_follow_business"
+
 CAPABILITIES = frozenset(
     {
         Capability.DM_SEND,
@@ -84,19 +87,23 @@ class InstagramAdapter:
     async def fetch_contact_profile(
         self, acct: SocialAccount, platform_user_id: str
     ) -> ContactProfile | None:
+        """Instagram's User Profile API, which needs the person's consent (they messaged the
+        account first). ``is_user_follow_business`` feeds the follow nudge (FR-AUT-22)."""
         body = await self.http.request(
             "GET",
             self._graph(platform_user_id),
             endpoint="user_profile",
             token=self._token(acct),
-            params={"fields": "name,username,profile_pic"},
+            params={"fields": PROFILE_FIELDS},
         )
         if not isinstance(body, dict):
             return None
+        follows = body.get("is_user_follow_business")
         return ContactProfile(
             name=body.get("name"),
             username=body.get("username"),
             profile_picture_url=body.get("profile_pic"),
+            follows_business=follows if isinstance(follows, bool) else None,
         )
 
     # ---- P3 (filled by T3.6/T3.7 for sending, T3.3/T3.14 for media, sync and backfill)
@@ -104,8 +111,8 @@ class InstagramAdapter:
     async def send_message(
         self, acct: SocialAccount, recipient_ref: str, message: OutboundMessage
     ) -> SendResult:
-        """One Send API call: text, text with link buttons (the button template), one
-        attachment by URL (image, video, audio or PDF file), or the heart sticker.
+        """One Send API call: text, text with quick replies, text with link buttons (the button
+        template), one attachment by URL (image, video, audio or PDF file), or the heart sticker.
 
         Human Agent replies carry ``messaging_type: MESSAGE_TAG`` and ``tag: HUMAN_AGENT``
         (TR-PL-04). A failure after the request went out is ``delivery_unknown`` (TR-JOB-05).
@@ -190,7 +197,9 @@ class InstagramAdapter:
         self, acct: SocialAccount, comment_ref: str, message: OutboundMessage
     ) -> SendResult:
         """Meta's private reply: the Send API addressed by ``recipient.comment_id`` (one per
-        comment, within 7 days). Text, or text with link buttons; nothing else."""
+        comment, within 7 days). Text, with link buttons or quick replies (a tap-first opening,
+        FR-AUT-21); nothing else. Meta's docs show only ``message.text`` for private replies, so
+        the runtime retries a rejected opening as text only (unverified, T0.9)."""
         if message.attachment is not None or message.sticker or message.template:
             raise PlatformError(
                 "platform_rejected", message="A private reply can only carry text and link buttons"
@@ -228,14 +237,34 @@ class InstagramAdapter:
 # confirms them on a real account).
 BUTTON_TEXT_MAX_CHARS = 640
 MAX_BUTTONS = 3
+# Quick replies (Meta's docs, checked 2026-09-29): at most 13, content_type "text"; titles past 20
+# characters are cut by Instagram. Not shown on desktop.
+MAX_QUICK_REPLIES = 13
 
 
 def _text_content(message: OutboundMessage) -> dict[str, object]:
-    """Text, or text with link buttons as Instagram's button template."""
+    """Text, text with quick replies (tap first, FR-AUT-21), or text with link buttons as
+    Instagram's button template."""
     if not message.text:
         raise PlatformError(
             "platform_rejected", message="Instagram messages need text or one attachment"
         )
+    if message.quick_replies:
+        if message.buttons:
+            raise PlatformError(
+                "platform_rejected", message="Quick replies can't go with link buttons"
+            )
+        if len(message.quick_replies) > MAX_QUICK_REPLIES:
+            raise PlatformError(
+                "platform_rejected", message="Instagram allows up to 13 quick replies"
+            )
+        return {
+            "text": message.text,
+            "quick_replies": [
+                {"content_type": "text", "title": reply.title, "payload": reply.payload}
+                for reply in message.quick_replies
+            ],
+        }
     if not message.buttons:
         return {"text": message.text}
     if len(message.buttons) > MAX_BUTTONS:

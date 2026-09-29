@@ -4,13 +4,18 @@ copy of each inbound attachment in our storage.
 Both read what they need, call out without holding a database connection, then write in a short
 transaction and publish after commit. Retryable platform errors propagate so the job retries
 (TR-JOB-04); anything else is logged and dropped, since the message itself is already stored.
+
+The profile also says whether the person follows the account (``is_user_follow_business``,
+FR-AUT-22): it is cached with the rest (24 h) and kept on the contact with the time it was read
+(``follows_business``, ``follows_checked_at``). ``follow_status`` reads it fresh, bypassing the
+cache, for the automation runtime (tap first and the follow nudge, FR-AUT-21, FR-AUT-22).
 """
 
 from __future__ import annotations
 
 import json
 import uuid
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -61,7 +66,8 @@ async def refresh_contact_profile(
     contact_id: uuid.UUID,
     now: datetime | None = None,
 ) -> bool:
-    """Fill the contact's name, username and picture; True when the contact was updated."""
+    """Fill the contact's name, username, picture and follow status (from the 24 h cache when
+    there); True when the contact was updated."""
     now = now or datetime.now(UTC)
     with workspace_scope(workspace_id):
         async with sessionmaker() as session:
@@ -71,41 +77,105 @@ async def refresh_contact_profile(
             )
         if contact is None or acct is None:
             return False
-        profile = await _profile(redis, deps, acct, contact.platform_user_id)
-        async with sessionmaker() as session:
-            contact = await inbox.get_contact(session, contact_id)
-            if contact is None:
-                return False
-            if profile is not None:
-                contact.display_name = profile.name or contact.display_name
-                contact.username = profile.username or contact.username
-                contact.profile_picture_url = (
-                    profile.profile_picture_url or contact.profile_picture_url
-                )
-            # Also after a refusal, so the next message does not ask again for a week.
-            contact.profile_fetched_at = now
-            await session.flush()
-            for conv in await rows.conversations_for_contact(session, contact.id):
-                await queue_conversation(session, conv, now=now, contact=contact)
-            await commit_and_publish(session, redis)
+        read = await _cached(redis, acct, contact.platform_user_id)
+        if read is None:
+            read = await _fetch(redis, deps, acct, contact.platform_user_id, now=now)
+        await _store(sessionmaker, redis, contact_id, read, now=now)
     return True
 
 
-async def _profile(
-    redis: Redis, deps: PlatformDeps, acct: SocialAccount, platform_user_id: str
-) -> ContactProfile | None:
-    key = profile_cache_key(acct.id, platform_user_id)
+async def follow_status(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    deps: PlatformDeps,
+    *,
+    contact_id: uuid.UUID,
+    now: datetime | None = None,
+) -> bool | None:
+    """Whether the contact follows the account now (FR-AUT-22), read fresh from the platform:
+    the cache is bypassed, then refreshed, and the contact's name, picture and follow status are
+    updated. None when the profile is refused, unavailable or silent on it. Never raises for a
+    platform error: nothing an automation sends waits on this. Runs in the workspace's scope."""
+    now = now or datetime.now(UTC)
+    async with sessionmaker() as session:
+        contact = await inbox.get_contact(session, contact_id)
+        acct = _live(await accounts.get(session, contact.social_account_id)) if contact else None
+    if contact is None or acct is None:
+        return None
     try:
-        cached = await redis.get(key)
+        read = await _fetch(redis, deps, acct, contact.platform_user_id, now=now)
+    except PlatformError as error:  # a temporary error: unknown this time, nothing stored
+        log.warning(
+            "follow_status_unavailable",
+            account_id=str(acct.id),
+            error_code=error.code,
+            platform_code=error.platform_code,
+        )
+        return None
+    await _store(sessionmaker, redis, contact_id, read, now=now)
+    return read.profile.follows_business if read.profile is not None else None
+
+
+@dataclass(frozen=True)
+class _Read:
+    profile: ContactProfile | None  # None: refused
+    fetched_at: datetime | None  # when the platform said it (a cached read is older)
+
+
+async def _store(
+    sessionmaker: async_sessionmaker[AsyncSession],
+    redis: Redis,
+    contact_id: uuid.UUID,
+    read: _Read,
+    *,
+    now: datetime,
+) -> None:
+    async with sessionmaker() as session:
+        contact = await inbox.get_contact(session, contact_id)
+        if contact is None:
+            return
+        profile = read.profile
+        if profile is not None:
+            contact.display_name = profile.name or contact.display_name
+            contact.username = profile.username or contact.username
+            contact.profile_picture_url = profile.profile_picture_url or contact.profile_picture_url
+            if profile.follows_business is not None:
+                contact.follows_business = profile.follows_business
+                contact.follows_checked_at = read.fetched_at or contact.follows_checked_at
+        # Also after a refusal, so the next message does not ask again for a week.
+        contact.profile_fetched_at = now
+        await session.flush()
+        for conv in await rows.conversations_for_contact(session, contact.id):
+            await queue_conversation(session, conv, now=now, contact=contact)
+        await commit_and_publish(session, redis)
+
+
+async def _cached(redis: Redis, acct: SocialAccount, platform_user_id: str) -> _Read | None:
+    try:
+        cached = await redis.get(profile_cache_key(acct.id, platform_user_id))
     except Exception:  # a cache is never worth failing over
         cached = None
-    if cached:
-        data: dict[str, Any] = json.loads(cached)
-        return ContactProfile(
+    if not cached:
+        return None
+    data: dict[str, Any] = json.loads(cached)
+    follows = data.get("follows_business")
+    fetched_at = data.get("fetched_at")
+    return _Read(
+        ContactProfile(
             name=data.get("name"),
             username=data.get("username"),
             profile_picture_url=data.get("profile_picture_url"),
-        )
+            follows_business=follows if isinstance(follows, bool) else None,
+        ),
+        datetime.fromisoformat(fetched_at) if isinstance(fetched_at, str) else None,
+    )
+
+
+async def _fetch(
+    redis: Redis, deps: PlatformDeps, acct: SocialAccount, platform_user_id: str, *, now: datetime
+) -> _Read:
+    """The profile from the platform, cached for a day. A refusal is a read without a profile;
+    retryable errors propagate."""
     try:
         profile = await adapter_for(acct, deps).fetch_contact_profile(acct, platform_user_id)
     except PlatformError as error:
@@ -117,13 +187,18 @@ async def _profile(
             error_code=error.code,
             platform_code=error.platform_code,
         )
-        return None
+        return _Read(None, now)
     if profile is not None:
+        cached = {**asdict(profile), "fetched_at": now.isoformat()}
         try:
-            await redis.set(key, json.dumps(asdict(profile)), ex=PROFILE_CACHE_TTL_S)
+            await redis.set(
+                profile_cache_key(acct.id, platform_user_id),
+                json.dumps(cached),
+                ex=PROFILE_CACHE_TTL_S,
+            )
         except Exception:
             log.warning("contact_profile_cache_failed", account_id=str(acct.id))
-    return profile
+    return _Read(profile, now)
 
 
 # ---------------------------------------------------------------- inbound media (TR-MED-03)

@@ -1,4 +1,4 @@
-"""Automation figures (T4.3; FR-AUT-03, FR-AUT-10, FR-AUT-16; UX-SCR-02, UX-SCR-12), all read
+"""Automation figures (T4.3, T4.8; FR-AUT-03, 10, 16, 21, 22; UX-SCR-02, UX-SCR-12), all read
 from automation_runs so they agree with the run log.
 
 - runs: every firing in the period, whatever its result (the run log lists them all).
@@ -10,6 +10,9 @@ from automation_runs so they agree with the run log.
 - skipped: by reason; the runtime never loads automations outside their run window, so
   "outside window" has no runs and stays 0.
 - queued now: runs waiting in the account's private-reply queue (TR-JOB-07).
+- tapped: runs whose tap-first opening was answered in the period (``confirmed_at``, FR-AUT-21);
+  waiting now: runs whose opening, sent in the last 7 days, still waits for an answer; nudged:
+  runs whose follow nudge was queued in the period (FR-AUT-22).
 
 Days are the workspace's calendar days, oldest first, the last one being today.
 
@@ -33,6 +36,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sqlalchemy import ColumnElement, Date, cast, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from socialhood.models.automations import Automation, AutomationRun, AutomationStatus, RunResult
 from socialhood.models.inbox import Message
@@ -47,6 +51,7 @@ from socialhood.schemas.automations import (
     SkippedCounts,
     SurgeOrderName,
 )
+from socialhood.services.automations.answers import ANSWER_WINDOW
 
 LIST_DAYS = 7
 SENT_STATUSES = ("sent", "delivered", "read")
@@ -212,6 +217,7 @@ async def automation_stats(
         .select_from(run)
         .where(run.automation_id == automation.id, run.result == RunResult.QUEUED)
     )
+    tapped, awaiting, nudged = await _tap_first_figures(session, automation, p, now)
     return AutomationStats(
         days=days,
         runs=runs,
@@ -225,7 +231,36 @@ async def automation_stats(
             DailyRuns(date=d, runs=by_day.get(d, (0, 0))[0], failures=by_day.get(d, (0, 0))[1])
             for d in p.days
         ],
+        tapped=tapped,
+        awaiting_now=awaiting,
+        nudged=nudged,
     )
+
+
+async def _tap_first_figures(
+    session: AsyncSession, automation: Automation, p: Period, now: datetime
+) -> tuple[int, int, int]:
+    """FR-AUT-21, FR-AUT-22: (answered in the period, waiting now, nudged in the period)."""
+    run = AutomationRun
+    nudge = aliased(Message)
+    tapped, awaiting = (
+        await session.execute(
+            select(
+                func.count().filter(run.confirmed_at >= p.since),
+                func.count().filter(
+                    run.result == RunResult.AWAITING_REPLY,
+                    automation_runs.opened_since(now - ANSWER_WINDOW),
+                ),
+            ).where(run.automation_id == automation.id)
+        )
+    ).one()
+    nudged = await session.scalar(
+        select(func.count())
+        .select_from(run)
+        .join(nudge, nudge.id == run.nudge_message_id)
+        .where(run.automation_id == automation.id, nudge.occurred_at >= p.since)
+    )
+    return int(tapped or 0), int(awaiting or 0), int(nudged or 0)
 
 
 # ---------------------------------------------------------------- the figures strip (UX-SCR-02)

@@ -76,6 +76,21 @@ def test_a_reply_points_at_the_message_it_answers() -> None:
     )
 
 
+def test_a_tapped_quick_reply_keeps_its_payload() -> None:
+    """T4.8 (FR-AUT-21): a tap is a normal message with message.quick_reply.payload."""
+    event = message("webhook_message_quick_reply.json")
+    assert (event.kind, event.text, event.is_echo) == ("text", "Send me the link", False)
+    assert event.quick_reply_payload == "shr:6f1c2d3e-4b5a-4c6d-8e7f-9a0b1c2d3e4f"
+    assert message("webhook_message_text.json").quick_reply_payload is None
+    # An echo's quick replies are the business's own offer, not a tap.
+    body = fixture("webhook_message_quick_reply.json")
+    body["entry"][0]["messaging"][0]["message"]["is_echo"] = True
+    [raw] = split_payload(body)
+    echo = parse(raw.payload)
+    assert isinstance(echo, InboundMessage)
+    assert echo.quick_reply_payload is None
+
+
 def test_an_echo_belongs_to_the_recipient() -> None:
     event = message("webhook_echo.json")
     assert event.is_echo

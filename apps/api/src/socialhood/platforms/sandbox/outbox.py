@@ -6,6 +6,13 @@ private replies or public comment replies), and a message whose text contains
 ``[sandbox:fail=<code>]`` fails with that code on every attempt, so end-to-end runs can trigger a
 Failed bubble from the composer. ``delivery_unknown`` behaves like a timeout after the request
 went out (TR-JOB-05).
+
+Tap first and the follow nudge (FR-AUT-21, FR-AUT-22): quick replies are recorded with the
+message; ``reject_quick_replies()`` makes Instagram-like refusals of any send or private reply
+that carries them (to exercise the text-only fallback). ``set_follows(ref, value)`` sets what the
+profile says about a contact following the account; without it a sandbox contact whose id
+contains ``follower`` follows, one whose id contains ``unknown`` is unknown, and anyone else does
+not follow, so the nudge can be seen in development.
 """
 
 from __future__ import annotations
@@ -46,6 +53,35 @@ PRIVATE_REPLIES: deque[SandboxSend] = deque(maxlen=KEEP)
 COMMENT_REPLIES: deque[SandboxCommentReply] = deque(maxlen=KEEP)
 SEEN: deque[tuple[str, str]] = deque(maxlen=KEEP)  # (account_ref, recipient_ref) marked seen
 _FAILURES: deque[tuple[SendKind | None, PlatformError]] = deque()
+FOLLOWS: dict[str, bool | None] = {}  # contact ref -> is_user_follow_business
+_REJECT_QUICK_REPLIES: list[bool] = [False]
+
+
+def set_follows(contact_ref: str, value: bool | None) -> None:
+    FOLLOWS[contact_ref] = value
+
+
+def follows(contact_ref: str) -> bool | None:
+    if contact_ref in FOLLOWS:
+        return FOLLOWS[contact_ref]
+    if "unknown" in contact_ref:
+        return None
+    return "follower" in contact_ref
+
+
+def reject_quick_replies(on: bool = True) -> None:
+    _REJECT_QUICK_REPLIES[0] = on
+
+
+def quick_reply_failure(message: OutboundMessage) -> PlatformError | None:
+    """Instagram's refusal of quick replies, when switched on (the runtime then sends text)."""
+    if not (_REJECT_QUICK_REPLIES[0] and message.quick_replies):
+        return None
+    return PlatformError(
+        "platform_rejected",
+        platform_code="100",
+        message="Sandbox: quick replies are not supported here",
+    )
 
 
 def fail_next(
@@ -65,6 +101,8 @@ def reset() -> None:
     COMMENT_REPLIES.clear()
     SEEN.clear()
     _FAILURES.clear()
+    FOLLOWS.clear()
+    _REJECT_QUICK_REPLIES[0] = False
 
 
 def failure_for(message: OutboundMessage, kind: SendKind = "send") -> PlatformError | None:

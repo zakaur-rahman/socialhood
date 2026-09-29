@@ -1989,6 +1989,8 @@ export interface components {
              * @enum {string}
              */
             kind: "dm" | "comment";
+            /** Quick Reply Payload */
+            quick_reply_payload?: string | null;
             /** Text */
             text: string;
         };

@@ -48,9 +48,15 @@ class SandboxAdapter:
     async def fetch_contact_profile(
         self, acct: SocialAccount, platform_user_id: str
     ) -> ContactProfile | None:
+        """A made-up name; the follow status comes from ``sandbox.outbox.follows``."""
+        from socialhood.platforms.sandbox import outbox
+
         short = platform_user_id[-4:]
         return ContactProfile(
-            name=f"Sandbox customer {short}", username=f"customer_{short}", profile_picture_url=None
+            name=f"Sandbox customer {short}",
+            username=f"customer_{short}",
+            profile_picture_url=None,
+            follows_business=outbox.follows(platform_user_id),
         )
 
     # ---- P3 (filled by T3.6/T3.7 for sending, T3.3/T3.14 for media, sync and backfill)
@@ -61,7 +67,7 @@ class SandboxAdapter:
         """A fake mid, or an injected failure (see ``sandbox.outbox``)."""
         from socialhood.platforms.sandbox import outbox
 
-        failure = outbox.failure_for(message, "send")
+        failure = outbox.quick_reply_failure(message) or outbox.failure_for(message, "send")
         if failure is not None:
             raise failure
         return SendResult(outbox.record(acct.platform_account_id, recipient_ref, message))
@@ -104,7 +110,9 @@ class SandboxAdapter:
             raise PlatformError(
                 "platform_rejected", message="A private reply can only carry text and link buttons"
             )
-        failure = outbox.failure_for(message, "private_reply")
+        failure = outbox.quick_reply_failure(message) or outbox.failure_for(
+            message, "private_reply"
+        )
         if failure is not None:
             raise failure
         return SendResult(

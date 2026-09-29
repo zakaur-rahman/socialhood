@@ -1,5 +1,5 @@
-"""T4.3, T4.7: activation rules (FR-AUT-02, 13, 14, 17), templates (FR-AUT-12), display status,
-figures helpers. Pure: no database."""
+"""T4.3, T4.7, T4.8: activation rules (FR-AUT-02, 13, 14, 17, 21, 22), templates (FR-AUT-12),
+display status, figures helpers. Pure: no database."""
 
 from __future__ import annotations
 
@@ -259,6 +259,71 @@ def test_queue_eta_is_the_private_reply_rate() -> None:
     assert stats.eta_minutes(1) == 1
     assert stats.eta_minutes(730) == 60  # the bucket's rate, so no hour exceeds 750
     assert stats.eta_minutes(2140) == 176  # "about 3 h"
+
+
+# ---------------------------------------------------------------- tap first and the nudge (T4.8)
+
+
+TAPS = replace(
+    COMPLETE,
+    confirm_first=True,
+    opening_text=templates.OPENING_TEXT,
+    opening_button=templates.OPENING_BUTTON,
+)
+
+
+@pytest.mark.parametrize(
+    ("change", "expected"),
+    [
+        ({}, []),
+        ({"opening_text": "  "}, ["opening_text"]),
+        ({"opening_text": None, "opening_button": None}, ["opening_text", "opening_button"]),
+        ({"opening_button": " "}, ["opening_button"]),
+        ({"opening_button": "x" * 21}, ["opening_button"]),
+        # The message follows their answer as a DM, so it may carry an image (not C-030).
+        ({"has_image": True}, []),
+        ({"has_image": True, "confirm_first": False}, ["message_media_asset_id"]),
+        # A DM trigger ignores tap first; an AI reply ignores tap first and the nudge.
+        ({"trigger": "dm_keyword", "opening_text": None}, []),
+        (
+            {"action": "ai_reply", "opening_text": None, "follow_nudge": True},
+            ["action"],
+        ),
+        ({"follow_nudge": True}, ["follow_nudge_text"]),
+        ({"follow_nudge": True, "follow_nudge_text": "Follow us!"}, []),
+        ({"follow_nudge": True, "follow_nudge_text": "x" * 301}, ["follow_nudge_text"]),
+        # 300 characters as typed, however long the fields render.
+        ({"follow_nudge": True, "follow_nudge_text": "{first_name} " * 23}, []),
+        ({"follow_nudge": False, "follow_nudge_text": None}, []),
+    ],
+)
+def test_tap_first_and_nudge_activation(change: dict[str, Any], expected: list[str]) -> None:
+    assert fields(replace(TAPS, **change)) == expected
+
+
+def test_the_opening_counts_bytes_with_the_longest_name_and_the_disclosure_line() -> None:
+    fits = replace(TAPS, opening_text="a" * 950 + "{first_name}")  # 980 bytes at its longest
+    assert fields(fits) == []
+    assert fields(fits, disclosure="x" * 20) == ["opening_text"]
+    errors = activation_errors(fits, disclosure="x" * 20, now=NOW)
+    assert errors[0].message == (
+        "Instagram allows 1,000 bytes. With a long name and the disclosure line this opening is"
+        " 1,002. Shorten it."
+    )
+
+
+def test_comment_templates_start_with_tap_first() -> None:
+    by_key = templates.BY_KEY
+    assert {k: (t.confirm_first, t.follow_nudge) for k, t in by_key.items()} == {
+        "send_link": (True, True),
+        "giveaway": (True, False),
+        "price_on_request": (False, False),
+        "catalogue_by_dm": (False, False),
+        "answer_faqs": (False, False),
+        "book_a_call": (False, False),
+    }
+    assert len(templates.OPENING_BUTTON) <= 20
+    assert templates.OPENING_TEXT.endswith("\U0001f447")
 
 
 def test_periods_are_the_workspaces_calendar_days() -> None:

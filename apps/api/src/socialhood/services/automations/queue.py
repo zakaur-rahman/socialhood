@@ -23,13 +23,20 @@ any other failure settles it (services/automations/results).
 
 DMs and other sends use their own buckets and jobs, and other accounts their own queues, so a
 surge on one account delays nothing else.
+
+Tap first (T4.8, FR-AUT-21): an automation set to confirm first sends its opening as the private
+reply, with one quick reply whose payload names the run (``shr:{run_id}``); once sent, the run
+waits for the commenter's answer (``awaiting_reply``, services/automations/answers). Meta
+documents private replies with text only, so an opening Instagram refuses (a validation refusal)
+is sent again at once as text, whose default copy asks them to reply instead; the stored message
+then shows no quick reply.
 """
 
 from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 
 from redis.asyncio import Redis
@@ -318,6 +325,8 @@ class _Claimed:
     contact: Contact
     message: OutboundMessage
     outcome: SendResult | PlatformError | None = field(default=None)  # None: not attempted
+    opening: bool = False  # tap first: the opening, with its quick reply (FR-AUT-21)
+    text_only: bool = False  # Instagram refused the quick reply; the opening went as text
 
 
 def _in_turn(lists: Sequence[tuple[Automation, list[AutomationRun]]]) -> list[AutomationRun]:
@@ -395,7 +404,7 @@ async def _prepare(
             session, [c.contact_id for c in comments.values() if c.contact_id]
         )
     }
-    ready: list[tuple[AutomationRun, Comment, Contact, str]] = []
+    ready: list[tuple[AutomationRun, Comment, Contact, OutboundMessage]] = []
     for queued in chosen:
         automation = by_automation[queued.automation_id]
         comment = comments.get(queued.trigger_comment_id) if queued.trigger_comment_id else None
@@ -406,13 +415,11 @@ async def _prepare(
         if automation.action != AutomationAction.SEND_MESSAGE:
             tally.failed += _give_up(queued, actions.AI_UNAVAILABLE)
             continue
-        text = actions.render_message(
-            automation, contact, username=comment.author_username, disclosure_line=run.disclosure
-        )
-        if text is None:
+        outbound = _private_reply(automation, queued, comment, contact, run.disclosure)
+        if outbound is None:
             tally.failed += _give_up(queued, actions.NO_MESSAGE)
             continue
-        ready.append((queued, comment, contact, text))
+        ready.append((queued, comment, contact, outbound))
 
     conversations = {
         c.contact_id: c
@@ -421,23 +428,25 @@ async def _prepare(
         )
     }
     staged: list[tuple[AutomationRun, Comment, Contact, Message, OutboundMessage]] = []
-    for queued, comment, contact, text in ready:
+    for queued, comment, contact, outbound in ready:
         conv = conversations.get(contact.id)
         if conv is None:
             conv, _ = await rows.get_or_create_conversation(
                 session, social_account_id=acct.id, contact_id=contact.id, platform=acct.platform
             )
             conversations[contact.id] = conv
-        buttons = actions.buttons(by_automation[queued.automation_id])
         msg = Message(
             conversation_id=conv.id,
             social_account_id=acct.id,
             direction=Direction.OUTBOUND,
             source=MessageSource.AUTOMATION,
             kind=MessageKind.TEXT,
-            text=text,
+            text=outbound.text,
             attachments=[],
-            buttons=[{"title": b.title, "url": b.url} for b in buttons],
+            buttons=[{"title": b.title, "url": b.url} for b in outbound.buttons],
+            quick_replies=[
+                {"title": q.title, "payload": q.payload} for q in outbound.quick_replies
+            ],
             occurred_at=run.now,
             client_id=actions.client_id_for(queued.id),
             status=MessageStatus.SENDING,
@@ -446,7 +455,7 @@ async def _prepare(
             reactions=[],
         )
         session.add(msg)
-        staged.append((queued, comment, contact, msg, OutboundMessage(text=text, buttons=buttons)))
+        staged.append((queued, comment, contact, msg, outbound))
     await session.flush()
     claimed: list[_Claimed] = []
     for queued, comment, contact, msg, outbound in staged:
@@ -462,10 +471,36 @@ async def _prepare(
                 comment_ref=comment.platform_comment_id,
                 contact=contact,
                 message=outbound,
+                opening=bool(outbound.quick_replies),
             )
         )
     await session.flush()
     return claimed
+
+
+def _private_reply(
+    automation: Automation,
+    queued: AutomationRun,
+    comment: Comment,
+    contact: Contact,
+    disclosure: str | None,
+) -> OutboundMessage | None:
+    """The private reply: the tap-first opening with its quick reply (FR-AUT-21), or the
+    message with its link buttons. None when there is nothing to send."""
+    if actions.opens_first(automation):
+        opening = actions.render_opening(
+            automation, contact, username=comment.author_username, disclosure_line=disclosure
+        )
+        if opening is not None:
+            return OutboundMessage(
+                text=opening, quick_replies=(actions.opening_quick_reply(automation, queued.id),)
+            )
+    text = actions.render_message(
+        automation, contact, username=comment.author_username, disclosure_line=disclosure
+    )
+    if text is None:
+        return None
+    return OutboundMessage(text=text, buttons=actions.buttons(automation))
 
 
 async def _commenter(
@@ -499,21 +534,53 @@ async def _send_batch(run: _Pass, claimed: list[_Claimed], tally: _Tally) -> Non
     """Send each claimed private reply, then settle them all in one transaction. A temporary
     error stops the batch; it and the replies not tried yet go back in the queue."""
     for item in claimed:
-        try:
-            item.outcome = await run.adapter.private_reply(run.acct, item.comment_ref, item.message)
-        except PlatformError as error:
-            item.outcome = error
-        except Exception:
-            # Something unexpected after the call started: Instagram may have sent it.
-            log.exception("private_reply_unexpected_error", run_id=str(item.run_id))
-            item.outcome = PlatformError(
-                DELIVERY_UNKNOWN, retryable=False, message="The platform did not confirm the send"
+        item.outcome = await _private_reply_call(run, item, item.message)
+        if isinstance(item.outcome, PlatformError) and _refused_quick_reply(item, item.outcome):
+            # Meta documents private replies with text only: an opening refused for its quick
+            # reply goes again as text, which asks them to reply instead (FR-AUT-21).
+            log.info(
+                "private_reply_quick_reply_refused",
+                run_id=str(item.run_id),
+                platform_code=item.outcome.platform_code,
+            )
+            item.text_only = True
+            item.outcome = await _private_reply_call(
+                run, item, replace(item.message, quick_replies=())
             )
         if isinstance(item.outcome, PlatformError) and (
             item.outcome.retryable or item.outcome.code == "account_needs_reconnect"
         ):
             break
     await _settle(run, claimed, tally)
+
+
+async def _private_reply_call(
+    run: _Pass, item: _Claimed, message: OutboundMessage
+) -> SendResult | PlatformError:
+    try:
+        return await run.adapter.private_reply(run.acct, item.comment_ref, message)
+    except PlatformError as error:
+        return error
+    except Exception:
+        # Something unexpected after the call started: Instagram may have sent it.
+        log.exception("private_reply_unexpected_error", run_id=str(item.run_id))
+        return PlatformError(
+            DELIVERY_UNKNOWN, retryable=False, message="The platform did not confirm the send"
+        )
+
+
+QUICK_REPLY_REFUSALS = frozenset({"platform_rejected"})
+
+
+def _refused_quick_reply(item: _Claimed, error: PlatformError) -> bool:
+    """Instagram refused a message that carried quick replies (a validation refusal, not a
+    temporary error or an unknown outcome), and it has not been retried as text yet."""
+    return (
+        not error.retryable
+        and error.code in QUICK_REPLY_REFUSALS
+        and bool(item.message.quick_replies)
+        and not item.text_only
+    )
 
 
 async def _settle(run: _Pass, claimed: list[_Claimed], tally: _Tally) -> None:
@@ -554,11 +621,16 @@ async def _settle(run: _Pass, claimed: list[_Claimed], tally: _Tally) -> None:
         messages = {
             m.id: m for m in await runs.messages_by_id(session, [c.message_id for c in done])
         }
+        for item in done:
+            text_only = messages.get(item.message_id) if item.text_only else None
+            if text_only is not None:
+                text_only.quick_replies = []  # what went out: the opening as text
+        by_run = {c.run_id: c for c in done}
         for settled in await runs.lock_many(session, [c.run_id for c in done]):
             reply_id = settled.private_reply_message_id
             msg = messages.get(reply_id) if reply_id else None
             if msg is not None:
-                results.apply_message(settled, msg)
+                results.apply_message(settled, msg, opening=by_run[settled.id].opening)
         for item in done:
             msg, conv = messages.get(item.message_id), conversations.get(item.conversation_id)
             if msg is None or conv is None:
