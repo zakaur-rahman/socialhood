@@ -14,6 +14,7 @@ import type {
   PostComment,
   PostDetail,
   ScheduledMessage,
+  ScheduledPostDetail,
   SocialAccount,
   Suggestion,
 } from "@/lib/api/types";
@@ -26,6 +27,7 @@ import {
   setPendingSuggestion,
 } from "@/lib/inbox/cache";
 import { useInboxStore } from "@/lib/inbox/store";
+import { applyCalendarMessage, applyScheduledPost } from "@/lib/schedule/cache";
 
 import type { SseEvent } from "./sse";
 
@@ -37,6 +39,8 @@ export type EventPayloads = {
   "suggestion.created": { conversation_id: string; suggestion: Suggestion };
   "suggestion.updated": { conversation_id: string; suggestion: Suggestion };
   "scheduled_message.updated": { scheduled_message: ScheduledMessage };
+  /** P7: a post was saved, scheduled, moved, or went through a publishing step. */
+  "scheduled_post.updated": { scheduled_post: ScheduledPostDetail };
   "social_account.updated": { social_account: SocialAccount };
   "notification.created": { notification: NotificationItem };
   /** F-12: a comment arrived, or its analysis, reply, hidden state or deletion changed. */
@@ -115,6 +119,13 @@ export function applyRealtimeEvent(
       const payload = parse<EventPayloads["scheduled_message.updated"]>(event.data);
       if (!payload?.scheduled_message) return;
       applyScheduled(queryClient, wid, payload.scheduled_message);
+      applyCalendarMessage(queryClient, wid, payload.scheduled_message);
+      return;
+    }
+    case "scheduled_post.updated": {
+      const payload = parse<EventPayloads["scheduled_post.updated"]>(event.data);
+      if (!payload?.scheduled_post) return;
+      applyScheduledPost(queryClient, wid, payload.scheduled_post);
       return;
     }
     case "social_account.updated": {
@@ -161,7 +172,7 @@ export function applyRealtimeEvent(
       void invalidateWorkspace(queryClient, wid);
       return;
     default:
-      // Events for pages built in later phases (scheduled posts) have no cache yet.
+      // Events for pages built in later phases have no cache yet.
       return;
   }
 }

@@ -60,6 +60,10 @@ export const emptyStates = {
     title: "No posts yet",
     body: "Your Instagram posts and their comments appear here after you connect.",
   },
+  schedule: {
+    title: "Plan your posts",
+    body: "Drag drafts onto the calendar, or set posting times and add posts to your queue.",
+  },
 } as const;
 
 /** "All caught up" when a view or search has no results (§4.7). */
