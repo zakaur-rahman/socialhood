@@ -62,6 +62,7 @@ from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.registry import adapter_for
 from socialhood.realtime.events import commit_and_publish
+from socialhood.repositories import automation_runs
 from socialhood.repositories import comment_analyses as repo
 from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import social_accounts as accounts
@@ -258,6 +259,18 @@ def _is_spam(reading: CommentReading) -> bool:
     return reading.is_spam or reading.intent == "spam"
 
 
+def _keywords_are_not_spam(read: _Readings, triggered: set[uuid.UUID]) -> None:
+    """A comment that triggered an automation answered the business's own call to comment
+    ("LINK", "price"), so it is never spam and never auto-hidden, whatever the model says (C-042).
+    The model reads one-word keyword comments as spam; this is decided in code, not by it."""
+    for comment_id in triggered & read.by_comment.keys():
+        reading = read.by_comment[comment_id]
+        intent: IntentName = "other" if reading.intent == "spam" else reading.intent
+        read.by_comment[comment_id] = reading.model_copy(
+            update={"is_spam": False, "intent": intent}
+        )
+
+
 # ---------------------------------------------------------------- the job
 
 
@@ -330,6 +343,9 @@ async def analyze_batch(
                 raise
             log.warning("comment_analysis_failed", account_id=str(account_id), code=error.code)
             return BatchRun("failed", skipped=prepared.skipped, more=True)
+        async with sessionmaker() as session:
+            triggered = await automation_runs.comments_with_runs(session, list(read.by_comment))
+        _keywords_are_not_spam(read, triggered)
         hidden = await _auto_hide(deps, prepared, read.by_comment)
         return await _store(sessionmaker, redis, prepared, read, hidden, now)
 

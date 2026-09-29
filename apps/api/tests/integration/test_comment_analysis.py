@@ -23,6 +23,8 @@ from socialhood.platforms.sandbox import outbox
 from socialhood.services.comments.analysis import clean_topic, readings_schema, render_batch
 from socialhood.settings import Settings
 from tests.support.analysis import use_credits
+from tests.support.automation_api import make_run
+from tests.support.automations import make_automation
 from tests.support.comments import Comments, reading
 from tests.support.inbox import make_account
 from tests.support.ingest import jobs, stream
@@ -242,6 +244,44 @@ async def test_spam_is_hidden_on_instagram_when_auto_hide_is_on(
     }
     assert updated[str(spam_id)]["hidden"] is True
     assert updated[str(spam_id)]["analysis"]["is_spam"] is True
+
+
+async def test_a_keyword_comment_is_never_spam_even_when_the_model_says_so(
+    cw: Comments, fake_ai: FakeProvider
+) -> None:
+    """C-042: "LINK" answers the business's own call to comment; seen live, the model called
+    such comments spam. A comment that triggered an automation is never spam or hidden."""
+    await cw.execute(
+        "UPDATE social_accounts SET auto_hide_spam = true WHERE id = :id", id=cw.account_id
+    )
+    post = await cw.post()
+    keyword_id = await cw.comment("Link", post=post)
+    automation = await make_automation(
+        cw.world.engine,
+        workspace_id=cw.wid,
+        account_id=cw.account_id,
+        trigger="comment_keyword",
+        status="paused",
+    )
+    await make_run(
+        cw.world.engine,
+        workspace_id=str(cw.wid),
+        automation_id=automation,
+        created_at=datetime.now(UTC),
+        trigger_comment_id=keyword_id,
+    )
+    fake_ai.respond("comment_analysis", by_text({"Link": SPAM}))
+
+    await cw.analyze()
+
+    assert list(outbox.MODERATION) == []
+    row = await cw.one("SELECT hidden FROM comments WHERE id = :id", id=keyword_id)
+    assert row["hidden"] is False
+    analysis = await cw.one(
+        "SELECT is_spam, intent FROM comment_analyses WHERE comment_id = :id", id=keyword_id
+    )
+    assert (analysis["is_spam"], analysis["intent"]) == (False, "other")
+    assert (await cw.stats(post))["spam"] == 0
 
 
 async def test_spam_stays_visible_with_auto_hide_off_or_when_instagram_refuses(

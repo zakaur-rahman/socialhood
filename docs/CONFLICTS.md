@@ -374,3 +374,9 @@ metrics differ by format) and get_account_insights the workspace time zone.
   IG_PRIVATE_REPLY bucket; the link on the comment makes a second one 409 ("This comment already has
   a private reply."), cleared again if Instagram definitely refuses; the 7-day limit has its own
   message. A public reply with the same text within 2 minutes is not posted twice.
+
+## C-042 · Keyword comments are never spam (found live, 2026-09-29)
+The first real comment analysis read the comments "Link" (the keyword of a comment-to-DM
+automation) as spam. With auto-hide on, that would hide the very comments automations answer. A
+comment that triggered an automation (any run result) is stored with is_spam false and a "spam"
+intent becomes "other", decided in code after the model answers, so it is never auto-hidden.

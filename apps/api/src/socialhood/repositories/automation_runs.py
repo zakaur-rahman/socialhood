@@ -536,6 +536,20 @@ async def automation_names(
     return {run_id: (automation_id, name) for run_id, automation_id, name in rows.all()}
 
 
+async def comments_with_runs(
+    session: AsyncSession, comment_ids: Sequence[uuid.UUID]
+) -> set[uuid.UUID]:
+    """The comments among ``comment_ids`` that triggered an automation (any result)."""
+    if not comment_ids:
+        return set()
+    rows = await session.scalars(
+        select(AutomationRun.trigger_comment_id)
+        .where(AutomationRun.trigger_comment_id.in_(set(comment_ids)))
+        .distinct()
+    )
+    return {comment_id for comment_id in rows.all() if comment_id is not None}
+
+
 async def queued_for(session: AsyncSession, automation_id: uuid.UUID) -> int:
     """The automation's runs waiting in the private-reply queue (ix_automation_runs_queued)."""
     count = await session.scalar(
