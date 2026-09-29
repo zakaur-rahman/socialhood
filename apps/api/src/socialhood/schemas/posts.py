@@ -38,11 +38,14 @@ COMMENT_FILTER_INTENTS: dict[str, tuple[IntentName, ...]] = {
 
 
 class CommentStats(ResponseModel):
-    """A post's comment counts (``media_items.comment_stats``), kept by the analysis job.
+    """A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,
+    the rest are recounted by the analysis job.
 
     ``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts
-    analysed spam. While ``analysed < total`` the page shows "Analysing {analysed} of {total}
-    comments" (FR-CMT-02). Deleted comments are not counted.
+    analysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI
+    analysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <
+    total`` the page shows "Analysing {analysed} of {total} comments" (FR-CMT-02) and the progress
+    always ends. Deleted comments are not counted.
     """
 
     total: int

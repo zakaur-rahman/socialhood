@@ -25,6 +25,8 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "scheduled_posts_monthly": {"free": 10, "pro": 300, "max": None},
     "pending_scheduled_messages": {"free": 20, "pro": 500, "max": None},
     "message_history_days": {"free": 90, "pro": None, "max": None},
+    # Posts per account whose comments are analysed: the most recent ones (T6.2).
+    "comment_intelligence_posts": {"free": 5, "pro": None, "max": None},
 }
 
 

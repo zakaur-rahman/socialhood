@@ -341,3 +341,36 @@ answers 200 with the comment once Instagram accepts it; a private reply answers 
 comment (the DM is queued); hide and unhide answer 200; delete answers 204 and keeps deleted_at.
 post.updated carries a PostDetail. The adapter's get_media_insights takes the media type (Instagram's
 metrics differ by format) and get_account_insights the workspace time zone.
+
+## C-040 · P6 metrics and analytics decisions
+- Post snapshots are checked every 15 minutes (the §2.9 catalogue said hourly; a 1 h window needs a
+  finer tick): `snapshot_post_metrics` queues a per-account `snapshot_account_posts`; account days
+  are `snapshot_account_daily` (hourly) queuing `snapshot_account_day`.
+- A window is due from publish time + age for max(30 min, age ÷ 4), then skipped for good, so a late
+  value is never labelled with an earlier age. Posts from before connecting get only the windows
+  still ahead of them. No interpolation between snapshots (agent-architecture §6 mentioned it); the
+  answer states the age used.
+- Instagram media insights are lifetime totals, so the 72 h run reads its own values and marks the
+  1 h, 6 h and 24 h rows insights_final; 24 h insight values are provisional until then.
+- Account day D is written from 02:00 local time; the run for day D also re-reads day D−2 once.
+- Baselines: the previous N posts of the same account and format (feed = image, carousel, video;
+  reel); diff % and z-score only with ≥ 3 values, a positive median and spread; engagement rate needs
+  reach > 0 and all four interactions. Stories are left out of analytics. A new IG_INSIGHTS bucket
+  paces insight calls. "insights_granted" follows the account's granted scope.
+
+## C-041 · P6 comment intelligence decisions
+- `CommentStats.analysed` counts every comment no longer pending, including skipped ones (analysis
+  off, credits used up, over the plan's post limit, empty, failed alone), so progress always ends.
+- New entitlement `comment_intelligence_posts` (§1.7: Free 5 most recent posts, Pro and Max all);
+  comments on older posts are skipped on Free and not re-analysed after an upgrade.
+- Analysis: one account at a time (lock `cmt:{account}`, at most one bulk slot), up to 10 batches of
+  50 per run, dispatched every 30 s by `dispatch_comment_analysis`; the model returns `{items}` for
+  comments numbered 1–50; an invalid answer is retried in halves (at most 12 calls). Summaries are
+  queued 60 s after analysis so a surge costs one summary a minute; an hourly sweep covers the 24 h
+  rule.
+- Webhook intake publishes comment.created and post.updated with the new total; backfill publishes
+  one post.updated per post. Backfill runs from sync when stored comments trail Instagram's count.
+- Manual private replies are queued human messages sent by `send_private_reply` through the shared
+  IG_PRIVATE_REPLY bucket; the link on the comment makes a second one 409 ("This comment already has
+  a private reply."), cleared again if Instagram definitely refuses; the 7-day limit has its own
+  message. A public reply with the same text within 2 minutes is not posted twice.

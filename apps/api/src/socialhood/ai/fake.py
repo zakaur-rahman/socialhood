@@ -2,7 +2,9 @@
 (``AI_PROVIDER=fake``; TR-AI-01).
 
 - ``generate_json`` / ``generate_text`` return what a test queued for the task with ``respond``
-  (a value, a callable of the call, or an ``AIError`` to raise), else the task's default.
+  (a value, a callable of the call, or an ``AIError`` to raise), else the task's default. The
+  comment_analysis default reads the comment numbers from the call and calls each one neutral, so
+  batches validate (T6.2).
 - ``embed`` hashes words into a bag-of-words vector and L2-normalises it, so texts sharing words
   are similar and retrieval behaves meaningfully in tests.
 - Every call is recorded in ``calls`` with everything the provider was given.
@@ -40,8 +42,32 @@ class FakeCall:
 
 Responder = Any  # a value, a Callable[[FakeCall], value] or an AIError to raise
 
+COMMENT_LINE = re.compile(r"^(\d+): ", re.MULTILINE)
 
-DEFAULTS: dict[str, dict[str, Any]] = {
+
+def comment_ids(call: FakeCall) -> list[str]:
+    """The comment numbers a comment_analysis call asks about ("12: text" lines)."""
+    return COMMENT_LINE.findall("\n".join(turn.text for turn in call.contents))
+
+
+def neutral_comments(call: FakeCall) -> dict[str, Any]:
+    """The comment_analysis default: every comment neutral, no topic."""
+    return {
+        "items": [
+            {
+                "id": comment_id,
+                "sentiment": "neutral",
+                "sentiment_score": 0.0,
+                "intent": "other",
+                "is_spam": False,
+                "topic": None,
+            }
+            for comment_id in comment_ids(call)
+        ]
+    }
+
+
+DEFAULTS: dict[str, Any] = {
     "analysis": {
         "intent": "other",
         "sentiment": "neutral",
@@ -63,6 +89,8 @@ DEFAULTS: dict[str, dict[str, Any]] = {
         "used_source_ids": [],
     },
     "summary": {"summary": "The customer asked a question.", "next_step": None},
+    "comment_analysis": neutral_comments,
+    "post_summary": {"summary": "Commenters like the post.", "labels": []},
 }
 
 

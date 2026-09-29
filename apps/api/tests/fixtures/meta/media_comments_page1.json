@@ -1,0 +1,55 @@
+{
+  "data": [
+    {
+      "id": "17900000000000001",
+      "text": "How much is the sourdough?",
+      "timestamp": "2026-09-27T09:00:00+0000",
+      "username": "bread.lover",
+      "from": {"id": "990000000000011", "username": "bread.lover"},
+      "like_count": 3,
+      "hidden": false,
+      "replies": {
+        "data": [
+          {
+            "id": "17900000000000002",
+            "text": "₹180 a loaf!",
+            "timestamp": "2026-09-27T09:05:00+0000",
+            "username": "maple.bakery",
+            "from": {"id": "17841400000000001", "username": "maple.bakery"},
+            "like_count": 1,
+            "hidden": false,
+            "parent_id": "17900000000000001"
+          },
+          {
+            "id": "17900000000000003",
+            "text": "Worth every rupee",
+            "timestamp": "2026-09-27T09:10:00+0000",
+            "username": "crumb.critic",
+            "from": {"id": "990000000000012", "username": "crumb.critic"},
+            "like_count": 0,
+            "hidden": false,
+            "parent_id": "17900000000000001"
+          }
+        ]
+      }
+    },
+    {
+      "id": "17900000000000004",
+      "text": "FREE FOLLOWERS check my bio",
+      "timestamp": "2026-09-27T09:20:00+0000",
+      "username": "growth.hacks.4u",
+      "from": {"id": "990000000000013", "username": "growth.hacks.4u"},
+      "like_count": 0,
+      "hidden": true
+    },
+    {
+      "id": "17900000000000005",
+      "text": "no author on this one",
+      "timestamp": "2026-09-27T09:30:00+0000"
+    }
+  ],
+  "paging": {
+    "cursors": {"before": "QVFIUmJlZm9yZQ", "after": "QVFIUmFmdGVy"},
+    "next": "https://graph.instagram.com/v24.0/18100000000000003/comments?after=QVFIUmFmdGVy"
+  }
+}

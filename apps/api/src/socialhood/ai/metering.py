@@ -9,9 +9,10 @@
 
 It reserves the feature's credits (§1.7) in its own short transaction before the call, so no row
 lock is held while the model runs, and raises ``QuotaExceeded`` before any call when they would run
-out. After the call it records an ``ai_usage_events`` row; if the block raises, it refunds the
-credits and records the event with 0 credits. Crossing 80% and 100% of the period's credits
-notifies the owners and admins once per period.
+out. A feature charged per batch passes the batch's ``cost`` (comment_analysis: 1 credit per 20
+comments, rounded up, T6.2). After the call it records an ``ai_usage_events`` row; if the block
+raises, it refunds the credits and records the event with 0 credits. Crossing 80% and 100% of the
+period's credits notifies the owners and admins once per period.
 """
 
 from __future__ import annotations
@@ -126,8 +127,9 @@ async def metered(
     ref_type: str | None = None,
     ref_id: uuid.UUID | None = None,
     now: datetime | None = None,
+    cost: int | None = None,
 ) -> AsyncIterator[Meter]:
-    cost = CREDIT_COSTS[feature]
+    cost = CREDIT_COSTS[feature] if cost is None else cost
     at = now or datetime.now(UTC)
     with workspace_scope(workspace_id):
         async with sessionmaker() as session:

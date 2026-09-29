@@ -23,3 +23,9 @@ account (docs/verification.md); tests that use a file must keep passing when it 
   `user_insights_follows.json` (`follows_and_unfollows` with the `follow_type` breakdown), and
   the refusals `error_100_incompatible_metric.json`, `error_100_33_missing_media.json`,
   `error_10_insights_permission.json`.
+- `media_comments_page1.json` and `media_comments_page2.json`: `GET /{media_id}/comments` with
+  replies expanded, for the comment backfill (T6.1): a question with the account's own reply and a
+  customer's, hidden spam, a comment without `from` (left out), and the `after` cursor to the last
+  page.
+- `error_100_33_not_found.json`: the error Meta documents for a write on an object that no longer
+  exists, such as a deleted comment (T6.3); not yet seen from a real account.

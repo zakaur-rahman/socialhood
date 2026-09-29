@@ -8,8 +8,8 @@ what real payloads confirmed: ``entry.time`` is milliseconds for messaging and s
 changes, and an echo arrives under the sending account's own ``entry.id``. Parsing is tolerant:
 a missing field falls back, it never fails the event.
 
-Graph reads for sync and backfill live here too: ``/me/media`` items and Conversations API
-threads. Their shapes are unverified until T0.9 item 7.
+Graph reads for sync and backfill live here too: ``/me/media`` items, Conversations API threads
+and a post's comments (T6.1). Their shapes are unverified until T0.9 item 7.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from typing import Any, Literal
 
-from socialhood.platforms.base import PlatformMedia, PlatformThread
+from socialhood.platforms.base import CommentPage, PlatformComment, PlatformMedia, PlatformThread
 from socialhood.platforms.events import (
     InboundComment,
     InboundEvent,
@@ -343,6 +343,56 @@ def media_item(raw: Mapping[str, Any]) -> PlatformMedia | None:
 
 def _count(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+# ---------------------------------------------------------------- Graph: comments (backfill)
+
+
+def comment_page(body: object, *, account_ref: str, media_ref: str) -> CommentPage:
+    """One page of ``GET /{media_id}/comments`` (T6.1, FR-CMT-01): each top-level comment followed
+    by the replies Instagram nested under it (``replies.data``, with ``parent_id`` set). A comment
+    without an id, a time or an author is left out. ``next_cursor`` is the ``after`` cursor while
+    Instagram says there is a next page."""
+    comments: list[PlatformComment] = []
+    for raw in _data(body):
+        top = _graph_comment(raw, account_ref=account_ref, media_ref=media_ref, parent_id=None)
+        if top is None:
+            continue
+        comments.append(top)
+        for reply in _data(raw.get("replies")):
+            parsed = _graph_comment(
+                reply,
+                account_ref=account_ref,
+                media_ref=media_ref,
+                parent_id=top.platform_comment_id,
+            )
+            if parsed is not None:
+                comments.append(parsed)
+    paging = _dict(_dict(body).get("paging"))
+    after = _str(_dict(paging.get("cursors")).get("after")) if paging.get("next") else None
+    return CommentPage(comments=tuple(comments), next_cursor=after)
+
+
+def _graph_comment(
+    raw: Mapping[str, Any], *, account_ref: str, media_ref: str, parent_id: str | None
+) -> PlatformComment | None:
+    comment_id, at = _str(raw.get("id")), graph_time(raw.get("timestamp"))
+    author = _dict(raw.get("from"))
+    author_ref = _id(author)
+    if not comment_id or at is None or not author_ref:
+        return None
+    return PlatformComment(
+        account_ref=account_ref,
+        occurred_at=at,
+        platform_comment_id=comment_id,
+        media_id=media_ref,
+        parent_id=_str(raw.get("parent_id")) or parent_id,
+        author_ref=author_ref,
+        author_username=_str(author.get("username")) or _str(raw.get("username")),
+        text=str(raw.get("text") or ""),
+        like_count=_count(raw.get("like_count")) or 0,
+        hidden=raw.get("hidden") is True,
+    )
 
 
 # ---------------------------------------------------------------- Graph: threads (backfill)

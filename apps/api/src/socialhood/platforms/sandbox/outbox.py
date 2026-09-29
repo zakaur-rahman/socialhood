@@ -13,6 +13,10 @@ that carries them (to exercise the text-only fallback). ``set_follows(ref, value
 profile says about a contact following the account; without it a sandbox contact whose id
 contains ``follower`` follows, one whose id contains ``unknown`` is unknown, and anyone else does
 not follow, so the nudge can be seen in development.
+
+Comment moderation (T6.2, T6.3): hides, unhides and deletes are recorded in ``MODERATION``;
+``fail_next(code, kind="moderation")`` makes the next one fail. ``reset()`` also forgets comments
+seeded with ``sandbox.comments.seed``.
 """
 
 from __future__ import annotations
@@ -29,7 +33,8 @@ from socialhood.platforms.errors import PlatformError
 DIRECTIVE = re.compile(r"\[sandbox:fail=([a-z_]+)\]")
 KEEP = 200
 
-SendKind = Literal["send", "private_reply", "comment_reply"]
+SendKind = Literal["send", "private_reply", "comment_reply", "moderation"]
+ModerationAction = Literal["hide", "unhide", "delete"]
 
 
 @dataclass(frozen=True)
@@ -48,9 +53,17 @@ class SandboxCommentReply:
     platform_comment_id: str
 
 
+@dataclass(frozen=True)
+class SandboxModeration:
+    account_ref: str
+    comment_ref: str
+    action: ModerationAction
+
+
 SENT: deque[SandboxSend] = deque(maxlen=KEEP)
 PRIVATE_REPLIES: deque[SandboxSend] = deque(maxlen=KEEP)
 COMMENT_REPLIES: deque[SandboxCommentReply] = deque(maxlen=KEEP)
+MODERATION: deque[SandboxModeration] = deque(maxlen=KEEP)
 SEEN: deque[tuple[str, str]] = deque(maxlen=KEEP)  # (account_ref, recipient_ref) marked seen
 _FAILURES: deque[tuple[SendKind | None, PlatformError]] = deque()
 FOLLOWS: dict[str, bool | None] = {}  # contact ref -> is_user_follow_business
@@ -96,13 +109,17 @@ def fail_next(
 
 
 def reset() -> None:
+    from socialhood.platforms.sandbox import comments
+
     SENT.clear()
     PRIVATE_REPLIES.clear()
     COMMENT_REPLIES.clear()
+    MODERATION.clear()
     SEEN.clear()
     _FAILURES.clear()
     FOLLOWS.clear()
     _REJECT_QUICK_REPLIES[0] = False
+    comments.SEEDED.clear()
 
 
 def failure_for(message: OutboundMessage, kind: SendKind = "send") -> PlatformError | None:
@@ -134,6 +151,10 @@ def record_comment_reply(account_ref: str, comment_ref: str, text: str) -> str:
     reply_id = f"sandbox_reply_{secrets.token_hex(8)}"
     COMMENT_REPLIES.append(SandboxCommentReply(account_ref, comment_ref, text, reply_id))
     return reply_id
+
+
+def record_moderation(account_ref: str, comment_ref: str, action: ModerationAction) -> None:
+    MODERATION.append(SandboxModeration(account_ref, comment_ref, action))
 
 
 def _error(code: str, retry_after_s: float | None) -> PlatformError:

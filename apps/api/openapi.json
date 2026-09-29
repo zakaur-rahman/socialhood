@@ -2434,7 +2434,7 @@
         "type": "object"
       },
       "CommentStats": {
-        "description": "A post's comment counts (``media_items.comment_stats``), kept by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. While ``analysed < total`` the page shows \"Analysing {analysed} of {total}\ncomments\" (FR-CMT-02). Deleted comments are not counted.",
+        "description": "A post's comment counts (``media_items.comment_stats``): ``total`` grows as comments arrive,\nthe rest are recounted by the analysis job.\n\n``positive + neutral + negative`` counts analysed comments that are not spam; ``spam`` counts\nanalysed spam. ``analysed`` counts every comment no longer waiting: analysed, or skipped (AI\nanalysis off, AI credits used up, beyond the plan's posts, empty), so while ``analysed <\ntotal`` the page shows \"Analysing {analysed} of {total} comments\" (FR-CMT-02) and the progress\nalways ends. Deleted comments are not counted.",
         "properties": {
           "analysed": {
             "title": "Analysed",
@@ -9343,8 +9343,7 @@
         "summary": "Delete Comment",
         "tags": [
           "comments"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/comments/{comment_id}/hide": {
@@ -9408,8 +9407,7 @@
         "summary": "Hide Comment",
         "tags": [
           "comments"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/comments/{comment_id}/private-reply": {
@@ -9494,8 +9492,7 @@
         "summary": "Private Reply To Comment",
         "tags": [
           "comments"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/comments/{comment_id}/reply": {
@@ -9580,8 +9577,7 @@
         "summary": "Reply To Comment",
         "tags": [
           "comments"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/comments/{comment_id}/unhide": {
@@ -9645,8 +9641,7 @@
         "summary": "Unhide Comment",
         "tags": [
           "comments"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/conversations": {
@@ -11953,8 +11948,7 @@
         "summary": "Get Post",
         "tags": [
           "posts"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/posts/{post_id}/comments": {
@@ -12067,13 +12061,12 @@
         "summary": "List Post Comments",
         "tags": [
           "posts"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/posts/{post_id}/summary": {
       "post": {
-        "description": "The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated\ncarries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post\nhas no analysed comments yet.",
+        "description": "The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated\ncarries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post\nhas no analysed comments yet, or AI analysis is off for its account.",
         "operationId": "refresh_post_summary",
         "parameters": [
           {
@@ -12130,8 +12123,7 @@
         "summary": "Refresh Post Summary",
         "tags": [
           "posts"
-        ],
-        "x-pending": "T6.3"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-messages": {
