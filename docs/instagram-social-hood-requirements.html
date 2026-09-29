@@ -748,6 +748,26 @@ sequenceDiagram
   </ul>
 </section>
 
+<section class="doc" id="agent-limits">
+  <h2 id="s10b"><span class="sn">10b</span>Limits that shape the AI agent</h2>
+  <p>Added 2026-09-29 with the agent direction (<a href="agent-architecture.html">agent-architecture.html</a>, BUILD_SPEC FR-AGT). The agent may only offer what these APIs allow; each limit below is enforced by the service a tool calls, not by the model.</p>
+  <div class="tw"><table>
+    <thead><tr><th>Limit</th><th>Consequence for the agent</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>DMs only inside the 24-hour window after the customer's last message (Human Agent tag: 7 days, after approval)</td><td>No cold DMs; "message John tomorrow at 10" is only possible if John's window is still open then; the agent offers the latest possible time</td><td>Verified in P3</td></tr>
+      <tr><td>Private replies: one per comment, within 7 days; quick replies accepted on them</td><td>Bulk private replies to old comments are refused with the reason; tap first works</td><td>Verified 2026-09-29 (items 5, 30)</td></tr>
+      <tr><td>User profile (name, <code>is_user_follow_business</code>) only after the person messaged the account</td><td>Commenters who never messaged have no profile data; follower-based answers cover only people who have messaged</td><td>Verified 2026-09-29 (item 31)</td></tr>
+      <tr><td>Media and account insights need <code>instagram_business_manage_insights</code> (App Review) and can lag up to 48 h</td><td>Without it the agent answers from likes and comment counts only and says so; insight metrics start at the 24 h snapshot</td><td>Permission request pending App Review</td></tr>
+      <tr><td>Insights are lifetime totals at request time; account insights are kept about 90 days</td><td>Comparisons at equal age need Social Hood's own snapshots (FR-ANL-01); history before connecting is partial</td><td>Documented; snapshot job in P6</td></tr>
+      <tr><td>Publishing quota (<code>content_publishing_limit</code>) and format rules</td><td><code>schedule_post</code> checks quota and format before scheduling; results are per target</td><td>To verify in P7 (item 6)</td></tr>
+      <tr><td>Business use case rate limits (<code>X-Business-Use-Case-Usage</code>) and the private-reply bucket (750 per hour)</td><td>Bulk actions become queued tasks with an ETA, never a burst</td><td>Header presence to verify (item 12)</td></tr>
+      <tr><td>Comment moderation (hide, delete) needs <code>instagram_business_manage_comments</code></td><td>Hide and delete tools are R2 and depend on this permission</td><td>Granted at connect</td></tr>
+      <tr><td>No share-, follow- or like-gated content (Meta Spam Community Standard)</td><td>The agent never conditions content on follows or shares (C-031)</td><td>Policy</td></tr>
+      <tr><td>Facebook Pages need Facebook Login and separate Page permissions; LinkedIn messaging is partner-only</td><td>Facebook targets arrive in R2, LinkedIn posting in R3; the agent reports "not connected" per target until then</td><td>Roadmap</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
 <section class="doc" id="oq">
   <h2 id="s11">Open questions requiring a real account</h2>
   <ol>

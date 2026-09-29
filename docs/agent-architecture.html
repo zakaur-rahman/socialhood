@@ -1,0 +1,615 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Social Hood Agent Architecture</title>
+<meta name="description" content="How Social Hood's AI agent plans, uses typed tools, executes under deterministic policy, verifies and reports; the R1 read-only scope and the path to autonomy.">
+<style>
+:root {
+  --bg: #fbfbfa; --panel: #ffffff; --fg: #1b1b1f; --muted: #5d5d66; --line: #e3e3e8;
+  --accent: #6d4bd8; --accent-soft: #efeafc; --ok: #1f7a4d; --warn: #9a5b00; --bad: #b3261e;
+  --code: #f4f4f6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111114; --panel: #18181c; --fg: #ececf1; --muted: #a2a2ad; --line: #2b2b33;
+    --accent: #a88bff; --accent-soft: #221c38; --ok: #5fcf95; --warn: #f0b35a; --bad: #ff8a80;
+    --code: #1f1f25;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111114; --panel: #18181c; --fg: #ececf1; --muted: #a2a2ad; --line: #2b2b33;
+  --accent: #a88bff; --accent-soft: #221c38; --ok: #5fcf95; --warn: #f0b35a; --bad: #ff8a80;
+  --code: #1f1f25;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg);
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 980px; margin: 0 auto; padding: 32px 16px 80px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; }
+h2 { font-size: 22px; margin: 48px 0 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+h3 { font-size: 17px; margin: 28px 0 8px; }
+p, li { max-width: 78ch; }
+.lede { color: var(--muted); font-size: 17px; }
+.sn { color: var(--accent); font-variant-numeric: tabular-nums; margin-right: 10px; }
+code, pre { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13px; }
+code { background: var(--code); padding: 1px 5px; border-radius: 4px; }
+pre { background: var(--code); padding: 14px 16px; border-radius: 8px; overflow-x: auto;
+  line-height: 1.45; border: 1px solid var(--line); }
+table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 14px; }
+.tw { overflow-x: auto; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; background: var(--panel); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 18px; margin: 14px 0; }
+.note { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 10px 14px; border-radius: 6px; margin: 14px 0; }
+.tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 7px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.r1 { color: var(--ok); border-color: var(--ok); }
+.r2 { color: var(--warn); border-color: var(--warn); }
+.r3 { color: var(--bad); border-color: var(--bad); }
+nav.toc { columns: 2; column-gap: 32px; font-size: 14px; }
+nav.toc a { color: var(--fg); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+@media (max-width: 640px) { nav.toc { columns: 1; } h1 { font-size: 24px; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Social Hood Agent Architecture</h1>
+<p class="lede">How Social Hood's AI becomes a tool-using agent that understands a request, plans, calls typed tools, executes under deterministic policy, verifies the result and reports it. R1 ships a read-only agent; autonomy grows in R2 and R3 as evaluation, permissions and observability mature.</p>
+<p class="lede">Companion to <code>BUILD_SPEC.html</code> (requirements FR-AGT-*, TR-AGT-*, task list PA). Written 2026-09-29, after P0–P5 were built.</p>
+
+<nav class="toc">
+  <a href="#decisions">0. Summary and decisions</a><br>
+  <a href="#prd">1. Product requirements</a><br>
+  <a href="#arch">2. Architecture</a><br>
+  <a href="#repo">3. Repository structure</a><br>
+  <a href="#agent">4. Agent components</a><br>
+  <a href="#tools">5. Tool specification</a><br>
+  <a href="#analytics">6. Analytics tools</a><br>
+  <a href="#schema">7. Database schema</a><br>
+  <a href="#perms">8. Permission model</a><br>
+  <a href="#lifecycle">9. Execution lifecycle</a><br>
+  <a href="#jobs">10. Job architecture</a><br>
+  <a href="#api">11. API design</a><br>
+  <a href="#frontend">12. Frontend plan</a><br>
+  <a href="#roadmap">13. Roadmap</a><br>
+  <a href="#examples">14. Example workflows</a><br>
+  <a href="#failure">15. Failure and retry</a><br>
+  <a href="#observe">16. Observability and audit</a><br>
+  <a href="#cost">17. Cost and metering</a><br>
+  <a href="#testing">18. Testing and evaluation</a><br>
+  <a href="#platform">19. Platform limits the agent must respect</a><br>
+  <a href="#answer">20. The final question</a>
+</nav>
+
+<h2 id="decisions"><span class="sn">0</span>Summary and decisions</h2>
+<p>The agent is an <strong>orchestration layer over the services Social Hood already has</strong>, not a second product. Sending, scheduling, automations, knowledge, analysis and the auto-reply policy keep their rules; the agent reaches them only through typed tools.</p>
+<div class="card">
+<p><strong>Decisions of record (owner, 2026-09-29)</strong></p>
+<ul>
+<li><strong>R1 ships a read-only agent</strong>, "Ask Social Hood": read tools over conversations, comments, posts, analytics, knowledge and schedules. It may <em>prepare</em> an action card that the user completes in the normal UI. Write tools, approvals, permissions and the Copilot and Supervised modes are R2; Autonomous mode and standing conditional workflows are R3.</li>
+<li><strong>Framework: Pydantic AI</strong>, used only for the loop between the model and its tools. Run state, plans, approvals, permissions, credits and audit live in Social Hood's own Postgres tables; durability comes from the existing Procrastinate jobs.</li>
+<li><strong>Facebook Pages stays R2</strong>, LinkedIn posting R3; LinkedIn messaging is not possible (partner-only API).</li>
+</ul>
+</div>
+<h3>What was already in place (P0–P5)</h3>
+<div class="tw"><table>
+<tr><th>Proposal asks for</th><th>Status before this change</th></tr>
+<tr><td>LLM proposes, deterministic rules decide</td><td>Built: the 13-check auto-reply policy (TR-AI-07) with every decision stored in <code>ai_decisions</code></td></tr>
+<tr><td>RAG only where it helps</td><td>Built: vector retrieval only for knowledge; everything else is SQL</td></tr>
+<tr><td>Metering, audit, tenancy, roles</td><td>Built: credits per call (TR-AI-09), <code>ai_usage_events</code>, workspace scoping on every query, owner/admin/agent roles</td></tr>
+<tr><td>Fair post comparison at equal age</td><td>Specified (FR-ANL-01 metric snapshots at 1 h, 6 h, 24 h, 72 h, 7 d, 30 d), not built</td></tr>
+<tr><td>Comment sentiment and topics</td><td>Specified for P6 (FR-CMT-02, TR-AI-11)</td></tr>
+<tr><td>Post scheduling</td><td>P7 (FR-PUB-*)</td></tr>
+<tr><td>"Ask Social Hood", assistant that builds automations</td><td>Planned for R3; now R1 (read-only) and R2 (writes)</td></tr>
+</table></div>
+<h3>Where this design differs from the brief, and why</h3>
+<ol>
+<li><strong>Tools are thin; services keep the rules.</strong> <code>schedule_message</code> calls the existing scheduling service, which already enforces the reply window, plan limits and idempotency. Nothing is written twice.</li>
+<li><strong>One analysis call, not five modules.</strong> Sentiment, intent, topics, spam and lead score come from one model call per message (TR-AI-05) and one per comment batch (TR-AI-11). Splitting them would multiply cost by five.</li>
+<li><strong>Plans are typed data; conditions are evaluated by code.</strong> The model writes a plan of steps and structured conditions; the executor runs it and decides whether a condition held.</li>
+<li><strong>One action gateway for every write</strong> (R2): a tool's fixed risk tier, the requester's role, agent permissions, mode, bulk limits and platform capability decide execute, ask for approval, or refuse. The model's opinion is never an input.</li>
+<li><strong>Verification is a read-back.</strong> Each write returns a receipt; a verifier reads the record back (and the platform, where it applies). Only then does the agent say it succeeded.</li>
+<li><strong>Four tables, not eleven.</strong> <code>agent_runs</code>, <code>agent_steps</code>, <code>agent_approvals</code>, <code>agent_policies</code>. Memory reuses what exists: business memory is the knowledge base, customer memory is the contact plus conversation summary and analyses, task memory is the run.</li>
+<li><strong>The agent lives beside <code>ai/</code>, not inside it.</strong> <code>ai/</code> is model plumbing (providers, prompts, metering, policy). The agent orchestrates domain services, so it is its own package.</li>
+</ol>
+
+<h2 id="prd"><span class="sn">1</span>Product requirements</h2>
+<p><strong>Vision.</strong> Social Hood doesn't only show what happened on social media: it understands what happened, decides what should be done, carries out permitted actions, verifies them and explains the result. Autonomy increases one level at a time, each gated by evaluation results and the owner's settings.</p>
+<div class="tw"><table>
+<tr><th>ID</th><th>Requirement</th><th>Release</th></tr>
+<tr><td>FR-AGT-01</td><td><strong>Ask Social Hood.</strong> A panel available on every page (and a full page) where a member asks questions in plain language, in English, Hindi or Hinglish. Answers cite the data they used (post, time range, counts) and link to it.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-02</td><td><strong>Read tools only in R1.</strong> Conversations, contacts, comments, posts, post metrics, analytics, sentiment and topics, knowledge, scheduled messages and posts, automations and their runs. No tool in R1 changes anything.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-03</td><td><strong>Prepared actions.</strong> When a request needs a change ("schedule a message to Priya tomorrow at 10"), the agent resolves the details and shows an action card that opens the existing UI pre-filled (schedule popover, automation editor, comment reply). The member completes it there.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-04</td><td><strong>Numbers come from the database.</strong> Counts, percentages, averages and comparisons are computed by analytics tools; the model only explains them. Each answer shows the time range and sample size.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-05</td><td><strong>Time.</strong> Relative and absolute dates ("tomorrow 7 PM", "last week", "this month", "the last 30 days") resolve deterministically in the workspace time zone, and the answer states the resolved range.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-06</td><td><strong>Honest limits.</strong> When data isn't available (insights not granted, Facebook not connected, a post too new to compare), the agent says so instead of guessing.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-07</td><td><strong>Run history.</strong> Every run is kept with its request, steps, tools used, results, credits and outcome; admins can open any run.</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>FR-AGT-08</td><td><strong>Write tools through the action gateway.</strong> Reply to a comment or many comments, send or schedule a message, schedule, reschedule or cancel a post, create, pause or edit an automation. Each write is checked by the gateway and verified after it runs.</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>FR-AGT-09</td><td><strong>Approvals.</strong> Writes the policy doesn't allow outright become approval requests showing exactly what will happen (recipients, text, scope, count). Approve, Edit or Cancel; approvals expire after 24 h.</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>FR-AGT-10</td><td><strong>Agent modes and permissions.</strong> Read only, Copilot (every write asks), Supervised (low-risk writes run, others ask). Per-capability switches (send replies, schedule messages, schedule posts, create automations, delete automations). Owners and admins set them.</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>FR-AGT-11</td><td><strong>Long tasks.</strong> Work that takes more than a few seconds (analysing thousands of comments, bulk replies) runs in the background with a cost quote first, progress, and a notification when done.</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>FR-AGT-12</td><td><strong>Multi-step conditional requests.</strong> "If engagement is above my 30-day average and sentiment is positive, schedule a similar post tomorrow at 7 PM": the plan and its conditions are shown before anything runs.</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>FR-AGT-13</td><td><strong>Autonomous mode.</strong> Permitted writes run without asking, inside owner-set limits (per-day caps, allowed tools, business hours).</td><td><span class="tag r3">R3</span></td></tr>
+<tr><td>FR-AGT-14</td><td><strong>Standing instructions.</strong> Saved, scheduled or event-triggered agent tasks ("every Monday, summarise last week's comments"; "when a post beats its 24-hour baseline, tell me").</td><td><span class="tag r3">R3</span></td></tr>
+<tr><td>FR-AGT-15</td><td><strong>Growth analyst.</strong> Content recommendations, best times and formats, campaign reports, draft captions for review.</td><td><span class="tag r3">R3</span></td></tr>
+</table></div>
+<p>The existing inbox AI (suggestions, Auto mode with the 13-check policy, automations with AI replies) stays as it is. In R3 the auto-reply loop becomes one standing instruction run by the same gateway.</p>
+
+<h2 id="arch"><span class="sn">2</span>Architecture</h2>
+<pre>
+                         Member (web)            Standing instruction (R3)
+                              │                          │
+                              ▼                          ▼
+                     POST …/agent/runs  ─────────►  agent_runs (Postgres)
+                              │
+                              ▼  job: run_agent(run_id)   (interactive lane)
+                     ┌─────────────────────┐
+                     │   Orchestrator      │  state machine; persists every step
+                     └──┬───────┬───────┬──┘
+                        │       │       │
+                Planner ◄┘  Memory │   Time resolver
+     (Pydantic AI loop     (context:     (dates → UTC
+      over Gemini;          workspace,    ranges, deterministic)
+      typed plan)           contact,
+                        │   summaries,
+                        │   knowledge)
+                        ▼
+                  Tool router ──► read tool ─────────────────────────┐
+                        │                                             │
+                        └──► write tool (R2) ─► Action gateway ─────┐ │
+                                                  │ risk tier        │ │
+                                                  │ role + perms     │ │
+                                                  │ mode + limits    │ │
+                                                  │ capability       │ │
+                                   approve? ◄─────┤                  │ │
+                                  agent_approvals │ execute          │ │
+                                                  ▼                  ▼ ▼
+                                      Existing services (sending, scheduled, automations,
+                                      publishing, knowledge, analytics, comments)
+                                                  │
+                                                  ▼
+                                      Repositories (tenancy) ─► Postgres
+                                      Platform adapters ─► Instagram · WhatsApp · (Facebook R2)
+                                                  │
+                                                  ▼
+                                      Verifier (read-back) ─► agent_steps.verification
+                                                  │
+                                                  ▼
+                                      Reporter: answer + receipts + links ─► SSE agent.* events
+</pre>
+<p><strong>The model never touches SQL, tokens or platform APIs.</strong> It chooses tools and fills their typed arguments; the application validates, authorises, executes and verifies.</p>
+
+<h2 id="repo"><span class="sn">3</span>Repository structure</h2>
+<p>Only additions; nothing existing moves. Paths are under <code>apps/api/src/socialhood/</code>.</p>
+<pre>
+agent/                       NEW: the orchestration layer (TA.x)
+├── orchestrator.py          run state machine: plan → steps → verify → report
+├── planner.py               Pydantic AI agent: system prompt, tool registration, typed Plan output
+├── plan.py                  Plan, Step, Condition models; condition evaluation (pure)
+├── executor.py              runs a step: tool router, retries, persistence, receipts
+├── gateway.py               R2: risk tier × role × permissions × mode × limits → execute | approve | refuse
+├── verify.py                read-back verifiers per write tool
+├── context.py               memory: workspace facts, contact, summaries, open tasks
+├── timeparse.py             deterministic date/time and range resolution (workspace time zone)
+├── registry.py              tool metadata: name, schema, risk tier, capability, release
+└── tools/                   thin typed adapters over existing services
+    ├── conversations.py     read: search, get, summary; R2 write: send, schedule
+    ├── comments.py          read: list, search, sentiment, topics; R2 write: reply, bulk reply, hide
+    ├── posts.py             read: posts, latest, search, metrics
+    ├── analytics.py         read: performance, compare, distributions, top posts, trends
+    ├── scheduling.py        read: scheduled messages and posts; R2 write: schedule, cancel
+    ├── automations.py       read: list, runs, stats, test; R2 write: create draft, activate, pause
+    └── knowledge.py         read: search knowledge, test a question
+
+services/analytics/          NEW (P6): typed metric queries shared by the UI and the agent
+jobs/tasks/agent.py          NEW: run_agent, resume_agent_run, expire_approvals (R2)
+jobs/tasks/insights.py       NEW (P6): snapshot_post_metrics, sync_account_insights
+ai/prompts/agent.v1.md       NEW: the planner's system prompt
+</pre>
+<p><strong>Not adopted from the brief:</strong> splitting <code>ai/analysis</code> into per-signal modules (one call already returns every signal); folders under <code>jobs/</code> (jobs are one thin module per domain today, which keeps imports simple); a separate <code>providers/</code> package (the provider interface already exists in <code>ai/provider.py</code>). The web gets <code>components/agent/*</code> and <code>app/(app)/w/[slug]/ask</code>.</p>
+
+<h2 id="agent"><span class="sn">4</span>Agent components</h2>
+<h3>Planner (Pydantic AI)</h3>
+<p>A Pydantic AI agent with the workspace's tools registered and a dependency object carrying the database session, workspace, requesting member (the <em>principal</em>), time zone and run id. Two ways of working:</p>
+<ul>
+<li><strong>Answer loop</strong> (questions, R1): the model calls read tools, at most 8 tool calls and 6 model turns per run, then writes the answer. Every tool call is persisted as a step.</li>
+<li><strong>Plan first</strong> (anything with a write, R2): the model returns a typed <code>Plan</code> (steps, each a tool call or a condition), which is validated and shown to the member before any write runs. The executor then runs the plan itself; the model is called again only to re-plan after a failure (at most twice) and to write the final report.</li>
+</ul>
+<p>Pydantic AI runs on Gemini through Social Hood's settings (<code>AI_MODEL_AGENT</code>, default the reply model). Every model call is wrapped in <code>ai.metering.metered</code> and recorded in <code>ai_usage_events</code> with feature <code>agent_turn</code>.</p>
+<h3>Plan and conditions</h3>
+<pre>
+class Step:            id, tool, args (validated by the tool's schema), depends_on: [step ids],
+                       when: Condition | None
+class Condition:       left: Ref, op: "&gt;" | "&gt;=" | "&lt;" | "&lt;=" | "==" | "!=", right: Ref | number
+class Ref:             step id + JSON path into that step's typed result, e.g. s2.engagement_rate
+</pre>
+<p>Conditions are evaluated by <code>plan.evaluate()</code> on stored tool results. A condition that refers to a missing value is <em>false with a reason</em>, and the report says which data was missing.</p>
+<h3>Memory</h3>
+<div class="tw"><table>
+<tr><th>Memory</th><th>Source (existing)</th><th>How the agent gets it</th></tr>
+<tr><td>Business</td><td>Knowledge base (TR-AI-08), brand voice (<code>ai_settings</code>)</td><td><code>search_knowledge</code> tool; brand voice in the system prompt as trusted settings</td></tr>
+<tr><td>Customer</td><td>Contact, conversation summary (FR-AI-03), latest analysis, lead score</td><td><code>get_customer</code>, <code>get_conversation</code></td></tr>
+<tr><td>Conversation</td><td>The Ask panel's thread: earlier runs in the same thread</td><td>Last 6 exchanges of the thread passed as data</td></tr>
+<tr><td>Task</td><td><code>agent_runs</code> and <code>agent_steps</code></td><td>The orchestrator reloads them to resume</td></tr>
+</table></div>
+<p>No separate vector memory. Remembering preferences ("always compare with 30 days") is an R3 idea and would be explicit, editable settings, not hidden embeddings.</p>
+<h3>Time resolver</h3>
+<p><code>agent/timeparse.py</code> turns phrases into explicit values in the workspace time zone before tools run: instants ("tomorrow 7 PM" → 2026-09-30T19:00+05:30), ranges ("last week" → Monday–Sunday of the previous ISO week; "this month" → 1st to now; "the last 30 days" → now − 30 d to now) and ages ("after 24 hours"). The model passes the phrase; tools receive resolved values; the answer states them. Ambiguous input ("next Friday" on a Friday) is resolved by a documented rule and stated in the answer.</p>
+<h3>Action gateway (R2)</h3>
+<p>Every write tool is declared with a fixed risk tier and a capability. The gateway decides from those, the principal's role, the workspace's agent policy and the concrete arguments (for example, the number of recipients):</p>
+<pre>
+decide(tool, args, principal, policy) → EXECUTE | APPROVAL | REFUSE(reason)
+  1. tool.release &lt;= current release              else REFUSE not_available
+  2. principal's role allows the action            else REFUSE forbidden
+  3. policy.permissions[tool.capability] is on     else REFUSE agent_permission_off
+  4. platform capability (TR-PL-11)                else REFUSE capability_unavailable
+  5. limits: bulk size, per-hour and per-day caps  else REFUSE limit_reached
+  6. mode × tier → EXECUTE or APPROVAL (table in §8)
+</pre>
+<h3>Verifier</h3>
+<p>Each write tool has a verifier that reads the effect back: a scheduled message exists with the returned id and time; an automation exists with the requested trigger and is in the requested status; a comment reply has a platform id. Platform-side confirmation comes from the existing receipts (send results, echoes, webhooks). An unverified write is reported as "not confirmed", never as success.</p>
+
+<h2 id="tools"><span class="sn">5</span>Tool specification</h2>
+<p>Every tool is a typed function: Pydantic input model, Pydantic result model, risk tier, capability, release. Tools call services, which call repositories; they never run model-written SQL. Results are compact (ids, numbers, short text, links); lists are capped and say how many more exist.</p>
+<div class="tw"><table>
+<tr><th>Tool</th><th>Backed by</th><th>Tier</th><th>Release</th></tr>
+<tr><td colspan="4"><strong>Conversations and customers</strong></td></tr>
+<tr><td><code>search_conversations(q, view, account, range)</code></td><td>services/conversations</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>get_conversation(id, last_n)</code></td><td>conversations, analysis, summaries</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>find_contact(name_or_handle)</code> / <code>get_customer(id)</code></td><td>contacts, analyses</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>draft_reply(conversation_id, instructions)</code></td><td>suggestions (TR-AI-06)</td><td>draft</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>send_message(conversation_id, text)</code></td><td>sending.queue_outbound</td><td>high</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td colspan="4"><strong>Comments</strong></td></tr>
+<tr><td><code>get_post_comments(post, sentiment, intent, spam, range)</code></td><td>comments (P6)</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>search_comments(q, range)</code></td><td>comments (trigram / full text)</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>reply_to_comment(comment_id, text)</code></td><td>comment actions (FR-CMT-04)</td><td>low</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>reply_to_comments(filter, text_or_template, max)</code></td><td>comment actions, bulk queue</td><td>high</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>hide_comment(comment_id)</code></td><td>comment actions</td><td>low</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td colspan="4"><strong>Posts and analytics</strong> (see §6)</td></tr>
+<tr><td><code>get_posts(range, format, account)</code> / <code>get_latest_post(account)</code> / <code>search_posts(q)</code></td><td>media items</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>analytics tools in §6</td><td>services/analytics</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td colspan="4"><strong>Scheduling</strong></td></tr>
+<tr><td><code>list_scheduled_messages(range)</code> / <code>list_scheduled_posts(range)</code></td><td>scheduled, publishing</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>prepare_scheduled_message(contact, text, when)</code></td><td>resolves contact, window and time; returns an action card</td><td>draft</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>schedule_message(conversation_id, text, send_at)</code> / <code>cancel_scheduled_message(id)</code></td><td>services/scheduled</td><td>low</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>schedule_post(draft, publish_at, targets)</code> / <code>reschedule_post</code> / <code>cancel_scheduled_post</code></td><td>publishing (P7)</td><td>high</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td colspan="4"><strong>Automations</strong></td></tr>
+<tr><td><code>list_automations</code> / <code>get_automation</code> / <code>get_automation_stats</code> / <code>test_automation</code></td><td>services/automations</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>prepare_automation(description)</code></td><td>template + definition; returns an editor link with a draft</td><td>draft</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>create_automation_draft(definition)</code></td><td>definitions.create + replace</td><td>low</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>activate_automation(id)</code> / <code>pause_automation(id)</code></td><td>definitions.activate / pause</td><td>high / low</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>delete_automation(id)</code></td><td>definitions.delete</td><td>destructive</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td colspan="4"><strong>Knowledge</strong></td></tr>
+<tr><td><code>search_knowledge(q)</code> / <code>answer_from_knowledge(question)</code></td><td>retrieval, answer (T5.3)</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>list_knowledge_gaps()</code></td><td>gaps (T5.10)</td><td>read</td><td><span class="tag r1">R1</span></td></tr>
+</table></div>
+<p><strong>Draft</strong> tools produce something for a person to act on and change nothing. In R1 an action card opens the existing screen with the values filled in (the schedule popover limited to the reply window, the automation editor with a draft, the comment reply box), so every existing check applies.</p>
+
+<h2 id="analytics"><span class="sn">6</span>Analytics tools</h2>
+<p><code>services/analytics</code> (P6) is a set of typed, parameterised queries used by both the UI and the agent. The agent never sees tables.</p>
+<div class="tw"><table>
+<tr><th>Function</th><th>Returns</th></tr>
+<tr><td><code>post_performance(post_id, at_age)</code></td><td>reach, views, likes, comments, shares, saves, engagement rate at the snapshot closest to <code>at_age</code> (1 h, 6 h, 24 h, 72 h, 7 d, 30 d) or lifetime; the age actually used</td></tr>
+<tr><td><code>compare_posts(post_id, baseline, at_age)</code></td><td>the post vs the baseline's median and mean per metric, difference in % and in standard deviations, baseline size; baseline = previous N posts, or posts in a range, same format optional</td></tr>
+<tr><td><code>top_posts(metric, range, n, at_age)</code></td><td>ranked posts with the metric and the age used</td></tr>
+<tr><td><code>above_average_posts(metric, range, at_age)</code></td><td>posts above the range's mean, with their margin</td></tr>
+<tr><td><code>engagement_trend(range, bucket)</code></td><td>per day or week: posts, total and mean engagement, reach (from account insights)</td></tr>
+<tr><td><code>account_metrics(range)</code></td><td>followers, reach, views, profile activity per day where Instagram provides them</td></tr>
+<tr><td><code>sentiment_distribution(scope)</code></td><td>counts and % positive, neutral, negative for a post, range or search; analysed vs total (unanalysed comments are reported, not guessed)</td></tr>
+<tr><td><code>sentiment_trend(range, bucket)</code> / <code>compare_sentiment(post_id, baseline)</code></td><td>negative share over time; this post vs baseline</td></tr>
+<tr><td><code>comment_topics(scope, sentiment, n)</code></td><td>top topics with counts and example comments (TR-AI-11 labels)</td></tr>
+<tr><td><code>lead_metrics(range, account)</code></td><td>conversations with lead score ≥ 60, by day and account; first-response time</td></tr>
+</table></div>
+<h3>Fair comparison</h3>
+<ul>
+<li>Instagram returns only lifetime totals at the moment you ask. Social Hood records snapshots at fixed ages after publishing (FR-ANL-01, now <strong>MUST in R1</strong>), so "this post after 24 hours" is compared with "previous posts after 24 hours".</li>
+<li>A post younger than the requested age is compared at its current age against the baseline at the same age (interpolated between snapshots when needed), and the answer says so.</li>
+<li>Posts published before the account was connected have no early snapshots; they join baselines only at ages they have, and the answer states the baseline size. With fewer than 3 comparable posts the agent says there isn't enough history.</li>
+<li>Engagement rate = (likes + comments + shares + saves) ÷ reach at the same age; reported only when reach exists.</li>
+<li>Reels and feed posts are compared within their format by default.</li>
+</ul>
+
+<h2 id="schema"><span class="sn">7</span>Database schema</h2>
+<p>Four tenant tables (§5.1 conventions: uuid ids, <code>workspace_id</code>, timestamps, workspace scoping). Credits reuse <code>ai_usage_events</code> (feature <code>agent_turn</code>, <code>ref_type = "agent_run"</code>).</p>
+<pre>
+agent_runs                          -- one request (R1) or one scheduled/triggered task (R3)
+  id, workspace_id, thread_id uuid           -- Ask panel thread (runs in one thread share context)
+  requested_by_user_id uuid null             -- the principal; null for standing instructions (R3)
+  source text        'ask' | 'standing' (R3)
+  request text       ≤ 2,000 chars, as typed
+  mode text          policy mode at the time: read_only | copilot | supervised | autonomous
+  status text        queued | planning | running | awaiting_approval | succeeded | partial
+                     | failed | cancelled | expired
+  plan jsonb null    typed Plan (R2), shown to the member
+  answer text null   the final report (markdown subset); citations in answer_refs
+  answer_refs jsonb  [{kind: post|conversation|comment|automation|scheduled, id, label}]
+  model text, prompt_version text, credits integer, input_tokens, output_tokens
+  error_code text null, error_message text null
+  started_at, completed_at timestamptz null
+  index (workspace_id, created_at DESC); index (thread_id, created_at)
+
+agent_steps                         -- every tool call and condition, in order
+  id, workspace_id, run_id FK CASCADE, ordinal smallint
+  kind text          tool | condition | report
+  tool text null, tier text null     read | draft | low | high | destructive
+  args jsonb         validated input (secrets never stored; message text kept, it is the user's data)
+  result jsonb null  compact typed result
+  status text        pending | running | succeeded | failed | skipped | blocked | awaiting_approval
+  decision text null gateway: execute | approval | refuse:{reason}
+  verification jsonb null  {verified: bool, checked: [...], external_ids: [...]}
+  idempotency_key text     run_id:ordinal:attempt → reused on retry so a write never runs twice
+  attempts smallint, latency_ms integer, error_code, error_message
+  started_at, completed_at
+  unique (run_id, ordinal)
+
+agent_approvals                     -- R2
+  id, workspace_id, run_id FK, step_id FK
+  summary text       what will happen, in plain words
+  payload jsonb      the exact tool and args that will run (edits replace it)
+  status text        pending | approved | rejected | expired | superseded
+  requested_at, expires_at (24 h), decided_by_user_id, decided_at
+  partial unique (step_id) WHERE status = 'pending'
+
+agent_policies                      -- one per workspace, created with it
+  id, workspace_id unique
+  mode text          read_only (R1 default and only value) | copilot | supervised | autonomous (R3)
+  permissions jsonb  {send_replies, schedule_messages, schedule_posts, create_automations,
+                      delete_automations, bulk_actions} → bool, all false by default
+  limits jsonb       {bulk_max: 50, writes_per_hour: 30, writes_per_day: 200}
+  updated_by_user_id, updated_at
+</pre>
+<p>Why not the eleven entities in the brief: <em>Agent</em> (one agent per workspace; the policy row is its configuration), <em>AgentTask</em> (a run is the task), <em>AgentToolCall</em> and <em>AgentAction</em> (both are steps), <em>AgentMemory</em> (reuses existing data), <em>AgentPermission</em> (a column of the policy), <em>AgentExecutionLog</em> (steps plus <code>ai_usage_events</code> plus structured logs).</p>
+
+<h2 id="perms"><span class="sn">8</span>Permission model</h2>
+<p>Three layers, all enforced in code, in this order. A request can never do more than the person who asked could do by hand.</p>
+<ol>
+<li><strong>Member role</strong> (existing): agents (the member role) can read the inbox and act on conversations; owners and admins also manage automations, knowledge, publishing and settings. The principal's role bounds every tool.</li>
+<li><strong>Agent policy</strong> (per workspace, owners and admins edit): mode, per-capability switches, limits.</li>
+<li><strong>Tool risk tier</strong> (fixed in code, raised by arguments: a reply to more than one comment is <em>high</em>; more than <code>bulk_max</code> is refused).</li>
+</ol>
+<div class="tw"><table>
+<tr><th>Tier \ Mode</th><th>Read only <span class="tag r1">R1</span></th><th>Copilot <span class="tag r2">R2</span></th><th>Supervised <span class="tag r2">R2</span></th><th>Autonomous <span class="tag r3">R3</span></th></tr>
+<tr><td>read</td><td>run</td><td>run</td><td>run</td><td>run</td></tr>
+<tr><td>draft</td><td>run (action card)</td><td>run</td><td>run</td><td>run</td></tr>
+<tr><td>low (single reply, schedule a message, pause)</td><td>refuse</td><td>approval</td><td>run</td><td>run</td></tr>
+<tr><td>high (bulk, send now, schedule or publish a post, activate automation)</td><td>refuse</td><td>approval</td><td>approval</td><td>run within caps</td></tr>
+<tr><td>destructive (delete automation, cancel published content)</td><td>refuse</td><td>approval</td><td>approval</td><td>approval</td></tr>
+</table></div>
+<p>Capability switches (all off until an owner turns them on in R2): send replies, schedule messages, schedule posts, create automations, delete automations, bulk actions. A switched-off capability refuses regardless of mode. The model can't change any of this; policy tools don't exist.</p>
+
+<h2 id="lifecycle"><span class="sn">9</span>Execution lifecycle</h2>
+<pre>
+queued ──► planning ──► running ──► succeeded
+   │           │           │  │
+   │           │           │  ├──► partial      (some steps failed or were refused; report says which)
+   │           │           │  └──► failed       (nothing useful done; error shown)
+   │           │           ▼
+   │           │    awaiting_approval ──approve──► running
+   │           │           │  └──reject──► running (step skipped) or cancelled
+   │           │           └──24 h──► expired
+   └──cancel (member)──► cancelled
+</pre>
+<ol>
+<li><strong>Accept.</strong> <code>POST …/agent/runs</code> stores the run (queued), reserves nothing yet, enqueues <code>run_agent</code>, returns 202 with the run id. The panel subscribes to <code>agent.*</code> events.</li>
+<li><strong>Understand and plan.</strong> The time resolver and context build the prompt; the planner either answers with read tools (R1) or returns a Plan (R2), which is validated: every tool exists and is allowed, arguments validate, dependencies form a chain without cycles, at most 12 steps.</li>
+<li><strong>Execute.</strong> Steps run in order. Each is persisted before and after; writes pass the gateway; approval pauses the run and returns the job. Retries follow §15.</li>
+<li><strong>Verify.</strong> Every write step runs its verifier; unverified becomes <code>partial</code>.</li>
+<li><strong>Report.</strong> The model writes the answer from stored step results (no new facts: the report prompt receives only results), with citations. Status becomes final; <code>agent.completed</code> is published.</li>
+</ol>
+
+<h2 id="jobs"><span class="sn">10</span>Job architecture</h2>
+<div class="tw"><table>
+<tr><th>Job</th><th>Lane</th><th>Lock / key</th><th>Purpose</th><th>Release</th></tr>
+<tr><td><code>run_agent(run_id)</code></td><td>interactive</td><td><code>agent:{run_id}</code></td><td>plan and run until done, approval or a long task</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>resume_agent_run(run_id)</code></td><td>interactive</td><td><code>agent:{run_id}</code></td><td>continue after an approval or a finished long task; also the crash recovery sweep</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>sweep_agent_runs</code></td><td>bulk, every 5 min</td><td>singleton</td><td>runs stuck in running for 10 min are resumed from their last completed step</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>expire_agent_approvals</code></td><td>bulk, every 15 min</td><td>singleton</td><td>pending approvals past 24 h → expired</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>snapshot_post_metrics</code></td><td>bulk, every 15 min</td><td>per account</td><td>FR-ANL-01 snapshots due at 1 h … 30 d</td><td><span class="tag r1">R1 (P6)</span></td></tr>
+<tr><td><code>sync_account_insights</code></td><td>bulk, daily</td><td>per account</td><td>account metrics for trends</td><td><span class="tag r1">R1 (P6)</span></td></tr>
+<tr><td>existing <code>analyze_comments</code>, <code>summarize_post</code>, publishing, sends</td><td>as today</td><td>as today</td><td>long agent tasks start these and wait on their completion events</td><td>—</td></tr>
+</table></div>
+<p>An agent run never does bulk work inside its own job. "Analyse all 50,000 comments" becomes a quoted task that enqueues the existing comment analysis for that scope; the run waits (<code>awaiting_task</code>, R2) and resumes when the task's completion event arrives. Progress comes from the task's counters.</p>
+
+<h2 id="api"><span class="sn">11</span>API design</h2>
+<div class="tw"><table>
+<tr><th>Method and path</th><th>Purpose</th><th>Role</th><th>Release</th></tr>
+<tr><td><code>POST …/agent/runs</code> {request, thread_id?}</td><td>Start a run; 202 with the run</td><td>agent</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>GET …/agent/runs?thread_id&amp;cursor</code></td><td>History (own runs; admins see all)</td><td>agent</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>GET …/agent/runs/{id}</code></td><td>Run with steps (tool, args summary, status, result summary, verification, latency, credits)</td><td>agent</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>POST …/agent/runs/{id}/cancel</code></td><td>Stop at the next step</td><td>agent</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>GET …/agent/threads</code></td><td>Ask panel threads</td><td>agent</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td><code>GET · PUT …/agent/policy</code></td><td>Mode, permissions, limits</td><td>admin</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>GET …/agent/approvals?status</code></td><td>Pending approvals across runs</td><td>agent</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>POST …/agent/approvals/{id}/approve · /reject</code> {payload?}</td><td>Decide; an edited payload is re-validated by the gateway</td><td>per tool's role</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td><code>GET …/analytics/posts/{id}/performance?age</code>, <code>…/analytics/compare</code>, <code>…/analytics/sentiment</code>, <code>…/analytics/top-posts</code></td><td>The analytics service for the UI (the same functions the agent uses)</td><td>agent</td><td><span class="tag r1">R1 (P6)</span></td></tr>
+</table></div>
+<p>Events on the existing stream: <code>agent.run.updated</code> (status, step progress), <code>agent.step</code> (a step finished: tool, status, summary), <code>agent.completed</code>, <code>agent.approval.created</code> (R2). Errors use the existing ApiError codes; a refused write is a step result, not an HTTP error.</p>
+
+<h2 id="frontend"><span class="sn">12</span>Frontend plan</h2>
+<ul>
+<li><strong>Ask Social Hood panel</strong> <span class="tag r1">R1</span>: opened from the top bar or <kbd>/</kbd>-style shortcut on any page, 420 px side sheet on desktop, full screen on phones; a full page at <code>/w/[slug]/ask</code> with thread history. Suggested prompts based on what exists ("How did my latest post do?", "What are people complaining about this week?").</li>
+<li><strong>Live steps</strong>: while running, a compact list of what the agent is doing ("Looking up your latest post", "Comparing with 10 earlier posts at 24 hours"), from <code>agent.step</code> events. No chain-of-thought is shown; only tool names in plain words and their outcomes.</li>
+<li><strong>Answer cards</strong>: numbers render as small tables and bar rows, with the time range, sample size and links to the posts, conversations or comments used. "Not enough data" and "insights not granted" are explicit states.</li>
+<li><strong>Action cards</strong> <span class="tag r1">R1</span>: "Schedule this message", "Open the automation draft", "Reply to this comment" open the existing screen pre-filled.</li>
+<li><strong>Plan preview and approvals</strong> <span class="tag r2">R2</span>: the plan as numbered steps with conditions; approval cards (what, to whom, how many, scope) with Approve, Edit, Cancel; an Approvals list in the panel and a notification.</li>
+<li><strong>Settings → Agent</strong> <span class="tag r2">R2</span>: mode, capability switches, limits, and a link to run history.</li>
+<li><strong>Run history</strong> <span class="tag r1">R1</span>: for admins, each run's request, steps, tools, results, credits and verification.</li>
+</ul>
+
+<h2 id="roadmap"><span class="sn">13</span>Roadmap</h2>
+<h3>Where the build is</h3>
+<p>Done: P0 foundations, P1 identity, P2 Instagram connection, P3 inbox and WhatsApp, P4 keyword automations (with tap first and the follow nudge), P5 AI (analysis, summaries, suggestions, knowledge and gaps, Auto policy with takeover, AI replies in automations, closing-soon reminders).</p>
+<h3>R1 (MVP) from here</h3>
+<div class="tw"><table>
+<tr><th>Phase</th><th>Scope</th><th>Agent-relevant outcome</th></tr>
+<tr><td>P6 Comments and post intelligence</td><td>As specified (FR-CMT, TR-AI-11) <strong>plus</strong> insights sync, FR-ANL-01 snapshots (raised to MUST), and <code>services/analytics</code> with the §6 functions and their UI (post detail figures, comparison at equal age)</td><td>The data and typed queries every analytics tool needs</td></tr>
+<tr><td>P7 Publishing</td><td>As specified (FR-PUB)</td><td>Scheduled posts for read tools; write tools in R2</td></tr>
+<tr><td><strong>PA Ask Social Hood (new; after P7, before P8)</strong></td><td>Agent runtime (runs, steps, orchestrator, Pydantic AI planner), R1 read and draft tools, time resolver, action cards, Ask panel and page, run history, metering (<code>agent_turn</code>), agent eval set</td><td>The read-only agent</td></tr>
+<tr><td>P8 Billing, push, digest</td><td>As specified; agent credits in plans</td><td></td></tr>
+<tr><td>P9 Home, hardening, launch</td><td>As specified; agent in the launch checklist and E2E suite</td><td></td></tr>
+</table></div>
+<h3>Phased path to autonomy</h3>
+<div class="tw"><table>
+<tr><th>Stage</th><th>Adds</th><th>Release</th></tr>
+<tr><td>1 AI foundation</td><td>Analysis, suggestions, summaries, knowledge, Auto replies with policy (done); comment analysis, basic analytics (P6)</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>2 Ask Social Hood</td><td>Read tools, analytics answers, prepared action cards, run history</td><td><span class="tag r1">R1</span></td></tr>
+<tr><td>3 Copilot</td><td>Action gateway, write tools, approvals, permissions, Copilot mode, long tasks with quotes and progress</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>4 Supervised agent</td><td>Low-risk writes without asking, typed multi-step plans with conditions, re-planning, bulk replies within caps; Facebook Pages tools</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>5 Social intelligence</td><td>Topic and sentiment trends, best posting times, historical comparisons across formats</td><td><span class="tag r2">R2</span></td></tr>
+<tr><td>6 Autonomous and growth</td><td>Autonomous mode, standing instructions, proactive follow-ups, content recommendations, campaign reports, caption drafts; LinkedIn posting</td><td><span class="tag r3">R3</span></td></tr>
+</table></div>
+<p>Each stage ships only when its evaluation targets (§18) pass and the previous stage's audit data shows no unsafe action.</p>
+
+<h2 id="examples"><span class="sn">14</span>Example workflows</h2>
+<h3>"How did my latest post perform compared with my previous 10 posts?" <span class="tag r1">R1</span></h3>
+<pre>
+1 get_latest_post(account)                     → post 1810…, reel, published 26 h ago
+2 compare_posts(post, baseline=previous 10 reels, at_age=24h)
+                                               → reach 4,120 vs median 2,900 (+42%), engagement
+                                                 rate 6.1% vs 4.4%, comments 88 vs 41; baseline 10
+3 sentiment_distribution(post)                 → 71% positive, 22% neutral, 7% negative of 83 analysed
+4 report: "Your latest reel is doing better than usual. At 24 hours it reached 4,120 people,
+   42% above the median of your previous 10 reels …" + table + links
+</pre>
+<h3>"What percentage of comments on my latest post are positive?" <span class="tag r1">R1</span></h3>
+<pre>
+1 get_latest_post → 2 sentiment_distribution(post)
+  → 4,281 comments, 4,190 analysed: positive 64%, neutral 24%, negative 12%; 91 still being analysed
+</pre>
+<h3>"Find negative comments about pricing and summarise the complaints" <span class="tag r1">R1</span></h3>
+<pre>
+1 get_post_comments(scope=last 30 days, sentiment=negative, topic~"price")   → 57 comments
+2 comment_topics(scope=those, n=5)                                            → "too expensive" 31,
+   "shipping cost" 14, "no discount" 8 …
+3 report with counts and three example comments per topic (quoted, linked)
+</pre>
+<h3>"Schedule a message to Priya tomorrow at 10 AM saying her order ships Monday"</h3>
+<pre>
+R1: find_contact("Priya") → one match on Instagram; timeparse → 30 Sep 10:00 IST;
+    prepare_scheduled_message → her reply window closes 30 Sep 08:12, so 10:00 is outside it.
+    Report: "Priya's window closes tomorrow at 8:12 AM. I can prepare it for 8:00 AM or earlier." +
+    action card (schedule popover limited to the window).
+R2 (Supervised, schedule_messages on): schedule_message(conv, text, 08:00) → gateway: low → run →
+    verify: scheduled_messages row exists, status scheduled, send_at 08:00 → "Scheduled for 8:00 AM."
+</pre>
+<h3>"Reply 'Thank you!' to all positive comments on my latest post" <span class="tag r2">R2</span></h3>
+<pre>
+1 get_latest_post → 2 get_post_comments(post, sentiment=positive, not_replied) → 212 comments
+3 reply_to_comments(212) → tier high, 212 &gt; bulk_max 50 → plan offers "the 50 most recent" or a
+  background task in batches of 50 with approval per batch; approval card shows the text,
+  count, post, and that Instagram rate limits spread it over about 40 minutes
+4 on approval: long task on the existing comment-reply queue; each reply verified by its
+  platform id; report: "Replied to 50 of 50; 162 remain."
+</pre>
+<h3>Conditional multi-step <span class="tag r2">R2</span></h3>
+<pre>
+"Analyse my latest Instagram post. If engagement is above my 30-day average and sentiment is
+ positive, schedule a similar post tomorrow at 7 PM."
+
+Plan (shown before running):
+ s1 get_latest_post(instagram)
+ s2 post_performance(s1.id, at_age = s1.age capped at 24h)
+ s3 compare_posts(s1.id, baseline = posts in last 30 days, at_age = same)
+ s4 sentiment_distribution(s1.id)
+ s5 condition: s3.engagement_rate.delta_pct &gt; 0  AND  s4.positive_share &gt;= 0.6
+ s6 draft_post_like(s1.id)            when s5   (caption draft, same media type; R3: generated)
+ s7 schedule_post(s6.draft, publish_at = timeparse("tomorrow 7 PM"), targets=[instagram])
+                                        when s5   → gateway: high → approval card
+ s8 verify: scheduled_posts row, status scheduled, publish_at matches
+Report: which conditions held (with numbers), what was scheduled, or why nothing was.
+</pre>
+
+<h2 id="failure"><span class="sn">15</span>Failure and retry</h2>
+<div class="tw"><table>
+<tr><th>Failure</th><th>Handling</th></tr>
+<tr><td>Model timeout or 5xx</td><td>Retry the model call once (the provider's retryable errors); then the run fails with "The AI didn't respond" and credits for failed calls are refunded (TR-AI-09)</td></tr>
+<tr><td>Invalid tool arguments or plan</td><td>Returned to the model as a validation error once; a second invalid plan fails the run</td></tr>
+<tr><td>Read tool error</td><td>Retried once if transient; otherwise the step fails and the model may continue with what it has; the answer says which data was unavailable</td></tr>
+<tr><td>Write tool, transient platform error</td><td>Retried with the same idempotency key (existing send and schedule paths are idempotent); max 3 attempts with backoff</td></tr>
+<tr><td>Write tool, permanent error</td><td>Step failed; dependent steps skipped; run ends partial with the platform's reason (e.g. "Instagram: outside the reply window")</td></tr>
+<tr><td>Worker crash mid-run</td><td>Steps are persisted before and after; the sweeper resumes from the last completed step; a write step that was running is re-checked with its verifier before any retry, so it never runs twice</td></tr>
+<tr><td>Approval not given in 24 h</td><td>Expired; the run ends partial and says what didn't happen</td></tr>
+<tr><td>Credits run out mid-run</td><td>No new model calls; the run reports what it finished</td></tr>
+<tr><td>Loop or runaway plan</td><td>Hard caps: 12 steps, 8 read calls per answer, 6 model turns, 2 re-plans, 2 minutes wall time for R1 runs</td></tr>
+</table></div>
+
+<h2 id="observe"><span class="sn">16</span>Observability and audit</h2>
+<ul>
+<li><strong>Stored per run</strong>: request, principal, mode, plan, every step (tool, validated args, result summary, gateway decision, verification, external ids such as platform message or schedule ids, latency, attempts, errors), model and prompt version, tokens and credits, final answer and citations.</li>
+<li><strong>Not stored</strong>: the model's hidden reasoning. The trace is operational: what was called, with what, and what happened.</li>
+<li><strong>Logs</strong>: structured lines <code>agent_step</code> with run id, step, tool, status, latency; secrets and long text redacted as today (SEC-07).</li>
+<li><strong>Metrics and alerts</strong>: runs by status, p95 time to answer, tool error rate, refused writes, approvals pending and expired, credits per run. Alerts on tool error rate &gt; 5% and on any write that failed verification.</li>
+<li><strong>Retention</strong>: runs and steps kept 180 days (the audit window), then summarised; deleting a workspace deletes them (§5.9 purge).</li>
+</ul>
+
+<h2 id="cost"><span class="sn">17</span>Cost and metering</h2>
+<div class="tw"><table>
+<tr><th>Item</th><th>Credits (proposal, pending OQ-1)</th></tr>
+<tr><td><code>agent_turn</code>: each model call in a run</td><td>1 (a typical question: 2–4 turns)</td></tr>
+<tr><td>Tools</td><td>0 (database queries); tools that call AI charge their existing feature cost (a draft reply = <code>reply_suggestion</code> 2, knowledge answer = <code>knowledge_test</code> 1)</td></tr>
+<tr><td>Long tasks</td><td>Quoted before starting from the existing costs, e.g. comment analysis 1 per 20 comments: 50,000 comments ≈ 2,500 credits</td></tr>
+<tr><td>Caps</td><td>Per run: 10 credits for R1 answers unless the member accepts a quote; per workspace: the monthly credits (§1.7)</td></tr>
+</table></div>
+<p>Model choice: the planner uses <code>AI_MODEL_AGENT</code> (default the reply model); the final report the same model at low temperature. Prompt caching of the tool catalogue and system prompt is used where Gemini supports it. The global daily spend guard (TR-AI-13) pauses agent runs after bulk AI and before DM replies.</p>
+
+<h2 id="testing"><span class="sn">18</span>Testing and evaluation</h2>
+<ul>
+<li><strong>Unit</strong>: time resolver (a table of phrases × time zones × edge days), condition evaluation, plan validation, gateway decisions (every tier × mode × permission × role combination), verifiers, tool argument schemas.</li>
+<li><strong>Integration</strong> (FakeProvider scripting tool calls): each tool against real Postgres; tenancy (another workspace's ids never resolve); a run end to end with persisted steps; crash and resume; approvals (R2); caps.</li>
+<li><strong>Agent eval set</strong> (<code>tests/ai_eval/agent.jsonl</code>, ≥ 100 requests with expected tools, expected numbers from seeded data and forbidden behaviours): tool-choice accuracy, answer numbers matching the database exactly, no claims of actions not taken, correct refusals, time ranges resolved correctly. Run before any prompt or model change; results in <code>docs/ai-eval-log.md</code>.</li>
+<li><strong>Targets to ship R1</strong>: ≥ 90% correct tool choice, 100% numeric answers equal to the database, 0 invented numbers, p95 answer ≤ 12 s for single-tool questions.</li>
+<li><strong>Targets before each autonomy step</strong> (R2, R3): 0 unverified success claims and 0 writes outside policy over 2 weeks of shadow runs (the agent plans and the gateway decides, but nothing executes), reviewed by the owner.</li>
+</ul>
+
+<h2 id="platform"><span class="sn">19</span>Platform limits the agent must respect</h2>
+<div class="tw"><table>
+<tr><th>Limit</th><th>Effect on the agent</th></tr>
+<tr><td>Instagram and WhatsApp messages only inside the 24-hour window (Human Agent tag 7 days after approval; WhatsApp templates outside)</td><td>No cold DMs; scheduled messages must fall inside the window; the agent explains and offers the latest possible time</td></tr>
+<tr><td>Private replies: one per comment, within 7 days</td><td>Bulk private replies to old comments are refused with the reason</td></tr>
+<tr><td>Insights need <code>instagram_business_manage_insights</code> (App Review) and can lag up to 48 h</td><td>Without it: comment and engagement counts only, stated in the answer; insight metrics start at the 24 h snapshot</td></tr>
+<tr><td>Insights are lifetime totals at request time</td><td>Fair comparison requires Social Hood's own snapshots (FR-ANL-01); posts from before connecting have partial history</td></tr>
+<tr><td>Publishing: daily limit (<code>content_publishing_limit</code>), supported formats, media rules (FR-PUB)</td><td><code>schedule_post</code> checks quota and format before scheduling; failures are per target</td></tr>
+<tr><td>API rate limits (business use case usage, TR-PL-09) and the private-reply bucket (750/hour)</td><td>Bulk actions run as queued tasks at the existing bucket rates, with an ETA</td></tr>
+<tr><td>Facebook Pages (R2) and LinkedIn posting (R3) not connected in R1; LinkedIn messaging unavailable</td><td>Per-target result: "Facebook: not connected"</td></tr>
+<tr><td>Follower demographics need 100+ followers; some account metrics limited to recent periods</td><td>Answers state when a metric isn't available for the account</td></tr>
+</table></div>
+<p>These are added to <code>instagram-social-hood-requirements.html</code> as "Limits that shape the agent" and to the verification list where unconfirmed.</p>
+
+<h2 id="answer"><span class="sn">20</span>The final question</h2>
+<div class="card">
+<p><strong>"Can Social Hood's autonomous agent safely operate the entire social-media workflow using tools, while analytics, permissions, platform APIs, business rules, and human approval remain under deterministic application control?"</strong></p>
+<p><strong>Yes, for the workflows the connected platforms' APIs allow, and in stages.</strong> The architecture keeps every decision that matters out of the model:</p>
+<ul>
+<li><strong>Analytics</strong>: numbers come from typed queries over stored data and snapshots; the model only explains them.</li>
+<li><strong>Permissions</strong>: role, agent policy and tool risk tier are checked in code by the action gateway on every write; no tool can change the policy.</li>
+<li><strong>Platform APIs</strong>: reached only through the existing adapters, with their capability checks, rate limits, reply-window rules and idempotency.</li>
+<li><strong>Business rules</strong>: live in the existing services the tools call (scheduling, automations, sending, publishing, knowledge), so the agent inherits them.</li>
+<li><strong>Human approval</strong>: a persisted pause that only a person with the right role can resolve; edits are re-checked.</li>
+<li><strong>Truthfulness</strong>: success is claimed only after a verifier reads the result back; everything is traced per step.</li>
+</ul>
+<p><strong>"Entire workflow" has honest limits</strong>: no cold DMs, no Facebook until R2, no LinkedIn messaging, insights only with App Review. Within those limits the agent can analyse, decide and act, and autonomy is widened only after each stage's evaluation and shadow-run audit pass.</p>
+</div>
+<pre>
+                 SOCIAL HOOD
+                      │
+                      ▼
+              AGENT (Pydantic AI loop)
+          ┌───────────┼────────────┐
+          ▼           ▼            ▼
+       ANALYZE      DECIDE        ACT
+    analytics &amp;   plan + code-   tools → action gateway
+    read tools    evaluated      → existing services
+                  conditions     → platform adapters
+          └───────────┼────────────┘
+                      ▼
+               VERIFY (read-back)
+                      ▼
+               REPORT (with citations and receipts)
+</pre>
+</main>
+</body>
+</html>

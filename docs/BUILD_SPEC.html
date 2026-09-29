@@ -608,9 +608,9 @@ table.xwide{min-width:980px}
   <div class="tw"><table class="wide">
     <thead><tr><th>Release</th><th>Contents</th><th>From the vision PRD</th></tr></thead>
     <tbody>
-      <tr><td><span class="tag r1">R1</span> launch</td><td>Workspaces and sign-in; Instagram and WhatsApp connections; unified inbox with real-time updates, attachments and reply-window rules; scheduled messages; keyword automations (DM and comment) with fixed or AI replies; message analysis; conversation summaries; suggested replies; AI modes with a safety policy and human takeover; knowledge base with a list of questions the AI couldn't answer; follow-up reminders before reply windows close; comment intelligence per post; Instagram publishing (image, carousel, Reels) with AI captions, a content calendar and a posting queue; automation templates and per-automation results; plans, trial and usage limits; Home overview on real data; in-app, email and push notifications with an installable app; weekly email digest; Meta data-deletion callbacks; background collection of post metric snapshots</td><td>Stages 1, 2, parts of 3 and 5; MVP A–F, J</td></tr>
-      <tr><td><span class="tag r2">R2</span></td><td>Facebook Pages (messages, comments, publishing); team members, roles and conversation assignment; saved replies; post analytics and time-normalised comparison; best posting times; link click tracking; website crawl into knowledge; product catalog; order capture and UPI payment requests; business hours for auto mode; topic trends; giveaway winner picker; story mention and reply triggers; data export; Max plan; light theme; database row-level security</td><td>Stages 4, 6, parts of 7 and 8; MVP G, H, I</td></tr>
-      <tr><td><span class="tag r3">R3</span></td><td>"Ask Social Hood" natural-language analytics; operator assistant that builds automations from chat; content recommendations and campaign reports; payment-gateway links in chat; LinkedIn organisation posting; follow-up sequences; competitor and listening features where APIs allow</td><td>Stages 7, 9–14</td></tr>
+      <tr><td><span class="tag r1">R1</span> launch</td><td>Workspaces and sign-in; Instagram and WhatsApp connections; unified inbox with real-time updates, attachments and reply-window rules; scheduled messages; keyword automations (DM and comment) with fixed or AI replies; message analysis; conversation summaries; suggested replies; AI modes with a safety policy and human takeover; knowledge base with a list of questions the AI couldn't answer; follow-up reminders before reply windows close; comment intelligence per post; Instagram publishing (image, carousel, Reels) with AI captions, a content calendar and a posting queue; automation templates and per-automation results; plans, trial and usage limits; Home overview on real data; in-app, email and push notifications with an installable app; weekly email digest; Meta data-deletion callbacks; background collection of post metric snapshots; post analytics compared at the same age (FR-ANL-01, FR-ANL-02); <b>Ask Social Hood</b>, a read-only AI agent that answers questions over conversations, comments, posts, analytics and knowledge and prepares actions for the user to confirm (FR-AGT-01…07)</td><td>Stages 1, 2, parts of 3 and 5; MVP A–F, J</td></tr>
+      <tr><td><span class="tag r2">R2</span></td><td>Facebook Pages (messages, comments, publishing); team members, roles and conversation assignment; saved replies; best posting times; link click tracking; website crawl into knowledge; product catalog; order capture and UPI payment requests; business hours for auto mode; topic trends; giveaway winner picker; story mention and reply triggers; data export; Max plan; light theme; database row-level security; agent write tools through the action gateway with approvals, permissions, Copilot and Supervised modes, background agent tasks and conditional plans (FR-AGT-08…12)</td><td>Stages 4, 6, parts of 7 and 8; MVP G, H, I</td></tr>
+      <tr><td><span class="tag r3">R3</span></td><td>Autonomous agent mode, standing instructions and the growth analyst (FR-AGT-13…15); content recommendations and campaign reports; payment-gateway links in chat; LinkedIn organisation posting; follow-up sequences; competitor and listening features where APIs allow</td><td>Stages 7, 9–14</td></tr>
     </tbody>
   </table></div>
 
@@ -717,6 +717,26 @@ table.xwide{min-width:980px}
     <div class="req"><div class="id">FR-KB-07</div><div><div class="t">Product catalog <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Structured products (name, price and currency, variants such as sizes, stock status, link, images) added by form or CSV import. The AI answers price and stock questions from these fields exactly instead of from retrieved text, and the composer can send a product card.</p></div></div>
   </div>
 
+  <h3 id="prd-fr-agt">AI agent</h3>
+  <p>An orchestration layer over the services below: understand, plan, call typed tools, execute under deterministic policy, verify, report. Design: <a href="agent-architecture.html">agent-architecture.html</a>.</p>
+  <div class="reqs">
+    <div class="req"><div class="id">FR-AGT-01</div><div><div class="t">Ask Social Hood <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>A panel on every page and a full page where a member asks questions in plain language (English, Hindi, Hinglish). Answers cite the data used (posts, time range, counts) and link to it.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-02</div><div><div class="t">Read tools only in R1 <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Conversations, contacts, comments, posts, post metrics, analytics, sentiment and topics, knowledge, scheduled messages and posts, automations and runs. No R1 tool changes anything.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-03</div><div><div class="t">Prepared actions <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>A request that needs a change becomes an action card that opens the existing screen pre-filled (schedule popover inside the reply window, automation editor with a draft, comment reply). The member completes it there, so every existing check applies.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-04</div><div><div class="t">Numbers come from the database <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Counts, percentages, averages and comparisons are computed by analytics tools; the model only explains them. Every answer states the time range and sample size.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-05</div><div><div class="t">Time <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Relative and absolute dates resolve deterministically in the workspace time zone before any tool runs; the answer states the resolved range.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-06</div><div><div class="t">Honest limits <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Missing data (insights not granted, platform not connected, a post too new to compare, comments not yet analysed) is stated, never guessed.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-07</div><div><div class="t">Run history <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Every run keeps its request, steps, tools, results, credits and outcome; admins can open any run.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-08</div><div><div class="t">Write tools through the action gateway <span class="tag must">MUST</span> <span class="tag r2">R2</span></div><p>Comment replies (one or many), send or schedule a message, schedule, reschedule or cancel a post, create, activate, pause or delete an automation. Every write is decided by the gateway (TR-AGT-04) and verified after it runs (TR-AGT-06).</p></div></div>
+    <div class="req"><div class="id">FR-AGT-09</div><div><div class="t">Approvals <span class="tag must">MUST</span> <span class="tag r2">R2</span></div><p>Writes the policy doesn't allow outright become approval requests showing exactly what will happen; Approve, Edit or Cancel; they expire after 24 h.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-10</div><div><div class="t">Agent modes and permissions <span class="tag must">MUST</span> <span class="tag r2">R2</span></div><p>Read only, Copilot, Supervised; per-capability switches (send replies, schedule messages, schedule posts, create automations, delete automations, bulk actions) and limits, set by owners and admins.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-11</div><div><div class="t">Long tasks <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Background work with a credit quote first, progress, and a notification when done.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-12</div><div><div class="t">Conditional multi-step requests <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>A typed plan with conditions is shown before anything runs; conditions are evaluated by code.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-13</div><div><div class="t">Autonomous mode <span class="tag should">SHOULD</span> <span class="tag r3">R3</span></div><p>Permitted writes run without asking, inside owner-set caps and hours.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-14</div><div><div class="t">Standing instructions <span class="tag should">SHOULD</span> <span class="tag r3">R3</span></div><p>Scheduled or event-triggered agent tasks; the Auto reply loop becomes one of them.</p></div></div>
+    <div class="req"><div class="id">FR-AGT-15</div><div><div class="t">Growth analyst <span class="tag should">SHOULD</span> <span class="tag r3">R3</span></div><p>Content recommendations, best times and formats, campaign reports, caption drafts for review.</p></div></div>
+  </div>
+
   <h3 id="prd-fr-aut">Automations</h3>
   <div class="reqs">
     <div class="req"><div class="id">FR-AUT-01</div><div><div class="t">Create an automation <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Fields: name; connected Instagram account; trigger (a DM contains a keyword, a comment contains a keyword, or any comment on selected posts); keywords (1–50; none for the any-comment trigger); match mode (whole word by default, exact message, or contains); action (send a message built in the DM builder, FR-AUT-13, or an AI reply guided by instructions); for comment triggers, public reply variations (FR-AUT-14) and the post scope (all posts, selected posts, or the next post published, FR-AUT-18); settings (cooldown, run window, order when busy, disclosure).</p></div></div>
@@ -783,8 +803,8 @@ table.xwide{min-width:980px}
   <h3 id="prd-fr-home">Home and analytics</h3>
   <div class="reqs">
     <div class="req"><div class="id">FR-HOME-01</div><div><div class="t">Home overview <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Real data only: conversations needing a reply, messages received today and in 7 days, share handled by AI, median first-response time (7 days), sentiment split of messages and comments (7 days), three posts with the most comments (7 days), and the onboarding checklist. No placeholder charts.</p></div></div>
-    <div class="req"><div class="id">FR-ANL-01</div><div><div class="t">Metric snapshots <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>When the insights permission is granted, record post metrics 1 h, 6 h, 24 h, 72 h, 7 d and 30 d after publishing. Instagram insights can lag up to 48 h, so the 1 h and 6 h snapshots hold the post's live counts (likes, comments), insight metrics start at 24 h, and the 72 h run re-reads earlier values and marks them final. Also record one row of account metrics per account per day (followers and account insights), because Instagram keeps account insights for only 90 days. No UI in R1; the data must exist when R2's analytics ship, because it cannot be backfilled.</p></div></div>
-    <div class="req"><div class="id">FR-ANL-02</div><div><div class="t">Post analytics <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Reach, views, engagement, comparison with the account's average at the same age, AI explanation.</p></div></div>
+    <div class="req"><div class="id">FR-ANL-01</div><div><div class="t">Metric snapshots <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>When the insights permission is granted, record post metrics 1 h, 6 h, 24 h, 72 h, 7 d and 30 d after publishing. Instagram insights can lag up to 48 h, so the 1 h and 6 h snapshots hold the post's live counts (likes, comments), insight metrics start at 24 h, and the 72 h run re-reads earlier values and marks them final. Also record one row of account metrics per account per day (followers and account insights), because Instagram keeps account insights for only 90 days. Post analytics (FR-ANL-02) and Ask Social Hood use them in R1; the data cannot be backfilled.</p></div></div>
+    <div class="req"><div class="id">FR-ANL-02</div><div><div class="t">Post analytics <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Reach, views, likes, comments, shares, saves and engagement rate per post, compared with the account's previous posts at the same age (TR-AGT-05); the explanation comes from Ask Social Hood.</p></div></div>
   </div>
 
   <h3 id="prd-fr-bil">Billing</h3>
@@ -1478,6 +1498,18 @@ RETURNING used;          -- no row: raise QuotaExceeded</code></pre>
     <div class="req"><div class="id">TR-AI-13</div><div><div class="t">Global spend guard</div><p>Beyond per-workspace credits, a platform-wide daily ceiling (<code>AI_DAILY_SPEND_LIMIT_USD</code>) is computed from <code>ai_usage_events</code> tokens and a price table per model. At 80%, alert. At 100%, pause bulk-lane AI (comment analysis, summaries) and keep DM analysis and replies running; the pause lifts at 00:00 UTC or when the limit is raised.</p></div></div>
   </div>
 
+  <h3 id="trd-agent">Agent</h3>
+  <div class="reqs">
+    <div class="req"><div class="id">TR-AGT-01</div><div><div class="t">Layering</div><p>Package <code>agent/</code> (orchestrator, planner, plan, executor, gateway, verify, context, timeparse, registry, tools/). Tools are typed adapters over existing services; they never run model-written SQL and never call platform APIs directly.</p></div></div>
+    <div class="req"><div class="id">TR-AGT-02</div><div><div class="t">Planner</div><p>Pydantic AI, used only for the model-and-tool loop, on Gemini (<code>AI_MODEL_AGENT</code>, default the reply model). Dependencies carry session, workspace, principal, time zone and run id. Answer loop for questions (at most 8 tool calls, 6 model turns); plan first for any write (typed Plan, at most 12 steps, 2 re-plans). Every model call is metered as <code>agent_turn</code>.</p></div></div>
+    <div class="req"><div class="id">TR-AGT-03</div><div><div class="t">Tools</div><p>Each tool declares an input and result model, a risk tier (read, draft, low, high, destructive), a capability and a release. Results are compact and capped. Draft tools change nothing.</p></div></div>
+    <div class="req"><div class="id">TR-AGT-04</div><div><div class="t">Action gateway (R2)</div><p>Every write: release available, principal's role allows it, the capability switch is on, platform capability (TR-PL-11), limits (bulk size, per hour, per day), then mode × tier gives execute or approval. The model's output is never an input to this decision.</p></div></div>
+    <div class="req"><div class="id">TR-AGT-05</div><div><div class="t">Analytics service</div><p><code>services/analytics</code>: post performance at an age, comparison with a baseline (previous N posts or a range, same format by default) at the same age from FR-ANL-01 snapshots, top and above-average posts, engagement and sentiment trends, sentiment distribution, comment topics, lead metrics. Engagement rate = interactions ÷ reach at the same age. Fewer than 3 comparable posts: "not enough history".</p></div></div>
+    <div class="req"><div class="id">TR-AGT-06</div><div><div class="t">Verification</div><p>Each write tool returns a receipt and has a verifier that reads the effect back (and the platform receipt where one exists). Only verified writes are reported as done; others are "not confirmed".</p></div></div>
+    <div class="req"><div class="id">TR-AGT-07</div><div><div class="t">State and recovery</div><p><code>run_agent</code> runs in the interactive lane with lock <code>agent:{run_id}</code>; steps are persisted before and after; a sweeper resumes runs stuck for 10 minutes from the last completed step, re-checking a running write with its verifier before any retry (idempotency key per step). Bulk work never runs inside a run: it becomes an existing background task that the run waits on.</p></div></div>
+    <div class="req"><div class="id">TR-AGT-08</div><div><div class="t">Trace</div><p>Per step: tool, validated arguments, result summary, gateway decision, verification, external ids, latency, attempts, errors; per run: model, prompt version, tokens, credits. No hidden model reasoning is stored. Kept 180 days.</p></div></div>
+  </div>
+
   <h2 id="trd-jobs"><span class="sn">2.9</span>Background jobs</h2>
   <div class="reqs">
     <div class="req"><div class="id">TR-JOB-01</div><div><div class="t">Worker</div>
@@ -1773,6 +1805,13 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">POST · DELETE</td><td class="m">/v1/me/push-subscriptions</td><td>Register or remove this device's push subscription</td><td>any user</td></tr>
       <tr><td class="m">GET</td><td class="m">…/knowledge-gaps?status=open</td><td>Questions the AI couldn't answer (30 days)</td><td>admin</td></tr>
       <tr><td class="m">POST</td><td class="m">…/knowledge-gaps/{id}/dismiss</td><td>Dismiss a gap (answering is creating an FAQ with <code>gap_id</code>)</td><td>admin</td></tr>
+      <tr><td class="m">POST</td><td class="m">…/agent/runs</td><td>Ask Social Hood: start a run {request, thread_id?}; 202 with the run</td><td>agent</td></tr>
+      <tr><td class="m">GET</td><td class="m">…/agent/runs?thread_id&amp;cursor · …/agent/runs/{id}</td><td>Run history; one run with its steps</td><td>agent</td></tr>
+      <tr><td class="m">POST</td><td class="m">…/agent/runs/{id}/cancel</td><td>Stop at the next step</td><td>agent</td></tr>
+      <tr><td class="m">GET</td><td class="m">…/agent/threads</td><td>Ask panel threads</td><td>agent</td></tr>
+      <tr><td class="m">GET · PUT</td><td class="m">…/agent/policy</td><td>Agent mode, capability switches, limits (R2)</td><td>admin</td></tr>
+      <tr><td class="m">GET · POST</td><td class="m">…/agent/approvals · …/agent/approvals/{id}/approve · /reject</td><td>Approvals (R2)</td><td>agent</td></tr>
+      <tr><td class="m">GET</td><td class="m">…/analytics/posts/{id}/performance · …/analytics/compare · …/analytics/sentiment · …/analytics/top-posts</td><td>Analytics service (TR-AGT-05)</td><td>agent</td></tr>
       <tr><td class="m">GET</td><td class="m">…/events</td><td>SSE stream</td><td>agent</td></tr>
       <tr><td class="m">POST</td><td class="m">…/dev/sandbox/inbound</td><td>Inject a fake event (sandbox only)</td><td>owner · dev only</td></tr>
       <tr><td class="m">GET · POST</td><td class="m">/webhooks/instagram · /webhooks/whatsapp</td><td>Meta webhooks</td><td>signature</td></tr>
@@ -2926,6 +2965,73 @@ erDiagram
   </table></div>
   <p>Keys: index <code>(source_id)</code>; <code>CREATE INDEX ix_knowledge_chunks_embedding ON knowledge_chunks USING hnsw (embedding vector_cosine_ops)</code>.</p>
 
+  <h3 id="data-agent">Agent</h3>
+  <p>Credits reuse <code>ai_usage_events</code> (feature <code>agent_turn</code>). Business, customer and conversation memory reuse the knowledge base, contacts, analyses and summaries; task memory is the run.</p>
+
+  <h3><code>agent_runs</code> <span class="tag">tenant</span></h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">thread_id</td><td class="m">uuid</td><td>no</td><td></td><td>Ask panel thread</td></tr>
+      <tr><td class="m">requested_by_user_id</td><td class="m">uuid</td><td>yes</td><td></td><td>the principal; null for standing instructions (R3)</td></tr>
+      <tr><td class="m">source</td><td class="m">text</td><td>no</td><td>'ask'</td><td>ask, standing (R3)</td></tr>
+      <tr><td class="m">request</td><td class="m">text</td><td>no</td><td></td><td>≤ 2,000 chars</td></tr>
+      <tr><td class="m">mode</td><td class="m">text</td><td>no</td><td></td><td>policy mode when the run started</td></tr>
+      <tr><td class="m">status</td><td class="m">text</td><td>no</td><td>'queued'</td><td>queued, planning, running, awaiting_approval, succeeded, partial, failed, cancelled, expired</td></tr>
+      <tr><td class="m">plan</td><td class="m">jsonb</td><td>yes</td><td></td><td>typed Plan (R2)</td></tr>
+      <tr><td class="m">answer · answer_refs</td><td class="m">text · jsonb</td><td>yes · no</td><td>· '[]'</td><td>final report; citations [{kind, id, label}]</td></tr>
+      <tr><td class="m">model · prompt_version · credits · input_tokens · output_tokens</td><td class="m">various</td><td>yes</td><td></td><td></td></tr>
+      <tr><td class="m">error_code · error_message</td><td class="m">text</td><td>yes</td><td></td><td></td></tr>
+      <tr><td class="m">started_at · completed_at</td><td class="m">timestamptz</td><td>yes</td><td></td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p>Keys: index <code>(workspace_id, created_at DESC)</code>; index <code>(thread_id, created_at)</code>.</p>
+
+  <h3><code>agent_steps</code> <span class="tag">tenant</span></h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">run_id</td><td class="m">uuid</td><td>no</td><td></td><td>FK ON DELETE CASCADE</td></tr>
+      <tr><td class="m">ordinal</td><td class="m">smallint</td><td>no</td><td></td><td></td></tr>
+      <tr><td class="m">kind</td><td class="m">text</td><td>no</td><td></td><td>tool, condition, report</td></tr>
+      <tr><td class="m">tool · tier</td><td class="m">text</td><td>yes</td><td></td><td>tier: read, draft, low, high, destructive</td></tr>
+      <tr><td class="m">args · result</td><td class="m">jsonb</td><td>no · yes</td><td></td><td>validated input; compact typed result</td></tr>
+      <tr><td class="m">status</td><td class="m">text</td><td>no</td><td>'pending'</td><td>pending, running, succeeded, failed, skipped, blocked, awaiting_approval</td></tr>
+      <tr><td class="m">decision</td><td class="m">text</td><td>yes</td><td></td><td>gateway: execute, approval, refuse:{reason}</td></tr>
+      <tr><td class="m">verification</td><td class="m">jsonb</td><td>yes</td><td></td><td>{verified, checked, external_ids}</td></tr>
+      <tr><td class="m">idempotency_key</td><td class="m">text</td><td>no</td><td></td><td>run_id:ordinal, reused on retry</td></tr>
+      <tr><td class="m">attempts · latency_ms</td><td class="m">smallint · integer</td><td>no</td><td>0</td><td></td></tr>
+      <tr><td class="m">error_code · error_message · started_at · completed_at</td><td class="m">various</td><td>yes</td><td></td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p>Keys: unique <code>(run_id, ordinal)</code>.</p>
+
+  <h3><code>agent_approvals</code> <span class="tag">tenant</span></h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">run_id · step_id</td><td class="m">uuid</td><td>no</td><td></td><td>FKs ON DELETE CASCADE</td></tr>
+      <tr><td class="m">summary</td><td class="m">text</td><td>no</td><td></td><td>what will happen, in plain words</td></tr>
+      <tr><td class="m">payload</td><td class="m">jsonb</td><td>no</td><td></td><td>the exact tool and args; an edit replaces it and is re-checked</td></tr>
+      <tr><td class="m">status</td><td class="m">text</td><td>no</td><td>'pending'</td><td>pending, approved, rejected, expired, superseded</td></tr>
+      <tr><td class="m">expires_at</td><td class="m">timestamptz</td><td>no</td><td></td><td>24 h after the request</td></tr>
+      <tr><td class="m">decided_by_user_id · decided_at</td><td class="m">uuid · timestamptz</td><td>yes</td><td></td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p>Keys: partial unique <code>(step_id) WHERE status = 'pending'</code>. R2.</p>
+
+  <h3><code>agent_policies</code> <span class="tag">tenant</span></h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">mode</td><td class="m">text</td><td>no</td><td>'read_only'</td><td>read_only (R1), copilot, supervised (R2), autonomous (R3)</td></tr>
+      <tr><td class="m">permissions</td><td class="m">jsonb</td><td>no</td><td>all false</td><td>send_replies, schedule_messages, schedule_posts, create_automations, delete_automations, bulk_actions</td></tr>
+      <tr><td class="m">limits</td><td class="m">jsonb</td><td>no</td><td></td><td>bulk_max 50, writes_per_hour 30, writes_per_day 200</td></tr>
+      <tr><td class="m">updated_by_user_id</td><td class="m">uuid</td><td>yes</td><td></td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p>Keys: uq <code>(workspace_id)</code>. Created with the workspace.</p>
+
   <h2 id="data-auto"><span class="sn">5.6</span>Automations and comments</h2>
   <h3><code>automations</code> <span class="tag">tenant</span></h3>
   <div class="tw"><table class="xwide">
@@ -3456,6 +3562,7 @@ interface Notification {
       <tr><td class="m">P5</td><td>AI: analysis, knowledge and gaps, suggestions, auto mode, follow-up reminders</td><td class="num">12</td><td>F-08, F-09, F-14, F-17, F-18 pass; eval meets PRD targets</td></tr>
       <tr><td class="m">P6</td><td>Comment intelligence</td><td class="num">5</td><td>F-12 passes; post summaries accurate on a real post</td></tr>
       <tr><td class="m">P7</td><td>Instagram publishing</td><td class="num">7</td><td>Image, carousel with video and Reel publish to a test account; F-13 passes</td></tr>
+      <tr><td class="m">PA</td><td>Ask Social Hood (read-only agent), after P7</td><td class="num">6</td><td>Agent eval targets met (≥ 90% tool choice, numbers equal to the database, no invented numbers); F-AGT flows pass</td></tr>
       <tr><td class="m">P8</td><td>Billing, entitlements, push, digest, measured plan limits</td><td class="num">9</td><td>F-15 and F-19 pass; plan limits set from measured AI cost</td></tr>
       <tr><td class="m">P9</td><td>Home, hardening, deployment, launch</td><td class="num">7</td><td>Launch checklist (§6.4) complete</td></tr>
           </tbody>
@@ -3589,6 +3696,19 @@ interface Notification {
       <tr><td class="m">T7.4</td><td>AI caption and hashtag endpoints</td><td>FR-PUB-02</td><td>Credits charged; brand voice applied</td></tr>
       <tr><td class="m">T7.5</td><td>Web composer: accounts, media tray with real upload progress and the library, crop, caption editor with counters, AI and hashtag groups, first comment, Add comment automation, date and time or queue, checklist, Feed, Reel and Grid previews</td><td>UX-SCR-13, FR-PUB-03, FR-PUB-10…13, FR-AUT-18</td><td>E2E F-13 via sandbox; a failing checklist item disables Schedule and links to the fix</td></tr>
       <tr><td class="m">T7.6</td><td>Web Schedule page: Week, Month and List views, drag to reschedule and to schedule drafts, queue slots, Messages layer, account filters, right rail, agenda on phones; posting times drawer and hashtag groups dialog</td><td>UX-SCR-04, UX-SCR-14, FR-PUB-08, FR-PUB-09, FR-PUB-14</td><td>E2E: dragging a draft onto Wednesday 18:00 schedules it; a published post can't be dragged; "Move to…" works by keyboard; the agenda view works at 375 px</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>PA · Ask Social Hood (after P7)</h3>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>ID</th><th>Task</th><th>Covers</th><th>Done when</th></tr></thead>
+    <tbody>
+      <tr><td class="m">TA.1</td><td>Agent tables (runs, steps, policies; approvals created now, used in R2), agent package skeleton, tool registry with tiers, run API and events</td><td>FR-AGT-01, 07, TR-AGT-01, 03, 08</td><td>A run is stored with its steps; tenancy suite covers the routes</td></tr>
+      <tr><td class="m">TA.2</td><td>Pydantic AI planner on Gemini: answer loop, caps, metering (<code>agent_turn</code>), report with citations from stored results only</td><td>TR-AGT-02, FR-AGT-04</td><td>Caps stop a runaway loop; credits recorded per turn; the report cites every number</td></tr>
+      <tr><td class="m">TA.3</td><td>Time resolver</td><td>FR-AGT-05</td><td>A table of phrases × time zones × edge days resolves exactly</td></tr>
+      <tr><td class="m">TA.4</td><td>Read and draft tools: conversations, contacts, comments, posts, analytics (P6 service), knowledge, schedules, automations; action cards</td><td>FR-AGT-02, 03, 06</td><td>Each tool tested against real data and another workspace's ids; action cards open pre-filled</td></tr>
+      <tr><td class="m">TA.5</td><td>Ask panel and page, live steps, answer and action cards, run history for admins</td><td>FR-AGT-01, 07</td><td>Component tests for every card state; 375 px works</td></tr>
+      <tr><td class="m">TA.6</td><td>Agent eval set (≥ 100 requests on seeded data), crash recovery sweeper</td><td>TR-AGT-07, §2.8 eval</td><td>Targets met and logged in docs/ai-eval-log.md; a killed worker resumes a run without repeating a step</td></tr>
     </tbody>
   </table></div>
 

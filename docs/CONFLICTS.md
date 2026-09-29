@@ -272,3 +272,56 @@ TR-AI-03 requires. `EmbedContentConfig` has `task_type` and `output_dimensionali
 confirms whether gemini-embedding-2 accepts `task_type` or needs the task written into the text.
 The model ids in TR-AI-02 are to be checked against Google's list with a valid key (the configured
 key was rejected on 2026-09-29).
+
+## C-033 · The AI becomes a tool-using agent (decision, 2026-09-29)
+The owner redirected the AI towards an autonomous agent (understand, plan, use tools, execute,
+verify, report). After review: R1 ships a read-only agent, "Ask Social Hood" (FR-AGT-01…07,
+phase PA after P7); write tools, approvals, permissions and Copilot/Supervised modes are R2;
+Autonomous mode and standing instructions R3. Framework: Pydantic AI for the model-and-tool loop
+only; state, approvals, permissions, credits and audit stay in Postgres. Facebook Pages stays R2.
+Departures from the owner's brief, accepted: tools are thin adapters over existing services; one
+analysis call instead of per-signal modules; plans are typed and conditions evaluated by code;
+one action gateway decides every write; success is verified by read-back; four tables instead of
+eleven; the agent package sits beside ai/, not inside it; FR-ANL-01 snapshots become MUST and
+FR-ANL-02 post analytics move to R1 because comparisons at equal age need them. Design:
+docs/agent-architecture.html.
+
+## C-034 · Merging knowledge gaps (decision, replaces TR-AI-12's rule)
+Measured on Postgres: "shipping to dubai" vs "shipping to uae" = 0.545 trigram similarity (not
+merged), "shipping to uae" vs "shipping to usa" = 0.684 (wrongly merged). New rule: the open gap
+labels (top 20) are passed to the suggestion call as data and the prompt asks the model to reuse
+an exact label for the same missing fact; exact match first; trigram similarity only as a fallback
+at 0.7. Needs suggest.v2 and an eval run (T5.9). To implement next.
+
+## C-035 · P5 build decisions (analysis, summaries, reminders)
+Embedding 2 aggregates several parts of one Content, so each text is its own Content; task format
+"task: search result | query: …" and "title: … | text: …". closing_soon now means a reminder went
+out for the current window, the window is open and no business message came after 18 h (FR-INB-14);
+the reminder states the real hours left and goes to all members. needs_human is raised by
+analysis and cleared only by a business reply. Summaries: last 50 messages, recomputed trigger
+count, 409 when analysis is off. No skipped decision row on a quota skip (checks belong to T5.6).
+
+## C-036 · P5 build decisions (knowledge)
+Long FAQs split with "Q: …\nA: " repeated; headings are hard chunk boundaries; the "[title] "
+prefix doesn't count toward 1,200. Character use: FAQ = question + answer, note = body, page or file
+= extracted text; a page or file that would pass the limit fails during ingestion; shortening is
+allowed over the limit. An edited source is unsearchable for the seconds it re-ingests. SSRF: every
+resolved address must be public; shared 100.64/10, reserved and multicast blocked; 15 s covers the
+whole fetch. An answered gap never reopens (a new one opens); a punctuation-only label records
+nothing. Knowledge uploads: PDF, DOCX, TXT, MD up to 10 MB.
+
+## C-037 · P5 build decisions (suggestions and Auto)
+No analysis for a message fails check 6 (Auto never sends blind). The output filter lets reviewed
+suggestions quote the conversation, but Auto and automation replies only knowledge and brand
+settings; an unknown link, email or phone makes the suggestion can_answer false. Built-in
+escalation phrases (refund, chargeback, lawyer, legal notice, consumer court, police, fraud, scam,
+talk to a human, manager…) match whole words. Takeover note only when Auto pauses; Resume adds a
+note; native-app echoes also pause Auto. Regenerate: 409 when AI is off or after 5; gaps count once
+per message; decide_auto_reply only for first generations. AI-reply automations need instructions
+and re-check the plan at runtime. Not built yet: suggestion expiry, the complex-model retry.
+
+## C-038 · P5 build decisions (web)
+The escalation banner and "AI paused" show only in Auto. The first draft shows a shimmer for up to
+30 s after an analysis that needs a reply. Brand voice opens as a form until a description exists.
+Plan gating reads the billing entitlements. The web refetches a conversation on
+conversation.updated for summary and AI state (the event carries list fields only).
