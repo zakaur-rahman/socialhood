@@ -4987,12 +4987,12 @@
         "summary": "List Automation Templates",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations": {
       "get": {
+        "description": "Every matching automation (no paging); ``q`` searches names and keywords.",
         "operationId": "list_automations",
         "parameters": [
           {
@@ -5132,8 +5132,7 @@
         "summary": "List Automations",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       },
       "post": {
         "description": "A draft, blank or filled from a template (FR-AUT-12).",
@@ -5195,8 +5194,7 @@
         "summary": "Create Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/pause": {
@@ -5253,8 +5251,7 @@
         "summary": "Pause Automations",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/priorities": {
@@ -5311,8 +5308,7 @@
         "summary": "Update Automation Priorities",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/summary": {
@@ -5365,8 +5361,7 @@
         "summary": "Get Automations Summary",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/{automation_id}": {
@@ -5422,8 +5417,7 @@
         "summary": "Delete Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       },
       "get": {
         "operationId": "get_automation",
@@ -5484,11 +5478,10 @@
         "summary": "Get Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       },
       "put": {
-        "description": "Replace the whole definition (autosave). Returns overlaps and what activation still needs.",
+        "description": "Replace the whole definition (autosave). Returns overlaps and what activation still needs.\nAn active automation must stay complete: 422 lists what the change would break.",
         "operationId": "update_automation",
         "parameters": [
           {
@@ -5557,8 +5550,7 @@
         "summary": "Update Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/{automation_id}/activate": {
@@ -5622,12 +5614,12 @@
         "summary": "Activate Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/{automation_id}/duplicate": {
       "post": {
+        "description": "A draft copy named \"\u2026 (copy)\".",
         "operationId": "duplicate_automation",
         "parameters": [
           {
@@ -5686,8 +5678,7 @@
         "summary": "Duplicate Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/{automation_id}/pause": {
@@ -5750,12 +5741,12 @@
         "summary": "Pause Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/{automation_id}/runs": {
       "get": {
+        "description": "The run log, newest first (FR-AUT-04).",
         "operationId": "list_automation_runs",
         "parameters": [
           {
@@ -5868,12 +5859,12 @@
         "summary": "List Automation Runs",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/{automation_id}/stats": {
       "get": {
+        "description": "Figures and the daily series for the last 7 or 30 days (FR-AUT-16).",
         "operationId": "get_automation_stats",
         "parameters": [
           {
@@ -5946,8 +5937,7 @@
         "summary": "Get Automation Stats",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/automations/{automation_id}/test": {
@@ -6021,8 +6011,7 @@
         "summary": "Test Automation",
         "tags": [
           "automations"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/conversations": {
@@ -7392,7 +7381,7 @@
     },
     "/v1/w/{wid}/posts": {
       "get": {
-        "description": "Newest first; ``q`` searches captions.",
+        "description": "Newest first; ``q`` searches captions. Stories are left out (they take no comments).",
         "operationId": "list_posts",
         "parameters": [
           {
@@ -7504,8 +7493,7 @@
         "summary": "List Posts",
         "tags": [
           "posts"
-        ],
-        "x-pending": "T4.3"
+        ]
       }
     },
     "/v1/w/{wid}/scheduled-messages": {
