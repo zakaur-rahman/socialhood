@@ -200,8 +200,14 @@ def more_words(shown: int, more: int, noun: str) -> str:
 # ---------------------------------------------------------------- citations (FR-AGT-01)
 
 
-def ref(kind: AnswerRefKind, record_id: uuid.UUID, label: str) -> AnswerRef:
-    return AnswerRef(kind=kind, id=record_id, label=clip(label, LABEL_CHARS) or kind)
+def ref(
+    kind: AnswerRefKind, record_id: uuid.UUID, label: str, parent_id: uuid.UUID | None = None
+) -> AnswerRef:
+    """``parent_id`` is where the record is shown: a comment's post, a scheduled message's
+    conversation."""
+    return AnswerRef(
+        kind=kind, id=record_id, label=clip(label, LABEL_CHARS) or kind, parent_id=parent_id
+    )
 
 
 def quoted(text: str | None) -> str:

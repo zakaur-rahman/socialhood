@@ -473,7 +473,10 @@ async def get_customer(ctx: ToolContext, args: GetCustomerInput) -> CustomerResu
     )
     name = contact_name(contact)
     refs = [ref("conversation", conv.id, name)] if conv else []
-    refs += [ref("comment", r.comment.id, quoted(r.comment.text)) for r in comments.rows]
+    refs += [
+        ref("comment", r.comment.id, quoted(r.comment.text), r.comment.media_item_id)
+        for r in comments.rows
+    ]
     caveats = []
     if conv is None:
         caveats.append(f"{name} hasn't messaged you, so there is no conversation.")

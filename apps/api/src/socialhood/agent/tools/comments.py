@@ -152,7 +152,7 @@ def _result(
         in_scope=found.in_scope,
         pending=found.pending,
         skipped=found.skipped,
-        refs=[*post_refs, *(ref("comment", i.id, quoted(i.text)) for i in items)],
+        refs=[*post_refs, *(ref("comment", i.id, quoted(i.text), i.post_id) for i in items)],
         caveats=_analysis_caveats(found, filtered=filtered),
     )
 
@@ -372,7 +372,7 @@ async def prepare_comment_reply(
         comment_text=clip(comment.text, 240),
         author=author,
         private_reply_until=deadline if args.private else None,
-        refs=[ref("comment", comment.id, quoted(comment.text)), post_ref(post, ctx)],
+        refs=[ref("comment", comment.id, quoted(comment.text), post.id), post_ref(post, ctx)],
         caveats=caveats,
         action_card=CommentReplyAction(
             kind="reply_to_comment",

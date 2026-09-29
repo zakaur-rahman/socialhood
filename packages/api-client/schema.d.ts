@@ -2442,6 +2442,8 @@ export interface components {
             kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source";
             /** Label */
             label: string;
+            /** Parent Id */
+            parent_id?: string | null;
         };
         /**
          * ApprovalApprove

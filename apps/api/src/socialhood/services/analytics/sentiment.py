@@ -62,6 +62,7 @@ class TopicExample:
     comment_id: uuid.UUID
     text: str
     commented_at: datetime
+    post_id: uuid.UUID
 
 
 @dataclass(frozen=True)
@@ -142,6 +143,7 @@ async def comment_topics(
                 Comment.id,
                 Comment.text,
                 Comment.commented_at,
+                Comment.media_item_id,
                 CommentAnalysis.topic,
                 func.row_number()
                 .over(
@@ -155,12 +157,18 @@ async def comment_topics(
             .subquery()
         )
         picked = await session.execute(
-            select(ranked.c.id, ranked.c.text, ranked.c.commented_at, ranked.c.topic)
+            select(
+                ranked.c.id,
+                ranked.c.text,
+                ranked.c.commented_at,
+                ranked.c.media_item_id,
+                ranked.c.topic,
+            )
             .where(ranked.c.rank <= examples)
             .order_by(ranked.c.topic, ranked.c.rank)
         )
-        for comment_id, text, at, topic in picked.all():
-            found[topic].append(TopicExample(comment_id, text, at))
+        for comment_id, text, at, post_id, topic in picked.all():
+            found[topic].append(TopicExample(comment_id, text, at, post_id))
     status = (
         await session.execute(
             select(

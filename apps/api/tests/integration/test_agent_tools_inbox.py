@@ -380,7 +380,10 @@ async def test_list_scheduled_messages_pending_and_by_range(shop: Shop) -> None:
     pending = await shop.call("list_scheduled_messages", {})
     assert [i.id for i in pending.items] == [soon, later]
     assert (pending.total, pending.more) == (2, 0)
-    assert pending.refs[0].kind == "scheduled_message"
+    assert (pending.refs[0].kind, pending.refs[0].parent_id) == (
+        "scheduled_message",
+        t.conversation_id,
+    )
     assert pending.refs[0].label.startswith("To Priya Shah, ")
     assert pending.summary == "2 messages still to be sent"
 

@@ -233,7 +233,10 @@ async def test_prepare_comment_reply_opens_the_reply_box_filled_in(shop: Shop, f
     assert card.prefill == CommentReplyPrefill(
         comment_id=feed.pricey, post_id=feed.reel, text="We have a sale this week!", private=False
     )
-    assert [(r.kind, r.id) for r in public.refs] == [("comment", feed.pricey), ("post", feed.reel)]
+    assert [(r.kind, r.id, r.parent_id) for r in public.refs] == [
+        ("comment", feed.pricey, feed.reel),  # a comment cites its post as its parent
+        ("post", feed.reel, None),
+    ]
 
     private = await shop.call(
         "prepare_comment_reply",
@@ -484,6 +487,7 @@ async def test_comment_topics_with_examples(shop: Shop, feed: Feed) -> None:
     assert (got.topic_count, got.analysed, got.total, got.pending) == (3, 3, 5, 1)
     assert got.topics[1].examples[0].comment_id == feed.pricey
     assert {r.id for r in got.refs} == {feed.reel, feed.love, feed.pricey, feed.shipping}
+    assert {r.parent_id for r in got.refs if r.kind == "comment"} == {feed.reel}
     assert got.caveats == ["1 of 5 comments are still being analysed, so they aren't counted."]
 
     negative = await shop.call(

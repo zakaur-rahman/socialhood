@@ -7,9 +7,9 @@ import type { Route } from "next";
 import type { ActionCard, AnswerRef } from "@/lib/api/types";
 
 /**
- * The screen a cited record opens. A comment and a scheduled message have no screen of their own
- * and the reference doesn't name their post or conversation, so they open the Comments page and
- * the inbox (where the Scheduled tab lists every scheduled message).
+ * The screen a cited record opens. A comment and a scheduled message have no screen of their own:
+ * they open their post and their conversation (the reference's parent), or the Comments page and
+ * the inbox when it names none.
  */
 export function refPath(ref: AnswerRef): string {
   switch (ref.kind) {
@@ -18,11 +18,11 @@ export function refPath(ref: AnswerRef): string {
     case "conversation":
       return `inbox/${ref.id}`;
     case "comment":
-      return "comments";
+      return ref.parent_id ? `comments/${ref.parent_id}` : "comments";
     case "automation":
       return `automations/${ref.id}`;
     case "scheduled_message":
-      return "inbox";
+      return ref.parent_id ? `inbox/${ref.parent_id}` : "inbox";
     case "scheduled_post":
       return `schedule/${ref.id}`;
     case "knowledge_source":

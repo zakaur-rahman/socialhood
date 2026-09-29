@@ -144,7 +144,10 @@ async def list_scheduled_messages(
         items=items,
         total=total,
         more=max(total - len(items), 0),
-        refs=[ref("scheduled_message", i.id, f"To {i.contact}, {i.send_at_label}") for i in items],
+        refs=[
+            ref("scheduled_message", i.id, f"To {i.contact}, {i.send_at_label}", i.conversation_id)
+            for i in items
+        ],
     )
 
 

@@ -81,6 +81,9 @@ class AnswerRef(ResponseModel):
     kind: AnswerRefKind
     id: uuid.UUID
     label: str  # short, e.g. "Reel of 26 Sep", "Priya Nair", "“Too expensive for me”"
+    # Where the record is shown: the post of a comment, the conversation of a scheduled
+    # message; None for records with a screen of their own.
+    parent_id: uuid.UUID | None = None
 
 
 class ScheduleMessagePrefill(ResponseModel):

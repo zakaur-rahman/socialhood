@@ -728,7 +728,7 @@ async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
                 ],
             )
         )
-        refs += [ref("comment", e.comment_id, quoted(e.text)) for e in t.examples]
+        refs += [ref("comment", e.comment_id, quoted(e.text), e.post_id) for e in t.examples]
     mood = f"{args.sentiment} " if args.sentiment else ""
     top = ", ".join(f"“{t.label}” {t.count}" for t in topics[:3])
     summary = f"{found.topic_count} topics in {found.analysed} analysed {mood}{scope}"
