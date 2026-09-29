@@ -23,7 +23,14 @@ import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/uuid";
 
 import { AttachmentTray, type TrayItem } from "./AttachmentTray";
-import { checkSchedule, defaultSchedule, ScheduleFields, scheduleLimits, type ScheduleValue } from "./ScheduleFields";
+import {
+  checkSchedule,
+  defaultSchedule,
+  preparedSchedule,
+  ScheduleFields,
+  scheduleLimits,
+  type ScheduleValue,
+} from "./ScheduleFields";
 
 // TR-FE-08: the emoji picker loads on demand.
 const EmojiPicker = dynamic(() => import("./EmojiPicker"), {
@@ -51,6 +58,8 @@ type Props = {
   onSend: (input: ReplyInput) => void;
   scheduleOpen: boolean;
   onScheduleOpenChange: (open: boolean) => void;
+  /** A time prepared by Ask Social Hood (FR-AGT-03): the popover opens at it when it fits. */
+  scheduleAt?: string | null;
   onChooseTemplate: () => void;
   /** The account can send attachments (capability dm_attachments). */
   canAttach: boolean;
@@ -77,6 +86,7 @@ export function Composer({
   onSend,
   scheduleOpen,
   onScheduleOpenChange,
+  scheduleAt = null,
   onChooseTemplate,
   canAttach,
   upload,
@@ -326,6 +336,7 @@ export function Composer({
           <PopoverContent align="end" side="top" className="w-80 border-line bg-panel p-3 shadow-xl">
             {scheduleOpen ? (
               <SchedulePanel
+                key={scheduleAt ?? "default"}
                 wid={wid}
                 conversation={conversation}
                 timeZone={timeZone}
@@ -333,6 +344,7 @@ export function Composer({
                 text={draft}
                 assets={ready.map((item) => item.asset!).filter(Boolean)}
                 blocked={uploading}
+                initialAt={scheduleAt}
                 onScheduled={() => {
                   resetAfterSend();
                   onScheduleOpenChange(false);
@@ -372,6 +384,7 @@ export function SchedulePanel({
   text,
   assets,
   blocked,
+  initialAt = null,
   onScheduled,
 }: {
   wid: string;
@@ -381,12 +394,15 @@ export function SchedulePanel({
   text: string;
   assets: MediaAsset[];
   blocked: boolean;
+  /** Ask Social Hood's prepared time (FR-AGT-03), used when it is still inside the limits. */
+  initialAt?: string | null;
   onScheduled: () => void;
 }) {
   const create = useCreateScheduled(wid, conversation.id);
   const closesAt = conversation.reply_window.closes_at ?? null;
   const limits = scheduleLimits(now, closesAt);
-  const [value, setValue] = useState<ScheduleValue>(() => defaultSchedule(now, timeZone, limits));
+  const [prepared] = useState(() => preparedSchedule(initialAt, timeZone, limits));
+  const [value, setValue] = useState<ScheduleValue>(() => prepared ?? defaultSchedule(now, timeZone, limits));
   const [error, setError] = useState<string | null>(null);
   const [key] = useState(uuid); // one Idempotency-Key per popover, reused if Schedule is clicked twice
   const windowTooShort = limits.max !== null && limits.max <= limits.min;
@@ -416,6 +432,13 @@ export function SchedulePanel({
   return (
     <div className="space-y-3" aria-label="Schedule message">
       <p className="text-sm font-semibold">Schedule message</p>
+      {initialAt ? (
+        <p className="text-xs text-brand-fg">
+          {prepared
+            ? "Prepared by Ask Social Hood. Check the message and time, then schedule."
+            : "Ask Social Hood's time no longer fits the reply window. Pick another."}
+        </p>
+      ) : null}
       {closesAt ? (
         <p className="text-xs text-fg-secondary">Window closes {formatDayTime(closesAt, timeZone, now)}</p>
       ) : null}

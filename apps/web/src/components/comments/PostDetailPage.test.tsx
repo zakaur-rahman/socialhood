@@ -2,6 +2,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { handOff, resetAgentHandoff, useAgentHandoff } from "@/lib/agent/handoff";
 import type { CommentFilter, PostComment, PostDetail, WorkspaceSummary } from "@/lib/api/types";
 import { matchesFilter, SECOND_PRIVATE_REPLY } from "@/lib/comments/format";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
@@ -19,6 +20,7 @@ import {
   workspace,
   type Call,
 } from "@/test/api";
+import { replyCard } from "@/test/agent";
 
 import { NOTHING_TO_SUMMARIZE } from "./PostSummaryCard";
 import { PostDetailPage } from "./PostDetailPage";
@@ -473,6 +475,55 @@ describe("Comment actions (FR-CMT-04)", () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith("@maple.bakery needs reconnecting before you can send from it."),
     );
+  });
+});
+
+describe("A reply prepared by Ask Social Hood (FR-AGT-03)", () => {
+  beforeEach(() => resetAgentHandoff());
+
+  it("opens that comment's reply box with the text; the member edits and sends it", async () => {
+    const user = userEvent.setup();
+    handOff(replyCard());
+    const { posted } = setup();
+    const box = await within(await screen.findByRole("listitem", { name: "Comment by @kabir" })).findByRole("textbox", {
+      name: "Public reply to @kabir",
+    });
+    expect(box).toHaveValue("Sorry about the wait! It ships today.");
+    expect(box).toHaveFocus();
+    // Nothing was sent by the hand-off.
+    expect(posted("/reply")).toHaveLength(0);
+    expect(within(row("@priya.styles")).queryByRole("textbox")).toBeNull();
+    await user.type(box, " Thanks for waiting.{Enter}");
+    await waitFor(() => expect(posted("/comments/cm-kabir/reply")).toHaveLength(1));
+    expect(posted("/comments/cm-kabir/reply")[0].body).toEqual({
+      text: "Sorry about the wait! It ships today. Thanks for waiting.",
+    });
+    expect(useAgentHandoff.getState().commentReply).toBeNull();
+  });
+
+  it("a private reply opens the DM box", async () => {
+    handOff(replyCard({ prefill: { ...replyCard().prefill, private: true } }));
+    setup();
+    const composer = await within(await screen.findByRole("listitem", { name: "Comment by @kabir" })).findByTestId("composer-dm");
+    expect(within(composer).getByRole("textbox", { name: "Private reply to @kabir" })).toHaveValue(
+      "Sorry about the wait! It ships today.",
+    );
+  });
+
+  it("says so when the comment isn't there, keeping the prepared text", async () => {
+    handOff(replyCard({ prefill: { ...replyCard().prefill, comment_id: "cm-gone" } }));
+    setup();
+    const notice = await screen.findByTestId("prepared-missing");
+    expect(notice).toHaveTextContent("isn't among this post's latest comments");
+    expect(notice).toHaveTextContent("Sorry about the wait! It ships today.");
+  });
+
+  it("a reply for another post is left for that post", async () => {
+    handOff(replyCard({ prefill: { ...replyCard().prefill, post_id: "po9" } }));
+    setup();
+    await screen.findByRole("list", { name: "Comments" });
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(useAgentHandoff.getState().commentReply).not.toBeNull();
   });
 });
 

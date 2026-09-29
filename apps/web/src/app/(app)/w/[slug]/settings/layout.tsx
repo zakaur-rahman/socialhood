@@ -13,6 +13,8 @@ const SECTIONS = [
   { segment: "connections", label: "Connections" },
   { segment: "ai", label: "AI" },
   { segment: "workspace", label: "Workspace" },
+  // agent-architecture.html §12: Settings → Agent, with the run history (FR-AGT-07).
+  { segment: "agent", label: "Agent" },
 ] as const;
 
 export default function SettingsLayout({ children }: { children: ReactNode }) {
@@ -20,7 +22,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   return (
     <div>
-      <nav aria-label="Settings" className="mx-auto flex w-full max-w-[1200px] gap-1 px-4 pt-4 md:px-6 md:pt-6">
+      <nav aria-label="Settings" className="mx-auto flex w-full max-w-[1200px] gap-1 overflow-x-auto px-4 pt-4 md:px-6 md:pt-6">
         {SECTIONS.map((section) => {
           const href = `/w/${slug}/settings/${section.segment}`;
           const active = pathname === href;

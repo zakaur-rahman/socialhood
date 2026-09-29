@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAgentHandoff, type AutomationDraftHandoff } from "@/lib/agent/handoff";
 import { ApiError } from "@/lib/api/errors";
 import {
   useActivateAutomation,
@@ -34,6 +35,7 @@ import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AccountGroup, type GroupActions } from "./AccountGroup";
+import { AgentDraftDialog } from "./AgentDraftDialog";
 import { editorHref, TemplateCard, TemplateGallery, useStartAutomation, type Choice } from "./TemplateGallery";
 
 export const SEARCH_DEBOUNCE_MS = 250;
@@ -131,6 +133,20 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
     setGallery({ open: false });
     if (openGallery) router.replace(`/w/${workspace.slug}/automations` as Route);
   };
+  // FR-AGT-03: an automation draft handed over by Ask Social Hood shows first (instead of the
+  // gallery on /automations/new); it is taken once from the hand-off store.
+  const draftHandoff = useAgentHandoff((state) => state.automationDraft);
+  const takeAutomationDraft = useAgentHandoff((state) => state.takeAutomationDraft);
+  const [agentDraft, setAgentDraft] = useState<AutomationDraftHandoff | null>(null);
+  const [draftTaken, setDraftTaken] = useState<string | null>(null);
+  if (draftHandoff && draftHandoff.nonce !== draftTaken) {
+    setDraftTaken(draftHandoff.nonce);
+    setAgentDraft(draftHandoff);
+  }
+  useEffect(() => {
+    if (draftHandoff) takeAutomationDraft(draftHandoff.nonce);
+  }, [draftHandoff, takeAutomationDraft]);
+
   const quickStart = (choice: Choice) => {
     if (accounts.length > 1) setGallery({ open: true, choice });
     else start(choice, accounts[0]?.id ?? null);
@@ -379,7 +395,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         {content}
       </div>
 
-      {gallery.open ? (
+      {gallery.open && !agentDraft ? (
         <TemplateGallery
           open
           onOpenChange={(open) => (open ? undefined : closeGallery())}
@@ -388,6 +404,17 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           accounts={accounts}
           initialChoice={gallery.choice}
           plan={workspace.plan}
+        />
+      ) : null}
+      {agentDraft ? (
+        <AgentDraftDialog
+          key={agentDraft.nonce}
+          draft={agentDraft}
+          accounts={accounts}
+          onClose={() => {
+            setAgentDraft(null);
+            closeGallery();
+          }}
         />
       ) : null}
     </PageFrame>

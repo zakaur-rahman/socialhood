@@ -99,4 +99,29 @@ describe("MobileNav (UX-SH-02)", () => {
     await user.click(within(nav).getByRole("link", { name: "Settings" }));
     expect(screen.queryByRole("navigation", { name: "Main" })).not.toBeInTheDocument();
   });
+
+  it("puts Ask Social Hood in the top bar, beside the menu (FR-AGT-01)", () => {
+    renderWithProviders(<MobileNav title="Home" workspace={owner} ask={<button type="button">Ask Social Hood</button>} />);
+    const bar = screen.getByRole("banner");
+    const buttons = within(bar).getAllByRole("button").map((button) => button.textContent || button.getAttribute("aria-label"));
+    expect(buttons).toEqual(["Ask Social Hood", "Open menu"]);
+  });
+});
+
+describe("Ask Social Hood in the sidebar (FR-AGT-01)", () => {
+  it("sits under the logo, above the sections, expanded or collapsed", () => {
+    const { rerender } = renderWithProviders(
+      <AppSidebar workspace={owner} collapsed={false} ask={<button type="button">Ask Social Hood</button>} />,
+    );
+    const nav = mainNav();
+    const ask = within(nav).getByRole("button", { name: "Ask Social Hood" });
+    const home = within(nav).getByRole("link", { name: "Home" });
+    expect(ask.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    rerender(
+      <TooltipProvider>
+        <AppSidebar workspace={owner} collapsed ask={<button type="button">Ask Social Hood</button>} />
+      </TooltipProvider>,
+    );
+    expect(within(mainNav()).getByRole("button", { name: "Ask Social Hood" })).toBeInTheDocument();
+  });
 });

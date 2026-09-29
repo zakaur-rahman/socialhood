@@ -81,4 +81,11 @@ export const keys = {
     ["w", wid, "scheduled-posts", view, accountIds] as const,
   postingSlots: (wid: string, accountId: string) => ["w", wid, "posting-slots", accountId] as const,
   hashtagGroups: (wid: string) => ["w", wid, "hashtag-groups"] as const,
+  // Ask Social Hood (PA): run lists (a thread's runs, the admin history) share one prefix
+  agentRunLists: (wid: string) => ["w", wid, "agent", "runs"] as const,
+  agentThreadRuns: (wid: string, threadId: string) => ["w", wid, "agent", "runs", "thread", threadId] as const,
+  agentRunHistory: (wid: string) => ["w", wid, "agent", "runs", "history"] as const,
+  agentRun: (wid: string, runId: string) => ["w", wid, "agent", "run", runId] as const,
+  agentThreads: (wid: string) => ["w", wid, "agent", "threads"] as const,
+  agentPolicy: (wid: string) => ["w", wid, "agent", "policy"] as const,
 };

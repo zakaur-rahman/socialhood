@@ -13,3 +13,4 @@ export * from "./billing";
 export * from "./posts";
 export * from "./analytics";
 export * from "./calendar";
+export * from "./agent";

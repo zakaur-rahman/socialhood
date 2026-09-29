@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import type { Route } from "next";
 
+import { AskButton, AskRoot } from "@/components/agent/AskPanel";
 import { exhaustedAiCredits, useBilling, useInboxCounts, useMe, useSocialAccounts } from "@/lib/api/queries";
 import type { BillingState, Role, SocialAccount } from "@/lib/api/types";
 import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
@@ -54,6 +55,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
         {...shared}
         title={pageTitle(pathname, workspace.slug)}
         notifications={<NotificationsButton collapsed={false} />}
+        ask={<AskButton variant="topbar" />}
       />
       <aside className="sticky top-0 hidden h-dvh shrink-0 p-4 pr-0 md:block">
         <AppSidebar
@@ -61,12 +63,15 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
           collapsed={collapsed}
           onToggleCollapsed={wide ? () => setCollapsedPreference(!collapsedPreference) : undefined}
           notifications={<NotificationsButton collapsed={collapsed} />}
+          ask={<AskButton variant="sidebar" collapsed={collapsed} />}
         />
       </aside>
       <main className="min-w-0 flex-1">
         <BannerSlot banners={allBanners} />
         {children}
       </main>
+      {/* FR-AGT-01: Ask Social Hood on every page, with its Ctrl/⌘ K shortcut. */}
+      <AskRoot />
     </div>
   );
 }

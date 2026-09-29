@@ -2,7 +2,9 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { handOff, resetAgentHandoff } from "@/lib/agent/handoff";
 import type { Automation, AutomationTemplate, SocialAccount } from "@/lib/api/types";
+import { draftCard } from "@/test/agent";
 import { account, automation, json, noContent, problem, renderWithApi, template, type Call } from "@/test/api";
 
 import { AutomationsPage } from "./AutomationsPage";
@@ -270,5 +272,85 @@ describe("AutomationsPage (UX-SCR-02)", () => {
       handlers: { ...handlers(), "GET /v1/w/:wid/automations": () => new Promise<Response>(() => {}) },
     });
     expect(screen.getByLabelText("Loading automations")).toHaveAttribute("aria-busy", "true");
+  });
+});
+
+describe("An automation draft from Ask Social Hood (FR-AGT-03)", () => {
+  beforeEach(() => resetAgentHandoff());
+
+  function draftHandlers(onCall: (call: Call) => void) {
+    const created = automation({
+      id: "au9",
+      name: "Price DM",
+      status: "draft",
+      display_status: "draft",
+      trigger: null,
+      keywords: [],
+      action: null,
+      message_text: null,
+      public_reply_texts: [],
+    });
+    return {
+      ...handlers(),
+      "POST /v1/w/:wid/automations": (call: Call) => {
+        onCall(call);
+        return json(created, 201);
+      },
+      "PUT /v1/w/:wid/automations/:id": (call: Call) => {
+        onCall(call);
+        return json({ ...created, ...(call.body as object) });
+      },
+    };
+  }
+
+  it("shows what was prepared instead of the gallery; Open in editor creates the draft, fills it and opens it", async () => {
+    const user = userEvent.setup();
+    const seen: Call[] = [];
+    handOff(draftCard());
+    renderWithApi(<AutomationsPage openGallery />, { handlers: draftHandlers((call) => seen.push(call)) });
+
+    const dialog = await screen.findByRole("dialog", { name: "Automation from Ask Social Hood" });
+    expect(screen.queryByRole("dialog", { name: "New automation" })).toBeNull();
+    const details = within(dialog).getByTestId("agent-draft");
+    expect(details).toHaveTextContent("Price DM");
+    await waitFor(() => expect(details).toHaveTextContent("@maple.bakery"));
+    expect(details).toHaveTextContent("DM keyword");
+    expect(details).toHaveTextContent("price, cost");
+    expect(details).toHaveTextContent("Hi {first_name|there}! Our price list is here.");
+    // Nothing is created until the member confirms.
+    expect(seen).toHaveLength(0);
+
+    await user.click(within(dialog).getByRole("button", { name: "Open in editor" }));
+    await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/w/maple/automations/au9?focus=first"));
+    expect(seen.map((call) => `${call.method} ${call.path}`)).toEqual([
+      "POST /v1/w/w1/automations",
+      "PUT /v1/w/w1/automations/au9",
+    ]);
+    expect(seen[0].body).toEqual({ name: "Price DM", social_account_id: "a1", template_key: null });
+    expect(seen[1].body).toMatchObject({
+      name: "Price DM",
+      trigger: "dm_keyword",
+      keywords: ["price", "cost"],
+      action: "send_message",
+      message_text: "Hi {first_name|there}! Our price list is here.",
+    });
+  });
+
+  it("asks which account when the draft names none and there are several; Cancel leaves it", async () => {
+    const user = userEvent.setup();
+    const seen: Call[] = [];
+    handOff(draftCard({ prefill: { ...draftCard().prefill, social_account_id: null } }));
+    renderWithApi(<AutomationsPage openGallery />, { handlers: draftHandlers((call) => seen.push(call)) });
+
+    const dialog = await screen.findByRole("dialog", { name: "Automation from Ask Social Hood" });
+    const open = within(dialog).getByRole("button", { name: "Open in editor" });
+    const cakes = await within(dialog).findByRole("radio", { name: "@maple.cakes" });
+    expect(open).toBeDisabled();
+    await user.click(cakes);
+    expect(open).toBeEnabled();
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(seen).toHaveLength(0);
+    expect(nav.replace).toHaveBeenCalledWith("/w/maple/automations");
   });
 });

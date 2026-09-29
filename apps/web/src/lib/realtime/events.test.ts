@@ -2,10 +2,11 @@ import { QueryClient } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
-import type { Conversation, ScheduledMessage } from "@/lib/api/types";
+import type { AgentRunDetail, Conversation, ScheduledMessage } from "@/lib/api/types";
 import type { ConversationPages, MessagePages, ScheduledPages } from "@/lib/inbox/cache";
 import { flattenMessages } from "@/lib/inbox/cache";
 import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
+import { runDetail } from "@/test/agent";
 import { analysis, conversation, listItem, message, suggestion } from "@/test/api";
 
 import { applyRealtimeEvent } from "./events";
@@ -269,5 +270,29 @@ describe("other events", () => {
     applyRealtimeEvent(queryClient, wid, { id: null, event: "conversation.updated", data: "{not json" });
     applyRealtimeEvent(queryClient, wid, { id: null, event: "comment.created", data: "{}" });
     expect(ids(queryClient, all)).toEqual(["c1"]);
+  });
+});
+
+describe("agent events (PA: agent.run.updated, agent.step, agent.completed)", () => {
+  it("patch a watched run's steps and status, and fetch it again when it completes", () => {
+    queryClient.setQueryData<AgentRunDetail>(keys.agentRun(wid, "r1"), runDetail({ id: "r1", status: "queued" }));
+    send(queryClient, "agent.run.updated", { run: { id: "r1", thread_id: "r1", status: "running", step_count: 0 } });
+    send(queryClient, "agent.step", {
+      run_id: "r1",
+      step: { id: "s1", ordinal: 0, kind: "tool", tool: "get_latest_post", label: "Looking up your latest post", status: "running", summary: null, latency_ms: 0 },
+    });
+    const detail = queryClient.getQueryData<AgentRunDetail>(keys.agentRun(wid, "r1"));
+    expect(detail?.status).toBe("running");
+    expect(detail?.steps.map((step) => step.label)).toEqual(["Looking up your latest post"]);
+    send(queryClient, "agent.completed", { run: { id: "r1", thread_id: "r1", status: "succeeded", step_count: 1 } });
+    expect(queryClient.getQueryState(keys.agentRun(wid, "r1"))?.isInvalidated).toBe(true);
+  });
+
+  it("ignore malformed agent payloads", () => {
+    queryClient.setQueryData<AgentRunDetail>(keys.agentRun(wid, "r1"), runDetail({ id: "r1", status: "running" }));
+    applyRealtimeEvent(queryClient, wid, { id: null, event: "agent.step", data: "{}" });
+    applyRealtimeEvent(queryClient, wid, { id: null, event: "agent.run.updated", data: "{bad" });
+    applyRealtimeEvent(queryClient, wid, { id: null, event: "agent.completed", data: JSON.stringify({ run: {} }) });
+    expect(queryClient.getQueryData<AgentRunDetail>(keys.agentRun(wid, "r1"))).toMatchObject({ status: "running", steps: [] });
   });
 });

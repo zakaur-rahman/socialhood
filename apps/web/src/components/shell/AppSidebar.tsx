@@ -25,6 +25,8 @@ type Props = {
   account?: ReactNode;
   /** The notifications bell (UX-SH-04). */
   notifications?: ReactNode;
+  /** Ask Social Hood's button (FR-AGT-01), under the logo. */
+  ask?: ReactNode;
   /** Called when a link is followed, so the mobile drawer can close. */
   onNavigate?: () => void;
   className?: string;
@@ -41,6 +43,7 @@ export function AppSidebar({
   userName,
   account,
   notifications,
+  ask,
   onNavigate,
   className,
 }: Props) {
@@ -74,6 +77,8 @@ export function AppSidebar({
           </span>
         )}
       </div>
+
+      {ask ? <div className={cn("relative mb-2 w-full", collapsed && "flex justify-center")}>{ask}</div> : null}
 
       <ul className="relative flex w-full flex-col gap-1">
         {navFor(workspace.role).map((item) => (

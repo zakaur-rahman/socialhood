@@ -41,6 +41,22 @@ export function defaultSchedule(now: Date, timeZone: string, limits: ScheduleLim
   return toZonedInputs(target, timeZone);
 }
 
+/**
+ * A time prepared elsewhere (Ask Social Hood's schedule card, FR-AGT-03) as the inputs' values,
+ * or null when it is missing or no longer inside the limits.
+ */
+export function preparedSchedule(
+  at: string | null | undefined,
+  timeZone: string,
+  limits: ScheduleLimits,
+): ScheduleValue | null {
+  if (!at) return null;
+  const instant = new Date(at);
+  if (Number.isNaN(instant.getTime()) || instant < limits.min) return null;
+  if (limits.max && instant > limits.max) return null;
+  return toZonedInputs(instant, timeZone);
+}
+
 /** Date and time inputs in the workspace timezone (F-10), with the zone named. */
 export function ScheduleFields({
   idPrefix,
