@@ -58,6 +58,10 @@ class WebhookEvent(IdMixin, Base):
         DateTime(timezone=True), server_default=func.now()
     )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # When the provider says the event happened (Dodo's payload ``timestamp``), for ordering
+    # (TR-BIL-02: an event older than subscriptions.last_event_at is ignored). Null when the
+    # provider gives none.
+    occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("provider", "dedupe_key"),

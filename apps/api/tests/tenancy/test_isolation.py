@@ -36,7 +36,15 @@ from tests.support.ai import (
 from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation, make_comment, make_media_item
+from tests.support.billing import make_payment
 from tests.support.inbox import make_asset, make_scheduled, make_thread
+from tests.support.notify import (
+    make_email_delivery,
+    make_notification,
+    make_push_subscription,
+    make_weekly_digest,
+    push_endpoint,
+)
 from tests.support.publishing import make_hashtag_group, make_posting_slot, make_scheduled_post
 
 METHODS = ("get", "post", "put", "patch", "delete")
@@ -198,6 +206,23 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# Billing and notification settings (P8: T8.2, T8.6): B's checkout and preferences can't be
+# started or changed from A's workspace.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/billing/checkout"): {"plan": "pro"},
+        ("PUT", "/v1/w/{wid}/notification-preferences"): {
+            "email_digest": False,
+            "push": {
+                "needs_you": False,
+                "new_lead": False,
+                "window_closing": False,
+                "account": False,
+            },
+        },
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
@@ -248,6 +273,9 @@ B_TABLES = (
     "agent_steps",
     "agent_approvals",
     "agent_policies",
+    "payments",
+    "email_deliveries",
+    "weekly_digests",
 )
 
 
@@ -411,6 +439,16 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     approval = await make_agent_approval(
         engine, workspace_id=wid, run_id=waiting.id, step_id=waiting.step_ids[0]
     )
+    await make_payment(engine, workspace_id=wid)
+    notification = await make_notification(engine, workspace_id=wid, user_id=b["id"])
+    await make_email_delivery(
+        engine,
+        workspace_id=wid,
+        user_id=b["id"],
+        notification_id=notification,
+        to_email="b@example.com",
+    )
+    await make_weekly_digest(engine, workspace_id=wid)
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -496,3 +534,36 @@ async def test_user_level_routes_only_list_the_callers_workspaces(
     body = (await client.get(path, headers=clerk.headers(member_a))).json()
     listed = body["workspaces"] if path == "/v1/me" else body["items"]
     assert [w["id"] for w in listed] == [a["workspaces"][0]["id"]]
+
+
+def _pending(app: FastAPI, method: str, path: str) -> str | None:
+    task: str | None = app.openapi()["paths"][path][method].get("x-pending")
+    return task
+
+
+async def test_a_user_cannot_remove_another_users_push_device(
+    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
+) -> None:
+    """Push subscriptions are user-scoped (§5.3): /v1/me/push-subscriptions only ever touches
+    the caller's rows. Removing B's endpoint as A answers 204 and B keeps the device. Runs once
+    T8.6 removes the route's x-pending marker."""
+    if task := _pending(app, "delete", "/v1/me/push-subscriptions"):
+        pytest.skip(f"{task} builds DELETE /v1/me/push-subscriptions")
+    member_a, _ = await sign_in(client, clerk, email="a@example.com")
+    _, b = await sign_in(client, clerk, email="b@example.com")
+    endpoint = push_endpoint()
+    device = await make_push_subscription(engine, user_id=b["id"], endpoint=endpoint)
+
+    response = await client.delete(
+        "/v1/me/push-subscriptions",
+        params={"endpoint": endpoint},
+        headers=clerk.headers(member_a),
+    )
+    assert response.status_code == 204, response.text
+    async with engine.connect() as conn:
+        owner = (
+            await conn.execute(
+                text("SELECT user_id FROM push_subscriptions WHERE id = :d"), {"d": device}
+            )
+        ).scalar_one()
+    assert str(owner) == b["id"]

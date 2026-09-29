@@ -16,6 +16,7 @@ from socialhood.jobs.app import app as jobs_app
 from socialhood.main import create_app
 from socialhood.security.crypto import new_key
 from socialhood.settings import AppEnv, Settings
+from tests.support.billing import DODO_API_KEY, DODO_WEBHOOK_SECRET, MAX_PRODUCT, PRO_PRODUCT
 from tests.support.identity import (
     ISSUER,
     PARTY,
@@ -25,6 +26,7 @@ from tests.support.identity import (
     make_keys,
     make_token,
 )
+from tests.support.notify import VAPID_PRIVATE_KEY, VAPID_PUBLIC_KEY
 
 CLERK_USERS_URL = "https://api.clerk.com/v1/users/"
 WEB = "http://web.test"
@@ -57,6 +59,16 @@ def api_settings(keys: Keys) -> Settings:
         ig_webhook_verify_token=IG_VERIFY_TOKEN,
         meta_app_secret=META_APP_SECRET,
         sandbox_platform_enabled=True,
+        # P8: the Dodo client and senders are fakes in tests (tests/support/billing.py, notify.py);
+        # these make the real ones look configured and let webhooks verify.
+        dodo_api_key=DODO_API_KEY,
+        dodo_webhook_secret=DODO_WEBHOOK_SECRET,
+        dodo_product_pro_monthly=PRO_PRODUCT,
+        dodo_product_max_monthly=MAX_PRODUCT,
+        resend_api_key="fake-resend-key-for-tests",
+        email_from="Social Hood <hello@socialhood.test>",
+        vapid_public_key=VAPID_PUBLIC_KEY,
+        vapid_private_key=VAPID_PRIVATE_KEY,
     )
 
 

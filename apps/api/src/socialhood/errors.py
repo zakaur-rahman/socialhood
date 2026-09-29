@@ -59,6 +59,20 @@ class FieldError:
     message: str
 
 
+@dataclass(frozen=True)
+class PlanLimit:
+    """What a 402 is about (T8.1, T8.4): the §1.7 entitlement key and, for quota_exceeded, the
+    plan's limit. The web's upgrade dialog names the limit from these ("Free includes 3 active
+    automations") without parsing ``detail``."""
+
+    entitlement: str
+    limit: int | None = None
+
+
+# The 402 codes (§4.7, TR-BIL-04): a feature the plan lacks, and a limit the plan has reached.
+PAYMENT_REQUIRED_CODES = ("entitlement_required", "quota_exceeded")
+
+
 class ApiError(Exception):
     """Raise anywhere in a request; rendered as application/problem+json."""
 
@@ -69,14 +83,18 @@ class ApiError(Exception):
         *,
         errors: list[FieldError] | None = None,
         headers: dict[str, str] | None = None,
+        plan_limit: PlanLimit | None = None,
     ) -> None:
         if code not in ERROR_CODES:
             raise ValueError(f"unknown error code {code!r}")
+        if plan_limit is not None and code not in PAYMENT_REQUIRED_CODES:
+            raise ValueError(f"plan_limit is only for 402 codes, not {code!r}")
         super().__init__(detail or code)
         self.code = code
         self.detail = detail
         self.errors = errors or []
         self.headers = headers or {}
+        self.plan_limit = plan_limit
 
     @property
     def status(self) -> int:
@@ -89,6 +107,7 @@ def problem_body(
     detail: str | None,
     request_id: str | None,
     errors: list[FieldError] | None = None,
+    plan_limit: PlanLimit | None = None,
 ) -> dict[str, Any]:
     spec = ERROR_CODES[code]
     body: dict[str, Any] = {
@@ -101,5 +120,8 @@ def problem_body(
         body["detail"] = detail
     if errors:
         body["errors"] = [{"field": e.field, "message": e.message} for e in errors]
+    if plan_limit is not None:
+        body["entitlement"] = plan_limit.entitlement
+        body["limit"] = plan_limit.limit
     body["request_id"] = request_id
     return body

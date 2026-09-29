@@ -129,13 +129,20 @@ class Settings(BaseSettings):
     dodo_webhook_secret: SecretStr | None = None
     dodo_product_pro_monthly: str | None = None
     dodo_product_max_monthly: str | None = None
+    # fake: run without Dodo (billing/dodo_fake.py); refused in production. Tests swap the client
+    # with billing.registry.use_dodo whatever this says.
+    dodo_provider: Literal["dodo", "fake"] = "dodo"
 
     resend_api_key: SecretStr | None = None
     email_from: str = "Social Hood <hello@socialhood.com>"
+    # fake: keep emails in memory (notify/email_fake.py); refused in production.
+    email_provider: Literal["resend", "fake"] = "resend"
 
     vapid_public_key: str | None = None
     vapid_private_key: SecretStr | None = None
     vapid_subject: str = "mailto:support@socialhood.com"
+    # fake: keep pushes in memory (notify/push_fake.py); refused in production.
+    push_provider: Literal["webpush", "fake"] = "webpush"
 
     sandbox_platform_enabled: bool = False
 
@@ -171,6 +178,9 @@ class Settings(BaseSettings):
             unsafe.append("SANDBOX_PLATFORM_ENABLED must be false in production")
         if self.log_level == "DEBUG":
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
+        for name in ("dodo_provider", "email_provider", "push_provider"):
+            if getattr(self, name) == "fake":
+                unsafe.append(f"{name.upper()} must not be fake in production")
         problems = []
         if missing:
             problems.append("missing: " + ", ".join(missing))

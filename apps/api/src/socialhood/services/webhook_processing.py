@@ -17,7 +17,7 @@ from socialhood.observability.logging import get_logger
 from socialhood.realtime import events
 from socialhood.repositories import webhook_events
 from socialhood.services import clerk_sync
-from socialhood.services.webhook_handlers import Handler, Outcome, instagram, whatsapp
+from socialhood.services.webhook_handlers import Handler, Outcome, dodo, instagram, whatsapp
 
 __all__ = ["HANDLERS", "Outcome", "process_event"]
 
@@ -31,6 +31,7 @@ async def _clerk(session: AsyncSession, event: WebhookEvent) -> Outcome:
 
 HANDLERS: dict[str, Handler] = {
     WebhookProvider.CLERK: _clerk,
+    WebhookProvider.DODO: dodo.handle,  # T8.3
     WebhookProvider.INSTAGRAM: instagram.handle,
     WebhookProvider.WHATSAPP: whatsapp.handle,
 }

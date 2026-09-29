@@ -509,3 +509,69 @@ intent becomes "other", decided in code after the model answers, so it is never 
 - The usage card shows AI credits; Upgrade shows only to owners and admins on Free or at 80% or
   more used, never on Max. The "Reconnecting…" pill appears only after 5 s without the event
   stream (each stream closes every 30 minutes and reconnects in about 3 s).
+
+## C-049 · P8 foundation decisions (contract)
+- Notification preferences stay in `workspace_members.notification_prefs` (§5.3), not a new table:
+  FR-NOT-03, F-19 and UX-SCR-07 define only the weekly digest switch and four push switches (Needs
+  you, new lead, window closing, account); in-app notifications are always on (FR-NOT-01) and the
+  FR-NOT-02 emails are not optional. GET and PUT …/notification-preferences use the stored shape;
+  PUT sends the whole object.
+- `push_subscriptions` is user-scoped (§5.3): one row per browser endpoint (unique, https only); a
+  device gets the pushes of every workspace its user is in, filtered by that membership's
+  switches. Added `failure_count` and `disabled_at` (5 failures in a row disable; 404 or 410
+  delete, TR-FE-09). Registering an endpoint again moves it to the caller. DELETE
+  /v1/me/push-subscriptions takes `?endpoint=` (no DELETE body) and only ever removes the caller's
+  row (204 either way).
+- The web reads the VAPID public key from GET /v1/push/config ({enabled, vapid_public_key}), not
+  NEXT_PUBLIC_VAPID_PUBLIC_KEY (TR-FE-09, §2.16), so one build serves any key and push shows as
+  unavailable when the API has none.
+- Dodo events are logged in `webhook_events` (§5.9: provider dodo, dedupe `dodo:{webhook-id}`),
+  which gains `occurred_at` (Dodo's payload `timestamp`); the ordering guard stays
+  `subscriptions.last_event_at` (TR-BIL-02). POST /webhooks/dodo is built in the foundation and
+  fails closed: 503 without DODO_WEBHOOK_SECRET, 401 unless the Standard Webhooks signature over the
+  raw body verifies within 5 minutes, 400 for a body that isn't a JSON object; a verified event is
+  stored once and processed by process_webhook_event through services/webhook_handlers/dodo.py.
+- Dodo sends events TR-BIL-02's table doesn't list (checked 2026-09-30): subscription.updated,
+  past_due, paused, unpaused; payment.processing and payment.cancelled; refund.* and dispute.*.
+  T8.3 maps them; proposed: past_due as on_hold (grace, FR-BIL-06), paused as on_hold, unpaused as
+  active, updated refreshes the period and cancel flag only, processing is a pending payment,
+  cancelled a failed one, refund and dispute events are logged and ignored.
+- `payments` follows §5.8 plus `dodo_subscription_id` and `failure_reason` (shown in the payment
+  problem email).
+- The 402 codes are the spec's two: entitlement_required and quota_exceeded (a capacity limit is
+  quota_exceeded, TR-BIL-04). A 402 also carries `entitlement` (the §1.7 key) and `limit` (a number,
+  or null for a missing feature) as problem extension members (`errors.PlanLimit`), so the upgrade
+  dialog names the limit without parsing `detail`.
+- Billing contract: POST …/billing/checkout {plan} returns {checkout_url, trial} (409 when a paid
+  plan exists, 422 for max until R2); …/portal returns {portal_url}; …/cancel and …/resume return
+  BillingState. Added a public GET /v1/billing/plans (plans, entitlements and Dodo prices) for
+  /pricing and the upgrade dialog. No billing event type: plan and status changes publish
+  usage.updated, on which the web refetches GET …/billing (F-15 already waits for it).
+- Dodo client: a thin client over the shared httpx client (§2.2 "Dodo REST via httpx"), not the
+  generated dodopayments SDK; signatures with the standardwebhooks package (already under svix,
+  now a direct dependency). DODO_ENVIRONMENT `live` or `live_mode` selects live, anything else test.
+- Email: `email_deliveries` is a transactional outbox (not in the spec), unique per (workspace,
+  dedupe_key); the dedupe key is also Resend's Idempotency-Key, so one event sends one email
+  (T8.5). The template is checked in code, not the database. The spec's
+  deliver_email(notification_id) takes the outbox row (delivery_id, workspace_id) instead, because
+  digest emails have no notification; its module is jobs/tasks/emails.py. A sweeper re-enqueues
+  rows still queued after a minute.
+- Emailed notification types: account_needs_reconnect, payment_problem, plan_activated,
+  plan_downgraded, post_failed (FR-NOT-02 plus F-15's "We'll email you when Pro is active" and the
+  downgrade). Pushed types: ai_escalated (Needs you), new_lead (new: lead score reaches 70),
+  window_closing, account_needs_reconnect and account_disconnected (account). Producers pass only
+  the type; services/notifications decides the channels. `notifications.channels` is checked to
+  in_app, email and push, and gains `pushed_at`.
+- Push: pywebpush encrypts (aes128gcm) and py_vapid signs, but the POST goes through the shared
+  httpx client. The service worker's payload is {title, body, url, tag}, at most 3,000 bytes,
+  where url is `/w/{slug}` + the notification's link.
+- Weekly digest: `weekly_digests` (not in the spec) is unique per (workspace, week_start), the
+  local Monday; it is the durable once-a-week guard that the job catalogue's
+  `digest:{workspace}:{iso week}` lock only approximates.
+- Unsubscribe: no table. A 66-character HMAC token naming the workspace and user, keyed from
+  TOKEN_ENCRYPTION_KEYS (the newest signs, all verify; no new secret), never expiring. POST
+  /v1/digest/unsubscribe?token= is public and is also the RFC 8058 List-Unsubscribe-Post target;
+  there is no GET, so link scanners can't unsubscribe anyone. The email's link opens a public web
+  page, /unsubscribe?token=, which posts.
+- DODO_PROVIDER, EMAIL_PROVIDER and PUSH_PROVIDER (`fake` for local runs, refused in production)
+  mirror AI_PROVIDER. Migration 0013 gives any workspace without a subscription row a Free one.
