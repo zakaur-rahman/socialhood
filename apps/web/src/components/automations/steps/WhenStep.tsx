@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition, SocialAccount, TriggerName } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
-import { errorsFor, type FieldErrors } from "@/lib/automations/definition";
+import { errorsFor, triggerPatch, type FieldErrors } from "@/lib/automations/definition";
 import { TRIGGER_LABEL } from "@/lib/automations/format";
 
 import { StepCard, type StepState } from "../StepCard";
@@ -41,12 +41,7 @@ export function WhenStep({
   const hint = TRIGGERS.find((trigger) => trigger.value === draft.trigger)?.hint ?? "Choose what starts this automation.";
   const known = accounts.some((account) => account.id === draft.social_account_id);
 
-  const setTrigger = (value: TriggerName) => {
-    const patch: Partial<AutomationDefinition> = { trigger: value };
-    // Any comment needs chosen posts or the next post (FR-AUT-02); start it on chosen posts.
-    if (value === "comment_any" && draft.post_scope === "all") patch.post_scope = "selected";
-    change(patch);
-  };
+  const setTrigger = (value: TriggerName) => change(triggerPatch(draft, value));
 
   return (
     <StepCard id="when" label="When" state={state} errors={[accountError, triggerError].filter(Boolean) as string[]}>

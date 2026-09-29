@@ -2,6 +2,7 @@
 import type {
   Automation,
   AutomationDefinition,
+  AutomationRun,
   DisplayStatus,
   MatchMode,
   OverlapWarning,
@@ -12,7 +13,7 @@ import type {
   TriggerName,
 } from "@/lib/api/types";
 import { relativeTime } from "@/lib/time";
-import { zonedParts } from "@/lib/tz";
+import { formatDayTime, zonedParts } from "@/lib/tz";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -188,6 +189,23 @@ export function overlapText(overlap: OverlapWarning): { before: string; name: st
     name: overlap.automation_name,
     after: overlap.this_runs_first ? ". This automation runs first." : ", which runs first.",
   };
+}
+
+/**
+ * Small markers under a run (UX-SCR-12): when their tap released the message (FR-AUT-21), whether
+ * they followed the account when it went out, and whether the follow nudge was sent (FR-AUT-22).
+ */
+export function runMarkers(
+  run: Pick<AutomationRun, "confirmed_at" | "follows_business" | "nudge_message_id">,
+  timeZone: string,
+  now: Date = new Date(),
+): string[] {
+  const markers: string[] = [];
+  if (run.confirmed_at) markers.push(`Tapped ${formatDayTime(run.confirmed_at, timeZone, now)}`);
+  if (run.follows_business === true) markers.push("Follower");
+  if (run.follows_business === false) markers.push("Not following");
+  if (run.nudge_message_id) markers.push("Nudged");
+  return markers;
 }
 
 /** "Replied" as a share of DMs sent, or "—" before any DM (UX-SCR-12). */

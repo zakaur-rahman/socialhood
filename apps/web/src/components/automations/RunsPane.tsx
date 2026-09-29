@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAutomationRuns } from "@/lib/api/queries";
 import type { AutomationRun, RunResult } from "@/lib/api/types";
-import { RESULT_LABEL } from "@/lib/automations/format";
+import { RESULT_LABEL, runMarkers } from "@/lib/automations/format";
 import { emptyStates } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
@@ -36,7 +36,10 @@ function contactLabel(run: AutomationRun): string {
   return contact.display_name?.trim() || (contact.username ? `@${contact.username}` : "Someone");
 }
 
-/** UX-SCR-12 runs: time, contact, what they wrote and the result; a row opens the conversation. */
+/**
+ * UX-SCR-12 runs: time, contact, what they wrote, the result ("Waiting for tap" under tap first)
+ * and the tap and follow markers; a row opens the conversation.
+ */
 export function RunsPane({
   wid,
   slug,
@@ -104,6 +107,7 @@ export function RunsPane({
 }
 
 function RunRow({ run, timeZone, href }: { run: AutomationRun; timeZone: string; href: Route | null }) {
+  const markers = runMarkers(run, timeZone);
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
@@ -118,6 +122,18 @@ function RunRow({ run, timeZone, href }: { run: AutomationRun; timeZone: string;
         {formatDayTime(run.created_at, timeZone)} · {run.trigger_kind === "dm" ? "DM" : "Comment"}
         {run.matched_keyword ? <> · &ldquo;{run.matched_keyword}&rdquo;</> : null}
       </p>
+      {markers.length > 0 ? (
+        <p data-testid="run-markers" className="mt-1.5 flex flex-wrap gap-1">
+          {markers.map((marker) => (
+            <span
+              key={marker}
+              className="rounded-full border border-line px-1.5 py-0.5 text-[11px] text-fg-secondary tabular-nums"
+            >
+              {marker}
+            </span>
+          ))}
+        </p>
+      ) : null}
     </>
   );
   const className = "block rounded-lg border border-line-subtle bg-field p-3";

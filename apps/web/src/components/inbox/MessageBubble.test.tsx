@@ -83,6 +83,30 @@ describe("MessageBubble variants (UX-INB-06)", () => {
     expect(screen.getByText("Automation · Price keyword")).toBeInTheDocument();
   });
 
+  it("tap first's opening: its quick reply shows as a chip under the text, not a button (FR-AUT-21)", () => {
+    const { row } = renderBubble({
+      ...out,
+      source: "automation",
+      text: "Hi there! Tap below and I'll send it over 👇",
+      quick_replies: [{ title: "Send me the link" }],
+    });
+    const chips = within(row).getByRole("list", { name: "Quick replies" });
+    expect(within(chips).getByRole("listitem")).toHaveTextContent("Send me the link");
+    expect(within(row).queryByRole("button", { name: "Send me the link" })).toBeNull();
+    // Under the text, inside the bubble.
+    const text = within(row).getByText("Hi there! Tap below and I'll send it over 👇");
+    expect(text.compareDocumentPosition(chips) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(row.querySelector('[data-variant="automation"]')).toContainElement(chips);
+  });
+
+  it("shows no quick replies on a customer's message or when there are none", () => {
+    const { row, unmount } = renderBubble({ text: "Send me the link", quick_replies: [{ title: "Ignored" }] });
+    expect(within(row).queryByRole("list", { name: "Quick replies" })).toBeNull();
+    unmount();
+    const outbound = renderBubble({ ...out, quick_replies: [] });
+    expect(within(outbound.row).queryByRole("list", { name: "Quick replies" })).toBeNull();
+  });
+
   it("sent from the Instagram app: raised, labelled", () => {
     const { row } = renderBubble({ ...out, source: "native_app" });
     expect(screen.getByText("Sent from Instagram")).toBeInTheDocument();

@@ -20,6 +20,12 @@ export const MAX_BUTTONS = 3;
 export const BUTTON_TITLE_MAX = 20;
 /** With link buttons the message is Instagram's button template: 640 characters of text. */
 export const BUTTON_TEXT_MAX_CHARS = 640;
+/** Tap first (FR-AUT-21): the opening is stored up to 2,000 characters; sent up to 1,000 bytes. */
+export const OPENING_MAX_CHARS = 2000;
+/** Instagram's quick-reply title limit. */
+export const OPENING_BUTTON_MAX = 20;
+/** The follow nudge (FR-AUT-22). */
+export const FOLLOW_NUDGE_MAX = 300;
 /** The API's long sample for the worst case: Instagram usernames are at most 30 characters. */
 const SAMPLE_LENGTH = 30;
 
@@ -59,6 +65,17 @@ export function worstCaseBytes(text: string, disclosure: string | null | undefin
 /** Characters as the API counts them (code points), for the button template's limit. */
 export function worstCaseChars(text: string, disclosure: string | null | undefined): number {
   return [...longestRender(text, disclosure)].length;
+}
+
+/** Characters as the API counts them (code points), e.g. "💛" is one. */
+export function charCount(text: string): number {
+  return [...text].length;
+}
+
+/** The text cut to a number of characters as the API counts them. */
+export function clampChars(text: string, max: number): string {
+  const chars = [...text];
+  return chars.length > max ? chars.slice(0, max).join("") : text;
 }
 
 /** What "Insert field" puts at the cursor. */

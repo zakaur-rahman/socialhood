@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { insertAt, renderFields, utf8Bytes, withDisclosure, worstCaseBytes, worstCaseChars } from "./render";
+import {
+  charCount,
+  clampChars,
+  insertAt,
+  renderFields,
+  utf8Bytes,
+  withDisclosure,
+  worstCaseBytes,
+  worstCaseChars,
+} from "./render";
 
 describe("renderFields (FR-AUT-13), as the API renders", () => {
   it("fills known fields", () => {
@@ -43,6 +52,15 @@ describe("byte counter (TR-PL-10)", () => {
     // Code points, not UTF-16 units: an emoji is one character, Devanagari one per code point.
     expect(worstCaseChars("😍", null)).toBe(1);
     expect(worstCaseChars("नमस्ते", "Sent automatically")).toBe(6 + 2 + 18);
+  });
+});
+
+describe("character limits (FR-AUT-21, FR-AUT-22)", () => {
+  it("counts and cuts by code points, as the API does", () => {
+    expect(charCount("Follow us 💛")).toBe(11);
+    expect(clampChars("Send me the link now please", 20)).toBe("Send me the link now");
+    expect(clampChars("💛".repeat(21), 20)).toBe("💛".repeat(20));
+    expect(clampChars("Short", 20)).toBe("Short");
   });
 });
 

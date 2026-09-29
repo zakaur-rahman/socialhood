@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Loader2, XCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -17,18 +17,22 @@ type Kind = "comment" | "dm";
 
 /**
  * UX-SCR-03 Test: type a message or comment and see whether this automation matches, which
- * automation would actually run, and the message it would send. Nothing is sent. The test runs
- * against the saved automation, so pending edits are saved first.
+ * automation would actually run, and the messages it would send: tap first's opening, the message
+ * and the follow nudge (FR-AUT-21, 22). Nothing is sent. The test runs against the saved
+ * automation, so pending edits are saved first.
  */
 export function MatchTester({
   wid,
   automationId,
   trigger,
+  openingButton = null,
   beforeTest,
 }: {
   wid: string;
   automationId: string;
   trigger: TriggerName | null | undefined;
+  /** Tap first's button title (FR-AUT-21), shown with the rendered opening. */
+  openingButton?: string | null;
   /** Save pending edits; false when saving failed. */
   beforeTest: () => Promise<boolean>;
 }) {
@@ -86,14 +90,23 @@ export function MatchTester({
         ) : test.isError ? (
           <p className="text-sm text-danger-fg">{errorMessage(test.error)}</p>
         ) : test.data ? (
-          <TestResult result={test.data} automationId={automationId} />
+          <TestResult result={test.data} automationId={automationId} openingButton={openingButton} />
         ) : null}
       </div>
     </div>
   );
 }
 
-export function TestResult({ result, automationId }: { result: AutomationTestResult; automationId: string }) {
+export function TestResult({
+  result,
+  automationId,
+  openingButton,
+}: {
+  result: AutomationTestResult;
+  automationId: string;
+  /** Tap first's button, shown under the rendered opening (the result carries only its text). */
+  openingButton?: string | null;
+}) {
   const winnerIsThis = result.winner?.id === automationId;
   const winnerText = result.winner
     ? winnerIsThis
@@ -128,12 +141,35 @@ export function TestResult({ result, automationId }: { result: AutomationTestRes
           <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_public_reply}</p>
         </div>
       ) : null}
-      {result.rendered_message ? (
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">DM</p>
-          <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_message}</p>
-        </div>
+      {result.rendered_opening ? (
+        <Rendered label="Opening" testId="test-opening">
+          <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_opening}</p>
+          {openingButton?.trim() ? (
+            <span className="inline-block rounded-full border border-brand-line px-3 py-1 text-xs font-medium text-brand-fg">
+              {openingButton}
+            </span>
+          ) : null}
+        </Rendered>
       ) : null}
+      {result.rendered_message ? (
+        <Rendered label={result.rendered_opening ? "DM after they tap or reply" : "DM"} testId="test-message">
+          <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_message}</p>
+        </Rendered>
+      ) : null}
+      {result.rendered_nudge ? (
+        <Rendered label="Follow nudge · only if they don't follow you" testId="test-nudge">
+          <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_nudge}</p>
+        </Rendered>
+      ) : null}
+    </div>
+  );
+}
+
+function Rendered({ label, testId, children }: { label: string; testId: string; children: ReactNode }) {
+  return (
+    <div data-testid={testId} className="space-y-1">
+      <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">{label}</p>
+      {children}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { AutomationDefinition } from "@/lib/api/types";
+import { usesFollowNudge, usesTapFirst } from "@/lib/automations/definition";
 
 import { MatchTester } from "./MatchTester";
 import { PreviewPane } from "./PreviewPane";
@@ -50,13 +51,24 @@ export function SidePanel({
         <PreviewPane draft={draft} accountUsername={accountUsername} disclosure={disclosure} mediaUrl={mediaUrl} />
       </TabsContent>
       <TabsContent value="test">
-        <MatchTester wid={wid} automationId={automationId} trigger={draft.trigger} beforeTest={beforeTest} />
+        <MatchTester
+          wid={wid}
+          automationId={automationId}
+          trigger={draft.trigger}
+          openingButton={draft.opening_button}
+          beforeTest={beforeTest}
+        />
       </TabsContent>
       <TabsContent value="runs">
         <RunsPane wid={wid} slug={slug} automationId={automationId} timeZone={timeZone} />
       </TabsContent>
       <TabsContent value="stats">
-        <StatsPane wid={wid} automationId={automationId} />
+        <StatsPane
+          wid={wid}
+          automationId={automationId}
+          tapFirst={usesTapFirst(draft)}
+          followNudge={usesFollowNudge(draft)}
+        />
       </TabsContent>
     </Tabs>
   );

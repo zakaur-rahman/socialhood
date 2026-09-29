@@ -67,6 +67,64 @@ describe("MatchTester (UX-SCR-03 Test)", () => {
     expect(within(box).getByText("None of the keywords appear in this text.")).toBeInTheDocument();
   });
 
+  it("tap first and the nudge: the opening with its button before the DM, the nudge after it", async () => {
+    const user = userEvent.setup();
+    renderWithApi(
+      <MatchTester
+        wid="w1"
+        automationId="au1"
+        trigger="comment_keyword"
+        openingButton="Send me the link"
+        beforeTest={vi.fn(async () => true)}
+      />,
+      {
+        handlers: {
+          "POST /v1/w/:wid/automations/:id/test": () =>
+            json({
+              matched: true,
+              matched_keyword: "link",
+              winner: { id: "au1", name: "Comment LINK" },
+              rendered_public_reply: "Sent you a DM!",
+              rendered_opening: "Hi there! Tap below and I'll send it over 👇",
+              rendered_message: "Hi Priya! Here's the link.",
+              rendered_nudge: "Enjoying this? Follow us for more.",
+            } satisfies AutomationTestResult),
+        },
+      },
+    );
+    await user.type(screen.getByRole("textbox", { name: "Comment" }), "LINK");
+    await user.click(screen.getByRole("button", { name: "Test" }));
+
+    const opening = await screen.findByTestId("test-opening");
+    expect(opening).toHaveTextContent("Opening");
+    expect(opening).toHaveTextContent("Hi there! Tap below and I'll send it over 👇");
+    expect(within(opening).getByText("Send me the link")).toBeInTheDocument();
+    const message = screen.getByTestId("test-message");
+    expect(message).toHaveTextContent("DM after they tap or reply");
+    expect(message).toHaveTextContent("Hi Priya! Here's the link.");
+    const nudge = screen.getByTestId("test-nudge");
+    expect(nudge).toHaveTextContent("Follow nudge · only if they don't follow you");
+    expect(nudge).toHaveTextContent("Enjoying this? Follow us for more.");
+    // Opening, then the message, then the nudge.
+    expect(opening.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(message.compareDocumentPosition(nudge) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("without tap first the DM keeps its label and nothing else shows", async () => {
+    const user = userEvent.setup();
+    renderTester({
+      matched: true,
+      matched_keyword: "link",
+      winner: { id: "au1", name: "Comment LINK" },
+      rendered_message: "Hi Priya! Here's the link.",
+    });
+    await user.type(screen.getByRole("textbox", { name: "Comment" }), "LINK");
+    await user.click(screen.getByRole("button", { name: "Test" }));
+    expect(await screen.findByTestId("test-message")).toHaveTextContent(/^DMHi Priya/);
+    expect(screen.queryByTestId("test-opening")).toBeNull();
+    expect(screen.queryByTestId("test-nudge")).toBeNull();
+  });
+
   it("does not test unsaved changes", async () => {
     const user = userEvent.setup();
     const { bodies } = renderTester(
