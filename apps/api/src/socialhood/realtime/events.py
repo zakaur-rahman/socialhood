@@ -15,6 +15,7 @@ from typing import Any, Literal
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.db.tenancy import workspace_scope
 from socialhood.models.inbox import Contact, Conversation, Message
 from socialhood.observability.logging import get_logger
 from socialhood.services.inbox_views import list_item, message_out
@@ -90,28 +91,36 @@ async def commit_and_publish(session: AsyncSession, redis: Redis) -> None:
         discard(session)
         raise
     pending = session.info.pop(_QUEUE_KEY, [])
-    await _name_automations(session, [payload for _, _, payload in pending])
+    await _name_automations(session, pending)
     for workspace_id, event_type, payload in pending:
         await publish(redis, workspace_id, event_type, payload)
 
 
-async def _name_automations(session: AsyncSession, payloads: list[dict[str, Any]]) -> None:
-    """Fill ``message.automation`` for messages an automation sent, in one query; an event
-    without the name still says "Automation", so a failed lookup never stops publishing."""
-    marked = [p for p in payloads if _AUTOMATION_RUN in p]
+async def _name_automations(
+    session: AsyncSession, pending: list[tuple[uuid.UUID, str, dict[str, Any]]]
+) -> None:
+    """Fill ``message.automation`` for messages an automation sent, one query per workspace, in
+    that workspace's scope (webhook handlers publish after leaving theirs). An event without the
+    name still says "Automation", so a failed lookup never stops publishing."""
+    marked: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for workspace_id, _, payload in pending:
+        if _AUTOMATION_RUN in payload:
+            marked.setdefault(workspace_id, []).append(payload)
     if not marked:
         return
     from socialhood.repositories.automation_runs import automation_names
 
-    try:
-        names = await automation_names(session, [p[_AUTOMATION_RUN] for p in marked])
-    except Exception:
-        log.warning("realtime_automation_names_failed")
-        names = {}
-    for p in marked:
-        found = names.get(p.pop(_AUTOMATION_RUN))
-        if found:
-            p["message"]["automation"] = {"id": str(found[0]), "name": found[1]}
+    for workspace_id, payloads in marked.items():
+        try:
+            with workspace_scope(workspace_id):
+                names = await automation_names(session, [p[_AUTOMATION_RUN] for p in payloads])
+        except Exception:
+            log.warning("realtime_automation_names_failed", exc_info=True)
+            names = {}
+        for p in payloads:
+            found = names.get(p.pop(_AUTOMATION_RUN))
+            if found:
+                p["message"]["automation"] = {"id": str(found[0]), "name": found[1]}
 
 
 # ---- builders for the inbox events every producer emits

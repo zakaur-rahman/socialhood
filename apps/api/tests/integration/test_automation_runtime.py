@@ -15,9 +15,10 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.db.tenancy import workspace_scope
-from socialhood.models.inbox import Conversation
+from socialhood.models.inbox import Conversation, Message
 from socialhood.platforms.events import InboundMessage
 from socialhood.platforms.sandbox import outbox
+from socialhood.realtime import events
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services.automations.runtime import Outcome
 from socialhood.services.conversations import list_messages
@@ -134,6 +135,35 @@ async def test_a_dm_keyword_sends_the_message_once(world: World) -> None:
     assert len(await outbound(world)) == 1
     assert len(await world.rows("SELECT id FROM automation_runs")) == 1
     assert len(outbox.SENT) == 1
+
+
+async def test_events_published_outside_the_workspace_scope_still_name_the_automation(
+    world: World,
+) -> None:
+    # Webhook handlers leave the workspace scope before publishing (a read receipt, say).
+    automation_id = await make_automation(
+        world.engine, workspace_id=world.wid, account_id=world.account_id, keywords=("price",)
+    )
+    thread = await dm_thread(world)
+    assert await world.run("dm", thread.message_ids[0]) is Outcome.FIRED
+    [dm] = await outbound(world)
+
+    async with world.maker() as session:
+        with workspace_scope(world.wid):
+            msg = await session.get(Message, dm["id"])
+            assert msg is not None
+            events.queue_message(session, msg, created=False)
+        await events.commit_and_publish(session, world.redis)
+
+    updates = [
+        data
+        for kind, data in await stream(world.redis, world.wid)
+        if kind == "message.updated" and data["message"]["id"] == str(dm["id"])
+    ]
+    assert updates[-1]["message"]["automation"] == {
+        "id": str(automation_id),
+        "name": "Send the link",
+    }
 
 
 async def test_the_dm_carries_its_image_buttons_and_the_disclosure_line(world: World) -> None:
