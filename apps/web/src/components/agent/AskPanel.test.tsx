@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -19,7 +19,11 @@ import {
   scheduleCard,
 } from "@/test/agent";
 
+import { fitTextarea } from "./AskComposer";
 import { AskButton, AskRoot, PAGE_COMPOSER_ID } from "./AskPanel";
+
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
+vi.mock("sonner", () => ({ toast }));
 
 const nav = vi.hoisted(() => ({ pathname: "/w/maple/home", push: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -68,7 +72,8 @@ function handlers(server: Server) {
         request: body.request,
         status: "queued",
         started_at: null,
-        created_at: `2026-09-29T11:0${created}:00Z`,
+        // Just asked: the seconds so far count from here.
+        created_at: new Date(Date.now() + created).toISOString(),
       });
       server.runs[id] = run;
       return json(summaryOf(run), 202);
@@ -166,21 +171,53 @@ describe("Ask Social Hood panel: opening and closing (FR-AGT-01, UX-A11Y-02)", (
 });
 
 describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
-  it("offers the suggested prompts; one asks at once and starts a thread", async () => {
+  it("a new thread welcomes the member and offers a question per area; one asks at once and starts a thread", async () => {
     const { posts } = setup();
     const { user, panel } = await openPanel();
+    const welcome = within(panel).getByTestId("ask-welcome");
+    expect(within(welcome).getByRole("heading", { name: "What would you like to know?" })).toBeInTheDocument();
     const prompts = within(panel).getByRole("list", { name: "Suggested questions" });
+    // The panel lists them; the page shows a 2 × 2 grid (AskPage.test).
+    expect(prompts).toHaveClass("flex-col");
     expect(within(prompts).getAllByRole("button").map((b) => b.textContent)).toEqual([
       "How did my latest post do?",
       "What are people complaining about this week?",
-      "Which posts beat my average this month?",
+      "Which conversations need a reply today?",
+      "Which automation sent the most DMs this week?",
     ]);
     await user.click(within(prompts).getByRole("button", { name: "What are people complaining about this week?" }));
     await waitFor(() => expect(posts()).toHaveLength(1));
     expect(posts()[0].body).toEqual({ request: "What are people complaining about this week?" });
     const run = await within(panel).findByRole("article", { name: "Question: What are people complaining about this week?" });
-    expect(await within(run).findByText(/Starting/)).toBeInTheDocument();
+    expect(await within(run).findByText("Starting…")).toBeInTheDocument();
     expect(useAskStore.getState().threads.w1).toBe("new1");
+  });
+
+  it("shows the question in a neutral bubble with its time on hover, and the answer beside the Social Hood mark", async () => {
+    setup({ runs: { r1: runDetail({ answer: "Your latest reel did well." }) } });
+    useAskStore.getState().setThread("w1", "r1");
+    const { panel } = await openPanel();
+    const run = await within(panel).findByRole("article", { name: "Question: How did my latest post do?" });
+    const bubble = within(run).getByText("How did my latest post do?");
+    expect(bubble).toHaveClass("bg-raised", "rounded-2xl", "max-w-[80%]");
+    expect(bubble).toHaveAttribute("title", expect.stringMatching(/15:30$/));
+    const time = run.querySelector("time");
+    expect(time).toHaveAttribute("dateTime", "2026-09-29T10:00:00Z");
+    expect(time).toHaveClass("opacity-0", "group-hover/run:opacity-100", "group-focus-within/run:opacity-100");
+    // No card around the answer: 15 px type on 28 px lines.
+    expect(within(run).getByTestId("answer")).toHaveClass("text-[15px]", "leading-7");
+    expect(within(run).getByTestId("run-result").className).not.toMatch(/\bborder\b/);
+  });
+
+  it("a queued run that doesn't start within 20 seconds says it's waiting", async () => {
+    setup({
+      runs: { r1: runDetail({ status: "queued", started_at: null, created_at: new Date(Date.now() - 30_000).toISOString() }) },
+    });
+    useAskStore.getState().setThread("w1", "r1");
+    const { panel } = await openPanel();
+    const run = await within(panel).findByRole("article");
+    expect(await within(run).findByText("Waiting to start…")).toBeInTheDocument();
+    expect(within(run).getByTestId("elapsed")).toHaveTextContent(/^3\d s$/);
   });
 
   it("Enter asks the typed question; Shift+Enter adds a line", async () => {
@@ -198,10 +235,12 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     const { user, panel } = await openPanel();
     await user.click(within(panel).getByRole("button", { name: "How did my latest post do?" }));
     const run = await within(panel).findByRole("article", { name: "Question: How did my latest post do?" });
-    await within(run).findByText(/Starting/);
+    await within(run).findByText("Starting…");
+    expect(within(run).getByTestId("elapsed")).toHaveTextContent(/^\d+ s$/);
+    expect(within(run).getByTestId("elapsed")).toHaveAttribute("aria-hidden", "true");
 
     emitRun(queryClient, { id: "new1", thread_id: "new1", status: "running", step_count: 0 });
-    await within(run).findByText(/Reading your question/);
+    await within(run).findByText("Reading your question…");
     emitStep(queryClient, "new1", {
       id: "s1",
       ordinal: 0,
@@ -213,7 +252,9 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
       latency_ms: 0,
     });
     const steps = within(run).getByRole("list", { name: "Steps" });
-    expect(await within(steps).findByText("Looking up your latest post")).toBeInTheDocument();
+    // The step it is on: a shimmering label.
+    const current = await within(steps).findByText("Looking up your latest post…");
+    expect(current).toHaveClass("text-shimmer");
     expect(steps).toHaveAttribute("aria-live", "polite");
     emitStep(queryClient, "new1", {
       id: "s1",
@@ -235,11 +276,19 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
       summary: null,
       latency_ms: 0,
     });
+    // Finished steps sit above the current one, with a check.
     expect(await within(steps).findByText("Reel from 28 Sep, 26 hours old")).toBeInTheDocument();
-    expect(within(steps).getByText("Comparing with 10 earlier posts at 24 hours")).toBeInTheDocument();
-    // While it works: Cancel, and no question box sending.
-    expect(within(run).getByRole("button", { name: "Cancel" })).toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: "Ask" })).toBeDisabled();
+    expect(within(steps).getByText("Looking up your latest post").closest("li")).toHaveAttribute("data-status", "succeeded");
+    expect(within(steps).getByText("Comparing with 10 earlier posts at 24 hours…")).toHaveClass("text-shimmer");
+    // While it works the member can type; the button stops the run instead of asking.
+    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    await user.type(box, "and last week?");
+    expect(box).toHaveValue("and last week?");
+    expect(within(panel).getByRole("button", { name: "Stop" })).toBeEnabled();
+    expect(within(panel).queryByRole("button", { name: "Ask" })).toBeNull();
+    expect(within(panel).queryByText(/still working/)).toBeNull();
+    await user.keyboard("{Enter}");
+    expect(calls.filter((c) => c.method === "POST" && c.path === "/v1/w/w1/agent/runs")).toHaveLength(1);
 
     // The event carries no answer; the run is fetched for it.
     state.runs.new1 = runDetail({
@@ -248,6 +297,7 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
       answer: LATEST_POST_ANSWER,
       answer_refs: LATEST_POST_REFS,
       credits: 3,
+      started_at: "2026-09-29T11:01:03Z",
       completed_at: "2026-09-29T11:01:09Z",
       steps: [agentStep({ id: "s1" }), agentStep({ id: "s2", ordinal: 1, tool: "compare_posts", label: "Comparing with 10 earlier posts at 24 hours" })],
     });
@@ -264,13 +314,76 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     expect(within(answer).getByText("Time range: 26 Sep to 28 Sep · 10 earlier reels compared.")).toBeInTheDocument();
     expect(within(answer).getByRole("link", { name: "Source 1: Post, Reel of 28 Sep" })).toHaveAttribute("href", "/w/maple/comments/po1");
     expect(within(answer).getByRole("link", { name: "Source 2: Post, Reel of 20 Sep" })).toHaveAttribute("href", "/w/maple/comments/po0");
+    // Sources: a wrap of chips, "1 · Reel of 28 Sep".
     const sources = within(run).getByRole("list", { name: "Sources" });
-    expect(within(sources).getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual([
-      "/w/maple/comments/po1",
-      "/w/maple/comments/po0",
+    expect(sources).toHaveClass("flex", "flex-wrap");
+    expect(within(sources).getAllByRole("link").map((a) => [a.getAttribute("href"), a.textContent])).toEqual([
+      ["/w/maple/comments/po1", "1·Post: Reel of 28 Sep"],
+      ["/w/maple/comments/po0", "2·Post: Reel of 20 Sep"],
     ]);
-    expect(within(run).queryByRole("button", { name: "Cancel" })).toBeNull();
-    expect(within(run).getByText("3 credits")).toBeInTheDocument();
+    // One line at the top: how long it worked and how many steps; the steps on request.
+    expect(within(run).getByTestId("steps-toggle")).toHaveTextContent("Worked for 6 s · 2 steps");
+    expect(within(run).getByTestId("steps-toggle")).toHaveAttribute("aria-expanded", "false");
+    // Copy and the credits under the answer; Ask is back.
+    const actions = within(run).getByTestId("answer-actions");
+    expect(within(actions).getByRole("button", { name: "Copy answer" })).toBeInTheDocument();
+    expect(actions).toHaveTextContent("3 credits");
+    expect(within(panel).queryByRole("button", { name: "Stop" })).toBeNull();
+    expect(within(panel).getByRole("button", { name: "Ask" })).toBeEnabled();
+  });
+
+  it("a citation pill names its record on hover or focus", async () => {
+    setup({ runs: { r1: runDetail({ answer: LATEST_POST_ANSWER, answer_refs: LATEST_POST_REFS }) } });
+    useAskStore.getState().setThread("w1", "r1");
+    const { user, panel } = await openPanel();
+    const pill = await within(panel).findByRole("link", { name: "Source 1: Post, Reel of 28 Sep" });
+    expect(pill).toHaveTextContent(/^1$/);
+    expect(pill).toHaveClass("rounded-full");
+    await user.hover(pill);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Post · Reel of 28 Sep");
+  });
+
+  it("Copy puts the answer on the clipboard as plain text, without the citation markers", async () => {
+    setup({ runs: { r1: runDetail({ answer: LATEST_POST_ANSWER, answer_refs: LATEST_POST_REFS }) } });
+    useAskStore.getState().setThread("w1", "r1");
+    const { user, panel } = await openPanel();
+    await user.click(await within(panel).findByRole("button", { name: "Copy answer" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Copied"));
+    const copied = await navigator.clipboard.readText();
+    expect(copied).toBe(
+      [
+        "Your latest reel is doing better than usual. At 24 hours it reached 4,120 people, 42% above the median of your previous 10 reels.",
+        "",
+        "Metric\tThis reel\tMedian of 10",
+        "Reach\t4,120\t2,900",
+        "Engagement rate\t6.1%\t4.4%",
+        "",
+        "Time range: 26 Sep to 28 Sep · 10 earlier reels compared.",
+      ].join("\n"),
+    );
+  });
+
+  it("under the latest answer, follow-up questions from what it cited ask in the same thread", async () => {
+    const { posts } = setup({
+      runs: {
+        r0: runDetail({ id: "r0", thread_id: "t1", request: "Earlier", answer: "Earlier answer [1].", answer_refs: LATEST_POST_REFS, created_at: "2026-09-29T09:00:00Z" }),
+        r1: runDetail({ id: "r1", thread_id: "t1", answer: "Your latest reel did well [1].", answer_refs: LATEST_POST_REFS }),
+      },
+    });
+    useAskStore.getState().setThread("w1", "t1");
+    const { user, panel } = await openPanel();
+    await within(panel).findByText(/Earlier answer/);
+    const followUps = within(panel).getAllByRole("list", { name: "Follow-up questions" });
+    // Only under the latest answer.
+    expect(followUps).toHaveLength(1);
+    expect(within(panel).getAllByRole("article")[1]).toContainElement(followUps[0]);
+    expect(within(followUps[0]).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Show the negative comments on this post",
+      "Compare it with my previous post",
+    ]);
+    await user.click(within(followUps[0]).getByRole("button", { name: "Compare it with my previous post" }));
+    await waitFor(() => expect(posts()).toHaveLength(1));
+    expect(posts()[0].body).toEqual({ request: "Compare it with my previous post", thread_id: "t1" });
   });
 
   it("a citation closes the panel on its way to the record", async () => {
@@ -301,12 +414,12 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     expect(await within(run).findByRole("region", { name: "Scheduled message" })).toBeInTheDocument();
     expect(within(run).getByRole("region", { name: "Comment reply" })).toBeInTheDocument();
     expect(within(run).getByRole("region", { name: "Automation draft" })).toBeInTheDocument();
-    await user.click(within(run).getByRole("button", { name: "Reply to this comment" }));
+    await user.click(within(run).getByRole("button", { name: "Open: Reply to this comment" }));
     expect(nav.push).toHaveBeenCalledWith("/w/maple/comments/po1");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
-  it("Cancel stops a working run; finished steps stay and it can be asked again", async () => {
+  it("Stop cancels a working run; finished steps stay and it can be asked again", async () => {
     const { calls } = setup({
       runs: {
         r1: runDetail({
@@ -318,11 +431,14 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     useAskStore.getState().setThread("w1", "r1");
     const { user, panel } = await openPanel();
     const run = await within(panel).findByRole("article");
-    await user.click(await within(run).findByRole("button", { name: "Cancel" }));
+    // Between steps it says it's working on it.
+    expect(await within(run).findByText("Working on it…")).toBeInTheDocument();
+    await user.click(within(panel).getByRole("button", { name: "Stop" }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/agent/runs/r1/cancel")).toBe(true));
     expect(await within(run).findByText("Cancelled")).toBeInTheDocument();
     expect(within(run).getByText(/You stopped this question/)).toBeInTheDocument();
     expect(within(run).getByRole("button", { name: "Ask again" })).toBeInTheDocument();
+    expect(within(panel).getByRole("button", { name: "Ask" })).toBeInTheDocument();
   });
 });
 
@@ -394,18 +510,44 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
     expect(within(panel).getByTestId("answer")).toHaveTextContent("Sentiment isn't available yet.");
   });
 
-  it("finished runs show their steps on request", async () => {
+  it("a finished run's one-line disclosure says how long it worked and opens its steps", async () => {
     const user = userEvent.setup();
     setup({
-      runs: { r1: runDetail({ answer: "Done.", steps: [agentStep({ label: "Looking up your latest post", summary: "Found it" })] }) },
+      runs: {
+        r1: runDetail({
+          answer: "Done.",
+          started_at: "2026-09-29T10:00:01Z",
+          completed_at: "2026-09-29T10:00:09Z",
+          steps: [agentStep({ label: "Looking up your latest post", summary: "Found it" })],
+        }),
+      },
     });
     useAskStore.getState().setThread("w1", "r1");
     const { panel } = await openPanel();
-    const toggle = await within(panel).findByRole("button", { name: "Show steps" });
+    const toggle = await within(panel).findByRole("button", { name: "Worked for 8 s" });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(within(panel).queryByRole("list", { name: "Steps" })).toBeNull();
     await user.click(toggle);
     expect(await within(panel).findByText("Looking up your latest post")).toBeInTheDocument();
     expect(within(panel).getByText("Found it")).toBeInTheDocument();
+    expect(toggle).toHaveTextContent("Worked for 8 s · 1 step");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("without a start and end it doesn't guess a duration", async () => {
+    setup({ runs: { r1: runDetail({ answer: "Done.", completed_at: null }) } });
+    useAskStore.getState().setThread("w1", "r1");
+    const { panel } = await openPanel();
+    expect(await within(panel).findByTestId("steps-toggle")).toHaveTextContent(/^Steps$/);
+  });
+
+  it("the notices are compact and inline, not cards", async () => {
+    setup({ runs: { r1: runDetail({ status: "cancelled" }) } });
+    useAskStore.getState().setThread("w1", "r1");
+    const { panel } = await openPanel();
+    const notice = await within(panel).findByRole("status");
+    expect(notice).toHaveAttribute("data-outcome", "cancelled");
+    expect(notice).toHaveClass("rounded-lg", "px-3", "py-2");
   });
 
   it("an expired run says so", async () => {
@@ -478,8 +620,81 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     // Wide tables scroll inside the answer, never the page.
     const table = await within(panel).findByRole("table");
     expect(table.closest('[role="region"]')).toHaveClass("overflow-x-auto", "max-w-full");
-    for (const link of within(panel).getAllByRole("link", { name: /Reel of/ }).filter((a) => a.closest("ol"))) {
-      expect(link).toHaveClass("min-h-10");
+    for (const link of within(within(panel).getByRole("list", { name: "Sources" })).getAllByRole("link")) {
+      expect(link).toHaveClass("min-h-10", "md:min-h-7");
     }
+    expect(within(panel).getByRole("button", { name: "Copy answer" })).toHaveClass("min-h-10");
+    for (const button of within(within(panel).getByRole("list", { name: "Follow-up questions" })).getAllByRole("button")) {
+      expect(button).toHaveClass("min-h-10");
+    }
+    // The question box keeps clear of the phone's home indicator.
+    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    expect(box.closest("form")?.parentElement).toHaveClass("pb-[calc(env(safe-area-inset-bottom)+0.75rem)]");
+  });
+});
+
+describe("The question box", () => {
+  it("is one rounded field with the send button inside, and never shows scroll arrows below its limit", async () => {
+    setup();
+    const { panel } = await openPanel();
+    const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
+    const field = box.parentElement!;
+    expect(field).toHaveClass("rounded-2xl", "border", "bg-field", "focus-within:ring-3");
+    expect(field).toContainElement(within(panel).getByRole("button", { name: "Ask" }));
+    expect(box).toHaveClass("overflow-y-hidden", "resize-none");
+    expect(box.style.overflowY).toBe("hidden");
+    // The desktop hint, for mouse and trackpad users.
+    expect(within(panel).getByText("Enter to ask · Shift+Enter for a new line")).toHaveClass("hidden", "pointer-fine:block");
+  });
+
+  it("fits its text, counting the border that scrollHeight leaves out, and scrolls only past 160 px", () => {
+    const el = document.createElement("textarea");
+    const size = (scroll: number, offset: number, client: number) => {
+      Object.defineProperty(el, "scrollHeight", { configurable: true, value: scroll });
+      Object.defineProperty(el, "offsetHeight", { configurable: true, value: offset });
+      Object.defineProperty(el, "clientHeight", { configurable: true, value: client });
+    };
+    size(34, 36, 34); // one line: 34 px of content and padding, 2 px of border
+    fitTextarea(el);
+    expect(el.style.height).toBe("36px");
+    expect(el.style.overflowY).toBe("hidden");
+    size(120, 36, 34);
+    fitTextarea(el);
+    expect(el.style.height).toBe("122px");
+    expect(el.style.overflowY).toBe("hidden");
+    size(300, 36, 34);
+    fitTextarea(el);
+    expect(el.style.height).toBe("160px");
+    expect(el.style.overflowY).toBe("auto");
+  });
+});
+
+describe("Scrolling", () => {
+  it("offers Jump to latest when the member has scrolled up, and goes to the end", async () => {
+    setup({
+      runs: {
+        r1: runDetail({ id: "r1", thread_id: "t1", answer: "First answer", created_at: "2026-09-29T10:00:00Z" }),
+        r2: runDetail({ id: "r2", thread_id: "t1", request: "Second question", answer: "Second answer", created_at: "2026-09-29T10:05:00Z" }),
+      },
+    });
+    useAskStore.getState().setThread("w1", "t1");
+    const { user, panel } = await openPanel();
+    await within(panel).findByText("Second answer");
+    const log = within(panel).getByRole("log", { name: "Conversation with Social Hood" });
+    Object.defineProperty(log, "scrollHeight", { configurable: true, value: 2000 });
+    Object.defineProperty(log, "clientHeight", { configurable: true, value: 500 });
+    expect(within(panel).queryByRole("button", { name: "Jump to latest" })).toBeNull();
+
+    log.scrollTop = 200;
+    fireEvent.scroll(log);
+    const jump = await within(panel).findByRole("button", { name: "Jump to latest" });
+    await user.click(jump);
+    expect(log.scrollTop).toBe(2000);
+    expect(within(panel).queryByRole("button", { name: "Jump to latest" })).toBeNull();
+
+    // Near the end, it isn't offered.
+    log.scrollTop = 1450;
+    fireEvent.scroll(log);
+    expect(within(panel).queryByRole("button", { name: "Jump to latest" })).toBeNull();
   });
 });

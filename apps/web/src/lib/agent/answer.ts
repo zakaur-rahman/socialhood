@@ -215,6 +215,30 @@ export function parseAnswer(source: string, refCount: number): Block[] {
   return blocks;
 }
 
+/**
+ * The answer as plain text for Copy: no ** markers or [n] citations, lists as "- " or "1. "
+ * lines, tables as tab-separated rows (they paste into a sheet). Every [n] goes, in range or not.
+ */
+export function answerToPlainText(answer: string): string {
+  const tidy = (text: string) =>
+    text
+      .replace(/[ \t]+([.,;:!?)])/g, "$1")
+      .replace(/[ \t]{2,}/g, " ")
+      .trim();
+  // Cite everything, so every [n] (up to 999) is recognised and dropped.
+  const blocks = parseAnswer(answer, 999);
+  const lines = blocks.map((block) => {
+    if (block.type === "paragraph") return block.lines.map((line) => tidy(plainText(line))).join("\n");
+    if (block.type === "list") {
+      return block.items
+        .map((item, index) => `${block.ordered ? `${block.start + index}.` : "-"} ${tidy(plainText(item))}`)
+        .join("\n");
+    }
+    return [block.header, ...block.rows].map((row) => row.map((cell) => tidy(plainText(cell))).join("\t")).join("\n");
+  });
+  return lines.join("\n\n");
+}
+
 /** The citation numbers an answer uses, in order of first use. */
 export function citedNumbers(blocks: Block[]): number[] {
   const seen = new Set<number>();

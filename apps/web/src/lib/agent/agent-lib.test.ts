@@ -7,7 +7,18 @@ import { agentRun, agentStep, agentThread, draftCard, replyCard, runDetail, sche
 
 import { addRunToThread, applyAgentRunEvent, applyAgentStepEvent, putRun, upsertStep, type RunPages, type ThreadPages } from "./cache";
 import { definitionFromDraft, draftAccount } from "./draft";
-import { durationText, isActive, isFinal, modifierKey, runOutcome } from "./format";
+import {
+  durationText,
+  followUpsFor,
+  groupThreads,
+  isActive,
+  isFinal,
+  modifierKey,
+  runOutcome,
+  secondsText,
+  threadGroup,
+  workedFor,
+} from "./format";
 import { actionPath, isAskPage, refPath } from "./routes";
 import { toDefinition } from "@/lib/automations/definition";
 import { account, automation } from "@/test/api";
@@ -32,6 +43,55 @@ describe("run statuses and outcomes (FR-AGT-06)", () => {
     expect(runOutcome("expired", null)?.kind).toBe("expired");
     expect(runOutcome("succeeded", null)).toBeNull();
     expect(runOutcome("partial", null)).toBeNull();
+  });
+
+  it("says how long a run worked only when it has a start and an end", () => {
+    expect(workedFor({ started_at: "2026-09-29T10:00:01Z", completed_at: "2026-09-29T10:00:07Z" })).toBe("6 s");
+    expect(workedFor({ started_at: "2026-09-29T10:00:01Z", completed_at: "2026-09-29T10:01:06Z" })).toBe("1 min 5 s");
+    expect(workedFor({ started_at: "2026-09-29T10:00:01Z", completed_at: "2026-09-29T10:00:01.2Z" })).toBe("1 s");
+    expect(workedFor({ started_at: null, completed_at: "2026-09-29T10:00:07Z" })).toBeNull();
+    expect(workedFor({ started_at: "2026-09-29T10:00:01Z", completed_at: null })).toBeNull();
+    expect(secondsText(120_000)).toBe("2 min");
+  });
+
+  it("picks follow-ups from what an answer cited, in turn per kind, never the question just asked", () => {
+    const post = { kind: "post" as const };
+    const conversation = { kind: "conversation" as const };
+    expect(followUpsFor([post, post], "How did my latest post do?")).toEqual([
+      "Show the negative comments on this post",
+      "Compare it with my previous post",
+    ]);
+    expect(followUpsFor([post, conversation], "x")).toEqual([
+      "Show the negative comments on this post",
+      "Which conversations need a reply today?",
+      "Compare it with my previous post",
+    ]);
+    expect(followUpsFor([conversation], "Which conversations need a reply today?")).toEqual(["Summarise this conversation"]);
+    expect(followUpsFor([], "x")).toEqual(["Which posts beat my average this month?", "What are people complaining about this week?"]);
+  });
+
+  it("groups threads by calendar day in the workspace time zone", () => {
+    const now = new Date("2026-09-30T20:00:00Z"); // 1 Oct 01:30 in Kolkata
+    const zone = "Asia/Kolkata";
+    expect(threadGroup("2026-09-30T19:00:00Z", zone, now)).toBe("Today"); // 1 Oct 00:30
+    expect(threadGroup("2026-09-30T18:00:00Z", zone, now)).toBe("Yesterday"); // 30 Sep 23:30
+    expect(threadGroup("2026-09-25T10:00:00Z", zone, now)).toBe("Previous 7 days");
+    expect(threadGroup("2026-09-20T10:00:00Z", zone, now)).toBe("Older");
+    // The same instants in UTC fall on other days.
+    expect(threadGroup("2026-09-30T18:00:00Z", "UTC", now)).toBe("Today");
+    const grouped = groupThreads(
+      [
+        { id: "a", last_run_at: "2026-09-30T19:00:00Z" },
+        { id: "b", last_run_at: "2026-09-20T10:00:00Z" },
+        { id: "c", last_run_at: "2026-09-30T19:30:00Z" },
+      ],
+      zone,
+      now,
+    );
+    expect(grouped.map((g) => [g.group, g.items.map((i) => i.id)])).toEqual([
+      ["Today", ["a", "c"]],
+      ["Older", ["b"]],
+    ]);
   });
 
   it("formats durations and the shortcut's modifier", () => {
