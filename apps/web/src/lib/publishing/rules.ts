@@ -34,8 +34,9 @@ export function charCount(text: string): number {
 // A hashtag starts at the beginning or after a character that can't be part of a word, so
 // "abc#def" and "&#123;" are not hashtags; Instagram allows letters (any script), digits and _.
 // Built from strings: lookbehind and \p{…} are ES2018 syntax, above the tsconfig target, and
-// every browser the app supports has them.
-const HASHTAG = new RegExp("(?<![\\p{L}\\p{M}\\p{N}_&#])#([\\p{L}\\p{M}\\p{N}_]+)", "gu");
+// every browser the app supports has them. The zero-width (non-)joiner is allowed too, like the
+// API's rule, so Hindi hashtags such as #नमस्ते count whole.
+const HASHTAG = new RegExp("(?<![\\p{L}\\p{M}\\p{N}_&#])#([\\p{L}\\p{M}\\p{N}_\\u200C\\u200D]+)", "gu");
 // Instagram usernames: letters, digits, periods and underscores; an email address is not a mention.
 const MENTION = new RegExp("(?<![\\p{L}\\p{M}\\p{N}_.@])@([A-Za-z0-9._]+)", "gu");
 

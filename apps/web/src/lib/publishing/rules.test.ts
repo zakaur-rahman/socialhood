@@ -39,6 +39,11 @@ describe("caption counters (FR-PUB-10)", () => {
     expect(hashtagsIn("#one#two")).toEqual(["one"]);
   });
 
+  it("keeps Devanagari vowel signs, viramas and zero-width joiners inside a hashtag, like the API", () => {
+    expect(hashtagsIn("#नमस्ते #हिंदी #मराठी")).toEqual(["नमस्ते", "हिंदी", "मराठी"]);
+    expect(hashtagsIn("#क्‍ष")).toEqual(["क्‍ष"]);
+  });
+
   it("finds @mentions, not email addresses", () => {
     expect(mentionsIn("Thanks @priya.styles and @maple_bakery.")).toEqual(["priya.styles", "maple_bakery"]);
     expect(mentionsIn("Write to hello@maple.example")).toEqual([]);

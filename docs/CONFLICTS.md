@@ -426,3 +426,23 @@ intent becomes "other", decided in code after the model answers, so it is never 
 - Routes sit in api/v1/publishing.py (T7.1), api/v1/captions.py (T7.4) and api/v1/media.py (the
   library, T7.1); adapters in platforms/*/publishing.py (T7.2); jobs in jobs/tasks/publishing.py
   (T7.3), so the four tasks touch different files.
+
+## C-044 · P7 build decisions (posts, publishing jobs, composer, calendar)
+- Posts: schedule, queue and publish-now answer 422 with one field error per failing checklist item
+  (same names and messages as the checklist); a draft save refuses only foreign or duplicate
+  accounts and assets. The 24 h publishing limit in the checklist is 100 minus the account's other
+  posts in that window (the real quota is read by the publishing job). Deleting a post never refunds
+  scheduled_posts_monthly. A free posting time has no scheduled post of the account within 30
+  minutes and is at least 5 minutes ahead. Hashtags are letters, digits, underscores, combining
+  marks and zero-width joiners in any script, compared NFC-lowercased, so Hindi hashtags count whole
+  (API and web agree).
+- Publishing jobs: a carousel's parent container is created only once every child reads FINISHED;
+  polls run at once, then every 60 s to poll 5, then every 5 minutes to poll 10 (about 29 minutes).
+  Every poll reads the container before publishing; PUBLISHED is resolved with a lookup, never a
+  second publish; three more polls then delivery_unknown. A disconnected account cancels its
+  target, a reconnect-needed one fails it; failures notify ("post_failed", deduped per post and
+  time). The jobs' scheduled_post.updated payload uses the posts service's projection (checklist
+  included). Publish-now sets publish_at = now and enqueues publish_target per target.
+- Web: the composer checks the checklist locally for instant feedback and the API's wins once saved;
+  scheduled posts don't autosave (changes wait for Update schedule); calendar drags snap to 15
+  minutes, published and publishing posts can't move, and "Move to…" is the keyboard alternative.
