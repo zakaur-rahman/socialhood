@@ -7,7 +7,11 @@ import type { AiDecision } from "@/lib/api/types";
 import { resetInboxStore } from "@/lib/inbox/store";
 import { account, billingState, conversation, json, message, noContent, renderWithApi, type Call } from "@/test/api";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/w/maple/inbox/c1" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/w/maple/inbox/c1",
+  useRouter: () => ({ replace: () => undefined, push: () => undefined }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 

@@ -129,7 +129,7 @@ def suggest_system(
     language: str,
     automation_instructions: str = "",
 ) -> str:
-    """suggest.v1 filled with the brand voice (FR-KB-04), trusted settings only (TR-AI-04)."""
+    """The suggest prompt with the brand voice (FR-KB-04); trusted settings only (TR-AI-04)."""
 
     def listed(items: Sequence[str] | None) -> str:
         return "; ".join(items) if items else "nothing specific"

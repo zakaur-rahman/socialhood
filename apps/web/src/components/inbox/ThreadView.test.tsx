@@ -9,7 +9,12 @@ import { account, conversation, json, listItem, message, noContent, problem, ren
 
 import { ThreadView } from "./ThreadView";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/w/maple/inbox/c1" }));
+const nav = vi.hoisted(() => ({ search: "", replace: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/w/maple/inbox/c1",
+  useRouter: () => ({ replace: nav.replace, push: () => undefined }),
+  useSearchParams: () => new URLSearchParams(nav.search),
+}));
 
 const priya = conversation({ id: "c1" });
 const kabir = conversation({
@@ -63,7 +68,11 @@ async function replyWith(text: string) {
   return user;
 }
 
-beforeEach(() => resetInboxStore());
+beforeEach(() => {
+  resetInboxStore();
+  nav.search = "";
+  nav.replace.mockClear();
+});
 
 describe("ThreadView: optimistic send (TR-FE-05)", () => {
   it("posts with client_id as the Idempotency-Key; a network drop fails with Retry, which reuses the key", async () => {
@@ -185,5 +194,21 @@ describe("ThreadView: read state (FR-INB-04)", () => {
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/conversations/c1/read")).toBe(true));
     const list = queryClient.getQueryData<{ pages: { items: { unread_count: number }[] }[] }>(keys.conversations("w1", filters));
     expect(list?.pages[0].items[0].unread_count).toBe(0);
+  });
+});
+
+describe("ThreadView: follow-up reminder link (F-18)", () => {
+  it("opens the scheduler for ?schedule=1 and removes the parameter", async () => {
+    nav.search = "schedule=1";
+    renderWithApi(<ThreadView key="c1" conversationId="c1" />, { handlers: handlers(() => noContent()) });
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/w/maple/inbox/c1", { scroll: false }));
+  });
+
+  it("keeps the scheduler closed without it", async () => {
+    renderWithApi(<ThreadView key="c1" conversationId="c1" />, { handlers: handlers(() => noContent()) });
+    expect(await screen.findByRole("button", { name: "Schedule for later" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(nav.replace).not.toHaveBeenCalled();
   });
 });

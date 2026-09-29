@@ -2,10 +2,11 @@
 Dubai?" and "shipping to UAE?" merge into one gap; answering removes it. Plus dismiss and reopen,
 counting each message once, the 30-day list with examples, and Home's count.
 
-How the two questions merge: suggest.v1 asks the model for a 2-4 word label and gives "shipping to
-uae" as its example, so both questions arrive labelled alike and meet by exact or trigram match.
-Trigram similarity alone does not merge the labels "shipping to dubai" and "shipping to uae"
-(0.55 < 0.6); see docs/CONFLICTS.md for the proposed rule.
+How the two questions merge (C-034): the draft is given the open gap labels (KNOWN GAPS) and
+suggest.v2 asks the model to reuse one exactly for the same missing fact, so both questions arrive
+with the same label and meet by exact match. Trigram similarity is only a fallback at 0.7: it
+neither merges "shipping to dubai" with "shipping to uae" (0.55) nor, wrongly, "shipping to usa"
+(0.68).
 """
 
 from __future__ import annotations
@@ -93,7 +94,7 @@ async def test_do_you_ship_to_dubai_and_shipping_to_uae_are_one_gap(
         engine, ws, "Do you ship to Dubai?", "shipping to UAE?", "Can you send a cake to the UAE?"
     )
 
-    # The model's labels (suggest.v1's own example for a Dubai question is "shipping to uae").
+    # The model's labels: given KNOWN GAPS, suggest.v2 reuses "shipping to uae" for Dubai (C-034).
     first = await record(maker, ws, "shipping to uae", dubai)
     assert await record(maker, ws, "Shipping to UAE", uae) == first  # exact after normalising
     assert await record(maker, ws, "shipping to the UAE", the_uae) == first  # trigram 0.84
@@ -111,21 +112,23 @@ async def test_do_you_ship_to_dubai_and_shipping_to_uae_are_one_gap(
     ]
 
 
-async def test_trigram_similarity_alone_is_the_merge_rule(
+async def test_trigram_similarity_is_only_a_fallback_at_0_7(
     ws: Ws, engine: AsyncEngine, maker: async_sessionmaker[AsyncSession]
 ) -> None:
-    """TR-AI-12 as written: exact or pg_trgm similarity >= 0.6. It keeps "shipping to dubai"
-    apart from "shipping to uae" (0.55) and joins "uae shipping" (0.81) and, wrongly, "shipping
-    to usa" (0.68). Recorded in docs/CONFLICTS.md with the proposed fix."""
+    """C-034: exact labels first (the model reuses KNOWN GAPS labels); pg_trgm similarity >= 0.7
+    joins near-identical wording like "uae shipping" (0.81) but no longer "shipping to usa" (0.68)
+    or "shipping to dubai" (0.55)."""
     m = await asked(engine, ws, "a", "b", "c", "d", "e")
 
     uae = await record(maker, ws, "shipping to uae", m[0])
     dubai = await record(maker, ws, "shipping to dubai", m[1])
+    assert dubai != uae
     assert await record(maker, ws, "UAE shipping", m[2]) == uae
-    assert await record(maker, ws, "shipping to usa", m[3]) == uae
-    assert await record(maker, ws, "return policy", m[4]) not in (uae, dubai)
+    usa = await record(maker, ws, "shipping to usa", m[3])
+    assert usa not in (uae, dubai)
+    assert await record(maker, ws, "return policy", m[4]) not in (uae, dubai, usa)
 
-    assert [g["occurrences"] for g in await gap_rows(engine)] == [3, 1, 1]
+    assert sorted(g["occurrences"] for g in await gap_rows(engine)) == [1, 1, 1, 2]
 
 
 async def test_a_message_counts_once_and_five_examples_are_kept(
@@ -180,7 +183,9 @@ async def test_the_list_is_open_gaps_of_30_days_most_asked_first(
     assert overview["knowledge_gaps_open"] == 2
     with workspace_scope(uuid.UUID(ws.wid)):
         async with make_sessionmaker(engine)() as session:
-            assert await open_topics(session, now=now) == ["eggless cakes", "gift wrapping"]
+            # Labels the model may reuse: open and dismissed, most asked first (C-034).
+            topics = await open_topics(session, now=now)
+    assert topics == ["hidden", "eggless cakes", "gift wrapping"]
 
 
 async def test_dismiss_hides_a_gap_until_it_is_asked_again(
@@ -199,7 +204,8 @@ async def test_dismiss_hides_a_gap_until_it_is_asked_again(
     await record(maker, ws, "sunday delivery", first)  # the same message again: still hidden
     assert (await ws.ok("GET", "/knowledge-gaps"))["items"] == []
 
-    assert await record(maker, ws, "Sunday deliveries", again) == gap_id  # asked again
+    # Asked again: KNOWN GAPS lists dismissed labels too, so the model reuses it (C-034).
+    assert await record(maker, ws, "Sunday delivery", again) == gap_id
     [gap] = await gap_rows(engine)
     assert (gap["status"], gap["occurrences"], gap["dismissed_at"]) == ("open", 2, None)
     assert [g["id"] for g in (await ws.ok("GET", "/knowledge-gaps"))["items"]] == [str(gap_id)]

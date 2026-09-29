@@ -12,7 +12,13 @@ from socialhood.services.knowledge import gaps, retrieval
 from socialhood.services.knowledge.gaps import normalize_topic
 from socialhood.services.knowledge.retrieval import Retrieved as RetrievedChunk
 
-__all__ = ["RetrievedChunk", "normalize_topic", "record_knowledge_gap", "retrieve_knowledge"]
+__all__ = [
+    "RetrievedChunk",
+    "normalize_topic",
+    "open_gap_labels",
+    "record_knowledge_gap",
+    "retrieve_knowledge",
+]
 
 
 async def retrieve_knowledge(session: AsyncSession, query: str) -> list[RetrievedChunk]:
@@ -33,3 +39,9 @@ async def record_knowledge_gap(
         session, missing_topic=missing_topic, message_id=message_id, now=now
     )
     return gap.id
+
+
+async def open_gap_labels(session: AsyncSession, now: datetime) -> list[str]:
+    """The workspace's most asked open gap labels (up to 20), so a draft can reuse one exactly
+    for the same missing fact (C-034)."""
+    return await gaps.open_topics(session, now=now, limit=20)

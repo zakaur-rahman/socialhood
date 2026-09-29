@@ -23,7 +23,7 @@ import re
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 
 from pydantic import BaseModel
@@ -42,7 +42,11 @@ from socialhood.models.inbox import Direction, Message, MessageKind
 from socialhood.observability.logging import get_logger
 from socialhood.services.inbox_views import preview_text
 from socialhood.services.sending import TEXT_LIMITS, platform_name, text_size
-from socialhood.services.suggestions.knowledge_port import RetrievedChunk, retrieve_knowledge
+from socialhood.services.suggestions.knowledge_port import (
+    RetrievedChunk,
+    open_gap_labels,
+    retrieve_knowledge,
+)
 from socialhood.settings import get_settings
 
 log = get_logger(__name__)
@@ -124,7 +128,7 @@ def system_prompt(
     language: str | None,
     instructions: str | None = None,
 ) -> tuple[str, str]:
-    """(system prompt, prompt version): suggest.v1 filled with trusted settings only."""
+    """(system prompt, prompt version): the suggest prompt with trusted settings."""
     prompt = prompts.load(TASK)
     text = prompt.render(
         business_name=brand.business_name,
@@ -224,8 +228,11 @@ async def message_language(session: AsyncSession, message_id: uuid.UUID) -> str 
     )
 
 
-def render_contents(lines: Sequence[Line], chunks: Sequence[RetrievedChunk]) -> str:
-    """The conversation, then the KNOWLEDGE block ("[k1] (source title) text")."""
+def render_contents(
+    lines: Sequence[Line], chunks: Sequence[RetrievedChunk], known_gaps: Sequence[str] = ()
+) -> str:
+    """The conversation, the KNOWLEDGE block ("[k1] (source title) text") and the KNOWN GAPS
+    labels a missing_topic should reuse (C-034)."""
     out = ["CONVERSATION (oldest first; the message to answer is marked TARGET)"]
     for line in lines:
         who = "Customer" if line.speaker == "customer" else "Business"
@@ -236,6 +243,10 @@ def render_contents(lines: Sequence[Line], chunks: Sequence[RetrievedChunk]) -> 
         out.append("(none)")
     for i, chunk in enumerate(chunks, 1):
         out.append(f"[k{i}] ({chunk.source_title}) {chunk.content}")
+    if known_gaps:
+        out.append("")
+        out.append("KNOWN GAPS (labels for questions the business hasn't answered yet)")
+        out.extend(f"- {label}" for label in known_gaps)
     return "\n".join(out)
 
 
@@ -335,11 +346,12 @@ async def draft(
     ) as meter:
         async with sessionmaker() as session:
             chunks = await retrieve_knowledge(session, request.query)
+            known_gaps = await open_gap_labels(session, datetime.now(UTC))
         result: AIResult[SuggestionOut] = await get_provider().generate_json(
             task=TASK,
             schema=SuggestionOut,
             system=system,
-            contents=[Turn("user", render_contents(request.lines, chunks))],
+            contents=[Turn("user", render_contents(request.lines, chunks, known_gaps))],
             model=settings.ai_model_reply,
             max_output_tokens=REPLY_MAX_TOKENS,
             temperature=REPLY_TEMPERATURE,

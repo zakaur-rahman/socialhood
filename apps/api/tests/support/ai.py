@@ -88,7 +88,7 @@ async def make_suggestion(
         "reply_text": "Our prices start at ₹499.",
         "model_confidence": 0.9,
         "model": "fake-model",
-        "prompt_version": "suggest.v1",
+        "prompt_version": "suggest.v2",
     }
     row = ReplySuggestion(
         conversation_id=conversation_id, message_id=message_id, **{**defaults, **values}

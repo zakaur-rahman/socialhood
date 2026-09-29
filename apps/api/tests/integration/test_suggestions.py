@@ -79,7 +79,7 @@ async def test_a_suggestion_is_drafted_from_knowledge(ai: Ai) -> None:
     assert row["top_similarity"] >= get_settings().ai_retrieval_min_sim
     assert (row["message_id"], row["regeneration_index"]) == (ai.message_id, 0)
     assert (row["prompt_version"], row["input_tokens"], row["output_tokens"]) == (
-        "suggest.v1",
+        "suggest.v2",
         100,
         20,
     )
@@ -234,6 +234,21 @@ async def test_a_new_suggestion_supersedes_the_pending_one(ai: Ai) -> None:
         (str(first["id"]), "superseded")
     ]
     assert (await ai.pending())["reply_text"] == "Second draft."
+
+
+async def test_open_gap_labels_reach_the_next_draft(ai: Ai) -> None:
+    """C-034: the draft lists the open gap labels as data (KNOWN GAPS), so the model can reuse
+    one exactly; suggest.v2 asks it to."""
+    ai.fake.respond("suggest", cannot())
+    await ai.suggest()  # records the gap "shipping to uae"
+    await ai.suggest(regeneration=1)
+
+    first, second = ai.fake.calls_for("suggest")
+    assert "KNOWN GAPS" not in first.contents[0].text
+    assert "KNOWN GAPS" in second.contents[0].text
+    assert "- shipping to uae" in second.contents[0].text
+    assert "KNOWN GAPS" in second.system  # the instruction, not the labels
+    assert "shipping to uae" not in second.system.split("e.g.")[-1].split("\n")[1]
 
 
 async def test_a_gap_counts_once_per_message(ai: Ai) -> None:

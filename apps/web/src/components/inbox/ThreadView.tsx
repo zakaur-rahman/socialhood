@@ -3,6 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { CalendarClock } from "lucide-react";
 import type { Route } from "next";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { AiModeMenu } from "@/components/ai/AiModeControl";
@@ -120,7 +121,18 @@ function Thread({
     },
     [sendReply, pendingSuggestionId, queryClient, wid, conversationId],
   );
-  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  // F-18: the "reply window closing" notification links here with ?schedule=1.
+  const [scheduleOpen, setScheduleOpen] = useState(() => searchParams.get("schedule") === "1");
+  useEffect(() => {
+    if (searchParams.get("schedule") !== "1") return;
+    const rest = new URLSearchParams(searchParams.toString());
+    rest.delete("schedule"); // a refresh doesn't reopen it
+    const query = rest.toString();
+    router.replace(`${pathname}${query ? `?${query}` : ""}` as Route, { scroll: false });
+  }, [searchParams, router, pathname]);
   const [templateOpen, setTemplateOpen] = useState(false);
 
   // Server messages, plus replies still in the outbox (optimistic or failed before reaching the API).

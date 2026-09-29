@@ -32,7 +32,7 @@ from socialhood.models.ai import KnowledgeGap as GapRow
 from socialhood.repositories import knowledge as repo
 from socialhood.schemas.knowledge import KnowledgeGap, KnowledgeGapExample, KnowledgeGapList
 
-MIN_SIMILARITY = 0.6  # TR-AI-12
+MIN_SIMILARITY = 0.7  # C-034: the fallback after exact labels; 0.6 merged "uae" with "usa"
 WINDOW = timedelta(days=30)
 MAX_EXAMPLES = 5  # stored, newest first
 SHOWN_EXAMPLES = 3  # FR-KB-06

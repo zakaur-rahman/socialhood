@@ -118,6 +118,8 @@ def assert_options_inside_config(
     assert config.max_output_tokens == tokens
     assert config.temperature == temp
     assert config.thinking_config is not None
+    assert config.automatic_function_calling is not None
+    assert config.automatic_function_calling.disable is True  # no tools, no SDK tool loop
 
 
 async def json_call(p: GeminiProvider, **overrides: Any) -> Any:

@@ -214,11 +214,16 @@ async def count_open_gaps(session: AsyncSession, *, since: datetime) -> int:
 
 
 async def open_gap_topics(session: AsyncSession, *, since: datetime, limit: int) -> list[str]:
+    """Labels of gaps still unanswered (open or dismissed), most asked first: a dismissed label
+    reused by the model reopens its gap (FR-KB-06, C-034)."""
     return list(
         (
             await session.scalars(
                 select(KnowledgeGap.topic_normalized)
-                .where(KnowledgeGap.status == GapStatus.OPEN, KnowledgeGap.last_seen_at >= since)
+                .where(
+                    KnowledgeGap.status.in_([GapStatus.OPEN, GapStatus.DISMISSED]),
+                    KnowledgeGap.last_seen_at >= since,
+                )
                 .order_by(KnowledgeGap.occurrences.desc(), KnowledgeGap.last_seen_at.desc())
                 .limit(limit)
             )

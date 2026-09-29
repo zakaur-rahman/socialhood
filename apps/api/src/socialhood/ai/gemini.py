@@ -124,6 +124,8 @@ class GeminiProvider:
             thinking_config=types.ThinkingConfig(
                 thinking_level=thinking_level(model, self.settings.ai_thinking_levels)
             ),
+            # No tools are passed; the SDK's automatic function calling stays off (and quiet).
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
         )
 
     async def _generate(

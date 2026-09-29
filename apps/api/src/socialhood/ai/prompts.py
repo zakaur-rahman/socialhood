@@ -11,7 +11,7 @@ from pathlib import Path
 
 PROMPTS = Path(__file__).parent / "prompts"
 PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
-CURRENT = {"analysis": 1, "suggest": 1, "summary": 1}
+CURRENT = {"analysis": 1, "suggest": 2, "summary": 1}  # suggest.v2: reuse KNOWN GAPS labels (C-034)
 
 
 @dataclass(frozen=True)

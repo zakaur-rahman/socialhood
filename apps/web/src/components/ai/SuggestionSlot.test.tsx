@@ -22,7 +22,11 @@ import {
   type Call,
 } from "@/test/api";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/w/maple/inbox/c1" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/w/maple/inbox/c1",
+  useRouter: () => ({ replace: () => undefined, push: () => undefined }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
