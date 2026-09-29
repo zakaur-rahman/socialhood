@@ -111,6 +111,8 @@ class Settings(BaseSettings):
     ai_model_reply: str = "gemini-3.5-flash-lite"
     ai_model_reply_complex: str = "gemini-3.8-flash"
     ai_model_embed: str = "gemini-embedding-2"
+    # Ask Social Hood's planner and report (TR-AGT-02); unset: AI_MODEL_REPLY.
+    ai_model_agent: str | None = None
     ai_embed_dim: int = 768
     # Thinking level per model id, JSON (TR-AI-03); unset: "minimal" for Flash-Lite, else "low".
     ai_thinking_levels: dict[str, str] = Field(default_factory=dict)

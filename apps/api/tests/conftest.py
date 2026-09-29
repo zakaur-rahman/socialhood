@@ -11,7 +11,12 @@ import os
 import sys
 from collections.abc import Callable, Mapping
 
+import pydantic_ai.models
 import pytest
+
+# No test reaches a real model through Pydantic AI (the agent's planner, TR-AGT-02): any model but
+# FunctionModel and TestModel raises. AI calls through ai/ use the FakeProvider (tests/support/ai).
+pydantic_ai.models.ALLOW_MODEL_REQUESTS = False
 
 pytest_plugins = [
     "tests.support.db",

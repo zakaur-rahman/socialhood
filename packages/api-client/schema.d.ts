@@ -62,6 +62,187 @@ export interface paths {
         patch: operations["update_workspace"];
         trace?: never;
     };
+    "/v1/w/{wid}/agent/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agent Approvals
+         * @description R2: approvals across runs; a member sees the ones they may decide (their own runs' writes
+         *     their role allows), owners and admins all.
+         */
+        get: operations["list_agent_approvals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/agent/approvals/{approval_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Agent Approval
+         * @description R2: run the write as shown, or with edited ``args`` (re-checked by the gateway). The
+         *     caller's role must allow the tool (403 forbidden); 409 when it is no longer pending.
+         */
+        post: operations["approve_agent_approval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/agent/approvals/{approval_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject Agent Approval
+         * @description R2: cancel the write; the step is skipped and the run continues without it. 409 when it
+         *     is no longer pending.
+         */
+        post: operations["reject_agent_approval"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/agent/policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Policy
+         * @description The workspace's agent mode, capability switches and limits. In R1 the mode is always
+         *     read_only and every switch is off.
+         */
+        get: operations["get_agent_policy"];
+        /**
+         * Update Agent Policy
+         * @description R2: replace the policy (owners and admins). 409 for ``autonomous`` until R3.
+         */
+        put: operations["update_agent_policy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/agent/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agent Runs
+         * @description FR-AGT-07 run history, newest first: the caller's runs, or every run for owners and
+         *     admins. ``thread_id`` keeps one thread's runs (the Ask panel reverses them into a
+         *     conversation); a thread that isn't the caller's lists nothing.
+         */
+        get: operations["list_agent_runs"];
+        put?: never;
+        /**
+         * Create Agent Run
+         * @description FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent
+         *     is enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing
+         *     is reserved yet. 404 when ``thread_id`` isn't one of the caller's threads; 402 quota_exceeded
+         *     when the workspace has no AI credits left (nothing is stored).
+         */
+        post: operations["create_agent_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/agent/runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Agent Run
+         * @description One run with every step: the tool in plain words, arguments, status, result summary,
+         *     verification, latency; the run's credits, model and prompt version (TR-AGT-08).
+         */
+        get: operations["get_agent_run"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/agent/runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Agent Run
+         * @description Stop at the next step (§9): an unfinished run becomes ``cancelled`` at once and run_agent
+         *     stops before its next step or model turn; a step already running finishes and is kept. A
+         *     finished run is returned as it is. Only the member who asked, or an owner or admin.
+         */
+        post: operations["cancel_agent_run"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/agent/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Agent Threads
+         * @description The caller's Ask panel threads, most recent activity first (owners and admins too: threads
+         *     are personal; other members' runs are in the run history).
+         */
+        get: operations["list_agent_threads"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {
         parameters: {
             query?: never;
@@ -1719,6 +1900,386 @@ export interface components {
             name?: string | null;
         };
         /**
+         * AgentApproval
+         * @description A write waiting for a person: exactly what will happen (recipients, text, scope, count).
+         */
+        AgentApproval: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            decided_by?: components["schemas"]["Actor"] | null;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Label */
+            label: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Request */
+            request: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected" | "expired" | "superseded";
+            /**
+             * Step Id
+             * Format: uuid
+             */
+            step_id: string;
+            /** Summary */
+            summary: string;
+            /**
+             * Tier
+             * @enum {string}
+             */
+            tier: "read" | "draft" | "low" | "high" | "destructive";
+            /** Tool */
+            tool: string;
+        };
+        /**
+         * AgentApprovalList
+         * @description Soonest to expire first; ``next_cursor`` fetches more.
+         */
+        AgentApprovalList: {
+            /** Items */
+            items: components["schemas"]["AgentApproval"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * AgentLimits
+         * @description Read like the permissions: ``{**DEFAULT_LIMITS, **row.limits}``.
+         */
+        AgentLimits: {
+            /** Bulk Max */
+            bulk_max: number;
+            /** Writes Per Day */
+            writes_per_day: number;
+            /** Writes Per Hour */
+            writes_per_hour: number;
+        };
+        /** AgentLimitsUpdate */
+        AgentLimitsUpdate: {
+            /** Bulk Max */
+            bulk_max: number;
+            /** Writes Per Day */
+            writes_per_day: number;
+            /** Writes Per Hour */
+            writes_per_hour: number;
+        };
+        /**
+         * AgentPermissions
+         * @description Per-capability switches (models/agent.AgentCapability), all off until an owner or admin
+         *     turns them on (R2). A key missing from the stored row reads as its default
+         *     (``{**DEFAULT_PERMISSIONS, **row.permissions}``).
+         */
+        AgentPermissions: {
+            /** Bulk Actions */
+            bulk_actions: boolean;
+            /** Create Automations */
+            create_automations: boolean;
+            /** Delete Automations */
+            delete_automations: boolean;
+            /** Schedule Messages */
+            schedule_messages: boolean;
+            /** Schedule Posts */
+            schedule_posts: boolean;
+            /** Send Replies */
+            send_replies: boolean;
+        };
+        /** AgentPermissionsUpdate */
+        AgentPermissionsUpdate: {
+            /** Bulk Actions */
+            bulk_actions: boolean;
+            /** Create Automations */
+            create_automations: boolean;
+            /** Delete Automations */
+            delete_automations: boolean;
+            /** Schedule Messages */
+            schedule_messages: boolean;
+            /** Schedule Posts */
+            schedule_posts: boolean;
+            /** Send Replies */
+            send_replies: boolean;
+        };
+        /**
+         * AgentPolicy
+         * @description The workspace's agent mode, switches and limits. R1: always read_only, all off.
+         */
+        AgentPolicy: {
+            limits: components["schemas"]["AgentLimits"];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "read_only" | "copilot" | "supervised" | "autonomous";
+            permissions: components["schemas"]["AgentPermissions"];
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            updated_by?: components["schemas"]["Actor"] | null;
+        };
+        /**
+         * AgentPolicyUpdate
+         * @description PUT …/agent/policy (R2): the whole policy. ``autonomous`` is refused until R3 (409).
+         */
+        AgentPolicyUpdate: {
+            limits: components["schemas"]["AgentLimitsUpdate"];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "read_only" | "copilot" | "supervised" | "autonomous";
+            permissions: components["schemas"]["AgentPermissionsUpdate"];
+        };
+        /**
+         * AgentRun
+         * @description A run in the history and a thread's exchanges (FR-AGT-01, FR-AGT-07); also the 202 answer
+         *     of POST …/agent/runs.
+         */
+        AgentRun: {
+            /** Action Cards */
+            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"])[];
+            /** Answer */
+            answer?: string | null;
+            /** Answer Refs */
+            answer_refs: components["schemas"]["AnswerRef"][];
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Credits */
+            credits: number;
+            error?: components["schemas"]["ErrorInfo"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "read_only" | "copilot" | "supervised" | "autonomous";
+            /** Request */
+            request: string;
+            requested_by?: components["schemas"]["Actor"] | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "ask" | "standing";
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "planning" | "running" | "awaiting_approval" | "succeeded" | "partial" | "failed" | "cancelled" | "expired";
+            /**
+             * Thread Id
+             * Format: uuid
+             */
+            thread_id: string;
+        };
+        /**
+         * AgentRunCreate
+         * @description POST …/agent/runs: a question in plain language (English, Hindi or Hinglish).
+         */
+        AgentRunCreate: {
+            /** Request */
+            request: string;
+            /** Thread Id */
+            thread_id?: string | null;
+        };
+        /**
+         * AgentRunDetail
+         * @description GET …/agent/runs/{run_id}: the run with every step (TR-AGT-08).
+         */
+        AgentRunDetail: {
+            /** Action Cards */
+            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"])[];
+            /** Answer */
+            answer?: string | null;
+            /** Answer Refs */
+            answer_refs: components["schemas"]["AnswerRef"][];
+            /** Completed At */
+            completed_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Credits */
+            credits: number;
+            error?: components["schemas"]["ErrorInfo"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "read_only" | "copilot" | "supervised" | "autonomous";
+            /** Model */
+            model?: string | null;
+            /** Plan */
+            plan?: {
+                [key: string]: unknown;
+            } | null;
+            /** Prompt Version */
+            prompt_version?: string | null;
+            /** Request */
+            request: string;
+            requested_by?: components["schemas"]["Actor"] | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "ask" | "standing";
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "planning" | "running" | "awaiting_approval" | "succeeded" | "partial" | "failed" | "cancelled" | "expired";
+            /** Steps */
+            steps: components["schemas"]["AgentStep"][];
+            /**
+             * Thread Id
+             * Format: uuid
+             */
+            thread_id: string;
+        };
+        /**
+         * AgentRunList
+         * @description Newest first; ``next_cursor`` fetches older runs.
+         */
+        AgentRunList: {
+            /** Items */
+            items: components["schemas"]["AgentRun"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * AgentStep
+         * @description One tool call, condition or report (TR-AGT-08), for the live steps and run history.
+         */
+        AgentStep: {
+            /** Args */
+            args: {
+                [key: string]: unknown;
+            };
+            /** Attempts */
+            attempts: number;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Decision */
+            decision?: string | null;
+            error?: components["schemas"]["ErrorInfo"] | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "tool" | "condition" | "report";
+            /** Label */
+            label: string;
+            /** Latency Ms */
+            latency_ms: number;
+            /** Ordinal */
+            ordinal: number;
+            /** Result */
+            result?: {
+                [key: string]: unknown;
+            } | null;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "running" | "succeeded" | "failed" | "skipped" | "blocked" | "awaiting_approval";
+            /** Summary */
+            summary?: string | null;
+            /** Tier */
+            tier?: ("read" | "draft" | "low" | "high" | "destructive") | null;
+            /** Tool */
+            tool?: string | null;
+            verification?: components["schemas"]["StepVerification"] | null;
+        };
+        /**
+         * AgentThread
+         * @description An Ask panel thread: the caller's runs that share context.
+         */
+        AgentThread: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Run At
+             * Format: date-time
+             */
+            last_run_at: string;
+            /**
+             * Last Status
+             * @enum {string}
+             */
+            last_status: "queued" | "planning" | "running" | "awaiting_approval" | "succeeded" | "partial" | "failed" | "cancelled" | "expired";
+            /** Run Count */
+            run_count: number;
+            /** Title */
+            title: string;
+        };
+        /**
+         * AgentThreadList
+         * @description Most recent activity first; ``next_cursor`` fetches older threads.
+         */
+        AgentThreadList: {
+            /** Items */
+            items: components["schemas"]["AgentThread"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
          * AiDecision
          * @description Why the AI did or did not reply (FR-SUG-04): the popover on an AI-sent bubble and the
          *     escalation banner.
@@ -1862,6 +2423,35 @@ export interface components {
             intent?: ("pricing" | "product_inquiry" | "purchase" | "order_status" | "shipping" | "support" | "complaint" | "refund" | "feedback" | "collaboration" | "greeting" | "spam" | "other") | null;
             /** Sentiment */
             sentiment?: ("positive" | "neutral" | "negative") | null;
+        };
+        /**
+         * AnswerRef
+         * @description A record an answer used (FR-AGT-01): ``[n]`` in the answer is item n of answer_refs.
+         */
+        AnswerRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source";
+            /** Label */
+            label: string;
+        };
+        /**
+         * ApprovalApprove
+         * @description Approve as shown, or with edited arguments (Edit): the edit replaces the payload and is
+         *     checked by the gateway again (TR-AGT-04).
+         */
+        ApprovalApprove: {
+            /** Args */
+            args?: {
+                [key: string]: unknown;
+            } | null;
         };
         /** Attachment */
         Attachment: {
@@ -2075,6 +2665,54 @@ export interface components {
              * @enum {string}
              */
             surge_order: "oldest_first" | "newest_first" | "public_only";
+            /** Trigger */
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+        };
+        /** AutomationDraftAction */
+        AutomationDraftAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "automation_draft";
+            /** Label */
+            label: string;
+            /** Note */
+            note?: string | null;
+            prefill: components["schemas"]["AutomationDraftPrefill"];
+            /** Route */
+            route: string;
+        };
+        /**
+         * AutomationDraftPrefill
+         * @description The automation editor, new and unsaved, filled with a draft (F-11). Field names and rules
+         *     are AutomationDefinition's (schemas/automations.py); the editor saves it like any draft.
+         */
+        AutomationDraftPrefill: {
+            /** Action */
+            action?: ("send_message" | "ai_reply") | null;
+            /** Ai Instructions */
+            ai_instructions?: string | null;
+            /** Keywords */
+            keywords?: string[];
+            /** Media Item Ids */
+            media_item_ids?: string[];
+            /** Message Text */
+            message_text?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Post Scope
+             * @default all
+             * @enum {string}
+             */
+            post_scope: "all" | "selected" | "next_post";
+            /** Public Reply Texts */
+            public_reply_texts?: string[];
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Template Key */
+            template_key?: string | null;
             /** Trigger */
             trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
         };
@@ -2675,11 +3313,49 @@ export interface components {
             /** Text */
             text: string;
         };
+        /** CommentReplyAction */
+        CommentReplyAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "reply_to_comment";
+            /** Label */
+            label: string;
+            /** Note */
+            note?: string | null;
+            prefill: components["schemas"]["CommentReplyPrefill"];
+            /** Route */
+            route: string;
+        };
         /**
          * CommentReplyCreate
          * @description POST …/comments/{comment_id}/reply: a public reply under the comment.
          */
         CommentReplyCreate: {
+            /** Text */
+            text: string;
+        };
+        /**
+         * CommentReplyPrefill
+         * @description The post detail's reply box on one comment (FR-CMT-04).
+         */
+        CommentReplyPrefill: {
+            /**
+             * Comment Id
+             * Format: uuid
+             */
+            comment_id: string;
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            /**
+             * Private
+             * @default false
+             */
+            private: boolean;
             /** Text */
             text: string;
         };
@@ -4006,6 +4682,38 @@ export interface components {
             /** Stored */
             stored: number;
         };
+        /** ScheduleMessageAction */
+        ScheduleMessageAction: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "schedule_message";
+            /** Label */
+            label: string;
+            /** Note */
+            note?: string | null;
+            prefill: components["schemas"]["ScheduleMessagePrefill"];
+            /** Route */
+            route: string;
+        };
+        /**
+         * ScheduleMessagePrefill
+         * @description The conversation's schedule popover (F-06), limited to the reply window.
+         */
+        ScheduleMessagePrefill: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /** Send At */
+            send_at?: string | null;
+            /** Text */
+            text: string;
+            /** Window Closes At */
+            window_closes_at?: string | null;
+        };
         /**
          * ScheduleRequest
          * @description POST …/schedule and …/reschedule: at least 5 minutes from now (else 422 on
@@ -4375,6 +5083,18 @@ export interface components {
             auto_hide_spam?: boolean | null;
             /** Display Name */
             display_name?: string | null;
+        };
+        /**
+         * StepVerification
+         * @description R2 (TR-AGT-06): what the verifier read back after a write.
+         */
+        StepVerification: {
+            /** Checked */
+            checked: string[];
+            /** External Ids */
+            external_ids: string[];
+            /** Verified */
+            verified: boolean;
         };
         /** Suggestion */
         Suggestion: {
@@ -4797,6 +5517,433 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_agent_approvals: {
+        parameters: {
+            query?: {
+                status?: "pending" | "approved" | "rejected" | "expired" | "superseded";
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApprovalList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approve_agent_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApprovalApprove"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApproval"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reject_agent_approval: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                approval_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApproval"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_agent_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPolicy"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_agent_policy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentPolicyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentPolicy"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_agent_runs: {
+        parameters: {
+            query?: {
+                thread_id?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRunList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_agent_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentRunCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRun"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_agent_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRunDetail"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_agent_run: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRun"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_agent_threads: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentThreadList"];
                 };
             };
             /** @description Validation error */
