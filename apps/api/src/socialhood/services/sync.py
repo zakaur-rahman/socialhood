@@ -26,6 +26,7 @@ from socialhood.platforms.registry import adapter_for
 from socialhood.realtime.events import commit_and_publish, queue_conversation
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import social_accounts as accounts
+from socialhood.services.automations import posts as automation_posts
 from socialhood.services.ingest import ingest
 
 log = get_logger(__name__)
@@ -108,6 +109,7 @@ async def sync_account_media(
                 await rows.upsert_media_item(
                     session, social_account_id=acct.id, media=item, synced_at=now
                 )
+            await automation_posts.link_next_posts(session, acct.id)  # FR-AUT-18
             await accounts.update(session, acct.id, media_synced_at=now)
             await session.commit()
     log.info("media_synced", account_id=str(account_id), posts=len(media))

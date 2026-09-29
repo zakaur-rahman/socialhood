@@ -86,7 +86,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Automations */
+        /**
+         * List Automations
+         * @description Every matching automation (no paging); ``q`` searches names and keywords.
+         */
         get: operations["list_automations"];
         put?: never;
         /**
@@ -169,6 +172,7 @@ export interface paths {
         /**
          * Update Automation
          * @description Replace the whole definition (autosave). Returns overlaps and what activation still needs.
+         *     An active automation must stay complete: 422 lists what the change would break.
          */
         put: operations["update_automation"];
         post?: never;
@@ -208,7 +212,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Duplicate Automation */
+        /**
+         * Duplicate Automation
+         * @description A draft copy named "… (copy)".
+         */
         post: operations["duplicate_automation"];
         delete?: never;
         options?: never;
@@ -240,7 +247,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Automation Runs */
+        /**
+         * List Automation Runs
+         * @description The run log, newest first (FR-AUT-04).
+         */
         get: operations["list_automation_runs"];
         put?: never;
         post?: never;
@@ -257,7 +267,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Automation Stats */
+        /**
+         * Get Automation Stats
+         * @description Figures and the daily series for the last 7 or 30 days (FR-AUT-16).
+         */
         get: operations["get_automation_stats"];
         put?: never;
         post?: never;
@@ -609,7 +622,7 @@ export interface paths {
         };
         /**
          * List Posts
-         * @description Newest first; ``q`` searches captions.
+         * @description Newest first; ``q`` searches captions. Stories are left out (they take no comments).
          */
         get: operations["list_posts"];
         put?: never;
