@@ -7,6 +7,7 @@ priorities, duplicate, delete and the post picker.
 
 from __future__ import annotations
 
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -15,8 +16,11 @@ import httpx
 import pytest
 import time_machine
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
+from socialhood.db.tenancy import workspace_scope
+from socialhood.errors import ApiError
+from socialhood.services.automations import definitions
 from tests.support.api import Clerk
 from tests.support.automation_api import (
     Ws,
@@ -317,6 +321,34 @@ async def test_the_free_plan_allows_three_active_automations(ws: Ws, engine: Asy
 
     await set_plan(engine, ws.wid, "pro")
     assert (await ws.ok("POST", f"/automations/{draft['id']}/activate"))["status"] == "active"
+
+
+async def test_two_activations_at_once_cannot_pass_the_limit(ws: Ws, engine: AsyncEngine) -> None:
+    for word in ("one", "two"):
+        await make_automation(
+            engine, workspace_id=ws.wid, account_id=ws.account_id, keywords=(word,)
+        )
+    first, second = await ws.draft(), await ws.draft()
+    now = datetime.now(UTC)
+
+    async def activate(session: AsyncSession, automation_id: str) -> None:
+        await definitions.activate(
+            session, uuid.UUID(automation_id), plan="free", disclosure=None, now=now
+        )
+
+    with workspace_scope(uuid.UUID(ws.wid)):
+        async with AsyncSession(engine) as a, AsyncSession(engine) as b:
+            await activate(a, first["id"])  # the third active one, not committed yet
+            racing = asyncio.create_task(activate(b, second["id"]))
+            await asyncio.sleep(0.3)
+            assert not racing.done()  # waits for the first to finish
+            await a.commit()
+            with pytest.raises(ApiError) as refused:
+                await racing
+            assert refused.value.code == "quota_exceeded"
+
+    active = await rows(engine, "SELECT id FROM automations WHERE status = 'active'")
+    assert len(active) == 3
 
 
 async def test_ai_replies_need_pro_and_then_the_knowledge_base(ws: Ws, engine: AsyncEngine) -> None:

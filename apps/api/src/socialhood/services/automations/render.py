@@ -44,7 +44,17 @@ def utf8_bytes(text: str) -> int:
     return len(text.encode())
 
 
+SAMPLE = "x" * 30
+
+
 def longest_render(text: str) -> str:
-    """The text with each field replaced by a long sample, for the byte counter's worst case:
-    Instagram usernames are at most 30 characters, and names are rarely longer."""
-    return render(text, first_name="x" * 30, username="x" * 30)
+    """The text with each field at its longest, for the byte counter's worst case: a 30-character
+    sample (Instagram usernames are at most 30 characters, and names are rarely longer), or the
+    field's fallback when that is longer. The web counter (lib/automations/render.ts) agrees."""
+
+    def fill(match: re.Match[str]) -> str:
+        field, fallback = match.group(1), match.group(2)
+        alternative = fallback if fallback is not None else DEFAULT_FALLBACK[field]
+        return alternative if utf8_bytes(alternative) > len(SAMPLE) else SAMPLE
+
+    return FIELD.sub(fill, text)

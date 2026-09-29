@@ -17,6 +17,7 @@ from socialhood.services.automations.matching import (
 )
 from socialhood.services.automations.render import (
     first_name_of,
+    longest_render,
     render,
     utf8_bytes,
     with_disclosure,
@@ -140,3 +141,12 @@ def test_first_names_and_the_disclosure_line() -> None:
     assert sent == "Here you go\n\nSent automatically"
     assert utf8_bytes(sent) == len(sent)  # ASCII
     assert utf8_bytes("कीमत") == 12  # Devanagari is 3 bytes per code point
+
+
+def test_the_worst_case_uses_the_longer_of_the_sample_and_the_fallback() -> None:
+    sample = "x" * 30
+    assert longest_render("Hi {first_name}!") == f"Hi {sample}!"
+    assert longest_render("Hi {first_name|friend}") == f"Hi {sample}"
+    long_fallback = "wonderful person who follows us"  # 31 bytes
+    assert longest_render(f"Hi {{first_name|{long_fallback}}}") == f"Hi {long_fallback}"
+    assert longest_render("@{username}") == f"@{sample}"

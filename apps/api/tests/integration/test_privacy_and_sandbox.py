@@ -15,6 +15,7 @@ from socialhood.models.platform import WebhookStatus
 from socialhood.security.signatures import sign_request
 from socialhood.services.webhook_processing import process_event
 from tests.support.api import IG_APP_SECRET, META_APP_SECRET, WEB, Clerk, sign_in
+from tests.support.automations import make_automation
 from tests.support.instagram import FakeInstagram, connect, fixture, signed_delivery
 
 APP_SCOPED_ID = "26000000000000001"  # me_business.json "id"
@@ -36,12 +37,17 @@ async def test_deauthorize_disconnects_and_tells_the_owner(
     clerk_id, me = await sign_in(client, clerk)
     wid = me["workspaces"][0]["id"]
     await connect(client, clerk, clerk_id, wid)
+    account = await one(engine, "SELECT id FROM social_accounts")
+    await make_automation(engine, workspace_id=wid, account_id=account["id"])
 
     response = await client.post("/webhooks/meta/deauthorize", data=signed_form(APP_SCOPED_ID))
     assert response.status_code == 200
 
     row = await one(engine, "SELECT * FROM social_accounts")
     assert (row["status"], row["access_token_enc"]) == ("disconnected", None)
+    paused = await one(engine, "SELECT status, paused_at FROM automations")
+    assert paused["status"] == "paused"
+    assert paused["paused_at"] is not None
     [note] = (
         await client.get(f"/v1/w/{wid}/notifications", headers=clerk.headers(clerk_id))
     ).json()["items"]

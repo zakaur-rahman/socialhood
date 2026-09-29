@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from socialhood.security.crypto import TokenCipher
 from socialhood.services.connections import SUBSCRIBE_FAILED
 from tests.support.api import TOKEN_KEY, WEB, Clerk, sign_in
+from tests.support.automations import make_automation
 from tests.support.instagram import (
     FakeInstagram,
     connect,
@@ -262,6 +263,8 @@ async def test_disconnect_deletes_the_token_and_clears_caches(
     await connect(client, clerk, clerk_id, ws["id"])
     [row] = await rows(engine)
     await redis.set(f"profile:{row['id']}:990000000000001", "{}")
+    await make_automation(engine, workspace_id=ws["id"], account_id=row["id"])
+    await make_automation(engine, workspace_id=ws["id"], account_id=row["id"], status="draft")
 
     url = f"/v1/w/{ws['id']}/social-accounts/{row['id']}"
     response = await client.delete(
@@ -274,6 +277,9 @@ async def test_disconnect_deletes_the_token_and_clears_caches(
     assert row["status"] == "disconnected"
     assert row["disconnected_at"] is not None
     assert await redis.keys("profile:*") == []
+    async with engine.connect() as conn:  # F-15: its automations stop; drafts stay drafts
+        statuses = (await conn.execute(text("SELECT status FROM automations"))).scalars().all()
+    assert sorted(statuses) == ["draft", "paused"]
     [listed] = (
         await client.get(f"/v1/w/{ws['id']}/social-accounts", headers=clerk.headers(clerk_id))
     ).json()["items"]

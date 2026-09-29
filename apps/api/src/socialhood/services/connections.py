@@ -25,6 +25,7 @@ from socialhood.platforms.registry import adapter_for
 from socialhood.platforms.sandbox.adapter import SANDBOX_PREFIX, is_sandbox
 from socialhood.repositories import social_accounts as accounts
 from socialhood.schemas.accounts import SocialAccountOut, SocialAccountPatch
+from socialhood.services.automations.definitions import pause_for_account
 from socialhood.services.notifications import notify_admins
 from socialhood.services.sync import start_initial_sync
 
@@ -298,19 +299,22 @@ async def update_account(
 async def disconnect(
     session: AsyncSession, redis: Redis, acct: SocialAccount, *, delete_data: bool
 ) -> None:
-    """Delete the token at once and stop processing the account's webhooks (FR-CON-06).
+    """Delete the token at once, stop processing the account's webhooks and pause its automations
+    (FR-CON-06, F-15).
 
     Deleting the account's conversations and comments arrives with those tables (P3, P6); until
     then there is nothing else stored for it.
     """
+    now = datetime.now(UTC)
     await accounts.update(
         session,
         acct.id,
         access_token_enc=None,
         status=AccountStatus.DISCONNECTED,
-        disconnected_at=datetime.now(UTC),
+        disconnected_at=now,
         last_error=None,
     )
+    await pause_for_account(session, acct.id, now=now)
     await session.commit()
     await _clear_caches(redis, acct.id)
     log.info("account_disconnected", account_id=str(acct.id), delete_data=delete_data)
@@ -375,18 +379,20 @@ async def mark_needs_reconnect(session: AsyncSession, acct: SocialAccount, reaso
 
 
 async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccount) -> None:
-    """The user removed our app on the platform (Meta deauthorize): drop the token and tell the
-    owners."""
+    """The user removed our app on the platform (Meta deauthorize): drop the token, pause the
+    account's automations and tell the owners."""
     if acct.status == AccountStatus.DISCONNECTED:
         return
+    now = datetime.now(UTC)
     await accounts.update(
         session,
         acct.id,
         access_token_enc=None,
         status=AccountStatus.DISCONNECTED,
-        disconnected_at=datetime.now(UTC),
+        disconnected_at=now,
         last_error=f"Social Hood was removed from this account in {platform_label(acct)}.",
     )
+    await pause_for_account(session, acct.id, now=now)
     handle = f"@{acct.username}" if acct.username else "An account"
     await notify_admins(
         session,

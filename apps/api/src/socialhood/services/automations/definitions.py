@@ -375,6 +375,8 @@ async def activate(
     if errors:
         raise ApiError("validation_error", ACTIVATE_DETAIL, errors=errors)
     limit = entitlement(plan, "active_automations")
+    if limit is not None:
+        await repo.lock_activations(session)
     if limit is not None and await repo.count_active(session, excluding=automation.id) >= limit:
         raise ApiError("quota_exceeded", f"Your plan includes {limit} active automations.")
     automation.status = ACTIVE
@@ -408,6 +410,17 @@ async def pause_many(session: AsyncSession, ids: Sequence[uuid.UUID], *, now: da
     if len(automations) != len(wanted):
         raise ApiError("not_found")
     paused = sum(_pause(a, now) for a in automations)
+    await session.flush()
+    return paused
+
+
+async def pause_for_account(
+    session: AsyncSession, social_account_id: uuid.UUID, *, now: datetime
+) -> int:
+    """F-15 disconnect: the account's active automations stop until someone resumes them."""
+    paused = sum(
+        _pause(a, now) for a in await repo.for_account(session, social_account_id, for_update=True)
+    )
     await session.flush()
     return paused
 

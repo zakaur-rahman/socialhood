@@ -12,9 +12,10 @@ from collections.abc import Sequence
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
-from sqlalchemy import exists, func, or_, select
+from sqlalchemy import exists, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.db.tenancy import require_workspace
 from socialhood.models.automations import (
     Automation,
     AutomationKeyword,
@@ -133,6 +134,15 @@ async def active_for_accounts(
         Automation.status == ACTIVE, Automation.social_account_id.in_(account_ids)
     )
     return list((await session.scalars(statement)).all())
+
+
+async def lock_activations(session: AsyncSession) -> None:
+    """Serialise activations in the workspace until the transaction ends, so two at once can't
+    both pass the active_automations limit."""
+    key = f"automations:activate:{require_workspace()}"
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": key}
+    )
 
 
 async def count_active(session: AsyncSession, *, excluding: uuid.UUID | None = None) -> int:

@@ -124,3 +124,63 @@ animated) and Office and text documents up to 100 MB, with tighter image (5 MB),
 (16 MB) limits. FR-INB-08 now says so; `services/sending.py SEND_RULES` and the composer apply
 these limits, and uploads for posts keep TR-MED-02's image and 90-second video rules. An
 Instagram heart is stored and shown as ❤️, both ways.
+
+## C-022 · AI-reply automations wait for the knowledge base (decision)
+FR-AUT-01 offers "Reply with AI", but AI replies need knowledge and suggestions (P5). In P4 an
+ai_reply automation can be drafted and tested but not activated: on Free the activate call returns
+402 `entitlement_required` ("AI replies in automations are part of Pro."), on Pro 422 with field
+`action` ("AI replies arrive with the knowledge base. Send a message for now."). The editor shows
+the same note. P5 lifts the 422.
+
+## C-023 · Activation rules beyond FR-AUT-02 (decision)
+Checked in this order: the ai_reply entitlement (402), then every field problem in one 422, then
+the `active_automations` quota (402 "Your plan includes N active automations."). Beyond FR-AUT-02:
+an end time already past is refused; the account must be Instagram and not disconnected
+(needs_reconnect is allowed); selected posts must belong to the automation's account; an empty
+public-reply variation is flagged; nested fields are named by index (`message_buttons.0.url`,
+`public_reply_texts.1`), and `missing_for_activation` uses the same names. A PUT that would leave an
+active automation failing these checks is refused with the same 422, so an active automation is
+always complete (the `complete_when_active` check). Activations in a workspace are serialised with
+an advisory lock, so two at once cannot both pass the limit. Reply with AI counts as complete only
+with instructions.
+
+## C-024 · The message byte counter's worst case (decision)
+FR-AUT-13's 1,000-byte limit is checked on the longest rendering: each personal field as a
+30-character sample (Instagram usernames are at most 30 characters), or its fallback when that is
+longer, plus the disclosure line. `render.longest_render` and the web's `worstCaseBytes` agree.
+
+## C-025 · Automation stats and display status (decision)
+UX-SCR-12's figures: the period is the workspace's calendar days ending today, oldest first; `runs`
+counts every run row; `dms_sent` counts runs whose DM reached sent, delivered or read; `failures`
+counts failed and partial runs; "outside window" skips are always 0 (the runtime never loads an
+automation outside its window, so no run row exists). List sorts: `recent_runs` = most runs in 7
+days, then latest run, then priority; `created` = newest first; the web adds "Priority" (its
+default), the only order in which drag and Move up / Move down appear (and only with no status,
+trigger or search filter, since `PUT …/priorities` takes the account's whole order).
+`display_status` is "scheduled" before `starts_at` and "ended" once `ends_at` has passed for active
+or paused automations; a draft is always a draft.
+
+## C-026 · The Test tab (decision)
+UX-SCR-12's test treats the automation under test as live, so a draft can be tried (the reason
+then says it runs once activated). The other candidates are the account's active automations
+inside their run window; cooldowns are ignored. Sample names default to "Priya" / "priya.shah"; an
+empty string shows the fallback. The disclosure line is added to the DM, not to public replies. The
+web saves pending edits before testing, because the API tests the saved automation.
+
+## C-027 · Posts, next post and scheduled posts (decision)
+PUT stores posts by scope: `selected` keeps the media items and scheduled posts given (a scheduled
+post that has published keeps its media item); `next_post` keeps its link while the scope and
+account are unchanged; `all` stores none. FR-AUT-18's next post is the account's first post (not a
+story) published at or after the automation's latest activation; post sync and
+`on_new_media_item` both call `link_next_posts`, which locks the automations so one is never
+linked twice. `posts.link_scheduled_post` is ready for P7's publish step (T7.3). Any comment
+cannot use All posts (the web switches it to Selected). The post picker leaves out stories and
+shows synced posts only; scheduled posts join it in P7.
+
+## C-028 · Automations and the rest of the app (decision)
+Home's `create_automation` step is done once any automation has been activated, so pausing keeps
+it ticked (the spec says only "create an automation"). The run-window job (every minute) pauses an
+automation past `ends_at` and notifies owners and admins once per end time ("{name} ended", linking
+to it). Disconnecting an account, or Meta's deauthorize, pauses its active automations (F-15);
+drafts stay drafts. The disclosure line (FR-AUT-11) is set in Settings → Workspace: off by default
+(null), "Sent automatically" when switched on, up to 60 characters.

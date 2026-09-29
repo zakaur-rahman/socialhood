@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { ApiError } from "@/lib/api/errors";
 import { useUpdateWorkspace, useWorkspace } from "@/lib/api/queries";
 import type { Workspace, WorkspacePatch } from "@/lib/api/types";
@@ -30,8 +31,16 @@ const schema = z.object({
     .regex(SLUG, "Use 3 to 48 lowercase letters, numbers and hyphens, starting and ending with a letter or number."),
   timezone: z.string().min(1, "Choose a timezone from the list."),
   reply_language: z.string().min(1),
+  disclosure_on: z.boolean(),
+  automation_disclosure: z.string().trim().max(60, "Use 60 characters or fewer."),
+}).refine((values) => !values.disclosure_on || values.automation_disclosure.length > 0, {
+  path: ["automation_disclosure"],
+  message: "Enter the line to add, or turn the disclosure off.",
 });
 type Values = z.infer<typeof schema>;
+
+/** FR-AUT-11: the line automated messages end with; null in the API means off. */
+const DEFAULT_DISCLOSURE = "Sent automatically";
 
 const LANGUAGES = [
   ["auto", "Customer's language"],
@@ -69,7 +78,8 @@ function browserTimezone(): string | null {
   }
 }
 
-/** FR-ACC-03 / UX-SCR-07 (Workspace): name, URL, timezone and reply language. */
+/** FR-ACC-03 / UX-SCR-07 (Workspace): name, URL, timezone, reply language and the automation
+ * disclosure line (FR-AUT-11). */
 export default function WorkspaceSettingsPage() {
   const current = useCurrentWorkspace();
   const workspace = useWorkspace(current.id);
@@ -90,29 +100,24 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
 
   const form = useForm<Values>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      name: workspace.name,
-      slug: workspace.slug,
-      timezone: workspace.timezone,
-      reply_language: workspace.reply_language,
-    },
+    defaultValues: formValues(workspace),
   });
   const { errors, isDirty } = form.formState;
   const timezone = useWatch({ control: form.control, name: "timezone" });
+  const disclosureOn = useWatch({ control: form.control, name: "disclosure_on" });
 
   const onSubmit = form.handleSubmit((values) => {
     const changes: WorkspacePatch = {};
-    for (const key of Object.keys(values) as (keyof Values)[]) {
-      if (form.formState.dirtyFields[key]) changes[key] = values[key];
+    const dirty = form.formState.dirtyFields;
+    for (const key of ["name", "slug", "timezone", "reply_language"] as const) {
+      if (dirty[key]) changes[key] = values[key];
+    }
+    if (dirty.disclosure_on || dirty.automation_disclosure) {
+      changes.automation_disclosure = values.disclosure_on ? values.automation_disclosure : null;
     }
     update.mutate(changes, {
       onSuccess: (saved) => {
-        form.reset({
-          name: saved.name,
-          slug: saved.slug,
-          timezone: saved.timezone,
-          reply_language: saved.reply_language,
-        });
+        form.reset(formValues(saved));
         toast.success("Workspace settings saved");
         if (saved.slug !== workspace.slug) router.replace(`/w/${saved.slug}/settings/workspace`);
       },
@@ -120,6 +125,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
         if (error instanceof ApiError && error.errors.length > 0) {
           for (const field of error.errors) {
             if (field.field in values) form.setError(field.field as keyof Values, { message: field.message });
+            else toast.error(field.message);
           }
           return;
         }
@@ -213,6 +219,47 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
         />
       </Field>
 
+      <div className="space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <Label htmlFor="disclosure_on">Say when a message is automated</Label>
+            <p id="disclosure-hint" className="text-xs text-fg-secondary">
+              Adds a short line to messages sent by automations and AI auto replies. Some places require bots to
+              identify themselves. It counts toward Instagram&apos;s 1,000-byte limit.
+            </p>
+          </div>
+          <Controller
+            control={form.control}
+            name="disclosure_on"
+            render={({ field }) => (
+              <Switch
+                id="disclosure_on"
+                aria-describedby="disclosure-hint"
+                checked={field.value}
+                disabled={!canEdit}
+                onCheckedChange={(on) => {
+                  field.onChange(on);
+                  if (on && !form.getValues("automation_disclosure")) {
+                    form.setValue("automation_disclosure", DEFAULT_DISCLOSURE, { shouldDirty: true });
+                  }
+                }}
+              />
+            )}
+          />
+        </div>
+        {disclosureOn ? (
+          <Field id="automation_disclosure" label="Line to add" error={errors.automation_disclosure?.message}>
+            <Input
+              id="automation_disclosure"
+              maxLength={60}
+              disabled={!canEdit}
+              aria-invalid={!!errors.automation_disclosure}
+              {...form.register("automation_disclosure")}
+            />
+          </Field>
+        ) : null}
+      </div>
+
       {canEdit ? (
         <div className="flex justify-end">
           <Button type="submit" disabled={!isDirty || update.isPending} className="bg-brand-gradient text-white">
@@ -224,6 +271,17 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
       )}
     </form>
   );
+}
+
+function formValues(workspace: Workspace): Values {
+  return {
+    name: workspace.name,
+    slug: workspace.slug,
+    timezone: workspace.timezone,
+    reply_language: workspace.reply_language,
+    disclosure_on: !!workspace.automation_disclosure,
+    automation_disclosure: workspace.automation_disclosure ?? "",
+  };
 }
 
 function Field({
