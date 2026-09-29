@@ -163,9 +163,13 @@ async def try_question(
     *,
     workspace: Workspace,
     question: str,
+    ref_type: str | None = None,
+    ref_id: uuid.UUID | None = None,
 ) -> KnowledgeTestResult:
     """FR-KB-03: draft an answer the way a suggestion would, 1 credit (knowledge_test); nothing
-    is stored or sent. 402 quota_exceeded without credits, 503 when the AI fails."""
+    is stored or sent. 402 quota_exceeded without credits, 503 when the AI fails. ``ref_type``
+    and ``ref_id`` name what the credits are for in ai_usage_events (Ask Social Hood's
+    answer_from_knowledge passes its run, TA.4)."""
     workspace_id, workspace_name = workspace.id, workspace.name
     language = reply_language(workspace)
     try:
@@ -183,7 +187,11 @@ async def try_question(
     settings = get_settings()
     try:
         async with metered(
-            sessionmaker, workspace_id=workspace_id, feature="knowledge_test"
+            sessionmaker,
+            workspace_id=workspace_id,
+            feature="knowledge_test",
+            ref_type=ref_type,
+            ref_id=ref_id,
         ) as meter:
             result = await get_provider().generate_json(
                 task="suggest",

@@ -136,6 +136,30 @@ async def get_or_404(session: AsyncSession, conversation_id: uuid.UUID) -> Conve
     return conv
 
 
+async def contact_conversation(session: AsyncSession, contact_id: uuid.UUID) -> Conversation | None:
+    """The contact's conversation (one per contact and account), if they have one (TA.4)."""
+    return (
+        await session.scalars(select(Conversation).where(Conversation.contact_id == contact_id))
+    ).one_or_none()
+
+
+async def latest_customer_message(
+    session: AsyncSession, conversation_id: uuid.UUID
+) -> Message | None:
+    """The customer's newest message in the conversation: what a drafted reply answers (TA.4)."""
+    return await session.scalar(
+        select(Message)
+        .where(
+            Message.conversation_id == conversation_id,
+            Message.direction == "inbound",
+            Message.source == MessageSource.CUSTOMER,
+            Message.deleted_at.is_(None),
+        )
+        .order_by(Message.occurred_at.desc(), Message.id.desc())
+        .limit(1)
+    )
+
+
 async def _human_agent(session: AsyncSession, conv: Conversation, *, enabled: bool) -> bool:
     acct = await social_accounts.get(session, conv.social_account_id)
     return acct is not None and human_agent_allowed(acct, ig_human_agent_enabled=enabled)
@@ -150,6 +174,10 @@ class ListFilters:
     platform: str | None = None
     account_id: uuid.UUID | None = None
     q: str | None = None
+    # Ask Social Hood (FR-AGT-05): conversations whose last message is in [active_from,
+    # active_until).
+    active_from: datetime | None = None
+    active_until: datetime | None = None
 
 
 def _view_filter(view: InboxView, now: datetime) -> list[ColumnElement[bool]]:
@@ -221,7 +249,48 @@ def _filters(filters: ListFilters, now: datetime) -> list[ColumnElement[bool]]:
         search = _search_filter(filters.q)
         if search is not None:
             where.append(search)
+    if filters.active_from is not None:
+        where.append(Conversation.last_message_at >= filters.active_from)
+    if filters.active_until is not None:
+        where.append(Conversation.last_message_at < filters.active_until)
     return where
+
+
+async def count_conversations(session: AsyncSession, filters: ListFilters, *, now: datetime) -> int:
+    """How many conversations ``list_conversations`` would page through (Ask Social Hood's "and
+    n more", TA.4)."""
+    count = await session.scalar(
+        select(func.count())
+        .select_from(Conversation)
+        .join(Contact, Contact.id == Conversation.contact_id)
+        .where(*_filters(filters, now))
+    )
+    return int(count or 0)
+
+
+async def find_contacts(
+    session: AsyncSession, term: str, *, limit: int
+) -> tuple[list[tuple[Contact, Conversation | None]], int]:
+    """Contacts whose name or username contains ``term`` (the trigram index), with their
+    conversation when they have one, most recent activity first; and how many match (Ask Social
+    Hood's find_contact, TA.4)."""
+    name = " ".join(term.split()).lstrip("@")
+    if not name:
+        return [], 0
+    match = CONTACT_TEXT.ilike(f"%{_escape_like(name)}%", escape="\\")
+    total = await session.scalar(select(func.count()).select_from(Contact).where(match))
+    rows = await session.execute(
+        select(Contact, Conversation)
+        .outerjoin(Conversation, Conversation.contact_id == Contact.id)
+        .where(match)
+        .order_by(
+            Conversation.last_message_at.desc().nulls_last(),
+            Contact.last_seen_at.desc().nulls_last(),
+            Contact.id,
+        )
+        .limit(limit)
+    )
+    return [(contact, conv) for contact, conv in rows.all()], int(total or 0)
 
 
 async def list_conversations(
