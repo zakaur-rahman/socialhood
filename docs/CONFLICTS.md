@@ -225,3 +225,40 @@ automation with queued runs enqueues its account's drain at once; held queues ar
   visible. `matched_keyword` stores the normalised keyword.
 - Messages an automation sent carry `automation {id, name}` in the conversation's messages and in
   `message.created` / `message.updated` events (the bubble says "Automation · {name}").
+
+## C-031 · No follow gate: tap first and a follow nudge instead (decision, FR-AUT-21, FR-AUT-22)
+The owner asked for "ask commenters who don't follow to follow or share, then send the link".
+Meta's Spam Community Standard forbids "requiring users to engage (in the form of likes, shares,
+follows, or any other public-facing form of engagement) to gain access to specific, exclusive
+content", and shares are not visible through the API at all. Built instead, with the owner's
+go-ahead: tap first (the private reply is an opening with a "Send me the link" quick reply; a tap or
+any reply releases the message as a normal DM, with the real first name, image and buttons) and a
+follow nudge (one more message after the message, only to people Instagram reports as not
+following; never before it, never instead of it). Details:
+- Answers: a quick-reply payload `shr:{run_id}` naming one of the contact's runs on that account
+  answers only that run (a second tap is handled and sends nothing); anything else, including a
+  payload that isn't theirs or an opening older than 7 days, is a typed reply, which releases up to
+  3 waiting runs, oldest first. The answering message is `automation_handled` and no DM keyword
+  automation runs on it; with nothing waiting, keyword automations run as usual. A paused
+  automation's run is still released (the opening promised it).
+- The fresh profile read (name and `is_user_follow_business`) happens before the run locks, so no
+  network call runs under a lock; then, once per run, `confirmed_at`, `follows_business` and the
+  message are written in one transaction. The released run is `sent` (or `partial` when its public
+  reply failed) and then mirrors the message's send; `private_reply_message_id` points at the
+  released message, the opening stays linked from the comment and the message's run.
+- The nudge is queued only after the message is recorded as sent, so it always follows it; a
+  failed message gets no nudge; unknown follow status gets none. Comment automations without tap
+  first never nudge (nobody answered; Meta allows no follow-up). AI-reply automations ignore both
+  settings. The nudge renders personal fields and ends with the disclosure line; its 300-character
+  limit is on the text as typed. The opening also ends with the disclosure line, inside its
+  1,000-byte limit.
+- If Instagram refuses quick replies on a private reply (non-retryable `platform_rejected`), the
+  opening is sent once more as text only, without taking another private-reply token; the default
+  copy ("…tap the button below, or just reply here…") works either way.
+- Defaults: new drafts and the comment templates start with tap first on; "Send a link to
+  commenters" also starts with the nudge on. Switching a DM or blank automation to a comment trigger
+  turns tap first on if it never had an opening. With tap first on, a comment automation may carry
+  an image again (C-030's rule applies only without it).
+- Runs still waiting after 7 days stay `awaiting_reply` in the log but are never released and are
+  not counted in "Waiting now". Stats: tapped = runs answered in the period, nudged = nudges sent in
+  the period.

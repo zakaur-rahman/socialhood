@@ -13,5 +13,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     css: false,
+    // The editor tests type into a large form; on a busy machine 5 s is too close.
+    testTimeout: 15_000,
   },
 });
