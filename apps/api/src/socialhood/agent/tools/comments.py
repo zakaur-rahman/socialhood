@@ -90,6 +90,7 @@ class CommentsResult(ToolResult):
     total: int  # comments matching the filters
     more: int
     in_scope: int  # comments on the post or in the range, before the analysis filters
+    analysed: int  # of those, analysed (spam included)
     pending: int  # of those, still being analysed
     skipped: int  # of those, not analysed
 
@@ -150,6 +151,7 @@ def _result(
         total=found.total,
         more=max(found.total - len(items), 0),
         in_scope=found.in_scope,
+        analysed=found.in_scope - found.pending - found.skipped,
         pending=found.pending,
         skipped=found.skipped,
         refs=[*post_refs, *(ref("comment", i.id, quoted(i.text), i.post_id) for i in items)],

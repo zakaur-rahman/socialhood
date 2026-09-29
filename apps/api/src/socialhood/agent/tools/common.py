@@ -114,8 +114,10 @@ def tool[I: BaseModel, R: ToolResult](
 
 
 class Period(BaseModel):
-    """A resolved range as the answer states it (UTC ends, label in the workspace's zone)."""
+    """A resolved range as the answer states it (UTC ends, label in the workspace's zone), with
+    the phrase it came from: the member's, or the tool's default ("the last 90 days")."""
 
+    phrase: str | None = None
     start: datetime
     end: datetime
     label: str
@@ -123,12 +125,20 @@ class Period(BaseModel):
 
     @classmethod
     def of(cls, resolved: ResolvedRange) -> Period:
-        return cls(start=resolved.start, end=resolved.end, label=resolved.label, rule=resolved.rule)
+        return cls(
+            phrase=resolved.phrase,
+            start=resolved.start,
+            end=resolved.end,
+            label=resolved.label,
+            rule=resolved.rule,
+        )
 
 
 class Days(BaseModel):
-    """Calendar days in the workspace's zone, both included (analytics)."""
+    """Calendar days in the workspace's zone, both included (analytics), with the phrase they
+    came from."""
 
+    phrase: str | None = None
     since: date
     until: date
     label: str
@@ -160,7 +170,13 @@ def period(
 def days(ctx: ToolContext, resolved: ResolvedRange) -> Days:
     """The analytics days for a resolved range (timeparse.calendar_days)."""
     since, until = calendar_days(resolved, ctx.timezone)
-    return Days(since=since, until=until, label=span_label(since, until), rule=resolved.rule)
+    return Days(
+        phrase=resolved.phrase,
+        since=since,
+        until=until,
+        label=span_label(since, until),
+        rule=resolved.rule,
+    )
 
 
 def instant(ctx: ToolContext, phrase: str, *, argument: str = "when") -> ResolvedInstant:

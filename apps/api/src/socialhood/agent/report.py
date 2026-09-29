@@ -23,9 +23,16 @@ from typing import Any
 
 from socialhood.schemas.agent import AnswerRef
 
-# "[3]", "[1, 2]" and "[1][2]" (two markers); a leading space goes with a dropped marker.
-CITATION = re.compile(r"(\s?)\[(\s*\d{1,3}(?:\s*,\s*\d{1,3})*\s*)\]")
+# "[3]", "[1, 2]", "[1-3]" and "[1][2]" (two markers); a leading space goes with a dropped marker.
+_PART = r"\d{1,3}(?:\s*[-\u2013]\s*\d{1,3})?"
+CITATION = re.compile(rf"(\s?)\[(\s*{_PART}(?:\s*,\s*{_PART})*\s*)\]")
 REPEATED = re.compile(r"(\[\d{1,3}\])\1+")  # "[2][2]" once renumbered
+# Brackets models sometimes write in place of a citation: "[]", a tool or field name
+# ("[search_conversations]") or a result's own words ("[summary]"). Other bracketed text stays.
+STRAY = re.compile(
+    r"\s?\[\s*(?:[a-z][a-z0-9]*(?:_[a-z0-9]+)+|summary|refs|caveats|source|sources)?\s*\](?!\()"
+)
+RANGE_MAX = 10  # a wider "[1-40]" is not a citation the reader can follow
 FALLBACK_REFS_PER_STEP = 3
 
 
@@ -70,8 +77,7 @@ def cite(answer: str, book: RefBook) -> tuple[str, list[AnswerRef]]:
 
     def replace(match: re.Match[str]) -> str:
         markers: list[str] = []
-        for part in match.group(2).split(","):
-            number = int(part)
+        for number in _numbers(match.group(2)):
             if not 1 <= number <= len(book.refs):
                 continue
             if number not in renumbered:
@@ -82,8 +88,20 @@ def cite(answer: str, book: RefBook) -> tuple[str, list[AnswerRef]]:
                 markers.append(marker)
         return match.group(1) + "".join(markers) if markers else ""
 
-    text = REPEATED.sub(r"\1", CITATION.sub(replace, answer))
+    text = REPEATED.sub(r"\1", STRAY.sub("", CITATION.sub(replace, answer)))
     return text.strip(), cited
+
+
+def _numbers(group: str) -> list[int]:
+    """The numbers a marker names: "1, 2" or "1-3" (a range shorter than RANGE_MAX)."""
+    numbers: list[int] = []
+    for part in group.split(","):
+        low, _, high = part.replace("\u2013", "-").partition("-")
+        start = int(low)
+        end = int(high) if high.strip() else start
+        if start <= end < start + RANGE_MAX:
+            numbers.extend(range(start, end + 1))
+    return numbers
 
 
 @dataclass(frozen=True, kw_only=True)
