@@ -607,7 +607,8 @@ export interface paths {
         };
         /**
          * List Knowledge Gaps
-         * @description Open gaps from the last 30 days, most asked first (TR-AI-12).
+         * @description Gaps asked in the last 30 days, most asked first, with up to three example messages
+         *     (FR-KB-06, TR-AI-12).
          */
         get: operations["list_knowledge_gaps"];
         put?: never;
@@ -627,7 +628,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Dismiss Knowledge Gap */
+        /**
+         * Dismiss Knowledge Gap
+         * @description Hidden until a customer asks again (FR-KB-06); 409 conflict once answered.
+         */
         post: operations["dismiss_knowledge_gap"];
         delete?: never;
         options?: never;
@@ -642,12 +646,18 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Knowledge Sources */
+        /**
+         * List Knowledge Sources
+         * @description Every source, newest first, with characters used of the plan's knowledge_characters.
+         */
         get: operations["list_knowledge_sources"];
         put?: never;
         /**
          * Create Knowledge Source
-         * @description 402 quota_exceeded over knowledge_characters; ingestion runs in the background.
+         * @description FR-KB-01: an FAQ (question, body), note (title, body), web page (url) or file
+         *     (file_asset_id). 422 lists missing or foreign fields; 402 quota_exceeded over
+         *     knowledge_characters; 415 for a file that isn't PDF, DOCX, TXT or MD up to 10 MB; 404 for a
+         *     gap_id that isn't this workspace's. Ingestion runs in the background (status pending).
          */
         post: operations["create_knowledge_source"];
         delete?: never;
@@ -671,7 +681,10 @@ export interface paths {
         delete: operations["delete_knowledge_source"];
         options?: never;
         head?: never;
-        /** Update Knowledge Source */
+        /**
+         * Update Knowledge Source
+         * @description Any change (or ``reingest``) adds 1 to the version and ingests the source again.
+         */
         patch: operations["update_knowledge_source"];
         trace?: never;
     };
@@ -686,7 +699,9 @@ export interface paths {
         put?: never;
         /**
          * Test Knowledge
-         * @description FR-KB-03: 1 credit; nothing is stored or sent.
+         * @description FR-KB-03: the answer a suggestion would draft, with its sources, or can_answer false
+         *     ("Not in your knowledge"). 1 credit; nothing is stored or sent. 402 quota_exceeded without
+         *     credits; 503 when the AI is unavailable.
          */
         post: operations["test_knowledge"];
         delete?: never;
