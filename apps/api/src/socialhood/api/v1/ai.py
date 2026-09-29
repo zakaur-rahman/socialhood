@@ -8,10 +8,12 @@ The signatures below are the P5 contract; each task implements its bodies and re
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 
 from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.ai import (
     AiDecision,
     AiDecisionFeedback,
@@ -20,6 +22,7 @@ from socialhood.schemas.ai import (
     AnalysisCorrection,
 )
 from socialhood.schemas.inbox import MessageAnalysis, Suggestion
+from socialhood.services import analysis, conversations, summaries
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["ai"])
 
@@ -39,16 +42,27 @@ async def update_ai_settings(body: AiSettingsUpdate, ctx: Admin, session: Sessio
     raise NotImplementedError("T5.5")
 
 
-@router.patch(
-    "/message-analyses/{analysis_id}",
-    operation_id="correct_message_analysis",
-    openapi_extra=pending("T5.2"),
-)
+@router.patch("/message-analyses/{analysis_id}", operation_id="correct_message_analysis")
 async def correct_message_analysis(
-    analysis_id: uuid.UUID, body: AnalysisCorrection, ctx: AnyMember, session: Session
+    request: Request,
+    analysis_id: uuid.UUID,
+    body: AnalysisCorrection,
+    ctx: AnyMember,
+    session: Session,
 ) -> MessageAnalysis:
-    """FR-AI-04: change a message's intent or sentiment."""
-    raise NotImplementedError("T5.2")
+    """FR-AI-04: change a message's intent or sentiment. The answer shows the corrected values
+    with ``corrected: true``; the conversation's chips follow a correction of its latest
+    analysis (conversation.updated)."""
+    corrected = await analysis.correct_analysis(
+        session,
+        analysis_id,
+        body,
+        user_id=ctx.user.id,
+        ig_human_agent_enabled=bool(request.app.state.settings.ig_human_agent_enabled),
+        now=datetime.now(UTC),
+    )
+    await commit_and_publish(session, request.app.state.redis)
+    return corrected
 
 
 @router.post(
@@ -79,11 +93,13 @@ async def dismiss_suggestion(
     "/conversations/{conversation_id}/summary",
     status_code=202,
     operation_id="refresh_summary",
-    openapi_extra=pending("T5.7"),
 )
 async def refresh_summary(conversation_id: uuid.UUID, ctx: AnyMember, session: Session) -> Response:
-    """FR-AI-03 on request; conversation.updated carries the new summary."""
-    raise NotImplementedError("T5.7")
+    """FR-AI-03 on request; conversation.updated carries the new summary (its ``summary`` key).
+    402 quota_exceeded without credits; 409 when AI analysis is off for the account."""
+    conv = await conversations.get_or_404(session, conversation_id)
+    await summaries.request_summary(session, conv)
+    return Response(status_code=202)
 
 
 @router.get(

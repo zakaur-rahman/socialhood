@@ -41,7 +41,14 @@ def conversation(**values: object) -> Conversation:
     [
         ({"needs_human": True, "last_intent": "complaint"}, "needs_you"),
         ({"last_intent": "complaint", "lead_score": 90}, "complaint"),
-        ({"last_inbound_at": NOW - timedelta(hours=22), "lead_score": 90}, "closing_soon"),
+        (
+            {
+                "last_inbound_at": NOW - timedelta(hours=22),
+                "window_reminder_for": NOW - timedelta(hours=22),
+                "lead_score": 90,
+            },
+            "closing_soon",
+        ),
         ({"lead_score": 60}, "lead"),
         ({"last_sentiment": "negative"}, "negative"),
         ({}, None),
@@ -53,9 +60,30 @@ def test_one_signal_in_priority_order(values: dict[str, object], signal: str | N
     assert list_item(conv, contact, now=NOW).signal == signal
 
 
-def test_closing_soon_needs_an_unanswered_conversation() -> None:
-    conv = conversation(awaiting_reply=False, last_inbound_at=NOW - timedelta(hours=22))
-    assert signal_for(conv, now=NOW, window_closes_at=NOW + timedelta(hours=2)) is None
+def test_closing_soon_needs_this_windows_reminder_and_no_reply_since() -> None:
+    """FR-INB-14, F-18: set by the reminder for the customer's last message; a new message (a
+    new window) or a business reply after the reminder could go out clears it."""
+    wrote = NOW - timedelta(hours=22)
+    closes = NOW + timedelta(hours=2)
+    reminded = conversation(last_inbound_at=wrote, window_reminder_for=wrote)
+    assert signal_for(reminded, now=NOW, window_closes_at=closes) == "closing_soon"
+
+    earlier_window = conversation(last_inbound_at=wrote, window_reminder_for=wrote - timedelta(1))
+    assert signal_for(earlier_window, now=NOW, window_closes_at=closes) is None
+
+    replied_before = conversation(
+        last_inbound_at=wrote,
+        window_reminder_for=wrote,
+        last_outbound_at=wrote + timedelta(hours=1),
+    )
+    assert signal_for(replied_before, now=NOW, window_closes_at=closes) == "closing_soon"
+
+    replied_after = conversation(
+        last_inbound_at=wrote, window_reminder_for=wrote, last_outbound_at=NOW - timedelta(hours=1)
+    )
+    assert signal_for(replied_after, now=NOW, window_closes_at=closes) is None
+
+    assert signal_for(reminded, now=NOW, window_closes_at=None) is None  # window closed
 
 
 def test_previews() -> None:

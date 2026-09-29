@@ -24,7 +24,9 @@ What each event does:
 A new customer message (not backfill) also sets ``contact_replied_at`` on automation runs that
 DMed the contact in the 24 h before (FR-AUT-16) and enqueues ``run_automation("dm", id)`` when
 the account has DM automations or a tap-first opening awaits the contact's answer (F-06 step 8,
-FR-AUT-21). A tapped quick reply keeps its payload (``quick_reply_payload``).
+FR-AUT-21). A tapped quick reply keeps its payload (``quick_reply_payload``). With AI analysis on
+for the account it queues ``analyze_conversation`` (4 s, one waiting job per conversation, so a
+burst is analysed once; TR-AI-05).
 
 Follow-ups are deferred by a couple of seconds: the caller commits after this returns, and a job
 that finds no row (its transaction rolled back) does nothing. ``backfill=True`` (history from
@@ -169,6 +171,7 @@ class _Ingest:
         self.profiles: dict[uuid.UUID, None] = {}  # contact ids, in order, without duplicates
         self.media: list[tuple[uuid.UUID, str]] = []  # (message id, attachment id)
         self.unsent_assets: list[str] = []  # stored copies of unsent messages' media
+        self.analyze: dict[uuid.UUID, None] = {}  # conversations with new customer messages
 
     async def apply(self, event: InboundEvent) -> None:
         if isinstance(event, InboundMessage):
@@ -228,6 +231,8 @@ class _Ingest:
             self._inbound(conv, contact, msg, event)
             if not self.backfill:
                 await _automations(self.session, contact, msg)
+                if self.acct.ai_analysis_enabled:  # FR-PRV-02
+                    self.analyze[conv.id] = None
         self.touched[conv.id] = (conv, contact)
         self.result.created_message_ids.append(msg.id)
         if not self.backfill:
@@ -466,7 +471,7 @@ class _Ingest:
         await self._enqueue_followups()
 
     async def _enqueue_followups(self) -> None:
-        if not (self.profiles or self.media or self.unsent_assets):
+        if not (self.profiles or self.media or self.unsent_assets or self.analyze):
             return
         from socialhood.jobs.enqueue import enqueue
         from socialhood.jobs.tasks.ingest import (
@@ -474,7 +479,10 @@ class _Ingest:
             fetch_contact_profile,
             ingest_media,
         )
+        from socialhood.services.analysis import enqueue_analysis
 
+        for conversation_id in self.analyze:  # a burst joins the job already waiting
+            await enqueue_analysis(self.acct.workspace_id, conversation_id)
         workspace_id = str(self.acct.workspace_id)
         for contact_id in self.profiles:
             await enqueue(

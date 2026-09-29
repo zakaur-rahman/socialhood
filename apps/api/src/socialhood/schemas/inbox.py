@@ -66,7 +66,9 @@ IntentName = Literal[
 ]
 Signal = Literal["needs_you", "complaint", "closing_soon", "lead", "negative"]
 WindowState = Literal["open", "human_agent", "template_only", "closed"]
-InboxView = Literal["all", "unread", "needs_reply", "leads", "ai_handled", "archived"]
+InboxView = Literal[
+    "all", "unread", "needs_reply", "leads", "closing_soon", "ai_handled", "archived"
+]
 
 
 class ErrorInfo(ResponseModel):

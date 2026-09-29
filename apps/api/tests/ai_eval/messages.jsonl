@@ -1,0 +1,18 @@
+// PLACEHOLDER: synthetic examples that only exercise the harness. Replace with the owner's 300 real, anonymised, labelled messages (T5.9), including Hinglish ones.
+// One JSON object per line: id, placeholder, context (earlier turns, "from": "customer" | "business"), text (the message to classify), labels {intent, sentiment, needs_human}.
+{"id": "p001", "placeholder": true, "context": [], "text": "How much is the gold hoop pair?", "labels": {"intent": "pricing", "sentiment": "neutral", "needs_human": false}}
+{"id": "p002", "placeholder": true, "context": [], "text": "Is the blue kurta available in M?", "labels": {"intent": "product_inquiry", "sentiment": "neutral", "needs_human": false}}
+{"id": "p003", "placeholder": true, "context": [{"from": "business", "text": "Yes, it's in stock in all sizes."}], "text": "Great, I'll take two. How do I pay?", "labels": {"intent": "purchase", "sentiment": "positive", "needs_human": false}}
+{"id": "p004", "placeholder": true, "context": [], "text": "I ordered on Monday, where is my parcel? Order 4471", "labels": {"intent": "order_status", "sentiment": "neutral", "needs_human": false}}
+{"id": "p005", "placeholder": true, "context": [], "text": "Do you ship to Dubai?", "labels": {"intent": "shipping", "sentiment": "neutral", "needs_human": false}}
+{"id": "p006", "placeholder": true, "context": [], "text": "The clasp on my bracelet came loose, how do I fix it?", "labels": {"intent": "support", "sentiment": "neutral", "needs_human": false}}
+{"id": "p007", "placeholder": true, "context": [], "text": "This is the third time you sent the wrong size. Really disappointed.", "labels": {"intent": "complaint", "sentiment": "negative", "needs_human": true}}
+{"id": "p008", "placeholder": true, "context": [], "text": "I want my money back for the torn dupatta.", "labels": {"intent": "refund", "sentiment": "negative", "needs_human": true}}
+{"id": "p009", "placeholder": true, "context": [], "text": "Loved the packaging, the earrings are gorgeous!", "labels": {"intent": "feedback", "sentiment": "positive", "needs_human": false}}
+{"id": "p010", "placeholder": true, "context": [], "text": "Hi! I'm a fashion creator with 40k followers, open to a collab?", "labels": {"intent": "collaboration", "sentiment": "positive", "needs_human": false}}
+{"id": "p011", "placeholder": true, "context": [], "text": "hello", "labels": {"intent": "greeting", "sentiment": "neutral", "needs_human": false}}
+{"id": "p012", "placeholder": true, "context": [], "text": "Earn $500 a day from home!!! click my bio", "labels": {"intent": "spam", "sentiment": "neutral", "needs_human": false}}
+{"id": "p013", "placeholder": true, "context": [], "text": "bhaiya ye wala kitne ka hai?", "labels": {"intent": "pricing", "sentiment": "neutral", "needs_human": false}}
+{"id": "p014", "placeholder": true, "context": [], "text": "mera order abhi tak nahi aaya, bahut late ho gaya", "labels": {"intent": "order_status", "sentiment": "negative", "needs_human": false}}
+{"id": "p015", "placeholder": true, "context": [], "text": "Can I speak to a real person please", "labels": {"intent": "support", "sentiment": "neutral", "needs_human": true}}
+{"id": "p016", "placeholder": true, "context": [{"from": "business", "text": "Your order has shipped!"}], "text": "thanks", "labels": {"intent": "other", "sentiment": "positive", "needs_human": false}}

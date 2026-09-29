@@ -2,11 +2,13 @@
 member makes to a conversation: read, unread, archive and the AI mode override.
 
 List: open conversations, newest activity first, or one view of them: unread (unread_count > 0),
-needs reply (awaiting_reply), leads (lead score >= 60), AI handled (the AI has replied in it and
-it does not need a human), or archived. Views, the platform and account filters and search all
-run in SQL before the page is cut, so a busy account never pushes another's conversations off a
-page. Search matches the contact's name or username (the trigram index) and message text
-(search_tsv, 'simple' config, each word as a prefix, for search as you type).
+needs reply (awaiting_reply), leads (lead score >= 60), closing soon (a follow-up reminder is out
+and unanswered, FR-INB-14), AI handled (the AI has replied in it and it does not need a human), or
+archived. The detail carries the latest message analysis (FR-AI-02). Views, the platform and
+account filters and search all run in SQL before the page is cut, so a busy account never pushes
+another's conversations off a page. Search matches the contact's name or username (the trigram
+index) and message text (search_tsv, 'simple' config, each word as a prefix, for search as you
+type).
 
 Cursors are opaque base64url of the sort key and id (TR-API-04), so ties never skip rows.
 """
@@ -66,8 +68,15 @@ from socialhood.schemas.inbox import (
 )
 from socialhood.schemas.inbox import Conversation as ConversationOut
 from socialhood.services import read_receipts
-from socialhood.services.inbox_views import LEAD_SCORE, human_agent_allowed, list_item, message_out
-from socialhood.services.reply_window import reply_window
+from socialhood.services.analysis import latest_analysis
+from socialhood.services.inbox_views import (
+    LEAD_SCORE,
+    REMINDER_FROM,
+    human_agent_allowed,
+    list_item,
+    message_out,
+)
+from socialhood.services.reply_window import STANDARD_WINDOW, reply_window
 
 CURSOR_INVALID = "This cursor is not valid. Load the list again."
 
@@ -142,7 +151,7 @@ class ListFilters:
     q: str | None = None
 
 
-def _view_filter(view: InboxView) -> list[ColumnElement[bool]]:
+def _view_filter(view: InboxView, now: datetime) -> list[ColumnElement[bool]]:
     if view == "archived":
         return [Conversation.status == ConversationStatus.ARCHIVED]
     where = [Conversation.status == ConversationStatus.OPEN]
@@ -152,6 +161,15 @@ def _view_filter(view: InboxView) -> list[ColumnElement[bool]]:
         where.append(Conversation.awaiting_reply == true())
     elif view == "leads":
         where.append(Conversation.lead_score >= LEAD_SCORE)
+    elif view == "closing_soon":  # inbox_views.closing_soon, in SQL (FR-INB-14, F-18)
+        where += [
+            Conversation.window_reminder_for == Conversation.last_inbound_at,
+            Conversation.last_inbound_at > literal(now - STANDARD_WINDOW, _TIMESTAMP),
+            or_(
+                Conversation.last_outbound_at.is_(None),
+                Conversation.last_outbound_at < Conversation.last_inbound_at + REMINDER_FROM,
+            ),
+        ]
     elif view == "ai_handled":
         where.append(Conversation.needs_human != true())
         where.append(
@@ -192,8 +210,8 @@ def _search_filter(q: str) -> ColumnElement[bool] | None:
     return or_(*matches)
 
 
-def _filters(filters: ListFilters) -> list[ColumnElement[bool]]:
-    where = [Conversation.last_message_at.is_not(None), *_view_filter(filters.view)]
+def _filters(filters: ListFilters, now: datetime) -> list[ColumnElement[bool]]:
+    where = [Conversation.last_message_at.is_not(None), *_view_filter(filters.view, now)]
     if filters.platform is not None:
         where.append(Conversation.platform == filters.platform)
     if filters.account_id is not None:
@@ -217,7 +235,7 @@ async def list_conversations(
     query = (
         select(Conversation, Contact)
         .join(Contact, Contact.id == Conversation.contact_id)
-        .where(*_filters(filters))
+        .where(*_filters(filters, now))
         .order_by(Conversation.last_message_at.desc(), Conversation.id.desc())
         .limit(limit + 1)
     )
@@ -307,7 +325,7 @@ async def conversation_detail(
                 override=conv.ai_mode_override,
                 paused_until=paused,
             ),
-            "latest_analysis": None,  # P5
+            "latest_analysis": await latest_analysis(session, conv.id),
             "pending_suggestion": None,  # P5
             "summary": (
                 ConversationSummary(

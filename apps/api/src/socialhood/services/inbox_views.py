@@ -26,8 +26,9 @@ from socialhood.schemas.inbox import (
 )
 from socialhood.services.reply_window import reply_window
 
-LEAD_SCORE = 60  # FR-INB-01 "Leads" and the Lead chip
-CLOSING_SOON = timedelta(hours=3)  # the "Closing in 3h" chip (FR-INB-14)
+LEAD_SCORE = 60  # FR-INB-01 "Leads", the Lead chip and follow-up reminders (FR-INB-14)
+# F-18: a reminder goes out once the customer's last message is 18 h old (until 22 h).
+REMINDER_FROM = timedelta(hours=18)
 PREVIEW_CHARS = 200
 
 
@@ -36,19 +37,31 @@ def human_agent_allowed(acct: SocialAccount, *, ig_human_agent_enabled: bool) ->
     return ig_human_agent_enabled and acct.platform == "instagram"
 
 
+def closing_soon(conv: Conversation, *, now: datetime, window_closes_at: datetime | None) -> bool:
+    """FR-INB-14, F-18: a follow-up reminder went out for the customer's last message, the
+    standard window is still open, and the business has not written since the reminder could go
+    out (18 h after that message). A new customer message (a new window) or a reply clears it.
+    The "Closing soon" view (services/conversations.py) is the same test in SQL."""
+    if conv.status != "open" or conv.last_inbound_at is None or window_closes_at is None:
+        return False
+    if conv.window_reminder_for != conv.last_inbound_at or window_closes_at <= now:
+        return False
+    replied = conv.last_outbound_at is not None and (
+        conv.last_outbound_at >= conv.last_inbound_at + REMINDER_FROM
+    )
+    return not replied
+
+
 def signal_for(
     conv: Conversation, *, now: datetime, window_closes_at: datetime | None
 ) -> Signal | None:
-    """At most one chip, in UX-INB-04's priority order."""
+    """At most one chip, in UX-INB-04's priority order (FR-AI-02). The AI signals come from the
+    latest message analysis (needs_human, last_intent, lead_score, last_sentiment; TR-AI-05)."""
     if conv.needs_human:
         return "needs_you"
     if conv.last_intent == "complaint":
         return "complaint"
-    if (
-        conv.awaiting_reply
-        and window_closes_at is not None
-        and timedelta(0) < window_closes_at - now <= CLOSING_SOON
-    ):
+    if closing_soon(conv, now=now, window_closes_at=window_closes_at):
         return "closing_soon"
     if conv.lead_score is not None and conv.lead_score >= LEAD_SCORE:
         return "lead"
