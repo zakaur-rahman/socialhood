@@ -10517,8 +10517,7 @@
         "summary": "Get Agent Policy",
         "tags": [
           "agent"
-        ],
-        "x-pending": "TA.1"
+        ]
       },
       "put": {
         "description": "R2: replace the policy (owners and admins). 409 for ``autonomous`` until R3.",
@@ -10681,8 +10680,7 @@
         "summary": "List Agent Runs",
         "tags": [
           "agent"
-        ],
-        "x-pending": "TA.1"
+        ]
       },
       "post": {
         "description": "FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent\nis enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing\nis reserved yet. 404 when ``thread_id`` isn't one of the caller's threads; 402 quota_exceeded\nwhen the workspace has no AI credits left (nothing is stored).",
@@ -10744,8 +10742,7 @@
         "summary": "Create Agent Run",
         "tags": [
           "agent"
-        ],
-        "x-pending": "TA.1"
+        ]
       }
     },
     "/v1/w/{wid}/agent/runs/{run_id}": {
@@ -10809,8 +10806,7 @@
         "summary": "Get Agent Run",
         "tags": [
           "agent"
-        ],
-        "x-pending": "TA.1"
+        ]
       }
     },
     "/v1/w/{wid}/agent/runs/{run_id}/cancel": {
@@ -10874,8 +10870,7 @@
         "summary": "Cancel Agent Run",
         "tags": [
           "agent"
-        ],
-        "x-pending": "TA.1"
+        ]
       }
     },
     "/v1/w/{wid}/agent/threads": {
@@ -10958,8 +10953,7 @@
         "summary": "List Agent Threads",
         "tags": [
           "agent"
-        ],
-        "x-pending": "TA.1"
+        ]
       }
     },
     "/v1/w/{wid}/ai-decisions/{decision_id}/feedback": {

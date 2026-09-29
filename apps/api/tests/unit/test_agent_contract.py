@@ -67,14 +67,14 @@ from socialhood.schemas.agent import (
     StepStatusName,
 )
 
-# operation id -> (method, path, pending task): §2.15's agent rows.
+# operation id -> (method, path, pending task; None once built): §2.15's agent rows.
 PA_ROUTES = {
-    "create_agent_run": ("post", "/v1/w/{wid}/agent/runs", "TA.1"),
-    "list_agent_runs": ("get", "/v1/w/{wid}/agent/runs", "TA.1"),
-    "get_agent_run": ("get", "/v1/w/{wid}/agent/runs/{run_id}", "TA.1"),
-    "cancel_agent_run": ("post", "/v1/w/{wid}/agent/runs/{run_id}/cancel", "TA.1"),
-    "list_agent_threads": ("get", "/v1/w/{wid}/agent/threads", "TA.1"),
-    "get_agent_policy": ("get", "/v1/w/{wid}/agent/policy", "TA.1"),
+    "create_agent_run": ("post", "/v1/w/{wid}/agent/runs", None),
+    "list_agent_runs": ("get", "/v1/w/{wid}/agent/runs", None),
+    "get_agent_run": ("get", "/v1/w/{wid}/agent/runs/{run_id}", None),
+    "cancel_agent_run": ("post", "/v1/w/{wid}/agent/runs/{run_id}/cancel", None),
+    "list_agent_threads": ("get", "/v1/w/{wid}/agent/threads", None),
+    "get_agent_policy": ("get", "/v1/w/{wid}/agent/policy", None),
     "update_agent_policy": ("put", "/v1/w/{wid}/agent/policy", "R2"),
     "list_agent_approvals": ("get", "/v1/w/{wid}/agent/approvals", "R2"),
     "approve_agent_approval": (
