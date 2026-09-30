@@ -10,21 +10,32 @@ import json
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import httpx
 import pytest
 from fastapi import FastAPI
+from procrastinate.jobs import Job
 from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from socialhood.billing.dodo import DodoError
 from socialhood.billing.dodo_fake import FakeDodo
+from socialhood.billing.orphans import cancel_orphan
+from socialhood.jobs.tasks.billing import DodoRetry
 from socialhood.services.webhook_handlers import dodo as dodo_handler
 from socialhood.settings import Settings
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation
-from tests.support.billing import MAX_PRODUCT, dodo_event, set_subscription, signed_headers
+from tests.support.billing import (
+    MAX_PRODUCT,
+    PRO_PRODUCT,
+    dodo_event,
+    set_subscription,
+    signed_headers,
+)
 from tests.support.dodo import deliver, payment, process_all, send, subscription
 from tests.support.inbox import make_account
 from tests.support.ingest import stream
@@ -480,10 +491,93 @@ async def test_an_event_without_metadata_routes_by_the_stored_subscription(owner
 
 
 async def test_an_event_for_no_known_workspace_is_ignored(owner: Owner) -> None:
-    row = await owner.event(
-        "subscription.active", subscription(str(uuid.uuid4()), subscription_id="sub_x")
-    )
+    """Neither our checkout's metadata nor a stored subscription: not ours, left alone."""
+    row = await owner.event("subscription.active", subscription(None, subscription_id="sub_x"))
     assert (row["status"], row["last_error"]) == ("ignored", "no workspace for this event")
+    assert await orphan_cancels(owner) == []
+
+
+# ---------------------------------------------------------------- orphans (C-060)
+
+ORPHAN_REASON = "the workspace was deleted; its subscription is cancelled"
+
+
+async def orphan_cancels(owner: Owner) -> list[dict[str, Any]]:
+    async with owner.engine.connect() as conn:
+        rows = await conn.execute(
+            text(
+                "SELECT args, queueing_lock, queue_name FROM procrastinate_jobs"
+                " WHERE task_name = 'cancel_orphan_subscription' ORDER BY id"
+            )
+        )
+        return [dict(r._mapping) for r in rows]
+
+
+async def test_a_checkout_paid_after_its_workspace_was_purged_is_cancelled(
+    owner: Owner, fake_dodo: FakeDodo
+) -> None:
+    fake_dodo.add_subscription("sub_orphan", product_id=PRO_PRODUCT)
+    gone = str(uuid.uuid4())  # the checkout's workspace, purged since
+    row = await owner.event("subscription.active", subscription(gone, subscription_id="sub_orphan"))
+    assert (row["status"], row["last_error"]) == ("ignored", ORPHAN_REASON)
+    # Later events about it find the cancel already queued.
+    await owner.event("subscription.renewed", subscription(gone, subscription_id="sub_orphan"))
+    assert await orphan_cancels(owner) == [
+        {
+            "args": {"subscription_id": "sub_orphan"},
+            "queueing_lock": "dodo_cancel:sub_orphan",
+            "queue_name": "bulk",
+        }
+    ]
+
+    assert await cancel_orphan(fake_dodo, "sub_orphan") is True
+    assert fake_dodo.calls[-1] == ("cancel_now", {"subscription_id": "sub_orphan"})
+    assert fake_dodo.subscriptions["sub_orphan"].status == "cancelled"
+
+
+@pytest.mark.parametrize("with_metadata", [True, False])
+async def test_a_live_subscription_of_a_workspace_being_deleted_is_cancelled(
+    owner: Owner, with_metadata: bool
+) -> None:
+    await make_pro(owner)
+    async with owner.engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE workspaces SET status = 'deleting' WHERE id = :w"), {"w": owner.wid}
+        )
+    data = subscription(owner.wid if with_metadata else None, status="on_hold")
+    row = await owner.event("subscription.on_hold", data)
+    assert (row["status"], row["last_error"]) == ("ignored", ORPHAN_REASON)
+    assert [job["args"] for job in await orphan_cancels(owner)] == [
+        {"subscription_id": "sub_test_1"}
+    ]
+
+
+@pytest.mark.parametrize("event_type", ["subscription.expired", "subscription.cancelled"])
+async def test_an_ended_subscription_of_a_deleted_workspace_needs_no_cancel(
+    owner: Owner, event_type: str
+) -> None:
+    status = "expired" if event_type == "subscription.expired" else "cancelled"
+    row = await owner.event(event_type, subscription(str(uuid.uuid4()), status=status))
+    assert (row["status"], row["last_error"]) == ("ignored", "no workspace for this event")
+    assert await orphan_cancels(owner) == []
+
+
+async def test_an_orphan_cancel_retries_while_dodo_is_down(fake_dodo: FakeDodo) -> None:
+    fake_dodo.add_subscription("sub_orphan", product_id=PRO_PRODUCT)
+    down = DodoError("Dodo timed out", status=503, retryable=True)
+    fake_dodo.fail_next(down)
+    with pytest.raises(DodoError):
+        await cancel_orphan(fake_dodo, "sub_orphan")
+    retry = DodoRetry()
+    assert retry.get_retry_decision(exception=down, job=cast(Job, SimpleNamespace(attempts=0)))
+    assert not retry.get_retry_decision(
+        exception=DodoError("refused", status=400), job=cast(Job, SimpleNamespace(attempts=0))
+    )
+    assert not retry.get_retry_decision(exception=down, job=cast(Job, SimpleNamespace(attempts=7)))
+
+    assert await cancel_orphan(fake_dodo, "sub_orphan") is True
+    # Already gone from Dodo: nothing left to cancel, which is done.
+    assert await cancel_orphan(fake_dodo, "sub_unknown") is False
 
 
 async def test_a_second_subscription_cannot_replace_a_live_one(owner: Owner) -> None:
