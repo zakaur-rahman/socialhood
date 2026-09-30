@@ -1,6 +1,20 @@
 import { describe, expect, it } from "vitest";
 
-import { countTrend, formatPercent, formatShare, formatSpan, formatWait, rateTrend, waitTrend } from "./format";
+import {
+  agoLabel,
+  channelsConnected,
+  channelsLine,
+  countTrend,
+  formatPercent,
+  formatShare,
+  formatSpan,
+  formatWait,
+  periodLabel,
+  periodPhrase,
+  rangeHeading,
+  rateTrend,
+  waitTrend,
+} from "./format";
 
 describe("Home formatting (UX-SCR-01)", () => {
   it("formats waits from seconds to days", () => {
@@ -26,24 +40,24 @@ describe("Home formatting (UX-SCR-01)", () => {
   });
 
   it("compares counts with the period before, not when it had none", () => {
-    expect(countTrend(10, 8, "7d")).toEqual({
+    expect(countTrend(10, 8, "7 days")).toEqual({
       direction: "up",
       good: null,
       text: "+25%",
       words: "up 25% from the previous 7 days",
     });
-    expect(countTrend(6, 8, "30d")?.text).toBe("−25%");
-    expect(countTrend(8, 8, "7d")).toMatchObject({ direction: "flat", text: "No change" });
-    expect(countTrend(8, 0, "7d")).toBeNull();
+    expect(countTrend(6, 8, "30 days")?.text).toBe("−25%");
+    expect(countTrend(8, 8, "7 days")).toMatchObject({ direction: "flat", text: "No change" });
+    expect(countTrend(8, 0, "7 days")).toBeNull();
   });
 
   it("compares shares in points, and waits with shorter as good news", () => {
-    expect(rateTrend(40, 35.5, "7d")).toMatchObject({ text: "+4.5 pts", good: true, words: "up 4.5 points from the previous 7 days" });
-    expect(rateTrend(40, 50, "7d", "neither")).toMatchObject({ text: "−10 pts", good: null });
-    expect(rateTrend(null, 50, "7d")).toBeNull();
-    expect(waitTrend(465, 930, "7d")).toMatchObject({ direction: "down", good: true, text: "−50%" });
-    expect(waitTrend(930, 465, "7d")).toMatchObject({ direction: "up", good: false, text: "+100%" });
-    expect(waitTrend(465, null, "7d")).toBeNull();
+    expect(rateTrend(40, 35.5, "7 days")).toMatchObject({ text: "+4.5 pts", good: true, words: "up 4.5 points from the previous 7 days" });
+    expect(rateTrend(40, 50, "7 days", "neither")).toMatchObject({ text: "−10 pts", good: null });
+    expect(rateTrend(null, 50, "7 days")).toBeNull();
+    expect(waitTrend(465, 930, "7 days")).toMatchObject({ direction: "down", good: true, text: "−50%" });
+    expect(waitTrend(930, 465, "7 days")).toMatchObject({ direction: "up", good: false, text: "+100%" });
+    expect(waitTrend(465, null, "7 days")).toBeNull();
   });
 
   it("names the range's local days", () => {
@@ -51,5 +65,28 @@ describe("Home formatting (UX-SCR-01)", () => {
     expect(formatSpan("2026-09-01", "2026-09-30")).toBe("1–30 Sep");
     expect(formatSpan("2026-10-30", "2026-11-05")).toBe("30 Oct–5 Nov");
     expect(formatSpan("2026-12-28", "2027-01-03")).toBe("28 Dec 2026–3 Jan 2027");
+  });
+
+  it("names a custom period by its length, and compares it with as many days before", () => {
+    expect(periodLabel(1)).toBe("1 day");
+    expect(periodLabel(12)).toBe("12 days");
+    expect(rangeHeading({ range: "7d", days: 7 })).toBe("Last 7 days");
+    expect(rangeHeading({ range: "custom", days: 12 })).toBe("12 days");
+    expect(periodPhrase({ range: "30d", days: 30 })).toBe("the last 30 days");
+    expect(periodPhrase({ range: "custom", days: 12 })).toBe("these 12 days");
+    expect(countTrend(12, 10, "12 days")?.words).toBe("up 20% from the previous 12 days");
+  });
+
+  it("names the channels and how long ago a customer wrote", () => {
+    expect(channelsLine(["instagram", "whatsapp"])).toBe("Overview across Instagram & WhatsApp");
+    expect(channelsLine(["instagram"])).toBe("Overview across Instagram");
+    expect(channelsLine([])).toBe("No channels connected yet");
+    expect(channelsConnected(2)).toBe("2 channels connected");
+    expect(channelsConnected(1)).toBe("1 channel connected");
+    expect(channelsConnected(0)).toBe("No channels connected");
+    expect(agoLabel("now")).toBe("just now");
+    expect(agoLabel("12m")).toBe("12m ago");
+    expect(agoLabel("3d")).toBe("3d ago");
+    expect(agoLabel("28 Sep")).toBe("28 Sep");
   });
 });

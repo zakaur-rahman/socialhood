@@ -80,12 +80,15 @@ function parse<T>(data: string): T | null {
   }
 }
 
-/** Events that change Home's numbers (GET …/overview is aggregates, so it is refetched). */
+/** Events that change Home's numbers or its priority queue (GET …/overview is aggregates, so it
+ * is refetched): a message arriving or a reply going out, and a suggested reply (AI draft ready). */
 const OVERVIEW_EVENTS: ReadonlySet<string> = new Set([
   "message.created",
   "message.updated",
   "conversation.updated",
   "analysis.created",
+  "suggestion.created",
+  "suggestion.updated",
   "comment.created",
   "comment.updated",
   "post.updated",

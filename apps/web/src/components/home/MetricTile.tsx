@@ -25,6 +25,8 @@ export function TrendChip({ trend }: { trend: Trend }) {
 type Props = {
   label: string;
   value: string;
+  /** A rule-based label beside the number (Attention, Fast; components/home/rules.ts). */
+  badge?: { label: string; tone: "warning" | "success" } | null;
   /** One line under the number: what it counts, or how to get a first value. */
   hint?: ReactNode;
   trend?: Trend | null;
@@ -33,7 +35,9 @@ type Props = {
 };
 
 /** UX-SCR-01: one metric in bg-panel rounded-xl p-4, the number in text-2xl semibold tabular-nums. */
-export function MetricTile({ label, value, hint, trend, href }: Props) {
+const BADGE_TONE = { warning: "bg-warning/15 text-warning", success: "bg-success/15 text-success" } as const;
+
+export function MetricTile({ label, value, badge, hint, trend, href }: Props) {
   const body = (
     <>
       <p className="flex items-center justify-between gap-2 text-xs text-fg-secondary">
@@ -44,12 +48,20 @@ export function MetricTile({ label, value, hint, trend, href }: Props) {
         <span className="text-2xl font-semibold tabular-nums" data-testid="metric-value">
           {value}
         </span>
+        {badge ? (
+          <span
+            data-testid="metric-badge"
+            className={cn("rounded-full px-2 text-[11px] leading-5 font-medium", BADGE_TONE[badge.tone])}
+          >
+            {badge.label}
+          </span>
+        ) : null}
         {trend ? <TrendChip trend={trend} /> : null}
       </p>
       {hint ? <p className="mt-1 text-xs text-fg-secondary">{hint}</p> : null}
     </>
   );
-  const frame = "block rounded-xl border border-line bg-panel p-4";
+  const frame = "block h-full rounded-xl border border-line bg-panel p-4";
   if (href) {
     return (
       <Link
