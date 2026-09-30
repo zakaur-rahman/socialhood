@@ -7082,8 +7082,12 @@
         "type": "object"
       },
       "Overview": {
-        "description": "GET \u2026/overview (FR-HOME-01, UX-SCR-01). Flows cover ``current`` (the range: 7 or 30 local\ndays up to and including today) and ``previous`` (as many days just before it); states are as\nof now.",
+        "description": "GET \u2026/overview (FR-HOME-01, UX-SCR-01). Flows cover ``current`` (the range: 7 or 30 local\ndays up to and including today, or the custom ``from``..``to``) and ``previous`` (as many days\njust before it); states are as of now.",
         "properties": {
+          "accounts_connected": {
+            "title": "Accounts Connected",
+            "type": "integer"
+          },
           "accounts_needing_attention": {
             "items": {
               "$ref": "#/components/schemas/AccountAttention"
@@ -7100,10 +7104,24 @@
           "current": {
             "$ref": "#/components/schemas/OverviewPeriod"
           },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
           "knowledge_gaps_open": {
             "default": 0,
             "title": "Knowledge Gaps Open",
             "type": "integer"
+          },
+          "latest_gap": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OverviewGap"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "message_sentiment": {
             "$ref": "#/components/schemas/SentimentSplit"
@@ -7120,13 +7138,44 @@
             "title": "Needs You",
             "type": "integer"
           },
+          "oldest_waiting_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Oldest Waiting Since"
+          },
+          "platforms_connected": {
+            "items": {
+              "enum": [
+                "instagram",
+                "whatsapp"
+              ],
+              "type": "string"
+            },
+            "title": "Platforms Connected",
+            "type": "array"
+          },
           "previous": {
             "$ref": "#/components/schemas/OverviewPeriod"
+          },
+          "priority_queue": {
+            "items": {
+              "$ref": "#/components/schemas/PriorityConversation"
+            },
+            "title": "Priority Queue",
+            "type": "array"
           },
           "range": {
             "enum": [
               "7d",
-              "30d"
+              "30d",
+              "custom"
             ],
             "title": "Range",
             "type": "string"
@@ -7149,6 +7198,16 @@
             "title": "Top Posts",
             "type": "array"
           },
+          "top_posts_engagement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OverviewEngagement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "top_questions": {
             "items": {
               "$ref": "#/components/schemas/QuestionCount"
@@ -7159,21 +7218,109 @@
         },
         "required": [
           "range",
+          "days",
           "timezone",
           "checklist",
           "needs_reply",
           "needs_you",
+          "oldest_waiting_since",
           "top_questions",
+          "latest_gap",
           "accounts_needing_attention",
+          "accounts_connected",
+          "platforms_connected",
+          "priority_queue",
           "messages_today",
           "current",
           "previous",
           "top_intents",
           "message_sentiment",
           "comment_sentiment",
-          "top_posts"
+          "top_posts",
+          "top_posts_engagement"
         ],
         "title": "Overview",
+        "type": "object"
+      },
+      "OverviewEngagement": {
+        "description": "The mean engagement rate of the most commented posts that have one (``posts`` of them).",
+        "properties": {
+          "posts": {
+            "title": "Posts",
+            "type": "integer"
+          },
+          "rate": {
+            "title": "Rate",
+            "type": "number"
+          }
+        },
+        "required": [
+          "rate",
+          "posts"
+        ],
+        "title": "OverviewEngagement",
+        "type": "object"
+      },
+      "OverviewGap": {
+        "description": "The open knowledge gap asked most recently: Home's View thread and Train AI. ``question``\nis the customer's newest example message (the topic when there is none); the conversation\nand message are where it came from, None for a comment's gap or a deleted message.",
+        "properties": {
+          "asked": {
+            "title": "Asked",
+            "type": "integer"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "format": "date-time",
+            "title": "Last Seen At",
+            "type": "string"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "topic",
+          "question",
+          "asked",
+          "last_seen_at",
+          "conversation_id",
+          "message_id"
+        ],
+        "title": "OverviewGap",
         "type": "object"
       },
       "OverviewPeriod": {
@@ -7281,6 +7428,17 @@
             "title": "Comments",
             "type": "integer"
           },
+          "engagement_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Engagement Rate"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -7347,7 +7505,8 @@
           "permalink",
           "posted_at",
           "comments",
-          "stats"
+          "stats",
+          "engagement_rate"
         ],
         "title": "OverviewPost",
         "type": "object"
@@ -8229,6 +8388,156 @@
           "ordered_ids"
         ],
         "title": "PrioritiesUpdate",
+        "type": "object"
+      },
+      "PriorityConversation": {
+        "description": "One row of Home's Live Priority Queue (services/priority_queue.py has the rules).",
+        "properties": {
+          "awaiting_reply": {
+            "title": "Awaiting Reply",
+            "type": "boolean"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/ContactSummary"
+          },
+          "has_pending_suggestion": {
+            "title": "Has Pending Suggestion",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_customer_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Customer Message"
+          },
+          "last_customer_message_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Customer Message At"
+          },
+          "lead_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Score"
+          },
+          "needs_human_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "refund",
+                  "legal",
+                  "complaint",
+                  "negative_sentiment",
+                  "abuse",
+                  "account_or_payment",
+                  "human_requested",
+                  "low_confidence",
+                  "out_of_knowledge",
+                  "window_closed",
+                  "policy_keyword",
+                  "output_blocked"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Human Reason"
+          },
+          "needs_you": {
+            "title": "Needs You",
+            "type": "boolean"
+          },
+          "platform": {
+            "enum": [
+              "instagram",
+              "whatsapp"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "priority": {
+            "anyOf": [
+              {
+                "enum": [
+                  "critical",
+                  "high",
+                  "medium",
+                  "low"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "waiting_since": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waiting Since"
+          },
+          "window_closes_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Closes At"
+          }
+        },
+        "required": [
+          "id",
+          "platform",
+          "contact",
+          "last_customer_message",
+          "last_customer_message_at",
+          "waiting_since",
+          "needs_you",
+          "needs_human_reason",
+          "awaiting_reply",
+          "has_pending_suggestion",
+          "window_closes_at",
+          "lead_score",
+          "priority"
+        ],
+        "title": "PriorityConversation",
         "type": "object"
       },
       "PrivateReplyCreate": {
@@ -17353,7 +17662,7 @@
     },
     "/v1/w/{wid}/overview": {
       "get": {
-        "description": "Home's metrics over the last 7 or 30 days (today included) in the workspace's time zone,\nwith the same number of days before them for comparison.",
+        "description": "Home's metrics over the last 7 or 30 days (``range``, 7d by default; today included), or\nthe local days ``from`` to ``to`` (YYYY-MM-DD, both included, at most 90 days, ``to`` no\nlater than today), in the workspace's time zone, with the same number of days before them\nfor comparison. ``range`` with ``from`` or ``to`` is 422.",
         "operationId": "get_overview",
         "parameters": [
           {
@@ -17371,13 +17680,53 @@
             "name": "range",
             "required": false,
             "schema": {
-              "default": "7d",
-              "enum": [
-                "7d",
-                "30d"
+              "anyOf": [
+                {
+                  "enum": [
+                    "7d",
+                    "30d"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ],
-              "title": "Range",
-              "type": "string"
+              "title": "Range"
+            }
+          },
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
             }
           }
         ],

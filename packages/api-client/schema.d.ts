@@ -1603,8 +1603,10 @@ export interface paths {
         };
         /**
          * Get Overview
-         * @description Home's metrics over the last 7 or 30 days (today included) in the workspace's time zone,
-         *     with the same number of days before them for comparison.
+         * @description Home's metrics over the last 7 or 30 days (``range``, 7d by default; today included), or
+         *     the local days ``from`` to ``to`` (YYYY-MM-DD, both included, at most 90 days, ``to`` no
+         *     later than today), in the workspace's time zone, with the same number of days before them
+         *     for comparison. ``range`` with ``from`` or ``to`` is 422.
          */
         get: operations["get_overview"];
         put?: never;
@@ -4623,20 +4625,25 @@ export interface components {
         /**
          * Overview
          * @description GET …/overview (FR-HOME-01, UX-SCR-01). Flows cover ``current`` (the range: 7 or 30 local
-         *     days up to and including today) and ``previous`` (as many days just before it); states are as
-         *     of now.
+         *     days up to and including today, or the custom ``from``..``to``) and ``previous`` (as many days
+         *     just before it); states are as of now.
          */
         Overview: {
+            /** Accounts Connected */
+            accounts_connected: number;
             /** Accounts Needing Attention */
             accounts_needing_attention: components["schemas"]["AccountAttention"][];
             checklist: components["schemas"]["Checklist"];
             comment_sentiment: components["schemas"]["SentimentSplit"];
             current: components["schemas"]["OverviewPeriod"];
+            /** Days */
+            days: number;
             /**
              * Knowledge Gaps Open
              * @default 0
              */
             knowledge_gaps_open: number;
+            latest_gap: components["schemas"]["OverviewGap"] | null;
             message_sentiment: components["schemas"]["SentimentSplit"];
             /** Messages Today */
             messages_today: number;
@@ -4644,20 +4651,65 @@ export interface components {
             needs_reply: number;
             /** Needs You */
             needs_you: number;
+            /** Oldest Waiting Since */
+            oldest_waiting_since: string | null;
+            /** Platforms Connected */
+            platforms_connected: ("instagram" | "whatsapp")[];
             previous: components["schemas"]["OverviewPeriod"];
+            /** Priority Queue */
+            priority_queue: components["schemas"]["PriorityConversation"][];
             /**
              * Range
              * @enum {string}
              */
-            range: "7d" | "30d";
+            range: "7d" | "30d" | "custom";
             /** Timezone */
             timezone: string;
             /** Top Intents */
             top_intents: components["schemas"]["IntentCount"][];
             /** Top Posts */
             top_posts: components["schemas"]["OverviewPost"][];
+            top_posts_engagement: components["schemas"]["OverviewEngagement"] | null;
             /** Top Questions */
             top_questions: components["schemas"]["QuestionCount"][];
+        };
+        /**
+         * OverviewEngagement
+         * @description The mean engagement rate of the most commented posts that have one (``posts`` of them).
+         */
+        OverviewEngagement: {
+            /** Posts */
+            posts: number;
+            /** Rate */
+            rate: number;
+        };
+        /**
+         * OverviewGap
+         * @description The open knowledge gap asked most recently: Home's View thread and Train AI. ``question``
+         *     is the customer's newest example message (the topic when there is none); the conversation
+         *     and message are where it came from, None for a comment's gap or a deleted message.
+         */
+        OverviewGap: {
+            /** Asked */
+            asked: number;
+            /** Conversation Id */
+            conversation_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Last Seen At
+             * Format: date-time
+             */
+            last_seen_at: string;
+            /** Message Id */
+            message_id: string | null;
+            /** Question */
+            question: string;
+            /** Topic */
+            topic: string;
         };
         /**
          * OverviewPeriod
@@ -4705,6 +4757,8 @@ export interface components {
             caption: string | null;
             /** Comments */
             comments: number;
+            /** Engagement Rate */
+            engagement_rate: number | null;
             /**
              * Id
              * Format: uuid
@@ -5051,6 +5105,43 @@ export interface components {
              * Format: uuid
              */
             social_account_id: string;
+        };
+        /**
+         * PriorityConversation
+         * @description One row of Home's Live Priority Queue (services/priority_queue.py has the rules).
+         */
+        PriorityConversation: {
+            /** Awaiting Reply */
+            awaiting_reply: boolean;
+            contact: components["schemas"]["ContactSummary"];
+            /** Has Pending Suggestion */
+            has_pending_suggestion: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Customer Message */
+            last_customer_message: string | null;
+            /** Last Customer Message At */
+            last_customer_message_at: string | null;
+            /** Lead Score */
+            lead_score: number | null;
+            /** Needs Human Reason */
+            needs_human_reason: ("refund" | "legal" | "complaint" | "negative_sentiment" | "abuse" | "account_or_payment" | "human_requested" | "low_confidence" | "out_of_knowledge" | "window_closed" | "policy_keyword" | "output_blocked") | null;
+            /** Needs You */
+            needs_you: boolean;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
+            /** Priority */
+            priority: ("critical" | "high" | "medium" | "low") | null;
+            /** Waiting Since */
+            waiting_since: string | null;
+            /** Window Closes At */
+            window_closes_at: string | null;
         };
         /**
          * PrivateReplyCreate
@@ -9922,7 +10013,9 @@ export interface operations {
     get_overview: {
         parameters: {
             query?: {
-                range?: "7d" | "30d";
+                range?: ("7d" | "30d") | null;
+                from?: string | null;
+                to?: string | null;
             };
             header?: never;
             path: {
