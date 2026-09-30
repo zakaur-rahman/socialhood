@@ -1,14 +1,19 @@
 "use client";
 
 import { UserButton } from "@clerk/nextjs";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 import type { Route } from "next";
 
 import { AskButton, AskRoot } from "@/components/agent/AskPanel";
+import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
+import { useOpenPortal } from "@/components/billing/use-billing-actions";
+import { ServiceWorkerRegistrar } from "@/components/push/ServiceWorkerRegistrar";
 import {
   exhaustedAiCredits,
+  keys,
   useBilling,
   useCommentCounts,
   useInboxCounts,
@@ -16,14 +21,14 @@ import {
   useSocialAccounts,
   useWorkspaces,
 } from "@/lib/api/queries";
-import type { BillingState, Role, SocialAccount } from "@/lib/api/types";
+import type { BillingState, Plan, Role, SocialAccount } from "@/lib/api/types";
 import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
 import { useReconnecting } from "@/lib/realtime/status";
-import { useMediaQuery, useStoredFlag } from "@/lib/use-browser-state";
+import { useMediaQuery, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AppSidebar } from "./AppSidebar";
-import { BannerSlot, type Banner } from "./BannerSlot";
+import { BannerSlot, billingBanners, type Banner } from "./BannerSlot";
 import { MobileNav } from "./MobileNav";
 import { NotificationsButton } from "./NotificationsButton";
 import { activeSegment, BILLING_HREF, pageTitle } from "./nav";
@@ -40,7 +45,19 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
   const me = useMe();
   const accounts = useSocialAccounts(workspace.id);
   const billing = useBilling(workspace.id);
+  const portal = useOpenPortal(workspace.id);
+  const [dismissedTrial, setDismissedTrial] = useStoredString<string>("socialhood:trial-reminder-dismissed", "");
+  usePlanChanges(workspace.id, workspace.plan, billing.data?.plan);
   const allBanners = [
+    ...billingBanners(billing.data, {
+      role: workspace.role,
+      timeZone: workspace.timezone,
+      billingHref: BILLING_HREF(workspace.slug),
+      onManageBilling: portal.open,
+      managing: portal.pending,
+      dismissedTrial,
+      onDismissTrial: setDismissedTrial,
+    }),
     ...accountBanners(accounts.data ?? [], workspace.slug),
     ...creditBanners(billing.data, workspace.slug, workspace.role),
     ...banners,
@@ -91,8 +108,33 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
       </main>
       {/* FR-AGT-01: Ask Social Hood on every page, with its Ctrl/⌘ K shortcut. */}
       <AskRoot />
+      {/* F-15: any 402 opens the upgrade dialog (lib/api/provider.tsx). */}
+      <UpgradeDialog />
+      {/* TR-FE-09: the push service worker (production builds) and this device's subscription. */}
+      <ServiceWorkerRegistrar />
     </div>
   );
+}
+
+/**
+ * A plan change (usage.updated, C-049) reaches the rest of the app: the sidebar's plan badge
+ * reads GET /v1/workspaces, and a downgrade changes accounts and automations (FR-BIL-07), so
+ * the workspace's queries refetch once when the billing plan differs from what was seen.
+ */
+function usePlanChanges(wid: string, workspacePlan: Plan, billingPlan: Plan | undefined) {
+  const queryClient = useQueryClient();
+  const seen = useRef<Plan | undefined>(undefined);
+  useEffect(() => {
+    if (!billingPlan) return;
+    const previous = seen.current;
+    seen.current = billingPlan;
+    if (previous && previous !== billingPlan) {
+      void queryClient.invalidateQueries({ queryKey: ["w", wid] });
+      void queryClient.invalidateQueries({ queryKey: keys.workspaces });
+    } else if (!previous && billingPlan !== workspacePlan) {
+      void queryClient.invalidateQueries({ queryKey: keys.workspaces });
+    }
+  }, [queryClient, wid, workspacePlan, billingPlan]);
 }
 
 /**

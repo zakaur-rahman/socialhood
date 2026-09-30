@@ -290,7 +290,8 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
     await user.click(within(form).getByRole("button", { name: "Add" }));
     const alert = await within(form).findByRole("alert");
     expect(alert).toHaveTextContent("Your plan includes 200,000 characters of knowledge.");
-    expect(within(alert).getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    // The 402 opens the app's upgrade dialog (T8.4); Upgrade here opens it again.
+    expect(within(alert).getByRole("button", { name: "Upgrade" })).toBeInTheDocument();
   });
 
   it("the usage meter turns full at the limit", async () => {

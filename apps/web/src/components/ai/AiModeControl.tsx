@@ -15,7 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ApiError } from "@/lib/api/errors";
+import { isPlanLimitError } from "@/lib/api/errors";
+import { useUpgradeDialog } from "@/lib/api/provider";
 import { autoAllowed, useBilling, useSocialAccounts, useUpdateConversation } from "@/lib/api/queries";
 import type { AiMode, Conversation, ConversationPatch } from "@/lib/api/types";
 import { AI_MODE_LABEL, AI_MODES } from "@/lib/ai/format";
@@ -25,7 +26,7 @@ import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
-import { AutoConfirmDialog, UpgradeDialog } from "./AiModeDialogs";
+import { AutoConfirmDialog } from "./AiModeDialogs";
 
 export type AiModeChoice = AiMode | "default";
 
@@ -36,13 +37,13 @@ export function pausedUntil(conversation: Conversation, now: Date): Date | null 
   return until;
 }
 
-export function isEntitlementError(error: unknown): boolean {
-  return error instanceof ApiError && (error.code === "entitlement_required" || error.status === 402);
-}
+/** Auto on a plan without it: the upgrade dialog opens before any request (F-15, §4.7). */
+export const AUTO_UPGRADE = { code: "entitlement_required", entitlement: "ai_modes" } as const;
 
 /**
  * FR-SUG-01 per-conversation override: Default (the account's mode), Off, Suggest or Auto. Auto
- * asks for confirmation (F-09); a plan without Auto, or a 402, opens the upgrade dialog.
+ * asks for confirmation (F-09); a plan without Auto opens the upgrade dialog, and so does a 402
+ * (lib/api/provider.tsx opens it for every 402, so it isn't a toast as well).
  */
 export function useConversationAiMode(conversation: Conversation) {
   const workspace = useCurrentWorkspace();
@@ -51,7 +52,7 @@ export function useConversationAiMode(conversation: Conversation) {
   const accounts = useSocialAccounts(wid);
   const billing = useBilling(wid);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const upgrade = useUpgradeDialog();
 
   const accountMode = accounts.data?.find((a) => a.id === conversation.social_account_id)?.ai_mode ?? null;
   const allowsAuto = autoAllowed(billing.data, workspace.plan);
@@ -62,27 +63,24 @@ export function useConversationAiMode(conversation: Conversation) {
       { id: conversation.id, patch },
       {
         onSuccess: () => (done ? toast.success(done) : undefined),
-        onError: (error) => (isEntitlementError(error) ? setUpgradeOpen(true) : toast.error(errorMessage(error))),
+        onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
       },
     );
 
   const choose = (next: AiModeChoice) => {
     if (next === choice) return;
     if (next === "default") return apply({ clear_ai_mode_override: true });
-    if (next === "auto") return allowsAuto ? setConfirmOpen(true) : setUpgradeOpen(true);
+    if (next === "auto") return allowsAuto ? setConfirmOpen(true) : upgrade.open(AUTO_UPGRADE);
     apply({ ai_mode_override: next });
   };
 
   const dialogs = (
-    <>
-      <AutoConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        target="this conversation"
-        onConfirm={() => apply({ ai_mode_override: "auto" })}
-      />
-      <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
-    </>
+    <AutoConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      target="this conversation"
+      onConfirm={() => apply({ ai_mode_override: "auto" })}
+    />
   );
 
   return {

@@ -1,6 +1,35 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, toApiError } from "./errors";
+import { ApiError, isPlanLimitError, toApiError } from "./errors";
+
+describe("402 problems (C-049)", () => {
+  it("keep the entitlement key and the limit", () => {
+    const error = toApiError({
+      type: "t",
+      title: "Payment required",
+      status: 402,
+      code: "quota_exceeded",
+      detail: "Your plan includes 3 active automations.",
+      entitlement: "active_automations",
+      limit: 3,
+    });
+    expect(error.entitlement).toBe("active_automations");
+    expect(error.limit).toBe(3);
+    expect(isPlanLimitError(error)).toBe(true);
+  });
+
+  it("a missing feature has a null limit", () => {
+    const error = toApiError({ type: "t", title: "t", status: 402, code: "entitlement_required", entitlement: "ai_modes", limit: null });
+    expect(error.limit).toBeNull();
+    expect(isPlanLimitError(error)).toBe(true);
+  });
+
+  it("other errors are not plan limits", () => {
+    expect(isPlanLimitError(toApiError({ type: "t", title: "t", status: 409, code: "conflict" }))).toBe(false);
+    expect(isPlanLimitError(new Error("402"))).toBe(false);
+    expect(toApiError({ type: "t", title: "t", status: 404, code: "not_found" }).entitlement).toBeUndefined();
+  });
+});
 
 describe("toApiError", () => {
   it("keeps the code, detail, field errors and request id of a problem body", () => {

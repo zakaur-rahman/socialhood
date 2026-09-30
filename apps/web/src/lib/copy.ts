@@ -284,3 +284,249 @@ export const aiCopy = {
   notInKnowledge: "Not in your knowledge",
   drafting: "Drafting a reply…",
 } as const;
+
+// ---- billing (P8: F-15, UX-SCR-07, FR-BIL-02…06, §4.7 402 codes)
+
+export type PlanName = "free" | "pro" | "max";
+
+export const PLAN_NAME: Record<PlanName, string> = { free: "Free", pro: "Pro", max: "Max" };
+
+function counted(n: number, one: string, many: string): string {
+  return `${count.format(n)} ${n === 1 ? one : many}`;
+}
+
+type LimitCopy = {
+  /** The upgrade dialog's title when this limit is reached (quota_exceeded). */
+  limitTitle: string;
+  /** What a limit of n includes: "3 active automations". */
+  includes: (n: number) => string;
+  /** What a plan without a limit has no limit on: "active automations". */
+  unlimited: string;
+};
+
+/** Copy for each §1.7 entitlement with a number (C-049: a 402 carries its key and limit). */
+const LIMIT_COPY: Record<string, LimitCopy> = {
+  active_automations: {
+    limitTitle: "Automation limit reached",
+    includes: (n) => counted(n, "active automation", "active automations"),
+    unlimited: "active automations",
+  },
+  accounts_per_platform: {
+    limitTitle: "Account limit reached",
+    includes: (n) => `${counted(n, "account", "accounts")} per platform`,
+    unlimited: "connected accounts",
+  },
+  knowledge_characters: {
+    limitTitle: "Knowledge limit reached",
+    includes: (n) => `${count.format(n)} characters of knowledge`,
+    unlimited: "knowledge",
+  },
+  scheduled_posts_monthly: {
+    limitTitle: "Scheduled post limit reached",
+    includes: (n) => `${counted(n, "scheduled post", "scheduled posts")} a month`,
+    unlimited: "scheduled posts",
+  },
+  pending_scheduled_messages: {
+    limitTitle: "Scheduled message limit reached",
+    includes: (n) => `${counted(n, "scheduled message", "scheduled messages")} waiting to send`,
+    unlimited: "scheduled messages",
+  },
+  members: {
+    limitTitle: "Member limit reached",
+    includes: (n) => counted(n, "member", "members"),
+    unlimited: "members",
+  },
+  ai_credits_monthly: {
+    limitTitle: "AI credits used up",
+    includes: (n) => `${count.format(n)} AI credits a month`,
+    unlimited: "AI credits",
+  },
+  comment_intelligence_posts: {
+    limitTitle: "Comment analysis limit reached",
+    includes: (n) => `comment analysis on the ${counted(n, "most recent post", "most recent posts")}`,
+    unlimited: "comment analysis",
+  },
+  message_history_days: {
+    limitTitle: "Message history limit reached",
+    includes: (n) => `${counted(n, "day", "days")} of message history`,
+    unlimited: "message history",
+  },
+};
+
+/** Features a plan has or lacks (entitlement_required, §4.7 "{Feature} is part of Pro."). */
+const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
+  ai_modes: {
+    feature: "Auto mode",
+    body: "On Pro, the AI can answer customers on its own when it's confident and the answer is in your knowledge.",
+  },
+  ai_reply_automations: {
+    feature: "AI replies in automations",
+    body: "On Pro, an automation can answer with AI from your knowledge instead of a fixed message.",
+  },
+};
+
+/** What a limit of n on this §1.7 key includes, e.g. "3 active automations"; null for other keys. */
+export function limitText(key: string, limit: number): string | null {
+  return LIMIT_COPY[key]?.includes(limit) ?? null;
+}
+
+/** "Free includes 3 active automations." (F-15); without the plan, "Your plan includes …" (§4.7). */
+export function planIncludes(key: string, limit: number, plan?: PlanName | null): string | null {
+  const copy = LIMIT_COPY[key];
+  if (!copy) return null;
+  return `${plan ? PLAN_NAME[plan] : "Your plan"} includes ${copy.includes(limit)}.`;
+}
+
+/** What another plan offers for the same key: "Pro includes 50 active automations." */
+export function planOffers(key: string, value: number | null, plan: PlanName): string | null {
+  const copy = LIMIT_COPY[key];
+  if (!copy) return null;
+  return value === null
+    ? `${PLAN_NAME[plan]} has no limit on ${copy.unlimited}.`
+    : `${PLAN_NAME[plan]} includes ${copy.includes(value)}.`;
+}
+
+export type UpgradeCopyInput = {
+  code: "entitlement_required" | "quota_exceeded";
+  entitlement?: string | null;
+  limit?: number | null;
+  detail?: string | null;
+};
+
+/**
+ * The upgrade dialog's title and first sentence for a 402 (§4.7): entitlement_required says
+ * "{Feature} is part of Pro."; quota_exceeded names the limit, and for AI credits when they reset.
+ */
+export function upgradeCopy(
+  input: UpgradeCopyInput,
+  context: { plan?: PlanName | null; resetsOn?: string | null; now?: Date } = {},
+): { title: string; body: string } {
+  const key = input.entitlement ?? "";
+  if (input.code === "entitlement_required") {
+    const feature = FEATURE_COPY[key];
+    if (feature) return { title: `${feature.feature} is part of Pro`, body: feature.body };
+    const named = input.detail?.match(/^(.+?) is part of Pro\.?$/);
+    if (named) return { title: `${named[1]} is part of Pro`, body: "Upgrade to Pro to use it." };
+    return { title: "This is part of Pro", body: input.detail || "Upgrade to Pro to use it." };
+  }
+  const copy = LIMIT_COPY[key];
+  if (key === "ai_credits_monthly" && typeof input.limit === "number") {
+    return { title: copy.limitTitle, body: aiCreditsExhausted(input.limit, context.resetsOn, context.now) };
+  }
+  if (copy && typeof input.limit === "number") {
+    return { title: copy.limitTitle, body: planIncludes(key, input.limit, context.plan) ?? "" };
+  }
+  return { title: copy?.limitTitle ?? "Plan limit reached", body: input.detail || "Your plan's limit is reached." };
+}
+
+/**
+ * Some 402s raised before P8 carry only their detail (T4, T5); the dialog still names what they
+ * are about. Every 402 from T8.1 carries its entitlement key (C-049), which wins.
+ */
+export function inferEntitlement(detail: string | null | undefined): string | null {
+  if (!detail) return null;
+  if (/^Auto mode is part of Pro/i.test(detail)) return "ai_modes";
+  if (/AI replies in automations/i.test(detail)) return "ai_reply_automations";
+  if (/AI credits/i.test(detail)) return "ai_credits_monthly";
+  if (/active automations/i.test(detail)) return "active_automations";
+  if (/scheduled posts/i.test(detail)) return "scheduled_posts_monthly";
+  if (/characters of knowledge|knowledge limit/i.test(detail)) return "knowledge_characters";
+  return null;
+}
+
+const CURRENCY_DIGITS = new Map<string, number>();
+
+function currencyDigits(currency: string): number {
+  let digits = CURRENCY_DIGITS.get(currency);
+  if (digits === undefined) {
+    try {
+      digits = new Intl.NumberFormat("en", { style: "currency", currency }).resolvedOptions().maximumFractionDigits ?? 2;
+    } catch {
+      digits = 2;
+    }
+    CURRENCY_DIGITS.set(currency, digits);
+  }
+  return digits;
+}
+
+/** A Dodo price in minor units as "₹999" or "$10.50" (§5.1: minor units plus a currency code). */
+export function formatPrice(price: { amount_minor: number; currency: string }): string {
+  const digits = currencyDigits(price.currency);
+  const amount = price.amount_minor / 10 ** digits;
+  const whole = Number.isInteger(amount);
+  try {
+    return new Intl.NumberFormat("en", {
+      style: "currency",
+      currency: price.currency,
+      minimumFractionDigits: whole ? 0 : digits,
+      maximumFractionDigits: digits,
+    }).format(amount);
+  } catch {
+    return `${amount} ${price.currency}`;
+  }
+}
+
+/** "₹999 a month" */
+export function pricePerMonth(price: { amount_minor: number; currency: string }): string {
+  return `${formatPrice(price)} a month`;
+}
+
+export const billingCopy = {
+  upgradeCta: "Upgrade to Pro",
+  trialCta: (days: number) => `Start ${days}-day trial`,
+  trialOffer: (days: number, price: string | null) =>
+    price ? `Try Pro free for ${days} days, then ${price}. Cancel anytime.` : `Try Pro free for ${days} days. Cancel anytime.`,
+  proPrice: (price: string) => `Pro is ${price}.`,
+  ownerOnly: "Only the workspace owner can change the plan.",
+  askOwner: "Ask an owner of this workspace to upgrade.",
+  confirming: "Confirming your payment…",
+  confirmingBody: "This takes a few seconds. Your plan changes as soon as the payment is confirmed.",
+  confirmed: (plan: string) => `You're on ${plan}`,
+  confirmedTrial: "Your Pro trial has started",
+  confirmedBody: "Your new limits are ready to use.",
+  slow: "Payment received? It can take a minute. We'll email you when Pro is active.",
+  checkoutConflict: "This workspace already has a paid plan. Change it from Manage billing.",
+  maxUnavailable: "Max isn't available yet.",
+  paymentsUnavailable: "Payments aren't available right now. Try again in a few minutes.",
+  noBillingAccount: "There's no billing account for this workspace yet. It's created when you upgrade.",
+  cancelled: (plan: string, date: string) => `${plan} until ${date}`,
+  resumed: (plan: string) => `${plan} will renew as usual`,
+} as const;
+
+/** FR-BIL-06, F-15: the owner's banner while the subscription is on hold. */
+export function paymentFailedBanner(graceUntil: string | null): string {
+  return graceUntil
+    ? `Payment failed. Update your payment method by ${graceUntil} to keep Pro`
+    : "Payment failed. Update your payment method to keep Pro";
+}
+
+/** The owner's reminder in the last days of a trial (Dodo charges the card when it ends). */
+export function trialEndingBanner(daysLeft: number, endsOn: string, renews: boolean, price: string | null): string {
+  const when = daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`;
+  if (!renews) return `Your Pro trial ends ${when}, on ${endsOn}. The workspace moves to Free then`;
+  return price
+    ? `Your Pro trial ends ${when}, on ${endsOn}. Pro then continues at ${price}`
+    : `Your Pro trial ends ${when}, on ${endsOn}. Pro then continues on your card`;
+}
+
+// ---- notifications and push (P8: FR-NOT-03, FR-NOT-04, F-19, UX-SCR-07)
+
+export const PUSH_EVENT_COPY = {
+  needs_you: { label: "Needs you", hint: "A conversation the AI handed to you." },
+  new_lead: { label: "New lead", hint: "Someone looks ready to buy." },
+  window_closing: { label: "Reply window closing", hint: "A lead's 24-hour reply window is about to close." },
+  account: { label: "Account problems", hint: "An account needs reconnecting or was disconnected." },
+} as const;
+
+export const unsubscribeCopy = {
+  working: "Unsubscribing…",
+  doneTitle: "You're unsubscribed",
+  done: (workspace: string) =>
+    `You won't get the weekly digest for ${workspace} any more. Turn it back on anytime in Settings → Notifications.`,
+  invalidTitle: "This link doesn't work",
+  invalid:
+    "It may be incomplete, or from a workspace you've left. You can change your emails in Settings → Notifications.",
+  missingTitle: "This link is incomplete",
+  missing: "Open the unsubscribe link from the email again, or change your emails in Settings → Notifications.",
+  failedTitle: "That didn't work",
+} as const;

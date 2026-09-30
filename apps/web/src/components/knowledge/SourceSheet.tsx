@@ -3,21 +3,19 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
 import { FileText } from "lucide-react";
-import Link from "next/link";
 import { useRef, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { BILLING_HREF } from "@/components/shell/nav";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError } from "@/lib/api/errors";
-import { useApi } from "@/lib/api/provider";
+import { ApiError, isPlanLimitError } from "@/lib/api/errors";
+import { upgradeRequestFrom, useApi, useUpgradeDialog, type UpgradeRequest } from "@/lib/api/provider";
 import { keys, useCreateKnowledgeSource, useUpdateKnowledgeSource } from "@/lib/api/queries";
 import type {
   KnowledgeSource,
@@ -173,7 +171,8 @@ function SourceForm({
   const [fileError, setFileError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
-  const [overLimit, setOverLimit] = useState(false);
+  const [overLimit, setOverLimit] = useState<UpgradeRequest | null>(null);
+  const upgrade = useUpgradeDialog();
   const fileRef = useRef<HTMLInputElement>(null);
   const saving = create.isPending || update.isPending || progress !== null;
 
@@ -188,8 +187,10 @@ function SourceForm({
 
   const fail = (error: unknown) => {
     setProgress(null);
-    if (error instanceof ApiError && error.status === 402) {
-      setOverLimit(true);
+    if (isPlanLimitError(error)) {
+      // The upgrade dialog opens by itself (lib/api/provider.tsx); the form keeps what was typed
+      // and says which limit stopped it.
+      setOverLimit(upgradeRequestFrom(error));
       return;
     }
     if (error instanceof ApiError && error.errors.length > 0) {
@@ -212,7 +213,7 @@ function SourceForm({
 
   const submit = form.handleSubmit(async (v) => {
     setFormError(null);
-    setOverLimit(false);
+    setOverLimit(null);
     if (mode.kind === "edit") {
       const before = initialValues(mode);
       const patch: Partial<KnowledgeSourcePatch> = {};
@@ -361,11 +362,17 @@ function SourceForm({
 
       {overLimit ? (
         <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning">
-          <p className="flex-1">{knowledgeLimitReached(limit)} Remove a source or upgrade for more.</p>
+          <p className="flex-1">
+            {knowledgeLimitReached(overLimit.limit ?? limit)} Remove a source or upgrade for more.
+          </p>
           {workspace.role === "owner" || workspace.role === "admin" ? (
-            <Link href={BILLING_HREF(workspace.slug)} className="shrink-0 rounded-md bg-white/10 px-3 py-1 font-medium text-fg hover:bg-white/15">
+            <button
+              type="button"
+              onClick={() => upgrade.open(overLimit)}
+              className="min-h-10 shrink-0 rounded-md bg-white/10 px-3 py-1 font-medium text-fg hover:bg-white/15 md:min-h-7"
+            >
               Upgrade
-            </Link>
+            </button>
           ) : null}
         </div>
       ) : null}

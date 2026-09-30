@@ -1,11 +1,9 @@
 "use client";
 
 import { ArrowDown, BarChart3, Inbox, MessageSquare, Sparkles, Zap, type LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { BILLING_HREF } from "@/components/shell/nav";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +11,7 @@ import { threadRunsOldestFirst } from "@/lib/agent/cache";
 import { isActive, SUGGESTED_PROMPTS, type PromptArea } from "@/lib/agent/format";
 import { useAskStore } from "@/lib/agent/store";
 import { ApiError } from "@/lib/api/errors";
+import { upgradeRequestFrom, useUpgradeDialog } from "@/lib/api/provider";
 import { exhaustedAiCredits, useAskAgent, useBilling, useCancelAgentRun, useThreadRuns } from "@/lib/api/queries";
 import { aiCreditsExhausted, errorMessage } from "@/lib/copy";
 import { useNow } from "@/lib/use-browser-state";
@@ -70,6 +69,7 @@ export function AskConversation({
 
   const latest = items[items.length - 1];
   const working = Boolean(latest && isActive(latest.status));
+  const upgrade = useUpgradeDialog();
   const credits = exhaustedAiCredits(billing.data);
   const outOfCredits = error instanceof ApiError && error.code === "quota_exceeded";
 
@@ -239,10 +239,13 @@ export function AskConversation({
               {askError(error, credits, now)}
             </p>
             {outOfCredits && workspace.role !== "agent" ? (
-              <Button asChild size="sm" className="bg-brand-gradient min-h-10 text-white md:min-h-7">
-                <Link href={BILLING_HREF(workspace.slug)} onClick={onNavigate}>
-                  Upgrade
-                </Link>
+              // The 402 already opened the upgrade dialog (lib/api/provider.tsx); this opens it again.
+              <Button
+                size="sm"
+                className="bg-brand-gradient min-h-10 text-white md:min-h-7"
+                onClick={() => (error instanceof ApiError ? upgrade.open(upgradeRequestFrom(error)) : undefined)}
+              >
+                Upgrade
               </Button>
             ) : null}
           </div>
