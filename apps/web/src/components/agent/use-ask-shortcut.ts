@@ -8,6 +8,8 @@ export const ASK_SHORTCUT_KEY = "k";
 export const ASK_SHORTCUT_ARIA = "Control+K Meta+K";
 
 export function isAskShortcut(event: Pick<KeyboardEvent, "key" | "ctrlKey" | "metaKey" | "altKey" | "shiftKey">): boolean {
+  // Autofill and password managers dispatch keydown events without a key.
+  if (typeof event.key !== "string") return false;
   return (
     event.key.toLowerCase() === ASK_SHORTCUT_KEY && (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey
   );
