@@ -133,7 +133,7 @@ async def list_jobs(app: App, *, task: str | None, since: datetime | None) -> Re
     jobs = await failed.list_failed_jobs(app, task=task, since=since)
     report.matched = len(jobs)
     for job in jobs:
-        note = "" if job.retryable_from_ops else "  (platform write: retry from the app)"
+        note = "" if job.retryable_from_ops else "  (not safe to re-run from here)"
         report.lines.append(
             f"{job.id:<8} {job.task_name:<24} {job.queue_name:<11} "
             f"{job.failed_at:%Y-%m-%d %H:%M}  attempts={job.attempts}{note}"
@@ -155,9 +155,9 @@ async def retry_jobs(
     report.matched = len(jobs)
     for job in jobs:
         if not job.retryable_from_ops:
-            # TR-JOB-05: the platform may already have the message or post.
+            # TR-JOB-05: the platform (or the member's device) may already have it.
             report.skipped.append(f"{job.id} {job.task_name}")
-            report.lines.append(f"skip  {job.id}  {job.task_name}: platform write, not retried")
+            report.lines.append(f"skip  {job.id}  {job.task_name}: not safe to re-run")
             continue
         report.lines.append(f"{'would retry' if dry_run else 'retry'}  {job.id}  {job.task_name}")
         if not dry_run:

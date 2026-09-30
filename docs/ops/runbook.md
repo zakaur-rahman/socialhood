@@ -85,8 +85,39 @@ No `ping` job ran for 10 minutes.
   restarts the service; a crash loop shows the error at startup (often settings validation, which
   lists every missing variable, or the database being unreachable).
 - Check `DATABASE_URL_DIRECT` reaches Postgres directly (the queue needs LISTEN/NOTIFY).
-- When it is back, due work runs by itself: the dispatcher catches up, and `sweep_stuck` requeues
-  webhook events still `received`.
+- When it is back, due work runs by itself: the dispatcher catches up, `sweep_stuck` requeues
+  webhook events still `received`, and `recover_stalled_jobs` settles the jobs the dead worker
+  was running (see [Deploys and running jobs](#deploys-and-running-jobs)).
+
+## Deploys and running jobs
+
+Every deploy or restart stops the worker. What happens to the jobs it is running:
+
+1. Render sends SIGTERM. `scripts/worker.sh` passes one SIGTERM to each lane; each lane takes no
+   new job and waits for its running ones. Procrastinate has no time limit of its own
+   (`shutdown_graceful_timeout` is unset on purpose: a job it aborted would end `aborted`, never
+   retried nor listed as failed).
+2. Render's `maxShutdownDelaySeconds` (60 s, `infra/render.yaml`) is the limit. Jobs done by then
+   finish normally; then Render sends SIGKILL, and whatever still runs stays `doing`.
+3. The stopping worker's heartbeat stopped at step 1. Once it is 90 seconds old
+   (`STALLED_AFTER_S`, `jobs/recovery.py`), `recover_stalled_jobs` (every 2 minutes, bulk lane)
+   settles each of its jobs by the task's class in `RECOVERY`:
+   - **retry** (idempotent: ingestion, analysis, suggestions, sync, backfills, snapshots,
+     automations, every periodic task…): back to `todo` at once, while the job has used fewer
+     than 3 attempts; after that it fails with an alert.
+   - **sweeper** (`send_message`, `send_private_reply`, `send_scheduled`, `publish_target`,
+     `poll_container`, `run_agent`, `process_webhook_event`, `deliver_email`): never run again.
+     The job is aborted so its run lock stops blocking, and the task's own sweeper decides (a
+     send that may have gone out becomes `delivery_unknown`, TR-JOB-05).
+   - **fail** (`post_first_comment`, `deliver_push`, or a task with no rule): failed, with an
+     `alert` (Sentry `alert_kind:stalled_job`). See [Stalled jobs](#stalled-jobs).
+
+Keep 90 s above the grace plus the 10 s heartbeat: raising `maxShutdownDelaySeconds` past 80
+means raising `STALLED_AFTER_S` too (a unit test checks this), or a job still finishing on the
+old worker could run twice. A starting worker prunes worker rows silent for 90 s as well.
+
+The same path covers a crash or an out-of-memory kill. Locally on Windows, Procrastinate installs
+no signal handlers, so stopping a worker always leaves its jobs to `recover_stalled_jobs`.
 
 ## Queue backlog
 
@@ -101,6 +132,22 @@ The interactive lane's oldest ready job is older than 30 seconds (TR-JOB-06).
 
 More than 20 jobs failed in the last hour. See which tasks in the dashboard ("Failed jobs by task")
 and Sentry (tag `job`), fix the cause, then `failed-jobs retry` with `--dry-run` first.
+
+## Stalled jobs
+
+`alert_kind:stalled_job`: a worker died while running a job that `recover_stalled_jobs` will not
+run again. The detail names the task and job id.
+
+- `post_first_comment`: open the post on Instagram. If the first comment isn't there, the owner
+  can add it by hand; the target shows no first comment and no error.
+- `deliver_push`: nothing to do; the notification is in the app.
+- "stalled again after 3 attempts": the job keeps killing its worker (often memory: a large
+  knowledge file). Check the worker's logs and memory around the job's start, fix the cause, then
+  `failed-jobs retry --id <job id>`.
+- "its task has no recovery rule": a job of a task that was renamed or removed. Nothing runs it;
+  add a rule if the task still exists.
+
+`failed-jobs list` shows these jobs; the CLI refuses to re-run the ones that aren't safe to.
 
 ## Billing alerts (Sentry)
 
