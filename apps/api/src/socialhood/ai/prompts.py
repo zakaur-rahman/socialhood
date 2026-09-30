@@ -15,7 +15,7 @@ PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
 CURRENT = {
     "analysis": 1,
     "suggest": 2,
-    "summary": 1,
+    "summary": 2,
     "comment_analysis": 1,
     "post_summary": 1,
     # The composer's Write with AI and Suggest hashtags (FR-PUB-02, T7.4).
@@ -25,6 +25,8 @@ CURRENT = {
     # member's role, answering the question asked, brackets only for citations, drafted text only
     # from results; docs/ai-eval-log.md).
     "agent": 2,
+    # summary.v2: a concrete next step from the conversation and the knowledge the latest draft
+    # used (C-063).
 }
 
 

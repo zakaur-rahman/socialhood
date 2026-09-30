@@ -147,6 +147,23 @@ async def chunk_texts(session: AsyncSession, chunk_ids: Sequence[uuid.UUID]) -> 
     )
 
 
+async def latest_used_chunk_ids(
+    session: AsyncSession, conversation_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """The knowledge chunks behind the conversation's newest draft that used any (the summary's
+    next step is grounded in them, summary.v2); [] when no draft used knowledge."""
+    ids = await session.scalar(
+        select(ReplySuggestion.used_chunk_ids)
+        .where(
+            ReplySuggestion.conversation_id == conversation_id,
+            func.cardinality(ReplySuggestion.used_chunk_ids) > 0,
+        )
+        .order_by(ReplySuggestion.created_at.desc(), ReplySuggestion.id.desc())
+        .limit(1)
+    )
+    return list(ids or [])
+
+
 # ---------------------------------------------------------------- decisions (TR-AI-07)
 
 
