@@ -12,6 +12,7 @@
     "test": "pnpm -r --if-present test",
     "build": "pnpm -r --if-present build",
     "gen:api": "node scripts/gen-api.mjs",
-    "tunnel": "node scripts/tunnel.mjs"
+    "tunnel": "node scripts/tunnel.mjs",
+    "e2e": "node scripts/e2e-stack.mjs"
   }
 }

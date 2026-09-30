@@ -216,6 +216,43 @@ describe("Suggested reply in the thread (F-08)", () => {
     expect(await screen.findByText("Drafting a reply…")).toBeInTheDocument();
   });
 
+  // Found by the e2e suite (T9.4): within DRAFT_WAIT_MS of the analysis, a handled suggestion
+  // fell back to the first-draft shimmer instead of closing.
+  it.each([
+    ["Send", "Send"],
+    ["Dismiss", "Dismiss suggestion"],
+  ])("after %s, a just-analysed message's card closes instead of drafting again", async (_, button) => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      latest_analysis: analysis({ message_id: "m1", needs_reply: true, created_at: new Date().toISOString() }),
+    });
+    const card = await screen.findByRole("region", { name: "Suggested reply" });
+    await user.click(within(card).getByRole("button", { name: button }));
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path !== "/v1/w/w1/conversations/c1/read")).toBe(true));
+    expect(screen.queryByRole("region", { name: "Suggested reply" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Drafting a reply…")).not.toBeInTheDocument();
+  });
+
+  it("a typed reply to a just-analysed message doesn't bring the drafting shimmer back", async () => {
+    const user = userEvent.setup();
+    const { calls, queryClient } = setup({
+      latest_analysis: analysis({ message_id: "m1", needs_reply: true, created_at: new Date().toISOString() }),
+    });
+    await screen.findByRole("region", { name: "Suggested reply" });
+    await user.type(screen.getByRole("textbox", { name: "Reply to Priya Nair" }), "Let me check{Enter}");
+    await waitFor(() => expect(sends(calls)).toHaveLength(1));
+    // The API retires the suggestion the typed reply didn't use (F-08).
+    act(() =>
+      applyRealtimeEvent(queryClient, "w1", {
+        id: "2-0",
+        event: "suggestion.updated",
+        data: JSON.stringify({ conversation_id: "c1", suggestion: suggestion({ status: "dismissed" }) }),
+      }),
+    );
+    expect(screen.queryByRole("region", { name: "Suggested reply" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Drafting a reply…")).not.toBeInTheDocument();
+  });
+
   it("no drafting shimmer for an analysis long past", async () => {
     setup({
       pending_suggestion: null,

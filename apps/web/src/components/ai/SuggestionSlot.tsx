@@ -108,9 +108,14 @@ export function useSuggestionSlot({
     return () => window.clearTimeout(timer);
   }, [waitingFor]);
 
-  // The first draft: the latest customer message was just analysed as needing a reply.
+  // The first draft: the latest customer message was just analysed as needing a reply, and
+  // nobody has answered it yet (a sent or dismissed draft, or a reply of their own, closes the
+  // card rather than bringing the shimmer back).
+  const [handledFor, setHandledFor] = useState<string | null>(null);
   const analysis = conversation.latest_analysis ?? null;
   const lastInbound = [...messages].reverse().find((m) => m.direction === "inbound") ?? null;
+  const answered =
+    lastInbound !== null && messages.slice(messages.indexOf(lastInbound) + 1).some((m) => m.direction === "outbound");
   const fresh = useWithin(analysis?.created_at ?? null, DRAFT_WAIT_MS);
   const drafting =
     !suggestion &&
@@ -119,7 +124,9 @@ export function useSuggestionSlot({
     fresh &&
     Boolean(analysis?.needs_reply) &&
     lastInbound !== null &&
-    analysis?.message_id === lastInbound.id;
+    analysis?.message_id === lastInbound.id &&
+    handledFor !== lastInbound.id &&
+    !answered;
 
   // A superseded suggestion can't be sent: the text stays, the link goes.
   useEffect(() => {
@@ -132,12 +139,14 @@ export function useSuggestionSlot({
   const send = () => {
     if (!suggestion?.reply_text || !canReply) return;
     onSend({ text: suggestion.reply_text, suggestionId: suggestion.id, humanAgent });
+    setHandledFor(suggestion.message_id);
     setPendingSuggestion(queryClient, wid, conversationId, null, suggestion.id);
     setSuggestionEdit(conversationId, null);
   };
 
   const close = () => {
     if (!suggestion) return;
+    setHandledFor(suggestion.message_id);
     setSuggestionEdit(conversationId, null);
     dismiss.mutate(suggestion, { onError: (error) => toast.error(errorMessage(error)) });
   };
