@@ -73,14 +73,26 @@ describe("MessageBubble variants (UX-INB-06)", () => {
     expect(row.querySelector('[data-variant="sending"]')).toHaveClass("opacity-80");
   });
 
-  it("AI auto reply: labelled Sent by AI", () => {
+  it("AI auto reply: AI Assisted under the bubble, the tooltip says the AI sent it (C-063)", () => {
     const { row } = renderBubble({ ...out, source: "ai_auto" });
-    expect(within(row).getByText("Sent by AI")).toBeInTheDocument();
+    const assisted = within(row).getByText("AI Assisted");
+    expect(assisted.closest("[title]")).toHaveAttribute("title", "Sent by AI: an auto reply");
+    expect(within(row).getByTestId("message-meta")).toContainElement(assisted);
+    expect(row.querySelector('[data-variant="ai_auto"]')).not.toContainElement(assisted);
   });
 
-  it("automation: labelled with its name", () => {
-    renderBubble({ ...out, source: "automation", automation: { id: "au1", name: "Price keyword" } });
-    expect(screen.getByText("Automation · Price keyword")).toBeInTheDocument();
+  it("automation: AI Assisted, the tooltip names the automation", () => {
+    const { row } = renderBubble({ ...out, source: "automation", automation: { id: "au1", name: "Price keyword" } });
+    expect(within(row).getByText("AI Assisted").closest("[title]")).toHaveAttribute(
+      "title",
+      "Sent by an automation: Price keyword",
+    );
+  });
+
+  it("a person's reply and a customer's message are not AI Assisted", () => {
+    renderBubble(out);
+    renderBubble();
+    expect(screen.queryByText("AI Assisted")).not.toBeInTheDocument();
   });
 
   it("tap first's opening: its quick reply shows as a chip under the text, not a button (FR-AUT-21)", () => {
@@ -160,7 +172,7 @@ describe("MessageBubble variants (UX-INB-06)", () => {
 
   it("unsupported: says so and links to Instagram", () => {
     renderBubble({ kind: "unsupported", text: null });
-    expect(screen.getByText(/Unsupported message/)).toBeInTheDocument();
+    expect(screen.getByTestId("unsupported-card")).toHaveTextContent("Unsupported message format");
     expect(screen.getByRole("link", { name: /View in Instagram/ })).toHaveAttribute("href", "https://www.instagram.com/direct/inbox/");
   });
 });

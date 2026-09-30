@@ -102,11 +102,16 @@ export function MessageBubble({
   );
   const metaClass = outbound && !nativeApp && !sticker ? "text-white/75" : "text-fg-secondary";
 
-  let label: { icon?: LucideIcon; text: string } | null = null;
-  if (outbound && message.source === "ai_auto") label = { icon: Sparkles, text: "Sent by AI" };
-  else if (outbound && message.source === "automation") {
-    label = { icon: Zap, text: message.automation ? `Automation · ${message.automation.name}` : "Automation" };
-  } else if (nativeApp) label = { text: `Sent from ${platformName}` };
+  // Written by the AI (an auto reply) or an automation: "AI Assisted" under the bubble (C-063).
+  const assisted =
+    outbound && message.source === "ai_auto"
+      ? "Sent by AI: an auto reply"
+      : outbound && message.source === "automation"
+        ? message.automation
+          ? `Sent by an automation: ${message.automation.name}`
+          : "Sent by an automation"
+        : null;
+  const label = nativeApp ? `Sent from ${platformName}` : null;
 
   const statusInfo = outbound && status ? STATUS[status] : undefined;
   const reactions = message.reactions ?? [];
@@ -132,13 +137,7 @@ export function MessageBubble({
       ) : null}
       <div className={cn("flex max-w-[85%] flex-col md:max-w-[70%]", outbound ? "items-end" : "items-start")}>
         <div className={cn(bubbleClass, reactions.length > 0 && "mb-3")} data-variant={variantName(message)}>
-          {label ? (
-            <p className={cn("mb-1 flex items-center gap-1 text-xs font-medium", nativeApp ? "text-fg-secondary" : "text-white/90")}>
-              {label.icon ? <label.icon className="size-3" aria-hidden /> : null}
-              {label.text}
-              {message.source === "ai_auto" && aiInfo ? aiInfo : null}
-            </p>
-          ) : null}
+          {label ? <p className="mb-1 text-[11px] font-medium text-fg-secondary">{label}</p> : null}
           {message.kind === "template" && message.template ? (
             <p className={cn("mb-1 text-xs font-medium", metaClass)}>Template · {message.template.name}</p>
           ) : null}
@@ -156,17 +155,26 @@ export function MessageBubble({
               {message.text}
             </p>
           ) : message.kind === "unsupported" ? (
-            <p>
-              Unsupported message.{" "}
+            <div
+              className={cn(
+                "flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-xs",
+                outbound && !nativeApp ? "border-white/30" : "border-line bg-canvas/40",
+              )}
+              data-testid="unsupported-card"
+            >
+              <span className={outbound && !nativeApp ? "text-white/90" : "text-fg-secondary"}>Unsupported message format</span>
               <a
                 href={platform === "instagram" ? "https://www.instagram.com/direct/inbox/" : "https://web.whatsapp.com/"}
                 target="_blank"
                 rel="noreferrer"
-                className={cn("inline-flex items-center gap-1 underline-offset-4 hover:underline", outbound ? "" : "text-brand-fg")}
+                className={cn(
+                  "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline",
+                  outbound && !nativeApp ? "" : "text-brand-fg",
+                )}
               >
                 View in {platformName} <ExternalLink className="size-3" aria-hidden />
               </a>
-            </p>
+            </div>
           ) : message.kind === "location" && !message.text ? (
             <p>Shared a location</p>
           ) : message.text ? (
@@ -188,15 +196,6 @@ export function MessageBubble({
               ))}
             </ul>
           ) : null}
-          <p className={cn("mt-1 flex items-center justify-end gap-1 text-xs tabular-nums", metaClass)}>
-            {message.edited_at && !unsent ? <span>Edited ·</span> : null}
-            <time dateTime={message.occurred_at}>{formatTime(message.occurred_at, timeZone)}</time>
-            {statusInfo ? (
-              <span role="img" aria-label={statusInfo.label} title={statusInfo.label} className="inline-flex">
-                <statusInfo.icon className={cn("size-3.5", statusInfo.className)} aria-hidden />
-              </span>
-            ) : null}
-          </p>
           {reactions.length > 0 ? (
             <span
               className={cn(
@@ -213,6 +212,28 @@ export function MessageBubble({
             </span>
           ) : null}
         </div>
+        {/* Under the bubble (C-063): time, delivery ticks, and who wrote an AI or automation message. */}
+        <p className="mt-1 flex items-center gap-1 px-1 text-[11px] text-fg-secondary tabular-nums" data-testid="message-meta">
+          {message.edited_at && !unsent ? <span>Edited ·</span> : null}
+          <time dateTime={message.occurred_at}>{formatTime(message.occurred_at, timeZone)}</time>
+          {statusInfo ? (
+            <span role="img" aria-label={statusInfo.label} title={statusInfo.label} className="inline-flex">
+              <statusInfo.icon className={cn("size-3.5", statusInfo.className)} aria-hidden />
+            </span>
+          ) : null}
+          {assisted ? (
+            <span className="ml-1 inline-flex items-center gap-0.5 font-medium text-brand-fg" title={assisted}>
+              {message.source === "automation" ? (
+                <Zap className="size-3" aria-hidden />
+              ) : (
+                <Sparkles className="size-3" aria-hidden />
+              )}
+              <span>AI Assisted</span>
+              <span className="sr-only"> ({assisted})</span>
+            </span>
+          ) : null}
+          {message.source === "ai_auto" && aiInfo ? aiInfo : null}
+        </p>
         {failed && failure ? (
           <div className="mt-1 flex max-w-full flex-col items-end gap-1" role="alert">
             <p className="text-right text-xs text-danger-fg">{failure.message}</p>
