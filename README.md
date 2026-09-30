@@ -105,3 +105,16 @@ pnpm gen:api                                # regenerate the API contract; commi
 ```
 
 If `uv` is not on your PATH, set `UV` to its full path for `pnpm gen:api`.
+
+The API suite runs faster in parallel, as CI runs it (pytest-xdist):
+
+```sh
+# Each worker gets its own database (socialhood_test_gw0, ...; created and migrated on first
+# use) and the Valkey db TEST_REDIS_URL's db + its index, which must stay at or below 15 (and
+# clear of the dev server's db 0: tests flush their db). Here 10 to 13.
+TEST_REDIS_URL=redis://localhost:6379/10 uv run pytest -n 4 --dist worksteal -m "not serial"
+uv run pytest -m serial                     # timing-budget tests, alone
+```
+
+Tests marked `serial` are skipped under `-n`. Branches, pull requests and releases:
+[`docs/ops/branching.md`](docs/ops/branching.md).
