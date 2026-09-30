@@ -1,19 +1,38 @@
 "use client";
 
-import { ChevronRight, X } from "lucide-react";
+import {
+  CalendarClock,
+  CalendarPlus,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Layers,
+  Lock,
+  MessageSquareText,
+  Reply,
+  Search,
+  ShieldCheck,
+  Trash2,
+  Workflow,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { PageFrame } from "@/components/shell/PageFrame";
+import { SectionLabel, SettingsCard } from "@/components/settings/SettingsCard";
+import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { creditsText, MODE_LABEL } from "@/lib/agent/format";
 import { askHref } from "@/lib/agent/routes";
-import { useAgentPolicy, useAgentRun, useAgentRunHistory } from "@/lib/api/queries";
-import type { AgentPermissions, AgentRun } from "@/lib/api/types";
+import { useAgentPolicy, useAgentRun, useAgentRunHistory, useBilling, usageMeter } from "@/lib/api/queries";
+import type { AgentPermissions, AgentRun, AgentRunStatus } from "@/lib/api/types";
+import { shortDate } from "@/lib/copy";
 import { relativeTime } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
@@ -22,18 +41,32 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 import { RunStatusChip, RunTrace, RunTraceSkeleton } from "./RunTrace";
 import { useReturnFocus } from "./use-return-focus";
 
-const PERMISSION_LABEL: Record<keyof AgentPermissions, string> = {
-  send_replies: "Send replies",
-  schedule_messages: "Schedule messages",
-  schedule_posts: "Schedule posts",
-  create_automations: "Create automations",
-  delete_automations: "Delete automations",
-  bulk_actions: "Bulk actions",
+/** Each write capability of the agent policy (schemas/agent.py AgentPermissions), in words. */
+const CAPABILITIES: Record<keyof AgentPermissions, { label: string; hint: string; icon: ReactNode }> = {
+  send_replies: { label: "Send replies", hint: "Reply to messages and comments", icon: <Reply /> },
+  schedule_messages: { label: "Schedule messages", hint: "Schedule messages to customers", icon: <CalendarClock /> },
+  schedule_posts: { label: "Schedule posts", hint: "Schedule and publish posts", icon: <CalendarPlus /> },
+  create_automations: { label: "Create automations", hint: "Create and turn on automations", icon: <Workflow /> },
+  delete_automations: { label: "Delete automations", hint: "Remove automations", icon: <Trash2 /> },
+  bulk_actions: { label: "Bulk actions", hint: "Change many items at once", icon: <Layers /> },
 };
 
 /**
- * Settings → Agent (agent-architecture.html §12): the agent's mode (read only in this release)
- * and the run history, where owners and admins open any run (FR-AGT-07).
+ * The run history's chips (C-066) as run statuses: Answered is a full or partial answer, Action
+ * needed a run waiting for someone's approval (R2), Failed a run that failed or expired. All
+ * also lists runs still working and cancelled ones.
+ */
+export const RUN_FILTERS: readonly { value: string; label: string; statuses: readonly AgentRunStatus[] }[] = [
+  { value: "all", label: "All", statuses: [] },
+  { value: "answered", label: "Answered", statuses: ["succeeded", "partial"] },
+  { value: "action", label: "Action needed", statuses: ["awaiting_approval"] },
+  { value: "failed", label: "Failed", statuses: ["failed", "expired"] },
+];
+
+/**
+ * Settings → Agent (agent-architecture.html §12, C-066): what Ask Social Hood may do (read only
+ * in this release, every write capability off and locked) and the run history, where owners and
+ * admins search, filter and open any run's trace (FR-AGT-07).
  */
 export function AgentSettingsPage() {
   const workspace = useCurrentWorkspace();
@@ -52,23 +85,63 @@ export function AgentSettingsPage() {
     );
   }
   return (
-    <PageFrame title="Ask Social Hood">
-      <div className="max-w-3xl space-y-6">
-        <PolicyCard />
-        <RunHistory />
-      </div>
-    </PageFrame>
+    <SettingsFrame
+      header={
+        <SettingsPageHeader
+          variant="card"
+          label="Assistant"
+          title="Ask Social Hood"
+          description="What the assistant may do in this workspace, and every question it has answered: its steps, tools, results and credits."
+          actions={<CreditsStat />}
+        />
+      }
+    >
+      <PolicyCard />
+      <RunHistory />
+    </SettingsFrame>
+  );
+}
+
+/** This period's AI credits, which every run uses (GET …/billing). Nothing until it loads. */
+function CreditsStat() {
+  const workspace = useCurrentWorkspace();
+  const billing = useBilling(workspace.id);
+  const credits = usageMeter(billing.data, "ai_credits");
+  if (!credits || typeof credits.limit !== "number") return null;
+  const count = new Intl.NumberFormat("en-US");
+  return (
+    <div className="rounded-xl border border-line-subtle bg-field/60 px-4 py-2.5 text-right">
+      <p className="text-[11px] font-semibold tracking-[0.12em] text-fg-secondary uppercase">AI credits</p>
+      <p className="text-sm tabular-nums">
+        <span className="text-lg font-semibold text-brand-fg">{count.format(credits.used)}</span>
+        <span className="text-fg-secondary"> / {count.format(credits.limit)}</span>
+      </p>
+      {credits.period_end ? (
+        <p className="text-xs text-fg-secondary">Resets on {shortDate(credits.period_end)}</p>
+      ) : null}
+    </div>
   );
 }
 
 function PolicyCard() {
   const workspace = useCurrentWorkspace();
   const policy = useAgentPolicy(workspace.id);
+  const mode = policy.data?.mode;
   return (
-    <section aria-labelledby="agent-mode-heading" className="space-y-3 rounded-xl border border-line bg-panel p-4">
-      <h2 id="agent-mode-heading" className="text-base font-semibold">
-        What it can do
-      </h2>
+    <SettingsCard
+      id="agent-mode"
+      icon={<ShieldCheck />}
+      title="Capabilities & permissions"
+      description="What Ask Social Hood can do on its own. Writes arrive in a later release."
+      aside={
+        mode ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
+            <ShieldCheck className="size-3.5" aria-hidden />
+            Mode: <span>{MODE_LABEL[mode]}</span>
+          </span>
+        ) : null
+      }
+    >
       {policy.isPending ? (
         <div className="space-y-2" aria-busy="true" aria-label="Loading the agent's mode">
           <Skeleton className="h-3 w-1/3 bg-raised" />
@@ -77,45 +150,101 @@ function PolicyCard() {
       ) : policy.isError ? (
         <ErrorState error={policy.error} onRetry={() => void policy.refetch()} />
       ) : (
-        <>
-          <p className="text-sm">
-            Mode: <span className="font-medium">{MODE_LABEL[policy.data.mode]}</span>
-          </p>
-          <p className="text-sm text-fg-secondary">
-            {policy.data.mode === "read_only"
-              ? "Ask Social Hood reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself."
-              : "Writes follow the switches below and the member's role."}
-          </p>
-          <ul className="grid gap-x-4 gap-y-1 sm:grid-cols-2" aria-label="Agent permissions">
-            {(Object.keys(PERMISSION_LABEL) as (keyof AgentPermissions)[]).map((key) => (
-              <li key={key} className="flex items-center justify-between gap-2 text-sm">
-                <span className="text-fg-secondary">{PERMISSION_LABEL[key]}</span>
-                <span className={policy.data.permissions[key] ? "text-success" : "text-fg-secondary"}>
-                  {policy.data.permissions[key] ? "On" : "Off"}
-                </span>
-              </li>
-            ))}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-line-subtle bg-field/60 p-4">
+            <SectionLabel className="flex items-center gap-1.5 text-brand-fg">
+              <Info className="size-3.5" aria-hidden />
+              Operational bounds
+            </SectionLabel>
+            <p className="mt-2 text-sm">
+              {policy.data.mode === "read_only"
+                ? "Ask Social Hood reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself."
+                : "Writes follow the switches below and the member's role."}
+            </p>
+          </div>
+          <ul className="grid gap-2 md:grid-cols-2" aria-label="Agent permissions">
+            {(Object.keys(CAPABILITIES) as (keyof AgentPermissions)[]).map((key) => {
+              const on = policy.data.permissions[key];
+              const capability = CAPABILITIES[key];
+              return (
+                <li key={key} className="flex min-h-14 items-center gap-3 rounded-xl border border-line-subtle bg-field/60 p-3">
+                  <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-raised text-fg-secondary [&_svg]:size-4">
+                    {capability.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{capability.label}</p>
+                    <p className="text-xs text-fg-secondary">{capability.hint}</p>
+                  </div>
+                  {on ? (
+                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">On</span>
+                  ) : (
+                    <span className="flex shrink-0 flex-col items-end gap-0.5">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2 py-0.5 text-xs font-medium text-fg-secondary">
+                        <Lock className="size-3" aria-hidden />
+                        <span>Off</span>
+                      </span>
+                      {policy.data.mode === "read_only" ? (
+                        <span className="text-[11px] text-fg-secondary">Coming later</span>
+                      ) : null}
+                    </span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
-        </>
+        </div>
       )}
-    </section>
+    </SettingsCard>
   );
 }
 
-/** FR-AGT-07: every run, newest first; a row opens the run's full trace. */
+/** The search box's text once typing pauses, so each keystroke isn't a request. */
+function useDebounced(value: string, ms = 300): string {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setDebounced(value), ms);
+    return () => window.clearTimeout(timer);
+  }, [value, ms]);
+  return debounced;
+}
+
+/**
+ * FR-AGT-07: every run, newest first; a row opens the run's full trace. C-066: search the
+ * requests, filter by outcome (both in the API: GET …/agent/runs?status&q), page through.
+ */
 export function RunHistory() {
   const workspace = useCurrentWorkspace();
   const now = useNow();
-  const history = useAgentRunHistory(workspace.id);
+  const [filter, setFilter] = useState("all");
+  const [text, setText] = useState("");
+  const q = useDebounced(text).trim();
+  const statuses = RUN_FILTERS.find((option) => option.value === filter)?.statuses ?? [];
+  const history = useAgentRunHistory(workspace.id, true, { statuses, q });
   const items = useMemo(() => history.data?.pages.flatMap((page) => page.items) ?? [], [history.data]);
+  // A new search or filter starts again from its first page.
+  const view = `${filter}|${q}`;
+  const [paging, setPaging] = useState({ view, page: 0 });
+  const page = paging.view === view ? paging.page : 0;
+  const setPage = (update: (current: number) => number) => setPaging({ view, page: update(page) });
   const [openId, setOpenId] = useState<string | null>(null);
+  const narrowed = filter !== "all" || q !== "";
+
+  // A page here is a page of the API (10 runs); Next reads the next one when it isn't loaded yet.
+  const pages = history.data?.pages ?? [];
+  const shown = pages[page]?.items ?? [];
+  const start = pages.slice(0, page).reduce((sum, loaded) => sum + loaded.items.length, 0);
+  const hasNext = page + 1 < pages.length || Boolean(history.hasNextPage);
+  const next = async () => {
+    if (page + 1 >= pages.length) await history.fetchNextPage();
+    setPage((current) => current + 1);
+  };
 
   let content;
   if (history.isPending) {
     content = (
-      <ul aria-busy="true" aria-label="Loading runs">
+      <ul aria-busy="true" aria-label="Loading runs" className="space-y-2">
         {Array.from({ length: 4 }, (_, i) => (
-          <li key={i} className="space-y-2 border-t border-line-subtle px-4 py-3 first:border-t-0">
+          <li key={i} className="space-y-2 rounded-xl border border-line-subtle p-4">
             <Skeleton className="h-3 w-2/3 bg-raised" />
             <Skeleton className="h-3 w-1/3 bg-raised" />
           </li>
@@ -125,7 +254,24 @@ export function RunHistory() {
   } else if (history.isError) {
     content = <ErrorState error={history.error} onRetry={() => void history.refetch()} />;
   } else if (items.length === 0) {
-    content = (
+    content = narrowed ? (
+      <EmptyState
+        title="No runs match"
+        body="Try other words or another filter."
+        action={
+          <Button
+            variant="secondary"
+            className="min-h-10"
+            onClick={() => {
+              setText("");
+              setFilter("all");
+            }}
+          >
+            Show all runs
+          </Button>
+        }
+      />
+    ) : (
       <EmptyState
         title="No questions yet"
         body="When someone asks Social Hood a question, the run shows here with every step it took."
@@ -134,40 +280,73 @@ export function RunHistory() {
   } else {
     content = (
       <>
-        <ul aria-label="Runs" data-testid="run-history">
-          {items.map((run) => (
-            <li key={run.id} className="border-t border-line-subtle first:border-t-0">
+        <ul aria-label="Runs" data-testid="run-history" className="space-y-2">
+          {shown.map((run) => (
+            <li key={run.id}>
               <RunRow run={run} now={now} onOpen={() => setOpenId(run.id)} />
             </li>
           ))}
         </ul>
-        {history.hasNextPage ? (
-          <div className="flex justify-center border-t border-line-subtle p-3">
+        <nav aria-label="Run history pages" className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-fg-secondary tabular-nums">
+            Showing {start + 1}–{start + shown.length}
+            {history.hasNextPage ? "" : ` of ${items.length}`} · Page {page + 1}
+          </p>
+          <div className="flex gap-2">
             <Button
               variant="secondary"
-              className="min-h-10 md:min-h-8"
-              disabled={history.isFetchingNextPage}
-              onClick={() => void history.fetchNextPage()}
+              className="min-h-10 md:min-h-9"
+              aria-label="Previous page"
+              disabled={page === 0}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
             >
-              {history.isFetchingNextPage ? "Loading…" : "Show older runs"}
+              <ChevronLeft aria-hidden /> Previous
+            </Button>
+            <Button
+              variant="secondary"
+              className="min-h-10 md:min-h-9"
+              aria-label="Next page"
+              disabled={!hasNext || history.isFetchingNextPage}
+              onClick={() => void next()}
+            >
+              {history.isFetchingNextPage ? "Loading…" : "Next"} <ChevronRight aria-hidden />
             </Button>
           </div>
-        ) : null}
+        </nav>
       </>
     );
   }
 
   return (
-    <section aria-labelledby="run-history-heading" className="rounded-xl border border-line bg-panel">
-      <div className="border-b border-line p-4">
-        <h2 id="run-history-heading" className="text-base font-semibold">
-          Run history
-        </h2>
-        <p className="text-sm text-fg-secondary">Every question asked in this workspace: its steps, tools, results and credits.</p>
+    <SettingsCard
+      id="run-history"
+      icon={<MessageSquareText />}
+      title="Run history"
+      description="Every question asked in this workspace: its steps, tools, results and credits."
+    >
+      <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
+          <Input
+            type="search"
+            aria-label="Search runs"
+            placeholder="Search questions"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            className="min-h-10 pl-9"
+          />
+        </div>
+        <ToggleGroup value={filter} onValueChange={setFilter} aria-label="Filter runs" className="overflow-x-auto lg:w-auto">
+          {RUN_FILTERS.map((option) => (
+            <ToggleGroupItem key={option.value} value={option.value} className="min-h-9 shrink-0 px-3">
+              {option.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
       {content}
       <RunDetailSheet runId={openId} onClose={() => setOpenId(null)} />
-    </section>
+    </SettingsCard>
   );
 }
 
@@ -178,11 +357,14 @@ function RunRow({ run, now, onOpen }: { run: AgentRun; now: Date; onOpen: () => 
     <button
       type="button"
       onClick={onOpen}
-      className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-white/5"
+      className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line-subtle bg-field/60 px-4 py-3 text-left outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-brand"
       aria-label={`Open the run: ${run.request}`}
     >
+      <span aria-hidden className="hidden size-9 shrink-0 place-items-center rounded-lg bg-raised text-fg-secondary sm:grid">
+        <MessageSquareText className="size-4" />
+      </span>
       <span className="min-w-0 flex-1 space-y-1">
-        <span className="line-clamp-2 block text-sm break-words">{run.request}</span>
+        <span className="line-clamp-2 block text-sm font-medium break-words">{run.request}</span>
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-fg-secondary">
           <RunStatusChip status={run.status} />
           <span>{run.requested_by?.name ?? "Former member"}</span>
@@ -190,9 +372,10 @@ function RunRow({ run, now, onOpen }: { run: AgentRun; now: Date; onOpen: () => 
           <time dateTime={run.created_at} title={formatDayTime(run.created_at, workspace.timezone, now)}>
             {time === "now" ? "just now" : time}
           </time>
-          <span aria-hidden>·</span>
-          <span className="tabular-nums">{creditsText(run.credits)}</span>
         </span>
+      </span>
+      <span className="shrink-0 rounded-md bg-raised px-2 py-0.5 text-xs text-fg-secondary tabular-nums">
+        {creditsText(run.credits)}
       </span>
       <ChevronRight className="size-4 shrink-0 text-fg-secondary" aria-hidden />
     </button>

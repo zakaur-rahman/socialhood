@@ -56,7 +56,11 @@ const failed = runDetail({
   created_at: "2026-09-29T09:00:00Z",
 });
 
-function handlers(runs: AgentRunDetail[] = [answered, failed], next: string | null = null) {
+function handlers(
+  runs: AgentRunDetail[] = [answered, failed],
+  next: string | null = null,
+  pick: (call: Call) => AgentRunDetail[] = () => runs,
+) {
   return {
     "GET /v1/w/:wid/agent/policy": () =>
       json({
@@ -77,7 +81,7 @@ function handlers(runs: AgentRunDetail[] = [answered, failed], next: string | nu
       const cursor = call.url.searchParams.get("cursor");
       if (cursor === "page2") return json({ items: [agentRun({ id: "r3", request: "Oldest question" })], next_cursor: null });
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      return json({ items: runs.map(({ steps, plan, model, prompt_version, ...run }) => run), next_cursor: next });
+      return json({ items: pick(call).map(({ steps, plan, model, prompt_version, ...run }) => run), next_cursor: next });
     },
     "GET /v1/w/:wid/agent/runs/:id": (_: Call, p: Record<string, string>) => {
       const run = runs.find((item) => item.id === p.id);
@@ -87,12 +91,21 @@ function handlers(runs: AgentRunDetail[] = [answered, failed], next: string | nu
 }
 
 describe("Settings → Agent (FR-AGT-07, agent-architecture.html §12)", () => {
-  it("shows the read-only mode with every switch off", async () => {
+  it("shows the read-only mode with every write capability off and locked until later", async () => {
     renderWithApi(<AgentSettingsPage />, { handlers: handlers() });
     expect(await screen.findByText("Read only")).toBeInTheDocument();
     expect(screen.getByText(/doesn't send, schedule or change anything itself/)).toBeInTheDocument();
     const permissions = screen.getByRole("list", { name: "Agent permissions" });
     expect(within(permissions).getAllByText("Off")).toHaveLength(6);
+    expect(within(permissions).getAllByText("Coming later")).toHaveLength(6);
+    expect(within(permissions).getAllByRole("listitem").map((li) => li.querySelector("p")?.textContent)).toEqual([
+      "Send replies",
+      "Schedule messages",
+      "Schedule posts",
+      "Create automations",
+      "Delete automations",
+      "Bulk actions",
+    ]);
   });
 
   it("lists every run with its request, who asked, outcome, credits and time", async () => {
@@ -153,11 +166,17 @@ describe("Settings → Agent (FR-AGT-07, agent-architecture.html §12)", () => {
     expect(screen.getByRole("button", { name: "Open the run: Top posts this month" })).toHaveFocus();
   });
 
-  it("loads older runs", async () => {
+  it("pages to older runs, reading further from the API when the loaded ones run out", async () => {
     const user = userEvent.setup();
     renderWithApi(<AgentSettingsPage />, { handlers: handlers([answered], "page2") });
-    await user.click(await screen.findByRole("button", { name: "Show older runs" }));
+    expect(await screen.findByRole("button", { name: "Open the run: How did my latest post do?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous page" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Next page" }));
     expect(await screen.findByRole("button", { name: "Open the run: Oldest question" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Open the run: How did my latest post do?" })).toBeNull();
+    expect(screen.getByText(/Page 2/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Previous page" }));
+    expect(await screen.findByRole("button", { name: "Open the run: How did my latest post do?" })).toBeInTheDocument();
   });
 
   it("an empty history says what will appear", async () => {
@@ -169,5 +188,78 @@ describe("Settings → Agent (FR-AGT-07, agent-architecture.html §12)", () => {
     renderWithApi(<AgentSettingsPage />, { handlers: handlers(), ws: { ...workspace, role: "agent" } });
     expect(screen.getByText("Run history is for owners and admins")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Open Ask Social Hood" })).toHaveAttribute("href", "/w/maple/ask");
+  });
+});
+
+describe("run history search and filters (C-066)", () => {
+  const partly = runDetail({ id: "r4", request: "Top posts this week", status: "partial" });
+  const waiting = runDetail({ id: "r5", request: "Reply to everyone", status: "awaiting_approval" });
+  const expired = runDetail({ id: "r6", request: "Old question", status: "expired" });
+  const all = [answered, failed, partly, waiting, expired];
+
+  function filtering() {
+    return handlers(all, null, (call) => {
+      const statuses = call.url.searchParams.getAll("status");
+      const q = (call.url.searchParams.get("q") ?? "").toLowerCase();
+      return all.filter(
+        (run) => (statuses.length === 0 || statuses.includes(run.status)) && run.request.toLowerCase().includes(q),
+      );
+    });
+  }
+
+  const rows = () =>
+    within(screen.getByRole("list", { name: "Runs" }))
+      .getAllByRole("button")
+      .map((row) => row.getAttribute("aria-label")?.replace("Open the run: ", ""));
+
+  it("each chip asks the API for its statuses", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderWithApi(<AgentSettingsPage />, { handlers: filtering() });
+    const chips = await screen.findByRole("radiogroup", { name: "Filter runs" });
+    expect(within(chips).getAllByRole("radio").map((chip) => chip.textContent)).toEqual([
+      "All",
+      "Answered",
+      "Action needed",
+      "Failed",
+    ]);
+    await screen.findByRole("list", { name: "Runs" });
+    expect(rows()).toHaveLength(5);
+
+    await user.click(within(chips).getByRole("radio", { name: "Answered" }));
+    await waitFor(() => expect(rows()).toEqual(["How did my latest post do?", "Top posts this week"]));
+    await user.click(within(chips).getByRole("radio", { name: "Action needed" }));
+    await waitFor(() => expect(rows()).toEqual(["Reply to everyone"]));
+    await user.click(within(chips).getByRole("radio", { name: "Failed" }));
+    await waitFor(() => expect(rows()).toEqual(["Top posts this month", "Old question"]));
+
+    const statusSets = calls
+      .filter((c) => c.path === "/v1/w/w1/agent/runs")
+      .map((c) => c.url.searchParams.getAll("status").join(","));
+    expect(statusSets).toEqual(["", "succeeded,partial", "awaiting_approval", "failed,expired"]);
+  });
+
+  it("search asks the API for the text once typing pauses; no match can show everything again", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderWithApi(<AgentSettingsPage />, { handlers: filtering() });
+    await screen.findByRole("list", { name: "Runs" });
+    await user.type(screen.getByRole("searchbox", { name: "Search runs" }), "top posts");
+    await waitFor(() => expect(rows()).toEqual(["Top posts this month", "Top posts this week"]));
+    const searched = calls.filter((c) => c.path === "/v1/w/w1/agent/runs").map((c) => c.url.searchParams.get("q"));
+    expect(searched).toEqual([null, "top posts"]); // one request for the phrase, not one per key
+
+    await user.clear(screen.getByRole("searchbox", { name: "Search runs" }));
+    await user.type(screen.getByRole("searchbox", { name: "Search runs" }), "nothing like it");
+    expect(await screen.findByText("No runs match")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Show all runs" }));
+    await waitFor(() => expect(rows()).toHaveLength(5));
+    expect(screen.getByRole("searchbox", { name: "Search runs" })).toHaveValue("");
+  });
+
+  it("a row still opens the run's trace", async () => {
+    const user = userEvent.setup();
+    renderWithApi(<AgentSettingsPage />, { handlers: filtering() });
+    await user.click(await screen.findByRole("button", { name: "Open the run: Top posts this month" }));
+    const sheet = await screen.findByRole("dialog", { name: "Run" });
+    expect(await within(sheet).findByText("The AI didn't respond (ai_unavailable)")).toBeInTheDocument();
   });
 });
