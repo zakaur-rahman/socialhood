@@ -45,7 +45,7 @@ and the `code=` log fields (SEC-07).
 | SEC-09 | SSRF protection | pass (accepted: A-1) | See the SEC-09 notes below. |
 | SEC-10 | Prompt injection containment | pass | See the SEC-10 notes below. |
 | SEC-11 | Headers | fixed | See the SEC-11 notes below. |
-| SEC-12 | Operational endpoints | pass (`/metrics` is T9.3) | See the SEC-12 notes below. |
+| SEC-12 | Operational endpoints | pass | See the SEC-12 notes below. |
 | SEC-13 | Dependency audits | pass | See the SEC-13 notes below. |
 | SEC-14 | No dev features in production | fixed | See the SEC-14 notes below. |
 
@@ -189,7 +189,7 @@ and the `code=` log fields (SEC-07).
 - **`/healthz`** returns `{"status":"ok"}` only (`api/health.py:31`).
 - **`/readyz`** needs the bearer `METRICS_TOKEN` outside local and test environments, and is 404 otherwise (`api/health.py:36-45`).
 - **`/docs` and `/openapi.json`** are off in production (`main.py:47-49`). They stay on in staging.
-- **`/metrics`** is T9.3 (agent C). The integrator should confirm its bearer check.
+- **`/metrics`** (T9.3) needs the bearer `METRICS_TOKEN`, compared in constant time (`hmac.compare_digest`); 404 when no token is configured, 401 for a missing or wrong one (`observability/http.py`). Confirmed in the integration pass. Tests: `integration/test_observability.py::test_metrics_needs_the_bearer_token` and `::test_metrics_does_not_exist_without_a_token`.
 
 ### SEC-13: dependencies
 - **CI.** `ci.yml` runs pip-audit on the exported lock and `pnpm audit --prod --audit-level high`. Dependabot runs weekly (`.github/dependabot.yml`).
