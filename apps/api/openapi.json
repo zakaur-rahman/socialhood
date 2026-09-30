@@ -10513,8 +10513,7 @@
         "summary": "Unsubscribe Digest",
         "tags": [
           "notifications"
-        ],
-        "x-pending": "T8.7"
+        ]
       }
     },
     "/v1/me": {
@@ -10594,11 +10593,10 @@
         "summary": "Delete Push Subscription",
         "tags": [
           "notifications"
-        ],
-        "x-pending": "T8.6"
+        ]
       },
       "post": {
-        "description": "Register this browser (F-19), or refresh it: the endpoint is unique, so registering it\nagain updates its keys, clears a failure count or disabled state, and gives it to the caller.",
+        "description": "Register this browser (F-19), or refresh it: the endpoint is unique, so registering it\nagain updates its keys, clears a failure count or disabled state, and gives it to the caller.\n422 for an endpoint that isn't a browser push service. A user keeps their 10 most recently\nused browsers.",
         "operationId": "create_push_subscription",
         "requestBody": {
           "content": {
@@ -10645,8 +10643,7 @@
         "summary": "Create Push Subscription",
         "tags": [
           "notifications"
-        ],
-        "x-pending": "T8.6"
+        ]
       }
     },
     "/v1/push/config": {
@@ -16607,8 +16604,7 @@
         "summary": "Get Notification Preferences",
         "tags": [
           "notifications"
-        ],
-        "x-pending": "T8.6"
+        ]
       },
       "put": {
         "description": "Replace the member's preferences (their own only; any role).",
@@ -16670,8 +16666,7 @@
         "summary": "Update Notification Preferences",
         "tags": [
           "notifications"
-        ],
-        "x-pending": "T8.6"
+        ]
       }
     },
     "/v1/w/{wid}/notifications": {

@@ -100,6 +100,8 @@ export interface paths {
          * Create Push Subscription
          * @description Register this browser (F-19), or refresh it: the endpoint is unique, so registering it
          *     again updates its keys, clears a failure count or disabled state, and gives it to the caller.
+         *     422 for an endpoint that isn't a browser push service. A user keeps their 10 most recently
+         *     used browsers.
          */
         post: operations["create_push_subscription"];
         /**
