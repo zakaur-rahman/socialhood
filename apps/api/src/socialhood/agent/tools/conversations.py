@@ -61,6 +61,7 @@ VIEW_WORDS: dict[str, str] = {
     "all": "open",
     "unread": "unread",
     "needs_reply": "needs-reply",
+    "needs_you": "needs-you",
     "leads": "lead (score 60+)",
     "closing_soon": "closing-soon",
     "ai_handled": "AI-handled",
@@ -93,8 +94,9 @@ class SearchConversationsInput(_Input):
     view: InboxView = Field(
         default="all",
         description=(
-            "all (open), unread, needs_reply, leads (lead score 60+), closing_soon (reply window "
-            "about to close), ai_handled or archived."
+            "all (open), unread, needs_reply, needs_you (the AI handed it to a person), leads "
+            "(lead score 60+), closing_soon (reply window about to close), ai_handled or "
+            "archived."
         ),
     )
     platform: PlatformName | None = None

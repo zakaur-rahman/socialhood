@@ -98,6 +98,7 @@ def list_item(
         signal=signal_for(conv, now=now, window_closes_at=closes_at),
         reply_window_closes_at=closes_at,
         lead_score=conv.lead_score,
+        ai_mode_override=conv.ai_mode_override,
     )
 
 

@@ -188,6 +188,8 @@ def _view_filter(view: InboxView, now: datetime) -> list[ColumnElement[bool]]:
         where.append(Conversation.unread_count > 0)
     elif view == "needs_reply":
         where.append(Conversation.awaiting_reply == true())
+    elif view == "needs_you":  # escalated to a person (FR-SUG-04); InboxCounts.needs_you counts it
+        where.append(Conversation.needs_human == true())
     elif view == "leads":
         where.append(Conversation.lead_score >= LEAD_SCORE)
     elif view == "closing_soon":  # inbox_views.closing_soon, in SQL (FR-INB-14, F-18)
