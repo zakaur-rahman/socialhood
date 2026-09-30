@@ -17,8 +17,8 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
   const { token } = await searchParams;
   const value = typeof token === "string" ? token.trim() : "";
   return (
-    <main className="mx-auto flex min-h-dvh max-w-xl flex-col items-start justify-center gap-3 p-6">
-      <div className="bg-shell-gradient mb-3 size-10 rounded-xl" aria-hidden />
+    // Inside the marketing layout (header and footer): the page only fills the space between them.
+    <main id="main" tabIndex={-1} className="mx-auto flex w-full max-w-xl flex-1 flex-col items-start justify-center gap-3 px-4 py-16 outline-none sm:px-6">
       {TOKEN.test(value) ? (
         <UnsubscribeResult token={value} />
       ) : (
