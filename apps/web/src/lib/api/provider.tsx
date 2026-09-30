@@ -110,9 +110,14 @@ function usePlanLimitErrors(queryClient: QueryClient, open: (request: UpgradeReq
   }, [queryClient, open]);
 }
 
-/** One API client and one query cache per tab (TR-FE-02). */
-export function ApiProvider({ children }: { children: ReactNode }) {
-  const { getToken } = useAuth();
+/**
+ * One API client and one query cache per tab (TR-FE-02). The signed-in area renders once Clerk
+ * has a signed-in session (``fallback`` until then): right after sign-up Clerk navigates to /app
+ * before it sets the new session, and requests sent in between would go without a token, fail
+ * with 401 and leave the new user on an error page (F-01; found by the e2e suite, T9.4).
+ */
+export function ApiProvider({ children, fallback = null }: { children: ReactNode; fallback?: ReactNode }) {
+  const { getToken, isLoaded, isSignedIn } = useAuth();
   const api = useMemo(
     () =>
       makeApi(async () => {
@@ -127,7 +132,7 @@ export function ApiProvider({ children }: { children: ReactNode }) {
   const [queryClient] = useState(makeQueryClient);
   return (
     <ApiClientProvider api={api} queryClient={queryClient}>
-      {children}
+      {isLoaded && isSignedIn ? children : fallback}
     </ApiClientProvider>
   );
 }
