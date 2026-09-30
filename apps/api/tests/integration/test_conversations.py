@@ -281,7 +281,7 @@ def b64(value: Any) -> str:
         b64([1]),
         b64({"at": 1}),
         b64(["2026-09-28T12:00:00+00:00", "not-a-uuid"]),
-        b64(["2026-09-28T12:00:00", str(uuid.uuid4())]),  # no time zone
+        b64(["2026-09-28T12:00:00", "3604d55c-65f5-4f1d-b254-01df645bdc6c"]),  # no time zone
     ],
 )
 async def test_a_bad_cursor_is_a_validation_error(
