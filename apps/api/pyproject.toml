@@ -40,6 +40,7 @@ dev = [
     "mypy>=1.13",
     "time-machine>=2.16",
     "respx>=0.22",
+    "pytest-xdist>=3.6",
 ]
 
 [build-system]
@@ -86,4 +87,5 @@ asyncio_default_test_loop_scope = "session"
 addopts = "-ra"
 markers = [
     "agent_eval: Ask Social Hood's eval against the real model (runs only with AGENT_EVAL=1)",
+    "serial: must not run beside other tests (timing budgets); skipped under -n, run with -m serial",
 ]

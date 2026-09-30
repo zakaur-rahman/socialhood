@@ -27,6 +27,7 @@ from socialhood.platforms.sandbox import history
 from socialhood.platforms.sandbox import publishing as sandbox
 from socialhood.services.post_publishing import publish
 from socialhood.services.post_publishing.projection import derive_status
+from socialhood.services.scheduled_posts import views as scheduled_post_views
 from socialhood.settings import Settings
 from tests.support.api import _clear_queue
 from tests.support.automations import make_automation
@@ -50,9 +51,14 @@ async def desk(
     api_settings: Settings,
     clean_db: None,
     queue: None,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> AsyncIterator[Desk]:
     async with httpx.AsyncClient() as http:
-        yield await make_desk(engine, redis, deps_from(http, api_settings))
+        deps = deps_from(http, api_settings)
+        # The jobs build the post's events with the worker's deps (jobs/runtime, from the
+        # environment, which has no token key in CI); use the test settings' instead.
+        monkeypatch.setattr(scheduled_post_views, "_worker_deps", lambda: deps)
+        yield await make_desk(engine, redis, deps)
 
 
 async def post_events(desk: Desk, post_id: uuid.UUID) -> list[dict[str, Any]]:

@@ -7,15 +7,18 @@ v1 keys). Nothing here was deployed on the owner's behalf.
 - **API and worker, Postgres, Valkey:** Render, Singapore, from [`infra/render.yaml`](../../infra/render.yaml).
 - **Web:** Vercel, from `apps/web` ([`apps/web/vercel.json`](../../apps/web/vercel.json)).
 - **Errors:** Sentry. **Metrics and alerts:** Grafana Cloud or Prometheus ([alerts.md](alerts.md)).
+- **Branches, merges, approvals and the GitHub settings:** [branching.md](branching.md).
 
 ## 1. Environments
 
 | | Staging | Production |
 |---|---|---|
-| Git branch | `main` (every merge) | `production` (fast-forward from `main` to release) |
+| Git branch | `develop` (every merge) | `main` (a release: `develop` → `main` pull request, or a hotfix) |
+| Deploys when | every check on the commit passes (`autoDeployTrigger: checksPass`) | CI passes on `main` **and** the owner approves (`.github/workflows/production.yml` calls the deploy hooks; `autoDeployTrigger: "off"`) |
 | Render services | `socialhood-api-staging`, `socialhood-worker-staging` | `socialhood-api`, `socialhood-worker` |
 | Render data | `socialhood-db-staging` (Postgres 18), `socialhood-kv-staging` | `socialhood-db`, `socialhood-kv` |
-| Vercel | Custom environment `staging` (branch `main`) | Production (branch `production`) |
+| Vercel | Custom environment `staging` (branch `develop`) | Production (branch `main`) |
+| Vercel previews | every pull request, against the staging API | |
 | Web domain | `staging.socialhood.com` | `app.socialhood.com` |
 | API domain | `api.staging.socialhood.com` | `api.socialhood.com` |
 | `APP_ENV` | `staging` | `production` (settings refuse fakes, the sandbox and DEBUG) |
@@ -25,8 +28,10 @@ v1 keys). Nothing here was deployed on the owner's behalf.
 | Meta app | the same app in development mode, or a test app | the live app |
 | Sentry `environment` | `staging` | `production` |
 
-Both stacks deploy only after CI passes (`autoDeployTrigger: checksPass`). Releasing is
-`git push origin main:production`.
+Staging deploys by itself once every GitHub check on the `develop` commit passes. Production
+never deploys by itself: after CI passes on `main`, the Production workflow waits in the GitHub
+environment `production` for the owner's approval, then calls the Render deploy hooks of
+`socialhood-api` and `socialhood-worker` with that commit ([branching.md](branching.md)).
 
 Domains follow OQ-3 (`app.` and `api.`). If the domain changes, change it in
 `infra/render.yaml` (config groups), Vercel, and every vendor URL in section 5.
@@ -45,11 +50,17 @@ Domains follow OQ-3 (`app.` and `api.`). If the domain changes, change it in
 ## 3. Render: create both stacks [owner account]
 
 1. In `infra/render.yaml`, check the domains in the two `*-config` groups (section 1). Commit.
-2. Render → **New → Blueprint** → choose the repository → **Blueprint file path**
-   `infra/render.yaml` → Apply. Render creates the project `socialhood` with the `production` and
+2. Render → **New → Blueprint** → choose the repository → **Branch** `main` → **Blueprint file
+   path** `infra/render.yaml` → Apply. Render creates the project `socialhood` with the `production` and
    `staging` environments, both databases, both Key Value instances, the two config groups and the
    four services. The first deploys fail at startup until step 4 is done; that is expected
    (production settings list every missing variable).
+
+   Then the Blueprint's **Settings → Auto Sync: No**. A Blueprint sync redeploys every service
+   whose settings it changes, from the newest commit on that service's branch, so an automatic
+   sync on `main` would deploy production without the approval. After a release that changes
+   `infra/render.yaml` has been approved and deployed, open the Blueprint and click **Manual
+   Sync** (staging gets the change at the same time).
 3. Plans in the file (check current prices on render.com/pricing before applying):
 
    | Resource | Production | Staging |
@@ -84,7 +95,11 @@ Domains follow OQ-3 (`app.` and `api.`). If the domain changes, change it in
 6. **Custom domains:** `socialhood-api` → Settings → Custom Domains → `api.socialhood.com`; add the
    CNAME Render shows to your DNS. Render issues the TLS certificate. Same for
    `api.staging.socialhood.com` on the staging API.
-7. **Deploy** each service again (Manual Deploy → Deploy latest commit). The API's pre-deploy
+7. **Deploy hooks.** `socialhood-api` → **Settings → Deploy Hook**: copy the URL into the GitHub
+   environment secret `RENDER_DEPLOY_HOOK_API`; the same for `socialhood-worker` →
+   `RENDER_DEPLOY_HOOK_WORKER` ([branching.md](branching.md), section 6). Treat both URLs as
+   secrets. The staging services need none.
+8. **Deploy** each service again (Manual Deploy → Deploy latest commit). The API's pre-deploy
    command runs `alembic upgrade head`, which also creates the `vector`, `pg_trgm` and `pgcrypto`
    extensions and the job queue's tables. Then check:
 
@@ -201,14 +216,28 @@ app has no VAPID variable.
    `pnpm build`); keep "Include files outside the root directory" on (the workspace packages).
    Node.js 24.
 2. Functions region: `sin1` (Singapore, next to the API; set in `vercel.json`).
-3. **Settings → Git:** production branch `production`. **Settings → Environments → Create
-   environment** `staging`, tracking branch `main` (Pro plan). Pull requests get preview
-   deployments; point previews at the staging API.
-4. Environment variables from section 4, separately for Production and staging.
-5. **Domains:** `app.socialhood.com` → Production; `staging.socialhood.com` → staging. Add the
+3. **Settings → Environments → Production → Branch Tracking:** `main`. **Settings →
+   Environments → Create environment** `staging`, **Branch Tracking** `develop` (custom
+   environments need Pro). Every other branch, and so every pull request, gets a Preview
+   deployment and a link on the pull request.
+4. Environment variables from section 4, separately for Production, staging and **Preview**.
+   Preview uses the staging values: `NEXT_PUBLIC_API_BASE_URL=https://api.staging.socialhood.com`
+   and the staging Clerk keys.
+
+   Previews are served from `*.vercel.app` addresses, and the staging API only accepts
+   `https://staging.socialhood.com` (`CORS_ALLOWED_ORIGINS` and `CLERK_AUTHORIZED_PARTIES` are
+   exact origins). Until the staging API also accepts preview origins (a code change: a pattern
+   for both settings), a preview shows the pages but its API calls and sign-in are refused; test
+   API-backed changes on staging after the merge to `develop`.
+5. Optional, **Settings → Deployment Checks → Add Checks → GitHub**: `api`, `web`, `contract`,
+   `secrets`. A production deployment then goes live on `app.socialhood.com` only after CI has
+   passed on its `main` commit. The web does not wait for the production approval, so the API must
+   stay compatible with the web that is live (add endpoints before the web uses them), and approve
+   release deploys promptly.
+6. **Domains:** `app.socialhood.com` → Production; `staging.socialhood.com` → staging. Add the
    records Vercel shows (CNAME `cname.vercel-dns.com`, or A for an apex).
-6. Deploy, then open the site and sign in.
-7. Security headers and the CSP are in `next.config.ts` (SEC-11). The CSP's `connect-src` must
+7. Deploy, then open the site and sign in.
+8. Security headers and the CSP are in `next.config.ts` (SEC-11). The CSP's `connect-src` must
    allow the Sentry ingest host from your DSN (for example `https://*.ingest.us.sentry.io`), or
    browser errors never arrive.
 
@@ -240,7 +269,13 @@ Replace `{API}` and `{WEB}` with the environment's domains.
 
 Staging first, then production. Tick each line.
 
-- [ ] Staging and production stacks created from `infra/render.yaml`; plans checked.
+- [ ] GitHub set up as in [branching.md](branching.md), section 6: default branch `main`,
+      `develop` created from `main`, rulesets on both with the checks `api`, `web`, `contract`
+      and `secrets`, environment `production` with the owner as required reviewer (or
+      `PRODUCTION_DEPLOY=manual`), and the two deploy hook secrets.
+- [ ] Staging and production stacks created from `infra/render.yaml` (Blueprint on `main`,
+      Auto Sync off); plans checked. Staging services track `develop` with "After CI checks
+      pass"; production services track `main` with auto-deploy off.
 - [ ] Both secrets groups created, filled and linked to both services of their environment.
 - [ ] `api.` and `app.` domains (and the staging pair) resolve, with TLS.
 - [ ] API pre-deploy ran `alembic upgrade head`; `/healthz` is `{"status":"ok"}`; `/readyz` with
@@ -262,7 +297,10 @@ Staging first, then production. Tick each line.
       If every request is 200, Render's `X-Forwarded-For` doesn't have the layout described
       under "Client IP" (section 4): fix `security/client_ip.py` before launch.
 - [ ] Worker log shows both lanes and the `ping` job every minute.
-- [ ] Vercel production and staging deploy; sign-in works; the web talks to the right API.
+- [ ] Vercel production tracks `main`, `staging` tracks `develop`, previews use the staging
+      variables; sign-in works; the web talks to the right API.
+- [ ] A merge to `develop` deployed staging by itself; a release to `main` waited for approval,
+      and approving it deployed the API (migration first) and the worker at that commit.
 - [ ] Sentry: a test error from each of API, worker and web arrives, tagged with the environment
       and release, with no headers, emails or message text ([alerts.md](alerts.md), section 4).
 - [ ] Grafana Cloud scrapes `/metrics`; the dashboard is imported; alert rules loaded.
@@ -276,9 +314,13 @@ Staging first, then production. Tick each line.
 
 ## 8. Everyday releases
 
-1. Merge to `main`: CI runs, then staging deploys (API migrates first).
+The branch model and the merge methods are in [branching.md](branching.md).
+
+1. Squash-merge pull requests into `develop`: CI runs, then staging deploys (API migrates first).
 2. Check staging: the dashboard, Sentry, a quick run of the main flows.
-3. `git push origin main:production`: production deploys the same commit after CI.
+3. Release: a pull request `develop` → `main`, merged with **Create a merge commit**. CI runs on
+   `main`; approve the Production run (Actions → Production → **Review deployments**). The API
+   migrates and deploys, then the worker, at that commit; Vercel deploys the web from `main`.
 4. Watch the dashboard and Sentry for 15 minutes. To roll back, Render → the service → Events →
    pick the previous deploy → **Rollback** (and the same in Vercel). Migrations are expand-only,
    so the previous code runs on the new schema.

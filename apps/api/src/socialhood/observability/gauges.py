@@ -127,8 +127,15 @@ async def _dispatcher(engine: AsyncEngine) -> list[str]:
 
 
 async def _sse(redis: Redis) -> list[str]:
+    # CLIENT LIST covers the whole server: count only streams on this deployment's db, so a
+    # shared Valkey (parallel test workers, one db each) never mixes in another's streams.
+    db = str(redis.connection_pool.connection_kwargs.get("db", 0))
     clients: list[dict[str, Any]] = await redis.client_list(_type="normal")
-    count = sum(1 for c in clients if str(c.get("name") or "").startswith("sse:"))
+    count = sum(
+        1
+        for c in clients
+        if str(c.get("name") or "").startswith("sse:") and str(c.get("db", "0")) == db
+    )
     return SSE_CONNECTIONS.render([({}, float(count))])
 
 

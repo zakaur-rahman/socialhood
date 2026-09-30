@@ -1,0 +1,102 @@
+# Production deploys (docs/ops/branching.md, docs/ops/deploy.md): after CI passes on a push to
+# `main`, wait for the owner's approval in the `production` environment, then trigger the Render
+# deploy hooks of the API and the worker for exactly the commit CI tested. The production
+# services have auto-deploy off (infra/render.yaml), so this is the only way code reaches them.
+# The API's pre-deploy command migrates the database before the new code takes traffic.
+#
+# Setup (Settings; details in docs/ops/branching.md, section 6):
+#   Environments → `production` → Required reviewers: the owner; deployment branches: `main`.
+#   Environment secrets: RENDER_DEPLOY_HOOK_API, RENDER_DEPLOY_HOOK_WORKER (Render → the
+#   service → Settings → Deploy Hook).
+#
+# Required reviewers on a private repository need GitHub Enterprise. Without them, set the
+# repository variable PRODUCTION_DEPLOY=manual: pushes to main then deploy nothing, and the owner
+# releases with Actions → Production → Run workflow (branch main), which deploys main's head once
+# CI has passed on it. "Run workflow" also redeploys; to roll back, use Render's Rollback.
+name: Production
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  actions: read # the manual run checks CI passed on the commit
+  contents: read
+
+# One production deploy at a time; a newer commit waits for the one before it.
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: deploy-production
+    # A green CI run from a push to main (not a pull request whose head branch is main), or a
+    # manual run on main.
+    if: >-
+      (github.event_name == 'workflow_run' &&
+       vars.PRODUCTION_DEPLOY != 'manual' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main') ||
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://api.socialhood.com/healthz
+    env:
+      SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Check the deploy hooks are set
+        env:
+          HOOK_API: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+          HOOK_WORKER: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}
+        run: |
+          if [ -z "$HOOK_API" ] || [ -z "$HOOK_WORKER" ]; then
+            echo "::error::Set RENDER_DEPLOY_HOOK_API and RENDER_DEPLOY_HOOK_WORKER (docs/ops/branching.md)."
+            exit 1
+          fi
+
+      - name: Check CI passed on the commit (manual runs)
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          passed="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${SHA}&event=push&status=success" --jq '.total_count')"
+          if [ "$passed" = "0" ]; then
+            echo "::error::CI has not passed on ${SHA} (a push to main). Wait for it, or fix main."
+            exit 1
+          fi
+
+      # The hook URLs are secrets: never echo them. `ref` pins the deploy to the tested commit
+      # instead of whatever is newest on main.
+      - name: Deploy the API (migrates first)
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_API }}
+        run: |
+          sep='?'; case "$HOOK" in *\?*) sep='&' ;; esac
+          curl --fail --silent --show-error --retry 3 -X POST \
+            "${HOOK}${sep}ref=${SHA}" -o /dev/null
+          echo "API deploy of ${SHA} triggered."
+
+      - name: Deploy the worker
+        env:
+          HOOK: ${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}
+        run: |
+          sep='?'; case "$HOOK" in *\?*) sep='&' ;; esac
+          curl --fail --silent --show-error --retry 3 -X POST \
+            "${HOOK}${sep}ref=${SHA}" -o /dev/null
+          echo "Worker deploy of ${SHA} triggered."
+
+      - name: Summary
+        run: |
+          {
+            echo "### Production deploy triggered"
+            echo
+            echo "Commit \`${SHA}\` → \`socialhood-api\` and \`socialhood-worker\`."
+            echo "Follow it in Render → the service → Events. Vercel deploys the web from \`main\` on its own."
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -14,12 +14,16 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession, create_async_engine
 
 from socialhood.settings import get_settings
+from tests.support import workers
 
 API_ROOT = Path(__file__).resolve().parents[2]
 
 
 @pytest.fixture(scope="session")
 def migrated_database() -> None:
+    if workers.WORKER is not None:
+        # A parallel worker's own database (tests/support/workers.py); the base one must exist.
+        workers.ensure_database(get_settings().database_url_direct)
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "migrations"))
     # Alembic's env runs its own event loop, so keep it off the test loop's thread.

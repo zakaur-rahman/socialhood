@@ -1,11 +1,21 @@
 # Render Blueprint for Social Hood (TR-OPS-02, TR-OPS-03, T9.5). The runbook is docs/ops/deploy.md.
 #
-# One project, two separate stacks: production (deploys the `production` branch) and staging
-# (deploys `main`). Each stack has the API web service, the worker (both lanes, scripts/worker.sh),
-# Postgres 18 with pgvector, and Key Value (Valkey). All in Singapore (§D11).
+# One project, two separate stacks: production (deploys `main`) and staging (deploys `develop`),
+# per the branch model in docs/ops/branching.md. Each stack has the API web service, the worker
+# (both lanes, scripts/worker.sh), Postgres 18 with pgvector, and Key Value (Valkey). All in
+# Singapore (§D11).
+#
+# Deploys:
+#   Staging: `autoDeployTrigger: checksPass`, so every merge to develop deploys once all of the
+#     commit's GitHub checks pass.
+#   Production: `autoDeployTrigger: "off"` (quoted: bare `off` is a YAML 1.1 boolean). The
+#     Production workflow (.github/workflows/production.yml) calls the two deploy hooks after CI
+#     passes on main and the owner approves the `production` environment.
+# Link this Blueprint to `main` and set its Auto Sync to No (docs/ops/deploy.md, section 3): a
+# Blueprint sync redeploys the services it changes, which would skip that approval.
 #
 # Point Render at this file when creating the Blueprint: New → Blueprint → Blueprint file path
-# `infra/render.yaml`. Services build from apps/api (rootDir), so Render only redeploys them when
+# `infra/render.yaml`. Services build from apps/api (rootDir), so staging only auto-deploys when
 # something under apps/api changes.
 #
 # Environment variables come from three places:
@@ -78,9 +88,9 @@ projects:
             runtime: python
             region: singapore
             plan: 1c-2g
-            branch: production
+            branch: main
             rootDir: apps/api
-            autoDeployTrigger: checksPass
+            autoDeployTrigger: "off" # deploy hook after approval (.github/workflows/production.yml)
             buildCommand: uv sync --locked --no-dev
             # TR-OPS-02: migrations run once per deploy, before the new code takes traffic.
             preDeployCommand: uv run --no-sync alembic upgrade head
@@ -120,9 +130,9 @@ projects:
             runtime: python
             region: singapore
             plan: 1c-2g
-            branch: production
+            branch: main
             rootDir: apps/api
-            autoDeployTrigger: checksPass
+            autoDeployTrigger: "off" # deploy hook after approval (.github/workflows/production.yml)
             buildCommand: uv sync --locked --no-dev
             # One process per lane; exits if either dies so Render restarts both (TR-JOB-01).
             startCommand: uv run --no-sync bash scripts/worker.sh
@@ -224,9 +234,9 @@ projects:
             runtime: python
             region: singapore
             plan: 0.5c-512mb
-            branch: main
+            branch: develop
             rootDir: apps/api
-            autoDeployTrigger: checksPass
+            autoDeployTrigger: checksPass # after every GitHub check on the commit passes
             buildCommand: uv sync --locked --no-dev
             preDeployCommand: uv run --no-sync alembic upgrade head
             startCommand: >-
@@ -256,9 +266,9 @@ projects:
             runtime: python
             region: singapore
             plan: 0.5c-512mb
-            branch: main
+            branch: develop
             rootDir: apps/api
-            autoDeployTrigger: checksPass
+            autoDeployTrigger: checksPass # after every GitHub check on the commit passes
             buildCommand: uv sync --locked --no-dev
             startCommand: uv run --no-sync bash scripts/worker.sh
             maxShutdownDelaySeconds: 60 # see the production worker

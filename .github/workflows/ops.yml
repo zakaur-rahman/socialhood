@@ -4,9 +4,10 @@ name: Ops
 
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
     paths: ["infra/prometheus/**", ".github/workflows/ops.yml"]
   pull_request:
+    branches: [develop, main]
     paths: ["infra/prometheus/**", ".github/workflows/ops.yml"]
 
 permissions:

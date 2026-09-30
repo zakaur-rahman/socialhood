@@ -170,12 +170,14 @@ async def test_an_expired_nonce_fails(
     redis: Redis,
 ) -> None:
     clerk_id, ws = await owner(client, clerk)
-    nonce = await callback(client, await start_connect(client, clerk, clerk_id, ws["id"]), "c-9")
+    # A code that cannot turn up by chance in the ids or the ciphertext ("c-9" could: 42ac-9524).
+    code = "plaintext-oauth-code"
+    nonce = await callback(client, await start_connect(client, clerk, clerk_id, ws["id"]), code)
     key = f"oauth:held:{nonce}"
     assert 0 < await redis.ttl(key) <= 600
     held = await redis.get(key)
     assert held is not None
-    assert "c-9" not in held  # the code is kept encrypted
+    assert code not in held  # the code is kept encrypted
     await redis.pexpire(key, 1)
     await asyncio.sleep(0.05)
 

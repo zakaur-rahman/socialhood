@@ -12,11 +12,16 @@ import time
 import uuid
 
 import httpx
+import pytest
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.support.api import Clerk, sign_in
 from tests.support.inbox import make_account
+
+# A wall-clock budget: timed beside other tests (pytest -n) it measures the machine's load, not
+# the query. CI runs it alone after the parallel run (pytest -m serial).
+pytestmark = pytest.mark.serial
 
 CONVERSATIONS = 5_000
 PER_CONVERSATION = 20
