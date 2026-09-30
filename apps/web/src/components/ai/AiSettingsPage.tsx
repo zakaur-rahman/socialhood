@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { CheckCircle2, Lock, MessagesSquare, ShieldAlert, Timer } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
 import { ProBadge } from "@/components/automations/TemplateGallery";
-import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
-import { PageFrame } from "@/components/shell/PageFrame";
+import { PLATFORM_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { PhraseChips } from "@/components/settings/PhraseChips";
+import { SaveBar } from "@/components/settings/SaveBar";
+import { SectionLabel, SettingsCard } from "@/components/settings/SettingsCard";
+import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
@@ -23,23 +27,37 @@ import {
   useUpdateAccount,
   useUpdateAiSettings,
 } from "@/lib/api/queries";
-import type { AiMode, AiSettings, SocialAccount, TakeoverMinutes } from "@/lib/api/types";
+import type { AccountStatus, AiMode, AiSettings, SocialAccount, TakeoverMinutes } from "@/lib/api/types";
 import { AI_MODE_HINT, AI_MODE_LABEL, AI_MODES, BUILT_IN_ESCALATIONS, TAKEOVER_OPTIONS } from "@/lib/ai/format";
 import { errorMessage } from "@/lib/copy";
+import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AUTO_UPGRADE } from "./AiModeControl";
 import { AutoConfirmDialog } from "./AiModeDialogs";
-import { ChipListInput } from "./ChipListInput";
+
+/** AiSettingsUpdate.escalation_phrases (apps/api schemas/ai.py): up to 20, each up to 120 characters. */
+export const ESCALATION_PHRASES_MAX = 20;
+const PHRASE_MAX_CHARS = 120;
+
+const API_NAME = { instagram: "Instagram API", whatsapp: "WhatsApp Cloud API" } as const;
+
+const STATUS_DOT: Record<AccountStatus, string> = {
+  active: "bg-success",
+  needs_reconnect: "bg-warning",
+  error: "bg-danger",
+  disconnected: "bg-fg-secondary",
+};
 
 function handleOf(account: SocialAccount): string {
   return account.username ? `@${account.username}` : (account.display_name ?? account.phone_number ?? "Account");
 }
 
 /**
- * UX-SCR-07 AI: each connected account's AI mode (FR-SUG-01; Auto needs a paid plan and a
- * confirmation, F-09), the human takeover period (FR-SUG-05) and escalation phrases next to the
- * built-in rules (FR-SUG-06).
+ * UX-SCR-07 AI Rules & Takeover (C-066): on the left each connected account's AI mode
+ * (FR-SUG-01; Auto needs a paid plan and a confirmation, F-09) and the human takeover period
+ * (FR-SUG-05); on the right the built-in escalation rules and the workspace's escalation phrases
+ * (FR-SUG-06). Modes save as they change; takeover and phrases save from the save bar.
  */
 export function AiSettingsPage() {
   const workspace = useCurrentWorkspace();
@@ -51,17 +69,34 @@ export function AiSettingsPage() {
   if (accounts.isError) return <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />;
   if (canManage && settings.isError) return <ErrorState error={settings.error} onRetry={() => void settings.refetch()} />;
 
+  const live = accounts.data.filter((a) => a.status !== "disconnected");
+  const header = (
+    <SettingsPageHeader
+      label="Autonomy & safety"
+      title="AI Rules & Takeover"
+      description="How the AI replies on each account, how long it steps back when you reply, and what always comes to you."
+    />
+  );
+
+  if (!canManage || !settings.data) {
+    return (
+      <SettingsFrame header={header}>
+        <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+          <AccountModes accounts={live} canManage={false} />
+          <SettingsCard
+            id="ai-readonly"
+            icon={<Lock />}
+            title="Takeover and escalation"
+            description="Only owners and admins can change AI settings."
+          />
+        </div>
+      </SettingsFrame>
+    );
+  }
   return (
-    <PageFrame title="AI">
-      <div className="max-w-2xl space-y-6">
-        <AccountModes accounts={accounts.data.filter((a) => a.status !== "disconnected")} canManage={canManage} />
-        {canManage && settings.data ? (
-          <EscalationForm settings={settings.data} />
-        ) : (
-          <p className="text-sm text-fg-secondary">Only owners and admins can change AI settings.</p>
-        )}
-      </div>
-    </PageFrame>
+    <SettingsFrame header={header}>
+      <RulesForm settings={settings.data} modes={<AccountModes accounts={live} canManage />} />
+    </SettingsFrame>
   );
 }
 
@@ -90,44 +125,99 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
   };
 
   return (
-    <section aria-labelledby="ai-accounts-title" className="rounded-xl border border-line bg-panel p-5">
-      <h2 id="ai-accounts-title" className="text-base font-semibold">
-        AI replies by account
-      </h2>
-      <p className="text-xs text-fg-secondary">
-        Off: no AI replies. Suggest: the AI drafts, you send. Auto: the AI sends when it&apos;s confident.
-        {allowsAuto ? "" : " Auto is part of Pro."}
-      </p>
+    <SettingsCard
+      id="ai-accounts"
+      icon={<MessagesSquare />}
+      title="AI replies by account"
+      description={
+        <>
+          <span className="font-medium text-fg">Off:</span> no AI replies.{" "}
+          <span className="font-medium text-fg">Suggest:</span> the AI drafts, you send.{" "}
+          <span className="font-medium text-fg">Auto:</span> the AI sends when it&apos;s confident.
+        </>
+      }
+      aside={
+        accounts.length > 0 ? (
+          <span className="rounded-full bg-raised px-2 py-0.5 text-xs text-fg-secondary tabular-nums">
+            {accounts.length} connected
+          </span>
+        ) : null
+      }
+    >
       {accounts.length === 0 ? (
         <EmptyState title="No connected accounts" body="Connect Instagram or WhatsApp to choose how the AI replies." />
       ) : (
-        <ul className="mt-4 divide-y divide-line-subtle">
+        <ul className="space-y-2" aria-label="AI mode per account">
           {accounts.map((account) => (
-            <li key={account.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex min-w-0 items-center gap-2">
-                <PlatformGlyph platform={account.platform} className="size-4 shrink-0" />
-                <span id={`ai-mode-label-${account.id}`} className="truncate text-sm font-medium">
-                  {handleOf(account)}
+            <li
+              key={account.id}
+              className="flex flex-col gap-3 rounded-xl border border-line-subtle bg-field/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex min-w-0 items-center gap-3">
+                <span
+                  aria-hidden
+                  className={cn("grid size-10 shrink-0 place-items-center rounded-xl text-white", PLATFORM_BG[account.platform])}
+                >
+                  <PlatformGlyph platform={account.platform} className="size-5" />
                 </span>
+                <div className="min-w-0">
+                  <p id={`ai-mode-label-${account.id}`} className="truncate text-sm font-medium">
+                    {handleOf(account)}
+                  </p>
+                  <p className="flex items-center gap-1.5 text-xs text-fg-secondary">
+                    <span className={cn("size-1.5 shrink-0 rounded-full", STATUS_DOT[account.status])} aria-hidden />
+                    {API_NAME[account.platform]}
+                  </p>
+                </div>
               </div>
               <ToggleGroup
                 value={account.ai_mode}
                 onValueChange={(value) => choose(account, value as AiMode)}
                 aria-labelledby={`ai-mode-label-${account.id}`}
                 disabled={!canManage || (update.isPending && update.variables?.id === account.id)}
-                className="sm:w-72"
+                className="sm:w-64"
               >
-                {AI_MODES.map((mode) => (
-                  <ToggleGroupItem key={mode} value={mode} className="text-xs" title={AI_MODE_HINT[mode]}>
-                    {AI_MODE_LABEL[mode]}
-                    {mode === "auto" && !allowsAuto ? <>{" "}<ProBadge /></> : null}
-                  </ToggleGroupItem>
-                ))}
+                {AI_MODES.map((mode) => {
+                  const locked = mode === "auto" && !allowsAuto;
+                  return (
+                    <ToggleGroupItem
+                      key={mode}
+                      value={mode}
+                      disabled={locked}
+                      className="min-h-9 text-xs"
+                      title={locked ? "Auto is part of Pro" : AI_MODE_HINT[mode]}
+                    >
+                      {AI_MODE_LABEL[mode]}
+                      {locked ? (
+                        <>
+                          {" "}
+                          <ProBadge />
+                        </>
+                      ) : null}
+                    </ToggleGroupItem>
+                  );
+                })}
               </ToggleGroup>
             </li>
           ))}
         </ul>
       )}
+      {!allowsAuto && accounts.length > 0 ? (
+        <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-fg-secondary">
+          <Lock className="size-4 shrink-0" aria-hidden />
+          Auto is part of Pro.
+          {canManage ? (
+            <Button
+              type="button"
+              variant="link"
+              className="h-auto min-h-10 px-0 text-brand-fg md:min-h-0"
+              onClick={() => upgrade.open(AUTO_UPGRADE)}
+            >
+              Upgrade for Auto
+            </Button>
+          ) : null}
+        </p>
+      ) : null}
       <AutoConfirmDialog
         open={Boolean(confirming)}
         onOpenChange={(open) => (open ? undefined : setConfirming(null))}
@@ -137,99 +227,116 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
           setConfirming(null);
         }}
       />
-    </section>
+    </SettingsCard>
   );
 }
 
-type EscalationValues = { takeover_minutes: TakeoverMinutes; escalation_phrases: string[] };
+type RulesValues = { takeover_minutes: TakeoverMinutes; escalation_phrases: string[] };
 
-function EscalationForm({ settings }: { settings: AiSettings }) {
+function valuesOf(settings: AiSettings): RulesValues {
+  return { takeover_minutes: settings.takeover_minutes, escalation_phrases: settings.escalation_phrases };
+}
+
+function RulesForm({ settings, modes }: { settings: AiSettings; modes: ReactNode }) {
   const workspace = useCurrentWorkspace();
   const update = useUpdateAiSettings(workspace.id);
-  const form = useForm<EscalationValues>({
-    defaultValues: { takeover_minutes: settings.takeover_minutes, escalation_phrases: settings.escalation_phrases },
-  });
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const form = useForm<RulesValues>({ defaultValues: valuesOf(settings) });
 
-  const onSubmit = form.handleSubmit((values) =>
+  const onSubmit = form.handleSubmit((values) => {
+    setSaveError(null);
     update.mutate(
       { ...toSettingsUpdate(settings), ...values },
       {
         onSuccess: (saved) => {
-          form.reset({ takeover_minutes: saved.takeover_minutes, escalation_phrases: saved.escalation_phrases });
+          form.reset(valuesOf(saved));
           toast.success("AI settings saved");
         },
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => setSaveError(errorMessage(error)),
       },
-    ),
-  );
+    );
+  });
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-6" aria-label="Takeover and escalation">
-      <section aria-labelledby="takeover-title" className="space-y-3 rounded-xl border border-line bg-panel p-5">
-        <div>
-          <h2 id="takeover-title" className="text-base font-semibold">
-            Human takeover
-          </h2>
-          <p className="text-xs text-fg-secondary">When you reply in a conversation, Auto pauses there for this long.</p>
+    <form onSubmit={onSubmit} noValidate aria-label="Takeover and escalation">
+      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+        <div className="min-w-0 space-y-6">
+          {modes}
+          <SettingsCard
+            id="takeover"
+            icon={<Timer />}
+            title="Human takeover"
+            description="When you reply in a conversation, Auto pauses there for this long."
+          >
+            <Controller
+              control={form.control}
+              name="takeover_minutes"
+              render={({ field }) => (
+                <ToggleGroup
+                  value={String(field.value)}
+                  onValueChange={(value) => field.onChange(Number(value) as TakeoverMinutes)}
+                  aria-labelledby="takeover-title"
+                  className="grid grid-cols-2 sm:grid-cols-4"
+                >
+                  {TAKEOVER_OPTIONS.map((option) => (
+                    <ToggleGroupItem key={option.value} value={String(option.value)} className="min-h-10">
+                      {option.label}
+                    </ToggleGroupItem>
+                  ))}
+                </ToggleGroup>
+              )}
+            />
+          </SettingsCard>
         </div>
-        <Controller
-          control={form.control}
-          name="takeover_minutes"
-          render={({ field }) => (
-            <ToggleGroup
-              value={String(field.value)}
-              onValueChange={(value) => field.onChange(Number(value) as TakeoverMinutes)}
-              aria-labelledby="takeover-title"
-            >
-              {TAKEOVER_OPTIONS.map((option) => (
-                <ToggleGroupItem key={option.value} value={String(option.value)} className="text-xs">
-                  {option.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          )}
-        />
-      </section>
 
-      <section aria-labelledby="escalation-title" className="space-y-4 rounded-xl border border-line bg-panel p-5">
-        <div>
-          <h2 id="escalation-title" className="text-base font-semibold">
-            Escalation
-          </h2>
-          <p className="text-xs text-fg-secondary">In Auto, these always come to you instead of an AI reply.</p>
-        </div>
-        <div className="space-y-1.5">
-          <p className="text-sm font-medium">Always built in</p>
-          <ul className="list-disc space-y-1 pl-5 text-sm text-fg-secondary" aria-label="Built-in escalation rules">
-            {BUILT_IN_ESCALATIONS.map((rule) => (
-              <li key={rule}>{rule}</li>
-            ))}
-          </ul>
-        </div>
-        <div className="space-y-1.5">
-          <p className="text-sm font-medium">Your escalation phrases</p>
-          <Controller
-            control={form.control}
-            name="escalation_phrases"
-            render={({ field }) => (
-              <ChipListInput
-                id="escalation-phrases"
-                label="Escalation phrases"
-                items={field.value}
-                onChange={field.onChange}
-                placeholder="e.g. cancel my order"
-                hint="A message with any of these words or phrases comes to you. Press Enter to add."
-              />
-            )}
-          />
-        </div>
-      </section>
-
-      <div className="flex justify-end">
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={!form.formState.isDirty || update.isPending}>
-          {update.isPending ? "Saving…" : "Save changes"}
-        </Button>
+        <SettingsCard
+          id="escalation"
+          icon={<ShieldAlert />}
+          title="Escalation"
+          description="In Auto, these conversations always come to you instead of an AI reply."
+        >
+          <div className="space-y-6">
+            <div className="space-y-3">
+              <SectionLabel id="built-in-label">Always built in</SectionLabel>
+              <ul className="grid gap-2 sm:grid-cols-2" aria-label="Built-in escalation rules">
+                {BUILT_IN_ESCALATIONS.map((rule) => (
+                  <li key={rule} className="flex items-start gap-2 rounded-lg border border-line-subtle bg-field/60 p-3 text-sm">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                    {rule}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <Controller
+              control={form.control}
+              name="escalation_phrases"
+              render={({ field }) => (
+                <PhraseChips
+                  id="escalation-phrases"
+                  label="Your escalation phrases"
+                  items={field.value}
+                  onChange={field.onChange}
+                  max={ESCALATION_PHRASES_MAX}
+                  maxLength={PHRASE_MAX_CHARS}
+                  placeholder="e.g. cancel my order"
+                  hint="A message with any of these words or phrases comes to you."
+                />
+              )}
+            />
+          </div>
+        </SettingsCard>
       </div>
+
+      <SaveBar
+        dirty={form.formState.isDirty}
+        saving={update.isPending}
+        error={saveError}
+        onReset={() => {
+          setSaveError(null);
+          form.reset(valuesOf(settings));
+        }}
+        onSave={() => void onSubmit()}
+      />
     </form>
   );
 }

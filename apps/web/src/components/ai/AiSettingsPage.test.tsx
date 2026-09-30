@@ -9,10 +9,12 @@ import { AiSettingsPage } from "./AiSettingsPage";
 
 const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/w/maple/settings/ai" }));
 
 const accounts = [
   account({ id: "a1", username: "maple.bakery", ai_mode: "suggest" }),
   account({ id: "a2", platform: "whatsapp", username: null, display_name: "Maple Orders", ai_mode: "off" }),
+  account({ id: "a3", username: "old.maple", ai_mode: "suggest", status: "disconnected" }),
 ];
 
 function setup({
@@ -78,15 +80,36 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
     await waitFor(() => expect(patches()).toEqual([{ path: "/v1/w/w1/social-accounts/a1", body: { ai_mode: "auto" } }]));
   });
 
-  it("on Free, Auto carries a Pro badge and opens the upgrade dialog; a 402 does the same", async () => {
+  it("on Free, Auto is disabled with a Pro badge on every account, and the hint opens the upgrade dialog", async () => {
     const user = userEvent.setup();
     const { patches } = setup({
       billing: billingState({ plan: "free", status: "free", entitlements: [{ key: "ai_modes", value: ["off", "suggest"] }] }),
     });
     const instagram = await screen.findByRole("radiogroup", { name: "@maple.bakery" });
-    await user.click(await within(instagram).findByRole("radio", { name: "Auto Pro" }));
+    const auto = await within(instagram).findByRole("radio", { name: "Auto Pro" });
+    expect(auto).toBeDisabled();
+    expect(within(screen.getByRole("radiogroup", { name: "Maple Orders" })).getByRole("radio", { name: "Auto Pro" })).toBeDisabled();
+    // Off and Suggest still work on Free.
+    expect(within(instagram).getByRole("radio", { name: "Off" })).toBeEnabled();
+    expect(screen.getByText("Auto is part of Pro.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Upgrade for Auto" }));
     expect(await screen.findByRole("dialog", { name: "Auto mode is part of Pro" })).toBeInTheDocument();
     expect(patches()).toEqual([]);
+  });
+
+  it("lists every connected account with Off, Suggest and Auto (C-066)", async () => {
+    setup();
+    const list = await screen.findByRole("list", { name: "AI mode per account" });
+    const rows = within(list).getAllByRole("radiogroup");
+    expect(rows.map((row) => row.getAttribute("aria-labelledby"))).toEqual(["ai-mode-label-a1", "ai-mode-label-a2"]);
+    for (const row of rows) {
+      expect(within(row).getAllByRole("radio").map((radio) => radio.textContent)).toEqual(["Off", "Suggest", "Auto"]);
+    }
+    expect(within(list).getByText("WhatsApp Cloud API")).toBeInTheDocument();
+    // A disconnected account has no AI mode to choose.
+    expect(screen.queryByRole("radiogroup", { name: "@old.maple" })).toBeNull();
+    expect(screen.getByText("2 connected")).toBeInTheDocument();
+    expect(screen.queryByText("Auto is part of Pro.")).toBeNull();
   });
 
   it("a 402 from the API opens the upgrade dialog", async () => {
@@ -109,8 +132,12 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
 
     const builtIn = screen.getByRole("list", { name: "Built-in escalation rules" });
     expect(within(builtIn).getAllByRole("listitem")).toHaveLength(6);
-    await user.type(screen.getByRole("textbox", { name: "Add to Escalation phrases" }), "cancel my order{Enter}");
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(screen.getByText("1 of 20 used")).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox", { name: "Add to Your escalation phrases" }), "cancel my order{Enter}");
+    expect(screen.getByText("2 of 20 used")).toBeInTheDocument();
+    const bar = screen.getByRole("region", { name: "Save changes" });
+    expect(within(bar).getByRole("status")).toHaveTextContent("Unsaved changes");
+    await user.click(within(bar).getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
     expect(calls.find((c) => c.method === "PUT")?.body).toMatchObject({
@@ -120,6 +147,23 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
       tone: "friendly",
     });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("AI settings saved"));
+    await waitFor(() => expect(within(bar).getByRole("status")).toHaveTextContent("All changes saved"));
+  });
+
+  it("phrases are removable chips; Add skips a duplicate; Reset undoes (C-066)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup();
+    const field = await screen.findByRole("textbox", { name: "Add to Your escalation phrases" });
+    await user.type(field, "LAWYER");
+    await user.click(screen.getByRole("button", { name: "Add" }));
+    expect(screen.getByText("That one is already in the list.")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Remove lawyer" }));
+    expect(screen.getByText("0 of 20 used")).toBeInTheDocument();
+    const bar = screen.getByRole("region", { name: "Save changes" });
+    await user.click(within(bar).getByRole("button", { name: "Reset" }));
+    expect(screen.getByRole("button", { name: "Remove lawyer" })).toBeInTheDocument();
+    expect(within(bar).getByRole("status")).toHaveTextContent("All changes saved");
+    expect(calls.some((c) => c.method === "PUT")).toBe(false);
   });
 
   it("agents see the modes read-only and no settings (the API keeps them to admins)", async () => {
