@@ -79,7 +79,7 @@ async def test_a_suggestion_is_drafted_from_knowledge(ai: Ai) -> None:
     assert row["top_similarity"] >= get_settings().ai_retrieval_min_sim
     assert (row["message_id"], row["regeneration_index"]) == (ai.message_id, 0)
     assert (row["prompt_version"], row["input_tokens"], row["output_tokens"]) == (
-        "suggest.v2",
+        "suggest.v3",
         100,
         20,
     )
@@ -515,3 +515,121 @@ async def test_similar_questions_count_as_one_gap_and_a_dismissed_one_reopens(ai
         "SELECT status, occurrences FROM knowledge_gaps WHERE id = :id", id=first
     )
     assert reopened == {"status": "open", "occurrences": 3}
+
+
+# ---------------------------------------------------------------- small talk (C-062)
+
+BUSINESS_INFO = cannot("information about the business", "business information")
+
+
+async def small_talk(ai: Ai, text: str, *, intent: str = "greeting", language: str = "en") -> None:
+    """The customer's message is ``text``, analysed with ``intent`` and ``language``."""
+    await ai.execute("UPDATE messages SET text = :t WHERE id = :id", t=text, id=ai.message_id)
+    await ai.analysis(intent=intent, language=language, sentiment_score=0.0, lead_score=10)
+
+
+async def test_a_greeting_gets_a_reply_without_knowledge(ai: Ai) -> None:
+    """Seen live: "Hi" came back "Not in your knowledge" with the gap "business information".
+    The model declines again here; the suggestion is a friendly reply all the same."""
+    await small_talk(ai, "Hi")
+    ai.fake.respond("suggest", BUSINESS_INFO)
+
+    assert await ai.suggest() is Outcome.STORED
+
+    row = await ai.pending()
+    assert (row["can_answer"], row["reply_text"]) == (True, "Hi! How can I help you today?")
+    assert (row["missing_info"], row["missing_topic"]) == (None, None)
+    assert row["used_chunk_ids"] == []
+    assert row["model_confidence"] == pytest.approx(0.9)
+    assert row["prompt_version"] == "suggest.v3"
+    assert await ai.rows("SELECT id FROM knowledge_gaps") == []
+    [(_, created)] = await ai.events("suggestion.created")
+    assert created["suggestion"]["can_answer"] is True
+    assert created["suggestion"]["low_confidence"] is False
+    # suggest.v3 tells the model small talk needs no knowledge, and never a business fact.
+    [call] = ai.fake.calls_for("suggest")
+    assert "Small talk needs no KNOWLEDGE." in call.system
+    assert "states no business fact" in call.system
+
+
+async def test_the_models_own_small_talk_reply_is_kept(ai: Ai) -> None:
+    await small_talk(ai, "Hi")
+    reply = "Hi there! Welcome to Maple. What can I do for you?"
+    ai.fake.respond("suggest", answer(reply, used=(), confidence=0.95))
+
+    await ai.suggest()
+
+    row = await ai.pending()
+    assert (row["can_answer"], row["reply_text"]) == (True, reply)
+    assert row["model_confidence"] == pytest.approx(0.95)
+    assert await ai.rows("SELECT id FROM knowledge_gaps") == []
+
+
+@pytest.mark.parametrize(
+    ("text", "intent", "expected"),
+    [
+        ("thanks!", "feedback", "You're welcome! Let us know if you need anything else."),
+        ("Thank you so much 🙏", "other", "You're welcome! Let us know if you need anything else."),
+        ("ok bye", "other", "Thanks for reaching out! Take care."),
+    ],
+)
+async def test_thanks_and_goodbyes_get_a_reply_too(
+    ai: Ai, text: str, intent: str, expected: str
+) -> None:
+    await small_talk(ai, text, intent=intent)
+    ai.fake.respond("suggest", BUSINESS_INFO)
+
+    await ai.suggest()
+
+    row = await ai.pending()
+    assert (row["can_answer"], row["reply_text"]) == (True, expected)
+    assert await ai.rows("SELECT id FROM knowledge_gaps") == []
+
+
+@pytest.mark.parametrize(
+    ("text", "language", "expected"),
+    [
+        ("namaste", "hi-Latn", "Namaste! Bataiye, hum aapki kya madad kar sakte hain?"),
+        ("kaise ho?", "en", "Namaste! Bataiye, hum aapki kya madad kar sakte hain?"),
+        ("Hi", "hi-Latn", "Namaste! Bataiye, hum aapki kya madad kar sakte hain?"),
+        ("नमस्ते जी", "hi", "नमस्ते! बताइए, हम आपकी क्या मदद कर सकते हैं?"),
+        ("shukriya bhai", "hi-Latn", "Aapka swagat hai! Kuch aur chahiye toh bataiye."),
+    ],
+)
+async def test_hindi_and_hinglish_small_talk_is_answered_in_kind(
+    ai: Ai, text: str, language: str, expected: str
+) -> None:
+    await small_talk(ai, text, language=language)
+    ai.fake.respond("suggest", BUSINESS_INFO)
+
+    await ai.suggest()
+
+    row = await ai.pending()
+    assert (row["can_answer"], row["reply_text"]) == (True, expected)
+    assert await ai.rows("SELECT id FROM knowledge_gaps") == []
+
+
+async def test_a_greeting_with_a_question_still_needs_knowledge(ai: Ai) -> None:
+    """ "Hi, what's the price?" is a pricing question: no knowledge, no answer, and the gap."""
+    await small_talk(ai, "Hi, what's the price?", intent="pricing")
+    ai.fake.respond("suggest", cannot("the price of the red dress", "red dress price"))
+
+    await ai.suggest()
+
+    row = await ai.pending()
+    assert (row["can_answer"], row["reply_text"]) == (False, None)
+    assert row["missing_topic"] == "red dress price"
+    [gap] = await ai.rows("SELECT topic, occurrences FROM knowledge_gaps")
+    assert gap == {"topic": "red dress price", "occurrences": 1}
+
+
+async def test_small_talk_the_analysis_reads_as_business_is_left_to_the_model(ai: Ai) -> None:
+    """ "ok" answering "Shall I book it?" is a purchase: the model's answer stands."""
+    await small_talk(ai, "ok", intent="purchase")
+    ai.fake.respond("suggest", cannot("whether the booking is confirmed", "booking confirmation"))
+
+    await ai.suggest()
+
+    row = await ai.pending()
+    assert row["can_answer"] is False
+    assert len(await ai.rows("SELECT id FROM knowledge_gaps")) == 1

@@ -19,6 +19,20 @@ baseline.
 | Date | Model | Prompts | Intent accuracy | Sentiment accuracy | needs_human recall | Fabrication rate | Auto-policy pass rate | Notes |
 |------|-------|---------|-----------------|--------------------|--------------------|------------------|-----------------------|-------|
 
+Prompt changes waiting for a run:
+
+- **2026-10-01 · suggest.v3** (C-062). Seen live: a WhatsApp "Hi" (analysis: greeting, neutral,
+  lead score 10) came back `can_answer: false` with the gap "business information". v3 adds one
+  rule: small talk (a greeting, thanks, goodbye or acknowledgement, in any language) is answered
+  without knowledge, in kind and briefly, states no business fact and records no gap; a message
+  that also asks something ("Hi, what's the price?") is not small talk. v2's rules are unchanged.
+  The suggestion job also falls back to a fixed reply in English, Hindi or Hinglish when the model
+  still declines pure small talk (`services/suggestions/small_talk.py`); the harness measures the
+  prompt alone. Not run against Gemini yet: cases s006–s009 in `suggestions.jsonl` are the
+  new small-talk placeholders; run the harness and add the row above before release. Watch
+  fabrication on s006–s008 (a greeting must not mention products, prices or hours) and that
+  s009 stays unanswered.
+
 ## Ask Social Hood (TA.6)
 
 Run before changing the agent's model, prompt (`agent.v{n}`) or a tool description, and record the

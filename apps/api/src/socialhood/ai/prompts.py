@@ -11,10 +11,12 @@ from pathlib import Path
 
 PROMPTS = Path(__file__).parent / "prompts"
 PLACEHOLDER = re.compile(r"\{([a-z_]+)\}")
-# suggest.v2: reuse KNOWN GAPS labels (C-034). comment_analysis and post_summary: TR-AI-11 (T6.2).
+# suggest.v2: reuse KNOWN GAPS labels (C-034). suggest.v3: small talk (a greeting, thanks, goodbye
+# or "ok") is answered without knowledge and states no business fact (C-062;
+# docs/ai-eval-log.md). comment_analysis and post_summary: TR-AI-11 (T6.2).
 CURRENT = {
     "analysis": 1,
-    "suggest": 2,
+    "suggest": 3,
     "summary": 1,
     "comment_analysis": 1,
     "post_summary": 1,

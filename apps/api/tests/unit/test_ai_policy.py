@@ -188,6 +188,67 @@ def test_non_fact_questions_need_no_source() -> None:
     assert evaluate(below).reason == "out_of_knowledge"
 
 
+# ---------------------------------------------------------------- small talk (C-062)
+
+GREETING = replace(
+    PASSING,
+    analysis=AnalysisFacts(intent="greeting", sentiment_score=0.0, needs_human=False),
+    message_text="Hi",
+    reply_text="Hi! How can I help you today?",
+    confidence=0.9,  # the fixed small-talk reply's (services/suggestions/small_talk)
+    used_sources=0,
+    top_similarity=None,
+    allowed_texts=[],
+)
+
+
+def test_auto_answers_a_greeting_without_knowledge() -> None:
+    decision = evaluate(GREETING)
+    assert (decision.outcome, decision.reason) == ("auto_sent", None)
+
+
+@pytest.mark.parametrize(
+    ("change", "failed", "reason"),
+    [
+        ({"confidence": 0.6}, [10], "low_confidence"),
+        (
+            {"analysis": AnalysisFacts(intent="greeting", sentiment_score=-0.8, needs_human=False)},
+            [8],
+            "negative_sentiment",
+        ),
+        (
+            {
+                "analysis": AnalysisFacts(
+                    intent="greeting",
+                    sentiment_score=0.0,
+                    needs_human=True,
+                    needs_human_reason="human_requested",
+                )
+            },
+            [6],
+            "human_requested",
+        ),
+        ({"ai_replies_last_hour": 5}, [12], "rate_capped"),
+        ({"reply_text": "Hi! Call us on +91 98765 43210."}, [13], "output_blocked"),
+    ],
+)
+def test_every_other_guard_still_applies_to_small_talk(
+    change: dict[str, Any], failed: list[int], reason: str
+) -> None:
+    facts = replace(GREETING, **change)
+    assert failed_checks(facts) == failed
+    assert evaluate(facts).reason == reason
+
+
+def test_a_greeting_with_a_price_question_still_needs_knowledge() -> None:
+    pricing = AnalysisFacts(intent="pricing", sentiment_score=0.0, needs_human=False)
+    asked = replace(GREETING, analysis=pricing, message_text="Hi, what's the price?")
+    assert failed_checks(replace(asked, can_answer=False)) == [9, 11]
+    assert evaluate(replace(asked, can_answer=False)).reason == "out_of_knowledge"
+    # A reply without a source is never sent for a price, however confident.
+    assert failed_checks(asked) == [11]
+
+
 @pytest.mark.parametrize(
     ("text", "phrase"),
     [
