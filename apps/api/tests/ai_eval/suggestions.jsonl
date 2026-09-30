@@ -5,3 +5,8 @@
 {"id": "s003", "placeholder": true, "question": "What are your store hours on Sunday?", "language": "en", "knowledge": [{"title": "Returns", "text": "Returns are accepted within 7 days of delivery."}], "answerable": false, "must_contain": []}
 {"id": "s004", "placeholder": true, "question": "return kaise karu?", "language": "hi-Latn", "knowledge": [{"title": "Returns", "text": "Returns are accepted within 7 days of delivery. Write to returns@maple.example with your order number."}], "answerable": true, "must_contain": ["7", "returns@maple.example"]}
 {"id": "s005", "placeholder": true, "question": "Is there a discount on the gold hoops?", "language": "en", "knowledge": [{"title": "Gold hoops", "text": "Gold-plated hoops, ₹1,499, hypoallergenic."}], "answerable": false, "must_contain": []}
+// Small talk (suggest.v3, C-062): a greeting or thanks is answerable without knowledge; a greeting with a question is not.
+{"id": "s006", "placeholder": true, "question": "Hi", "language": "en", "knowledge": [], "answerable": true, "must_contain": []}
+{"id": "s007", "placeholder": true, "question": "thanks!", "language": "en", "knowledge": [{"title": "Returns", "text": "Returns are accepted within 7 days of delivery."}], "answerable": true, "must_contain": []}
+{"id": "s008", "placeholder": true, "question": "namaste, kaise ho?", "language": "hi-Latn", "knowledge": [], "answerable": true, "must_contain": []}
+{"id": "s009", "placeholder": true, "question": "Hi, what's the price?", "language": "en", "knowledge": [{"title": "Returns", "text": "Returns are accepted within 7 days of delivery."}], "answerable": false, "must_contain": []}

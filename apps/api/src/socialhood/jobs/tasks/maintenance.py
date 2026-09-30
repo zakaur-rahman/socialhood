@@ -1,6 +1,7 @@
-"""Maintenance: the periodic ping, the stuck-row sweep (TR-JOB-03), webhook health (TR-WH-08)
-and failed-work alerts (TR-OPS-04). Alerts are error-level log events named ``alert``, which the
-error tracker picks up (T9.3)."""
+"""Maintenance: the periodic ping, the stuck-row sweep (TR-JOB-03), jobs left running by a dead
+worker (recover_stalled_jobs, jobs/recovery.py), webhook health (TR-WH-08) and failed-work alerts
+(TR-OPS-04). Alerts are error-level log events named ``alert``, which the error tracker picks up
+(T9.3)."""
 
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from socialhood.db.tenancy import tenant_bypass_scope
 from socialhood.jobs.app import BULK, INTERACTIVE, app
+from socialhood.jobs.recovery import recover_stalled
 from socialhood.jobs.runtime import runtime
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.platform import WebhookEvent, WebhookStatus
@@ -55,6 +57,15 @@ async def sweep_webhook_events(
 @app.task(name="sweep_stuck", queue=INTERACTIVE, queueing_lock="sweep_stuck")
 async def sweep_stuck(timestamp: int) -> None:
     await sweep_webhook_events(runtime().sessionmaker)
+
+
+@app.periodic(cron="*/2 * * * *", periodic_id="recover_stalled_jobs")
+@app.task(name="recover_stalled_jobs", queue=BULK, queueing_lock="recover_stalled_jobs")
+async def recover_stalled_jobs(timestamp: int) -> None:
+    """Retry, release or fail the jobs of workers silent for 90 s, by their task's class. No run
+    lock: a stalled copy of this job would hold it, and two runs at once are harmless (each job
+    moves once; the other run finds it moved on)."""
+    await recover_stalled(app)
 
 
 async def webhook_health(

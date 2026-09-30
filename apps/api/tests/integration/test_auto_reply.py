@@ -146,6 +146,22 @@ async def test_an_escalation_needs_you_and_keeps_the_suggestion(ai: Ai) -> None:
     assert await ai.used() == 2  # nothing charged for the decision
 
 
+async def test_auto_answers_a_greeting_without_knowledge(ai: Ai) -> None:
+    """C-062: "Hi" needs no knowledge. Even when the model declines, the suggestion is the fixed
+    small-talk reply, and Auto sends it like any confident reply."""
+    await ai.execute("UPDATE messages SET text = 'Hi' WHERE id = :id", id=ai.message_id)
+    declined = cannot("information about the business", "business information")
+    suggestion_id = await ready(ai, declined, intent="greeting", sentiment_score=0.0)
+
+    decision = await ai.decide(suggestion_id)
+
+    assert decision is not None
+    assert (decision.outcome, decision.reason) == ("auto_sent", None)
+    [sent] = await ai.rows("SELECT source, text FROM messages WHERE direction = 'outbound'")
+    assert sent == {"source": "ai_auto", "text": "Hi! How can I help you today?"}
+    assert await ai.rows("SELECT id FROM knowledge_gaps") == []
+
+
 async def test_out_of_knowledge_escalates(ai: Ai) -> None:
     suggestion_id = await ready(ai, cannot())
     decision = await ai.decide(suggestion_id)

@@ -819,3 +819,61 @@ Evidence per item: docs/security-checklist.md.
   active workspace (FOR SHARE), `account_in_use`, the encrypted token, `subscribed_apps` and
   registration. The script is for Meta's test number, which Embedded Signup can't connect; it
   takes the token from `WHATSAPP_DEV_TOKEN` and refuses production.
+
+## C-062 · Jobs left running by a dead worker; small-talk replies (live testing)
+- Seen live: a worker restarted during `ingest_knowledge_source` left the job `doing` and the
+  source `processing` with 0 chunks for good. Every Render deploy stops the worker, and
+  `scripts/worker.sh` didn't forward SIGTERM (bash exits on it, so whether the lanes could drain
+  depended on how the host signals the process tree). Worse than a lost job: a dead `doing` job
+  keeps its run lock, and Procrastinate
+  starts no job with that lock again. The domain sweepers settle their rows (sends, scheduled
+  messages, posts, agent runs, emails, webhook events) but not the job, so the conversation's
+  next send (`conv:`), the re-queued publish or poll (`pub:`, `poll:`), the resumed agent run
+  (`agent:`), the account's private-reply drain (`prq:`) and the conversation's next analysis
+  (`analyze:`) waited behind it for ever. `post_first_comment` had no recovery at all.
+- `recover_stalled_jobs` (every 2 minutes, bulk lane) takes the jobs of workers silent for 90 s
+  (`get_stalled_jobs`; `prune_stalled_workers` on the same threshold) and settles each by its
+  task's class in `jobs/recovery.py: RECOVERY`, one table with every task (a unit test fails for
+  a task missing from it): RETRY (idempotent, and every periodic task) back to `todo` while
+  under 3 attempts, else failed; SWEEPER (`send_message`, `send_private_reply`,
+  `send_scheduled`, `publish_target`, `poll_container`, `run_agent`, `process_webhook_event`,
+  `deliver_email`) aborted, never re-run, so the lock frees and the sweeper decides; FAIL
+  (`post_first_comment`, `deliver_push`, unknown tasks) failed with `alert_kind:stalled_job`.
+  A stalled job whose queueing lock another waiting job holds is aborted: that job does the
+  work. `run_automation` and `drain_private_replies` are RETRY although they write to the
+  platform: a run recorded per event, and replies committed `sending` before the call, make a
+  re-run send nothing twice (both already re-run after any exception).
+- Shutdown: `worker.sh` gives each lane one SIGTERM (each lane in its own session, since a
+  second SIGTERM kills a Procrastinate worker at once) and waits. Procrastinate's
+  `shutdown_graceful_timeout` stays unset: an aborted job ends `aborted`, never retried nor
+  listed as failed, while one Render kills after its 60 s grace stays `doing` for the recovery.
+  The heartbeat stops as soon as a worker is asked to stop, so 90 s has to exceed that 60 s plus
+  the 10 s heartbeat (tested against `infra/render.yaml`), and the worker's own startup prune
+  (`stalled_worker_timeout`, Procrastinate's default 30 s) uses 90 s too.
+- The ops CLI no longer retries `post_first_comment`, `send_private_reply` or `deliver_push`
+  (`PLATFORM_WRITE_TASKS` named two tasks that don't exist instead).
+- Not changed: a private reply that dies before its claim stays `queued`, and `sweep_messages`
+  re-queues it as `send_message`, which doesn't know private replies. Rare (the claim is the
+  job's first step); worth its own fix.
+- Seen live: a WhatsApp "Hi" was analysed right (greeting, neutral, lead score 10), but its
+  suggestion came back `can_answer: false`, no text, gap "business information". No code forced
+  it: suggest.v2 only said "use only facts from KNOWLEDGE", and the model read a greeting as a
+  question about the business. suggest.v3 (`ai/prompts.py`) adds a rule: small talk (greeting,
+  thanks, goodbye, "ok") is answered without knowledge, in kind, with no business fact and no
+  missing topic; "Hi, what's the price?" is not small talk. The same prompt drafts automations'
+  AI replies and knowledge's "Try a question", which now answer small talk too.
+- Small talk in code (`services/suggestions/small_talk.py`), the net under the prompt: the whole
+  text is small talk in English, Hindi or Hinglish (a phrase list: "hi", "good morning", "thank
+  you so much", "kaise ho", "shukriya", "धन्यवाद", "ठीक है"…, with "sir", "ji" and punctuation
+  allowed) and the analysis intent is greeting, feedback or other (or there is no analysis). The
+  intent list has no thanks or goodbye (a "thanks!" is labelled feedback or other), and adding
+  intents would change the enum, its check constraint and the contract, so the text decides and
+  the intent can only rule out: an "ok" read as a purchase goes to the model. Emoji alone are
+  left to the model (an emoji can be angry). When the model still declines small talk, the
+  suggestion is a fixed reply of the same kind in the customer's language (Devanagari → Hindi;
+  Hinglish words or a `hi` analysis → Hinglish; else English), e.g. "Hi! How can I help you
+  today?", with confidence 0.9 and no sources, so small talk never records a knowledge gap.
+- Auto: allowed. Check 11 wants knowledge only for fact intents, so a small-talk reply goes out
+  when it passes everything else (confidence ≥ AUTO_MIN_CONFIDENCE, which the fixed reply's 0.9
+  meets by default; no human request, no negative sentiment, the rate cap, the output filter).
+  No check changed. The prompt still needs its eval run (docs/ai-eval-log.md).

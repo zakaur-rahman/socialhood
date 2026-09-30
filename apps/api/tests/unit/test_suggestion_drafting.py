@@ -32,7 +32,7 @@ BRAND = Brand(
 
 def test_the_system_prompt_is_brand_voice_and_rules_only() -> None:
     text, version = system_prompt(BRAND, platform="instagram", language="hi-Latn")
-    assert version == "suggest.v2"
+    assert version == "suggest.v3"
     for fragment in (
         "from Maple Bakery to a customer on Instagram",
         "About the business: Eggless cakes in Pune.",

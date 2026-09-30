@@ -7,10 +7,13 @@ regeneration) someone already replied or an automation handled it (FR-AUT-07). O
 drafts (services/suggestions/drafting, 2 credits) and, holding the conversation's row lock,
 supersedes the pending suggestion and inserts the new one as ``pending``; a draft that cannot
 answer records its knowledge gap (first generation only, so regenerating does not count the
-question twice). suggestion.created (and suggestion.updated for the superseded one) are
-published after the commit, and in Auto mode decide_auto_reply is enqueued (first generation
-only: a person asking for another draft is handling the conversation). A failed call stores a
-``failed`` suggestion so the card stops waiting; used-up credits store nothing (FR-AI-05).
+question twice). Small talk (a greeting, thanks, goodbye or "ok"; services/suggestions/small_talk)
+always gets a reply: the model's, or a fixed one in the customer's language when the model
+declined, so it never records a gap (C-062). suggestion.created (and suggestion.updated for the
+superseded one) are published after the commit, and in Auto mode decide_auto_reply is enqueued
+(first generation only: a person asking for another draft is handling the conversation). A failed
+call stores a ``failed`` suggestion so the card stops waiting; used-up credits store nothing
+(FR-AI-05).
 
 What happens to a pending suggestion (§5.9):
 - sent with its id: ``sent`` when the text is the suggestion's (ignoring spacing), else
@@ -45,7 +48,7 @@ from socialhood.repositories import inbox, social_accounts
 from socialhood.repositories import ingest as ingest_rows
 from socialhood.repositories import suggestions as repo
 from socialhood.schemas.inbox import Suggestion, SuggestionSource
-from socialhood.services.suggestions import drafting, knowledge_port
+from socialhood.services.suggestions import drafting, knowledge_port, small_talk
 
 log = get_logger(__name__)
 
@@ -207,6 +210,7 @@ async def generate(
             log.info("suggestion_not_needed", message_id=str(msg.id), reason=stale)
             return Outcome.SKIPPED
         lines = await drafting.conversation_lines(session, msg)
+        talk = small_talk.is_small_talk(msg.text, await drafting.message_intent(session, msg.id))
         request = drafting.DraftRequest(
             workspace_id=workspace_id,
             feature=FEATURE,
@@ -230,6 +234,11 @@ async def generate(
         log.warning("suggestion_failed", message_id=str(message_id), error_code=error.code)
         await _store_failed(sessionmaker, redis, msg, regeneration, error)
         return Outcome.FAILED
+    if talk:
+        settled = small_talk.settle(draft, msg.text or "", request.language)
+        if settled is not draft:
+            log.info("suggestion_small_talk_fallback", message_id=str(msg.id))
+        draft = settled
     stored = await _store(sessionmaker, redis, msg, regeneration, draft, now=now)
     if stored is None:
         return Outcome.SKIPPED

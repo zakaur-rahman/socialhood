@@ -21,7 +21,13 @@ decision popover can show all of them; the first failure decides the outcome:
  13 the output filter passes (ai/output_filter)               escalated · output_blocked
 
 No analysis for the message fails check 6 as low_confidence: Auto never sends without the
-analysis' human, intent and sentiment signals (a P5 decision). Escalation phrases are the
+analysis' human, intent and sentiment signals (a P5 decision).
+
+Small talk (C-062): Auto may answer a greeting, thanks or goodbye. Check 11 asks for a knowledge
+source only for FACT_INTENTS, so a small-talk reply (the model's under suggest.v3, or the fixed one
+from services/suggestions/small_talk) is sent when it passes the rest like any reply: confidence
+at least AUTO_MIN_CONFIDENCE, no escalation signal, the rate cap and the output filter. A "Hi,
+what's the price?" is a pricing question and still needs knowledge. Escalation phrases are the
 built-in ones below plus the workspace's own (FR-SUG-06), matched as whole words or phrases in
 the message answered, ignoring case.
 """

@@ -126,7 +126,9 @@ projects:
             buildCommand: uv sync --locked --no-dev
             # One process per lane; exits if either dies so Render restarts both (TR-JOB-01).
             startCommand: uv run --no-sync bash scripts/worker.sh
-            # A running job gets this long to finish on deploy; unfinished ones are retried.
+            # On a deploy or restart, running jobs get this long to finish (scripts/worker.sh);
+            # recover_stalled_jobs settles the ones still running when Render kills the worker.
+            # Keep it below STALLED_AFTER_S (90) less the 10 s heartbeat (jobs/recovery.py).
             maxShutdownDelaySeconds: 60
             numInstances: 1
             envVars:
@@ -259,7 +261,7 @@ projects:
             autoDeployTrigger: checksPass
             buildCommand: uv sync --locked --no-dev
             startCommand: uv run --no-sync bash scripts/worker.sh
-            maxShutdownDelaySeconds: 60
+            maxShutdownDelaySeconds: 60 # see the production worker
             numInstances: 1
             envVars:
               - fromGroup: socialhood-staging-config

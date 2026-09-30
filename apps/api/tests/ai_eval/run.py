@@ -11,11 +11,12 @@ It reads two datasets next to this file:
   job builds it) and prints per-class intent accuracy, the intent confusion matrix, sentiment
   accuracy and needs_human precision and recall.
 - ``suggestions.jsonl``: questions with the knowledge they need and the facts a correct answer must
-  contain (``answerable: false`` when the knowledge lacks the answer). It runs the suggestion prompt
-  (suggest.v1) and prints answer accuracy, the fabrication rate (answers stating a price, number,
-  link, email or phone number that is not in the knowledge, or answering an unanswerable
-  question) and the auto-policy pass rate (the checks of TR-AI-07 that depend on the draft alone:
-  can_answer, confidence >= AUTO_MIN_CONFIDENCE, the output filter and the length).
+  contain (``answerable: false`` when the knowledge lacks the answer; small talk is answerable
+  without knowledge). It runs the current suggestion prompt and prints answer accuracy, the
+  fabrication rate (answers stating a price, number, link, email or phone number that is not in
+  the knowledge, or answering an unanswerable question) and the auto-policy pass rate (the
+  checks of TR-AI-07 that depend on the draft alone: can_answer, confidence >=
+  AUTO_MIN_CONFIDENCE, the output filter and the length).
 
 Both are JSON Lines; lines starting with ``//`` are comments. The seed files are synthetic
 placeholders (``"placeholder": true``) until the owner's 300 labelled

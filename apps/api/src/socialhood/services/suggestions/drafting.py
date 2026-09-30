@@ -228,6 +228,17 @@ async def message_language(session: AsyncSession, message_id: uuid.UUID) -> str 
     )
 
 
+async def message_intent(session: AsyncSession, message_id: uuid.UUID) -> str | None:
+    """The message's analysed intent, a member's correction first (FR-AI-04), when there is an
+    analysis."""
+    return await session.scalar(
+        select(func.coalesce(MessageAnalysis.corrected_intent, MessageAnalysis.intent))
+        .where(MessageAnalysis.message_id == message_id)
+        .order_by(MessageAnalysis.created_at.desc())
+        .limit(1)
+    )
+
+
 def render_contents(
     lines: Sequence[Line], chunks: Sequence[RetrievedChunk], known_gaps: Sequence[str] = ()
 ) -> str:

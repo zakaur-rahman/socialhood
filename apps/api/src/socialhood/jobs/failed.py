@@ -11,6 +11,8 @@ from typing import Any
 
 from procrastinate import App
 
+from socialhood.jobs.recovery import RECOVERY, Recovery
+
 # Tasks that write to a platform. Their jobs record nothing about whether the platform received
 # the request, so the CLI cannot tell a send that ended delivery_unknown from any other failure;
 # it never retries them (TR-JOB-05). Users retry sends from the app after checking Instagram.
@@ -20,8 +22,8 @@ PLATFORM_WRITE_TASKS = frozenset(
         "send_message",
         "send_scheduled",
         "publish_target",
-        "reply_to_comment",
-        "private_reply",
+        "post_first_comment",
+        "send_private_reply",
         "run_automation",
         "drain_private_replies",
     }
@@ -52,7 +54,11 @@ class FailedJob:
 
     @property
     def retryable_from_ops(self) -> bool:
-        return self.task_name not in PLATFORM_WRITE_TASKS
+        """Not a platform write, nor a task recover_stalled_jobs never runs again (FAIL)."""
+        return (
+            self.task_name not in PLATFORM_WRITE_TASKS
+            and RECOVERY.get(self.task_name) is not Recovery.FAIL
+        )
 
 
 async def list_failed_jobs(
