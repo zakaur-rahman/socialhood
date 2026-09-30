@@ -13,6 +13,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import Admin, Session
 from socialhood.billing.entitlements import credits_gate
 from socialhood.schemas.knowledge import (
@@ -80,7 +81,7 @@ async def delete_knowledge_source(source_id: uuid.UUID, ctx: Admin, session: Ses
     return Response(status_code=204)
 
 
-@router.post("/knowledge/test", operation_id="test_knowledge")
+@router.post("/knowledge/test", operation_id="test_knowledge", dependencies=[ratelimit.AI])
 async def test_knowledge(
     request: Request, body: KnowledgeTest, ctx: Admin, session: Session
 ) -> KnowledgeTestResult:
@@ -100,7 +101,7 @@ async def test_knowledge(
 async def list_knowledge_gaps(
     ctx: Admin,
     session: Session,
-    status: Annotated[str, Query(pattern="^(open|answered|dismissed)$")] = "open",
+    status: Annotated[str, Query(max_length=16, pattern="^(open|answered|dismissed)$")] = "open",
 ) -> KnowledgeGapList:
     """Gaps asked in the last 30 days, most asked first, with up to three example messages
     (FR-KB-06, TR-AI-12)."""

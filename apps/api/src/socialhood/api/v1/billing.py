@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import AnyMember, Owner, Session
 from socialhood.billing.dodo import DodoClient
 from socialhood.billing.registry import get_dodo
@@ -90,7 +91,7 @@ async def resume_billing(request: Request, ctx: Owner, session: Session) -> Bill
     return await _state(request, ctx, session)
 
 
-@public_router.get("/plans", operation_id="list_billing_plans")
+@public_router.get("/plans", operation_id="list_billing_plans", dependencies=[ratelimit.PUBLIC])
 async def list_billing_plans(request: Request) -> PlanList:
     """Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their §1.7
     entitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing

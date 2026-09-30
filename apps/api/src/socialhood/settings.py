@@ -57,6 +57,7 @@ REQUIRED_IN_PRODUCTION: tuple[str, ...] = (
     "resend_api_key",
     "vapid_public_key",
     "vapid_private_key",
+    "client_ip_header",
 )
 
 
@@ -152,6 +153,13 @@ class Settings(BaseSettings):
 
     sandbox_platform_enabled: bool = False
 
+    # TR-API-07 (security/ratelimit.py). Off only for local load or end-to-end runs; refused in
+    # production. CLIENT_IP_HEADER names the header the edge proxy sets to the caller's address
+    # (true-client-ip on Render, which Cloudflare overwrites); required in production, where the
+    # socket peer is the proxy and X-Forwarded-For's first entry is whatever the client sent.
+    rate_limits_enabled: bool = True
+    client_ip_header: str | None = None
+
     @field_validator(
         "cors_allowed_origins", "clerk_authorized_parties", "token_encryption_keys", mode="before"
     )
@@ -193,7 +201,9 @@ class Settings(BaseSettings):
             unsafe.append("SANDBOX_PLATFORM_ENABLED must be false in production")
         if self.log_level == "DEBUG":
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
-        for name in ("dodo_provider", "email_provider", "push_provider"):
+        if not self.rate_limits_enabled:
+            unsafe.append("RATE_LIMITS_ENABLED must be true in production")
+        for name in ("ai_provider", "dodo_provider", "email_provider", "push_provider"):
             if getattr(self, name) == "fake":
                 unsafe.append(f"{name.upper()} must not be fake in production")
         problems = []

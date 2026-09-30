@@ -24,6 +24,7 @@ from socialhood.errors import ApiError
 from socialhood.models.identity import Role, User, Workspace, WorkspaceMember, WorkspaceStatus
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import users
+from socialhood.security import ratelimit
 from socialhood.services.provisioning import provision_user
 from socialhood.settings import Settings
 
@@ -48,6 +49,7 @@ async def current_user(request: Request, session: Session) -> User:
         clerk_id = verify_session_token(_bearer(request), settings)
     except InvalidToken as error:
         raise ApiError("unauthorized") from error
+    await ratelimit.enforce(request, "user", clerk_id)  # TR-API-07, before any database work
 
     user = await users.get_by_clerk_id(session, clerk_id)
     if user is None:

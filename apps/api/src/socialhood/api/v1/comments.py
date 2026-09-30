@@ -20,6 +20,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, Request, Response
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import Admin, AnyMember, Session
 from socialhood.errors import ApiError
 from socialhood.platforms.deps import PlatformDeps, deps_from
@@ -62,7 +63,9 @@ async def get_comment_counts(ctx: AnyMember, session: Session) -> CommentCounts:
     return await queries.comment_counts(session, now=datetime.now(UTC))
 
 
-@router.post("/comments/{comment_id}/reply", operation_id="reply_to_comment")
+@router.post(
+    "/comments/{comment_id}/reply", operation_id="reply_to_comment", dependencies=[ratelimit.SENDS]
+)
 async def reply_to_comment(
     request: Request,
     comment_id: uuid.UUID,
@@ -96,6 +99,7 @@ async def reply_to_comment(
     "/comments/{comment_id}/private-reply",
     status_code=202,
     operation_id="private_reply_to_comment",
+    dependencies=[ratelimit.SENDS],
 )
 async def private_reply_to_comment(
     request: Request,

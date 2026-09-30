@@ -2203,6 +2203,7 @@
           },
           "keywords": {
             "items": {
+              "maxLength": 500,
               "type": "string"
             },
             "maxItems": 50,
@@ -2302,6 +2303,7 @@
           },
           "public_reply_texts": {
             "items": {
+              "maxLength": 2000,
               "type": "string"
             },
             "maxItems": 5,
@@ -10242,6 +10244,7 @@
           },
           "params": {
             "items": {
+              "maxLength": 1024,
               "type": "string"
             },
             "maxItems": 20,
@@ -16028,6 +16031,7 @@
             "required": false,
             "schema": {
               "default": "open",
+              "maxLength": 16,
               "pattern": "^(open|answered|dismissed)$",
               "title": "Status",
               "type": "string"

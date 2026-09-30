@@ -13,6 +13,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, Query, Request, Response
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import AnyMember, Session
 from socialhood.realtime import events
 from socialhood.schemas.inbox import (
@@ -57,6 +58,7 @@ async def list_conversation_scheduled_messages(
     "/conversations/{conversation_id}/scheduled-messages",
     status_code=201,
     operation_id="create_scheduled_message",
+    dependencies=[ratelimit.SENDS],
 )
 async def create_scheduled_message(
     request: Request,

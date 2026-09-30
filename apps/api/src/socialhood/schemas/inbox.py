@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -294,7 +294,9 @@ class MessageList(ResponseModel):
 class TemplateSend(RequestModel):
     name: str = Field(min_length=1, max_length=512)
     language: str = Field(min_length=2, max_length=15)
-    params: list[str] = Field(default_factory=list, max_length=20)
+    params: list[Annotated[str, Field(max_length=1024)]] = Field(
+        default_factory=list, max_length=20
+    )
 
 
 class SendMessage(RequestModel):

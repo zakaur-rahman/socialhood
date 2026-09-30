@@ -62,6 +62,26 @@ def test_complete_production_settings_load() -> None:
     settings = make(**complete_production())
     assert settings.is_production
     assert settings.cors_allowed_origins == ["a", "b"]
+    assert settings.rate_limits_enabled
+
+
+@pytest.mark.parametrize(
+    "name", ["ai_provider", "dodo_provider", "email_provider", "push_provider"]
+)
+def test_production_refuses_fake_providers(name: str) -> None:
+    # SEC-14: the in-memory fakes are development features.
+    values = complete_production()
+    values[name] = "fake"
+    with pytest.raises(ConfigurationError, match=name.upper()):
+        make(**values)
+
+
+def test_production_refuses_disabled_rate_limits() -> None:
+    # SEC-14, TR-API-07: the switch exists for local load and end-to-end runs only.
+    values = complete_production()
+    values["rate_limits_enabled"] = False
+    with pytest.raises(ConfigurationError, match="RATE_LIMITS_ENABLED"):
+        make(**values)
 
 
 @pytest.mark.parametrize("scheme", ["postgresql", "postgres"])

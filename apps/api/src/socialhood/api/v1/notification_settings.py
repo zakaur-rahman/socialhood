@@ -14,6 +14,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import AnyMember, CurrentUser, Session
 from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError, FieldError
@@ -124,7 +125,9 @@ async def delete_push_subscription(
 # ---------------------------------------------------------------- digest (T8.7)
 
 
-@router.post("/v1/digest/unsubscribe", operation_id="unsubscribe_digest")
+@router.post(
+    "/v1/digest/unsubscribe", operation_id="unsubscribe_digest", dependencies=[ratelimit.PUBLIC]
+)
 async def unsubscribe_digest(
     request: Request, session: Session, token: Annotated[str, Query(min_length=1, max_length=100)]
 ) -> DigestUnsubscribed:
