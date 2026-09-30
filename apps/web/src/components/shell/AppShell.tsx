@@ -10,6 +10,7 @@ import type { Route } from "next";
 import { AskButton, AskRoot } from "@/components/agent/AskPanel";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { useOpenPortal } from "@/components/billing/use-billing-actions";
+import { PushSignOutCleanup } from "@/components/push/PushSignOutCleanup";
 import { ServiceWorkerRegistrar } from "@/components/push/ServiceWorkerRegistrar";
 import {
   exhaustedAiCredits,
@@ -112,6 +113,8 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
       <UpgradeDialog />
       {/* TR-FE-09: the push service worker (production builds) and this device's subscription. */}
       <ServiceWorkerRegistrar />
+      {/* Signing out removes this browser's push first, so a shared device stops getting alerts. */}
+      <PushSignOutCleanup />
     </div>
   );
 }

@@ -13,6 +13,15 @@ function syncedEndpoint(): string | null {
   }
 }
 
+/** After sign-out the next member's visit registers the browser afresh. */
+export function forgetSyncedPush() {
+  try {
+    window.sessionStorage.removeItem(SYNCED_KEY);
+  } catch {
+    // Nothing remembered to forget.
+  }
+}
+
 function markSynced(endpoint: string) {
   try {
     window.sessionStorage.setItem(SYNCED_KEY, endpoint);

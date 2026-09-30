@@ -8,7 +8,18 @@ import type { Cropper } from "@/lib/publishing/crop";
 import type { ScheduledPost, ScheduledPostDraft } from "@/lib/publishing/types";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
 import { formatDayTime } from "@/lib/tz";
-import { account, automation, json, problem, renderWithApi, template, workspace, type Call } from "@/test/api";
+import {
+  account,
+  automation,
+  billingState,
+  json,
+  planList,
+  problem,
+  renderWithApi,
+  template,
+  workspace,
+  type Call,
+} from "@/test/api";
 import {
   hashtagGroup,
   mediaAsset,
@@ -96,8 +107,11 @@ function renderComposer({
       "GET /v1/w/:wid/social-accounts": () => json({ items: accounts }),
       "GET /v1/w/:wid/hashtag-groups": () => json({ items: [hashtagGroup()] }),
       "GET /v1/w/:wid/posts": () => json({ items: [], next_cursor: null }),
+      "GET /v1/w/:wid/billing": () => json(billingState({ plan: "free", status: "free" })),
+      "GET /v1/billing/plans": () => json(planList()),
       ...handlers,
     },
+    upgradeDialog: true,
   });
   return { ...view, puts, state };
 }
@@ -263,17 +277,23 @@ describe("PostComposer checklist gating (FR-PUB-10, T7.5 done-when)", () => {
     expect(scheduleButton()).toBeDisabled();
   });
 
-  it("names the plan limit when scheduling is over it (402)", async () => {
+  it("over the plan's scheduled posts (402): the upgrade dialog names the limit, and nothing else does", async () => {
     const user = userEvent.setup();
     renderComposer({
       initial: readyPost({ publish_at: inTwoDays() }),
       handlers: {
         "POST /v1/w/:wid/scheduled-posts/:id/schedule": () =>
-          problem(402, "quota_exceeded", "Your plan includes 30 scheduled posts a month."),
+          problem(402, "quota_exceeded", "Your plan includes 10 scheduled posts a month.", {
+            entitlement: "scheduled_posts_monthly",
+            limit: 10,
+          }),
       },
     });
     await user.click(await screen.findByRole("button", { name: "Schedule" }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Your plan includes 30 scheduled posts a month."));
+    const upgrade = await screen.findByRole("dialog", { name: "Scheduled post limit reached" });
+    expect(upgrade).toHaveTextContent("Free includes 10 scheduled posts a month.");
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(toast.success).not.toHaveBeenCalledWith(expect.stringMatching(/^Scheduled/));
   });
 });
 

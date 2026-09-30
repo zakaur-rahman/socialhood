@@ -58,6 +58,7 @@ import {
 import { instagramAccounts } from "@/lib/automations/accounts";
 import { queueBanner, shortDateTime, STATUS_LABEL, SURGE_LABEL } from "@/lib/automations/format";
 import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -179,7 +180,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
       onError: (caught) => {
         const apiError = toApiError(caught);
         if (apiError.code !== "validation_error" || apiError.errors.length === 0) {
-          toast.error(errorMessage(apiError));
+          toastError(apiError); // a plan limit (402) is the upgrade dialog's to say
           return;
         }
         const next = fieldErrors(apiError.errors);

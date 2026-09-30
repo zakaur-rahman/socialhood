@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 
+import { UpgradeAction } from "@/components/billing/UpgradeAction";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -404,6 +405,8 @@ export function SchedulePanel({
   const [prepared] = useState(() => preparedSchedule(initialAt, timeZone, limits));
   const [value, setValue] = useState<ScheduleValue>(() => prepared ?? defaultSchedule(now, timeZone, limits));
   const [error, setError] = useState<string | null>(null);
+  // A plan limit (402) behind the error: Upgrade beside it opens the dialog (INLINE_PLAN_LIMITS).
+  const [limitError, setLimitError] = useState<unknown>(null);
   const [key] = useState(uuid); // one Idempotency-Key per popover, reused if Schedule is clicked twice
   const windowTooShort = limits.max !== null && limits.max <= limits.min;
   const hasText = text.trim() !== "";
@@ -412,6 +415,7 @@ export function SchedulePanel({
     const checked = checkSchedule(value, timeZone, limits, now);
     if ("error" in checked) return setError(checked.error);
     setError(null);
+    setLimitError(null);
     create.mutate(
       {
         text: text.trim(),
@@ -424,7 +428,10 @@ export function SchedulePanel({
           toast.success(`Scheduled for ${formatDayTime(scheduled.send_at, timeZone, now)}`);
           onScheduled();
         },
-        onError: (e) => setError(errorMessage(e)),
+        onError: (e) => {
+          setError(errorMessage(e));
+          setLimitError(e);
+        },
       },
     );
   };
@@ -452,11 +459,13 @@ export function SchedulePanel({
             onChange={(next) => {
               setValue(next);
               setError(null);
+              setLimitError(null);
             }}
             timeZone={timeZone}
             limits={limits}
             error={error}
           />
+          {error ? <UpgradeAction error={limitError} /> : null}
           {hasText ? null : <p className="text-xs text-fg-secondary">Write a message first.</p>}
           <Button
             className="w-full bg-brand-gradient text-white"

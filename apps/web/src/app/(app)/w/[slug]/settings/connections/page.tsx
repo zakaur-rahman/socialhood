@@ -25,6 +25,7 @@ import {
 } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { connectResult, emptyStates, errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const SANDBOX_TOOLS = process.env.NODE_ENV !== "production";
@@ -54,7 +55,8 @@ function Connections() {
   const startConnect = useCallback(() => {
     connect.mutate(undefined, {
       onSuccess: (url) => window.location.assign(url),
-      onError: (error) => toast.error(errorMessage(error)),
+      // Over accounts_per_platform (402): the upgrade dialog says so.
+      onError: (error) => toastError(error),
     });
   }, [connect]);
 

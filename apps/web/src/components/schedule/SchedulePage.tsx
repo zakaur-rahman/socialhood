@@ -45,7 +45,9 @@ import {
 } from "@/lib/api/queries/calendar";
 import type { ScheduledPostSummary, ScheduledPostView } from "@/lib/api/types";
 import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import { isPlanLimitError } from "@/lib/api/errors";
 import { emptyStates, errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import {
   CALENDAR_VIEWS,
   instantAt,
@@ -201,6 +203,8 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           return null;
         })
         .catch((error: unknown) => {
+          // Over the plan's scheduled posts (402): the card goes back and the upgrade dialog says why.
+          if (isPlanLimitError(error)) return null;
           if (!needsComposer(error)) return moveErrorMessage(error);
           // Not ready: the composer opens with its failing checklist items (F-13).
           toast.error("Finish this post to schedule it. The checklist shows what's missing.");
@@ -215,7 +219,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
         say(`${captionLine(post.caption)} moved to ${when}.`);
         return null;
       })
-      .catch((error: unknown) => moveErrorMessage(error));
+      .catch((error: unknown) => (isPlanLimitError(error) ? null : moveErrorMessage(error)));
   };
 
   /** Where a drop lands: the target time, or the post's own time on another day (Month). */
@@ -282,7 +286,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           if (needsComposer(error, ["publish_at", "targets"])) {
             toast.error("Finish this post to schedule it. The checklist shows what's missing.");
             openComposer(post);
-          } else toast.error(firstProblem(error));
+          } else toastError(error, firstProblem(error));
         },
       }),
     unschedule: (post) =>

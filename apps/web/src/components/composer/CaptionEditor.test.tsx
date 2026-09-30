@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { json, problem, renderWithApi, type Call } from "@/test/api";
+import { billingState, json, planList, problem, renderWithApi, type Call } from "@/test/api";
 import { hashtagGroup } from "@/test/composer-fixtures";
 
 import { CaptionEditor, CaptionField } from "./CaptionEditor";
@@ -134,13 +134,71 @@ describe("CaptionField (UX-SCR-13, FR-PUB-10)", () => {
             : json({ caption: "New dresses, fresh for autumn." });
         },
       },
+      upgradeDialog: true,
     });
     await user.click(screen.getByRole("button", { name: "Write with AI" }));
     await user.click(screen.getByRole("button", { name: "Improve my caption" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("You've used all 500 AI credits for this month. They reset on 1 Oct.");
+    // One message: the inline one, beside the brief; the dialog doesn't open by itself.
+    expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument(); // the popover is a dialog too
     expect(caption().value).toBe("new dresses");
     await user.click(screen.getByRole("button", { name: "Improve my caption" }));
     await waitFor(() => expect(caption().value).toBe("New dresses, fresh for autumn."));
+  });
+
+  it("Upgrade beside the credit limit opens the upgrade dialog", async () => {
+    const user = userEvent.setup();
+    renderWithApi(<Harness initial="new dresses" />, {
+      handlers: {
+        "POST /v1/w/:wid/ai/caption": () =>
+          problem(402, "quota_exceeded", "You've used all 500 AI credits for this month.", {
+            entitlement: "ai_credits_monthly",
+            limit: 500,
+          }),
+        "GET /v1/w/:wid/billing": () => json(billingState({ plan: "free", status: "free" })),
+        "GET /v1/billing/plans": () => json(planList()),
+      },
+      upgradeDialog: true,
+    });
+    await user.click(screen.getByRole("button", { name: "Write with AI" }));
+    await user.click(screen.getByRole("button", { name: "Improve my caption" }));
+    const alert = await screen.findByRole("alert");
+    expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument(); // the popover is a dialog too
+    await user.click(within(alert).getByRole("button", { name: "Upgrade" }));
+    expect(await screen.findByRole("dialog", { name: "AI credits used up" })).toHaveTextContent(
+      "You've used all 500 AI credits for this month.",
+    );
+  });
+
+  it("Suggest hashtags over the credit limit: the note under the box, with Upgrade, and no dialog", async () => {
+    const user = userEvent.setup();
+    renderWithApi(<Harness initial="new linen dresses" />, {
+      handlers: {
+        "POST /v1/w/:wid/ai/hashtags": () =>
+          problem(402, "quota_exceeded", "You've used all 500 AI credits for this month.", {
+            entitlement: "ai_credits_monthly",
+            limit: 500,
+          }),
+      },
+      upgradeDialog: true,
+    });
+    await user.click(screen.getByRole("button", { name: "Suggest hashtags" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("You've used all 500 AI credits for this month.");
+    expect(within(alert).getByRole("button", { name: "Upgrade" })).toBeInTheDocument();
+    expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument(); // the popover is a dialog too
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("other failures get no Upgrade", async () => {
+    const user = userEvent.setup();
+    renderWithApi(<Harness initial="new linen dresses" />, {
+      handlers: { "POST /v1/w/:wid/ai/hashtags": () => problem(409, "conflict", "Try again in a moment.") },
+    });
+    await user.click(screen.getByRole("button", { name: "Suggest hashtags" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Try again in a moment.");
+    expect(within(alert).queryByRole("button", { name: "Upgrade" })).not.toBeInTheDocument();
   });
 });
 

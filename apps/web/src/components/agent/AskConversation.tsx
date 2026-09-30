@@ -239,7 +239,7 @@ export function AskConversation({
               {askError(error, credits, now)}
             </p>
             {outOfCredits && workspace.role !== "agent" ? (
-              // The 402 already opened the upgrade dialog (lib/api/provider.tsx); this opens it again.
+              // The ask opts out of the automatic dialog (INLINE_PLAN_LIMITS): this message is the one.
               <Button
                 size="sm"
                 className="bg-brand-gradient min-h-10 text-white md:min-h-7"

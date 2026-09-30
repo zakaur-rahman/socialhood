@@ -29,7 +29,7 @@ import type {
   ScheduledPostDraft,
 } from "@/lib/publishing/types";
 
-import { useApi } from "../provider";
+import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type { Automation, AutomationDefinition } from "../types";
 import { keys } from "./keys";
 import { expectOk, unwrap } from "./unwrap";
@@ -263,6 +263,8 @@ export function useGenerateCaption(wid: string) {
   return useMutation<CaptionSuggestion, Error, CaptionRequest>({
     mutationFn: (body) => unwrap(api.POST("/v1/w/{wid}/ai/caption", { params: { path: { wid } }, body })),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: keys.billing(wid) }),
+    // The caption box says why beside the field, with Upgrade (CaptionEditor).
+    meta: INLINE_PLAN_LIMITS,
   });
 }
 
@@ -272,6 +274,7 @@ export function useSuggestHashtags(wid: string) {
   return useMutation<HashtagSuggestion, Error, HashtagSuggestionRequest>({
     mutationFn: (body) => unwrap(api.POST("/v1/w/{wid}/ai/hashtags", { params: { path: { wid } }, body })),
     onSettled: () => void queryClient.invalidateQueries({ queryKey: keys.billing(wid) }),
+    meta: INLINE_PLAN_LIMITS,
   });
 }
 

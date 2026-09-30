@@ -188,8 +188,8 @@ function SourceForm({
   const fail = (error: unknown) => {
     setProgress(null);
     if (isPlanLimitError(error)) {
-      // The upgrade dialog opens by itself (lib/api/provider.tsx); the form keeps what was typed
-      // and says which limit stopped it.
+      // The form keeps what was typed and says which limit stopped it, with Upgrade opening the
+      // dialog (the create opts out of the automatic one: INLINE_PLAN_LIMITS).
       setOverLimit(upgradeRequestFrom(error));
       return;
     }

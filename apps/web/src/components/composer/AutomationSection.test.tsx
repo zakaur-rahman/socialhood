@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { account, automation, json, problem, renderWithApi, template, type Call } from "@/test/api";
+import { account, automation, billingState, json, planList, problem, renderWithApi, template, type Call } from "@/test/api";
 
 import { AutomationSection } from "./AutomationSection";
 
@@ -27,7 +27,10 @@ function renderSection({ beforeCreate = async () => true, create }: { beforeCrea
           return create ? create() : json(automation({ id: "au5", trigger: null, keywords: [] }), 201);
         },
         "PUT /v1/w/:wid/automations/:id": () => json(automation({ id: "au5" })),
+        "GET /v1/w/:wid/billing": () => json(billingState({ plan: "free", status: "free" })),
+        "GET /v1/billing/plans": () => json(planList()),
       },
+      upgradeDialog: true,
     },
   );
   return { created };
@@ -65,11 +68,27 @@ describe("AutomationSection (FR-AUT-18)", () => {
 
   it("shows why the automation couldn't be created", async () => {
     const user = userEvent.setup();
-    renderSection({ create: () => problem(402, "quota_exceeded", "Your plan includes 3 active automations.") });
+    renderSection({ create: () => problem(409, "conflict", "This post is publishing. Add the automation afterwards.") });
     await user.click(screen.getByRole("button", { name: "Add comment automation" }));
     await user.click(await screen.findByRole("button", { name: "Use template: Send a link to commenters" }));
     await user.click(screen.getByRole("button", { name: "Use template" }));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Your plan includes 3 active automations."));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("This post is publishing. Add the automation afterwards."));
+    expect(nav.push).not.toHaveBeenCalled();
+  });
+
+  it("over a plan limit (402): the upgrade dialog is the only message", async () => {
+    const user = userEvent.setup();
+    renderSection({
+      create: () =>
+        problem(402, "quota_exceeded", "Your plan includes 3 active automations.", { entitlement: "active_automations", limit: 3 }),
+    });
+    await user.click(screen.getByRole("button", { name: "Add comment automation" }));
+    await user.click(await screen.findByRole("button", { name: "Use template: Send a link to commenters" }));
+    await user.click(screen.getByRole("button", { name: "Use template" }));
+    const upgrade = await screen.findByRole("dialog", { name: "Automation limit reached" });
+    expect(upgrade).toHaveTextContent("Free includes 3 active automations.");
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(nav.push).not.toHaveBeenCalled();
   });
 });

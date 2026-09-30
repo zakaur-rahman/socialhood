@@ -15,7 +15,7 @@ import { useAddCommentAutomation } from "@/lib/api/queries/scheduledPosts";
 import type { AutomationTemplate, Plan, SocialAccount } from "@/lib/api/types";
 import { DEFAULT_NAME, isCommentTrigger } from "@/lib/automations/definition";
 import { STATUS_LABEL, TRIGGER_LABEL } from "@/lib/automations/format";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { handleOf } from "@/lib/publishing/rules";
 import type { LinkedAutomation } from "@/lib/publishing/types";
 import { cn } from "@/lib/utils";
@@ -175,7 +175,8 @@ function AddAutomationDialog({
           onOpenChange(false);
           router.push(editorHref(slug, automation.id, true));
         },
-        onError: (error) => toast.error(errorMessage(error)),
+        // A plan limit (402) is the upgrade dialog's to explain: one message.
+        onError: (error) => toastError(error),
       },
     );
   };

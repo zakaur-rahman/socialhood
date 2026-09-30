@@ -7,7 +7,7 @@ import { definitionFromDraft } from "@/lib/agent/draft";
 import { isActive } from "@/lib/agent/format";
 import { toDefinition } from "@/lib/automations/definition";
 
-import { useApi } from "../provider";
+import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type {
   AgentPolicy,
   AgentRun,
@@ -128,6 +128,8 @@ export function useAskAgent(wid: string) {
       void queryClient.invalidateQueries({ queryKey: keys.agentThreads(wid), exact: true });
       void queryClient.invalidateQueries({ queryKey: keys.agentRunHistory(wid), exact: true });
     },
+    // Out of credits, the question box says so beside the question, with Upgrade (AskConversation).
+    meta: INLINE_PLAN_LIMITS,
   });
 }
 

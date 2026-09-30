@@ -78,8 +78,14 @@ export function useUpgradeDialog(): UpgradeContextValue {
 }
 
 /**
- * Watches both caches for a 402. A mutation can opt out with `meta: { upgradeDialog: false }`
- * when its screen explains the limit another way.
+ * A mutation's `meta` when its screen shows the 402 inline instead (a field-level message with
+ * its own Upgrade action that opens the dialog), so there is one message, not two.
+ */
+export const INLINE_PLAN_LIMITS = { upgradeDialog: false } as const;
+
+/**
+ * Watches both caches for a 402. A mutation can opt out with `meta: INLINE_PLAN_LIMITS` when its
+ * screen explains the limit another way.
  */
 function usePlanLimitErrors(queryClient: QueryClient, open: (request: UpgradeRequest) => void) {
   useEffect(() => {

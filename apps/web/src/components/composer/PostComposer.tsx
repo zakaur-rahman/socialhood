@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError, toApiError } from "@/lib/api/errors";
+import { ApiError, isPlanLimitError, toApiError } from "@/lib/api/errors";
 import { useSocialAccounts } from "@/lib/api/queries";
 import {
   composerKeys,
@@ -418,6 +418,8 @@ function Composer({
   const acting = schedule.isPending || queuePost.isPending || publishNow.isPending || unschedule.isPending || put.isPending;
 
   const onActionError = (caught: unknown) => {
+    // Over the plan's scheduled posts (402): the upgrade dialog names the limit, alone.
+    if (isPlanLimitError(caught)) return;
     const apiError = toApiError(caught);
     if (apiError.code === "validation_error" && apiError.errors.length) {
       setActionErrors(itemsFromErrors(apiError.errors));
