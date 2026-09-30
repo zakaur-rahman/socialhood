@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -14,7 +14,6 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { isPlanLimitError } from "@/lib/api/errors";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { autoAllowed, useBilling, useSocialAccounts, useUpdateConversation } from "@/lib/api/queries";
@@ -98,7 +97,10 @@ function defaultLabel(accountMode: AiMode | null): string {
   return accountMode ? `Account default · ${AI_MODE_LABEL[accountMode]}` : "Account default";
 }
 
-/** UX-INB-05: the AI chip in the thread header, a menu of modes; "AI paused" with Resume. */
+/**
+ * UX-INB-05: the one AI mode control (C-063), a compact menu in the thread header: the account
+ * default and each mode; "AI paused" with Resume during a takeover.
+ */
 export function AiModeMenu({ conversation, now }: { conversation: Conversation; now: Date }) {
   const control = useConversationAiMode(conversation);
   const paused = pausedUntil(conversation, now);
@@ -136,11 +138,14 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
           <button
             type="button"
             aria-label={`AI mode: ${label}. Change`}
-            className={cn(
-              "inline-flex shrink-0 items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-medium hover:bg-brand/25",
-              TONE_CLASS.brand,
-            )}
+            title={
+              control.choice === "default"
+                ? `${defaultLabel(control.accountMode)}. Change it for this conversation`
+                : "Set for this conversation. Change"
+            }
+            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-brand-line bg-brand-soft px-2 text-xs font-medium text-brand-fg hover:bg-brand/25"
           >
+            <Sparkles className="size-3.5" aria-hidden />
             AI: {label}
             <ChevronDown className="size-3" aria-hidden />
           </button>
@@ -163,53 +168,5 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
       </DropdownMenu>
       {control.dialogs}
     </>
-  );
-}
-
-/** UX-INB-09: the segmented Default · Off · Suggest · Auto in the details panel. */
-export function AiModeSegments({ conversation, now }: { conversation: Conversation; now: Date }) {
-  const control = useConversationAiMode(conversation);
-  const workspace = useCurrentWorkspace();
-  const paused = pausedUntil(conversation, now);
-  const far = paused && paused.getTime() - now.getTime() > 7 * 24 * 3_600_000;
-
-  return (
-    <div className="space-y-2">
-      <ToggleGroup
-        value={control.choice}
-        onValueChange={(value) => control.choose(value as AiModeChoice)}
-        aria-label="AI in this conversation"
-        disabled={control.pending}
-      >
-        <ToggleGroupItem value="default" className="px-1.5 text-xs">
-          Default
-        </ToggleGroupItem>
-        {AI_MODES.map((mode) => (
-          <ToggleGroupItem key={mode} value={mode} className="px-1.5 text-xs">
-            {AI_MODE_LABEL[mode]}
-            {mode === "auto" && !control.allowsAuto ? <span className="sr-only"> (Pro)</span> : null}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      <p className="text-xs text-fg-secondary">
-        {control.choice === "default"
-          ? control.accountMode
-            ? `Uses the account's mode: ${AI_MODE_LABEL[control.accountMode]}.`
-            : "Uses the account's mode."
-          : `Set for this conversation: ${AI_MODE_LABEL[control.choice]}.`}
-        {!control.allowsAuto ? " Auto is part of Pro." : null}
-      </p>
-      {paused ? (
-        <div className="flex items-center justify-between gap-2 rounded-lg bg-warning/15 px-3 py-2 text-xs text-warning" role="status">
-          <span>
-            {far ? "AI paused until you resume it" : `AI paused until ${formatDayTime(paused, workspace.timezone, now)}`}
-          </span>
-          <Button variant="ghost" size="xs" className="text-fg" disabled={control.pending} onClick={control.resume}>
-            Resume
-          </Button>
-        </div>
-      ) : null}
-      {control.dialogs}
-    </div>
   );
 }

@@ -23,29 +23,33 @@ import { ReplyWindowChip } from "./ReplyWindowChip";
 
 const AI_LABEL = { off: "AI: Off", suggest: "AI: Suggest", auto: "AI: Auto" } as const;
 
+const PLATFORM_TEXT = { instagram: "text-instagram", whatsapp: "text-whatsapp" } as const;
+
 type Props = {
   conversation: Conversation;
   now: Date;
   /** Phones: the back button to the list. */
   backHref?: Route;
-  /** Show the account name next to the platform (several accounts connected). */
-  showAccount?: boolean;
+  /** The context panel is showing (inline or as a sheet). */
   detailsOpen: boolean;
   onToggleDetails: () => void;
   canSchedule: boolean;
   onSchedule: () => void;
   onArchive: (archived: boolean) => void;
   onMarkUnread: () => void;
-  /** The AI mode menu and pause state (P5); without it the header shows a read-only chip. */
+  /** The one AI mode control (a compact menu); without it the header shows a read-only chip. */
   aiControl?: ReactNode;
 };
 
-/** UX-INB-05: who, where, the reply window and AI state, and the conversation's actions. */
+/**
+ * UX-INB-05, re-arranged (C-063): who (avatar, name, handle, platform and our linked account),
+ * the reply-window chip beside the name, then the AI mode menu, scheduling, the context panel
+ * toggle and the conversation's other actions.
+ */
 export function ThreadHeader({
   conversation,
   now,
   backHref,
-  showAccount = false,
   detailsOpen,
   onToggleDetails,
   canSchedule,
@@ -61,9 +65,14 @@ export function ThreadHeader({
     : conversation.social_account.display_name;
   const paused = conversation.ai.paused_until && new Date(conversation.ai.paused_until) > now;
   const archived = conversation.status === "archived";
+  const needsYou = conversation.needs_human ? (
+    <span className={cn("hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium md:inline-flex", TONE_CLASS.danger)}>
+      Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
+    </span>
+  ) : null;
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line bg-panel px-4">
+    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-panel px-4">
       {backHref ? (
         <Link
           href={backHref}
@@ -73,45 +82,40 @@ export function ThreadHeader({
           <ArrowLeft className="size-5" aria-hidden />
         </Link>
       ) : null}
-      <ContactAvatar id={conversation.contact.id} name={name} pictureUrl={conversation.contact.profile_picture_url} size={32} />
+      <ContactAvatar
+        id={conversation.contact.id}
+        name={name}
+        pictureUrl={conversation.contact.profile_picture_url}
+        platform={conversation.platform}
+        size={40}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-2">
           <h2 className="truncate text-sm font-semibold">{name}</h2>
           <ReplyWindowChip window={conversation.reply_window} now={now} />
-          <span className="hidden min-w-0 items-center gap-1.5 overflow-hidden sm:flex">
-            {aiControl ? (
-              <>
-                {conversation.needs_human ? (
-                  <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.danger)}>
-                    Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
-                  </span>
-                ) : null}
-                {aiControl}
-              </>
-            ) : conversation.needs_human ? (
-              <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.danger)}>
-                Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
-              </span>
-            ) : paused ? (
-              <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.warning)}>AI paused</span>
-            ) : (
-              <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.brand)}>
-                {AI_LABEL[conversation.ai.effective_mode]}
-              </span>
-            )}
-          </span>
+          {needsYou}
         </div>
-        <p className="truncate text-xs text-fg-secondary">
+        <p className="truncate text-xs text-fg-secondary" data-testid="thread-identity">
           {conversation.contact.username ? `@${conversation.contact.username} · ` : ""}
-          {platform}
-          {showAccount && account ? ` · ${account}` : ""}
+          <span className={PLATFORM_TEXT[conversation.platform]}>{platform}</span>
+          {account ? ` · ${account}` : ""}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        {aiControl ?? (
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+              paused ? TONE_CLASS.warning : TONE_CLASS.brand,
+            )}
+          >
+            {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}
+          </span>
+        )}
         <Button
           variant="ghost"
           size="icon-lg"
-          className="size-10 md:size-9"
+          className="hidden size-9 md:inline-flex"
           aria-label="Schedule a message"
           title={canSchedule ? "Schedule a message" : "Scheduling needs an open reply window"}
           disabled={!canSchedule}
@@ -123,9 +127,10 @@ export function ThreadHeader({
           variant="ghost"
           size="icon-lg"
           aria-label="Details"
+          title={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}
           aria-pressed={detailsOpen}
           onClick={onToggleDetails}
-          className={cn("size-10 md:size-9", detailsOpen && "text-brand-fg")}
+          className={cn("size-10 md:size-9", detailsOpen && "bg-brand-soft text-brand-fg")}
         >
           <PanelRight aria-hidden />
         </Button>

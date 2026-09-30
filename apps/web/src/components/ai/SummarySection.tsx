@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { Lightbulb, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -74,21 +74,28 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
         <>
           <p className="text-sm leading-relaxed">{summary.text}</p>
           {summary.next_step ? (
-            <p className="text-sm">
-              <span className="font-medium text-brand-fg">Next step: </span>
-              {summary.next_step}
-            </p>
+            // summary.v2 (C-063): one concrete suggestion from the conversation and knowledge.
+            <div role="note" aria-label="Next step" className="rounded-lg border border-brand-line bg-brand-soft px-3 py-2">
+              <p className="flex items-center gap-1 text-[11px] font-semibold tracking-[0.08em] text-brand-fg uppercase">
+                <Lightbulb className="size-3" aria-hidden /> Next step
+              </p>
+              <p className="mt-0.5 text-sm leading-relaxed">{summary.next_step}</p>
+            </div>
           ) : null}
         </>
       ) : (
         <p className="text-sm text-fg-secondary">No summary yet. It appears after a few messages, or ask for one now.</p>
       )}
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-fg-secondary">{summary && !waiting ? updatedLabel(summary.updated_at, now) : ""}</span>
-        <Button variant="ghost" size="xs" className="text-brand-fg" disabled={waiting || refresh.isPending} onClick={ask}>
-          <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}
-        </Button>
-      </div>
+      <p className="text-xs text-fg-secondary">{summary && !waiting ? updatedLabel(summary.updated_at, now) : ""}</p>
+      <Button
+        variant="secondary"
+        size="sm"
+        className="w-full"
+        disabled={waiting || refresh.isPending}
+        onClick={ask}
+      >
+        <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}
+      </Button>
     </div>
   );
 }
