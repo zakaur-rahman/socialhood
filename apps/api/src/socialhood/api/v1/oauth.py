@@ -1,4 +1,9 @@
-"""GET /v1/oauth/instagram/callback (F-03): public; the single-use state proves who started it."""
+"""GET /v1/oauth/instagram/callback (F-03): public; the single-use state proves who started it.
+
+It never connects anything itself (X-1, login CSRF): the browser that brings the code back may
+not belong to the member who started the connect. The code is parked under a one-time nonce and
+the signed-in Connections page finishes with POST …/social-accounts/instagram/complete, which
+only the member who started it can do (services/connections.finish_instagram_connect)."""
 
 from __future__ import annotations
 
@@ -9,10 +14,9 @@ from fastapi import APIRouter, Query, Request
 from fastapi.responses import RedirectResponse
 
 from socialhood.api import ratelimit
-from socialhood.billing.plans import current_plan
-from socialhood.db.tenancy import workspace_scope
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import deps_from
+from socialhood.repositories import workspaces
 from socialhood.services import connections as service
 from socialhood.settings import Settings
 
@@ -41,22 +45,15 @@ async def instagram_callback(
     if data is None:
         # Expired, reused or forged state: we cannot tell which workspace, so /app routes it.
         return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
+    async with request.app.state.sessionmaker() as session:
+        active = await workspaces.is_active(session, uuid.UUID(data["workspace_id"]))
+    if not active:  # deleted or being deleted since the connect started (T9.6)
+        return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
     target = f"{_web(settings)}/w/{data['slug']}/settings/connections"
     if error or not code:
         reason = "access_denied" if error in (None, "access_denied") else "connect_failed"
         return RedirectResponse(f"{target}?error={reason}", status_code=303)
 
     deps = deps_from(request.app.state.http, settings)
-    with workspace_scope(uuid.UUID(data["workspace_id"])):
-        async with request.app.state.sessionmaker() as session:
-            outcome = await service.complete_instagram_connect(
-                session,
-                deps,
-                code=code,
-                user_id=uuid.UUID(data["user_id"]),
-                plan=await current_plan(session),
-            )
-    if outcome.error:
-        extra = f"&limit={outcome.limit}" if outcome.limit is not None else ""
-        return RedirectResponse(f"{target}?error={outcome.error}{extra}", status_code=303)
-    return RedirectResponse(f"{target}?connected=instagram", status_code=303)
+    nonce = await service.hold_instagram_code(request.app.state.redis, deps, data, code)
+    return RedirectResponse(f"{target}?instagram={nonce}", status_code=303)

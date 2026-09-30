@@ -13,11 +13,22 @@ from sqlalchemy.orm import aliased
 from socialhood.models.agent import AgentPolicy
 from socialhood.models.ai import AiSettings
 from socialhood.models.billing import Plan, Subscription, SubscriptionStatus
-from socialhood.models.identity import Role, User, Workspace, WorkspaceMember
+from socialhood.models.identity import Role, User, Workspace, WorkspaceMember, WorkspaceStatus
 
 
 async def get(session: AsyncSession, workspace_id: uuid.UUID) -> Workspace | None:
     return await session.get(Workspace, workspace_id)
+
+
+async def is_active(session: AsyncSession, workspace_id: uuid.UUID, *, lock: bool = False) -> bool:
+    """Whether the workspace exists and isn't being deleted. With ``lock`` the row is held FOR
+    SHARE until the transaction ends, so a deletion that starts meanwhile waits for it and then
+    disconnects whatever it added (T9.6)."""
+    query = select(Workspace.status).where(Workspace.id == workspace_id)
+    if lock:
+        query = query.with_for_update(read=True)
+    status = (await session.execute(query)).scalar_one_or_none()
+    return status == WorkspaceStatus.ACTIVE
 
 
 async def owned_by(session: AsyncSession, user_id: uuid.UUID) -> list[Workspace]:

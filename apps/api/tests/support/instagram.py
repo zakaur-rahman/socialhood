@@ -106,12 +106,35 @@ async def start_connect(client: httpx.AsyncClient, clerk: Clerk, clerk_id: str, 
     return state_from(response.json()["authorize_url"])
 
 
+async def callback(client: httpx.AsyncClient, state: str, code: str = "code-1") -> str:
+    """Instagram sends the browser back; returns the nonce the callback redirected with (X-1)."""
+    response = await client.get(
+        "/v1/oauth/instagram/callback", params={"code": code, "state": state}
+    )
+    query = redirect_query(response)
+    assert "instagram" in query, query
+    return query["instagram"]
+
+
+async def complete(
+    client: httpx.AsyncClient, clerk: Clerk, clerk_id: str, wid: str, nonce: str
+) -> httpx.Response:
+    """The signed-in Connections page finishes the connect with the nonce."""
+    return await client.post(
+        f"/v1/w/{wid}/social-accounts/instagram/complete",
+        json={"nonce": nonce},
+        headers=clerk.headers(clerk_id),
+    )
+
+
 async def connect(
     client: httpx.AsyncClient, clerk: Clerk, clerk_id: str, wid: str, *, code: str = "code-1"
 ) -> httpx.Response:
-    """Run the whole connect flow and return the callback's redirect."""
+    """Run the whole connect flow (start, Instagram's callback, the page's complete) and return
+    the complete response: 200 with the account, or the problem."""
     state = await start_connect(client, clerk, clerk_id, wid)
-    return await client.get("/v1/oauth/instagram/callback", params={"code": code, "state": state})
+    nonce = await callback(client, state, code)
+    return await complete(client, clerk, clerk_id, wid, nonce)
 
 
 def redirect_query(response: httpx.Response) -> dict[str, str]:

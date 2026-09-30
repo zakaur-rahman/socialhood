@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import secrets
 import uuid
-from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -25,6 +24,7 @@ from socialhood.platforms.instagram import oauth
 from socialhood.platforms.registry import adapter_for
 from socialhood.platforms.sandbox.adapter import SANDBOX_PREFIX, is_sandbox
 from socialhood.repositories import social_accounts as accounts
+from socialhood.repositories import workspaces
 from socialhood.schemas.accounts import SocialAccountOut, SocialAccountPatch
 from socialhood.services.automations.definitions import pause_for_account
 from socialhood.services.notifications import notify_admins
@@ -141,21 +141,84 @@ async def pop_state(redis: Redis, state: str | None) -> dict[str, str] | None:
     return json.loads(raw) if raw else None
 
 
-@dataclass(frozen=True)
-class ConnectOutcome:
-    error: str | None = None
-    account_id: uuid.UUID | None = None
-    limit: int | None = None  # with quota_exceeded, for the "Your plan includes …" copy
+# X-1 (login CSRF): the public callback never connects anything. Whoever's browser brings the code
+# back may not be the person who started the connect (an attacker can send their authorize link to
+# a victim), so the callback parks the code under a one-time nonce, bound to the user and
+# workspace from the state, and the signed-in page finishes with POST …/instagram/complete. Only
+# the member who started the connect can finish it.
+
+HELD_TTL_S = 600  # Instagram's code lives an hour; the member is sent straight back to the page
+CONNECT_EXPIRED = "That connection link expired. Connect Instagram again."
+CONNECT_NOT_YOURS = (
+    "This Instagram connection was started by someone else, so it wasn't added. To connect your "
+    "own account, use Connect Instagram."
+)
+CONNECT_FAILED = "Instagram didn't respond. Try again."
+NOT_PROFESSIONAL = (
+    "Only Instagram business and creator accounts can connect. Switch the account type in the "
+    "Instagram app, then try again."
+)
+IN_USE = "This account is connected to another Social Hood workspace. Disconnect it there first."
+
+
+def _held_key(nonce: str) -> str:
+    return f"oauth:held:{nonce}"
+
+
+async def hold_instagram_code(
+    redis: Redis, deps: PlatformDeps, state: dict[str, str], code: str
+) -> str:
+    """Park the code (encrypted, like every platform credential) for the signed-in page; returns
+    the nonce the callback hands to the browser."""
+    nonce = secrets.token_urlsafe(32)
+    held = {
+        "user_id": state["user_id"],
+        "workspace_id": state["workspace_id"],
+        "code": deps.cipher.encrypt(code).decode(),
+    }
+    await redis.set(_held_key(nonce), json.dumps(held), ex=HELD_TTL_S)
+    return nonce
+
+
+async def finish_instagram_connect(
+    session: AsyncSession,
+    redis: Redis,
+    deps: PlatformDeps,
+    *,
+    nonce: str,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+    plan: str,
+) -> SocialAccount:
+    """POST …/instagram/complete: take the held code (once, whatever happens next) and connect,
+    but only for the member and workspace that started it."""
+    raw = await redis.getdel(_held_key(nonce))
+    if raw is None:
+        raise ApiError("not_found", CONNECT_EXPIRED)
+    held = json.loads(raw)
+    if held["user_id"] != str(user_id) or held["workspace_id"] != str(workspace_id):
+        log.warning(
+            "instagram_connect_refused",
+            reason="not_the_starter",
+            started_in=held["workspace_id"],
+            started_by=held["user_id"],
+        )
+        raise ApiError("forbidden", CONNECT_NOT_YOURS)
+    code = deps.cipher.decrypt(held["code"].encode())
+    return await complete_instagram_connect(
+        session, deps, workspace_id=workspace_id, code=code, user_id=user_id, plan=plan
+    )
 
 
 async def complete_instagram_connect(
     session: AsyncSession,
     deps: PlatformDeps,
     *,
+    workspace_id: uuid.UUID,
     code: str,
     user_id: uuid.UUID,
     plan: str,
-) -> ConnectOutcome:
+) -> SocialAccount:
     """Exchange the code, check the account, store it, subscribe it. Runs in the workspace scope."""
     http = PlatformHttp(deps.http, "instagram")
     try:
@@ -166,14 +229,17 @@ async def complete_instagram_connect(
         log.warning(
             "instagram_connect_failed", error_code=error.code, platform_code=error.platform_code
         )
-        return ConnectOutcome(error="connect_failed")
+        raise ApiError("platform_error", CONNECT_FAILED) from error
     if not profile.is_professional:
-        return ConnectOutcome(error="ig_not_professional")
+        raise ApiError("ig_not_professional", NOT_PROFESSIONAL)
+    # A deletion that began after the request was let in: nothing may be added to it (T9.6).
+    if not await workspaces.is_active(session, workspace_id, lock=True):
+        raise ApiError("not_found")
     existing = await accounts.find(session, Platform.INSTAGRAM, profile.user_id)
     reconnecting = existing is not None and existing.status != AccountStatus.DISCONNECTED
     limit = None if reconnecting else await _at_capacity(session, Platform.INSTAGRAM, plan)
     if limit is not None:
-        return ConnectOutcome(error="quota_exceeded", limit=limit)
+        raise _quota_error(limit, Platform.INSTAGRAM)
 
     now = datetime.now(UTC)
     values: dict[str, Any] = {
@@ -193,11 +259,12 @@ async def complete_instagram_connect(
     }
     acct = await _upsert(session, Platform.INSTAGRAM, profile.user_id, values)
     if acct is None:
-        return ConnectOutcome(error="account_in_use")
+        raise ApiError("account_in_use", IN_USE)
     await subscribe(session, acct, deps)
     await session.commit()
+    await session.refresh(acct)
     await start_initial_sync(acct)  # FR-CON-01: recent posts and conversations
-    return ConnectOutcome(account_id=acct.id)
+    return acct
 
 
 async def _upsert(

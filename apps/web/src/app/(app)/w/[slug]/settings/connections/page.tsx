@@ -16,6 +16,7 @@ import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import { ApiError, isPlanLimitError } from "@/lib/api/errors";
 import {
+  useCompleteInstagramConnect,
   useCreateSandboxAccount,
   useDisconnectAccount,
   useResubscribeAccount,
@@ -25,7 +26,14 @@ import {
 } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { browser } from "@/lib/billing/browser";
-import { connectResult, emptyStates, errorMessage } from "@/lib/copy";
+import {
+  completeConnectResult,
+  connectResult,
+  emptyStates,
+  errorMessage,
+  instagramConnected,
+  type ConnectResult,
+} from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -61,7 +69,7 @@ function Connections() {
     });
   }, [connect]);
 
-  useConnectResultToast(accounts.data, accounts.isError, startConnect);
+  const finishing = useConnectResultToast(wid, accounts.data, accounts.isError, startConnect);
 
   if (accounts.isPending) return <PageSkeleton rows={2} />;
   if (accounts.isError) return <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />;
@@ -89,9 +97,9 @@ function Connections() {
         </Button>
       ) : null}
       <ConnectWhatsAppButton wid={wid} />
-      <Button className="bg-brand-gradient text-white" disabled={connect.isPending} onClick={startConnect}>
+      <Button className="bg-brand-gradient text-white" disabled={connect.isPending || finishing} onClick={startConnect}>
         <InstagramGlyph className="size-4" />
-        {connect.isPending ? "Opening Instagram…" : "Connect Instagram"}
+        {finishing ? "Connecting Instagram…" : connect.isPending ? "Opening Instagram…" : "Connect Instagram"}
       </Button>
     </>
   ) : null;
@@ -187,12 +195,21 @@ function handleOf(account: SocialAccount): string {
   return account.username ? `@${account.username}` : (account.display_name ?? "Account");
 }
 
+function showConnectResult(result: ConnectResult | null, retry: () => void) {
+  if (result?.kind === "success") toast.success(result.message);
+  else if (result) {
+    toast.error(result.message, result.retry ? { action: { label: "Try again", onClick: retry } } : undefined);
+  }
+}
+
 /**
- * The OAuth callback redirects here with ?connected=instagram or ?error=…; show the toast once,
- * then drop the parameters so a refresh does not repeat it. Success waits for the account list
- * so the toast can name the account.
+ * The OAuth callback redirects here with ?instagram=<nonce> (X-1: the page, signed in, finishes
+ * the connect; the callback never does) or ?error=…. Post the nonce once, show the toast once,
+ * and drop the parameters straight away so a refresh repeats neither. ?connected=instagram is
+ * still understood (a link from before X-1); that toast waits for the list to name the account.
  */
 function useConnectResultToast(
+  wid: string,
   accounts: SocialAccount[] | undefined,
   failed: boolean,
   retry: () => void,
@@ -200,20 +217,28 @@ function useConnectResultToast(
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const complete = useCompleteInstagramConnect(wid);
+  const { mutate: finish } = complete;
   const shown = useRef(false);
 
   useEffect(() => {
-    if (shown.current || !(params.has("connected") || params.has("error"))) return;
-    if (params.has("connected") && accounts === undefined && !failed) return;
+    if (shown.current || !(params.has("instagram") || params.has("connected") || params.has("error"))) return;
+    const nonce = params.get("instagram");
+    if (!nonce && params.has("connected") && accounts === undefined && !failed) return;
     shown.current = true;
+    router.replace(pathname as Route, { scroll: false });
+    if (nonce) {
+      finish(nonce, {
+        onSuccess: (account) => showConnectResult(instagramConnected(account.username), retry),
+        onError: (error) => showConnectResult(completeConnectResult(error), retry),
+      });
+      return;
+    }
     const newest = [...(accounts ?? [])]
       .filter((a) => a.connected_at)
       .sort((a, b) => (b.connected_at ?? "").localeCompare(a.connected_at ?? ""))[0];
-    const result = connectResult(new URLSearchParams(params.toString()), newest?.username);
-    if (result?.kind === "success") toast.success(result.message);
-    else if (result) {
-      toast.error(result.message, result.retry ? { action: { label: "Try again", onClick: retry } } : undefined);
-    }
-    router.replace(pathname as Route, { scroll: false });
-  }, [params, accounts, failed, retry, router, pathname]);
+    showConnectResult(connectResult(new URLSearchParams(params.toString()), newest?.username), retry);
+  }, [params, accounts, failed, retry, router, pathname, finish]);
+
+  return complete.isPending;
 }

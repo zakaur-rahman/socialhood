@@ -95,6 +95,34 @@ export function useStartInstagramConnect(wid: string) {
   });
 }
 
+/**
+ * F-03, X-1: the OAuth callback sends the browser back with ?instagram=<nonce>; this finishes the
+ * connect as the signed-in member. Only the member who started it can finish it (403 otherwise),
+ * once and within 10 minutes (404 after). A 402 opens the upgrade dialog like any other.
+ */
+export function useCompleteInstagramConnect(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<SocialAccount, Error, string>({
+    mutationFn: (nonce) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/social-accounts/instagram/complete", {
+          params: { path: { wid } },
+          body: { nonce },
+        }),
+      ),
+    onSuccess: async (account) => {
+      queryClient.setQueryData<SocialAccount[]>(keys.accounts(wid), (items) =>
+        items ? [...items.filter((item) => item.id !== account.id), account] : items,
+      );
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.accounts(wid) }),
+        queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] }),
+      ]);
+    },
+  });
+}
+
 function useAccountMutation<TVars>(
   wid: string,
   call: (vars: TVars) => Promise<SocialAccount | null>,

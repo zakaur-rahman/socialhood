@@ -25,6 +25,7 @@ from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.whatsapp import signup as meta
 from socialhood.platforms.whatsapp.graph import WhatsAppHttp
 from socialhood.repositories import social_accounts as accounts
+from socialhood.repositories import workspaces
 from socialhood.schemas.whatsapp import EmbeddedSignup
 from socialhood.services.connections import _at_capacity, _upsert, subscribe
 
@@ -62,6 +63,7 @@ async def complete_signup(
     deps: PlatformDeps,
     *,
     signup: EmbeddedSignup,
+    workspace_id: uuid.UUID,
     user_id: uuid.UUID,
     plan: str,
 ) -> SocialAccount:
@@ -85,6 +87,9 @@ async def complete_signup(
             platform_message=error.message,
         )
         raise ApiError("platform_error", CONNECT_FAILED) from error
+    # A deletion that began after the request was let in: nothing may be added to it (T9.6).
+    if not await workspaces.is_active(session, workspace_id, lock=True):
+        raise ApiError("not_found")
 
     now = datetime.now(UTC)
     values: dict[str, Any] = {

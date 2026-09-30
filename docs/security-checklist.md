@@ -17,16 +17,18 @@ Paths are relative to `apps/api/src/socialhood/` (API), `apps/api/tests/` (tests
 | Status | Count |
 |---|---|
 | pass | 28 |
-| fixed | 6 |
-| gap | 1 |
+| fixed | 7 |
+| gap | 0 |
 | accepted | 4 |
 
 The 39 items are the 14 SEC items, the 16 §0.3 rows, the rate limits and the 8 extra checks at
-the end. SEC-04, SEC-08, SEC-11 and SEC-14 count as fixed. The rate limits and X-3 are the other
-two fixes.
+the end. SEC-04, SEC-08, SEC-11 and SEC-14 count as fixed. The rate limits, X-1 and X-3 are the
+other three fixes.
 
-The open gap is **X-1, OAuth login CSRF on Instagram connect**. It should be fixed before public
-launch; see X-1 for the design.
+The one gap this pass found, **X-1, OAuth login CSRF on Instagram connect**, was fixed in the P9
+integration pass (branch `p9/integration`, C-060). So were the fixes it needed in other agents'
+files: uvicorn's `--no-server-header` (SEC-11), the client IP behind Render's proxy (rate limits)
+and the `code=` log fields (SEC-07).
 
 ## SEC items (§2.12)
 
@@ -275,7 +277,7 @@ The 429 is covered by each operation's documented `default` problem response. No
 
 | ID | Check | Status | Evidence |
 |---|---|---|---|
-| X-1 | OAuth state bound to the browser (login CSRF on Instagram connect) | **gap** | See X-1 below. |
+| X-1 | OAuth state bound to the browser (login CSRF on Instagram connect) | fixed | See X-1 below. |
 | X-2 | Open redirects: the OAuth callback, checkout return and the auth return | pass | See X-2 below. |
 | X-3 | Navigation to URLs the API returns (checkout, portal, Instagram authorize) | fixed | See X-3 below. |
 | X-4 | Idempotency (TR-API-05) | pass, with notes | See X-4 below. |
@@ -284,24 +286,53 @@ The 429 is covered by each operation's documented `default` problem response. No
 | A-3 | The Cloudinary upload signature signs only `folder` and `timestamp` | accepted | See A-3 below. |
 | A-4 | Web CSP keeps `script-src 'unsafe-inline'`; Meta's SDK is allowed app-wide | accepted | See A-4 below. |
 
-### X-1: OAuth login CSRF on Instagram connect (gap)
+### X-1: OAuth login CSRF on Instagram connect (fixed)
 **The problem.** The state is random, single-use, lasts 10 minutes and names the starting user and
-workspace (`services/connections.py:120-141`). The public callback, however, completes the connect
-for whichever browser brings the code.
+workspace (`services/connections.py` `start_instagram_connect`). The public callback, however,
+completed the connect for whichever browser brought the code.
 
 **The attack.** An attacker starts a connect in their own workspace and sends the Instagram
 authorize link to a victim. If the victim approves "Social Hood", the victim's Instagram account is
 connected to the attacker's workspace, which can then read and send its DMs. F-04 (`account_in_use`)
 blocks this only when the victim's account is already connected elsewhere.
 
-**Why it is deferred.** The fix changes the connect flow, the web connections page, about 28 test
-call sites and the contract. That is not a small change in a parallel phase.
-
-**The fix.** The callback stops completing the connect. Instead:
-1. It stores `{code, state data}` under a one-time nonce in Valkey, with a 10-minute TTL.
+**The fix (p9/integration).** The callback no longer connects anything:
+1. `api/v1/oauth.py` pops the state, refuses a workspace that isn't active, and parks the code under
+   a one-time nonce: `oauth:held:{nonce}` in Valkey, 10-minute TTL, holding the state's user and
+   workspace and the code **encrypted** with `TOKEN_ENCRYPTION_KEYS` (`hold_instagram_code`). The
+   code, not the token, is kept: it lives an hour at most, works once, and is useless without the
+   app secret. Nothing is exchanged until the member confirms.
 2. It redirects to `/w/{slug}/settings/connections?instagram=<nonce>`.
-3. The signed-in page posts the nonce to a new `POST /v1/w/{wid}/social-accounts/instagram/complete` (Admin).
-4. That route completes the connect only if the stored user and workspace equal the caller's. Anything else is 404.
+3. The signed-in Connections page posts the nonce once to `POST /v1/w/{wid}/social-accounts/instagram/complete` (Admin) and drops it from the URL.
+4. `finish_instagram_connect` takes the nonce with `GETDEL` (single use, whatever happens next), then
+   connects only if the stored user id and workspace id equal the caller's. `workspace_ctx` has
+   already required a membership in an active workspace, and `Admin` the role.
+- **Answers.** 404 `not_found` for an expired, used or unknown nonce ("That connection link
+  expired."); 403 `forbidden` when someone else started it ("This Instagram connection was started
+  by someone else, so it wasn't added."). The connect's own outcomes keep their codes: 409
+  `account_in_use`, 402 `quota_exceeded` (`accounts_per_platform`, with the limit), the new 422
+  `ig_not_professional`, and 502 `platform_error` when Instagram fails.
+- **A victim** lands on the attacker's workspace URL. Not being a member, the page says "Workspace
+  not found" and nothing is posted; posted to any workspace, the nonce is refused (403) and used up.
+  The code is never exchanged.
+- **Deletion (T9.6 follow-up).** The callback refuses a workspace that isn't active, and the
+  complete re-reads the workspace row `FOR SHARE` before storing the account, so a deletion that
+  starts mid-connect either waits and then disconnects the account, or wins and the connect is 404.
+  The WhatsApp signup does the same (`repositories/workspaces.is_active`).
+- **Tests** (`tests/integration/test_connections.py`):
+  `test_a_victim_cannot_finish_an_attackers_connect`,
+  `test_a_nonce_for_another_workspace_of_the_same_member_is_refused`, `test_a_nonce_works_once`,
+  `test_an_expired_nonce_fails` (which also checks the code is stored encrypted),
+  `test_no_connect_for_a_workspace_being_deleted`, and the existing connect tests through the new
+  `tests/support/instagram.connect` helper (start, callback, complete). Web:
+  `settings/connections/page.test.tsx` (the nonce is posted once and the copy for each refusal)
+  and `lib/copy.test.ts`.
+
+**WhatsApp Embedded Signup is not affected.** Meta's SDK runs in a popup opened by the signed-in
+Connections page and hands the code back to that page's JavaScript (`src/lib/whatsapp/embedded-signup.ts`),
+which posts it with the member's bearer token to `POST …/social-accounts/whatsapp/embedded-signup`.
+There is no public redirect for another browser to land on, and the API never uses cookies, so a
+code can only be submitted by the member whose page asked for it.
 
 ### X-2: open redirects (pass)
 - **OAuth callback.** It redirects only to `WEB_BASE_URL` plus the stored slug, which must match `SLUG_PATTERN`. The `error` value maps to fixed codes (`api/v1/oauth.py`). New: `test_security_pass.py::test_the_oauth_callback_only_redirects_to_the_web_app`.

@@ -33,7 +33,12 @@ async def complete_whatsapp_signup(
     account_in_use when the number is connected to another workspace."""
     deps = _deps(request)
     acct = await whatsapp_connect.complete_signup(
-        session, deps, signup=body, user_id=ctx.user.id, plan=await current_plan(session)
+        session,
+        deps,
+        signup=body,
+        workspace_id=ctx.workspace_id,
+        user_id=ctx.user.id,
+        plan=await current_plan(session),
     )
     return account_out(acct, deps)
 

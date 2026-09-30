@@ -26,6 +26,8 @@ ERROR_CODES: dict[str, ErrorCode] = {
     "account_needs_reconnect": ErrorCode(409, "The account needs reconnecting"),
     "capability_unavailable": ErrorCode(409, "This account can't do that"),
     "account_in_use": ErrorCode(409, "The account is connected to another workspace"),  # F-04
+    # F-03: a personal Instagram account came back from the connect (§4.7's copy, C-060).
+    "ig_not_professional": ErrorCode(422, "Only business and creator accounts can connect"),
     "entitlement_required": ErrorCode(402, "Upgrade required"),
     "quota_exceeded": ErrorCode(402, "Plan limit reached"),
     "unsupported_media": ErrorCode(415, "Unsupported media"),
