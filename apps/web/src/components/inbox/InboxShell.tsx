@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -116,7 +116,9 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   const [storedPlatform, setStoredPlatform] = useStoredString<PlatformChoice>(`socialhood:inbox-platform:${wid}`, "all");
   const platform: PlatformChoice = platforms.includes(storedPlatform as Platform) ? (storedPlatform as Platform) : "all";
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [view, setView] = useState<InboxView>("all");
+  // Home's Needs reply tile opens this view (?view=needs_reply); the chips change it from there.
+  const linkedView = useSearchParams().get("view");
+  const [view, setView] = useState<InboxView>(() => VIEWS.find((option) => option.value === linkedView)?.value ?? "all");
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<InboxTab>("chats");
   const platformAccounts = platform === "all" ? [] : accounts.filter((account) => account.platform === platform);

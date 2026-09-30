@@ -1,12 +1,14 @@
 """The workspace's headline numbers over a date range: one definition for the weekly digest
 (FR-NOT-04, T8.7) and the Home overview (FR-HOME-01, T9.1).
 
-**T9.1 must build GET …/overview's metrics on these functions**, so that "numbers match the
-overview endpoint" (T8.7's acceptance) holds by construction: the digest is ``compute`` over the
-Monday to Sunday before it is sent (``week_before``), and the overview over its range
-(``days_up_to_today``: 7d or 30d, the local days up to and including today, like the analytics
-ranges of C-039). Home's extra numbers (messages today, the sentiment split, conversations
-needing a reply) belong in this module too when T9.1 adds them.
+**GET …/overview (T9.1, services/overview.py) builds its metrics on these functions**, so that
+"numbers match the overview endpoint" (T8.7's acceptance) holds by construction: the digest is
+``compute`` over the Monday to Sunday before it is sent (``week_before``), and the overview over
+its range (``days_up_to_today``: 7d or 30d, the local days up to and including today, like the
+analytics ranges of C-039), compared with the same number of days before it (``period_before``).
+Home's extra numbers live here too: messages today (``messages_received`` over today), the
+sentiment splits of messages and comments, and the accounts that need attention. Conversations
+needing a reply are the inbox's own count (services/conversations.py ``inbox_counts``).
 
 Ranges are local calendar days in the workspace's time zone (services/analytics/common.py
 ``date_range``), start included, end excluded. Definitions:
@@ -30,6 +32,13 @@ Ranges are local calendar days in the workspace's time zone (services/analytics/
   (the Knowledge page's list, FR-KB-06).
 - **Comments** and **top posts**: comments made in the range and not deleted; posts ranked by
   them, most first, then the newest post.
+- **Message sentiment**: customer messages received in the range, by their analysis's sentiment
+  (a member's correction wins). Spam (the intent, correction winning) is counted apart and
+  messages without an analysis are reported as such, never guessed; positive + neutral +
+  negative are the analysed messages that are not spam, and the shares are of that sum.
+- **Comment sentiment**: the analytics distribution for the same days (services/analytics/
+  sentiment.py; C-039): comments made in the range and not deleted, spam apart.
+- **Accounts needing attention**: connected accounts that need reconnecting or are in error.
 Percentages are 0 to 100 with one decimal, None when there is nothing to divide.
 """
 
@@ -45,8 +54,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from socialhood.db.tenancy import require_workspace
-from socialhood.models.ai import GapStatus, MessageAnalysis
+from socialhood.models.ai import GapStatus, MessageAnalysis, Sentiment
 from socialhood.models.automations import Comment
+from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.inbox import (
     Conversation,
     ConversationStatus,
@@ -56,8 +66,10 @@ from socialhood.models.inbox import (
     MessageStatus,
 )
 from socialhood.models.media import MediaItem
+from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import knowledge as knowledge_repo
-from socialhood.services.analytics.common import DateRange, date_range, zone
+from socialhood.services.analytics.common import DateRange, View, date_range, zone
+from socialhood.services.analytics.sentiment import sentiment_distribution
 from socialhood.services.knowledge import gaps
 
 REPLY_SOURCES = (
@@ -69,6 +81,8 @@ REPLY_SOURCES = (
 AI_SOURCES = (MessageSource.AI_AUTO, MessageSource.AUTOMATION)
 REACHED = (MessageStatus.SENT, MessageStatus.DELIVERED, MessageStatus.READ)
 LEFT_OUT_INTENTS = ("other", "spam")
+SPAM_INTENT = "spam"
+NEEDS_ATTENTION = (AccountStatus.NEEDS_RECONNECT, AccountStatus.ERROR)
 TURN_LOOKBACK = timedelta(days=30)
 TOP_N = 3
 
@@ -80,6 +94,20 @@ def days_up_to_today(timezone: str, now: datetime, days: int) -> DateRange:
     """The ``days`` local days ending today (the overview's 7d and 30d)."""
     today = now.astimezone(zone(timezone)).date()
     return date_range(timezone, now, today - timedelta(days=days - 1), today)
+
+
+def period_before(timezone: str, span: DateRange) -> DateRange:
+    """The same number of local days just before ``span`` (the overview's comparison). Local
+    midnight to local midnight, so a daylight-saving change makes it an hour longer or shorter."""
+    tz = zone(timezone)
+    days = (span.until - span.since).days + 1
+    since = span.since - timedelta(days=days)
+    return DateRange(
+        since=since,
+        until=span.since - timedelta(days=1),
+        start=datetime.combine(since, time.min, tzinfo=tz),
+        end=datetime.combine(span.since, time.min, tzinfo=tz),
+    )
 
 
 def week_before(timezone: str, week_start: date) -> DateRange:
@@ -186,6 +214,28 @@ class OverviewStats:
         }
 
 
+@dataclass(frozen=True)
+class SentimentSplit:
+    total: int  # messages or comments in the range
+    analysed: int  # of them, with an analysis
+    positive: int  # analysed and not spam
+    neutral: int
+    negative: int
+    spam: int
+
+    def share(self, part: int) -> float | None:
+        """A share of the analysed, non-spam total (positive + neutral + negative)."""
+        return pct(part, self.positive + self.neutral + self.negative)
+
+
+@dataclass(frozen=True)
+class AccountAttention:
+    account_id: uuid.UUID
+    platform: str
+    username: str | None
+    status: str  # needs_reconnect or error
+
+
 def pct(part: int, whole: int) -> float | None:
     return round(part / whole * 100, 1) if whole else None
 
@@ -209,18 +259,32 @@ def _reply_at(m: type[Message] | Any) -> ColumnElement[datetime]:
     return func.coalesce(m.sent_at, m.occurred_at)
 
 
+def _received_in(ws: uuid.UUID, span: DateRange) -> ColumnElement[bool]:
+    """Customer messages that arrived in the range."""
+    return and_(
+        Message.workspace_id == ws,
+        _customer(Message),
+        Message.occurred_at >= span.start,
+        Message.occurred_at < span.end,
+    )
+
+
+async def messages_received(session: AsyncSession, span: DateRange) -> int:
+    """Messages received: Home's "Messages today" is this over today."""
+    ws = require_workspace()
+    return int(
+        await session.scalar(
+            select(func.count()).select_from(Message).where(_received_in(ws, span))
+        )
+        or 0
+    )
+
+
 async def inbox_stats(session: AsyncSession, span: DateRange) -> InboxStats:
     ws = require_workspace()
     start, end = span.start, span.end
-    in_range = and_(
-        Message.workspace_id == ws,
-        _customer(Message),
-        Message.occurred_at >= start,
-        Message.occurred_at < end,
-    )
-    received = int(
-        await session.scalar(select(func.count()).select_from(Message).where(in_range)) or 0
-    )
+    in_range = _received_in(ws, span)
+    received = await messages_received(session, span)
 
     # Reply rate and handled by AI, per conversation.
     firsts = (
@@ -330,18 +394,32 @@ async def top_intents(session: AsyncSession, span: DateRange, n: int = TOP_N) ->
     return [IntentCount(intent=row.intent, count=int(row.n)) for row in rows]
 
 
-async def comments(
-    session: AsyncSession, span: DateRange, n: int = TOP_N
-) -> tuple[int, list[PostComments]]:
-    """Comments made in the range, and the ``n`` posts with the most of them."""
-    ws = require_workspace()
-    scope = and_(
+def _comments_in(ws: uuid.UUID, span: DateRange) -> ColumnElement[bool]:
+    return and_(
         Comment.workspace_id == ws,
         Comment.deleted_at.is_(None),
         Comment.commented_at >= span.start,
         Comment.commented_at < span.end,
     )
-    total = int(await session.scalar(select(func.count()).select_from(Comment).where(scope)) or 0)
+
+
+async def comments_received(session: AsyncSession, span: DateRange) -> int:
+    ws = require_workspace()
+    return int(
+        await session.scalar(
+            select(func.count()).select_from(Comment).where(_comments_in(ws, span))
+        )
+        or 0
+    )
+
+
+async def comments(
+    session: AsyncSession, span: DateRange, n: int = TOP_N
+) -> tuple[int, list[PostComments]]:
+    """Comments made in the range, and the ``n`` posts with the most of them."""
+    ws = require_workspace()
+    scope = _comments_in(ws, span)
+    total = await comments_received(session, span)
     if not total:
         return 0, []
     count = func.count(Comment.id)
@@ -387,6 +465,74 @@ async def needs_you(session: AsyncSession) -> int:
         )
         or 0
     )
+
+
+async def message_sentiment(session: AsyncSession, span: DateRange) -> SentimentSplit:
+    ws = require_workspace()
+    sentiment = func.coalesce(MessageAnalysis.corrected_sentiment, MessageAnalysis.sentiment)
+    is_spam = func.coalesce(MessageAnalysis.corrected_intent, MessageAnalysis.intent) == SPAM_INTENT
+    analysed = func.count(MessageAnalysis.id)
+
+    def clean(name: Sentiment) -> ColumnElement[int]:
+        return analysed.filter(and_(not_(is_spam), sentiment == name.value))
+
+    row = (
+        await session.execute(
+            select(
+                func.count(Message.id),
+                analysed,
+                clean(Sentiment.POSITIVE),
+                clean(Sentiment.NEUTRAL),
+                clean(Sentiment.NEGATIVE),
+                analysed.filter(is_spam),
+            )
+            .select_from(Message)
+            .outerjoin(
+                MessageAnalysis,
+                and_(
+                    MessageAnalysis.message_id == Message.id,
+                    MessageAnalysis.workspace_id == ws,
+                ),
+            )
+            .where(_received_in(ws, span))
+        )
+    ).one()
+    total, done, positive, neutral, negative, spam = (int(v or 0) for v in row)
+    return SentimentSplit(total, done, positive, neutral, negative, spam)
+
+
+def _no_capabilities(acct: SocialAccount) -> frozenset[Capability]:
+    return frozenset()  # the sentiment distribution reads no insights
+
+
+async def comment_sentiment(
+    session: AsyncSession, span: DateRange, *, timezone: str, now: datetime
+) -> SentimentSplit:
+    """``span`` must be local days in ``timezone`` (``days_up_to_today``, ``period_before``):
+    the analytics distribution is asked for the same days."""
+    dist = await sentiment_distribution(
+        session, View(timezone, now, _no_capabilities), since=span.since, until=span.until
+    )
+    return SentimentSplit(
+        dist.total, dist.analysed, dist.positive, dist.neutral, dist.negative, dist.spam
+    )
+
+
+async def accounts_needing_attention(session: AsyncSession) -> list[AccountAttention]:
+    ws = require_workspace()
+    rows = await session.execute(
+        select(
+            SocialAccount.id, SocialAccount.platform, SocialAccount.username, SocialAccount.status
+        )
+        .where(SocialAccount.workspace_id == ws, SocialAccount.status.in_(NEEDS_ATTENTION))
+        .order_by(SocialAccount.connected_at, SocialAccount.id)
+    )
+    return [
+        AccountAttention(
+            account_id=row.id, platform=row.platform, username=row.username, status=row.status
+        )
+        for row in rows
+    ]
 
 
 async def unanswered_questions(

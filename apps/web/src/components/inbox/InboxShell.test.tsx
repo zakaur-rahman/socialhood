@@ -7,11 +7,12 @@ import { account, conversation, json, listItem, noContent, renderWithApi, type C
 
 import { InboxShell } from "./InboxShell";
 
-const nav = vi.hoisted(() => ({ params: {} as { id?: string }, push: vi.fn() }));
+const nav = vi.hoisted(() => ({ params: {} as { id?: string }, push: vi.fn(), search: "" }));
 vi.mock("next/navigation", () => ({
   useParams: () => nav.params,
   useRouter: () => ({ push: nav.push, replace: vi.fn() }),
   usePathname: () => (nav.params.id ? `/w/maple/inbox/${nav.params.id}` : "/w/maple/inbox"),
+  useSearchParams: () => new URLSearchParams(nav.search),
 }));
 
 const originalMatchMedia = window.matchMedia;
@@ -77,6 +78,7 @@ function pane(name: "list" | "thread" | "details"): HTMLElement | null {
 
 beforeEach(() => {
   nav.params = {};
+  nav.search = "";
   nav.push.mockReset();
   window.localStorage.clear();
 });
@@ -175,6 +177,15 @@ describe("InboxShell list states (§4.7)", () => {
     await user.click(screen.getByRole("button", { name: "Show all" }));
     expect(await screen.findByText("Kabir Shah")).toBeInTheDocument();
     expect(views).toEqual(["all", "unread"]);
+  });
+
+  it("opens on the view in the link (Home's Needs reply tile)", async () => {
+    nav.search = "view=needs_reply";
+    const views: (string | null)[] = [];
+    renderShell({ onList: (call) => views.push(call.url.searchParams.get("view")) });
+    expect(await screen.findByText('Nothing matches "Needs reply" right now.')).toBeInTheDocument();
+    expect(views).toEqual(["needs_reply"]);
+    expect(screen.getByRole("button", { name: "Needs reply" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("searches on the server after a pause", async () => {

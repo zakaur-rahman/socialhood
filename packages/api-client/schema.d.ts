@@ -1600,7 +1600,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Overview */
+        /**
+         * Get Overview
+         * @description Home's metrics over the last 7 or 30 days (today included) in the workspace's time zone,
+         *     with the same number of days before them for comparison.
+         */
         get: operations["get_overview"];
         put?: never;
         post?: never;
@@ -2129,6 +2133,26 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountAttention */
+        AccountAttention: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "needs_reconnect" | "error";
+            /** Username */
+            username: string | null;
+        };
         /** Actor */
         Actor: {
             /**
@@ -4031,6 +4055,16 @@ export interface components {
             /** Unread */
             unread: number;
         };
+        /** IntentCount */
+        IntentCount: {
+            /** Count */
+            count: number;
+            /**
+             * Intent
+             * @enum {string}
+             */
+            intent: "pricing" | "product_inquiry" | "purchase" | "order_status" | "shipping" | "support" | "complaint" | "refund" | "feedback" | "collaboration" | "greeting" | "spam" | "other";
+        };
         /** KnowledgeGap */
         KnowledgeGap: {
             /** Examples */
@@ -4547,19 +4581,115 @@ export interface components {
             /** This Runs First */
             this_runs_first: boolean;
         };
-        /** Overview */
+        /**
+         * Overview
+         * @description GET …/overview (FR-HOME-01, UX-SCR-01). Flows cover ``current`` (the range: 7 or 30 local
+         *     days up to and including today) and ``previous`` (as many days just before it); states are as
+         *     of now.
+         */
         Overview: {
+            /** Accounts Needing Attention */
+            accounts_needing_attention: components["schemas"]["AccountAttention"][];
             checklist: components["schemas"]["Checklist"];
+            comment_sentiment: components["schemas"]["SentimentSplit"];
+            current: components["schemas"]["OverviewPeriod"];
             /**
              * Knowledge Gaps Open
              * @default 0
              */
             knowledge_gaps_open: number;
+            message_sentiment: components["schemas"]["SentimentSplit"];
+            /** Messages Today */
+            messages_today: number;
+            /** Needs Reply */
+            needs_reply: number;
+            /** Needs You */
+            needs_you: number;
+            previous: components["schemas"]["OverviewPeriod"];
             /**
              * Range
              * @enum {string}
              */
             range: "7d" | "30d";
+            /** Timezone */
+            timezone: string;
+            /** Top Intents */
+            top_intents: components["schemas"]["IntentCount"][];
+            /** Top Posts */
+            top_posts: components["schemas"]["OverviewPost"][];
+            /** Top Questions */
+            top_questions: components["schemas"]["QuestionCount"][];
+        };
+        /**
+         * OverviewPeriod
+         * @description One period's flows (services/overview_stats.py has the definitions, shared with the weekly
+         *     digest): local days ``since`` to ``until``, both included, in the workspace's time zone.
+         *     Percentages are 0 to 100 with one decimal, None when there is nothing to divide.
+         */
+        OverviewPeriod: {
+            /** Comments Received */
+            comments_received: number;
+            /** Conversations */
+            conversations: number;
+            /** Conversations Replied */
+            conversations_replied: number;
+            /** First Responses */
+            first_responses: number;
+            /** Handled By Ai */
+            handled_by_ai: number;
+            /** Handled By Ai Rate */
+            handled_by_ai_rate: number | null;
+            /** Median First Response S */
+            median_first_response_s: number | null;
+            /** Messages Received */
+            messages_received: number;
+            /** Reply Rate */
+            reply_rate: number | null;
+            /**
+             * Since
+             * Format: date
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date
+             */
+            until: string;
+        };
+        /**
+         * OverviewPost
+         * @description One of the posts with the most comments in the period; ``stats`` is the post's own
+         *     comment split, as on the Comments page.
+         */
+        OverviewPost: {
+            /** Caption */
+            caption: string | null;
+            /** Comments */
+            comments: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Media Type */
+            media_type: string;
+            /** Media Url */
+            media_url: string | null;
+            /** Permalink */
+            permalink: string | null;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            stats: components["schemas"]["CommentStats"];
+            /** Thumbnail Url */
+            thumbnail_url: string | null;
         };
         /** PlanList */
         PlanList: {
@@ -4985,6 +5115,13 @@ export interface components {
             /** User Agent */
             user_agent?: string | null;
         };
+        /** QuestionCount */
+        QuestionCount: {
+            /** Asked */
+            asked: number;
+            /** Topic */
+            topic: string;
+        };
         /**
          * QueueInfo
          * @description FR-AUT-10: private replies waiting in the account's 750/hour queue for this automation.
@@ -5403,6 +5540,31 @@ export interface components {
             total: number;
             /** Until */
             until?: string | null;
+        };
+        /**
+         * SentimentSplit
+         * @description Messages (customer, received) or comments (not deleted) in the period by sentiment.
+         *     ``positive + neutral + negative`` are analysed and not spam; the shares are of that sum.
+         */
+        SentimentSplit: {
+            /** Analysed */
+            analysed: number;
+            /** Negative */
+            negative: number;
+            /** Negative Pct */
+            negative_pct: number | null;
+            /** Neutral */
+            neutral: number;
+            /** Neutral Pct */
+            neutral_pct: number | null;
+            /** Positive */
+            positive: number;
+            /** Positive Pct */
+            positive_pct: number | null;
+            /** Spam */
+            spam: number;
+            /** Total */
+            total: number;
         };
         /** SkippedCounts */
         SkippedCounts: {

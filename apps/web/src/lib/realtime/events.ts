@@ -80,12 +80,52 @@ function parse<T>(data: string): T | null {
   }
 }
 
+/** Events that change Home's numbers (GET …/overview is aggregates, so it is refetched). */
+const OVERVIEW_EVENTS: ReadonlySet<string> = new Set([
+  "message.created",
+  "message.updated",
+  "conversation.updated",
+  "analysis.created",
+  "comment.created",
+  "comment.updated",
+  "post.updated",
+  "social_account.updated",
+]);
+
+/** A burst of events refetches Home once, this long after the first of them. */
+export const OVERVIEW_REFRESH_MS = 3_000;
+
+const overviewTimers = new WeakMap<QueryClient, Map<string, ReturnType<typeof setTimeout>>>();
+
+/**
+ * Refetch the overview soon (only once Home has loaded it: an unmounted Home is marked stale and
+ * refetches when it opens). Throttled, so a busy inbox doesn't recompute Home per message.
+ */
+export function refreshOverviewSoon(queryClient: QueryClient, wid: string): void {
+  if (queryClient.getQueryCache().findAll({ queryKey: ["w", wid, "overview"] }).length === 0) return;
+  let timers = overviewTimers.get(queryClient);
+  if (!timers) {
+    timers = new Map();
+    overviewTimers.set(queryClient, timers);
+  }
+  if (timers.has(wid)) return;
+  const pending = timers;
+  pending.set(
+    wid,
+    setTimeout(() => {
+      pending.delete(wid);
+      void queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] });
+    }, OVERVIEW_REFRESH_MS),
+  );
+}
+
 export function applyRealtimeEvent(
   queryClient: QueryClient,
   wid: string,
   event: SseEvent,
   options: ApplyOptions = {},
 ): void {
+  if (OVERVIEW_EVENTS.has(event.event)) refreshOverviewSoon(queryClient, wid);
   switch (event.event) {
     case "message.created":
     case "message.updated": {
