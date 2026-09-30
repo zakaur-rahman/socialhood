@@ -96,7 +96,6 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     expect(pane("thread")).toHaveTextContent("Thread pane");
     expect(pane("details")).toHaveClass("w-[300px]");
     expect(pane("details")?.tagName).toBe("ASIDE");
-    // Labels show on the platform strip at this width.
     const strip = screen.getByRole("group", { name: "Platform" });
     expect(within(strip).getByRole("button", { name: "All" })).toHaveTextContent("All");
   });
@@ -109,8 +108,9 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     expect(pane("list")).toHaveClass("w-[320px]");
     expect(pane("thread")).toBeInTheDocument();
     expect(pane("details")).toBeNull();
+    // The segmented platform control is labelled at every width (C-063).
     const strip = screen.getByRole("group", { name: "Platform" });
-    expect(within(strip).getByRole("button", { name: "All" })).toHaveTextContent("");
+    expect(within(strip).getByRole("button", { name: "All" })).toHaveTextContent("All");
   });
 
   it("768–1023 px: list 300 and thread", async () => {
@@ -150,6 +150,40 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
   });
 });
 
+describe("the context panel's width threshold (C-063)", () => {
+  it("≥ 1440 px: starts open", async () => {
+    setWidth(1500);
+    nav.params = { id: "c1" };
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    expect(pane("details")).not.toBeNull();
+  });
+
+  it("1280–1439 px: starts collapsed", async () => {
+    setWidth(1300);
+    nav.params = { id: "c1" };
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    expect(pane("details")).toBeNull();
+  });
+
+  it("the remembered choice wins at either width", async () => {
+    window.localStorage.setItem("socialhood:inbox-details", "1");
+    setWidth(1300);
+    nav.params = { id: "c1" };
+    const view = renderShell();
+    await screen.findByText("Kabir Shah");
+    expect(pane("details")).not.toBeNull();
+    view.unmount();
+
+    window.localStorage.setItem("socialhood:inbox-details", "0");
+    setWidth(1500);
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    expect(pane("details")).toBeNull();
+  });
+});
+
 describe("InboxShell list states (§4.7)", () => {
   beforeEach(() => setWidth(1440));
 
@@ -177,6 +211,21 @@ describe("InboxShell list states (§4.7)", () => {
     await user.click(screen.getByRole("button", { name: "Show all" }));
     expect(await screen.findByText("Kabir Shah")).toBeInTheDocument();
     expect(views).toEqual(["all", "unread"]);
+  });
+
+  it("Needs you is a chip; Archived sits behind More", async () => {
+    const user = userEvent.setup();
+    const views: (string | null)[] = [];
+    renderShell({ onList: (call) => views.push(call.url.searchParams.get("view")) });
+    await screen.findByText("Kabir Shah");
+    await user.click(screen.getByRole("button", { name: "Needs you" }));
+    expect(await screen.findByText('Nothing matches "Needs you" right now.')).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Archived" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "More views" }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "Archived" }));
+    expect(await screen.findByText('Nothing matches "Archived" right now.')).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "More views: Archived" })).toBeInTheDocument();
+    expect(views).toEqual(["all", "needs_you", "archived"]);
   });
 
   it("opens on the view in the link (Home's Needs reply tile)", async () => {
@@ -263,5 +312,7 @@ describe("keyboard shortcuts (FR-INB-12)", () => {
     expect(pane("details")).not.toBeNull();
     await user.keyboard("{Escape}");
     expect(pane("details")).toBeNull();
+    // Remembered per device (C-063). Last in the file: the choice also stays in memory.
+    expect(window.localStorage.getItem("socialhood:inbox-details")).toBe("0");
   });
 });
