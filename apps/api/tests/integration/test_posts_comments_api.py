@@ -288,7 +288,14 @@ async def test_the_summary_refresh_queues_the_job_or_says_why_not(shop: Shop) ->
     assert not job["deferred"]  # a member's refresh runs at once
 
     await use_credits(shop.engine, uuid.UUID(shop.wid), 199, now=datetime.now(UTC))
-    assert (await shop.post_json(f"/posts/{post}/summary")).status_code == 402
+    no_credits = await shop.post_json(f"/posts/{post}/summary")
+    assert no_credits.status_code == 402
+    problem = no_credits.json()
+    assert (problem["code"], problem["entitlement"], problem["limit"]) == (
+        "quota_exceeded",
+        "ai_credits_monthly",
+        200,
+    )
 
     await shop.execute(
         "UPDATE social_accounts SET ai_analysis_enabled = false WHERE id = :id", id=shop.account_id

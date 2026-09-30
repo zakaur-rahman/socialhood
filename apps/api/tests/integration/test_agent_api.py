@@ -170,7 +170,12 @@ async def test_without_credits_asking_is_402_and_stores_nothing(team: Team) -> N
     await use_credits(team.engine, uuid.UUID(team.wid), 200, now=datetime.now(UTC))
     response = await team.post("/agent/runs", {"request": "How did my latest post do?"})
     assert response.status_code == 402
-    assert response.json()["code"] == "quota_exceeded"
+    problem = response.json()
+    assert (problem["code"], problem["entitlement"], problem["limit"]) == (
+        "quota_exceeded",
+        "ai_credits_monthly",
+        200,
+    )
     assert await team.rows("SELECT id FROM agent_runs") == []
 
 

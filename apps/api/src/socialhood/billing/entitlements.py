@@ -25,8 +25,11 @@ Three forms, the same 402 whichever answers:
 
 The plan is always the workspace's subscription (billing/plans.py, never a copy). Accounts beyond
 the plan's accounts_per_platform (after a downgrade, FR-BIL-07) are read-only: the earliest
-connected accounts of each platform keep the plan's slots; the rest refuse scheduled messages and
-automation activations (``check_account_writable``).
+connected accounts of each platform keep the plan's slots; the rest can be read, synced and
+disconnected but not send (``check_account_writable``): replies and retries
+(services/sending.queue_outbound, so AI, automation and scheduled sends too), comment replies,
+scheduled messages and automation activations refuse them, and the automation runtime skips them
+(``read_only_error``). Publishing is not gated (C-050).
 """
 
 from __future__ import annotations
@@ -182,22 +185,32 @@ async def read_only_accounts(session: AsyncSession, *, plan: str | None = None) 
     return extra
 
 
-async def check_account_writable(
+async def read_only_error(
     session: AsyncSession, account: SocialAccount, *, plan: str | None = None
-) -> None:
-    """402 quota_exceeded when ``account`` is read-only on this plan (FR-BIL-07): it can be read
-    and disconnected, not used to send or publish."""
+) -> ApiError | None:
+    """The 402 quota_exceeded for an ``account`` that is read-only on this plan (FR-BIL-07), or
+    None when it may send. For callers that record the refusal instead of raising it."""
     plan = plan or await current_plan(session)
     if account.id not in await read_only_accounts(session, plan=plan):
-        return
+        return None
     limit = int(entitlement(plan, "accounts_per_platform"))
     name = f"@{account.username}" if account.username else "This account"
-    raise quota_error(
+    return quota_error(
         "accounts_per_platform",
         limit,
         f"Your plan includes {_noun(limit, account.platform)}. {name} is read-only until you "
         "upgrade or disconnect another.",
     )
+
+
+async def check_account_writable(
+    session: AsyncSession, account: SocialAccount, *, plan: str | None = None
+) -> None:
+    """402 quota_exceeded when ``account`` is read-only on this plan (FR-BIL-07): it can be read,
+    synced and disconnected, not used to send."""
+    error = await read_only_error(session, account, plan=plan)
+    if error is not None:
+        raise error
 
 
 @asynccontextmanager

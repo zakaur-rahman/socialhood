@@ -2,7 +2,9 @@
 hide, unhide and delete from the post detail (UX-SCR-05).
 
 Each locks the comment, checks it is still there and the account can act (reconnect needed: 409
-account_needs_reconnect; no comments on the platform: 409 capability_unavailable), changes it on
+account_needs_reconnect; no comments on the platform: 409 capability_unavailable; for the two
+replies, an account read-only after a downgrade: 402 quota_exceeded, FR-BIL-07, while hide,
+unhide and delete stay allowed because they send nothing), changes it on
 Instagram first, then here, and queues comment.updated with the new ``Comment``. The caller commits
 with ``commit_and_publish``. A platform refusal becomes an API error: a broken connection marks the
 account (F-05) and is 409 account_needs_reconnect, a rate limit is 429 rate_limited, anything else
@@ -33,6 +35,7 @@ from datetime import datetime, timedelta
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import check_account_writable
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.automations import Comment
 from socialhood.models.connections import SocialAccount
@@ -106,12 +109,21 @@ def _alive(comment: Comment) -> None:
 
 
 async def _account(
-    session: AsyncSession, deps: PlatformDeps, comment: Comment, needs: Capability
+    session: AsyncSession,
+    deps: PlatformDeps,
+    comment: Comment,
+    needs: Capability,
+    *,
+    sends: bool = False,
 ) -> tuple[SocialAccount, PlatformAdapter]:
+    """The comment's account and adapter; ``sends``: a reply, refused from a read-only
+    account (FR-BIL-07)."""
     acct = await accounts.get(session, comment.social_account_id)
     if acct is None:
         raise ApiError("not_found")
     sending.check_account(acct)
+    if sends:
+        await check_account_writable(session, acct)
     try:
         adapter = adapter_for(acct, deps)
     except PlatformError as error:
@@ -175,7 +187,7 @@ async def reply(
     replied = comment.our_replied_at
     if comment.our_reply_text == text and replied and now - replied < DOUBLE_REPLY_WINDOW:
         return await _out(session, comment.id, publish=False)
-    acct, adapter = await _account(session, deps, comment, Capability.COMMENTS)
+    acct, adapter = await _account(session, deps, comment, Capability.COMMENTS, sends=True)
     try:
         reply_id = await adapter.reply_to_comment(acct, comment.platform_comment_id, text)
     except PlatformError as error:
@@ -270,7 +282,7 @@ async def private_reply(
         raise ApiError("conflict", AUTOMATION_QUEUED)
     if now - comment.commented_at > PRIVATE_REPLY_LIMIT:
         raise ApiError("conflict", TOO_OLD)
-    acct, _ = await _account(session, deps, comment, Capability.PRIVATE_REPLY)
+    acct, _ = await _account(session, deps, comment, Capability.PRIVATE_REPLY, sends=True)
     problem = sending.text_limit_error(acct.platform, text)
     if problem:
         raise ApiError("validation_error", errors=[FieldError("text", problem)])

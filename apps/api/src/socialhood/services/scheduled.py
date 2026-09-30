@@ -3,7 +3,9 @@
 The API schedules, edits, cancels and lists them. The dispatcher (jobs/tasks/scheduled.py) claims
 due rows and runs ``send_claimed`` for each: it re-checks the reply window, then hands the text to
 the send pipeline (``services.sending.queue_outbound``) as a normal human reply, or marks the row
-expired and tells the owners. Every change queues ``scheduled_message.updated`` (TR-RT-03).
+expired and tells the owners. A refusal from the pipeline fails the row with its code and reason,
+e.g. quota_exceeded when the account became read-only after a downgrade (FR-BIL-07). Every change
+queues ``scheduled_message.updated`` (TR-RT-03).
 Nothing here commits: callers commit with ``realtime.events.commit_and_publish``.
 
 Lifecycle (§3 state diagram): scheduled -> canceled (user) or sending (dispatcher claims);

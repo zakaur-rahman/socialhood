@@ -22,6 +22,7 @@ from fastapi import APIRouter, Query, Request
 from socialhood.agent import orchestrator
 from socialhood.api.v1.ai import pending
 from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.billing.entitlements import credits_gate
 from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.agent import (
     AgentApproval,
@@ -51,8 +52,10 @@ async def create_agent_run(
     """FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent
     is enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing
     is reserved yet. 404 when ``thread_id`` isn't one of the caller's threads; 402 quota_exceeded
-    when the workspace has no AI credits left (nothing is stored)."""
-    row = await agent_runs.create(session, ctx, body)
+    (ai_credits_monthly, with the plan's limit) when the workspace has no AI credits left
+    (nothing is stored)."""
+    async with credits_gate(session):  # §2.15 "agent · credits": the 402 names the plan's limit
+        row = await agent_runs.create(session, ctx, body)
     [out] = await agent_runs.runs_out(session, [row])
     await commit_and_publish(session, request.app.state.redis)
     await orchestrator.enqueue_run(row.id, row.workspace_id)  # after the commit

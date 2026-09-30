@@ -157,6 +157,19 @@ class World:
         async with self.engine.connect() as conn:
             return [dict(r._mapping) for r in await conn.execute(text(sql), params)]
 
+    async def plan(self, plan: str) -> None:
+        """The workspace's plan (a bare workspace has no subscription row: Free). A second
+        account of a platform needs Pro, or it is read-only and sends nothing (FR-BIL-07)."""
+        async with self.engine.begin() as conn:
+            await conn.execute(
+                text(
+                    "INSERT INTO subscriptions (workspace_id, plan, status, billing_anchor_day)"
+                    " VALUES (:w, :p, 'active', 1)"
+                    " ON CONFLICT (workspace_id) DO UPDATE SET plan = :p"
+                ),
+                {"w": self.wid, "p": plan},
+            )
+
     async def run_row(self, run_id: uuid.UUID | None = None) -> dict[str, Any]:
         if run_id is None:
             [row] = await self.rows(

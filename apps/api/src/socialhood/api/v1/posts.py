@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Response
 
 from socialhood.auth.deps import AnyMember, Session
+from socialhood.billing.entitlements import credits_gate
 from socialhood.schemas.posts import CommentFilter, CommentList, PostDetail, PostList
 from socialhood.services.automations import queries
 from socialhood.services.comments import queries as comment_queries
@@ -45,10 +46,12 @@ async def get_post(post_id: uuid.UUID, ctx: AnyMember, session: Session) -> Post
 @router.post("/posts/{post_id}/summary", status_code=202, operation_id="refresh_post_summary")
 async def refresh_post_summary(post_id: uuid.UUID, ctx: AnyMember, session: Session) -> Response:
     """The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated
-    carries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post
-    has no analysed comments yet, or AI analysis is off for its account."""
+    carries the new summary and topics. 402 quota_exceeded (ai_credits_monthly, with the plan's
+    limit) without AI credits; 409 when the post has no analysed comments yet, or AI analysis is
+    off for its account."""
     item = await comment_queries.post_or_404(session, post_id)
-    await summaries.request_summary(session, item)
+    async with credits_gate(session):  # §2.15 credits: the 402 names the plan's limit
+        await summaries.request_summary(session, item)
     return Response(status_code=202)
 
 

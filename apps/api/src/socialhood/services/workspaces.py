@@ -101,7 +101,12 @@ async def cancel_dodo_subscription(session: AsyncSession, dodo: DodoClient) -> b
     end), so Dodo never charges for a workspace that no longer exists. Runs in the workspace's
     scope before anything is deleted. True when Dodo cancelled one. A subscription Dodo no longer
     has, or refuses to cancel because it has already ended, counts as done; Dodo not answering
-    refuses the deletion with 503, so the owner can try again."""
+    refuses the deletion with 503, so the owner can try again.
+
+    Callers: Clerk's user.deleted (services/clerk_sync, which deletes anyway when Dodo fails and
+    logs it). TODO(T9.6): DELETE /v1/w/{wid} (FR-ACC-05, F-16, §2.15) isn't built yet; P9's T9.6
+    owns workspace deletion and must call this first, before tokens are destroyed and the
+    workspace is marked deleting."""
     sub = await subscriptions.current(session)
     if sub is None or not sub.dodo_subscription_id:
         return False

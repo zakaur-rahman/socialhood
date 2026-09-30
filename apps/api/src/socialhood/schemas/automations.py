@@ -31,6 +31,7 @@ RunResultName = Literal[
     "skipped_expired",
     "escalated",
     "awaiting_reply",  # tap first: the opening went out; the message follows their tap or reply
+    "skipped_read_only",  # the account is read-only after a downgrade (FR-BIL-07)
 ]
 TemplateCategory = Literal["grow", "sell", "support"]
 

@@ -18,7 +18,9 @@ any-comment ones, then priority, then the oldest). Matches are tried in that ord
 its post scope is passed over, one on cooldown for the contact records a ``skipped_cooldown`` run
 and is passed over, and the first that passes records its run (unique per automation and event)
 and acts. Any run already recorded for the event means the event was handled: running it again
-sends nothing.
+sends nothing. On an account that is read-only after a downgrade (FR-BIL-07; the downgrade pauses
+its automations, this guards the rest) the first match that isn't cooling down records a
+``skipped_read_only`` run with the plan's reason instead, and nothing is sent.
 
 - DM: the message (personal fields, disclosure line, image, link buttons) goes through
   services/sending.queue_outbound with source ``automation``, linked to the run; the trigger
@@ -47,6 +49,7 @@ from typing import Any, Literal, cast
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from socialhood.billing.entitlements import read_only_error
 from socialhood.errors import ApiError
 from socialhood.models.automations import (
     Automation,
@@ -83,6 +86,7 @@ REPLY_WINDOW = timedelta(hours=24)  # FR-AUT-16
 PRIVATE_REPLY_LIMIT = timedelta(days=7)  # FR-AUT-10
 EXPIRED = ("expired", "Instagram's 7-day limit passed")
 NO_MESSAGE = actions.NO_MESSAGE
+READ_ONLY = "read_only"  # a skipped_read_only run's error_code (FR-BIL-07)
 
 
 class Outcome(StrEnum):
@@ -225,6 +229,27 @@ async def _cooling(
     return await runs.on_cooldown(session, automation.id, contact_id, since=since)
 
 
+async def _read_only_reason(session: AsyncSession, acct: SocialAccount | None) -> str | None:
+    """FR-BIL-07: why the account can't send on this plan (the 402's detail), or None."""
+    if acct is None:
+        return None
+    error = await read_only_error(session, acct)
+    return None if error is None else actions.api_error_reason(error)
+
+
+def _skipped_read_only(
+    automation: Automation, keyword: str, reason: str, **common: Any
+) -> dict[str, Any]:
+    return _run_row(
+        automation,
+        keyword,
+        result=RunResult.SKIPPED_READ_ONLY,
+        error_code=READ_ONLY,
+        error_message=reason,
+        **common,
+    )
+
+
 # ---- DMs
 
 
@@ -280,6 +305,7 @@ async def _match_dm(
     found = matching.matches(msg.text or "", [item.candidate for item in loaded])
     if not found:
         return Outcome.NO_MATCH
+    read_only = await _read_only_reason(session, await accounts.get(session, msg.social_account_id))
     by_id = {item.automation.id: item.automation for item in loaded}
     for match in found:
         automation = by_id[match.automation_id]
@@ -294,6 +320,11 @@ async def _match_dm(
                 _run_row(automation, match.keyword, result=RunResult.SKIPPED_COOLDOWN, **common),
             )
             continue
+        if read_only is not None:
+            await runs.insert_run(
+                session, _skipped_read_only(automation, match.keyword, read_only, **common)
+            )
+            break
         ai = automation.action == AutomationAction.AI_REPLY
         run = await runs.insert_run(
             session,
@@ -452,7 +483,8 @@ async def _run_comment(env: _Env, comment_id: uuid.UUID) -> Outcome:
         contact = (
             await inbox.get_contact(session, comment.contact_id) if comment.contact_id else None
         )
-        fired = await _first_passing(session, env, comment, contact, loaded, found)
+        read_only = await _read_only_reason(session, acct)
+        fired = await _first_passing(session, env, comment, contact, loaded, found, read_only)
         if fired is None:
             await session.commit()
             return Outcome.SKIPPED
@@ -477,6 +509,7 @@ async def _first_passing(
     contact: Contact | None,
     loaded: list[runs.Loaded],
     found: list[matching.Match],
+    read_only: str | None,
 ) -> _Fired | Outcome | None:
     by_id = {item.automation.id: item.automation for item in loaded}
     expired = env.now - comment.commented_at >= PRIVATE_REPLY_LIMIT
@@ -507,6 +540,11 @@ async def _first_passing(
                     error_message=reason,
                     **common,
                 ),
+            )
+            return None
+        if read_only is not None:
+            await runs.insert_run(
+                session, _skipped_read_only(automation, match.keyword, read_only, **common)
             )
             return None
         plan = _plan(automation)
