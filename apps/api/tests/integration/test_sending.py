@@ -1,13 +1,16 @@
 """T3.6: the send pipeline. POST a reply (TR-API-05 idempotency, TR-PL-10 limits, FR-INB-10
 window, account and attachment checks, FR-SUG-05 takeover), the send_message job (TR-JOB-04
-retries, TR-JOB-05 unknown outcomes, F-07 attachments), retry, and the in-flight sweeper."""
+retries, TR-JOB-05 unknown outcomes, F-07 attachments), retry, and the in-flight sweeper (a
+comment's private reply goes back to its own job, C-062)."""
 
 from __future__ import annotations
 
 import json
 import uuid
 from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import httpx
 import pytest
@@ -16,18 +19,23 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from socialhood.jobs.app import app as jobs_app
+from socialhood.jobs.recovery import recover_stalled
 from socialhood.jobs.runtime import Runtime
+from socialhood.jobs.tasks import comments as comment_tasks
 from socialhood.jobs.tasks.send import sweep_in_flight
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.sandbox import outbox
 from socialhood.realtime.events import stream_key
 from tests.support.api import Clerk
-from tests.support.inbox import make_asset, make_workspace
+from tests.support.automations import make_comment, make_media_item
+from tests.support.inbox import make_account, make_asset, make_workspace
 from tests.support.instagram import GRAPH
 from tests.support.sending import (
     IG_TOKEN,
     Setup,
     clean_outbox,
+    context,
     conversation_row,
     message_row,
     outbound_rows,
@@ -653,6 +661,7 @@ async def test_the_sweeper_requeues_a_queued_message_that_lost_its_job(
     counts = await sweep_in_flight(worker.sessionmaker, redis)
     assert counts == {"requeued": 1, "abandoned": 0}
     assert len([j for j in await send_jobs() if j["status"] == "todo"]) == 1
+    assert await send_jobs("send_private_reply") == []  # a plain DM: send_message sends it
 
 
 async def test_the_sweeper_fails_a_stuck_send_as_delivery_unknown(
@@ -688,3 +697,184 @@ async def test_the_sweeper_leaves_recent_messages_alone(
     await queue_jobs_done()
     await age(engine, message["id"], "sending", 5)
     assert await sweep_in_flight(worker.sessionmaker, redis) == {"requeued": 0, "abandoned": 0}
+
+
+# ---------------------------------------------------------------- sweeper: private replies (C-062)
+
+
+@dataclass
+class Reply:
+    comment_id: uuid.UUID
+    comment_ref: str
+    message_id: str
+    conversation_id: str
+
+
+@pytest.fixture
+def replier(worker: Runtime, monkeypatch: pytest.MonkeyPatch) -> Runtime:
+    """send_private_reply runs on the test app's runtime too."""
+    monkeypatch.setattr(comment_tasks, "runtime", lambda: worker)
+    return worker
+
+
+async def queue_private_reply(
+    client: httpx.AsyncClient, setup: Setup, engine: AsyncEngine
+) -> Reply:
+    """A member's private reply to a comment (T6.3): queued, with its send_private_reply job."""
+    post = await make_media_item(engine, workspace_id=setup.wid, account_id=setup.account_id)
+    comment_id = await make_comment(
+        engine, workspace_id=setup.wid, account_id=setup.account_id, media_item_id=post
+    )
+    response = await client.post(
+        f"/v1/w/{setup.wid}/comments/{comment_id}/private-reply",
+        json={"text": "Here's the link: maple.example"},
+        headers={**setup.headers, "Idempotency-Key": uuid.uuid4().hex},
+    )
+    assert response.status_code == 202, response.text
+    reply = response.json()["private_reply"]
+    async with engine.connect() as conn:
+        ref = await conn.scalar(
+            text("SELECT platform_comment_id FROM comments WHERE id = :id"), {"id": comment_id}
+        )
+    return Reply(comment_id, str(ref), reply["message_id"], reply["conversation_id"])
+
+
+async def reply_jobs(status: str = "todo") -> list[dict[str, Any]]:
+    return [j for j in await send_jobs("send_private_reply") if j["status"] == status]
+
+
+async def run_reply_job(job: dict[str, Any], *, attempts: int = 0) -> None:
+    await comment_tasks.send_private_reply(context(attempts), **job["args"])
+
+
+async def worker_dies_holding(job_id: int) -> None:
+    """A worker took the job and died (heartbeat 5 minutes old) before the job's first step."""
+    dead = await jobs_app.connector.execute_query_one_async(
+        "INSERT INTO procrastinate_workers (last_heartbeat)"
+        " VALUES (now() - interval '5 minutes') RETURNING id"
+    )
+    await jobs_app.connector.execute_query_async(
+        "UPDATE procrastinate_jobs SET status = 'doing', worker_id = %(w)s WHERE id = %(id)s",
+        w=dead["id"],
+        id=job_id,
+    )
+
+
+async def linked_reply(engine: AsyncEngine, comment_id: uuid.UUID) -> str | None:
+    async with engine.connect() as conn:
+        linked = await conn.scalar(
+            text("SELECT private_reply_message_id FROM comments WHERE id = :id"),
+            {"id": comment_id},
+        )
+    return str(linked) if linked else None
+
+
+async def test_a_queued_private_reply_a_dead_worker_dropped_goes_back_to_its_own_job(
+    client: httpx.AsyncClient,
+    setup: Setup,
+    engine: AsyncEngine,
+    queue: None,
+    replier: Runtime,
+    redis: Redis,
+) -> None:
+    """The worker died before send_private_reply claimed the reply. The sweeper hands it back
+    to send_private_reply, addressed by the comment, never to send_message: it goes once."""
+    reply = await queue_private_reply(client, setup, engine)
+    [job] = await reply_jobs()
+    await worker_dies_holding(job["id"])
+    assert (await recover_stalled(jobs_app))["released"] == 1  # aborted, never re-run there
+    await age(engine, reply.message_id, "queued", 2)
+
+    assert await sweep_in_flight(replier.sessionmaker, redis) == {"requeued": 1, "abandoned": 0}
+    assert await send_jobs() == []  # no send_message
+    [again] = await reply_jobs()
+    assert (again["queueing_lock"], again["lock"]) == (
+        f"send:{reply.message_id}",
+        f"conv:{reply.conversation_id}",
+    )
+    assert again["args"]["comment_id"] == str(reply.comment_id)
+    # Its job is waiting: the next sweep queues nothing more.
+    assert await sweep_in_flight(replier.sessionmaker, redis) == {"requeued": 0, "abandoned": 0}
+
+    await run_reply_job(again)
+    await run_reply_job(again)  # run twice: still one private reply
+    [sent] = outbox.PRIVATE_REPLIES
+    assert (sent.recipient_ref, sent.message.text) == (
+        reply.comment_ref,
+        "Here's the link: maple.example",
+    )
+    assert list(outbox.SENT) == []  # not as a plain DM
+    row = await message_row(engine, reply.message_id)
+    assert (row["status"], row["platform_message_id"]) == ("sent", sent.platform_message_id)
+    assert await linked_reply(engine, reply.comment_id) == reply.message_id
+    assert await sweep_in_flight(replier.sessionmaker, redis) == {"requeued": 0, "abandoned": 0}
+
+
+async def test_a_private_reply_left_sending_is_never_sent_again(
+    client: httpx.AsyncClient,
+    setup: Setup,
+    engine: AsyncEngine,
+    queue: None,
+    replier: Runtime,
+    redis: Redis,
+) -> None:
+    """Claimed (sending) when its worker died: Instagram may have it and allows one per comment,
+    so it ends delivery_unknown, the comment keeps it, and nothing sends it again."""
+    reply = await queue_private_reply(client, setup, engine)
+    [job] = await reply_jobs()
+    await queue_jobs_done()
+    await age(engine, reply.message_id, "sending", 11)
+
+    assert await sweep_in_flight(replier.sessionmaker, redis) == {"requeued": 0, "abandoned": 1}
+    row = await message_row(engine, reply.message_id)
+    assert (row["status"], row["error_code"]) == ("failed", "delivery_unknown")
+    assert await linked_reply(engine, reply.comment_id) == reply.message_id
+    assert await reply_jobs() == []
+    assert await send_jobs() == []
+    await run_reply_job(job, attempts=1)  # a late retry of its job
+    assert list(outbox.PRIVATE_REPLIES) == []
+    assert list(outbox.SENT) == []
+    assert await sweep_in_flight(replier.sessionmaker, redis) == {"requeued": 0, "abandoned": 0}
+
+
+async def test_a_swept_private_reply_of_a_read_only_account_is_held(
+    client: httpx.AsyncClient,
+    setup: Setup,
+    engine: AsyncEngine,
+    queue: None,
+    replier: Runtime,
+    redis: Redis,
+) -> None:
+    """Queued before a downgrade left the account read-only (FR-BIL-07): the reply waits, as the
+    automations' private replies do, and goes once the account may send again."""
+    reply = await queue_private_reply(client, setup, engine)
+    await queue_jobs_done()
+    first = await make_account(engine, setup.wid, username="maple.first")
+    async with engine.begin() as conn:  # connected first: it keeps Free's one Instagram slot
+        await conn.execute(
+            text(
+                "UPDATE social_accounts SET connected_at = now() - interval '1 day' WHERE id = :a"
+            ),
+            {"a": first},
+        )
+    await age(engine, reply.message_id, "queued", 2)
+
+    assert await sweep_in_flight(replier.sessionmaker, redis) == {"requeued": 1, "abandoned": 0}
+    [job] = await reply_jobs()
+    await queue_jobs_done()  # the worker took it
+    await run_reply_job(job)
+    assert list(outbox.PRIVATE_REPLIES) == []
+    assert (await message_row(engine, reply.message_id))["status"] == "queued"
+    assert await linked_reply(engine, reply.comment_id) == reply.message_id
+    [held] = await reply_jobs()  # it looks again in 10 minutes
+    assert held["scheduled_at"] > datetime.now(UTC) + timedelta(minutes=9)
+    assert await sweep_in_flight(replier.sessionmaker, redis) == {"requeued": 0, "abandoned": 0}
+
+    async with engine.begin() as conn:  # the other account is disconnected
+        await conn.execute(
+            text("UPDATE social_accounts SET status = 'disconnected' WHERE id = :a"), {"a": first}
+        )
+    await run_reply_job(held)
+    [sent] = outbox.PRIVATE_REPLIES
+    assert sent.recipient_ref == reply.comment_ref
+    assert (await message_row(engine, reply.message_id))["status"] == "sent"

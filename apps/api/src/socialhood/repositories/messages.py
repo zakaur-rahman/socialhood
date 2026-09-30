@@ -5,13 +5,14 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, NamedTuple
 
-from sqlalchemy import or_, select
+from sqlalchemy import and_, case, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.models.inbox import Message, MessageStatus
+from socialhood.models.automations import Comment
+from socialhood.models.inbox import Message, MessageSource, MessageStatus
 from socialhood.repositories.base import scoped_update
 
 IN_FLIGHT = (MessageStatus.QUEUED, MessageStatus.SENDING)
@@ -108,15 +109,48 @@ class InFlight(NamedTuple):
     workspace_id: uuid.UUID
     conversation_id: uuid.UUID
     status: str
+    # A queued row that is a member's private reply (T6.3): the comment it answers. Only
+    # send_private_reply sends it; send_message would send it as a plain DM.
+    comment_id: uuid.UUID | None = None
 
 
 async def in_flight(
-    session: AsyncSession, *, queued_before: datetime, sending_before: datetime, limit: int = 500
+    session: AsyncSession,
+    *,
+    queued_before: datetime,
+    sending_before: datetime,
+    limit: int = 500,
+    replies_within: timedelta = timedelta(days=7),
 ) -> list[InFlight]:
     """Outbound rows that have not moved for a while (ix_messages_in_flight). Callers in jobs/
-    run this across workspaces."""
+    run this across workspaces.
+
+    A queued private reply is a member's (source human; the automations' are stored ``sending``,
+    services/automations/queue) linked from ``comments.private_reply_message_id``. Its comment is
+    looked up among the workspace's comments made within ``replies_within`` (Instagram's 7 days)
+    before the message, since none is queued for an older comment: ix_comments_workspace_commented
+    finds it without reading every comment."""
+    reply_to = (
+        select(Comment.id)
+        .where(
+            Comment.workspace_id == Message.workspace_id,
+            Comment.commented_at >= Message.occurred_at - replies_within,
+            Comment.private_reply_message_id == Message.id,
+        )
+        .limit(1)
+        .scalar_subquery()
+    )
+    private_reply = and_(
+        Message.status == MessageStatus.QUEUED, Message.source == MessageSource.HUMAN
+    )
     rows = await session.execute(
-        select(Message.id, Message.workspace_id, Message.conversation_id, Message.status)
+        select(
+            Message.id,
+            Message.workspace_id,
+            Message.conversation_id,
+            Message.status,
+            case((private_reply, reply_to), else_=None),
+        )
         .where(
             or_(
                 (Message.status == MessageStatus.QUEUED) & (Message.updated_at < queued_before),
@@ -126,4 +160,4 @@ async def in_flight(
         .order_by(Message.updated_at)
         .limit(limit)
     )
-    return [InFlight(r[0], r[1], r[2], str(r[3])) for r in rows.all()]
+    return [InFlight(r[0], r[1], r[2], str(r[3]), r[4]) for r in rows.all()]

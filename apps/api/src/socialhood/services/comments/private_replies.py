@@ -8,6 +8,9 @@ services/comments/actions). ``send_private_reply`` (interactive lane, queueing l
 any send in the conversation) then:
 
 1. claims the message (queued to sending) before anything else, so no other send picks it up;
+   an account that is read-only after a downgrade (FR-BIL-07) holds it instead: it stays queued
+   and the job looks again every HOLD_RETRY_S, as the automations' private-reply queue holds
+   theirs, until the account may send or the comment is past 7 days (step 2 then fails it);
 2. checks the account, the PRIVATE_REPLY capability and Instagram's 7-day limit again;
 3. takes a token from the account's IG_PRIVATE_REPLY bucket, shared with the automation queue
    (never more than 750 private replies an hour); without one soon it defers itself until a token
@@ -20,6 +23,11 @@ any send in the conversation) then:
    try again; the failed message stays in the conversation.
 
 message.updated, comment.updated and conversation.updated follow each change.
+
+A queued reply whose job was lost (a worker that died before the claim) goes back to
+``send_private_reply`` from the message sweeper (``requeue``, jobs/tasks/send.py), never to
+``send_message``, which would send it as a plain DM. One left ``sending`` is the sweeper's
+delivery_unknown like any send (TR-JOB-05): Instagram may have it, and allows one per comment.
 """
 
 from __future__ import annotations
@@ -34,6 +42,7 @@ from redis.asyncio import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from socialhood.billing.entitlements import read_only_error
 from socialhood.models.automations import Comment
 from socialhood.models.connections import SocialAccount
 from socialhood.models.inbox import Message, MessageStatus
@@ -57,10 +66,11 @@ from socialhood.services.comments.actions import PRIVATE_REPLY_LIMIT, TOO_OLD
 log = get_logger(__name__)
 
 MAX_INLINE_WAIT_S = 2.0  # waiting this long for a token happens in the job
+HOLD_RETRY_S = 600.0  # a reply held for a read-only account looks again (as the automations' queue)
 PRIVATE_REPLY_EXPIRED = "reply_window_closed"
 NOT_QUEUED = "Couldn't queue the private reply. Try again."
 
-Outcome = Literal["sent", "failed", "skipped", "deferred"]
+Outcome = Literal["sent", "failed", "skipped", "deferred", "held"]
 Sleep = Callable[[float], Awaitable[Any]]
 
 
@@ -115,6 +125,21 @@ async def enqueue_send(
     )
 
 
+async def requeue(
+    workspace_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    message_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+) -> bool:
+    """The message sweeper's path for a queued private reply that lost its job: its own job again
+    (a waiting one makes this a no-op). A failed enqueue is logged; the next sweep tries again."""
+    try:
+        return await enqueue_send(workspace_id, comment_id, message_id, conversation_id)
+    except Exception:
+        log.warning("private_reply_enqueue_failed", message_id=str(message_id))
+        return False
+
+
 async def send(
     sessionmaker: async_sessionmaker[AsyncSession],
     redis: Redis,
@@ -135,7 +160,16 @@ async def send(
         comment = await comments_repo.get(session, comment_id)
         if msg is None or comment is None or comment.private_reply_message_id != msg.id:
             return "skipped"
+        now = now or datetime.now(UTC)
         if msg.status == MessageStatus.QUEUED:
+            if await _held(session, msg, comment, now):
+                conversation_id = msg.conversation_id
+                await session.rollback()
+                await enqueue_send(
+                    workspace_id, comment_id, message_id, conversation_id, delay_s=HOLD_RETRY_S
+                )
+                log.info("private_reply_held", message_id=str(message_id), error_code="read_only")
+                return "held"
             if not await messages_repo.claim(
                 session, msg.id, from_status=MessageStatus.QUEUED, attempts=msg.attempts + 1
             ):
@@ -147,7 +181,6 @@ async def send(
         acct = await accounts.get(session, msg.social_account_id)
         if acct is None:
             return "skipped"
-        now = now or datetime.now(UTC)
         refusal = _check(acct, comment, deps, now)
         if refusal is not None:
             return await _fail(session, redis, acct, comment, msg, *refusal)
@@ -178,6 +211,19 @@ async def send(
     return "sent"
 
 
+async def _held(session: AsyncSession, msg: Message, comment: Comment, now: datetime) -> bool:
+    """The queued reply waits: its account is read-only after a downgrade (FR-BIL-07) and the
+    comment can still get it. Past Instagram's 7 days it goes on, and ``_check`` fails it."""
+    if _expired(comment, now):
+        return False
+    acct = await accounts.get(session, msg.social_account_id)
+    return acct is not None and await read_only_error(session, acct) is not None
+
+
+def _expired(comment: Comment, now: datetime) -> bool:
+    return now - comment.commented_at > PRIVATE_REPLY_LIMIT or comment.deleted_at is not None
+
+
 def _check(
     acct: SocialAccount, comment: Comment, deps: PlatformDeps, now: datetime
 ) -> tuple[str, str] | None:
@@ -190,7 +236,7 @@ def _check(
         return "capability_unavailable", error.message
     if Capability.PRIVATE_REPLY not in caps:
         return "capability_unavailable", ""
-    if now - comment.commented_at > PRIVATE_REPLY_LIMIT or comment.deleted_at is not None:
+    if _expired(comment, now):
         return PRIVATE_REPLY_EXPIRED, ""
     return None
 
