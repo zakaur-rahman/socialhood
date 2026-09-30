@@ -13,6 +13,7 @@ import {
   billingState,
   conversation,
   json,
+  knowledgeGap,
   knowledgeSource,
   message,
   noContent,
@@ -97,7 +98,7 @@ describe("Suggested reply in the thread (F-08)", () => {
     const user = userEvent.setup();
     const { calls } = setup();
     const card = await screen.findByRole("region", { name: "Suggested reply" });
-    await user.click(within(card).getByRole("button", { name: "Edit" }));
+    await user.click(within(card).getByRole("button", { name: "Insert" }));
 
     const box = screen.getByRole("textbox", { name: "Reply to Priya Nair" });
     expect(box).toHaveValue("Yes, we ship to the UAE! Delivery to Dubai takes 5–7 business days.");
@@ -116,7 +117,7 @@ describe("Suggested reply in the thread (F-08)", () => {
   it("stopping the edit keeps the text, drops the link and brings the card back", async () => {
     const user = userEvent.setup();
     const { calls } = setup();
-    await user.click(within(await screen.findByRole("region", { name: "Suggested reply" })).getByRole("button", { name: "Edit" }));
+    await user.click(within(await screen.findByRole("region", { name: "Suggested reply" })).getByRole("button", { name: "Insert" }));
     await user.click(screen.getByRole("button", { name: "Stop editing the suggestion" }));
     expect(screen.getByRole("region", { name: "Suggested reply" })).toBeInTheDocument();
 
@@ -129,7 +130,7 @@ describe("Suggested reply in the thread (F-08)", () => {
     const user = userEvent.setup();
     const { calls, queryClient } = setup();
     const card = await screen.findByRole("region", { name: "Suggested reply" });
-    await user.click(within(card).getByRole("button", { name: "Regenerate" }));
+    await user.click(within(card).getByRole("button", { name: "Draft again" }));
 
     await waitFor(() =>
       expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/conversations/c1/suggestions")).toBe(true),
@@ -155,7 +156,7 @@ describe("Suggested reply in the thread (F-08)", () => {
     const user = userEvent.setup();
     setup({}, { "POST /v1/w/:wid/conversations/:id/suggestions": () => problem(429, "rate_limited", "No more drafts for this message.") });
     const card = await screen.findByRole("region", { name: "Suggested reply" });
-    await user.click(within(card).getByRole("button", { name: "Regenerate" }));
+    await user.click(within(card).getByRole("button", { name: "Draft again" }));
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith("No more drafts for this message."));
     expect(screen.queryByText("Drafting a reply…")).not.toBeInTheDocument();
     expect(screen.getByText(/Delivery to Dubai takes 5–7 business days/)).toBeInTheDocument();
@@ -288,6 +289,23 @@ describe("Not in your knowledge (FR-SUG-03, F-08)", () => {
     const body = calls.find((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources")?.body as KnowledgeSourceCreate;
     expect(body).toMatchObject({ type: "faq", question: "Do you ship to Dubai?", body: "Yes, 5–7 business days, free over ₹3,000." });
     await waitFor(() => expect(screen.queryByRole("form", { name: "Add an FAQ" })).not.toBeInTheDocument());
+  });
+
+  it("Add to knowledge links the question's knowledge gap, so the answer resolves it (C-063)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup(
+      { pending_suggestion: gap },
+      { "GET /v1/w/:wid/knowledge-gaps": () => json({ items: [knowledgeGap({ id: "g7" })] }) },
+    );
+    const card = await screen.findByRole("region", { name: "Not in your knowledge" });
+    await user.click(within(card).getByRole("button", { name: "Add to knowledge" }));
+    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    expect(within(form).getByLabelText("Question")).toHaveValue("Do you ship to Dubai?");
+    await user.type(within(form).getByLabelText("Answer"), "Yes, 5–7 business days.");
+    await user.click(within(form).getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources")).toBe(true));
+    const body = calls.find((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources")?.body as KnowledgeSourceCreate;
+    expect(body).toMatchObject({ type: "faq", question: "Do you ship to Dubai?", gap_id: "g7" });
   });
 
   it("agents only get Write reply, which focuses the composer", async () => {

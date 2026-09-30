@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { SourceSheet, type KnowledgeUploader, type SourceSheetMode } from "@/components/knowledge/SourceSheet";
+import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import {
   exhaustedAiCredits,
   useBilling,
@@ -22,6 +22,7 @@ import { useInboxStore } from "@/lib/inbox/store";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { EditingSuggestionChip, EscalationBanner, SuggestionCard } from "./SuggestionCard";
+import { useTeachAi } from "./TeachAi";
 
 /** How long after an analysis the first draft is awaited (TR-AI-06: ready within 12 s p95). */
 export const DRAFT_WAIT_MS = 30_000;
@@ -85,7 +86,6 @@ export function useSuggestionSlot({
   const setSuggestionEdit = useInboxStore((state) => state.setSuggestionEdit);
   const setDraft = useInboxStore((state) => state.setDraft);
   const [waitingFor, setWaitingFor] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<SourceSheetMode | null>(null);
 
   const suggestion: Suggestion | null = conversation.pending_suggestion ?? null;
   const name = firstName(contactName(conversation.contact, conversation.platform));
@@ -169,6 +169,16 @@ export function useSuggestionSlot({
     requestAnimationFrame(() => focusComposer(conversationId));
   };
 
+  // Add to knowledge is Teach AI (C-063): the FAQ answers the question's gap, when it was counted.
+  const teachAi = useTeachAi({
+    upload,
+    onSaved: () => {
+      if (suggestion && suggestion.regenerations_left > 0) {
+        toast("The AI can use it once it's processed.", { action: { label: "Draft again", onClick: redraft } });
+      }
+    },
+  });
+
   const escalation =
     conversation.needs_human && conversation.needs_human_reason && conversation.ai.effective_mode === "auto"
       ? escalationBanner(conversation.needs_human_reason)
@@ -190,28 +200,21 @@ export function useSuggestionSlot({
             customerName={name}
             canSend={canReply}
             busy={dismiss.isPending || regenerate.isPending}
+            addingToKnowledge={teachAi.opening}
             actions={{
               onSend: send,
               onEdit: edit,
               onRegenerate: redraft,
               onDismiss: close,
               onWriteReply: () => focusComposer(conversationId),
-              onAddToKnowledge:
-                workspace.role === "agent" ? undefined : () => setSheet({ kind: "create", type: "faq", question }),
+              onAddToKnowledge: teachAi.canTeach
+                ? () => void teachAi.teach(question, suggestion?.message_id ?? lastInbound?.id ?? null)
+                : undefined,
             }}
           />
         )
       ) : null}
-      <SourceSheet
-        mode={sheet}
-        onOpenChange={(open) => (open ? undefined : setSheet(null))}
-        upload={upload}
-        onSaved={() => {
-          if (suggestion && suggestion.regenerations_left > 0) {
-            toast("The AI can use it once it's processed.", { action: { label: "Draft again", onClick: redraft } });
-          }
-        }}
-      />
+      {teachAi.sheet}
     </>
   );
 

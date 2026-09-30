@@ -32,7 +32,7 @@ function card(props: Partial<Parameters<typeof SuggestionCard>[0]> = {}) {
   return handlers;
 }
 
-describe("SuggestionCard (UX-INB-08)", () => {
+describe("the AI draft bar (UX-INB-08, C-063)", () => {
   it("generating: two shimmer lines and Drafting a reply…", () => {
     card({ generating: true });
     const region = screen.getByRole("region", { name: "Suggested reply" });
@@ -41,19 +41,19 @@ describe("SuggestionCard (UX-INB-08)", () => {
     expect(within(region).queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
   });
 
-  it("ready: text, source chip and every action", async () => {
+  it("ready: AI draft, source chip and every action: Insert, Send, Draft again, Dismiss", async () => {
     const user = userEvent.setup();
     const handlers = card();
     const region = screen.getByRole("region", { name: "Suggested reply" });
     expect(region).toHaveAttribute("data-state", "ready");
-    expect(within(region).getByText(/Delivery to Dubai takes 5–7 business days/)).toBeInTheDocument();
+    expect(within(region).getByText(/Delivery to Dubai takes 5–7 business days/)).toHaveTextContent(/^AI draft: Yes, we ship/);
     expect(within(region).getByText("From: Shipping policy")).toBeInTheDocument();
     expect(within(region).queryByText("Check this")).not.toBeInTheDocument();
     expect(within(region).getByText("5 drafts left")).toBeInTheDocument();
 
     await user.click(within(region).getByRole("button", { name: "Send" }));
-    await user.click(within(region).getByRole("button", { name: "Edit" }));
-    await user.click(within(region).getByRole("button", { name: "Regenerate" }));
+    await user.click(within(region).getByRole("button", { name: "Insert" }));
+    await user.click(within(region).getByRole("button", { name: "Draft again" }));
     await user.click(within(region).getByRole("button", { name: "Dismiss suggestion" }));
     expect(handlers.onSend).toHaveBeenCalledOnce();
     expect(handlers.onEdit).toHaveBeenCalledOnce();
@@ -82,9 +82,9 @@ describe("SuggestionCard (UX-INB-08)", () => {
     expect(screen.getByText("Check this")).toBeInTheDocument();
   });
 
-  it("no regenerations left: Regenerate is off", () => {
+  it("no drafts left: Draft again is off", () => {
     card({ suggestion: suggestion({ regenerations_left: 0 }) });
-    expect(screen.getByRole("button", { name: "Regenerate" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Draft again" })).toBeDisabled();
     expect(screen.getByText("No drafts left")).toBeInTheDocument();
   });
 
@@ -102,6 +102,12 @@ describe("SuggestionCard (UX-INB-08)", () => {
     expect(screen.getByRole("button", { name: "Less" })).toHaveAttribute("aria-expanded", "true");
   });
 
+  it("one draft only: no quick-reply chips", () => {
+    card();
+    expect(screen.getAllByText(/AI draft:/)).toHaveLength(1);
+    expect(screen.queryByRole("list")).not.toBeInTheDocument();
+  });
+
   it("not in knowledge: the missing fact, Add to knowledge and Write reply", async () => {
     const user = userEvent.setup();
     const handlers = card({
@@ -109,12 +115,22 @@ describe("SuggestionCard (UX-INB-08)", () => {
     });
     const region = screen.getByRole("region", { name: "Not in your knowledge" });
     expect(region).toHaveAttribute("data-state", "not_in_knowledge");
-    expect(within(region).getByText("Priya asked about shipping to Dubai.")).toBeInTheDocument();
+    expect(within(region).getByText("Priya asked about shipping to Dubai.").parentElement).toHaveTextContent(
+      "Not in your knowledge: Priya asked about shipping to Dubai.",
+    );
     expect(within(region).queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
     await user.click(within(region).getByRole("button", { name: "Add to knowledge" }));
     await user.click(within(region).getByRole("button", { name: "Write reply" }));
     expect(handlers.onAddToKnowledge).toHaveBeenCalledOnce();
     expect(handlers.onWriteReply).toHaveBeenCalledOnce();
+  });
+
+  it("Add to knowledge waits while the question's gap is looked up", () => {
+    card({
+      suggestion: suggestion({ can_answer: false, reply_text: null, missing_info: "shipping to Dubai", sources: [] }),
+      addingToKnowledge: true,
+    });
+    expect(screen.getByRole("button", { name: "Add to knowledge" })).toBeDisabled();
   });
 
   it("not in knowledge without the right to add knowledge (agents): only Write reply", () => {
