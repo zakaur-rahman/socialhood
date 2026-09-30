@@ -242,7 +242,7 @@ async def test_a_thread_filter_lists_only_your_own_runs(team: Team) -> None:
 
 
 async def test_the_history_filters_by_status_and_searches_requests(team: Team) -> None:
-    """Settings → Agent's chips and search (C-065): any case, LIKE wildcards taken literally."""
+    """Settings → Agent's chips and search (C-066): any case, LIKE wildcards taken literally."""
     base = datetime.now(UTC) - timedelta(hours=1)
     answered = await team.run(request="How did my latest post do?", created_at=base)
     partly = await team.run(

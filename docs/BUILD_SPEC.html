@@ -1800,7 +1800,7 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">POST</td><td class="m">…/ai/caption · …/ai/hashtags</td><td>Generate caption or hashtags</td><td>admin · credits</td></tr>
       <tr><td class="m">GET</td><td class="m">…/billing</td><td>Plan, status, entitlements, usage, prices</td><td>agent</td></tr>
       <tr><td class="m">POST</td><td class="m">…/billing/checkout · /portal · /cancel · /resume</td><td>Billing actions</td><td>owner</td></tr>
-      <tr><td class="m">GET</td><td class="m">…/billing/payments?cursor&amp;limit</td><td>Payment history from Dodo's payment.* webhooks, newest first (C-065)</td><td>admin</td></tr>
+      <tr><td class="m">GET</td><td class="m">…/billing/payments?cursor&amp;limit</td><td>Payment history from Dodo's payment.* webhooks, newest first (C-066)</td><td>admin</td></tr>
       <tr><td class="m">GET · POST</td><td class="m">…/notifications · …/notifications/read</td><td>List; mark read <code>{ids}</code> or all</td><td>agent</td></tr>
       <tr><td class="m">GET · PUT</td><td class="m">…/notification-preferences</td><td>The member's email digest and push event toggles</td><td>agent</td></tr>
       <tr><td class="m">POST · DELETE</td><td class="m">/v1/me/push-subscriptions</td><td>Register or remove this device's push subscription</td><td>any user</td></tr>

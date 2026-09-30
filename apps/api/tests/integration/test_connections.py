@@ -375,7 +375,7 @@ async def test_account_settings(
 async def test_last_synced_is_the_later_of_the_media_sync_and_the_backfill(
     client: httpx.AsyncClient, clerk: Clerk, instagram: FakeInstagram, engine: AsyncEngine
 ) -> None:
-    """Settings → Connections' "Last synced" (C-065): when posts or history were last pulled."""
+    """Settings → Connections' "Last synced" (C-066): when posts or history were last pulled."""
     clerk_id, ws = await owner(client, clerk)
     await connect(client, clerk, clerk_id, ws["id"])
     url = f"/v1/w/{ws['id']}/social-accounts"

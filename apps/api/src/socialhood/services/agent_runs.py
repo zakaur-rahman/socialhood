@@ -185,7 +185,7 @@ async def list_runs(
     q: str | None = None,
 ) -> schemas.AgentRunList:
     """Newest first. A thread is always the caller's own; without one, owners and admins see
-    every run. ``statuses`` and ``q`` narrow the list (Settings → Agent's history, C-065)."""
+    every run. ``statuses`` and ``q`` narrow the list (Settings → Agent's history, C-066)."""
     mine_only = thread_id is not None or not sees_every_run(ctx)
     rows = await repo.list_runs(
         session,

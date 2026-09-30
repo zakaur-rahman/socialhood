@@ -290,7 +290,7 @@ async def test_get_billing_has_prices_and_a_meter_for_every_limit(owner: Owner) 
     assert billing["trial_eligible"] is True
 
 
-# ---------------------------------------------------------------- payment history (C-065)
+# ---------------------------------------------------------------- payment history (C-066)
 
 
 async def test_payment_history_is_newest_first_with_dodos_fields_and_pages(owner: Owner) -> None:

@@ -26,7 +26,7 @@ async def test_members_read_their_workspace(client: httpx.AsyncClient, clerk: Cl
 async def test_the_member_count_is_this_workspaces(
     client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
 ) -> None:
-    """Settings → Workspace's summary (C-065): members of this workspace only."""
+    """Settings → Workspace's summary (C-066): members of this workspace only."""
     clerk_id, me = await sign_in(client, clerk, email="owner@example.com")
     wid = me["workspaces"][0]["id"]
     _, other = await sign_in(client, clerk, email="other@example.com")  # a workspace of its own

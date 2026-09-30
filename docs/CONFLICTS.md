@@ -1000,3 +1000,77 @@ The layout and structure follow the owner's mockup; colours stay ours (tokens an
 - The digest's functions and numbers are unchanged; Home's additions live beside them in
   services/overview_stats.py (accounts connected, latest question, engagement) and
   services/priority_queue.py, and the digest doesn't read them (C-053).
+
+## C-066 · Settings redesign (owner-approved layout, feat/settings-redesign)
+The layout follows the owner's five settings mockups; colours stay ours (tokens and theme).
+Behaviour, routes, permissions and API calls are unchanged except where listed under API.
+- Shell: the tab bar stays in the settings layout with an underlined active tab and
+  `aria-current`, and the same role visibility (Billing for owners and admins). AI is labelled
+  "AI Rules & Takeover". Every tab starts with `SettingsPageHeader`: a breadcrumb read from the
+  address (Settings › Billing), so it always names the tab the page is on, a small label, the
+  title, one line of description and the page's actions. There is no top bar and no global Save.
+- Cards: `SettingsCard`, a rounded panel named by its heading (a region), with an icon, section
+  labels, and a red-accented danger tone. Two columns from 1280 px where the mockup has them
+  (AI, Connections, Workspace, Notifications), one column below; controls are 40 px tall there.
+- Save bar: sticky at the bottom of a form page (AI's takeover and phrases, Workspace). Clean:
+  "All changes saved". Dirty: "Unsaved changes" with Reset and Save. Saving: a spinner, both
+  buttons disabled. A failed save's error shows in the bar (field errors stay on their fields)
+  instead of a toast. While dirty, leaving warns: `beforeunload` for reload, close and typed
+  addresses, and a confirm for any same-origin link, caught on the window in the capture phase
+  before Next's Link sees the click. Browser Back and Forward and code-driven `router.push` are
+  not caught: the App Router has no way to block them.
+- Things that already saved as they changed still do: account AI modes (AI page and Connections),
+  the per-account switches, and the notification switches. Notifications' bar is status only
+  (saving, saved, or "Last change not saved" with the reason); its failure is no longer a toast.
+- Connections: a search (name, handle, number, platform) and All · Connected · Disconnected ·
+  Sandboxes with counts over the accounts the search matches. Connected means not disconnected
+  (needs reconnect and error count); Sandboxes overlaps the other two. Cards: avatar with the
+  platform badge, name, handle, status pill; the AI settings in an inner panel; a footer with
+  "Instagram API" or "WhatsApp Cloud API", "Last synced …" when the API has a time, and
+  Reconnect, Retry or Disconnect. Two columns from 1280 px. The status copy stays "Needs
+  reconnecting" (lib/copy is shared).
+- Remove is not built: the mockup's Remove (for sandboxes and disconnected cards) needs a route
+  that deletes an account row and, by cascade, its conversations, messages, comments, posts and
+  automations. Adding that was not permitted in this session, so disconnected cards keep only
+  Reconnect and sandboxes keep Disconnect. It is left for the owner to decide.
+- AI Rules & Takeover: left, every connected account with Off, Suggest and Auto (a disconnected
+  account has no mode to set: the PATCH is 409) and Human takeover (30 min, 2 h, 24 h, Until
+  resumed, as today); right, the six built-in rules as a checklist and the escalation phrases as
+  removable chips with an add field and "n of 20 used" (AiSettingsUpdate: 20 phrases of up to 120
+  characters). On Free, Auto is disabled with the Pro badge and "Upgrade for Auto" opens the same
+  upgrade dialog; a 402 still opens it. The phrases use a new `PhraseChips`; `ChipListInput` is
+  unchanged (brand voice uses it). `AiModeControl` is unchanged.
+- Billing & Usage: a plan hero (name, status, the trial end or renewal with the price, the
+  owner's actions as before). Badges: Trial, Active, On hold (was "Payment failed"), Cancelling
+  (was "Cancelled"), Free. "Resource quotas & usage" is a grid of every meter GET …/billing
+  counts, now including Instagram and WhatsApp accounts, each with its percentage and, for AI
+  credits and scheduled posts, the reset date. The plan comparison is the public plan list with
+  the current plan highlighted and Max "Coming soon". Payment history is a table (date, amount
+  and currency, status with Dodo's failure reason, Dodo's invoice link), newest first, older
+  pages on demand, with an empty state.
+- Agent: a header card with this period's AI credits (GET …/billing). "Capabilities &
+  permissions": the read-only bounds text, "Mode: Read only", and each AgentPermissions switch
+  as Off, locked, "Coming later". Run history: search and chips, both answered by the API; All,
+  Answered (succeeded, partial), Action needed (awaiting_approval; none until R2) and Failed
+  (failed, expired); cancelled and unfinished runs show under All. Pages of 10 with Previous and
+  Next; no total (the API has no count). A row still opens the run's trace.
+- Workspace: "General information" with the name's counter at 80 (the API's maximum), the URL
+  with its "…/w/" prefix and the existing warning, timezone, reply language, and the disclosure
+  switch with its line (counter at 60) and a preview (the message, a blank line, the line, as
+  render.with_disclosure appends it). The danger zone is `DeleteWorkspace` in the danger card;
+  its behaviour is unchanged. Beside them, "At a glance": plan, connected channels by platform,
+  members and the created date, all read from the API.
+- API: `GET /v1/w/{wid}/billing/payments` (owners and admins, like reading billing; the billing
+  actions stay the owner's): the workspace's `payments` rows (id, occurred_at, amount_minor,
+  currency, status, invoice_url, failure_reason), newest first by occurred_at, cursor pages of up
+  to 50 (20 by default). `SocialAccountOut.last_synced_at`: the later of `media_synced_at` and
+  `backfilled_at`, null when neither ran (WhatsApp). `WorkspaceOut.member_count`. `GET
+  …/agent/runs` takes `status` (repeatable) and `q` (the request contains it, any case, LIKE
+  wildcards taken literally). No migration; §2.15 lists the new route and filters.
+- Dropped from the mockups: the top bar (Docs & API, Support, Save Changes), the Dashboard item
+  and the ops meter (the sidebar is unchanged), sync uptime, environment instance and node ids,
+  the upcoming connectors card, the encryption claims card, model latency and ops tier, the
+  Visual Rules Matrix, "synced to cloud edge", annual billing and "save 20%", quota rollover,
+  the SOC-2 and audit cards, "Download all CSV", "Auto-renew enabled" and "Encrypted Stripe
+  billing", the policy version and 2FA link, screenshots, a retention label (not a setting),
+  version badges, Audit Log, Save All, disclosure reach, sync health and custom slug routing.

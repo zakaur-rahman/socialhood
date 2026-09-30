@@ -215,7 +215,7 @@ async def billing_state(
     )
 
 
-# ---------------------------------------------------------------- payment history (C-065)
+# ---------------------------------------------------------------- payment history (C-066)
 
 
 async def payment_history(session: AsyncSession, *, cursor: str | None, limit: int) -> PaymentList:

@@ -89,7 +89,7 @@ class PlanList(ResponseModel):
     items: list[PlanOffer]
 
 
-# ---------------------------------------------------------------- payment history (C-065)
+# ---------------------------------------------------------------- payment history (C-066)
 
 
 class PaymentOut(ResponseModel):
