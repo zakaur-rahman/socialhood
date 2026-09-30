@@ -99,14 +99,14 @@ async def update_workspace(
 async def cancel_dodo_subscription(session: AsyncSession, dodo: DodoClient) -> bool:
     """F-16: deleting a workspace first cancels its Dodo subscription at once (not at the period
     end), so Dodo never charges for a workspace that no longer exists. Runs in the workspace's
-    scope before anything is deleted. True when Dodo cancelled one. A subscription Dodo no longer
-    has, or refuses to cancel because it has already ended, counts as done; Dodo not answering
-    refuses the deletion with 503, so the owner can try again.
+    scope. True when Dodo cancelled one. A subscription Dodo no longer has, or refuses to cancel
+    because it has already ended, counts as done; Dodo not answering raises 503
+    (service_unavailable).
 
-    Callers: Clerk's user.deleted (services/clerk_sync, which deletes anyway when Dodo fails and
-    logs it). TODO(T9.6): DELETE /v1/w/{wid} (FR-ACC-05, F-16, §2.15) isn't built yet; P9's T9.6
-    owns workspace deletion and must call this first, before tokens are destroyed and the
-    workspace is marked deleting."""
+    Caller: the purge_workspace job's first step (services/workspace_deletion.purge_workspace),
+    for DELETE /v1/w/{wid} and Clerk's user.deleted alike (T9.6). The workspace is already marked
+    deleting, so a 503 is retried: the subscriptions row, which names the subscription, and the
+    workspace row stay until Dodo confirms, and an overdue purge raises an alert (C-052)."""
     sub = await subscriptions.current(session)
     if sub is None or not sub.dodo_subscription_id:
         return False

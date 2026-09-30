@@ -71,14 +71,21 @@ class Workspace(IdMixin, TimestampMixin, Base):
     timezone: Mapped[str] = mapped_column(Text, server_default=text("'UTC'"))
     reply_language: Mapped[str] = mapped_column(Text, server_default=text("'auto'"))
     status: Mapped[str] = mapped_column(Text, server_default=text("'active'"))
-    owner_user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
+    # Null only while deleting: Clerk's user.deleted removes the owner before the purge (0015).
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     trial_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     deletion_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deletion_requested_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
     checklist_dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     automation_disclosure: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         CheckConstraint(_in("status", WorkspaceStatus), name="status"),
+        CheckConstraint("owner_user_id IS NOT NULL OR status = 'deleting'", name="owner"),
         CheckConstraint(f"slug ~ '{SLUG_PATTERN}'", name="slug"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name"),
         CheckConstraint(

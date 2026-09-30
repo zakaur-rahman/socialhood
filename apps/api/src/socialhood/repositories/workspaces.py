@@ -6,7 +6,7 @@ import uuid
 from datetime import date
 from typing import Any
 
-from sqlalchemy import delete, func, select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -60,11 +60,6 @@ async def transfer_ownership(
     await session.execute(
         update(Workspace).where(Workspace.id == workspace_id).values(owner_user_id=user_id)
     )
-
-
-async def delete_workspace(session: AsyncSession, workspace_id: uuid.UUID) -> None:
-    """Delete a workspace; every tenant table cascades from it."""
-    await session.execute(delete(Workspace).where(Workspace.id == workspace_id))
 
 
 async def trial_used_by_owner(session: AsyncSession, workspace: Workspace) -> bool:
