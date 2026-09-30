@@ -1,22 +1,30 @@
 # Gates from §6.1 (T0.8): every job must pass before merge. Never skip a red gate.
+#
+# The job names `api`, `web`, `contract` and `secrets` are the required status checks on `main`
+# and `develop` (docs/ops/branching.md). Renaming a job breaks branch protection: change the
+# rulesets in the same pull request.
 name: CI
 
 on:
-  push:
-    branches: [main]
   pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
 
 permissions:
   contents: read
 
+# A newer push to the same branch or pull request cancels the run it replaces.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  # Lint, types, the tenancy rule, migrations, the test suite and the dependency audit.
   api:
-    name: API (lint, types, tenancy rule, tests, audit)
+    name: api
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: apps/api
@@ -38,29 +46,46 @@ jobs:
           --health-cmd "valkey-cli ping"
           --health-interval 5s --health-timeout 3s --health-retries 20
     env:
+      # The base test database and Valkey db. Under -n every worker uses its own database
+      # (socialhood_test_gw0, ...) and the Valkey db base + worker index (0-3 here); see
+      # tests/support/workers.py.
       TEST_DATABASE_URL: postgresql+asyncpg://socialhood:socialhood@localhost:5432/socialhood_test
       TEST_DATABASE_URL_DIRECT: postgresql://socialhood:socialhood@localhost:5432/socialhood_test
-      TEST_REDIS_URL: redis://localhost:6379/15
+      TEST_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
       - run: uv sync --locked
       - run: uv run ruff format --check .
       - run: uv run ruff check .
       - run: uv run mypy
       - name: Tenancy rule (TR-TEN-04)
         run: uv run python scripts/check_tenancy.py
-      - run: uv run pytest
+      - name: Migrations apply from scratch and match the models (TR-OPS-02)
+        env:
+          APP_ENV: test
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+          DATABASE_URL_DIRECT: ${{ env.TEST_DATABASE_URL_DIRECT }}
+        run: |
+          uv run alembic upgrade head
+          uv run alembic check
+      - name: Tests (parallel; a database and a Valkey db per worker)
+        run: uv run pytest -n 4 --dist worksteal -m "not serial"
+      - name: Tests that must run alone (the serial marker)
+        run: uv run pytest -m serial
       - name: Dependency audit (SEC-13)
         run: |
           uv export --format requirements-txt --no-hashes --no-emit-project --no-dev > "$RUNNER_TEMP/requirements.txt"
           uvx pip-audit --requirement "$RUNNER_TEMP/requirements.txt" --disable-pip --no-deps
 
+  # Lint, types, unit tests, the production build and the dependency audit.
   web:
-    name: Web (lint, types, tests, build, audit)
+    name: web
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -76,14 +101,17 @@ jobs:
       - name: Dependency audit (SEC-13)
         run: pnpm audit --prod --audit-level high
 
+  # OpenAPI drift (TR-API-08): the committed contract and client match the code.
   contract:
-    name: OpenAPI drift (TR-API-08)
+    name: contract
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
@@ -100,9 +128,11 @@ jobs:
             exit 1
           fi
 
+  # Secret scan (SEC-06) over the whole history.
   secrets:
-    name: Secret scan (SEC-06)
+    name: secrets
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:

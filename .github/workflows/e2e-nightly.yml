@@ -2,6 +2,12 @@
 # F-15 against the sandbox stack, every night and on demand. Done when it is green three nights in
 # a row. How it works and how to run it locally: docs/testing-e2e.md.
 #
+# The nightly run tests `develop` (staging, docs/ops/branching.md); a manual run tests the branch
+# picked in "Use workflow from". GitHub runs scheduled workflows from the default branch's copy of
+# this file (`main`), so changes to the schedule take effect once they are released. It does not
+# run on every push to develop: Render deploys staging only after every check on the commit passes
+# (autoDeployTrigger: checksPass), and this suite takes up to 45 minutes.
+#
 # Secrets (Settings > Secrets and variables > Actions), from the Clerk DEVELOPMENT instance only
 # (the launcher refuses live keys):
 #   CLERK_E2E_PUBLISHABLE_KEY   its publishable key (pk_test_…)
@@ -61,6 +67,8 @@ jobs:
       E2E_REDIS_URL: redis://127.0.0.1:6379/5
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'schedule' && 'develop' || github.ref }}
 
       - uses: astral-sh/setup-uv@v6
         with:
