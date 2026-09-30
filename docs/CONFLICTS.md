@@ -819,3 +819,64 @@ Evidence per item: docs/security-checklist.md.
   active workspace (FOR SHARE), `account_in_use`, the encrypted token, `subscribed_apps` and
   registration. The script is for Meta's test number, which Embedded Signup can't connect; it
   takes the token from `WHATSAPP_DEV_TOKEN` and refuses production.
+
+## C-063 · Inbox redesign (owner-approved layout) and three small AI features
+The layout and structure follow the owner's mockup; colours stay ours (tokens and theme).
+- List column: a segmented platform control (All, Instagram, WhatsApp, labelled at every width)
+  replaces the coloured strip; "Inbox" sits beside the Chats | Scheduled segments; the search is
+  full width with the account filter beside it when a platform has several accounts. Chips: All,
+  Unread, Needs reply, Needs you, Leads, AI handled; Archived is behind "More". Needs you is a new
+  list view, `view=needs_you` (open conversations with `needs_human`, the test
+  InboxCounts.needs_you already used); Ask Social Hood's search tool accepts it too.
+- Rows: 40 px avatar with the platform badge, time on the right, "You:", "AI:" or "Auto:" before
+  our own previews (AI: stays for auto replies), and small badges: "Needs you", the other signals
+  (complaint, closing soon, negative), "Lead 72/100" from the lead threshold (60, the API's
+  LEAD_SCORE; the mockup's 40 would not be a lead) and "AI Auto" when the AI replies on its own.
+  The API's list item gains `ai_mode_override`; the row takes the account's mode when it is null.
+  Rows are 68 px, or 90 px with badges, fixed so the virtualised list needs no measuring. The
+  selected row has a brand bar on the left.
+- Thread header: avatar, name with the window chip beside it (neutral, amber under 2 h, red
+  "Window closed"), then handle · platform · our linked account (always, not only with several
+  accounts). The AI mode menu ("AI: Suggest") is the only AI mode control: the details panel's
+  segments are gone; its takeover pause and escalation stay there as short notes, and Resume
+  stays in the menu. Scheduling (md and up), the panel toggle and the More menu follow.
+- Messages: time, delivery ticks and, for `ai_auto` and `automation` messages, "AI Assisted"
+  (its tooltip says an auto reply, or names the automation) sit under the bubble; the "why"
+  button of an auto reply moved there too. "Sent from Instagram" stays inside the bubble; an
+  unsupported message is a small card with "View in …".
+- The suggestion card is a slim bar above the composer: "AI draft: …" with Insert (was Edit),
+  Send, Draft again (was Regenerate) and Dismiss, the sources and "Check this" as small chips;
+  the gap state reads "Not in your knowledge: …" with Add to knowledge. Still one draft; no
+  quick-reply chips.
+- Composer: the text box on top, a toolbar under it (attach, emoji, heart or sticker, AI Polish,
+  schedule) and Send. No "knowledge" button: there is no knowledge search to open (the Knowledge
+  page's test costs a credit).
+- Context panel: Customer (Follows you when known, customer since, linked account, lead score
+  bar, Open in Instagram or WhatsApp when there is a profile), Latest message (intent, sentiment,
+  priority, the analysis's topics as they are, Teach AI, Correct the AI) and Summary (the text,
+  a Next step callout, Refresh). Inline from 1280 px (300 px, 320 px from 1440 px), a sheet
+  below. The header toggle collapses it; the choice is remembered per device
+  (`socialhood:inbox-details`, localStorage behind try/catch); with no choice yet it starts open
+  from 1440 px and collapsed below.
+- AI Polish: `POST …/conversations/{id}/polish` `{text, tone?}` → `{text}` (AnyMember, AI rate
+  limit, credits gate). Prompt `polish.v1`: grammar and clarity in the draft's own language and
+  script (English, Hindi, Hinglish in Latin letters), same meaning and roughly the length, no new
+  facts, prices or promises; the brand voice's tone unless the request names friendly or
+  professional. The last 6 messages go as context, none with AI analysis off for the account
+  (FR-PRV-02). An answer that adds a number, link, email address or phone number, is empty or is
+  longer than twice the draft (or 200 characters more for a short one) is refused with 503 and
+  refunded, never shown. Feature `reply_polish`, 1 credit; migration 0016 lets
+  ai_usage_events.feature take it (its downgrade deletes those events). The composer replaces
+  the text and offers Undo until the text is edited; text typed during the call is kept.
+- Summary next step: prompt `summary.v2` asks for one concrete, verb-first suggestion from the
+  conversation and KNOWLEDGE only, or null. KNOWLEDGE is the chunks the conversation's newest
+  knowledge-backed draft used (at most 4), read from the database, so the summary stays one model
+  call with no retrieval or embedding. `next_step` was already in the schema and stays null on
+  older summaries.
+- Teach AI (web): from the panel's latest message, and the draft bar's Add to knowledge, the
+  existing SourceSheet opens in place (no trip to the Knowledge page, so no hand-off store or
+  search params) as an FAQ with the customer's question; the member writes the answer. The open
+  gaps are read when it is used; the gap whose examples include that message goes with the FAQ
+  as `gap_id`, so saving answers it. Owners and admins only, like knowledge.
+- The mobile and tablet single-pane navigation is unchanged; the panel opens as a sheet from
+  the header toggle. The sidebar is unchanged.
