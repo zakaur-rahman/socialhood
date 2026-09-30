@@ -852,9 +852,20 @@ Evidence per item: docs/security-checklist.md.
   (`stalled_worker_timeout`, Procrastinate's default 30 s) uses 90 s too.
 - The ops CLI no longer retries `post_first_comment`, `send_private_reply` or `deliver_push`
   (`PLATFORM_WRITE_TASKS` named two tasks that don't exist instead).
-- Not changed: a private reply that dies before its claim stays `queued`, and `sweep_messages`
-  re-queues it as `send_message`, which doesn't know private replies. Rare (the claim is the
-  job's first step); worth its own fix.
+- Fixed after (fix/queued-private-replies): a member's private reply (T6.3) whose job died before
+  its claim stayed `queued`, and `sweep_messages` re-queued it as `send_message`, which sent it
+  as a plain DM or failed it on the closed window while the comment kept its one private reply.
+  Only these are ever `queued`: an automation's private reply is stored `sending` by the drain,
+  so a dead drain's reply was already the sweeper's delivery_unknown, settling its run. Now
+  `messages_repo.in_flight` names the comment of a queued human message linked from
+  `comments.private_reply_message_id` (looked up among the workspace's comments of the 7 days
+  before it, on ix_comments_workspace_commented, so no migration), and the sweeper hands it
+  back to `send_private_reply` (`private_replies.requeue`, same `send:{id}` key), never to
+  `send_message`. One left `sending` still ends delivery_unknown and keeps the comment linked;
+  nothing re-sends it. The job now holds a queued reply of an account read-only after a
+  downgrade (FR-BIL-07), as the automations' queue does: still queued, looked at again every
+  10 minutes, sent once the account may send, failed with the 7-day reason after that. A
+  reconnect-needed account fails it as before (`account_needs_reconnect`, the comment freed).
 - Seen live: a WhatsApp "Hi" was analysed right (greeting, neutral, lead score 10), but its
   suggestion came back `can_answer: false`, no text, gap "business information". No code forced
   it: suggest.v2 only said "use only facts from KNOWLEDGE", and the model read a greeting as a

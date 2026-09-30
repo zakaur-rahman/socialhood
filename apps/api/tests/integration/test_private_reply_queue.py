@@ -18,6 +18,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.db.tenancy import workspace_scope
+from socialhood.jobs.tasks.send import sweep_in_flight
 from socialhood.platforms.sandbox import outbox
 from socialhood.repositories import inbox
 from socialhood.services import sending
@@ -319,6 +320,39 @@ async def test_a_temporary_error_puts_the_reply_back_in_the_queue(world: World) 
     [run] = await world.rows("SELECT result, private_reply_message_id FROM automation_runs")
     assert run == {"result": "queued", "private_reply_message_id": None}
     assert (await world.drain()).sent == 1
+
+
+async def test_a_reply_a_dead_drain_left_sending_is_never_sent_again(
+    world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The drain claimed the reply (stored ``sending``) and its worker died before the call:
+    the message sweeper fails it as delivery_unknown, settling the run, and no drain sends it
+    (Instagram may have it, and allows one private reply per comment)."""
+    automation_id = await comment_automation(world)
+    await queued_runs(world, automation_id, count=1, commented_at=datetime.now(UTC))
+
+    async def dies(*args: Any) -> None:
+        return None
+
+    with monkeypatch.context() as patched:
+        patched.setattr(prq, "_send_batch", dies)
+        await world.drain()
+    [msg] = await world.rows("SELECT id, status FROM messages")
+    assert msg["status"] == "sending"
+    async with world.engine.begin() as conn:
+        await conn.execute(
+            text("UPDATE messages SET updated_at = now() - interval '11 minutes' WHERE id = :id"),
+            {"id": msg["id"]},
+        )
+
+    assert await sweep_in_flight(world.maker, world.redis) == {"requeued": 0, "abandoned": 1}
+    [row] = await world.rows("SELECT status, error_code FROM messages")
+    assert (row["status"], row["error_code"]) == ("failed", "delivery_unknown")
+    [run] = await world.rows("SELECT result, error_code FROM automation_runs")
+    assert (run["result"], run["error_code"]) == ("failed", "delivery_unknown")
+    again = await world.drain()
+    assert (again.sent, again.remaining) == (0, 0)
+    assert not outbox.PRIVATE_REPLIES
 
 
 async def test_an_account_to_reconnect_holds_the_queue(world: World) -> None:

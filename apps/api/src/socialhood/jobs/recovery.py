@@ -103,7 +103,7 @@ RECOVERY: dict[str, Recovery] = {
     "cancel_orphan_subscription": R,  # an ended subscription counts as done
     # ---- recovered by their own sweepers (never run again here)
     "send_message": S,  # sweep_messages: sending → delivery_unknown, queued → enqueued again
-    "send_private_reply": S,  # sweep_messages: the message is claimed (sending) before the call
+    "send_private_reply": S,  # sweep_messages: sending → delivery_unknown, queued → its own job
     "send_scheduled": S,  # sweep_stuck_scheduled: the claim goes back to scheduled, or fails
     "publish_target": S,  # sweep_stuck_posts: back to pending (or failed after 3 claims)
     "poll_container": S,  # sweep_stuck_posts: the next poll is queued

@@ -23,6 +23,7 @@ from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.platforms.errors import PlatformError
 from socialhood.repositories import messages as messages_repo
 from socialhood.services import read_receipts, sending
+from socialhood.services.comments import private_replies
 
 log = get_logger(__name__)
 
@@ -98,8 +99,11 @@ async def sweep_in_flight(
     sessionmaker: async_sessionmaker[AsyncSession], redis: Redis, now: datetime | None = None
 ) -> dict[str, int]:
     """Messages that stopped moving (ix_messages_in_flight): a queued one lost its job, so it is
-    enqueued again (a waiting job makes that a no-op); a sending one whose job is gone may have
-    reached the platform, so it fails as delivery_unknown and is never re-sent (TR-JOB-05)."""
+    enqueued again (a waiting job makes that a no-op): a comment's private reply to
+    send_private_reply, which sends it addressed by the comment and holds it for a read-only
+    account, anything else to send_message. A sending one whose job is gone may have reached the
+    platform, so it fails as delivery_unknown and is never re-sent (TR-JOB-05); both jobs use the
+    ``send:{id}`` key that ``send_job_pending`` looks for."""
     now = now or datetime.now(UTC)
     async with sessionmaker() as session:
         with tenant_bypass_scope():
@@ -108,7 +112,13 @@ async def sweep_in_flight(
             )
     counts = {"requeued": 0, "abandoned": 0}
     for row in rows:
-        if row.status == MessageStatus.QUEUED:
+        if row.status == MessageStatus.QUEUED and row.comment_id is not None:
+            counts["requeued"] += int(
+                await private_replies.requeue(
+                    row.workspace_id, row.comment_id, row.id, row.conversation_id
+                )
+            )
+        elif row.status == MessageStatus.QUEUED:
             counts["requeued"] += int(
                 await sending.enqueue_send(row.id, row.conversation_id, row.workspace_id)
             )
