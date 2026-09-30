@@ -659,3 +659,54 @@ intent becomes "other", decided in code after the model answers, so it is never 
   other and spam, needs you, open questions from 30 days, comments without deleted ones).
 - Unsubscribe: an HMAC token computed at send time and never stored; POST only (404 for a bad
   token, safe to repeat); List-Unsubscribe headers only when API_BASE_URL is set.
+
+## C-054 · P7b media editor decisions
+Instagram's API takes only a finished image or video URL, so its filters, effects and music can't
+be applied through it. The owner decided on an editor of our own; the spike (docs/editor-spike.md)
+settled the details. The spec's FR-PUB-20…27, TR-MED-04, TR-MED-05, UX-SCR-15, §5.7
+media_renders and the P7b task table (TB.1…TB.6) now say this.
+- Rendered by Cloudinary, which already stores every post upload: not in the browser (canvas or
+  ffmpeg.wasm can't render video reliably on phones and would publish something other than the
+  preview) and not a paid editor SDK (a licence and still a render and hosting pipeline to build).
+- Non-destructive: an edit is an `EditSpec` (v1) on the post's item
+  (`scheduled_post_assets.edit_spec`); its file is a Cloudinary derived asset (`media_renders`).
+  The upload never changes. The same spec of the same upload is one render (spec hash).
+- Everyone gets the editor. New video renders count against `video_renders_monthly` (Free 10,
+  Pro 200, Max 1,000, proposals) by `created_at` in the usage period, counted live from
+  `media_renders` (no usage_counters metric); reused and failed renders don't count. Photo edits
+  render on the fly and aren't limited, only counted. TB.6 checks the numbers against Cloudinary's
+  credits per render (the spike used about 4 credits, mostly video).
+- Photo extras: Cloudinary's artistic looks (20: `daenerys` doesn't exist), one-tap `e_improve`,
+  sharpen and vibrance, and Apply this look to all photos (preset, adjustments, look and enhance;
+  not crop or text).
+- Presets use only adjustments video supports, so a preset looks alike on photos and video.
+  Video silently ignores vibrance, sepia, grayscale, sharpen, tint, hue, `e_improve` and `e_art`:
+  warmth is a translucent full-frame colour layer on both, video black and white is saturation
+  -100, sepia isn't offered.
+- One builder, twice: `media/editor/transform.py` and `lib/editor/transform.ts`, held together by
+  66 golden cases in `packages/editor-fixtures/transform-cases.json` that both suites run. The web
+  builds its previews itself, so there is no preview route; a video previews as still frames that
+  use only video effects (image effects apply to frames and would lie).
+- Crops are whole pixels (`c_crop` then `c_scale`), never `ar_` (`ar_1.91:1` is refused). Output
+  up to 1440 px wide for photos and 1080 px for video, never upscaled; video sizes even.
+- Text: six Google fonts Cloudinary renders; `c_limit` shrinks a line too wide for the frame, and
+  lines break only where the owner typed one; at most 5 layers of 150 characters and 5 lines.
+  Emoji outside the Basic Multilingual Plane are refused by the API (Cloudinary refuses or skips
+  them) and dropped by the builders. Video text times are seconds of the trimmed clip, before the
+  speed change. `fl_no_overflow` keeps layers from growing a photo's canvas.
+- Mute keeps a silent sound track (`e_volume:mute`) rather than removing it (`ac_none`).
+- Video renders are eager and asynchronous: the notification webhook (signed, 2-hour window, fails
+  closed) finishes them, `poll_render` reads the source's derived files when no notification comes
+  (never by requesting the derived URL, which renders it again), and a sweeper restarts lost
+  starts and fails renders after 30 minutes. Photos are ready when created.
+- Saving a draft never renders; the editor asks for the render on Done. A draft that leaves
+  `edits` out keeps each item's edit. A post with a video edit not yet rendered can't be scheduled
+  or published (checklist `edits`, 422 on `edits.{i}`).
+- A Reel's cover is `cover_url`: a still of the source with the edit at `cover_s` (an image
+  transformation), not `thumb_offset`.
+- Strict transformations (signed delivery URLs) stay off, as P3 and P7 already rely on unsigned
+  ones; for P9's security pass.
+- Later (FR-PUB-27, R2): AI auto-captions for Reels, music, stickers.
+- Found in the spike, not changed here: P7 publishes unedited video through an on-the-fly
+  `vc_h264,ac_aac,f_mp4` URL, which took 20 s for a 48 MB 1080p file; rendering it eagerly too
+  would make Instagram's fetch fast and safe.

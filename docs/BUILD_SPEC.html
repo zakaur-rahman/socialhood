@@ -798,6 +798,14 @@ table.xwide{min-width:980px}
     <div class="req"><div class="id">FR-PUB-13</div><div><div class="t">Media library <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>Uploaded images and videos are kept in a library, filterable by type and date, for reuse in new posts. Upload progress reflects the bytes actually sent.</p></div></div>
     <div class="req"><div class="id">FR-PUB-14</div><div><div class="t">Duplicate and bulk actions <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>Duplicate a post as a new draft. In the List view, select several posts to shift their times, unschedule or delete them.</p></div></div>
     <div class="req"><div class="id">FR-PUB-15</div><div><div class="t">Best times <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Suggested posting times per account from its own post results (needs at least 10 published posts with insights), shown as highlighted slots in the Week view and in the time picker.</p></div></div>
+    <div class="req"><div class="id">FR-PUB-20</div><div><div class="t">Edit media before publishing <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Instagram's own filters, effects and music can't be applied through its API, which only takes a finished file, so the composer has its own editor. Every item of a post opens full screen (a photo, a video, each item of a carousel) with: crop to 1:1, 4:5, 1.91:1 (feed) or 9:16 (Reels and stories) with zoom and a focus point; rotate 90° and flip; 10 filter presets (vivid, warm, cool, mono, fade, noir, golden, dramatic, bright, retro); adjustments for brightness, contrast, saturation, gamma, warmth and vignette; up to 5 text layers (6 fonts, colour, size, an optional background box, a position; on video a start and end time); a logo or watermark from an uploaded image (size, opacity, position). Photos and videos get the same tools wherever Cloudinary supports them on both (docs/editor-spike.md).</p><div class="ac"><ul><li>The original upload is never changed: an edit is a spec saved on the post's item, and Reset returns to the original.</li><li>Text refuses emoji Cloudinary can't draw (most emoji) with a message; Hindi and accented text work.</li><li>The same tools work on each carousel item; each keeps its own crop and text.</li></ul></div></div></div>
+    <div class="req"><div class="id">FR-PUB-21</div><div><div class="t">Rendered by Cloudinary <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Edits are rendered by Cloudinary as derived files of the upload, never in the browser. A photo's edit is ready as soon as it is made (an on-the-fly transformation). A video's renders in the background after Done: the item shows Rendering, then the result or Couldn't render with the reason and Try again. Asking for the same edit of the same upload again reuses the render.</p></div></div>
+    <div class="req"><div class="id">FR-PUB-22</div><div><div class="t">Video tools <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Trim (start and end on a filmstrip, at least 1 second), speed 0.5×, 1.5× or 2×, fade in and out (up to 3 seconds each), mute the original sound, and a cover frame for Reels picked from the clip.</p></div></div>
+    <div class="req"><div class="id">FR-PUB-23</div><div><div class="t">Video render allowance <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>Everyone gets the editor. New video renders count against <code>video_renders_monthly</code> (§1.7) in the usage period; the same edit again, and a failed render, don't count. Over the allowance, a new video render answers 402 <code>quota_exceeded</code> with the key and limit, and the editor offers the upgrade (F-15). Photo edits aren't limited; they are counted and shown on the billing page.</p></div></div>
+    <div class="req"><div class="id">FR-PUB-24</div><div><div class="t">Publish the rendered file <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>A post publishes each edited item's rendered file, and a Reel its chosen cover. A post with a video edit that isn't rendered yet can't be scheduled or published: the checklist shows it (FR-PUB-10) and names the item; photos never wait.</p></div></div>
+    <div class="req"><div class="id">FR-PUB-25</div><div><div class="t">What you see is what publishes <span class="tag must">MUST</span> <span class="tag r1">R1</span></div><p>The editor's previews are Cloudinary's own output built by the same rules as the render (one builder in the API and its twin in the web, held together by shared test cases), not a browser approximation. A video previews as frames at the playhead with the edit applied.</p></div></div>
+    <div class="req"><div class="id">FR-PUB-26</div><div><div class="t">Photo extras <span class="tag should">SHOULD</span> <span class="tag r1">R1</span></div><p>Photos also get Cloudinary's artistic looks (20), one-tap auto-enhance, sharpen and vibrance. In a carousel, Apply this look to all photos copies the preset, adjustments, look and enhance to every photo (not their crop or text).</p></div></div>
+    <div class="req"><div class="id">FR-PUB-27</div><div><div class="t">Later editor tools <span class="tag should">SHOULD</span> <span class="tag r2">R2</span></div><p>Not in P7b: AI auto-captions for Reels (speech to timed text layers), music, and stickers.</p></div></div>
   </div>
 
   <h3 id="prd-fr-home">Home and analytics</h3>
@@ -845,6 +853,7 @@ table.xwide{min-width:980px}
       <tr><td class="m">pending_scheduled_messages</td><td>20</td><td>500</td><td>unlimited</td></tr>
       <tr><td class="m">message_history_days</td><td>90</td><td>unlimited</td><td>unlimited</td></tr>
       <tr><td class="m">comment_intelligence_posts</td><td>5 most recent</td><td>all</td><td>all</td></tr>
+      <tr><td class="m">video_renders_monthly</td><td>10</td><td>200</td><td>1,000</td></tr>
       <tr><td class="m">trial_days</td><td>n/a</td><td>7, once</td><td>none</td></tr>
     </tbody>
   </table></div>
@@ -864,6 +873,7 @@ table.xwide{min-width:980px}
     </tbody>
   </table></div>
   <p>Credits reset on the subscription's billing anchor day (Free: the workspace creation day each month). Embedding knowledge does not use credits; it counts against <code>knowledge_characters</code>.</p>
+  <p><code>video_renders_monthly</code> (P7b, FR-PUB-23) counts <code>media_renders</code> of kind video created in the same usage period, leaving out failed ones; the same edit of the same upload is one render. Photo edits are not limited. Check the numbers against Cloudinary's credits per render (TB.6).</p>
 
   <h2 id="prd-out"><span class="sn">1.8</span>Out of scope for R1</h2>
   <ul>
@@ -992,7 +1002,7 @@ flowchart LR
 │  │  │  ├─ jobs/                  # app.py (Procrastinate app), enqueue.py, dispatcher.py, tasks/*.py
 │  │  │  ├─ realtime/              # events.py (publish), sse.py (stream)
 │  │  │  ├─ billing/               # plans.py, entitlements.py, dodo.py, usage.py
-│  │  │  ├─ media/                 # cloudinary.py
+│  │  │  ├─ media/                 # cloudinary.py; editor/ (spec.py, transform.py: P7b)
 │  │  │  ├─ security/              # crypto.py, signatures.py, ratelimit.py
 │  │  │  ├─ ops/                   # cli.py: list and replay failed events and jobs (TR-OPS-04)
 │  │  │  └─ observability/         # logging.py, metrics.py, tracing.py
@@ -1006,6 +1016,7 @@ flowchart LR
 │     ├─ src/stores/               # zustand stores
 │     └─ src/styles/globals.css    # tokens (§4.2)
 ├─ packages/api-client/            # generated OpenAPI types (schema.d.ts)
+├─ packages/editor-fixtures/       # the editor builders' golden cases (TR-MED-04)
 ├─ infra/                          # docker-compose.yml, render.yaml
 ├─ docs/                           # this spec as markdown, QUESTIONS.md, CONFLICTS.md
 └─ .github/workflows/ci.yml</code></pre>
@@ -1573,6 +1584,8 @@ RETURNING id;            -- enqueue(send_scheduled, key=f"smsg:{id}", id=id)</co
       <tr><td class="m">publish_target(target_id)</td><td>interactive</td><td>dispatcher, publish now</td><td class="m">pub:{target_id}</td><td>120 s</td><td>3</td></tr>
       <tr><td class="m">poll_container(target_id, n)</td><td>interactive</td><td>publish_target; re-enqueues itself every 60 s for polls 1–5, then every 5 min for polls 6–10 (30 min in all)</td><td class="m">poll:{target_id}:{n}</td><td>30 s</td><td>1</td></tr>
       <tr><td class="m">post_first_comment(target_id)</td><td>interactive</td><td>target published with a first comment</td><td class="m">firstc:{target_id}</td><td>30 s</td><td>3</td></tr>
+      <tr><td class="m">start_render(render_id)</td><td>interactive</td><td>a new or retried video render (TR-MED-05)</td><td class="m">render:{render_id}</td><td>60 s</td><td>3</td></tr>
+      <tr><td class="m">poll_render(render_id, n)</td><td>interactive</td><td>start_render; re-enqueues itself every 15 s up to 40 times when no notification finishes the render</td><td class="m">renderpoll:{render_id}:{n}</td><td>30 s</td><td>1</td></tr>
       <tr><td class="m">analyze_comments(account_id)</td><td>bulk</td><td>dispatcher when comments pending</td><td class="m">cmt:{account_id}</td><td>60 s</td><td>2</td></tr>
       <tr><td class="m">summarize_post(media_item_id)</td><td>bulk</td><td>20 new analysed comments or 24 h</td><td class="m">postsum:{id}</td><td>60 s</td><td>2</td></tr>
       <tr><td class="m">summarize_conversation(conv_id)</td><td>bulk</td><td>8 new messages or on request</td><td class="m">convsum:{conv_id}</td><td>30 s</td><td>2</td></tr>
@@ -1584,6 +1597,7 @@ RETURNING id;            -- enqueue(send_scheduled, key=f"smsg:{id}", id=id)</co
       <tr><td class="m">check_closing_windows</td><td>interactive</td><td>cron every 15 min</td><td>lock</td><td>60 s</td><td>n/a</td></tr>
       <tr><td class="m">send_weekly_digests</td><td>bulk</td><td>cron hourly; sends to workspaces where it is Monday 09:00 locally</td><td>lock + <code>digest:{workspace}:{iso week}</code></td><td>300 s</td><td>n/a</td></tr>
       <tr><td class="m">dispatch_due · sweep_stuck</td><td>interactive</td><td>cron 30 s · 1 min</td><td>lock</td><td>25 s · 60 s</td><td>n/a</td></tr>
+      <tr><td class="m">sweep_stuck_renders</td><td>bulk</td><td>cron every 5 min: restart renders pending 2 min; fail renders unfinished after 30 min</td><td>lock</td><td>60 s</td><td>n/a</td></tr>
       <tr><td class="m">snapshot_metrics · refresh_tokens</td><td>bulk</td><td>cron hourly · daily 03:00 UTC</td><td>lock</td><td>300 s</td><td>n/a</td></tr>
       <tr><td class="m">snapshot_account_daily</td><td>bulk</td><td>cron hourly; runs for accounts where it is 02:00 in the workspace timezone</td><td>lock + <code>acctday:{account}:{date}</code></td><td>300 s</td><td>n/a</td></tr>
       <tr><td class="m">reconcile_subscriptions · purge_expired</td><td>bulk</td><td>cron 6-hourly · daily 04:00 UTC</td><td>lock</td><td>300 s · 600 s</td><td>n/a</td></tr>
@@ -1607,6 +1621,7 @@ RETURNING id;            -- enqueue(send_scheduled, key=f"smsg:{id}", id=id)</co
       <tr><td class="m">suggestion.updated</td><td><code>{conversation_id, suggestion: Suggestion}</code></td><td>Sent, dismissed, superseded, expired</td></tr>
       <tr><td class="m">scheduled_message.updated</td><td><code>{scheduled_message: ScheduledMessage}</code></td><td>Any status change</td></tr>
       <tr><td class="m">scheduled_post.updated</td><td><code>{scheduled_post: ScheduledPost}</code></td><td>Any status or target change</td></tr>
+      <tr><td class="m">media_render.updated</td><td><code>{render: MediaRender}</code></td><td>A render is created, starts, finishes or fails (P7b); the posts using it also get <code>scheduled_post.updated</code></td></tr>
       <tr><td class="m">comment.created · comment.updated</td><td><code>{comment: Comment}</code></td><td>New comment; analysis, hidden, reply</td></tr>
       <tr><td class="m">social_account.updated</td><td><code>{social_account: SocialAccount}</code></td><td>Status or settings change</td></tr>
       <tr><td class="m">usage.updated</td><td><code>{metric, used, limit, period_end}</code></td><td>Usage crosses a whole percent</td></tr>
@@ -1625,6 +1640,22 @@ RETURNING id;            -- enqueue(send_scheduled, key=f"smsg:{id}", id=id)</co
       </ol></div></div>
     <div class="req"><div class="id">TR-MED-02</div><div><div class="t">Limits (verify Instagram's current specs)</div><p>Images: JPEG, PNG, WEBP or HEIC up to 8 MB, published as JPEG through a delivery transformation (<code>f_jpg,q_auto,w_1440,c_limit</code>); aspect ratio 4:5 to 1.91:1, otherwise the composer offers a crop. Video: MP4 or MOV up to 100 MB and 90 s in R1, delivered as <code>vc_h264,ac_aac,f_mp4</code>. WhatsApp documents: PDF up to 20 MB.</p></div></div>
     <div class="req"><div class="id">TR-MED-03</div><div><div class="t">Inbound media</div><p>Platform media URLs expire. <code>ingest_media</code> downloads each inbound attachment through the adapter and stores it under <code>ws/{workspace_id}/inbound/{yyyy}/{mm}</code>, updating the attachment with <code>storage_url</code>. Until then the UI shows the platform URL. Exceptions: story-mention media is never copied (Meta's policy); the UI shows it from the platform URL and a "Story no longer available" placeholder once that fails. WhatsApp media URLs expire 5 minutes after they are issued, so <code>ingest_media</code> requests the URL from the media id immediately before downloading.</p></div></div>
+    <div class="req"><div class="id">TR-MED-04</div><div><div class="t">Edit spec and transformation builder (P7b)</div><p>An edit is an <code>EditSpec</code> (version 1, <code>media/editor/spec.py</code>): rotate and flips, crop (aspect, zoom, focus), preset, adjustments, look and enhance (photos), text layers (at most 5, 150 characters and 5 lines each, no characters outside the Basic Multilingual Plane), logo (a media asset id), trim, speed, fades, mute and cover (video). Validation keeps ranges; <code>problems(spec, kind, duration)</code> refuses photo-only tools on video, video-only tools on photos and times past the clip. <code>media/editor/transform.py</code> turns (asset, spec) into a transformation and URL; <code>apps/web/src/lib/editor/transform.ts</code> is its line-for-line twin, and both suites run every case in <code>packages/editor-fixtures/transform-cases.json</code> (at least 40: photos, video, carousel items, escaping, Hindi, emoji), which <code>scripts/editor_fixtures.py</code> writes from the Python builder.</p>
+      <ol class="steps">
+        <li>Components in order, one effect each: trim <code>so_,eo_</code> (video) or the still's <code>so_</code>; <code>a_90|180|270</code>, <code>a_hflip</code>, <code>a_vflip</code>; <code>c_crop,w_,h_,x_,y_</code> in whole pixels of the rotated media, then <code>c_scale,w_,h_</code> down to 1440 px (photos) or 1080 px (video), never up, video sizes even; photos <code>e_improve</code>, <code>e_art:{look}</code>; adjustments (preset plus own, clamped) brightness, contrast, saturation, gamma, vibrance, warmth, <code>e_vignette:{n},b_black</code>, sharpen; text layers; logo; video <code>e_accelerate</code>, <code>e_fade</code> in and out, <code>e_volume:mute</code>; delivery <code>q_auto</code> (.jpg) or <code>vc_h264,ac_aac,q_auto</code> (.mp4).</li>
+        <li>Warmth is a full-frame wash (<code>e_tint</code> is photo-only): <code>l_text:Arial_20:%20,b_rgb:{FF8C00|0064FF}{alpha}</code>, scaled to the frame.</li>
+        <li>Text: <code>l_text:{font}_{px}[_bold][_italic][_center|_right]:{text},co_rgb:,b_rgb:RRGGBBAA,bo_{pad}px_solid_rgb:RRGGBBAA,c_limit,w_{90% of width}</code>, then <code>fl_layer_apply,fl_no_overflow,g_center,x_,y_</code> and, on video, <code>so_,eo_</code> in seconds of the trimmed clip. Text is percent-encoded UTF-8 with <code>,</code>, <code>/</code> and <code>%</code> encoded twice.</li>
+        <li>Numbers: pixels by <code>floor(v + 0.5)</code>; seconds with at most two decimals. The output size and a video's length (trimmed, then divided by the speed) come with every build.</li>
+        <li><code>still(asset, spec, at, max_width)</code>: a JPEG of a video's frame <code>at</code> seconds into the trimmed clip with the crop, colour, logo and the text showing then (no speed, fades or sound); for a photo, its render scaled down. The Reel cover is the still at <code>cover_s</code>.</li>
+      </ol></div></div>
+    <div class="req"><div class="id">TR-MED-05</div><div><div class="t">Renders (P7b)</div>
+      <ol class="steps">
+        <li><code>POST …/media-renders {asset_id, spec}</code> hashes the spec (SHA-256 of its canonical JSON); an existing <code>(asset, hash)</code> render is returned. A photo render is stored <code>ready</code> with the build's URL. A video render checks <code>video_renders_monthly</code>, is stored <code>pending</code> with its transformation (and <code>cover_url</code>), and <code>start_render</code> is enqueued.</li>
+        <li><code>start_render</code>: signed <code>POST /v1_1/{cloud}/video/explicit</code> with <code>public_id</code>, <code>type=upload</code>, <code>eager={transformation}/mp4</code>, <code>eager_async=true</code> and, when <code>API_BASE_URL</code> is set, <code>eager_notification_url={API_BASE_URL}/webhooks/cloudinary</code>; stores <code>batch_id</code> and the derived URL; status <code>rendering</code>.</li>
+        <li><code>POST /webhooks/cloudinary</code> fails closed: 503 without the API secret; 401 unless <code>X-Cld-Signature</code> is SHA-1 (or SHA-256) of the raw body, <code>X-Cld-Timestamp</code> and the API secret, with the timestamp at most 2 hours old. Stored once (<code>cloudinary:{sha256 of body}</code>) and processed by <code>process_webhook_event</code>; the workspace comes from the asset's <code>ws/{workspace_id}/</code> folder; the render is found by <code>batch_id</code> and marked <code>ready</code> (size, bytes, length) or <code>failed</code>.</li>
+        <li><code>poll_render</code> is the fallback: the Admin API's derived files of the source (<code>max_results=500</code>; transformations come back URL-decoded), every 15 s for 10 minutes. Never poll by requesting the derived URL (it renders again on the fly). <code>sweep_stuck_renders</code> handles lost jobs.</li>
+        <li>Publishing (FR-PUB-24): each edited item publishes its render's URL (photos: the on-the-fly URL); a Reel with a cover sends <code>cover_url</code>. The checklist's <code>edits</code> item fails while a video edit has no ready render, and schedule and publish answer 422 on <code>edits.{i}</code>.</li>
+      </ol></div></div>
     <div class="req"><div class="id">TR-BIL-01</div><div><div class="t">Checkout</div><p><code>POST {DODO_BASE}/checkouts</code> with <code>product_cart: [{product_id, quantity: 1}]</code>, <code>customer: {email, name}</code>, <code>return_url: {WEB_BASE_URL}/w/{slug}/settings/billing?checkout=return</code>, <code>metadata: {workspace_id}</code>, and <code>subscription_data: {trial_period_days: 7}</code> only if eligible (TR-BIL-05). Base URL <code>https://test.dodopayments.com</code> or <code>https://live.dodopayments.com</code> by <code>DODO_ENVIRONMENT</code>. Verify field names at build time.</p></div></div>
     <div class="req"><div class="id">TR-BIL-02</div><div><div class="t">Webhook-driven state</div><p>Only signed Dodo webhooks change plan or status. Events older than <code>subscriptions.last_event_at</code> are ignored. Plan comes from the product id (<code>DODO_PRODUCT_PRO_MONTHLY</code> → <code>pro</code>).</p>
       <div class="tw"><table>
@@ -1797,6 +1828,8 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">GET · PUT</td><td class="m">…/social-accounts/{id}/posting-slots</td><td>Weekly posting times</td><td>admin</td></tr>
       <tr><td class="m">GET · POST · PATCH · DELETE</td><td class="m">…/hashtag-groups</td><td>Saved hashtag sets</td><td>admin</td></tr>
       <tr><td class="m">GET</td><td class="m">…/media-assets?type&amp;cursor</td><td>Media library</td><td>agent</td></tr>
+      <tr><td class="m">POST</td><td class="m">…/media-renders</td><td>Render an edit <code>{asset_id, spec}</code>: 201 new, 200 the same edit rendered before (P7b)</td><td>admin · video_renders_monthly</td></tr>
+      <tr><td class="m">GET</td><td class="m">…/media-renders/{id}</td><td>One render (status, URL, size)</td><td>admin</td></tr>
       <tr><td class="m">POST</td><td class="m">…/ai/caption · …/ai/hashtags</td><td>Generate caption or hashtags</td><td>admin · credits</td></tr>
       <tr><td class="m">GET</td><td class="m">…/billing</td><td>Plan, status, entitlements, usage, prices</td><td>agent</td></tr>
       <tr><td class="m">POST</td><td class="m">…/billing/checkout · /portal · /cancel · /resume</td><td>Billing actions</td><td>owner</td></tr>
@@ -1815,7 +1848,7 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">GET</td><td class="m">…/events</td><td>SSE stream</td><td>agent</td></tr>
       <tr><td class="m">POST</td><td class="m">…/dev/sandbox/inbound</td><td>Inject a fake event (sandbox only)</td><td>owner · dev only</td></tr>
       <tr><td class="m">GET · POST</td><td class="m">/webhooks/instagram · /webhooks/whatsapp</td><td>Meta webhooks</td><td>signature</td></tr>
-      <tr><td class="m">POST</td><td class="m">/webhooks/dodo · /webhooks/clerk</td><td>Provider webhooks</td><td>signature</td></tr>
+      <tr><td class="m">POST</td><td class="m">/webhooks/dodo · /webhooks/clerk · /webhooks/cloudinary</td><td>Provider webhooks (Cloudinary: render notifications, TR-MED-05)</td><td>signature</td></tr>
       <tr><td class="m">POST</td><td class="m">/webhooks/meta/deauthorize · /webhooks/meta/data-deletion</td><td>Meta privacy callbacks</td><td>signed_request</td></tr>
       <tr><td class="m">GET</td><td class="m">/v1/data-deletion/{code}</td><td>Deletion request status (public)</td><td>public</td></tr>
       <tr><td class="m">GET</td><td class="m">/healthz · /readyz · /metrics</td><td>Operations</td><td>public · internal · token</td></tr>
@@ -2060,7 +2093,7 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
   <ol class="steps">
     <li>Schedule → New post, or click an empty time in the calendar (which pre-fills that time). <code>POST …/scheduled-posts</code> creates a draft; the composer opens at <code>/schedule/{id}</code>.</li>
     <li>User selects accounts, adds media (signed uploads with progress; reorder by drag; each asset validated against TR-MED-02, with the crop tool for out-of-range ratios), writes the caption (counter for characters and hashtags), optionally per-account captions, and may use AI caption, hashtags or a hashtag group, add a first comment, or add a comment automation (FR-AUT-18).</li>
-    <li>The preview updates live with the first account's name and picture.</li>
+    <li>The preview updates live with the first account's name and picture. Edit on an item opens the media editor (UX-SCR-15); Done saves the edit on the item and asks for its render (FR-PUB-20…24): photos are ready at once, a video renders in the background and the checklist waits for it.</li>
     <li>Schedule: choose date and time in the workspace timezone; <code>POST …/scheduled-posts/{id}/schedule {publish_at}</code>. The API validates (media count and types per format, caption limits, at least one account, time ≥ now + 5 min, <code>scheduled_posts_monthly</code>), creates one <code>scheduled_post_targets</code> row per account with status <code>pending</code> and sets the post to <code>scheduled</code>. Publish now uses <code>/publish-now</code>, which sets <code>publish_at = now</code>. Add to queue calls <code>POST …/scheduled-posts/{id}/queue</code>, which takes each account's next free posting time and then schedules the same way.</li>
     <li>At <code>publish_at</code>, <code>dispatch_due</code> claims each target; <code>publish_target</code> checks the account's quota, creates containers (children first for carousels), stores <code>container_id</code>, and enqueues <code>poll_container</code>.</li>
     <li><code>poll_container</code> checks status every 60 s for 5 minutes, then every 5 minutes (Meta asks for at most one status call per minute): <code>FINISHED</code> → <code>media_publish</code>, store <code>platform_media_id</code> and <code>permalink</code>, target <code>published</code>; <code>ERROR</code> or <code>EXPIRED</code> → target <code>failed</code> with the reason; still <code>IN_PROGRESS</code> after 30 minutes → failed "Instagram took too long to process the video".</li>
@@ -2533,6 +2566,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
       </ul></div></div>
     <div class="req"><div class="id">UX-SCR-13</div><div><div class="t">Post composer</div><p>Full page at <code>/schedule/{id}</code>, two columns. Left (max 640 px), in order: <strong>Accounts</strong> (toggle chips with avatars; disabled with the reason when an account cannot publish); <strong>Media</strong> (tray with real upload progress, add from device or the library, drag to reorder, crop to 1:1, 4:5 or 1.91:1, remove; the derived format is shown: Image, Carousel, Reel); <strong>Caption</strong> (character, hashtag and mention counters; Write with AI; Suggest hashtags; Insert hashtag group; per-account caption toggle); <strong>First comment</strong> (optional); <strong>Automation</strong> (optional Add comment automation, showing the linked automation's summary); <strong>When</strong> (date and time in the workspace timezone, or Add to queue showing the time it will take; suggested times in R2). The checklist (FR-PUB-10) sits above a sticky action bar (Save draft, Schedule or Update schedule, Publish now), failing items first, and disabled buttons say why. Right (360 px, sticky): preview tabs Feed, Reel (videos) and Grid, with an account switcher when captions differ. While publishing the composer is read-only with a status banner; published shows View on Instagram and the first-comment result; failed shows the reason and Edit and retry.</p></div></div>
     <div class="req"><div class="id">UX-SCR-14</div><div><div class="t">Posting times and hashtag groups</div><p>Posting times: a drawer from the Schedule page with a tab per account and a 7-day grid (add times per day, copy a day to other days), plus a line listing the next 5 free times. Hashtag groups: a dialog listing groups (name, count, first hashtags) with create, edit and delete; the editor counts hashtags against the limit of 30.</p></div></div>
+    <div class="req"><div class="id">UX-SCR-15</div><div><div class="t">Media editor (P7b)</div><p>Edit on a tray item opens the editor full screen over the composer, one item at a time with a strip to switch items in a carousel. The preview fills the middle (the photo's render, or the video playing with a frame of the edit at the playhead); tabs below: <strong>Crop</strong> (aspect chips, drag to move the frame, pinch or slider to zoom, rotate and flip), <strong>Filters</strong> (preset thumbnails of this item; photos also show the looks), <strong>Adjust</strong> (sliders; Enhance on photos), <strong>Text</strong> (add up to 5 layers, drag on the preview, font, size, colour, box; on video a start and end on the timeline), <strong>Logo</strong> (pick an image from the library, size, opacity, drag), and for video <strong>Trim</strong> (filmstrip with handles), <strong>Speed</strong>, <strong>Sound</strong> (mute, fades) and <strong>Cover</strong>. Photos in a carousel get Apply this look to all photos. Reset and Done sit in the header; Done saves and starts the render. The item in the tray shows Edited, Rendering or Couldn't render. At 375 px the tabs scroll and the preview keeps its aspect. Over the video render allowance, Done shows the upgrade dialog (F-15) and keeps the edit as a draft.</p></div></div>
   </div>
 
   <h2 id="ux-components"><span class="sn">4.6</span>Components</h2>
@@ -3223,9 +3257,11 @@ erDiagram
           <tr><td class="m">scheduled_post_id</td><td class="m">uuid</td><td>FK ON DELETE CASCADE</td></tr>
           <tr><td class="m">media_asset_id</td><td class="m">uuid</td><td>FK ON DELETE RESTRICT</td></tr>
           <tr><td class="m">position</td><td class="m">smallint</td><td>0-based</td></tr>
+          <tr><td class="m">edit_spec</td><td class="m">jsonb</td><td>P7b: the item's EditSpec (TR-MED-04); null when unedited</td></tr>
+          <tr><td class="m">render_id</td><td class="m">uuid</td><td>P7b: FK media_renders ON DELETE SET NULL; the render of exactly this edit</td></tr>
         </tbody>
       </table></div>
-      <p>Keys: <code>uq (scheduled_post_id, position)</code>.</p>
+      <p>Keys: <code>uq (scheduled_post_id, position)</code>. Check: <code>render_id IS NULL OR edit_spec IS NOT NULL</code>. A save that leaves <code>edits</code> out keeps each item's edit.</p>
     </div>
     <div>
       <h3>Format rules</h3>
@@ -3236,6 +3272,28 @@ erDiagram
       </ul>
     </div>
   </div>
+  <h3><code>media_renders</code> <span class="tag">tenant</span> <span class="tag">P7b</span></h3>
+  <div class="tw"><table class="wide">
+    <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="m">media_asset_id</td><td class="m">uuid</td><td>no</td><td></td><td>FK media_assets ON DELETE CASCADE</td></tr>
+      <tr><td class="m">kind</td><td class="m">text</td><td>no</td><td></td><td>image, video</td></tr>
+      <tr><td class="m">spec</td><td class="m">jsonb</td><td>no</td><td></td><td>EditSpec v1 (TR-MED-04)</td></tr>
+      <tr><td class="m">spec_hash</td><td class="m">text</td><td>no</td><td></td><td>SHA-256 hex of the spec's canonical JSON</td></tr>
+      <tr><td class="m">transformation · format</td><td class="m">text</td><td>no</td><td></td><td>what the builder made; jpg (image) or mp4 (video)</td></tr>
+      <tr><td class="m">status</td><td class="m">text</td><td>no</td><td class="m">'pending'</td><td>pending, rendering, ready, failed</td></tr>
+      <tr><td class="m">url · cover_url</td><td class="m">text</td><td>yes</td><td></td><td>the rendered file; a Reel's cover frame</td></tr>
+      <tr><td class="m">batch_id</td><td class="m">text</td><td>yes</td><td></td><td>Cloudinary's eager batch (notifications name it)</td></tr>
+      <tr><td class="m">width · height</td><td class="m">integer</td><td>yes</td><td></td><td></td></tr>
+      <tr><td class="m">duration_s</td><td class="m">real</td><td>yes</td><td></td><td>video, after trim and speed</td></tr>
+      <tr><td class="m">bytes</td><td class="m">bigint</td><td>yes</td><td></td><td></td></tr>
+      <tr><td class="m">error</td><td class="m">text</td><td>yes</td><td></td><td>set when failed</td></tr>
+      <tr><td class="m">attempts · poll_count</td><td class="m">smallint</td><td>no</td><td class="m">0</td><td></td></tr>
+      <tr><td class="m">requested_by_user_id</td><td class="m">uuid</td><td>yes</td><td></td><td>FK users ON DELETE SET NULL</td></tr>
+      <tr><td class="m">started_at · ready_at</td><td class="m">timestamptz</td><td>yes</td><td></td><td></td></tr>
+    </tbody>
+  </table></div>
+  <p>Keys: <code>uq (media_asset_id, spec_hash)</code>; <code>ix (workspace_id, kind, created_at)</code> for the allowance; partial <code>ix (created_at) WHERE status IN ('pending', 'rendering')</code> for the sweeper; partial <code>ix (batch_id)</code>. Checks: ready has a URL and <code>ready_at</code>; failed has an error; image is jpg and video mp4. Renders count by <code>created_at</code> in the usage period (§5.8), failed ones left out.</p>
   <h3><code>scheduled_post_targets</code> <span class="tag">tenant</span></h3>
   <div class="tw"><table class="xwide">
     <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
@@ -3348,7 +3406,7 @@ erDiagram
   <div class="tw"><table class="wide">
     <thead><tr><th>Column</th><th>Type</th><th>Null</th><th>Default</th><th>Notes</th></tr></thead>
     <tbody>
-      <tr><td class="m">provider</td><td class="m">text</td><td>no</td><td></td><td>instagram, whatsapp, dodo, clerk</td></tr>
+      <tr><td class="m">provider</td><td class="m">text</td><td>no</td><td></td><td>instagram, whatsapp, dodo, clerk, cloudinary</td></tr>
       <tr><td class="m">dedupe_key</td><td class="m">text</td><td>no</td><td></td><td>TR-WH-04</td></tr>
       <tr><td class="m">event_type</td><td class="m">text</td><td>no</td><td></td><td>e.g. <code>message</code>, <code>comment</code>, <code>status</code>, <code>subscription.active</code></td></tr>
       <tr><td class="m">platform_account_id</td><td class="m">text</td><td>yes</td><td></td><td>routing key</td></tr>
@@ -3500,6 +3558,32 @@ interface BillingState {
   entitlements: { key: string; value: number | boolean | string[] | null }[];
   usage: { metric: string; used: number; limit?: number; period_end?: string }[];
 }
+
+interface EditSpec {                                        // P7b, TR-MED-04; every field optional on input
+  v: 1; rotate: 0 | 90 | 180 | 270; flip_h: boolean; flip_v: boolean;
+  crop?: { aspect: "original" | "1:1" | "4:5" | "1.91:1" | "9:16"; zoom: number; x: number; y: number };
+  preset?: "vivid" | "warm" | "cool" | "mono" | "fade" | "noir" | "golden" | "dramatic" | "bright" | "retro";
+  adjust: { brightness: number; contrast: number; saturation: number; gamma: number;
+            vibrance: number; warmth: number; vignette: number; sharpen: number };
+  look?: string; enhance: boolean;                           // photos only
+  texts: { text: string; font: "poppins" | "montserrat" | "playfair" | "pacifico" | "anton" | "marker";
+           size: number; color: string; bold: boolean; italic: boolean; align: "left" | "center" | "right";
+           background?: string; background_opacity: number; x: number; y: number;
+           start_s?: number; end_s?: number }[];            // at most 5
+  logo?: { asset_id: string; width: number; opacity: number; x: number; y: number };
+  trim?: { start_s: number; end_s: number }; speed: 0.5 | 1 | 1.5 | 2;   // video only from here
+  fade_in_s: number; fade_out_s: number; mute: boolean; cover_s?: number;
+}
+
+interface MediaRender {                                     // P7b, TR-MED-05
+  id: string; asset_id: string; kind: "image" | "video";
+  status: "pending" | "rendering" | "ready" | "failed"; spec: EditSpec;
+  url?: string; cover_url?: string; width?: number; height?: number; duration_s?: number;
+  bytes?: number; error?: string; requested_by_user_id?: string; created_at: string; ready_at?: string;
+}
+// ScheduledPost.assets[] (PostAsset) adds public_id, edit?: EditSpec and
+// render?: {id, status, url?, cover_url?, width?, height?, duration_s?, error?};
+// ScheduledPostDraft adds edits?: (EditSpec | null)[] (one per asset_ids entry; left out: kept).
 
 interface KnowledgeGap {
   id: string; topic: string; status: "open" | "answered" | "dismissed";
@@ -3709,6 +3793,19 @@ interface Notification {
       <tr><td class="m">TA.4</td><td>Read and draft tools: conversations, contacts, comments, posts, analytics (P6 service), knowledge, schedules, automations; action cards</td><td>FR-AGT-02, 03, 06</td><td>Each tool tested against real data and another workspace's ids; action cards open pre-filled</td></tr>
       <tr><td class="m">TA.5</td><td>Ask panel and page, live steps, answer and action cards, run history for admins</td><td>FR-AGT-01, 07</td><td>Component tests for every card state; 375 px works</td></tr>
       <tr><td class="m">TA.6</td><td>Agent eval set (≥ 100 requests on seeded data), crash recovery sweeper</td><td>TR-AGT-07, §2.8 eval</td><td>Targets met and logged in docs/ai-eval-log.md; a killed worker resumes a run without repeating a step</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>P7b · Media editor (after P7 and PA)</h3>
+  <div class="tw"><table class="xwide">
+    <thead><tr><th>ID</th><th>Task</th><th>Covers</th><th>Done when</th></tr></thead>
+    <tbody>
+      <tr><td class="m">TB.1</td><td>Foundation: the Cloudinary spike (docs/editor-spike.md); <code>EditSpec</code> v1; the transformation builder in Python and TypeScript with the golden fixtures; <code>media_renders</code>, <code>scheduled_post_assets.edit_spec</code> and <code>render_id</code> (migration 0015); <code>video_renders_monthly</code>; the contract (pending routes, <code>media_render.updated</code>, <code>PostAsset.edit</code> and <code>render</code>, <code>ScheduledPostDraft.edits</code>, the checklist's <code>edits</code> key); <code>/webhooks/cloudinary</code> failing closed; the render job module</td><td>TR-MED-04, TR-MED-05, FR-PUB-25</td><td>Both suites pass every golden case (at least 40); the migration goes up, down and up; the fixtures' transformations return 200 from Cloudinary with the predicted size and length</td></tr>
+      <tr><td class="m">TB.2</td><td>Render pipeline: create or reuse a render (validation, logo asset, photo ready at once, video pending), <code>start_render</code> (eager async with the notification URL), the Cloudinary notification handler, <code>poll_render</code>, <code>sweep_stuck_renders</code>, <code>media_render.updated</code>; GET and POST <code>…/media-renders</code> built</td><td>FR-PUB-21, FR-PUB-22, TR-MED-05</td><td>Tests with respx for Cloudinary: a video render goes pending → rendering → ready by a notification and, without one, by polling; a failure shows the reason and retries; the same spec reuses the render; the tenancy suite covers the routes</td></tr>
+      <tr><td class="m">TB.3</td><td>Allowance: count video renders (and photo edits) by <code>created_at</code> in the usage period; 402 <code>quota_exceeded</code> for <code>video_renders_monthly</code>; usage meters on <code>GET …/billing</code></td><td>FR-PUB-23, TR-BIL-04</td><td>The 11th new video render of a Free month answers 402 with the key and limit; a reused or failed render doesn't count; the billing page shows both meters</td></tr>
+      <tr><td class="m">TB.4</td><td>Publishing: save <code>edits</code> with each item (validation, keep when left out, link renders by spec hash), <code>PostAsset.render</code>, the checklist's <code>edits</code> and <code>media_files</code> on the edited result, schedule and publish gating, the publish job sending rendered URLs and a Reel's <code>cover_url</code></td><td>FR-PUB-20, FR-PUB-24</td><td>Sandbox publishing of an edited photo, carousel and Reel sends the rendered URLs and cover; a post with a rendering video can't be scheduled and says which item</td></tr>
+      <tr><td class="m">TB.5</td><td>Web editor: full-screen editor per item with the tabs of UX-SCR-15, live previews from the TypeScript builder, text drag, trim filmstrip, preset thumbnails, Apply this look to all photos, render status in the tray from <code>media_render.updated</code>, the upgrade path on 402</td><td>UX-SCR-15, FR-PUB-20…26</td><td>Component tests for every tab and render state; 375 px works; a video edit renders and the checklist clears when it is ready</td></tr>
+      <tr><td class="m">TB.6</td><td>Verify on a real account: publish an edited carousel and Reel with a cover; receive a Cloudinary notification on staging; measure the credits of a 30 s 1080p render; check a portrait phone video and an EXIF-rotated photo</td><td>FR-PUB-24, TR-MED-05, §1.7</td><td>Results in docs/editor-spike.md; the owner confirms or changes <code>video_renders_monthly</code></td></tr>
     </tbody>
   </table></div>
 

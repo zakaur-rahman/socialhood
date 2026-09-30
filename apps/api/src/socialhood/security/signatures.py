@@ -44,6 +44,51 @@ def sign_standard_webhook(msg_id: str, timestamp: datetime, raw: bytes, secret: 
     return Webhook(secret).sign(msg_id=msg_id, timestamp=timestamp, data=raw.decode())
 
 
+CLOUDINARY_MAX_AGE_S = 7200  # Cloudinary's own SDKs accept a notification for 2 hours
+
+
+def _cloudinary_digest(raw: bytes, timestamp: str, secret: str, hex_length: int) -> str:
+    algorithm = hashlib.sha256 if hex_length == 64 else hashlib.sha1
+    return algorithm(raw + timestamp.encode() + secret.encode()).hexdigest()
+
+
+def verify_cloudinary_notification(
+    raw: bytes,
+    headers: Mapping[str, str],
+    secret: str,
+    *,
+    now: float,
+    max_age_s: int = CLOUDINARY_MAX_AGE_S,
+) -> bool:
+    """TR-MED-05 (SEC-04): a Cloudinary notification is genuine only when ``X-Cld-Signature`` is
+    the hex SHA-1 (SHA-256 on accounts set to it: 64 hex digits) of the raw body, then
+    ``X-Cld-Timestamp``, then the API secret, and the timestamp is at most ``max_age_s`` old (and
+    not more than 5 minutes ahead). Anything else is False: no secret, a missing or malformed
+    header, a stale or future timestamp. Never raises, so a caller cannot fail open by accident.
+    (The spike checked the account signs with SHA-1: the upload API's own ``signature`` is
+    sha1("public_id=…&version=…" + secret).)"""
+    if not secret:
+        return False
+    wanted = {name.lower(): value for name, value in headers.items()}
+    signature = wanted.get("x-cld-signature", "").strip().lower()
+    timestamp = wanted.get("x-cld-timestamp", "").strip()
+    if len(signature) not in (40, 64) or not timestamp.isdigit():
+        return False
+    if not now - max_age_s <= int(timestamp) <= now + 300:
+        return False
+    expected = _cloudinary_digest(raw, timestamp, secret, len(signature))
+    return hmac.compare_digest(expected, signature)
+
+
+def sign_cloudinary_notification(
+    raw: bytes, timestamp: int, secret: str, *, algorithm: str = "sha1"
+) -> dict[str, str]:
+    """The headers Cloudinary would send with ``raw`` (tests and the sandbox)."""
+    stamp = str(timestamp)
+    digest = _cloudinary_digest(raw, stamp, secret, 64 if algorithm == "sha256" else 40)
+    return {"X-Cld-Timestamp": stamp, "X-Cld-Signature": digest}
+
+
 def verify_hub_signature(raw: bytes, header: str | None, secret: str) -> bool:
     """Meta's X-Hub-Signature-256: ``sha256=<hex>`` of HMAC-SHA256(secret, raw body)."""
     if not header or not secret or not header.startswith("sha256="):

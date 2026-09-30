@@ -54,6 +54,27 @@ class StoredResource:
         )
 
 
+@dataclass(frozen=True)
+class EagerStarted:
+    """Cloudinary's answer to an eager render (P7b, TB.2): its batch (notifications name it) and
+    the derived file's URL, which serves the render once it is done."""
+
+    batch_id: str | None
+    secure_url: str
+
+
+@dataclass(frozen=True)
+class DerivedFile:
+    """One derived file of an asset (Admin API ``derived``). ``transformation`` comes back
+    URL-decoded (``%20`` as a space), so compare it with the decoded builder string."""
+
+    id: str
+    transformation: str
+    format: str
+    bytes: int
+    secure_url: str
+
+
 def sign(params: dict[str, Any], api_secret: str) -> str:
     pairs = sorted(
         (k, v) for k, v in params.items() if k not in UNSIGNED_KEYS and v not in (None, "")
@@ -143,6 +164,30 @@ class Cloudinary:
         if response.status_code >= 400:
             raise CloudinaryError(f"lookup failed with HTTP {response.status_code}")
         return StoredResource.from_api(response.json())
+
+    async def render_eager(
+        self,
+        public_id: str,
+        resource_type: ResourceType,
+        transformation: str,
+        fmt: str,
+        *,
+        notification_url: str | None,
+    ) -> EagerStarted:
+        """TB.2: start an eager render of an uploaded asset (docs/editor-spike.md). Signed
+        ``POST {API}/{cloud}/{resource_type}/explicit`` with ``public_id``, ``type=upload``,
+        ``eager={transformation}/{fmt}``, ``eager_async=true`` and, when given,
+        ``eager_notification_url``. The answer's ``eager[0]`` has ``status: processing``,
+        ``batch_id`` and ``secure_url`` (with the source's version). 4xx other than 420/429 is
+        final (CloudinaryError says so); timeouts, 420, 429 and 5xx are retryable."""
+        raise NotImplementedError("TB.2")
+
+    async def derived_files(self, public_id: str, resource_type: ResourceType) -> list[DerivedFile]:
+        """TB.2: the asset's derived files (``GET resources/{resource_type}/upload/{public_id}``
+        with ``max_results=500``; follow ``derived_next_cursor`` if present). poll_render's
+        fallback when no notification arrives. Never HEAD a derived URL to poll: on a small video
+        that renders it again on the fly."""
+        raise NotImplementedError("TB.2")
 
     async def destroy(self, public_id: str, resource_type: ResourceType) -> None:
         self._require()

@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.media.editor.spec import EditSpec
 from socialhood.models.connections import SocialAccount
 from socialhood.models.media import MediaAsset
 from socialhood.models.publishing import (
@@ -92,8 +93,11 @@ def thumbnail_url(asset: MediaAsset) -> str | None:
 
 
 def asset_out(row: ScheduledPostAsset, asset: MediaAsset) -> PostAsset:
+    """The item with its edit (P7b); its render is filled by TB.4 (the post's renders load in one
+    query with the assets)."""
     return PostAsset(
         id=asset.id,
+        public_id=asset.public_id,
         resource_type="video" if asset.resource_type == "video" else "image",
         url=asset.secure_url or "",
         thumbnail_url=thumbnail_url(asset),
@@ -101,6 +105,7 @@ def asset_out(row: ScheduledPostAsset, asset: MediaAsset) -> PostAsset:
         height=asset.height,
         duration_s=asset.duration_s,
         position=row.position,
+        edit=EditSpec.model_validate(row.edit_spec) if row.edit_spec is not None else None,
     )
 
 

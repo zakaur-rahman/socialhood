@@ -158,7 +158,8 @@ def test_a_passing_post_lists_each_check_once_in_order() -> None:
     items = rules.checklist(
         _post(publish_at=NOW + timedelta(hours=1)), now=NOW, publishing_limit=100
     )
-    assert [i.key for i in items] == list(CHECKLIST_KEYS)
+    # edits (P7b) appears only for a post with edited items, as publish_at only with a time.
+    assert [i.key for i in items] == [k for k in CHECKLIST_KEYS if k != "edits"]
     assert all(i.ok and i.field is None for i in items)
     assert items[0].message == "Publishing to @maple.bakery"
     assert items[1].message == "Image post"

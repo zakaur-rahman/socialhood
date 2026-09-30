@@ -37,6 +37,7 @@ from tests.support.analytics import make_account_day, make_comment_analysis, mak
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation, make_comment, make_media_item
 from tests.support.billing import make_payment
+from tests.support.editor import make_render
 from tests.support.inbox import make_asset, make_scheduled, make_thread
 from tests.support.notify import (
     make_email_delivery,
@@ -70,6 +71,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "run_id": "run_id",
     "approval_id": "approval_id",
     "thread_id": "thread_id",  # in bodies only: POST …/agent/runs continues a thread
+    "render_id": "render_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -223,6 +225,16 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# The media editor (P7b: TB.2): rendering B's upload from A's workspace is 404 and renders nothing.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/media-renders"): {
+            "asset_id": "{asset_id}",
+            "spec": {"preset": "vivid", "texts": [{"text": "Taken over"}]},
+        },
+    }
+)
+
 # Headers a route requires, so the call fails on tenancy, not validation.
 EXAMPLE_HEADERS: dict[tuple[str, str], dict[str, str]] = {
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
@@ -276,6 +288,7 @@ B_TABLES = (
     "payments",
     "email_deliveries",
     "weekly_digests",
+    "media_renders",
 )
 
 
@@ -300,6 +313,7 @@ class Seed:
     run_id: str = ""
     approval_id: str = ""
     thread_id: str = ""
+    render_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -409,8 +423,26 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     await make_comment_analysis(engine, workspace_id=wid, comment_id=comment)
     await make_snapshot(engine, workspace_id=wid, media_item_id=post)
     await make_account_day(engine, workspace_id=wid, account_id=account_id)
+    # An edited Reel: its item holds an edit and that edit's render (P7b).
+    clip = await make_asset(
+        engine,
+        workspace_id=wid,
+        purpose="post",
+        resource_type="video",
+        fmt="mp4",
+        width=1920,
+        height=1080,
+    )
+    edit = {"preset": "vivid", "crop": {"aspect": "9:16"}}
+    render = await make_render(engine, workspace_id=wid, asset_id=clip, spec=edit)
     scheduled_post = await make_scheduled_post(
-        engine, workspace_id=wid, account_ids=[account_id], first_comment="#summer"
+        engine,
+        workspace_id=wid,
+        account_ids=[account_id],
+        first_comment="#summer",
+        asset_ids=[clip],
+        edits=[edit],
+        render_ids=[render],
     )
     await make_posting_slot(engine, workspace_id=wid, account_id=account_id)
     hashtag_group = await make_hashtag_group(engine, workspace_id=wid)
@@ -469,6 +501,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         run_id=str(run.id),
         approval_id=str(approval),
         thread_id=str(run.thread_id),
+        render_id=str(render),
     )
 
 

@@ -13,6 +13,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from socialhood.db.tenancy import workspace_scope
+from socialhood.media.editor.spec import EditSpec
 from socialhood.models.media import MediaAsset
 from socialhood.models.publishing import (
     HashtagGroup,
@@ -57,6 +58,8 @@ async def make_scheduled_post(
     caption_overrides: Mapping[uuid.UUID | str, str] | None = None,
     target_status: str = "pending",
     target_values: Mapping[str, Any] | None = None,
+    edits: Sequence[Mapping[str, Any] | None] | None = None,
+    render_ids: Sequence[uuid.UUID | str | None] | None = None,
     **values: Any,
 ) -> MadePost:
     """A post with its assets (in the order given) and one target per account.
@@ -65,6 +68,10 @@ async def make_scheduled_post(
     the assets unless ``format`` is given; a post past draft gets a time an hour from now unless
     ``publish_at`` is given. Published targets get a platform media id and permalink unless
     ``target_values`` sets them. Other ScheduledPost columns go in ``values``.
+
+    P7b: ``edits`` gives each item's edit spec (in asset order, None for an unedited one; stored
+    as the API normalizes it) and ``render_ids`` each item's render (tests/support/editor.py
+    make_render).
     """
     wid = _uuid(workspace_id)
     if asset_ids is None:
@@ -90,8 +97,20 @@ async def make_scheduled_post(
             )
             session.add(post)
             await session.flush()
+            specs = list(edits or [None] * len(assets))
+            renders = list(render_ids or [None] * len(assets))
             session.add_all(
-                ScheduledPostAsset(scheduled_post_id=post.id, media_asset_id=a, position=i)
+                ScheduledPostAsset(
+                    scheduled_post_id=post.id,
+                    media_asset_id=a,
+                    position=i,
+                    edit_spec=(
+                        None
+                        if specs[i] is None
+                        else EditSpec.model_validate(specs[i]).model_dump(mode="json")
+                    ),
+                    render_id=None if renders[i] is None else _uuid(renders[i]),
+                )
                 for i, a in enumerate(assets)
             )
             targets: dict[uuid.UUID, uuid.UUID] = {}

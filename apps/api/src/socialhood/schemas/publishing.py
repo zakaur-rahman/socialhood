@@ -10,8 +10,9 @@ Conventions:
   time zone, which every calendar and posting-times answer states.
 - One set of field names serves the draft body, 422 validation errors (FieldError) and checklist
   items, so the composer can mark the control to fix: ``targets``, ``targets.{i}``,
-  ``targets.{i}.caption_override``, ``asset_ids``, ``asset_ids.{i}``, ``caption``,
-  ``first_comment``, ``publish_at`` (``{i}`` is the index in the body's list).
+  ``targets.{i}.caption_override``, ``asset_ids``, ``asset_ids.{i}``, ``edits.{i}``,
+  ``edits.{i}.{spec field}`` (P7b), ``caption``, ``first_comment``, ``publish_at`` (``{i}`` is the
+  index in the body's list).
 - A post can be edited (PUT), unscheduled or moved while it is a draft or scheduled; once a
   target is claimed it is ``publishing`` and those answer 409 conflict ("Publishing started").
   PUT also takes a failed or canceled post, which becomes a draft again (Edit and retry,
@@ -26,6 +27,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
+from socialhood.media.editor.spec import EditSpec
 from socialhood.models.publishing import (
     CAPTION_MAX_CHARS,
     FIRST_COMMENT_MAX_CHARS,
@@ -37,6 +39,7 @@ from socialhood.models.publishing import (
 from socialhood.schemas.automations import StatusName as AutomationStatusName
 from socialhood.schemas.automations import TriggerName
 from socialhood.schemas.common import RequestModel, ResponseModel
+from socialhood.schemas.editor import MediaRenderRef
 from socialhood.schemas.inbox import ErrorInfo, MediaAssetOut, ScheduledMessage
 
 ScheduledPostStatusName = Literal[
@@ -60,7 +63,11 @@ FirstCommentStatus = Literal["pending", "posted", "failed"]
 # - accounts: at least one account; each is connected and can publish (Capability.PUBLISH)
 # - media: at least one asset, and the assets make a format (1 image; 1 video, a Reel; 2 to 10
 #   images and videos, a carousel)
-# - media_files: each asset's type, size, aspect ratio and video length (TR-MED-02)
+# - media_files: each asset's type, size, aspect ratio and video length (TR-MED-02); for an edited
+#   item, of the edited result (its crop, trim and speed)
+# - edits (P7b, FR-PUB-24): only for a post with edited items: every video edit is rendered
+#   (``edits.{i}``: rendering, failed with the reason, or not rendered yet); photo edits are
+#   always ready
 # - caption: the caption and each per-account caption up to 2,200 characters
 # - hashtags: at most 30 hashtags in each caption
 # - mentions: at most 20 @mentions in each caption
@@ -70,6 +77,7 @@ ChecklistKey = Literal[
     "accounts",
     "media",
     "media_files",
+    "edits",
     "caption",
     "hashtags",
     "mentions",
@@ -80,6 +88,7 @@ CHECKLIST_KEYS: tuple[ChecklistKey, ...] = (
     "accounts",
     "media",
     "media_files",
+    "edits",
     "caption",
     "hashtags",
     "mentions",
@@ -97,9 +106,14 @@ Hashtag = Annotated[str, Field(min_length=1, max_length=100)]
 
 class PostAsset(ResponseModel):
     """One image or video of the post (§5.10), in order. ``id`` is the media asset's id: the
-    composer sends these ids back, reordered, in ``asset_ids``."""
+    composer sends these ids back, reordered, in ``asset_ids``, and each item's edit in ``edits``.
+
+    P7b: ``edit`` is the item's EditSpec (None: unedited), ``render`` its rendered file (None
+    until one is asked for). The editor builds its previews from ``public_id`` and the asset's
+    size with the shared builder (lib/editor/transform.ts)."""
 
     id: uuid.UUID
+    public_id: str  # Cloudinary's, for the editor's previews
     resource_type: Literal["image", "video"]
     url: str  # the uploaded file (media_assets.secure_url)
     thumbnail_url: str | None = None  # images: the image; videos: a frame of the video
@@ -107,6 +121,8 @@ class PostAsset(ResponseModel):
     height: int | None = None
     duration_s: float | None = None
     position: int  # 0-based
+    edit: EditSpec | None = None
+    render: MediaRenderRef | None = None
 
 
 class FirstCommentResult(ResponseModel):
@@ -209,6 +225,11 @@ class ScheduledPostDraft(RequestModel):
     first_comment: str | None = Field(default=None, max_length=FIRST_COMMENT_MAX_CHARS)
     # A draft may keep a time (a calendar click); a scheduled post's time.
     publish_at: datetime | None = None
+    # P7b (FR-PUB-20): the edit of each item, in ``asset_ids`` order (null: unedited). Left out,
+    # each item keeps the edit it had (matched by asset id), so a client that doesn't edit never
+    # loses one. A list of another length is 422 on ``edits``; a spec that can't apply to its item
+    # is 422 on ``edits.{i}.{field}``. Saving never starts a render: POST …/media-renders does.
+    edits: list[EditSpec | None] | None = Field(default=None, max_length=MAX_ASSETS)
 
 
 class ScheduleRequest(RequestModel):

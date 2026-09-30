@@ -19,6 +19,7 @@ from __future__ import annotations
 import datetime as dt
 import uuid
 from enum import StrEnum
+from typing import Any
 
 from sqlalchemy import (
     CheckConstraint,
@@ -31,7 +32,7 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy import text as sql
-from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from socialhood.db.base import Base, IdMixin, TimestampMixin
@@ -143,7 +144,12 @@ class ScheduledPost(IdMixin, TimestampMixin, TenantScoped, Base):
 
 
 class ScheduledPostAsset(IdMixin, TimestampMixin, TenantScoped, Base):
-    """One image or video of a post, in order. Replaced as a whole on every save."""
+    """One image or video of a post, in order. Replaced as a whole on every save.
+
+    P7b: ``edit_spec`` is the item's EditSpec (media/editor/spec.py; null: unedited) and
+    ``render_id`` the render of exactly that edit (media_renders, same asset and spec hash) once
+    one is asked for. A save keeps an item's edit when the body leaves ``edits`` out. Publishing
+    uses the render's file; a video edit without a ready render blocks scheduling (FR-PUB-24)."""
 
     __tablename__ = "scheduled_post_assets"
 
@@ -155,10 +161,17 @@ class ScheduledPostAsset(IdMixin, TimestampMixin, TenantScoped, Base):
         ForeignKey("media_assets.id", ondelete="RESTRICT"), index=True
     )
     position: Mapped[int] = mapped_column(SmallInteger)  # 0-based
+    # none_as_null: an unedited item is SQL NULL, not JSON null (the render_has_edit check).
+    edit_spec: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
+    # SET NULL: a render deleted with its asset's derived files leaves the edit to render again.
+    render_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("media_renders.id", ondelete="SET NULL"), index=True
+    )
 
     __table_args__ = (
         UniqueConstraint("scheduled_post_id", "position"),
         CheckConstraint(f"position BETWEEN 0 AND {MAX_ASSETS - 1}", name="position"),
+        CheckConstraint("render_id IS NULL OR edit_spec IS NOT NULL", name="render_has_edit"),
     )
 
 

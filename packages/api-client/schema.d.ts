@@ -1470,6 +1470,51 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/media-renders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Media Render
+         * @description FR-PUB-21: render ``spec`` of a post upload. 201 with a new render (a photo's is ready, a
+         *     video's pending with start_render enqueued); 200 with the existing one when this asset has
+         *     that spec already (a failed one is started again). 404 when the asset isn't this workspace's;
+         *     422 on ``spec.{field}`` when the spec can't apply (media/editor/spec.problems, a logo that
+         *     isn't an image upload of this workspace, an asset without dimensions); 402 quota_exceeded
+         *     (``video_renders_monthly``, the plan's limit) for a new video render past the allowance.
+         */
+        post: operations["create_media_render"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/media-renders/{render_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Media Render
+         * @description One render, for a composer that missed its media_render.updated.
+         */
+        get: operations["get_media_render"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/message-analyses/{analysis_id}": {
         parameters: {
             query?: never;
@@ -2138,6 +2183,52 @@ export interface components {
             id: string;
             /** Name */
             name?: string | null;
+        };
+        /**
+         * Adjustments
+         * @description Each 0 by default (no change); ranges in ADJUSTMENTS.
+         */
+        Adjustments: {
+            /**
+             * Brightness
+             * @default 0
+             */
+            brightness: number;
+            /**
+             * Contrast
+             * @default 0
+             */
+            contrast: number;
+            /**
+             * Gamma
+             * @default 0
+             */
+            gamma: number;
+            /**
+             * Saturation
+             * @default 0
+             */
+            saturation: number;
+            /**
+             * Sharpen
+             * @default 0
+             */
+            sharpen: number;
+            /**
+             * Vibrance
+             * @default 0
+             */
+            vibrance: number;
+            /**
+             * Vignette
+             * @default 0
+             */
+            vignette: number;
+            /**
+             * Warmth
+             * @default 0
+             */
+            warmth: number;
         };
         /**
          * AgentApproval
@@ -3423,7 +3514,7 @@ export interface components {
              * Key
              * @enum {string}
              */
-            key: "accounts" | "media" | "media_files" | "caption" | "hashtags" | "mentions" | "publishing_limit" | "publish_at";
+            key: "accounts" | "media" | "media_files" | "edits" | "caption" | "hashtags" | "mentions" | "publishing_limit" | "publish_at";
             /** Message */
             message: string;
             /** Ok */
@@ -3868,6 +3959,35 @@ export interface components {
              */
             updated_at: string;
         };
+        /**
+         * Crop
+         * @description The frame: the largest rectangle of ``aspect`` inside the (rotated) media, made smaller by
+         *     ``zoom``, centred on the focus point (``x``, ``y``: 0 to 1 across and down) as far as the
+         *     edges allow. ``original`` keeps the media's own shape (zoom still crops in).
+         */
+        Crop: {
+            /**
+             * Aspect
+             * @default original
+             * @enum {string}
+             */
+            aspect: "original" | "1:1" | "4:5" | "1.91:1" | "9:16";
+            /**
+             * X
+             * @default 0.5
+             */
+            x: number;
+            /**
+             * Y
+             * @default 0.5
+             */
+            y: number;
+            /**
+             * Zoom
+             * @default 1
+             */
+            zoom: number;
+        };
         /** DailyRuns */
         DailyRuns: {
             /**
@@ -3907,6 +4027,73 @@ export interface components {
             email_digest: boolean;
             /** Workspace Name */
             workspace_name: string;
+        };
+        /**
+         * EditSpec
+         * @description One item's edit (version 1). Everything is optional; an empty spec renders the media as
+         *     Instagram needs it (JPEG up to 1440 px wide, H.264 video up to 1080 px wide).
+         */
+        EditSpec: {
+            adjust?: components["schemas"]["Adjustments"];
+            /** Cover S */
+            cover_s?: number | null;
+            crop?: components["schemas"]["Crop"] | null;
+            /**
+             * Enhance
+             * @default false
+             */
+            enhance: boolean;
+            /**
+             * Fade In S
+             * @default 0
+             */
+            fade_in_s: number;
+            /**
+             * Fade Out S
+             * @default 0
+             */
+            fade_out_s: number;
+            /**
+             * Flip H
+             * @default false
+             */
+            flip_h: boolean;
+            /**
+             * Flip V
+             * @default false
+             */
+            flip_v: boolean;
+            logo?: components["schemas"]["Logo"] | null;
+            /** Look */
+            look?: ("al_dente" | "athena" | "audrey" | "aurora" | "eucalyptus" | "fes" | "frost" | "hairspray" | "hokusai" | "incognito" | "linen" | "peacock" | "primavera" | "quartz" | "red_rock" | "refresh" | "sizzle" | "sonnet" | "ukulele" | "zorro") | null;
+            /**
+             * Mute
+             * @default false
+             */
+            mute: boolean;
+            /** Preset */
+            preset?: ("vivid" | "warm" | "cool" | "mono" | "fade" | "noir" | "golden" | "dramatic" | "bright" | "retro") | null;
+            /**
+             * Rotate
+             * @default 0
+             * @enum {integer}
+             */
+            rotate: 0 | 90 | 180 | 270;
+            /**
+             * Speed
+             * @default 1
+             * @enum {number}
+             */
+            speed: 0.5 | 1 | 1.5 | 2;
+            /** Texts */
+            texts?: components["schemas"]["TextLayer"][];
+            trim?: components["schemas"]["Trim"] | null;
+            /**
+             * V
+             * @default 1
+             * @constant
+             */
+            v: 1;
         };
         /**
          * EmbeddedSignup
@@ -4245,6 +4432,38 @@ export interface components {
             /** Trigger */
             trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
         };
+        /**
+         * Logo
+         * @description A watermark from an uploaded image (a media asset of this workspace): ``width`` is a
+         *     fraction of the output width; (``x``, ``y``) its centre.
+         */
+        Logo: {
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            /**
+             * Opacity
+             * @default 100
+             */
+            opacity: number;
+            /**
+             * Width
+             * @default 0.2
+             */
+            width: number;
+            /**
+             * X
+             * @default 0.88
+             */
+            x: number;
+            /**
+             * Y
+             * @default 0.92
+             */
+            y: number;
+        };
         /** MarkRead */
         MarkRead: {
             /**
@@ -4328,6 +4547,104 @@ export interface components {
             resource_type: "image" | "video" | "raw";
             /** Secure Url */
             secure_url?: string | null;
+            /** Width */
+            width?: number | null;
+        };
+        /**
+         * MediaRender
+         * @description §5.10 MediaRender: one edit of one upload and its rendered file.
+         */
+        MediaRender: {
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            /** Bytes */
+            bytes?: number | null;
+            /** Cover Url */
+            cover_url?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duration S */
+            duration_s?: number | null;
+            /** Error */
+            error?: string | null;
+            /** Height */
+            height?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "image" | "video";
+            /** Ready At */
+            ready_at?: string | null;
+            /** Requested By User Id */
+            requested_by_user_id?: string | null;
+            spec: components["schemas"]["EditSpec"];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "rendering" | "ready" | "failed";
+            /** Url */
+            url?: string | null;
+            /** Width */
+            width?: number | null;
+        };
+        /**
+         * MediaRenderCreate
+         * @description POST …/media-renders: render ``spec`` of the post upload ``asset_id``.
+         *
+         *     The same spec of the same asset is one render: asking again returns it (200) instead of a new
+         *     one (201), and a failed one starts again. Refusals: 404 when the asset isn't this workspace's;
+         *     422 on ``spec.{field}`` when the spec can't apply to the media (a look on a video, a trim past
+         *     its end, a logo that isn't an image of this workspace); 402 quota_exceeded
+         *     (``video_renders_monthly`` with the plan's limit) for a new video render past the month's
+         *     allowance. Photo renders aren't limited (they are counted).
+         */
+        MediaRenderCreate: {
+            /**
+             * Asset Id
+             * Format: uuid
+             */
+            asset_id: string;
+            spec: components["schemas"]["EditSpec"];
+        };
+        /**
+         * MediaRenderRef
+         * @description A post item's render (``PostAsset.render``): enough for the composer's badge ("Rendering",
+         *     "Couldn't render") and the preview.
+         */
+        MediaRenderRef: {
+            /** Cover Url */
+            cover_url?: string | null;
+            /** Duration S */
+            duration_s?: number | null;
+            /** Error */
+            error?: string | null;
+            /** Height */
+            height?: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "rendering" | "ready" | "failed";
+            /** Url */
+            url?: string | null;
             /** Width */
             width?: number | null;
         };
@@ -4596,11 +4913,16 @@ export interface components {
         /**
          * PostAsset
          * @description One image or video of the post (§5.10), in order. ``id`` is the media asset's id: the
-         *     composer sends these ids back, reordered, in ``asset_ids``.
+         *     composer sends these ids back, reordered, in ``asset_ids``, and each item's edit in ``edits``.
+         *
+         *     P7b: ``edit`` is the item's EditSpec (None: unedited), ``render`` its rendered file (None
+         *     until one is asked for). The editor builds its previews from ``public_id`` and the asset's
+         *     size with the shared builder (lib/editor/transform.ts).
          */
         PostAsset: {
             /** Duration S */
             duration_s?: number | null;
+            edit?: components["schemas"]["EditSpec"] | null;
             /** Height */
             height?: number | null;
             /**
@@ -4610,6 +4932,9 @@ export interface components {
             id: string;
             /** Position */
             position: number;
+            /** Public Id */
+            public_id: string;
+            render?: components["schemas"]["MediaRenderRef"] | null;
             /**
              * Resource Type
              * @enum {string}
@@ -5264,6 +5589,8 @@ export interface components {
              * @default
              */
             caption: string;
+            /** Edits */
+            edits?: (components["schemas"]["EditSpec"] | null)[] | null;
             /** First Comment */
             first_comment?: string | null;
             /** Publish At */
@@ -5575,6 +5902,70 @@ export interface components {
             /** Params */
             params?: string[];
         };
+        /**
+         * TextLayer
+         * @description A caption drawn on the media. ``size`` is the font size as a fraction of the output width;
+         *     (``x``, ``y``) is the centre of the text box (0 to 1 across and down). Video only: shown from
+         *     ``start_s`` to ``end_s``, in seconds of the trimmed clip (before any speed change); either
+         *     left out means from the start or to the end.
+         */
+        TextLayer: {
+            /**
+             * Align
+             * @default center
+             * @enum {string}
+             */
+            align: "left" | "center" | "right";
+            /** Background */
+            background?: string | null;
+            /**
+             * Background Opacity
+             * @default 60
+             */
+            background_opacity: number;
+            /**
+             * Bold
+             * @default false
+             */
+            bold: boolean;
+            /**
+             * Color
+             * @default #FFFFFF
+             */
+            color: string;
+            /** End S */
+            end_s?: number | null;
+            /**
+             * Font
+             * @default poppins
+             * @enum {string}
+             */
+            font: "poppins" | "montserrat" | "playfair" | "pacifico" | "anton" | "marker";
+            /**
+             * Italic
+             * @default false
+             */
+            italic: boolean;
+            /**
+             * Size
+             * @default 0.06
+             */
+            size: number;
+            /** Start S */
+            start_s?: number | null;
+            /** Text */
+            text: string;
+            /**
+             * X
+             * @default 0.5
+             */
+            x: number;
+            /**
+             * Y
+             * @default 0.5
+             */
+            y: number;
+        };
         /** TopPost */
         TopPost: {
             /**
@@ -5616,6 +6007,19 @@ export interface components {
              * Format: date
              */
             until: string;
+        };
+        /**
+         * Trim
+         * @description The part of the video to keep, in seconds of the original.
+         */
+        Trim: {
+            /** End S */
+            end_s: number;
+            /**
+             * Start S
+             * @default 0
+             */
+            start_s: number;
         };
         /** UploadSignature */
         UploadSignature: {
@@ -9335,6 +9739,100 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UploadSignature"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_media_render: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaRenderCreate"];
+            };
+        };
+        responses: {
+            /** @description The same edit, rendered before */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRender"];
+                };
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRender"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_media_render: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                render_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaRender"];
                 };
             };
             /** @description Validation error */

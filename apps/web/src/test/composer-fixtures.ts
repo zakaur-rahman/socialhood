@@ -6,6 +6,7 @@ import type { ChecklistItem, HashtagGroup, PostAsset, ScheduledPost, ScheduledPo
 export function postAsset(overrides: Partial<PostAsset> = {}): PostAsset {
   return {
     id: "as1",
+    public_id: "ws/w1/post/as1",
     resource_type: "image",
     url: "https://res.cloudinary.com/demo/image/upload/ws/w1/post/as1.jpg",
     thumbnail_url: "https://res.cloudinary.com/demo/image/upload/ws/w1/post/as1.jpg",

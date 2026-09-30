@@ -32,6 +32,7 @@ class WebhookProvider(StrEnum):
     WHATSAPP = "whatsapp"
     DODO = "dodo"
     CLERK = "clerk"
+    CLOUDINARY = "cloudinary"  # render notifications (P7b, TR-MED-05)
 
 
 class WebhookStatus(StrEnum):

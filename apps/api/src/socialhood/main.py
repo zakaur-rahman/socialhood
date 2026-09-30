@@ -21,6 +21,7 @@ from socialhood.kv import make_redis
 from socialhood.observability.logging import configure_logging
 from socialhood.settings import Settings, get_settings
 from socialhood.webhooks import clerk as clerk_webhook
+from socialhood.webhooks import cloudinary as cloudinary_webhook
 from socialhood.webhooks import dodo as dodo_webhook
 from socialhood.webhooks import instagram as instagram_webhook
 from socialhood.webhooks import meta_privacy
@@ -60,6 +61,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for router in api_v1.ROUTERS:
         app.include_router(router)
     app.include_router(clerk_webhook.router)
+    app.include_router(cloudinary_webhook.router)
     app.include_router(dodo_webhook.router)
     app.include_router(instagram_webhook.router)
     app.include_router(meta_privacy.router)

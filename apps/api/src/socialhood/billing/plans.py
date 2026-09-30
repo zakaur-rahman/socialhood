@@ -39,6 +39,10 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "message_history_days": {"free": 90, "pro": None, "max": None},
     # Posts per account whose comments are analysed: the most recent ones (T6.2).
     "comment_intelligence_posts": {"free": 5, "pro": None, "max": None},
+    # Edited videos rendered per usage period (P7b, FR-PUB-23): media_renders of kind video
+    # created in the period, failed ones not counted; asking for the same edit again is free.
+    # Photo edits render on the fly and aren't limited (they are counted, billing/usage.py).
+    "video_renders_monthly": {"free": 10, "pro": 200, "max": 1000},
 }
 
 

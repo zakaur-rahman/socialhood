@@ -26,6 +26,70 @@
         "title": "Actor",
         "type": "object"
       },
+      "Adjustments": {
+        "additionalProperties": false,
+        "description": "Each 0 by default (no change); ranges in ADJUSTMENTS.",
+        "properties": {
+          "brightness": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -99.0,
+            "title": "Brightness",
+            "type": "integer"
+          },
+          "contrast": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -100.0,
+            "title": "Contrast",
+            "type": "integer"
+          },
+          "gamma": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -50.0,
+            "title": "Gamma",
+            "type": "integer"
+          },
+          "saturation": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -100.0,
+            "title": "Saturation",
+            "type": "integer"
+          },
+          "sharpen": {
+            "default": 0,
+            "maximum": 400.0,
+            "minimum": 0.0,
+            "title": "Sharpen",
+            "type": "integer"
+          },
+          "vibrance": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -100.0,
+            "title": "Vibrance",
+            "type": "integer"
+          },
+          "vignette": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Vignette",
+            "type": "integer"
+          },
+          "warmth": {
+            "default": 0,
+            "maximum": 100.0,
+            "minimum": -100.0,
+            "title": "Warmth",
+            "type": "integer"
+          }
+        },
+        "title": "Adjustments",
+        "type": "object"
+      },
       "AgentApproval": {
         "description": "A write waiting for a person: exactly what will happen (recipients, text, scope, count).",
         "properties": {
@@ -3724,6 +3788,7 @@
               "accounts",
               "media",
               "media_files",
+              "edits",
               "caption",
               "hashtags",
               "mentions",
@@ -5036,6 +5101,47 @@
         "title": "ConversationSummary",
         "type": "object"
       },
+      "Crop": {
+        "additionalProperties": false,
+        "description": "The frame: the largest rectangle of ``aspect`` inside the (rotated) media, made smaller by\n``zoom``, centred on the focus point (``x``, ``y``: 0 to 1 across and down) as far as the\nedges allow. ``original`` keeps the media's own shape (zoom still crops in).",
+        "properties": {
+          "aspect": {
+            "default": "original",
+            "enum": [
+              "original",
+              "1:1",
+              "4:5",
+              "1.91:1",
+              "9:16"
+            ],
+            "title": "Aspect",
+            "type": "string"
+          },
+          "x": {
+            "default": 0.5,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "default": 0.5,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          },
+          "zoom": {
+            "default": 1.0,
+            "maximum": 4.0,
+            "minimum": 1.0,
+            "title": "Zoom",
+            "type": "number"
+          }
+        },
+        "title": "Crop",
+        "type": "object"
+      },
       "DailyRuns": {
         "properties": {
           "date": {
@@ -5118,6 +5224,186 @@
           "email_digest"
         ],
         "title": "DigestUnsubscribed",
+        "type": "object"
+      },
+      "EditSpec": {
+        "additionalProperties": false,
+        "description": "One item's edit (version 1). Everything is optional; an empty spec renders the media as\nInstagram needs it (JPEG up to 1440 px wide, H.264 video up to 1080 px wide).",
+        "properties": {
+          "adjust": {
+            "$ref": "#/components/schemas/Adjustments"
+          },
+          "cover_s": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover S"
+          },
+          "crop": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Crop"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enhance": {
+            "default": false,
+            "title": "Enhance",
+            "type": "boolean"
+          },
+          "fade_in_s": {
+            "default": 0.0,
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Fade In S",
+            "type": "number"
+          },
+          "fade_out_s": {
+            "default": 0.0,
+            "maximum": 3.0,
+            "minimum": 0.0,
+            "title": "Fade Out S",
+            "type": "number"
+          },
+          "flip_h": {
+            "default": false,
+            "title": "Flip H",
+            "type": "boolean"
+          },
+          "flip_v": {
+            "default": false,
+            "title": "Flip V",
+            "type": "boolean"
+          },
+          "logo": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Logo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "look": {
+            "anyOf": [
+              {
+                "enum": [
+                  "al_dente",
+                  "athena",
+                  "audrey",
+                  "aurora",
+                  "eucalyptus",
+                  "fes",
+                  "frost",
+                  "hairspray",
+                  "hokusai",
+                  "incognito",
+                  "linen",
+                  "peacock",
+                  "primavera",
+                  "quartz",
+                  "red_rock",
+                  "refresh",
+                  "sizzle",
+                  "sonnet",
+                  "ukulele",
+                  "zorro"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Look"
+          },
+          "mute": {
+            "default": false,
+            "title": "Mute",
+            "type": "boolean"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "enum": [
+                  "vivid",
+                  "warm",
+                  "cool",
+                  "mono",
+                  "fade",
+                  "noir",
+                  "golden",
+                  "dramatic",
+                  "bright",
+                  "retro"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset"
+          },
+          "rotate": {
+            "default": 0,
+            "enum": [
+              0,
+              90,
+              180,
+              270
+            ],
+            "title": "Rotate",
+            "type": "integer"
+          },
+          "speed": {
+            "default": 1.0,
+            "enum": [
+              0.5,
+              1,
+              1.5,
+              2
+            ],
+            "title": "Speed",
+            "type": "number"
+          },
+          "texts": {
+            "items": {
+              "$ref": "#/components/schemas/TextLayer"
+            },
+            "maxItems": 5,
+            "title": "Texts",
+            "type": "array"
+          },
+          "trim": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Trim"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "v": {
+            "const": 1,
+            "default": 1,
+            "title": "V",
+            "type": "integer"
+          }
+        },
+        "title": "EditSpec",
         "type": "object"
       },
       "EmbeddedSignup": {
@@ -6042,6 +6328,50 @@
         "title": "LinkedAutomation",
         "type": "object"
       },
+      "Logo": {
+        "additionalProperties": false,
+        "description": "A watermark from an uploaded image (a media asset of this workspace): ``width`` is a\nfraction of the output width; (``x``, ``y``) its centre.",
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "opacity": {
+            "default": 100,
+            "maximum": 100.0,
+            "minimum": 10.0,
+            "title": "Opacity",
+            "type": "integer"
+          },
+          "width": {
+            "default": 0.2,
+            "maximum": 0.5,
+            "minimum": 0.05,
+            "title": "Width",
+            "type": "number"
+          },
+          "x": {
+            "default": 0.88,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "default": 0.92,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "asset_id"
+        ],
+        "title": "Logo",
+        "type": "object"
+      },
       "MarkRead": {
         "additionalProperties": false,
         "properties": {
@@ -6305,6 +6635,270 @@
           "created_at"
         ],
         "title": "MediaAssetOut",
+        "type": "object"
+      },
+      "MediaRender": {
+        "description": "\u00a75.10 MediaRender: one edit of one upload and its rendered file.",
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "bytes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bytes"
+          },
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "image",
+              "video"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "ready_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready At"
+          },
+          "requested_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By User Id"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/EditSpec"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "rendering",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "asset_id",
+          "kind",
+          "status",
+          "spec",
+          "created_at"
+        ],
+        "title": "MediaRender",
+        "type": "object"
+      },
+      "MediaRenderCreate": {
+        "additionalProperties": false,
+        "description": "POST \u2026/media-renders: render ``spec`` of the post upload ``asset_id``.\n\nThe same spec of the same asset is one render: asking again returns it (200) instead of a new\none (201), and a failed one starts again. Refusals: 404 when the asset isn't this workspace's;\n422 on ``spec.{field}`` when the spec can't apply to the media (a look on a video, a trim past\nits end, a logo that isn't an image of this workspace); 402 quota_exceeded\n(``video_renders_monthly`` with the plan's limit) for a new video render past the month's\nallowance. Photo renders aren't limited (they are counted).",
+        "properties": {
+          "asset_id": {
+            "format": "uuid",
+            "title": "Asset Id",
+            "type": "string"
+          },
+          "spec": {
+            "$ref": "#/components/schemas/EditSpec"
+          }
+        },
+        "required": [
+          "asset_id",
+          "spec"
+        ],
+        "title": "MediaRenderCreate",
+        "type": "object"
+      },
+      "MediaRenderRef": {
+        "description": "A post item's render (``PostAsset.render``): enough for the composer's badge (\"Rendering\",\n\"Couldn't render\") and the preview.",
+        "properties": {
+          "cover_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Url"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "height": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Height"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "rendering",
+              "ready",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "width": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Width"
+          }
+        },
+        "required": [
+          "id",
+          "status"
+        ],
+        "title": "MediaRenderRef",
         "type": "object"
       },
       "Message": {
@@ -7078,7 +7672,7 @@
         "type": "object"
       },
       "PostAsset": {
-        "description": "One image or video of the post (\u00a75.10), in order. ``id`` is the media asset's id: the\ncomposer sends these ids back, reordered, in ``asset_ids``.",
+        "description": "One image or video of the post (\u00a75.10), in order. ``id`` is the media asset's id: the\ncomposer sends these ids back, reordered, in ``asset_ids``, and each item's edit in ``edits``.\n\nP7b: ``edit`` is the item's EditSpec (None: unedited), ``render`` its rendered file (None\nuntil one is asked for). The editor builds its previews from ``public_id`` and the asset's\nsize with the shared builder (lib/editor/transform.ts).",
         "properties": {
           "duration_s": {
             "anyOf": [
@@ -7090,6 +7684,16 @@
               }
             ],
             "title": "Duration S"
+          },
+          "edit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EditSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "height": {
             "anyOf": [
@@ -7110,6 +7714,20 @@
           "position": {
             "title": "Position",
             "type": "integer"
+          },
+          "public_id": {
+            "title": "Public Id",
+            "type": "string"
+          },
+          "render": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MediaRenderRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "resource_type": {
             "enum": [
@@ -7148,6 +7766,7 @@
         },
         "required": [
           "id",
+          "public_id",
           "resource_type",
           "url",
           "position"
@@ -8868,6 +9487,28 @@
             "title": "Caption",
             "type": "string"
           },
+          "edits": {
+            "anyOf": [
+              {
+                "items": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/EditSpec"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edits"
+          },
           "first_comment": {
             "anyOf": [
               {
@@ -9841,6 +10482,128 @@
         "title": "TemplateSend",
         "type": "object"
       },
+      "TextLayer": {
+        "additionalProperties": false,
+        "description": "A caption drawn on the media. ``size`` is the font size as a fraction of the output width;\n(``x``, ``y``) is the centre of the text box (0 to 1 across and down). Video only: shown from\n``start_s`` to ``end_s``, in seconds of the trimmed clip (before any speed change); either\nleft out means from the start or to the end.",
+        "properties": {
+          "align": {
+            "default": "center",
+            "enum": [
+              "left",
+              "center",
+              "right"
+            ],
+            "title": "Align",
+            "type": "string"
+          },
+          "background": {
+            "anyOf": [
+              {
+                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Background"
+          },
+          "background_opacity": {
+            "default": 60,
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "Background Opacity",
+            "type": "integer"
+          },
+          "bold": {
+            "default": false,
+            "title": "Bold",
+            "type": "boolean"
+          },
+          "color": {
+            "default": "#FFFFFF",
+            "pattern": "^#[0-9A-Fa-f]{6}$",
+            "title": "Color",
+            "type": "string"
+          },
+          "end_s": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End S"
+          },
+          "font": {
+            "default": "poppins",
+            "enum": [
+              "poppins",
+              "montserrat",
+              "playfair",
+              "pacifico",
+              "anton",
+              "marker"
+            ],
+            "title": "Font",
+            "type": "string"
+          },
+          "italic": {
+            "default": false,
+            "title": "Italic",
+            "type": "boolean"
+          },
+          "size": {
+            "default": 0.06,
+            "maximum": 0.2,
+            "minimum": 0.02,
+            "title": "Size",
+            "type": "number"
+          },
+          "start_s": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start S"
+          },
+          "text": {
+            "maxLength": 150,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "x": {
+            "default": 0.5,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "X",
+            "type": "number"
+          },
+          "y": {
+            "default": 0.5,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Y",
+            "type": "number"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TextLayer",
+        "type": "object"
+      },
       "TopPost": {
         "properties": {
           "age": {
@@ -9932,6 +10695,30 @@
           "items"
         ],
         "title": "TopPosts",
+        "type": "object"
+      },
+      "Trim": {
+        "additionalProperties": false,
+        "description": "The part of the video to keep, in seconds of the original.",
+        "properties": {
+          "end_s": {
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "End S",
+            "type": "number"
+          },
+          "start_s": {
+            "default": 0.0,
+            "maximum": 3600.0,
+            "minimum": 0.0,
+            "title": "Start S",
+            "type": "number"
+          }
+        },
+        "required": [
+          "end_s"
+        ],
+        "title": "Trim",
         "type": "object"
       },
       "UploadSignature": {
@@ -16351,6 +17138,146 @@
         "tags": [
           "media"
         ]
+      }
+    },
+    "/v1/w/{wid}/media-renders": {
+      "post": {
+        "description": "FR-PUB-21: render ``spec`` of a post upload. 201 with a new render (a photo's is ready, a\nvideo's pending with start_render enqueued); 200 with the existing one when this asset has\nthat spec already (a failed one is started again). 404 when the asset isn't this workspace's;\n422 on ``spec.{field}`` when the spec can't apply (media/editor/spec.problems, a logo that\nisn't an image upload of this workspace, an asset without dimensions); 402 quota_exceeded\n(``video_renders_monthly``, the plan's limit) for a new video render past the allowance.",
+        "operationId": "create_media_render",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MediaRenderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaRender"
+                }
+              }
+            },
+            "description": "The same edit, rendered before"
+          },
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaRender"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Media Render",
+        "tags": [
+          "editor"
+        ],
+        "x-pending": "TB.2"
+      }
+    },
+    "/v1/w/{wid}/media-renders/{render_id}": {
+      "get": {
+        "description": "One render, for a composer that missed its media_render.updated.",
+        "operationId": "get_media_render",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "render_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Render Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaRender"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Media Render",
+        "tags": [
+          "editor"
+        ],
+        "x-pending": "TB.2"
       }
     },
     "/v1/w/{wid}/message-analyses/{analysis_id}": {

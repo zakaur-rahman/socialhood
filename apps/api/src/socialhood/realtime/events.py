@@ -47,6 +47,9 @@ EventType = Literal[
     "agent.run.updated",  # {run: AgentRunEvent}: status or step progress
     "agent.step",  # AgentStepEvent: a step started (running) or ended
     "agent.completed",  # {run: AgentRunEvent}: a final status; the panel fetches the run
+    # The media editor (schemas/editor.py, P7b): a render was created, started, finished or
+    # failed. The posts whose items use it also get scheduled_post.updated (their checklist).
+    "media_render.updated",  # {render: MediaRender}
     "resync",
 ]
 
