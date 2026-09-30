@@ -1,5 +1,9 @@
 """Plans and entitlements (§1.7, TR-BIL-04). Numbers are proposals pending OQ-1; changing one is
-a one-line edit plus a deploy. None means unlimited."""
+a one-line edit plus a deploy. None means unlimited.
+
+Paid plans map to Dodo products by settings (TR-BIL-02: DODO_PRODUCT_PRO_MONTHLY is pro,
+DODO_PRODUCT_MAX_MONTHLY max). Max can be read from Dodo but not bought until R2 (FR-BIL-01).
+"""
 
 from __future__ import annotations
 
@@ -8,7 +12,15 @@ from typing import TYPE_CHECKING, Any, Literal
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from socialhood.settings import Settings
+
 Plan = Literal["free", "pro", "max"]
+PLANS: tuple[Plan, ...] = ("free", "pro", "max")
+PAID_PLANS: tuple[Plan, ...] = ("pro", "max")
+# Plans a checkout can start (FR-BIL-01: Max in R2).
+AVAILABLE: dict[Plan, bool] = {"free": True, "pro": True, "max": False}
+# §1.7 trial_days: Pro's 7-day trial, once per workspace and owner email (FR-BIL-03, TR-BIL-05).
+TRIAL_DAYS: dict[Plan, int] = {"free": 0, "pro": 7, "max": 0}
 
 ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "accounts_per_platform": {"free": 1, "pro": 3, "max": 10},
@@ -50,6 +62,25 @@ CREDIT_COSTS: dict[str, int] = {
 def entitlement(plan: str, key: str) -> Any:
     values = ENTITLEMENTS[key]
     return values.get(plan, values["free"])  # type: ignore[call-overload]
+
+
+def product_for(plan: str, settings: Settings) -> str | None:
+    """The Dodo product id a paid plan is sold as (None: not configured, or Free)."""
+    products = {
+        "pro": settings.dodo_product_pro_monthly,
+        "max": settings.dodo_product_max_monthly,
+    }
+    return products.get(plan) or None
+
+
+def plan_for_product(product_id: str | None, settings: Settings) -> Plan | None:
+    """TR-BIL-02: the plan a Dodo product id stands for; None for a product we don't sell."""
+    if not product_id:
+        return None
+    for plan in PAID_PLANS:
+        if product_for(plan, settings) == product_id:
+            return plan
+    return None
 
 
 async def current_plan(session: AsyncSession) -> str:

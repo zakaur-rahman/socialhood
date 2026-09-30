@@ -23,12 +23,13 @@ from typing import Literal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import check_account_writable, quota_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ERROR_CODES, ApiError, FieldError
 from socialhood.models.inbox import Conversation, Message, ScheduledMessage
 from socialhood.models.inbox import ScheduledStatus as S
 from socialhood.realtime import events
-from socialhood.repositories import inbox
+from socialhood.repositories import inbox, social_accounts
 from socialhood.repositories import scheduled as repo
 from socialhood.repositories.scheduled import DONE, ScheduledRow
 from socialhood.schemas.inbox import (
@@ -191,7 +192,7 @@ async def create(
     conv = await _conversation_or_404(session, conversation_id)
     send_at = _check_send_at(conv, body.send_at, human_agent_enabled=human_agent_enabled, now=now)
     asset_ids = await _check_assets(session, body.attachment_asset_ids)
-    await _check_capacity(session)
+    await _check_capacity(session, conv)
     contact = await inbox.get_contact(session, conv.contact_id)
     if contact is None:  # pragma: no cover - a conversation always has its contact
         raise ApiError("not_found")
@@ -336,10 +337,16 @@ async def _check_assets(session: AsyncSession, asset_ids: Sequence[uuid.UUID]) -
     return unique
 
 
-async def _check_capacity(session: AsyncSession) -> None:
-    limit = entitlement(await current_plan(session), "pending_scheduled_messages")
+async def _check_capacity(session: AsyncSession, conv: Conversation) -> None:
+    """pending_scheduled_messages (§1.7), and the conversation's account must not be read-only
+    after a downgrade (FR-BIL-07): both 402 quota_exceeded."""
+    plan = await current_plan(session)
+    account = await social_accounts.get(session, conv.social_account_id)
+    if account is not None:
+        await check_account_writable(session, account, plan=plan)
+    limit = entitlement(plan, "pending_scheduled_messages")
     if limit is not None and await repo.count_pending(session) >= limit:
-        raise ApiError("quota_exceeded", f"Your plan includes {limit} scheduled messages.")
+        raise quota_error("pending_scheduled_messages", limit)
 
 
 # ---- the dispatcher's side (TR-JOB-03, FR-SMS-03)

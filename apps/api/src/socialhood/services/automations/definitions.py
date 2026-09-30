@@ -8,8 +8,9 @@ follow nudge starts off (on for "Send a link to commenters") with its default li
 Rules:
 - A draft may be incomplete. Activation checks everything at once (services/automations/
   validation.py) after the plan's entitlements: an AI-reply automation needs ai_reply_automations
-  (402 entitlement_required) and the workspace's active automations are capped by
-  active_automations (402 quota_exceeded).
+  (402 entitlement_required), its account must not be read-only after a downgrade (FR-BIL-07,
+  402 quota_exceeded on accounts_per_platform) and the workspace's active automations are capped
+  by active_automations (402 quota_exceeded).
 - An active automation stays complete: a PUT that would leave it unable to activate is refused
   with the same field errors, and nothing is saved.
 - Keywords are stored as typed and normalised (matching.normalize), once per normalised form, in
@@ -28,6 +29,11 @@ from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import (
+    check_account_writable,
+    entitlement_error,
+    quota_error,
+)
 from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.automations import (
@@ -410,16 +416,20 @@ async def activate(
     if automation.status == ACTIVE:
         return automation
     if automation.action == "ai_reply" and not entitlement(plan, "ai_reply_automations"):
-        raise ApiError("entitlement_required", "AI replies in automations are part of Pro.")
+        raise entitlement_error("ai_reply_automations")
     definition = await stored_definition(session, automation)
     errors = validation.activation_errors(definition, disclosure=disclosure, now=now)
     if errors:
         raise ApiError("validation_error", ACTIVATE_DETAIL, errors=errors)
+    if automation.social_account_id is not None:  # FR-BIL-07: a read-only account can't send
+        account = await social_accounts.get(session, automation.social_account_id)
+        if account is not None:
+            await check_account_writable(session, account, plan=plan)
     limit = entitlement(plan, "active_automations")
     if limit is not None:
         await repo.lock_activations(session)
     if limit is not None and await repo.count_active(session, excluding=automation.id) >= limit:
-        raise ApiError("quota_exceeded", f"Your plan includes {limit} active automations.")
+        raise quota_error("active_automations", limit)
     automation.status = ACTIVE
     automation.activated_at = now
     automation.paused_at = None
@@ -433,6 +443,12 @@ def _pause(automation: Automation, now: datetime) -> bool:
     automation.status = AutomationStatus.PAUSED
     automation.paused_at = now
     return True
+
+
+def pause_rows(automations: Sequence[Automation], now: datetime) -> list[uuid.UUID]:
+    """Pause the loaded (locked) automations that are active; returns those paused. The
+    downgrade (billing/downgrade.py, FR-BIL-07) uses it; the caller flushes."""
+    return [automation.id for automation in automations if _pause(automation, now)]
 
 
 async def pause(session: AsyncSession, automation_id: uuid.UUID, *, now: datetime) -> Automation:

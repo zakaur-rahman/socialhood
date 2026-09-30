@@ -14,8 +14,8 @@ export interface paths {
         /**
          * List Billing Plans
          * @description Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their §1.7
-         *     entitlements and Dodo prices (cached 1 h), for the /pricing page and the upgrade dialog's
-         *     comparison. The same numbers as GET …/billing.
+         *     entitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing
+         *     page and the upgrade dialog's comparison. The same numbers as GET …/billing.
          */
         get: operations["list_billing_plans"];
         put?: never;
@@ -758,9 +758,10 @@ export interface paths {
         };
         /**
          * Get Billing
-         * @description Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters),
-         *     trial eligibility (TR-BIL-05) and, from T8.2, the paid plans' prices from Dodo (cached 1 h;
-         *     empty when Dodo can't be reached).
+         * @description Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge
+         *     characters, active automations, pending scheduled messages and connected accounts per
+         *     platform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo
+         *     (cached 1 h; a price Dodo can't give now is left out).
          */
         get: operations["get_billing"];
         put?: never;
@@ -784,7 +785,8 @@ export interface paths {
          * Cancel Billing
          * @description FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's
          *     cancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays
-         *     until the period ends (subscription.cancelled, then expired). 409 on the Free plan.
+         *     until the period ends (subscription.cancelled, then Free). 409 on the Free plan; cancelling
+         *     again answers the same.
          */
         post: operations["cancel_billing"];
         delete?: never;
@@ -808,7 +810,7 @@ export interface paths {
          *     /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial
          *     only when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan
          *     (active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo
-         *     isn't configured or doesn't answer.
+         *     isn't configured or doesn't answer. Nothing changes until Dodo's signed webhook arrives.
          */
         post: operations["create_billing_checkout"];
         delete?: never;
@@ -829,7 +831,8 @@ export interface paths {
         /**
          * Create Billing Portal
          * @description FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened
-         *     in a new tab. 409 conflict when the workspace has never had a Dodo customer.
+         *     in a new tab. 409 conflict when the workspace has never had a Dodo customer; 503 when Dodo
+         *     doesn't answer.
          */
         post: operations["create_billing_portal"];
         delete?: never;
@@ -849,7 +852,8 @@ export interface paths {
         put?: never;
         /**
          * Resume Billing
-         * @description Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``.
+         * @description Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``, or when
+         *     Dodo has already ended the plan.
          */
         post: operations["resume_billing"];
         delete?: never;

@@ -26,6 +26,7 @@ from socialhood.ai import prompts
 from socialhood.ai.metering import QuotaExceeded, metered, quota
 from socialhood.ai.provider import AIError, Turn
 from socialhood.ai.registry import get_provider
+from socialhood.billing.entitlements import credits_error
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.publishing import CAPTION_MAX_CHARS, MAX_HASHTAGS, MAX_MENTIONS
 from socialhood.observability.logging import get_logger
@@ -127,15 +128,10 @@ def clean_hashtags(raw: Sequence[str], *, leave_out: set[str], count: int) -> li
 
 
 async def _quota_error(session: AsyncSession) -> ApiError:
-    """§4.7's copy for used-up AI credits."""
+    """§4.7's copy for used-up AI credits, with the plan's limit (billing/entitlements.py)."""
     credits = await quota(session)
     await session.commit()
-    end = credits.period_end
-    return ApiError(
-        "quota_exceeded",
-        f"You've used all {credits.limit or 0:,} AI credits for this month. "
-        f"They reset on {end.day} {end:%B}.",
-    )
+    return credits_error(credits)
 
 
 async def generate_caption(

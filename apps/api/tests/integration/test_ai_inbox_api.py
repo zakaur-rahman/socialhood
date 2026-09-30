@@ -293,7 +293,8 @@ async def test_billing_state_on_the_free_plan(member: Member, engine: AsyncEngin
     body = response.json()
     assert (body["plan"], body["status"], body["cancel_at_period_end"]) == ("free", "free", False)
     assert body["trial_eligible"] is True
-    assert body["prices"] == []
+    # P8 (T8.2): the paid plans' prices come from Dodo's products (the FakeDodo's here).
+    assert {p["plan"] for p in body["prices"]} == {"pro", "max"}
     entitlements = {e["key"]: e["value"] for e in body["entitlements"]}
     assert entitlements["ai_modes"] == ["off", "suggest"]
     assert entitlements["ai_credits_monthly"] == 200

@@ -16,6 +16,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import quota_error
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.connections import AccountStatus, Platform, SocialAccount
 from socialhood.observability.logging import get_logger
@@ -51,7 +52,9 @@ async def _check_capacity(session: AsyncSession, phone_number_id: str, plan: str
     limit = await _at_capacity(session, Platform.WHATSAPP, plan)
     if limit is not None:
         noun = "account" if limit == 1 else "accounts"
-        raise ApiError("quota_exceeded", f"Your plan includes {limit} WhatsApp {noun}.")
+        raise quota_error(
+            "accounts_per_platform", limit, f"Your plan includes {limit} WhatsApp {noun}."
+        )
 
 
 async def complete_signup(

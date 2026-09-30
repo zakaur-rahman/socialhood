@@ -14,6 +14,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request, Response
 
 from socialhood.auth.deps import Admin, Session
+from socialhood.billing.entitlements import credits_gate
 from socialhood.schemas.knowledge import (
     KnowledgeGap,
     KnowledgeGapList,
@@ -86,9 +87,13 @@ async def test_knowledge(
     """FR-KB-03: the answer a suggestion would draft, with its sources, or can_answer false
     ("Not in your knowledge"). 1 credit; nothing is stored or sent. 402 quota_exceeded without
     credits; 503 when the AI is unavailable."""
-    return await answer.try_question(
-        session, request.app.state.sessionmaker, workspace=ctx.workspace, question=body.question
-    )
+    async with credits_gate(session):  # §2.15 "admin · credits"
+        return await answer.try_question(
+            session,
+            request.app.state.sessionmaker,
+            workspace=ctx.workspace,
+            question=body.question,
+        )
 
 
 @router.get("/knowledge-gaps", operation_id="list_knowledge_gaps")

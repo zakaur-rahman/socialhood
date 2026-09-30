@@ -13,10 +13,20 @@ from zoneinfo import available_timezones
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.dodo import DodoClient, DodoError
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.identity import SLUG_PATTERN, Workspace
-from socialhood.repositories import automations, knowledge, social_accounts, workspaces
+from socialhood.observability.logging import get_logger
+from socialhood.repositories import (
+    automations,
+    knowledge,
+    social_accounts,
+    subscriptions,
+    workspaces,
+)
 from socialhood.schemas.workspaces import Checklist, ChecklistKey, ChecklistStep, WorkspacePatch
+
+log = get_logger(__name__)
 
 _SLUG = re.compile(SLUG_PATTERN)
 _LANGUAGE = re.compile(r"^(auto|[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)$")
@@ -84,6 +94,30 @@ async def update_workspace(
             ) from error
         raise
     await session.refresh(workspace)
+
+
+async def cancel_dodo_subscription(session: AsyncSession, dodo: DodoClient) -> bool:
+    """F-16: deleting a workspace first cancels its Dodo subscription at once (not at the period
+    end), so Dodo never charges for a workspace that no longer exists. Runs in the workspace's
+    scope before anything is deleted. True when Dodo cancelled one. A subscription Dodo no longer
+    has, or refuses to cancel because it has already ended, counts as done; Dodo not answering
+    refuses the deletion with 503, so the owner can try again."""
+    sub = await subscriptions.current(session)
+    if sub is None or not sub.dodo_subscription_id:
+        return False
+    try:
+        cancelled = await dodo.cancel_now(sub.dodo_subscription_id)
+    except DodoError as error:
+        if error.retryable or error.status is None:
+            log.warning("workspace_delete_dodo_unavailable", status=error.status)
+            raise ApiError(
+                "service_unavailable",
+                "Couldn't cancel the subscription with the payment provider. Try again.",
+            ) from error
+        log.info("workspace_delete_dodo_nothing_to_cancel", status=error.status)
+        return False
+    log.info("workspace_delete_dodo_cancelled", status=cancelled.status)
+    return True
 
 
 # Each checklist step is computed from data (FR-ACC-04). Steps whose tables arrive in later

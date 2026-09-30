@@ -31,6 +31,7 @@ from datetime import UTC, datetime, time, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.billing import UsageMetric
@@ -334,7 +335,11 @@ async def _count(session: AsyncSession, post: PostRow, now: datetime) -> None:
     if await usage.reserve(session, period_start=start, cost=1, metric=metric) is None:
         row = await usage.counter(session, start, metric=metric)
         allowed = row.limit if row is not None and row.limit is not None else limit
-        raise ApiError("quota_exceeded", f"Your plan includes {allowed} scheduled posts a month.")
+        raise quota_error(
+            "scheduled_posts_monthly",
+            allowed,
+            f"Your plan includes {allowed} scheduled posts a month.",
+        )
     post.counted_at = now
 
 

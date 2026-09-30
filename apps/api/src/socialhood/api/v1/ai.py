@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Request, Response
 
 from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.billing.entitlements import credits_gate
 from socialhood.errors import ApiError
 from socialhood.realtime.events import commit_and_publish
 from socialhood.repositories import inbox
@@ -89,7 +90,8 @@ async def regenerate_suggestion(
     conv = await inbox.get_conversation(session, conversation_id)
     if conv is None:
         raise ApiError("not_found")
-    await suggestions.regenerate(session, conv)
+    async with credits_gate(session):  # §2.15 "agent · credits": the 402 names the plan's limit
+        await suggestions.regenerate(session, conv)
     await session.commit()
     return Response(status_code=202)
 
@@ -118,7 +120,8 @@ async def refresh_summary(conversation_id: uuid.UUID, ctx: AnyMember, session: S
     """FR-AI-03 on request; conversation.updated carries the new summary (its ``summary`` key).
     402 quota_exceeded without credits; 409 when AI analysis is off for the account."""
     conv = await conversations.get_or_404(session, conversation_id)
-    await summaries.request_summary(session, conv)
+    async with credits_gate(session):  # §2.15 "agent · credits"
+        await summaries.request_summary(session, conv)
     return Response(status_code=202)
 
 

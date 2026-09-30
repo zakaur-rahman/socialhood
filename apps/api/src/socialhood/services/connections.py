@@ -13,6 +13,7 @@ from redis.asyncio import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import entitlement_error, quota_error
 from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError
 from socialhood.models.connections import AccountStatus, AiMode, Platform, SocialAccount
@@ -87,7 +88,11 @@ async def _at_capacity(session: AsyncSession, platform: str, plan: str) -> int |
 
 def _quota_error(limit: int, platform: str) -> ApiError:
     noun = "account" if limit == 1 else "accounts"
-    return ApiError("quota_exceeded", f"Your plan includes {limit} {platform.capitalize()} {noun}.")
+    return quota_error(
+        "accounts_per_platform",
+        limit,
+        f"Your plan includes {limit} {platform.capitalize()} {noun}.",
+    )
 
 
 async def _check_capacity(session: AsyncSession, platform: str, plan: str) -> None:
@@ -286,7 +291,7 @@ async def update_account(
 ) -> SocialAccount:
     values = patch.model_dump(exclude_unset=True, exclude_none=True)
     if "ai_mode" in values and values["ai_mode"] not in entitlement(plan, "ai_modes"):
-        raise ApiError("entitlement_required", "Auto mode is part of Pro.")
+        raise entitlement_error("ai_modes")
     if acct.status == AccountStatus.DISCONNECTED:
         raise ApiError("conflict", "Reconnect this account before changing its settings.")
     if values:
