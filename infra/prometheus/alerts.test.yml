@@ -1,0 +1,131 @@
+# promtool unit tests for alerts.yml (T9.3: "a forced failure triggers its alert").
+# Run from this folder: promtool test rules alerts.test.yml
+# (Docker: see docs/ops/alerts.md.) Each test is quiet while traffic is normal, then fires once the
+# forced failure starts, using the same series the API exports.
+
+rule_files:
+  - alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  # Dispatcher lag: the worker stops while a scheduled message is due.
+  - interval: 1m
+    input_series:
+      - series: 'socialhood_dispatcher_lag_seconds{kind="message"}'
+        values: "0x5 60 120 180 240 300 360"
+      - series: 'socialhood_dispatcher_lag_seconds{kind="post"}'
+        values: "0x11"
+    alert_rule_test:
+      - eval_time: 7m
+        alertname: DispatcherLag
+        exp_alerts: []
+      - eval_time: 10m
+        alertname: DispatcherLag
+        exp_alerts:
+          - exp_labels: { severity: critical, kind: message }
+            exp_annotations:
+              summary: "Due messages are more than 2 minutes late"
+              runbook: docs/ops/runbook.md#dispatcher-lag
+
+  # Webhook failures: unsigned POSTs to /webhooks/instagram from minute 11. WhatsApp stays healthy,
+  # and a single Clerk failure in a quiet period is below the volume floor.
+  - interval: 1m
+    input_series:
+      - series: 'socialhood_webhook_deliveries_total{provider="instagram",outcome="accepted"}'
+        values: "0+100x30"
+      - series: 'socialhood_webhook_deliveries_total{provider="instagram",outcome="signature_invalid"}'
+        values: "0x10 5+5x20"
+      - series: 'socialhood_webhook_deliveries_total{provider="whatsapp",outcome="accepted"}'
+        values: "0+100x30"
+      - series: 'socialhood_webhook_deliveries_total{provider="clerk",outcome="accepted"}'
+        values: "0x30"
+      - series: 'socialhood_webhook_deliveries_total{provider="clerk",outcome="error"}'
+        values: "0x5 1x25"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: WebhookFailures
+        exp_alerts: []
+      - eval_time: 25m
+        alertname: WebhookFailures
+        exp_alerts:
+          - exp_labels: { severity: critical, provider: instagram }
+            exp_annotations:
+              summary: "Over 1% of instagram webhook deliveries failing for 5 minutes"
+              runbook: docs/ops/runbook.md#webhook-failures
+
+  # Send failures: sandbox sends with [sandbox:fail=platform_rejected] from minute 11.
+  - interval: 1m
+    input_series:
+      - series: 'socialhood_sends_total{platform="instagram",outcome="sent",code=""}'
+        values: "0+20x40"
+      - series: 'socialhood_sends_total{platform="instagram",outcome="failed",code="platform_rejected"}'
+        values: "0x10 2+2x30"
+      - series: 'socialhood_sends_total{platform="whatsapp",outcome="sent",code=""}'
+        values: "0+20x40"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: SendFailures
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: SendFailures
+        exp_alerts:
+          - exp_labels: { severity: critical, platform: instagram }
+            exp_annotations:
+              summary: "Over 5% of instagram sends failing"
+              runbook: docs/ops/runbook.md#send-failures
+
+  # AI errors: a model id the provider rejects, from minute 11.
+  - interval: 1m
+    input_series:
+      - series: 'socialhood_ai_calls_total{feature="message_analysis",model="gemini-3.5-flash-lite",outcome="ok"}'
+        values: "0+50x40"
+      - series: 'socialhood_ai_calls_total{feature="message_analysis",model="bad-model",outcome="error"}'
+        values: "0x10 5+5x30"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: AIErrors
+        exp_alerts: []
+      - eval_time: 30m
+        alertname: AIErrors
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "Over 5% of AI calls failing"
+              runbook: docs/ops/runbook.md#ai-errors
+
+  # The worker stops at minute 15: the per-minute ping job stops running.
+  - interval: 1m
+    input_series:
+      - series: 'socialhood_job_runs_total{task="ping",lane="interactive",status="succeeded"}'
+        values: "0+1x15 15x20"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: WorkerDown
+        exp_alerts: []
+      - eval_time: 34m
+        alertname: WorkerDown
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "No worker has run a job in 10 minutes"
+              runbook: docs/ops/runbook.md#worker-down
+
+  # TR-JOB-06: the interactive lane backs up.
+  - interval: 1m
+    input_series:
+      - series: 'socialhood_queue_oldest_ready_seconds{lane="interactive"}'
+        values: "0 5 40 45 50 55 60"
+      - series: 'socialhood_queue_oldest_ready_seconds{lane="bulk"}'
+        values: "0 300 600 900 1200 1500 1800"
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: InteractiveQueueBacklog
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: InteractiveQueueBacklog
+        exp_alerts:
+          - exp_labels: { severity: warning, lane: interactive }
+            exp_annotations:
+              summary: "Interactive jobs waiting more than 30 seconds"
+              runbook: docs/ops/runbook.md#queue-backlog

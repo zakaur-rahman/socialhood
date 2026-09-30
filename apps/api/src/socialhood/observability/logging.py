@@ -24,7 +24,7 @@ _SAFE_KEYS = frozenset({"status_code", "error_code", "platform_code", "http_stat
 _TEXT_KEYS = frozenset({"text", "body"})
 
 
-def _is_secret_key(key: str) -> bool:
+def is_secret_key(key: str) -> bool:
     return key.lower() not in _SAFE_KEYS and bool(_SECRET_KEY.search(key))
 
 
@@ -34,7 +34,7 @@ def redact(value: Any, *, truncate: bool) -> Any:
         out: dict[Any, Any] = {}
         for key, item in value.items():
             name = str(key)
-            if _is_secret_key(name):
+            if is_secret_key(name):
                 out[key] = REDACTED
             elif truncate and name.lower() in _TEXT_KEYS and isinstance(item, str):
                 out[key] = item if len(item) <= TEXT_LIMIT else item[:TEXT_LIMIT] + "…"
@@ -60,6 +60,9 @@ class RedactProcessor:
 
 
 def configure_logging(level: str = "INFO") -> None:
+    # Imported here: the Sentry module imports this one.
+    from socialhood.observability.sentry import SentryLogProcessor
+
     numeric = logging.getLevelName(level.upper())
     if not isinstance(numeric, int):
         numeric = logging.INFO
@@ -67,6 +70,9 @@ def configure_logging(level: str = "INFO") -> None:
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
+        # Error-level events (alerts, logged exceptions) go to Sentry when it is on (T9.3).
+        # Before format_exc_info, so the exception keeps its traceback.
+        SentryLogProcessor(),
         structlog.processors.format_exc_info,
         RedactProcessor(truncate=numeric > logging.DEBUG),
         structlog.processors.JSONRenderer(),

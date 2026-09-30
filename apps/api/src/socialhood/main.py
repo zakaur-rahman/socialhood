@@ -18,7 +18,10 @@ from socialhood.db.engine import make_engine, make_sessionmaker
 from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.runtime import make_http_client
 from socialhood.kv import make_redis
+from socialhood.observability import http as observability_http
 from socialhood.observability.logging import configure_logging
+from socialhood.observability.metrics import Flusher
+from socialhood.observability.sentry import init_sentry, instrument_running_loop
 from socialhood.settings import Settings, get_settings
 from socialhood.webhooks import clerk as clerk_webhook
 from socialhood.webhooks import dodo as dodo_webhook
@@ -30,12 +33,18 @@ from socialhood.webhooks import whatsapp as whatsapp_webhook
 def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     configure_logging(settings.log_level)
+    # Before the routers are added, so Sentry's FastAPI integration wraps them (no DSN: no-op).
+    init_sentry(settings, component="api")
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        instrument_running_loop()
+        flusher = Flusher(app.state.redis)  # metrics buffer → Valkey (observability/metrics.py)
+        flusher.start()
         # The API only defers jobs; workers run them (TR-ARC-02).
         async with jobs_app.open_async():
             yield
+        await flusher.stop()
         await app.state.http.aclose()
         await app.state.redis.aclose()
         await app.state.engine.dispose()
@@ -57,6 +66,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_problem_handlers(app)
     app.openapi = lambda: problem_openapi(app)  # type: ignore[method-assign]
     app.include_router(health.router)
+    app.include_router(observability_http.router)  # /metrics behind METRICS_TOKEN (SEC-12)
     for router in api_v1.ROUTERS:
         app.include_router(router)
     app.include_router(clerk_webhook.router)
@@ -76,6 +86,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_age=600,
     )
     app.add_middleware(BodyLimitMiddleware)
+    # Request metrics and unhandled-error capture, just inside the request context (T9.3).
+    app.add_middleware(observability_http.MetricsMiddleware)
     # Added last, so it is the outermost middleware.
     app.add_middleware(RequestContextMiddleware)
     return app

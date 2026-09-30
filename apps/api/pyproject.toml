@@ -29,6 +29,7 @@ dependencies = [
     "pydantic-ai-slim[google]>=2.51.0",
     "standardwebhooks>=1.1",
     "pywebpush>=2.5",
+    "sentry-sdk[fastapi]>=2.40",
 ]
 
 [dependency-groups]

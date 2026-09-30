@@ -1,0 +1,38 @@
+# Example Prometheus config for Social Hood (T9.3), for a self-hosted Prometheus. With Grafana Cloud,
+# use its Metrics Endpoint integration instead (docs/ops/alerts.md, section 2).
+#
+# Put each environment's METRICS_TOKEN in `metrics_token` and `metrics_token_staging` next to this
+# config (no trailing newline; .gitignore keeps them out of git), then:
+#   docker run -d -p 9090:9090 -v "$PWD/infra/prometheus:/etc/prometheus" prom/prometheus:latest
+# The API and the worker are both counted through the API's /metrics: there is one target per
+# environment.
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - alerts.yml
+
+scrape_configs:
+  - job_name: socialhood-api
+    scheme: https
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics_token
+    static_configs:
+      - targets: ["api.socialhood.com"]
+        labels:
+          environment: production
+
+  - job_name: socialhood-api-staging
+    scheme: https
+    metrics_path: /metrics
+    authorization:
+      type: Bearer
+      credentials_file: /etc/prometheus/metrics_token_staging
+    static_configs:
+      - targets: ["api.staging.socialhood.com"]
+        labels:
+          environment: staging

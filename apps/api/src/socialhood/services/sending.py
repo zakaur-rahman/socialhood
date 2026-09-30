@@ -55,6 +55,7 @@ from socialhood.models.inbox import (
     MessageStatus,
 )
 from socialhood.observability.logging import get_logger
+from socialhood.observability.metrics import record_send
 from socialhood.platforms.base import (
     OutboundAttachment,
     OutboundButton,
@@ -938,6 +939,7 @@ async def _fail(send: _Send, code: str, platform_message: str = "") -> Delivery:
     )
     if await messages_repo.mark_failed(send.session, send.msg.id, code=code, message=reason):
         await _commit(send, publish=True)
+        record_send(send.conv.platform, failed_code=code)
     else:
         await send.session.rollback()
     return Delivery.FAILED
@@ -969,6 +971,7 @@ async def _mark_sent(send: _Send, platform_message_id: str | None, *, now: datet
         )
     if updated:
         await _commit(send, publish=True)
+        record_send(send.conv.platform)
     else:
         await send.session.rollback()
 
@@ -1022,5 +1025,6 @@ async def give_up(
         ):
             return False
         await _commit(send, publish=True)
+        record_send(conv.platform, failed_code=DELIVERY_UNKNOWN)
         log.warning("send_message_abandoned", message_id=str(message_id))
         return True

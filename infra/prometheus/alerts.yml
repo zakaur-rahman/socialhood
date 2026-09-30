@@ -1,0 +1,139 @@
+# Prometheus alert rules for Social Hood (T9.3, TR-OPS-01, TR-WH-08, TR-JOB-06, TR-OPS-04).
+#
+# The metrics come from the API's /metrics (apps/api/src/socialhood/observability). Load these
+# rules into Grafana Cloud or Prometheus as described in docs/ops/alerts.md, which also says how to
+# force each failure in staging. `promtool test rules alerts.test.yml` (run from this folder)
+# proves each rule fires on its failure and stays quiet on normal traffic.
+#
+# Ratios need a minimum volume, so one failed request in a quiet five minutes does not page anyone.
+# Summaries name the failure without the live value (the value is on the alert itself), which keeps
+# the promtool tests exact.
+
+groups:
+  - name: socialhood-t9.3
+    rules:
+      # Scheduled messages and posts go out within a minute of their time (FR-SMS-03); the
+      # dispatcher runs every 30 s. Fires when the oldest due row is more than 2 minutes late.
+      - alert: DispatcherLag
+        expr: max by (kind) (socialhood_dispatcher_lag_seconds) > 120
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Due {{ $labels.kind }}s are more than 2 minutes late"
+          runbook: docs/ops/runbook.md#dispatcher-lag
+
+      # TR-WH-08: Meta disables a webhook after about an hour of failed deliveries.
+      - alert: WebhookFailures
+        expr: |
+          (
+            sum by (provider) (rate(socialhood_webhook_deliveries_total{outcome!="accepted"}[5m]))
+            /
+            sum by (provider) (rate(socialhood_webhook_deliveries_total[5m]))
+          ) > 0.01
+          and
+          sum by (provider) (increase(socialhood_webhook_deliveries_total[5m])) >= 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Over 1% of {{ $labels.provider }} webhook deliveries failing for 5 minutes"
+          runbook: docs/ops/runbook.md#webhook-failures
+
+      - alert: SendFailures
+        expr: |
+          (
+            sum by (platform) (rate(socialhood_sends_total{outcome="failed"}[15m]))
+            /
+            sum by (platform) (rate(socialhood_sends_total[15m]))
+          ) > 0.05
+          and
+          sum by (platform) (increase(socialhood_sends_total[15m])) >= 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Over 5% of {{ $labels.platform }} sends failing"
+          runbook: docs/ops/runbook.md#send-failures
+
+      - alert: AIErrors
+        expr: |
+          (
+            sum (rate(socialhood_ai_calls_total{outcome!="ok"}[15m]))
+            /
+            sum (rate(socialhood_ai_calls_total[15m]))
+          ) > 0.05
+          and
+          sum (increase(socialhood_ai_calls_total[15m])) >= 10
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Over 5% of AI calls failing"
+          runbook: docs/ops/runbook.md#ai-errors
+
+  - name: socialhood-health
+    rules:
+      # The `ping` job runs every minute on the interactive lane: no runs means no worker.
+      - alert: WorkerDown
+        expr: (sum (increase(socialhood_job_runs_total{task="ping",status="succeeded"}[10m])) or vector(0)) < 1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "No worker has run a job in 10 minutes"
+          runbook: docs/ops/runbook.md#worker-down
+
+      # TR-JOB-06: bulk work must never delay a customer's DM.
+      - alert: InteractiveQueueBacklog
+        expr: socialhood_queue_oldest_ready_seconds{lane="interactive"} > 30
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Interactive jobs waiting more than 30 seconds"
+          runbook: docs/ops/runbook.md#queue-backlog
+
+      # TR-OPS-04 (also raised from the worker as a Sentry alert).
+      - alert: FailedJobs
+        expr: sum (increase(socialhood_job_runs_total{status="failed"}[1h])) > 20
+        labels:
+          severity: warning
+        annotations:
+          summary: "More than 20 jobs failed in the last hour"
+          runbook: docs/ops/runbook.md#failed-jobs
+
+      - alert: ApiServerErrors
+        expr: |
+          (
+            sum (rate(socialhood_http_requests_total{status=~"5.."}[10m]))
+            /
+            sum (rate(socialhood_http_requests_total[10m]))
+          ) > 0.01
+          and
+          sum (increase(socialhood_http_requests_total[10m])) >= 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Over 1% of API requests failing with 5xx"
+          runbook: docs/ops/runbook.md#api-errors
+
+      - alert: MetricsCollectorFailing
+        expr: socialhood_collector_up == 0
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The {{ $labels.collector }} gauges cannot be read (database or Valkey)"
+          runbook: docs/ops/runbook.md#metrics
+
+      # Fires when the scrape itself fails: API down, token wrong, or Valkey unreachable.
+      - alert: MetricsScrapeDown
+        expr: up{job="socialhood-api"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Prometheus cannot scrape the API's /metrics"
+          runbook: docs/ops/runbook.md#metrics

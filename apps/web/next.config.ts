@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 // TR-FE-07: one strict config. Never add ignoreBuildErrors or ignoreDuringBuilds.
@@ -27,4 +28,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// T9.3: Sentry's build step. Source maps upload (and a release is created) only when
+// SENTRY_AUTH_TOKEN is set, so builds without Sentry credentials are unchanged.
+const sentryUpload = Boolean(process.env.SENTRY_AUTH_TOKEN);
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  sourcemaps: { disable: !sentryUpload },
+  release: { create: sentryUpload, finalize: sentryUpload },
+  silent: !process.env.CI,
+  telemetry: false,
+});
