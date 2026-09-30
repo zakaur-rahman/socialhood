@@ -108,6 +108,7 @@ SEND_ROUTES = [
 AI_ROUTES = [
     f"/conversations/{NIL}/suggestions",
     f"/conversations/{NIL}/summary",
+    f"/conversations/{NIL}/polish",
     "/ai/caption",
     "/ai/hashtags",
     "/knowledge/test",

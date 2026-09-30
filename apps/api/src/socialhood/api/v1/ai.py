@@ -1,5 +1,5 @@
 """AI routes (§2.15): AI settings (T5.5), analysis corrections (T5.2), suggestions (T5.4),
-summaries (T5.7) and auto-reply decisions (T5.6).
+summaries (T5.7), auto-reply decisions (T5.6) and the composer's AI Polish (C-063).
 
 The signatures below are the P5 contract; each task implements its bodies and removes its
 ``openapi_extra`` marker so the tenancy suite covers the route.
@@ -25,9 +25,11 @@ from socialhood.schemas.ai import (
     AiSettings,
     AiSettingsUpdate,
     AnalysisCorrection,
+    PolishRequest,
+    PolishResult,
 )
 from socialhood.schemas.inbox import MessageAnalysis, Suggestion
-from socialhood.services import ai_settings, analysis, conversations, summaries
+from socialhood.services import ai_settings, analysis, conversations, polish, summaries
 from socialhood.services.suggestions import service as suggestions
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["ai"])
@@ -126,6 +128,29 @@ async def refresh_summary(conversation_id: uuid.UUID, ctx: AnyMember, session: S
     async with credits_gate(session):  # §2.15 "agent · credits"
         await summaries.request_summary(session, conv)
     return Response(status_code=202)
+
+
+@router.post(
+    "/conversations/{conversation_id}/polish",
+    operation_id="polish_reply",
+    dependencies=[ratelimit.AI],
+)
+async def polish_reply(
+    request: Request,
+    conversation_id: uuid.UUID,
+    body: PolishRequest,
+    ctx: AnyMember,
+    session: Session,
+) -> PolishResult:
+    """AI Polish (C-063): the member's draft with its grammar and clarity fixed, in the same
+    language (English, Hindi or Hinglish), meaning and roughly length; it never adds facts,
+    prices or promises. 1 credit; nothing is stored or sent. 402 quota_exceeded without credits;
+    503 when the AI can't answer or its answer changed the draft's details."""
+    conv = await conversations.get_or_404(session, conversation_id)
+    async with credits_gate(session):  # §2.15 "agent · credits"
+        return await polish.polish_reply(
+            session, request.app.state.sessionmaker, conv=conv, body=body
+        )
 
 
 @router.get("/messages/{message_id}/ai-decision", operation_id="get_ai_decision")

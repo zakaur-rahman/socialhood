@@ -67,6 +67,12 @@ def neutral_comments(call: FakeCall) -> dict[str, Any]:
     }
 
 
+def echo_draft(call: FakeCall) -> dict[str, Any]:
+    """The polish default: the DRAFT back as it was."""
+    last = call.contents[-1].text if call.contents else ""
+    return {"text": last.removeprefix("DRAFT:\n")}
+
+
 DEFAULTS: dict[str, Any] = {
     "analysis": {
         "intent": "other",
@@ -93,6 +99,7 @@ DEFAULTS: dict[str, Any] = {
     "post_summary": {"summary": "Commenters like the post.", "labels": []},
     "caption": {"caption": "New this week, made for sunny days. Which one is yours? #newarrivals"},
     "hashtags": {"hashtags": ["newarrivals", "shoplocal", "smallbusiness"]},
+    "polish": echo_draft,
 }
 
 

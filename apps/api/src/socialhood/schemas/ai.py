@@ -87,3 +87,21 @@ class AiDecisionFeedback(RequestModel):
     """POST …/ai-decisions/{id}/feedback: "bad" = should not have sent; null clears it."""
 
     feedback: Literal["bad"] | None
+
+
+PolishTone = Literal["friendly", "professional"]
+
+
+class PolishRequest(RequestModel):
+    """POST …/conversations/{id}/polish (C-063): the member's draft reply. ``tone`` overrides the
+    brand voice's tone for this rewrite."""
+
+    text: str = Field(min_length=1, max_length=4096)
+    tone: PolishTone | None = None
+
+
+class PolishResult(ResponseModel):
+    """The polished draft: the same language, meaning and roughly the length, with no fact,
+    number, link or promise the draft didn't have. Nothing is stored or sent."""
+
+    text: str
