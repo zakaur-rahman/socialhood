@@ -5,7 +5,7 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tansta
 import { applyScheduled, removeScheduled, type ScheduledPages } from "@/lib/inbox/cache";
 import { uuid } from "@/lib/uuid";
 
-import { useApi } from "../provider";
+import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type { ScheduledMessage, ScheduledMessageCreate, ScheduledMessageList, ScheduledMessagePatch } from "../types";
 import { keys } from "./keys";
 import { expectOk, unwrap } from "./unwrap";
@@ -64,6 +64,8 @@ export function useCreateScheduled(wid: string, conversationId: string) {
         }),
       ),
     onSuccess: after,
+    // Over pending_scheduled_messages, the schedule popover says so, with Upgrade (inbox Composer).
+    meta: INLINE_PLAN_LIMITS,
   });
 }
 

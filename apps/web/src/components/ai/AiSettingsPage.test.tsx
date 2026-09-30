@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AiSettings, SocialAccount } from "@/lib/api/types";
-import { account, aiSettings, billingState, json, problem, renderWithApi, workspace, type Call } from "@/test/api";
+import { account, aiSettings, billingState, json, planList, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
 import { AiSettingsPage } from "./AiSettingsPage";
 
@@ -39,7 +39,9 @@ function setup({
         patch
           ? patch(call)
           : json({ ...(accounts.find((a) => a.id === p.id) as SocialAccount), ...(call.body as object) }),
+      "GET /v1/billing/plans": () => json(planList()),
     },
+    upgradeDialog: true,
   });
   const patches = () => view.calls.filter((c) => c.method === "PATCH").map((c) => ({ path: c.path, body: c.body }));
   return { ...view, patches };
@@ -93,7 +95,9 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
     const instagram = await screen.findByRole("radiogroup", { name: "@maple.bakery" });
     await user.click(within(instagram).getByRole("radio", { name: "Auto" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Turn on Auto" }));
+    // A 402 from before C-049 carries only its detail; the dialog still knows what it is about.
     expect(await screen.findByRole("dialog", { name: "Auto mode is part of Pro" })).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("takeover period and escalation phrases save with the rest of the settings", async () => {

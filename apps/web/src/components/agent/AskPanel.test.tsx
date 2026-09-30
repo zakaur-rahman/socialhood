@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { resetAgentHandoff } from "@/lib/agent/handoff";
 import { resetAskStore, useAskStore } from "@/lib/agent/store";
 import type { AgentRun, AgentRunCreate, AgentRunDetail, AgentThread, BillingState, WorkspaceSummary } from "@/lib/api/types";
-import { billingState, json, problem, renderWithApi, workspace, type Call } from "@/test/api";
+import { billingState, json, planList, problem, renderWithApi, workspace, type Call } from "@/test/api";
 import {
   agentStep,
   agentThread,
@@ -92,7 +92,11 @@ function setup(server: Partial<Server> = {}, ws: WorkspaceSummary = workspace) {
       <AskButton variant="sidebar" />
       <AskRoot />
     </>,
-    { handlers: handlers(state), ws },
+    {
+      handlers: { ...handlers(state), "GET /v1/billing/plans": () => json(planList()) },
+      ws,
+      upgradeDialog: true,
+    },
   );
   const posts = () => view.calls.filter((c) => c.method === "POST" && c.path === "/v1/w/w1/agent/runs");
   return { ...view, state, posts };
@@ -488,8 +492,26 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
     await user.type(box, "Top posts{Enter}");
     const alert = await within(panel).findByRole("alert");
     expect(alert).toHaveTextContent("You've used all 5,000 AI credits for this month.");
-    expect(within(alert).queryByRole("link", { name: "Upgrade" })).toBeNull();
+    expect(within(alert).queryByRole("button", { name: "Upgrade" })).toBeNull();
     expect(box).toHaveValue("Top posts");
+    expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument();
+  });
+
+  it("out of credits (402): one message, beside the question; its Upgrade opens the upgrade dialog", async () => {
+    setup({
+      create: () =>
+        problem(402, "quota_exceeded", "You've used all 5,000 AI credits for this month.", {
+          entitlement: "ai_credits_monthly",
+          limit: 5000,
+        }),
+    });
+    const { user, panel } = await openPanel();
+    await user.type(within(panel).getByRole("textbox", { name: "Ask Social Hood a question" }), "Top posts{Enter}");
+    const alert = await within(panel).findByRole("alert");
+    expect(alert).toHaveTextContent("You've used all 5,000 AI credits for this month.");
+    expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument();
+    await user.click(within(alert).getByRole("button", { name: "Upgrade" }));
+    expect(await screen.findByRole("dialog", { name: "AI credits used up" })).toBeInTheDocument();
   });
 
   it("with the credits used up, the question box explains and doesn't send", async () => {

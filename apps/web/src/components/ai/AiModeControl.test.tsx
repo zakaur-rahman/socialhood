@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Conversation } from "@/lib/api/types";
+import { browser } from "@/lib/billing/browser";
 import {
   account,
   aiSettings,
   billingState,
   conversation,
   json,
+  planList,
   problem,
   renderWithApi,
   workspace,
@@ -41,11 +43,14 @@ function setup(
       handlers: {
         "GET /v1/w/:wid/social-accounts": () => json({ items: [account({ ai_mode: "suggest" })] }),
         "GET /v1/w/:wid/billing": () => json(billing),
+        "GET /v1/billing/plans": () => json(planList()),
+        "POST /v1/w/:wid/billing/checkout": () => json({ checkout_url: "https://checkout.dodo.test/s/1", trial: true }),
         "GET /v1/w/:wid/ai-settings": () =>
           json(aiSettings({ escalation_phrases: ["lawyer", "cancel my order"], takeover_minutes: 30 })),
         "PATCH /v1/w/:wid/conversations/:id": (call) =>
           patch ? patch(call) : json({ ...conv, ...(call.body as object) }),
       },
+      upgradeDialog: true,
     },
   );
   const patches = () => view.calls.filter((c) => c.method === "PATCH").map((c) => c.body);
@@ -92,28 +97,36 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
     expect(patches()[0]).toMatchObject({ ai_mode_override: "auto" });
   });
 
-  it("a 402 from the API opens the upgrade dialog", async () => {
+  it("a 402 from the API opens the upgrade dialog, not a toast", async () => {
     const user = userEvent.setup();
-    setup("menu", {}, { patch: () => problem(402, "entitlement_required", "Auto mode is part of Pro.") });
+    setup("menu", {}, {
+      patch: () => problem(402, "entitlement_required", "Auto mode is part of Pro.", { entitlement: "ai_modes", limit: null }),
+    });
     const menu = await openMenu();
     await user.click(within(menu).getByRole("menuitemradio", { name: "Auto" }));
     await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Turn on Auto" }));
 
     const upgrade = await screen.findByRole("dialog", { name: "Auto mode is part of Pro" });
-    expect(within(upgrade).getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    // Already on a paid plan: the owner is sent to billing rather than a second checkout.
+    expect(within(upgrade).getByRole("link", { name: "View billing" })).toHaveAttribute("href", "/w/maple/settings/billing");
     expect(toast.error).not.toHaveBeenCalled();
   });
 
   it("on a plan without Auto: a Pro badge, and choosing it offers the trial instead of saving", async () => {
     const user = userEvent.setup();
-    const { patches } = setup("menu", {}, { billing: freeBilling });
+    const assign = vi.spyOn(browser, "assign").mockImplementation(() => {});
+    const { patches, calls } = setup("menu", {}, { billing: freeBilling });
     const menu = await openMenu();
     const auto = await within(menu).findByRole("menuitemradio", { name: "Auto Pro" });
     await user.click(auto);
     const upgrade = await screen.findByRole("dialog", { name: "Auto mode is part of Pro" });
-    expect(await within(upgrade).findByRole("link", { name: "Start 7-day trial" })).toBeInTheDocument();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     expect(patches()).toHaveLength(0);
+    // Straight to checkout (F-15).
+    await user.click(await within(upgrade).findByRole("button", { name: "Start 7-day trial" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
+    expect(calls.find((c) => c.method === "POST")?.body).toEqual({ plan: "pro" });
+    assign.mockRestore();
   });
 
   it("Account default clears the override", async () => {

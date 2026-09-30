@@ -5,8 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { isEntitlementError } from "@/components/ai/AiModeControl";
-import { AutoConfirmDialog, UpgradeDialog } from "@/components/ai/AiModeDialogs";
+import { AutoConfirmDialog } from "@/components/ai/AiModeDialogs";
 import { AccountCard } from "@/components/connections/AccountCard";
 import { ConnectWhatsAppButton, useWhatsAppConnect } from "@/components/connections/ConnectWhatsAppButton";
 import { InstagramGlyph } from "@/components/connections/InstagramGlyph";
@@ -15,7 +14,7 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, isPlanLimitError } from "@/lib/api/errors";
 import {
   useCreateSandboxAccount,
   useDisconnectAccount,
@@ -26,6 +25,7 @@ import {
 } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { connectResult, emptyStates, errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const SANDBOX_TOOLS = process.env.NODE_ENV !== "production";
@@ -51,12 +51,12 @@ function Connections() {
   const sandbox = useCreateSandboxAccount(wid);
   const whatsapp = useWhatsAppConnect(wid);
   const [confirmAuto, setConfirmAuto] = useState<SocialAccount | null>(null);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const startConnect = useCallback(() => {
     connect.mutate(undefined, {
       onSuccess: (url) => window.location.assign(url),
-      onError: (error) => toast.error(errorMessage(error)),
+      // Over accounts_per_platform (402): the upgrade dialog says so.
+      onError: (error) => toastError(error),
     });
   }, [connect]);
 
@@ -136,8 +136,8 @@ function Connections() {
                     : update.mutate(
                         { id: account.id, patch },
                         {
-                          onError: (error) =>
-                            isEntitlementError(error) ? setUpgradeOpen(true) : toast.error(errorMessage(error)),
+                          // A 402 opens the upgrade dialog by itself (lib/api/provider.tsx).
+                          onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
                         },
                       ),
                 onReconnect: account.platform === "whatsapp" ? whatsapp.connect : startConnect,
@@ -171,15 +171,13 @@ function Connections() {
             update.mutate(
               { id: confirmAuto.id, patch: { ai_mode: "auto" } },
               {
-                onError: (error) =>
-                  isEntitlementError(error) ? setUpgradeOpen(true) : toast.error(errorMessage(error)),
+                onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
               },
             );
           }
           setConfirmAuto(null);
         }}
       />
-      <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
     </PageFrame>
   );
 }

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
@@ -13,7 +13,11 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 export const metadata: Metadata = {
   title: { default: "Social Hood", template: "%s · Social Hood" },
   description: "One inbox for Instagram and WhatsApp, with AI that answers from your business knowledge.",
+  // TR-FE-09: added to an iPhone's Home Screen, the app opens standalone (where push works).
+  appleWebApp: { capable: true, title: "Social Hood", statusBarStyle: "black" },
 };
+
+export const viewport: Viewport = { themeColor: "#000000" };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (

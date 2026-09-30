@@ -12,6 +12,8 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { isPlanLimitError } from "@/lib/api/errors";
+import { useUpgradeDialog } from "@/lib/api/provider";
 import {
   autoAllowed,
   toSettingsUpdate,
@@ -26,8 +28,8 @@ import { AI_MODE_HINT, AI_MODE_LABEL, AI_MODES, BUILT_IN_ESCALATIONS, TAKEOVER_O
 import { errorMessage } from "@/lib/copy";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
-import { isEntitlementError } from "./AiModeControl";
-import { AutoConfirmDialog, UpgradeDialog } from "./AiModeDialogs";
+import { AUTO_UPGRADE } from "./AiModeControl";
+import { AutoConfirmDialog } from "./AiModeDialogs";
 import { ChipListInput } from "./ChipListInput";
 
 function handleOf(account: SocialAccount): string {
@@ -69,20 +71,21 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
   const billing = useBilling(workspace.id);
   const allowsAuto = autoAllowed(billing.data, workspace.plan);
   const [confirming, setConfirming] = useState<SocialAccount | null>(null);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const upgrade = useUpgradeDialog();
 
   const save = (account: SocialAccount, mode: AiMode) =>
     update.mutate(
       { id: account.id, patch: { ai_mode: mode } },
       {
         onSuccess: () => toast.success(`${handleOf(account)}: AI ${AI_MODE_LABEL[mode]}`),
-        onError: (error) => (isEntitlementError(error) ? setUpgradeOpen(true) : toast.error(errorMessage(error))),
+        // A 402 opens the upgrade dialog by itself (lib/api/provider.tsx).
+        onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
       },
     );
 
   const choose = (account: SocialAccount, mode: AiMode) => {
     if (mode === account.ai_mode) return;
-    if (mode === "auto") return allowsAuto ? setConfirming(account) : setUpgradeOpen(true);
+    if (mode === "auto") return allowsAuto ? setConfirming(account) : upgrade.open(AUTO_UPGRADE);
     save(account, mode);
   };
 
@@ -134,7 +137,6 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
           setConfirming(null);
         }}
       />
-      <UpgradeDialog open={upgradeOpen} onOpenChange={setUpgradeOpen} />
     </section>
   );
 }

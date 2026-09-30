@@ -31,6 +31,7 @@ import type { Automation, AutomationSort, AutomationStatus, SocialAccount, Trigg
 import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
 import { etaText, formatCount, TRIGGER_LABEL } from "@/lib/automations/format";
 import { emptyStates, errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -192,7 +193,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             toast.error(`${automation.name} isn't ready: ${fields[0].message}`, {
               action: { label: "Finish setup", onClick: () => router.push(editorHref(workspace.slug, automation.id)) },
             });
-          } else toast.error(errorMessage(error));
+          } else toastError(error); // a plan limit (402) is the upgrade dialog's to say
         },
       });
     },

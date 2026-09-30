@@ -17,6 +17,7 @@ import {
   knowledgeGap,
   knowledgeSource,
   noContent,
+  planList,
   problem,
   renderWithApi,
   type Call,
@@ -37,6 +38,7 @@ type State = {
   used: number;
   create?: (call: Call) => Response;
   test?: KnowledgeTestResult;
+  testFails?: () => Response;
 };
 
 function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<MediaAsset>) {
@@ -99,6 +101,7 @@ function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<Me
           return noContent();
         },
         "POST /v1/w/:wid/knowledge/test": () =>
+          state.testFails?.() ??
           json(state.test ?? { can_answer: true, answer: "Yes, in 5–7 days.", missing_info: null, sources: [] }),
         "GET /v1/w/:wid/knowledge-gaps": () => json({ items: state.gaps }),
         "POST /v1/w/:wid/knowledge-gaps/:id/dismiss": (_, p) => {
@@ -107,7 +110,9 @@ function setup(partial: Partial<State> = {}, upload?: (file: File) => Promise<Me
           return json({ ...gap, status: "dismissed" });
         },
         "GET /v1/w/:wid/billing": () => json(billingState()),
+        "GET /v1/billing/plans": () => json(planList()),
       },
+      upgradeDialog: true,
     },
   );
   const posted = () =>
@@ -281,7 +286,8 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
 
   it("over the plan's knowledge limit (402): says which limit, with Upgrade", async () => {
     const { state } = setup();
-    state.create = () => problem(402, "quota_exceeded", "Plan limit reached");
+    state.create = () =>
+      problem(402, "quota_exceeded", "Plan limit reached", { entitlement: "knowledge_characters", limit: 200_000 });
     await screen.findByRole("table", { name: "Knowledge sources" });
     const user = await addFromMenu("FAQ");
     const form = await screen.findByRole("form", { name: "Add an FAQ" });
@@ -290,7 +296,12 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
     await user.click(within(form).getByRole("button", { name: "Add" }));
     const alert = await within(form).findByRole("alert");
     expect(alert).toHaveTextContent("Your plan includes 200,000 characters of knowledge.");
-    expect(within(alert).getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    // One message: the form's (the create opts out of the automatic dialog); Upgrade opens it.
+    expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument();
+    await user.click(within(alert).getByRole("button", { name: "Upgrade" }));
+    expect(await screen.findByRole("dialog", { name: "Knowledge limit reached" })).toHaveTextContent(
+      "includes 200,000 characters of knowledge.",
+    );
   });
 
   it("the usage meter turns full at the limit", async () => {
@@ -356,6 +367,24 @@ describe("Test your knowledge (FR-KB-03)", () => {
     const answer = await within(box).findByTestId("test-answer");
     expect(answer).toHaveTextContent("Not in your knowledge");
     expect(answer).toHaveTextContent("Missing: gift wrapping options.");
+  });
+
+  it("out of credits (402): one message where the answer goes, with Upgrade", async () => {
+    const user = userEvent.setup();
+    setup({
+      testFails: () =>
+        problem(402, "quota_exceeded", "Your AI credits for this period are used up.", {
+          entitlement: "ai_credits_monthly",
+          limit: 5000,
+        }),
+    });
+    const box = await screen.findByRole("region", { name: "Test your knowledge" });
+    await user.type(within(box).getByLabelText("Question"), "Do you gift wrap?{Enter}");
+    const alert = await within(box).findByRole("alert");
+    expect(alert).toHaveTextContent("Your AI credits for this period are used up.");
+    expect(screen.queryByTestId("upgrade-dialog")).not.toBeInTheDocument();
+    await user.click(within(alert).getByRole("button", { name: "Upgrade" }));
+    expect(await screen.findByRole("dialog", { name: "AI credits used up" })).toBeInTheDocument();
   });
 });
 

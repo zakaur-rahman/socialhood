@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 
-import { useApi } from "../provider";
+import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type {
   KnowledgeGap,
   KnowledgeGapList,
@@ -62,6 +62,8 @@ export function useCreateKnowledgeSource(wid: string) {
         queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] }),
       ]);
     },
+    // The form says which limit stopped it, with Upgrade, and keeps what was typed (SourceSheet).
+    meta: INLINE_PLAN_LIMITS,
   });
 }
 
@@ -107,6 +109,8 @@ export function useTestKnowledge(wid: string) {
   return useMutation<KnowledgeTestResult, Error, string>({
     mutationFn: (question) =>
       unwrap(api.POST("/v1/w/{wid}/knowledge/test", { params: { path: { wid } }, body: { question } })),
+    // Out of credits, the answer area says so, with Upgrade (TestBox).
+    meta: INLINE_PLAN_LIMITS,
   });
 }
 

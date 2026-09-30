@@ -1,8 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
-import { BILLING_HREF } from "@/components/shell/nav";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -13,9 +10,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useAiSettings, useBilling } from "@/lib/api/queries";
+import { useAiSettings } from "@/lib/api/queries";
 import { BUILT_IN_ESCALATIONS, takeoverText } from "@/lib/ai/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -75,44 +70,5 @@ export function AutoConfirmDialog({
   );
 }
 
-/** entitlement_required (§4.7): "{Feature} is part of Pro." with Start 7-day trial or Upgrade. */
-export function UpgradeDialog({
-  open,
-  onOpenChange,
-  feature = "Auto mode",
-  body = "On Pro, the AI can answer customers on its own when it's confident and the answer is in your knowledge.",
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  feature?: string;
-  body?: string;
-}) {
-  const workspace = useCurrentWorkspace();
-  const billing = useBilling(workspace.id, open);
-  const canUpgrade = workspace.role !== "agent";
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-line bg-panel">
-        <DialogHeader>
-          <DialogTitle>{feature} is part of Pro</DialogTitle>
-          <DialogDescription className="text-fg-secondary">
-            {body}
-            {canUpgrade ? "" : " Ask an owner of this workspace to upgrade."}
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="border-line bg-transparent">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Not now
-          </Button>
-          {canUpgrade ? (
-            <Button asChild className="bg-brand-gradient text-white">
-              <Link href={BILLING_HREF(workspace.slug)}>
-                {billing.data?.trial_eligible ? "Start 7-day trial" : "Upgrade"}
-              </Link>
-            </Button>
-          ) : null}
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
+// The upgrade dialog (entitlement_required, quota_exceeded) is components/billing/UpgradeDialog:
+// every 402 opens it (T8.4).

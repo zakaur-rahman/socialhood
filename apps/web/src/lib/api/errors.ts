@@ -12,6 +12,10 @@ export type Problem = {
   detail?: string;
   errors?: ProblemField[];
   request_id?: string | null;
+  /** 402 only (C-049): the §1.7 entitlement key the request ran into. */
+  entitlement?: string;
+  /** 402 only: the plan's limit for that key; null for a feature the plan lacks. */
+  limit?: number | null;
 };
 
 export class ApiError extends Error {
@@ -20,6 +24,8 @@ export class ApiError extends Error {
   readonly detail?: string;
   readonly errors: ProblemField[];
   readonly requestId?: string | null;
+  readonly entitlement?: string;
+  readonly limit?: number | null;
 
   constructor(problem: Problem) {
     super(problem.detail ?? problem.title);
@@ -29,6 +35,8 @@ export class ApiError extends Error {
     this.detail = problem.detail;
     this.errors = problem.errors ?? [];
     this.requestId = problem.request_id;
+    this.entitlement = typeof problem.entitlement === "string" ? problem.entitlement : undefined;
+    this.limit = typeof problem.limit === "number" || problem.limit === null ? problem.limit : undefined;
   }
 }
 
@@ -48,4 +56,16 @@ export function toApiError(error: unknown, status?: number): ApiError {
     status: status ?? 0,
     code: status ? "internal" : "network",
   });
+}
+
+/** The two 402 codes (§4.7, TR-BIL-04). */
+export const PLAN_LIMIT_CODES = ["entitlement_required", "quota_exceeded"] as const;
+export type PlanLimitCode = (typeof PLAN_LIMIT_CODES)[number];
+
+/** A 402: the plan lacks a feature or a limit is reached; the upgrade dialog takes it from here. */
+export function isPlanLimitError(error: unknown): error is ApiError {
+  return (
+    error instanceof ApiError &&
+    (error.status === 402 || (PLAN_LIMIT_CODES as readonly string[]).includes(error.code))
+  );
 }

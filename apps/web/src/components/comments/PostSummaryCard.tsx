@@ -11,6 +11,7 @@ import { ApiError } from "@/lib/api/errors";
 import { useRefreshPostSummary } from "@/lib/api/queries";
 import type { PostDetail } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const NONE = "none";
@@ -48,7 +49,8 @@ export function PostSummaryCard({ post, now }: { post: PostDetail; now: Date }) 
     refresh.mutate(undefined, {
       onError: (error) => {
         setRequested(null);
-        toast.error(error instanceof ApiError && error.code === "conflict" ? NOTHING_TO_SUMMARIZE : errorMessage(error));
+        // Out of credits (402): the upgrade dialog says so.
+        toastError(error, error instanceof ApiError && error.code === "conflict" ? NOTHING_TO_SUMMARIZE : errorMessage(error));
       },
     });
   };

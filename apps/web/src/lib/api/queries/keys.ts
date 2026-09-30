@@ -74,6 +74,10 @@ export const keys = {
   knowledgeSources: (wid: string) => ["w", wid, "knowledge-sources"] as const,
   knowledgeGaps: (wid: string) => ["w", wid, "knowledge-gaps"] as const,
   billing: (wid: string) => ["w", wid, "billing"] as const,
+  // P8: public plans, and the member's own notification settings and push
+  billingPlans: ["billing-plans"] as const,
+  notificationPreferences: (wid: string) => ["w", wid, "notification-preferences"] as const,
+  pushConfig: ["push-config"] as const,
   // publishing: the Schedule page (P7)
   calendars: (wid: string) => ["w", wid, "calendar"] as const,
   calendar: (wid: string, from: string, to: string) => ["w", wid, "calendar", from, to] as const,

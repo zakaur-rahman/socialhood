@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRefreshSummary } from "@/lib/api/queries";
 import type { Conversation } from "@/lib/api/types";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { relativeTime } from "@/lib/time";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -55,7 +55,7 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
     refresh.mutate(undefined, {
       onError: (error) => {
         setRequested(null);
-        toast.error(errorMessage(error));
+        toastError(error); // out of credits (402): the upgrade dialog says so
       },
     });
   };

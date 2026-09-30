@@ -3,6 +3,7 @@
 import { AlertTriangle, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { UpgradeAction } from "@/components/billing/UpgradeAction";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,9 +59,11 @@ export function TestBox({ wid }: { wid: string }) {
             <Skeleton className="h-3 w-4/5 bg-raised" />
           </div>
         ) : test.isError ? (
-          <p role="alert" className="text-sm text-danger-fg">
-            {errorMessage(test.error)}
-          </p>
+          <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-danger-fg">
+            <p className="min-w-0 flex-1">{errorMessage(test.error)}</p>
+            {/* Out of credits (402): Upgrade opens the dialog (INLINE_PLAN_LIMITS on the test). */}
+            <UpgradeAction error={test.error} />
+          </div>
         ) : result ? (
           result.can_answer ? (
             <div className="space-y-2 rounded-lg border border-brand-line bg-field p-3" data-testid="test-answer">

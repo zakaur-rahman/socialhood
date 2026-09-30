@@ -15,6 +15,7 @@ import {
 import type { Conversation, Message, Suggestion } from "@/lib/api/types";
 import { escalationBanner } from "@/lib/ai/format";
 import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { setPendingSuggestion } from "@/lib/inbox/cache";
 import { contactName, firstName } from "@/lib/inbox/format";
 import { useInboxStore } from "@/lib/inbox/store";
@@ -147,7 +148,7 @@ export function useSuggestionSlot({
     regenerate.mutate(undefined, {
       onError: (error) => {
         setWaitingFor(null);
-        toast.error(errorMessage(error));
+        toastError(error); // out of credits (402): the upgrade dialog says so
       },
     });
   };

@@ -6,6 +6,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import type { ReactElement, ReactNode } from "react";
 
+import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { makeApi } from "@/lib/api/client";
 import { ApiClientProvider, makeQueryClient } from "@/lib/api/provider";
@@ -25,6 +26,8 @@ import type {
   PostComparison,
   PostDetail,
   PostPerformance,
+  PlanList,
+  PlanOffer,
   PostSummary,
   SocialAccount,
   Suggestion,
@@ -39,8 +42,13 @@ export function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 }
 
-export function problem(status: number, code: string, detail?: string): Response {
-  return new Response(JSON.stringify({ type: "about:blank", title: code, status, code, detail }), {
+export function problem(
+  status: number,
+  code: string,
+  detail?: string,
+  extra: { entitlement?: string; limit?: number | null } = {},
+): Response {
+  return new Response(JSON.stringify({ type: "about:blank", title: code, status, code, detail, ...extra }), {
     status,
     headers: { "Content-Type": "application/problem+json" },
   });
@@ -107,14 +115,24 @@ export function renderWithApi(
     handlers = {},
     queryClient = makeQueryClient(),
     ws = workspace,
-  }: { handlers?: Record<string, Handler>; queryClient?: QueryClient; ws?: WorkspaceSummary } = {},
+    upgradeDialog = false,
+  }: {
+    handlers?: Record<string, Handler>;
+    queryClient?: QueryClient;
+    ws?: WorkspaceSummary;
+    /** Render the app's upgrade dialog, which every 402 opens (AppShell renders it in the app). */
+    upgradeDialog?: boolean;
+  } = {},
 ) {
   queryClient.setDefaultOptions({ queries: { retry: false, staleTime: Infinity, refetchOnWindowFocus: false } });
   const { api, calls } = fakeApi(handlers);
   const wrap = (node: ReactNode) => (
     <ApiClientProvider api={api} queryClient={queryClient}>
       <WorkspaceProvider value={ws}>
-        <TooltipProvider>{node}</TooltipProvider>
+        <TooltipProvider>
+          {node}
+          {upgradeDialog ? <UpgradeDialog /> : null}
+        </TooltipProvider>
       </WorkspaceProvider>
     </ApiClientProvider>
   );
@@ -327,6 +345,31 @@ export function billingState(overrides: Partial<BillingState> = {}): BillingStat
     entitlements: [{ key: "ai_modes", value: ["off", "suggest", "auto"] }],
     usage: [{ metric: "ai_credits", used: 120, limit: 5000, period_end: "2026-10-01" }],
     ...overrides,
+  };
+}
+
+/** GET /v1/billing/plans (C-049): Free, Pro with its Dodo price and trial, Max not yet available. */
+export function planList(overrides: { proPrice?: PlanOffer["price"] } = {}): PlanList {
+  const ent = (plan: "free" | "pro" | "max") => [
+    { key: "accounts_per_platform", value: { free: 1, pro: 3, max: 10 }[plan] },
+    { key: "active_automations", value: { free: 3, pro: 50, max: null }[plan] },
+    { key: "ai_modes", value: plan === "free" ? ["off", "suggest"] : ["off", "suggest", "auto"] },
+    { key: "ai_credits_monthly", value: { free: 200, pro: 5000, max: 25000 }[plan] },
+    { key: "knowledge_characters", value: { free: 200_000, pro: 5_000_000, max: 50_000_000 }[plan] },
+    { key: "scheduled_posts_monthly", value: { free: 10, pro: 300, max: null }[plan] },
+  ];
+  return {
+    items: [
+      { plan: "free", available: true, entitlements: ent("free"), price: null, trial_days: 0 },
+      {
+        plan: "pro",
+        available: true,
+        entitlements: ent("pro"),
+        price: "proPrice" in overrides ? overrides.proPrice : { plan: "pro", amount_minor: 99_900, currency: "INR", interval: "month" },
+        trial_days: 7,
+      },
+      { plan: "max", available: false, entitlements: ent("max"), price: null, trial_days: 0 },
+    ],
   };
 }
 

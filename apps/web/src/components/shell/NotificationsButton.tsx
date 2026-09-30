@@ -3,8 +3,9 @@
 import { AlertTriangle, Bell, CircleAlert, Info } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
+import { GetAlertsCard } from "@/components/push/GetAlertsCard";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -47,6 +48,13 @@ export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
           items={notifications.data?.items ?? []}
           unread={unread}
           slug={workspace.slug}
+          offer={
+            <GetAlertsCard
+              items={notifications.data?.items ?? []}
+              slug={workspace.slug}
+              onNavigate={() => setOpen(false)}
+            />
+          }
           marking={markRead.isPending}
           onMarkAllRead={() => markRead.mutate({ all: true })}
           onOpen={(item) => {
@@ -72,6 +80,7 @@ export function NotificationsPanel({
   marking,
   onMarkAllRead,
   onOpen,
+  offer,
   now = new Date(),
 }: {
   items: NotificationItem[];
@@ -80,6 +89,8 @@ export function NotificationsPanel({
   marking: boolean;
   onMarkAllRead: () => void;
   onOpen: (item: NotificationItem) => void;
+  /** F-19: "Get alerts on your phone", above the list. */
+  offer?: ReactNode;
   now?: Date;
 }) {
   return (
@@ -90,6 +101,7 @@ export function NotificationsPanel({
           Mark all read
         </Button>
       </div>
+      {offer}
       {items.length === 0 ? (
         <EmptyState title={emptyStates.notifications.title} body={emptyStates.notifications.body} />
       ) : (

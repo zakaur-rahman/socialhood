@@ -142,10 +142,27 @@ export type Baseline = Schemas["Baseline"];
 export type AgeName = PostPerformance["age"];
 export type MetricName = MetricComparison["metric"];
 
-// ---- billing state (TR-BIL-04; P5 reads usage for the AI credit banner)
+// ---- billing (TR-BIL-04, F-15; P5 reads usage for the AI credit banner, P8 the rest)
 
 export type BillingState = Schemas["BillingState"];
 export type UsageMeter = Schemas["UsageMeter"];
+export type BillingStatus = BillingState["status"];
+export type BillingPrice = Schemas["BillingPrice"];
+export type EntitlementValue = Schemas["EntitlementValue"];
+export type PlanOffer = Schemas["PlanOffer"];
+export type PlanList = Schemas["PlanList"];
+export type CheckoutSession = Schemas["CheckoutSession"];
+export type PortalSession = Schemas["PortalSession"];
+
+// ---- notification preferences and push (P8: FR-NOT-03, FR-NOT-04, TR-FE-09, C-049)
+
+export type NotificationPreferences = Schemas["NotificationPreferences"];
+export type PushPreferences = Schemas["PushPreferences"];
+export type PushEvent = keyof PushPreferences;
+export type PushConfig = Schemas["PushConfig"];
+export type PushDevice = Schemas["PushDevice"];
+export type PushSubscriptionCreate = Schemas["PushSubscriptionCreate"];
+export type DigestUnsubscribed = Schemas["DigestUnsubscribed"];
 
 // ---- publishing: the Schedule page (P7: FR-PUB-08, 09, 12, 14, UX-SCR-04, UX-SCR-14)
 

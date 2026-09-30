@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
 import { useCompleteWhatsAppSignup } from "@/lib/api/queries";
 import { errorMessage, whatsappConnected } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { loadFacebookSdk, runEmbeddedSignup } from "@/lib/whatsapp/embedded-signup";
 
 import { WhatsAppGlyph } from "./WhatsAppGlyph";
@@ -24,7 +25,8 @@ export function whatsappSignupError(error: unknown): string {
   if (error instanceof ApiError && error.code === "account_in_use") {
     return "This account is connected to another Social Hood workspace. Disconnect it there first.";
   }
-  // Other refusals (Meta's weekly onboarding allowance, plan limits) carry their copy in detail.
+  // Other refusals (Meta's weekly onboarding allowance) carry their copy in detail; a plan limit
+  // (402) is the upgrade dialog's.
   return errorMessage(error);
 }
 
@@ -55,7 +57,8 @@ export function useWhatsAppConnect(wid: string) {
         { code: result.code, waba_id: result.waba_id, phone_number_id: result.phone_number_id },
         {
           onSuccess: (account) => toast.success(whatsappConnected(account.display_name, account.phone_number)),
-          onError: (error) => toast.error(whatsappSignupError(error)),
+          // Over accounts_per_platform (402): the upgrade dialog says so.
+          onError: (error) => toastError(error, whatsappSignupError(error)),
         },
       );
     } catch (error) {

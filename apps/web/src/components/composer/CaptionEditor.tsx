@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
+import { UpgradeAction } from "@/components/billing/UpgradeAction";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -86,6 +87,8 @@ export function CaptionField({
   const overMentions = mentions && counts.mentions > MAX_MENTIONS;
   const [suggested, setSuggested] = useState<string[] | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // The failure behind the notice: a plan limit (402) gets Upgrade beside it.
+  const [noticeError, setNoticeError] = useState<unknown>(null);
   const suggest = useSuggestHashtags(wid);
 
   const present = new Set(hashtagsIn(value));
@@ -93,6 +96,7 @@ export function CaptionField({
 
   const onSuggest = () => {
     setNotice(null);
+    setNoticeError(null);
     if (!value.trim()) {
       setNotice("Write a caption first, then suggest hashtags.");
       return;
@@ -105,7 +109,10 @@ export function CaptionField({
           setSuggested(result.hashtags);
           if (result.hashtags.length === 0) setNotice("No new hashtags to suggest for this caption.");
         },
-        onError: (error) => setNotice(errorMessage(error)),
+        onError: (error) => {
+          setNotice(errorMessage(error));
+          setNoticeError(error);
+        },
       },
     );
   };
@@ -163,9 +170,12 @@ export function CaptionField({
         </p>
       ) : null}
       {notice ? (
-        <p role="alert" className="flex items-start gap-1.5 text-xs text-danger-fg">
-          <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden /> {notice}
-        </p>
+        <div role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-danger-fg">
+          <p className="flex min-w-0 flex-1 items-start gap-1.5">
+            <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden /> {notice}
+          </p>
+          <UpgradeAction error={noticeError} />
+        </div>
       ) : null}
       {suggested && remaining.length > 0 ? (
         <div role="group" aria-label="Suggested hashtags" className="rounded-lg border border-line bg-field p-3">
@@ -334,11 +344,13 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [failure, setFailure] = useState<unknown>(null);
   const generate = useGenerateCaption(wid);
   const briefId = useId();
 
   const run = (mode: "write" | "improve") => {
     setError(null);
+    setFailure(null);
     generate.mutate(mode === "write" ? { mode, brief: brief.trim() } : { mode, caption, brief: brief.trim() || null }, {
       onSuccess: (result) => {
         onWritten(result.caption);
@@ -346,7 +358,11 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
         setBrief("");
         toast.success(mode === "write" ? "Caption written. Change anything you like." : "Caption improved. Change anything you like.");
       },
-      onError: (caught) => setError(errorMessage(caught)),
+      // A 402 stays here beside the brief (INLINE_PLAN_LIMITS), with Upgrade opening the dialog.
+      onError: (caught) => {
+        setError(errorMessage(caught));
+        setFailure(caught);
+      },
     });
   };
 
@@ -387,9 +403,10 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
             <p className="text-xs text-fg-secondary">Written in your brand voice. Uses AI credits.</p>
           </div>
           {error ? (
-            <p role="alert" className="text-xs text-danger-fg">
-              {error}
-            </p>
+            <div role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-danger-fg">
+              <p className="min-w-0 flex-1">{error}</p>
+              <UpgradeAction error={failure} />
+            </div>
           ) : null}
           <div className="flex flex-wrap gap-2">
             <Button type="submit" className="bg-brand-gradient text-white" disabled={!brief.trim() || generate.isPending}>
