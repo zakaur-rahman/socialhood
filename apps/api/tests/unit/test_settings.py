@@ -62,3 +62,11 @@ def test_complete_production_settings_load() -> None:
     settings = make(**complete_production())
     assert settings.is_production
     assert settings.cors_allowed_origins == ["a", "b"]
+
+
+@pytest.mark.parametrize("scheme", ["postgresql", "postgres"])
+def test_a_plain_database_url_gets_the_asyncpg_driver(scheme: str) -> None:
+    # Render links its connection string (postgresql://…) straight into DATABASE_URL (T9.5).
+    settings = make(**{**BASE, "database_url": f"{scheme}://u:p@db/x"})
+    assert settings.database_url == "postgresql+asyncpg://u:p@db/x"
+    assert settings.database_url_direct == "postgresql://u:p@db/x"

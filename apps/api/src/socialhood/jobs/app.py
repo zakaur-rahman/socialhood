@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import procrastinate
 
+from socialhood.observability.jobs import worker_defaults
 from socialhood.observability.logging import configure_logging
 from socialhood.settings import get_settings
 
@@ -46,4 +47,5 @@ configure_logging(get_settings().log_level)
 app = procrastinate.App(
     connector=procrastinate.PsycopgConnector(conninfo=get_settings().database_url_direct),
     import_paths=TASK_MODULES,
+    worker_defaults=worker_defaults(),  # Sentry, logs and metrics around every job (T9.3)
 )

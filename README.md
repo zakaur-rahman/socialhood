@@ -13,8 +13,8 @@ questions and spec conflicts go in `docs/QUESTIONS.md` and `docs/CONFLICTS.md`.
 | `apps/api` | FastAPI API and the job worker: one Python package, `socialhood` |
 | `apps/web` | Next.js app |
 | `packages/api-client` | TypeScript types generated from the API's OpenAPI document |
-| `infra` | Local services (`docker-compose.yml`) |
-| `docs` | Spec, questions, conflicts, platform verification |
+| `infra` | Local services (`docker-compose.yml`), the Render Blueprint (`render.yaml`), alert rules, the Grafana dashboard, scripts |
+| `docs` | Spec, questions, conflicts, platform verification; `docs/ops/` for deploys, alerts, dashboards, backups and the runbook |
 
 ## Prerequisites
 

@@ -1,0 +1,26 @@
+# T9.3: the alert rules stay valid and each still fires on its forced failure
+# (infra/prometheus/alerts.test.yml, docs/ops/alerts.md).
+name: Ops
+
+on:
+  push:
+    branches: [main]
+    paths: ["infra/prometheus/**", ".github/workflows/ops.yml"]
+  pull_request:
+    paths: ["infra/prometheus/**", ".github/workflows/ops.yml"]
+
+permissions:
+  contents: read
+
+jobs:
+  alert-rules:
+    name: Alert rules (promtool)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check and test the rules
+        run: |
+          docker run --rm -v "$PWD/infra/prometheus:/rules" -w /rules --entrypoint promtool \
+            prom/prometheus:latest check rules alerts.yml
+          docker run --rm -v "$PWD/infra/prometheus:/rules" -w /rules --entrypoint promtool \
+            prom/prometheus:latest test rules alerts.test.yml

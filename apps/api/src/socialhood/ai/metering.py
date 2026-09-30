@@ -29,6 +29,7 @@ from socialhood.ai.provider import AIError, AIResult
 from socialhood.billing.plans import CREDIT_COSTS, current_plan, entitlement
 from socialhood.db.tenancy import workspace_scope
 from socialhood.observability.logging import get_logger
+from socialhood.observability.metrics import record_ai_call
 from socialhood.repositories import usage
 from socialhood.services.notifications import notify_admins
 
@@ -173,6 +174,13 @@ async def _settle(
 ) -> None:
     """The usage event, and the refund when the call failed. Never raises: a lost event must
     not turn a successful call into a failure."""
+    record_ai_call(
+        feature,
+        meter.model or "unknown",
+        outcome,
+        input_tokens=meter.input_tokens,
+        output_tokens=meter.output_tokens,
+    )
     try:
         with workspace_scope(workspace_id):
             async with sessionmaker() as session:

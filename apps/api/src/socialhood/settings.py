@@ -12,7 +12,7 @@ from enum import StrEnum
 from functools import lru_cache
 from typing import Annotated, Literal
 
-from pydantic import Field, SecretStr, field_validator, model_validator
+from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
@@ -81,6 +81,12 @@ class Settings(BaseSettings):
 
     log_level: str = "INFO"
     sentry_dsn: str | None = None
+    # Share of requests and jobs traced (0 = errors only); T9.3.
+    sentry_traces_sample_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    # Release tag on errors: SENTRY_RELEASE, else the commit Render deploys (RENDER_GIT_COMMIT).
+    sentry_release: str | None = Field(
+        default=None, validation_alias=AliasChoices("sentry_release", "render_git_commit")
+    )
     metrics_token: SecretStr | None = None
 
     clerk_secret_key: SecretStr | None = None
@@ -153,6 +159,15 @@ class Settings(BaseSettings):
     def _split_commas(cls, value: object) -> object:
         if isinstance(value, str):
             return [item.strip() for item in value.split(",") if item.strip()]
+        return value
+
+    @field_validator("database_url")
+    @classmethod
+    def _asyncpg_driver(cls, value: str) -> str:
+        # Render hands out postgresql://… (infra/render.yaml links it); the engine needs asyncpg.
+        for prefix in ("postgresql://", "postgres://"):
+            if value.startswith(prefix):
+                return "postgresql+asyncpg://" + value[len(prefix) :]
         return value
 
     @field_validator("clerk_jwt_key")

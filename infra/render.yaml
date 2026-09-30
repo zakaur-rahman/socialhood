@@ -1,0 +1,286 @@
+# Render Blueprint for Social Hood (TR-OPS-02, TR-OPS-03, T9.5). The runbook is docs/ops/deploy.md.
+#
+# One project, two separate stacks: production (deploys the `production` branch) and staging
+# (deploys `main`). Each stack has the API web service, the worker (both lanes, scripts/worker.sh),
+# Postgres 18 with pgvector, and Key Value (Valkey). All in Singapore (§D11).
+#
+# Point Render at this file when creating the Blueprint: New → Blueprint → Blueprint file path
+# `infra/render.yaml`. Services build from apps/api (rootDir), so Render only redeploys them when
+# something under apps/api changes.
+#
+# Environment variables come from three places:
+#   1. Links below: DATABASE_URL, DATABASE_URL_DIRECT (direct, never PgBouncer) and REDIS_URL.
+#   2. `socialhood-<env>-config`: non-secret settings, managed by this file.
+#   3. `socialhood-<env>-secrets`: every vendor key, secret and account id. Render cannot hold
+#      secrets in a Blueprint-managed group, so this group is created and linked to both services
+#      by hand (docs/ops/deploy.md, step 4). This file never touches it.
+# The worker needs the same settings as the API: production settings validation runs in both.
+
+projects:
+  - name: socialhood
+    environments:
+      # ------------------------------------------------------------------ production
+      - name: production
+        envVarGroups:
+          - name: socialhood-production-config
+            envVars:
+              - key: APP_ENV
+                value: production
+              - key: PYTHON_VERSION
+                value: 3.13.14
+              - key: LOG_LEVEL
+                value: INFO
+              # OQ-3: replace with the real domains before the first deploy.
+              - key: API_BASE_URL
+                value: https://api.socialhood.com
+              - key: WEB_BASE_URL
+                value: https://app.socialhood.com
+              - key: CORS_ALLOWED_ORIGINS
+                value: https://app.socialhood.com
+              - key: CLERK_AUTHORIZED_PARTIES
+                value: https://app.socialhood.com
+              - key: IG_REDIRECT_URI
+                value: https://api.socialhood.com/v1/oauth/instagram/callback
+              - key: IG_GRAPH_VERSION
+                value: v25.0
+              - key: META_GRAPH_VERSION
+                value: v25.0
+              - key: IG_REQUEST_INSIGHTS_SCOPE
+                value: "false" # true after Meta approves insights
+              - key: IG_HUMAN_AGENT_ENABLED
+                value: "false" # true after Meta approves Human Agent
+              - key: DODO_ENVIRONMENT
+                value: live
+              - key: EMAIL_FROM
+                value: Social Hood <hello@socialhood.com>
+              - key: VAPID_SUBJECT
+                value: mailto:support@socialhood.com
+              - key: SANDBOX_PLATFORM_ENABLED
+                value: "false" # SEC-14: production refuses to start otherwise
+              - key: AI_DAILY_SPEND_LIMIT_USD
+                value: "100"
+              - key: BULK_CONCURRENCY_PER_WORKSPACE
+                value: "4"
+              - key: SENTRY_TRACES_SAMPLE_RATE
+                value: "0.1"
+              - key: WORKER_INTERACTIVE_CONCURRENCY
+                value: "20"
+              - key: WORKER_BULK_CONCURRENCY
+                value: "8"
+
+        services:
+          - type: web
+            name: socialhood-api
+            runtime: python
+            region: singapore
+            plan: 1c-2g
+            branch: production
+            rootDir: apps/api
+            autoDeployTrigger: checksPass
+            buildCommand: uv sync --locked --no-dev
+            # TR-OPS-02: migrations run once per deploy, before the new code takes traffic.
+            preDeployCommand: uv run --no-sync alembic upgrade head
+            startCommand: >-
+              uv run --no-sync uvicorn socialhood.main:app --host 0.0.0.0 --port $PORT
+              --proxy-headers --forwarded-allow-ips="*" --no-access-log
+            healthCheckPath: /healthz
+            maxShutdownDelaySeconds: 30
+            # Needs a Pro workspace plan or higher. Safe to scale out: rate limits, SSE streams and the
+            # metrics registry live in Valkey, and /metrics serves the same totals from any instance.
+            scaling:
+              minInstances: 1
+              maxInstances: 3
+              targetCPUPercent: 70
+              targetMemoryPercent: 80
+            envVars:
+              - fromGroup: socialhood-production-config
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: socialhood-db
+                  property: connectionString
+              - key: DATABASE_URL_DIRECT
+                fromDatabase:
+                  name: socialhood-db
+                  property: connectionString
+              - key: REDIS_URL
+                fromService:
+                  type: keyvalue
+                  name: socialhood-kv
+                  property: connectionString
+
+          - type: worker
+            name: socialhood-worker
+            runtime: python
+            region: singapore
+            plan: 1c-2g
+            branch: production
+            rootDir: apps/api
+            autoDeployTrigger: checksPass
+            buildCommand: uv sync --locked --no-dev
+            # One process per lane; exits if either dies so Render restarts both (TR-JOB-01).
+            startCommand: uv run --no-sync bash scripts/worker.sh
+            # A running job gets this long to finish on deploy; unfinished ones are retried.
+            maxShutdownDelaySeconds: 60
+            numInstances: 1
+            envVars:
+              - fromGroup: socialhood-production-config
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: socialhood-db
+                  property: connectionString
+              - key: DATABASE_URL_DIRECT
+                fromDatabase:
+                  name: socialhood-db
+                  property: connectionString
+              - key: REDIS_URL
+                fromService:
+                  type: keyvalue
+                  name: socialhood-kv
+                  property: connectionString
+
+          - type: keyvalue
+            name: socialhood-kv
+            region: singapore
+            plan: 256mb
+            ipAllowList: [] # private network only
+            # Locks, semaphores and rate-limit buckets must not vanish silently; a full instance
+            # fails loudly instead (watch memory in the Render dashboard).
+            maxmemoryPolicy: noeviction
+
+        databases:
+          - name: socialhood-db
+            region: singapore
+            plan: 1c-4g
+            postgresMajorVersion: "18"
+            databaseName: socialhood
+            user: socialhood
+            diskSizeGB: 50
+            ipAllowList: [] # private network only; use the dashboard's shell for access
+
+      # ------------------------------------------------------------------ staging
+      - name: staging
+        envVarGroups:
+          - name: socialhood-staging-config
+            envVars:
+              - key: APP_ENV
+                value: staging
+              - key: PYTHON_VERSION
+                value: 3.13.14
+              - key: LOG_LEVEL
+                value: INFO
+              - key: API_BASE_URL
+                value: https://api.staging.socialhood.com
+              - key: WEB_BASE_URL
+                value: https://staging.socialhood.com
+              - key: CORS_ALLOWED_ORIGINS
+                value: https://staging.socialhood.com
+              - key: CLERK_AUTHORIZED_PARTIES
+                value: https://staging.socialhood.com
+              - key: IG_REDIRECT_URI
+                value: https://api.staging.socialhood.com/v1/oauth/instagram/callback
+              - key: IG_GRAPH_VERSION
+                value: v25.0
+              - key: META_GRAPH_VERSION
+                value: v25.0
+              - key: IG_REQUEST_INSIGHTS_SCOPE
+                value: "false"
+              - key: IG_HUMAN_AGENT_ENABLED
+                value: "false"
+              - key: DODO_ENVIRONMENT
+                value: test
+              - key: EMAIL_FROM
+                value: Social Hood Staging <staging@socialhood.com>
+              - key: VAPID_SUBJECT
+                value: mailto:support@socialhood.com
+              # The sandbox account lets staging force send failures (docs/ops/alerts.md) and
+              # run end-to-end flows without Meta.
+              - key: SANDBOX_PLATFORM_ENABLED
+                value: "true"
+              - key: AI_DAILY_SPEND_LIMIT_USD
+                value: "10"
+              - key: BULK_CONCURRENCY_PER_WORKSPACE
+                value: "4"
+              - key: SENTRY_TRACES_SAMPLE_RATE
+                value: "0.5"
+              - key: WORKER_INTERACTIVE_CONCURRENCY
+                value: "10"
+              - key: WORKER_BULK_CONCURRENCY
+                value: "4"
+
+        services:
+          - type: web
+            name: socialhood-api-staging
+            runtime: python
+            region: singapore
+            plan: 0.5c-512mb
+            branch: main
+            rootDir: apps/api
+            autoDeployTrigger: checksPass
+            buildCommand: uv sync --locked --no-dev
+            preDeployCommand: uv run --no-sync alembic upgrade head
+            startCommand: >-
+              uv run --no-sync uvicorn socialhood.main:app --host 0.0.0.0 --port $PORT
+              --proxy-headers --forwarded-allow-ips="*" --no-access-log
+            healthCheckPath: /healthz
+            maxShutdownDelaySeconds: 30
+            numInstances: 1
+            envVars:
+              - fromGroup: socialhood-staging-config
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: socialhood-db-staging
+                  property: connectionString
+              - key: DATABASE_URL_DIRECT
+                fromDatabase:
+                  name: socialhood-db-staging
+                  property: connectionString
+              - key: REDIS_URL
+                fromService:
+                  type: keyvalue
+                  name: socialhood-kv-staging
+                  property: connectionString
+
+          - type: worker
+            name: socialhood-worker-staging
+            runtime: python
+            region: singapore
+            plan: 0.5c-512mb
+            branch: main
+            rootDir: apps/api
+            autoDeployTrigger: checksPass
+            buildCommand: uv sync --locked --no-dev
+            startCommand: uv run --no-sync bash scripts/worker.sh
+            maxShutdownDelaySeconds: 60
+            numInstances: 1
+            envVars:
+              - fromGroup: socialhood-staging-config
+              - key: DATABASE_URL
+                fromDatabase:
+                  name: socialhood-db-staging
+                  property: connectionString
+              - key: DATABASE_URL_DIRECT
+                fromDatabase:
+                  name: socialhood-db-staging
+                  property: connectionString
+              - key: REDIS_URL
+                fromService:
+                  type: keyvalue
+                  name: socialhood-kv-staging
+                  property: connectionString
+
+          - type: keyvalue
+            name: socialhood-kv-staging
+            region: singapore
+            plan: 256mb
+            ipAllowList: []
+            maxmemoryPolicy: noeviction
+
+        databases:
+          - name: socialhood-db-staging
+            region: singapore
+            plan: 0.5c-1g
+            postgresMajorVersion: "18"
+            databaseName: socialhood
+            user: socialhood
+            diskSizeGB: 10
+            ipAllowList: []

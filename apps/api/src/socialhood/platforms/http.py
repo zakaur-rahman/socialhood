@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 
 from socialhood.observability.logging import get_logger
+from socialhood.observability.metrics import record_platform_call
 from socialhood.platforms.errors import PlatformError, map_graph_error
 
 log = get_logger("socialhood.platforms")
@@ -71,6 +72,7 @@ class PlatformHttp:
         outcome: str,
         platform_code: str | None = None,
     ) -> None:
+        record_platform_call(self.platform, endpoint, outcome)
         log.info(
             "platform_call",
             platform=self.platform,
