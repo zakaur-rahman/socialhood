@@ -30,6 +30,7 @@ from socialhood.api.v1 import (
     publishing,
     scheduled,
     whatsapp,
+    workspace_deletion,
     workspaces,
 )
 
@@ -58,4 +59,5 @@ ROUTERS: tuple[APIRouter, ...] = (
     captions.router,
     agent.router,
     notification_settings.router,
+    workspace_deletion.router,
 )

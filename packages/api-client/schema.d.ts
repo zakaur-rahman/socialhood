@@ -150,7 +150,8 @@ export interface paths {
         get: operations["get_workspace"];
         put?: never;
         post?: never;
-        delete?: never;
+        /** Delete Workspace */
+        delete: operations["delete_workspace"];
         options?: never;
         head?: never;
         /** Update Workspace */
@@ -5689,6 +5690,29 @@ export interface components {
             /** Name */
             name: string;
         };
+        /** WorkspaceDeletion */
+        WorkspaceDeletion: {
+            /**
+             * Deletion Requested At
+             * Format: date-time
+             */
+            deletion_requested_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Purge By
+             * Format: date-time
+             */
+            purge_by: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "deleting";
+        };
         /** WorkspaceList */
         WorkspaceList: {
             /** Items */
@@ -6049,6 +6073,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_workspace: {
+        parameters: {
+            query: {
+                confirm_name: string;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspaceDeletion"];
                 };
             };
             /** @description Validation error */

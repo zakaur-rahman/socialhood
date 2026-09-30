@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
 import httpx
+import pytest
 from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
@@ -17,6 +19,7 @@ from socialhood.billing.dodo import DodoError
 from socialhood.billing.dodo_fake import FakeDodo
 from socialhood.jobs.app import app as jobs_app
 from socialhood.models.platform import WebhookStatus
+from socialhood.services import workspace_deletion as deletion
 from socialhood.services.webhook_processing import process_event
 from tests.support.api import Clerk, sign_in
 from tests.support.billing import PRO_PRODUCT, set_subscription
@@ -118,20 +121,53 @@ async def test_unknown_users_and_events_are_ignored(
     assert status is WebhookStatus.IGNORED
 
 
+@dataclass
+class NoMedia:
+    """The Cloudinary folder purge, faked (nothing was uploaded)."""
+
+    async def delete_workspace_folder(self, workspace_id: uuid.UUID) -> None:
+        return None
+
+
+async def purge(app: FastAPI, dodo: FakeDodo, workspace_id: str) -> str:
+    deps = deletion.PurgeDeps(
+        sessionmaker=app.state.sessionmaker, redis=app.state.redis, dodo=dodo, media=NoMedia()
+    )
+    return (await deletion.purge_workspace(deps, uuid.UUID(workspace_id))).status
+
+
+async def workspace_rows(engine: AsyncEngine) -> dict[str, tuple[str, Any]]:
+    async with engine.connect() as conn:
+        rows = await conn.execute(text("SELECT id, status, owner_user_id FROM workspaces"))
+        return {str(r.id): (r.status, r.owner_user_id) for r in rows}
+
+
 async def test_user_deleted_removes_solely_owned_workspaces(
-    client: httpx.AsyncClient, app: FastAPI, clerk: Clerk, engine: AsyncEngine
+    client: httpx.AsyncClient,
+    app: FastAPI,
+    clerk: Clerk,
+    engine: AsyncEngine,
+    fake_dodo: FakeDodo,
 ) -> None:
-    doomed, _ = await sign_in(client, clerk, email="doomed@example.com")
+    """The user goes at once; their workspace is marked deleting (it may outlive its owner) and
+    the purge removes it (T9.6)."""
+    doomed, me = await sign_in(client, clerk, email="doomed@example.com")
     _, survivor = await sign_in(client, clerk, email="survivor@example.com")
     status = await _deliver_and_process(
         client, app, {"type": "user.deleted", "data": {"id": doomed, "deleted": True}}
     )
     assert status is WebhookStatus.PROCESSED
+    wid, kept = me["workspaces"][0]["id"], survivor["workspaces"][0]["id"]
+    assert await workspace_rows(engine) == {
+        wid: ("deleting", None),
+        kept: ("active", uuid.UUID(survivor["id"])),
+    }
     async with engine.connect() as conn:
-        workspaces = (await conn.execute(text("SELECT id FROM workspaces"))).scalars().all()
         emails = (await conn.execute(text("SELECT email FROM users"))).scalars().all()
-    assert [str(w) for w in workspaces] == [survivor["workspaces"][0]["id"]]
     assert emails == ["survivor@example.com"]
+
+    assert await purge(app, fake_dodo, wid) == "purged"
+    assert list(await workspace_rows(engine)) == [kept]
 
 
 async def _paid(engine: AsyncEngine, fake_dodo: FakeDodo, wid: str, sub_id: str) -> None:
@@ -152,8 +188,8 @@ async def _paid(engine: AsyncEngine, fake_dodo: FakeDodo, wid: str, sub_id: str)
 async def test_user_deleted_cancels_the_deleted_workspaces_dodo_subscription(
     client: httpx.AsyncClient, app: FastAPI, clerk: Clerk, engine: AsyncEngine, fake_dodo: FakeDodo
 ) -> None:
-    """F-16: a solely owned workspace's subscription is cancelled at Dodo before it is deleted;
-    a shared one keeps its subscription with its new owner."""
+    """F-16: a solely owned workspace's subscription is cancelled at Dodo (the purge's first
+    step) before it is deleted; a shared one keeps its subscription with its new owner."""
     doomed, me = await sign_in(client, clerk, email="doomed@example.com")
     _, partner = await sign_in(client, clerk, email="partner@example.com")
     await _paid(engine, fake_dodo, me["workspaces"][0]["id"], "sub_mine")
@@ -176,29 +212,43 @@ async def test_user_deleted_cancels_the_deleted_workspaces_dodo_subscription(
         client, app, {"type": "user.deleted", "data": {"id": doomed, "deleted": True}}
     )
     assert status is WebhookStatus.PROCESSED
+    mine = me["workspaces"][0]["id"]
+    assert await purge(app, fake_dodo, mine) == "purged"
     assert fake_dodo.subscriptions["sub_mine"].status == "cancelled"
     assert fake_dodo.subscriptions["sub_theirs"].status == "active"
-    async with engine.connect() as conn:
-        left = (await conn.execute(text("SELECT id FROM workspaces"))).scalars().all()
-    assert [str(w) for w in left] == [shared]
+    assert list(await workspace_rows(engine)) == [shared]
 
 
-async def test_user_deleted_still_deletes_when_dodo_fails(
+async def test_user_deleted_retries_the_dodo_cancel_until_it_goes_through(
     client: httpx.AsyncClient, app: FastAPI, clerk: Clerk, engine: AsyncEngine, fake_dodo: FakeDodo
 ) -> None:
-    """Dodo not answering doesn't keep a deleted person's workspace: it is logged instead."""
+    """C-052, fixed in T9.6: Dodo not answering doesn't lose the cancel. The person and their
+    data go, but the deleting workspace keeps its subscription row until the purge's retry gets
+    the cancel through."""
     doomed, me = await sign_in(client, clerk, email="doomed@example.com")
-    await _paid(engine, fake_dodo, me["workspaces"][0]["id"], "sub_mine")
+    wid = me["workspaces"][0]["id"]
+    await _paid(engine, fake_dodo, wid, "sub_mine")
     fake_dodo.fail_next(DodoError("down", status=503, retryable=True))
 
     status = await _deliver_and_process(
         client, app, {"type": "user.deleted", "data": {"id": doomed, "deleted": True}}
     )
     assert status is WebhookStatus.PROCESSED
-    assert fake_dodo.subscriptions["sub_mine"].status == "active"  # left for a person to cancel
+    with pytest.raises(deletion.PurgeBlocked):
+        await purge(app, fake_dodo, wid)
+    assert fake_dodo.subscriptions["sub_mine"].status == "active"
     async with engine.connect() as conn:
-        assert (await conn.execute(text("SELECT id FROM workspaces"))).scalars().all() == []
         assert (await conn.execute(text("SELECT id FROM users"))).scalars().all() == []
+        subs = await conn.execute(
+            text("SELECT dodo_subscription_id FROM subscriptions WHERE workspace_id = :w"),
+            {"w": wid},
+        )
+        assert subs.scalars().all() == ["sub_mine"]
+    assert await workspace_rows(engine) == {wid: ("deleting", None)}
+
+    assert await purge(app, fake_dodo, wid) == "purged"  # the job's retry
+    assert fake_dodo.subscriptions["sub_mine"].status == "cancelled"
+    assert await workspace_rows(engine) == {}
 
 
 async def test_user_deleted_hands_shared_workspaces_to_another_owner(

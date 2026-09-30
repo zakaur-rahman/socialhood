@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { DeleteWorkspace } from "@/components/workspace/DeleteWorkspace";
 import { ApiError } from "@/lib/api/errors";
 import { useUpdateWorkspace, useWorkspace } from "@/lib/api/queries";
 import type { Workspace, WorkspacePatch } from "@/lib/api/types";
@@ -79,7 +80,8 @@ function browserTimezone(): string | null {
 }
 
 /** FR-ACC-03 / UX-SCR-07 (Workspace): name, URL, timezone, reply language and the automation
- * disclosure line (FR-AUT-11). */
+ * disclosure line (FR-AUT-11); for owners, the danger zone that deletes the workspace
+ * (FR-ACC-05). */
 export default function WorkspaceSettingsPage() {
   const current = useCurrentWorkspace();
   const workspace = useWorkspace(current.id);
@@ -87,7 +89,10 @@ export default function WorkspaceSettingsPage() {
   if (workspace.isError) return <ErrorState error={workspace.error} onRetry={() => void workspace.refetch()} />;
   return (
     <PageFrame title="Workspace">
-      <WorkspaceForm workspace={workspace.data} canEdit={current.role !== "agent"} />
+      <div className="space-y-6">
+        <WorkspaceForm workspace={workspace.data} canEdit={current.role !== "agent"} />
+        <DeleteWorkspace />
+      </div>
     </PageFrame>
   );
 }

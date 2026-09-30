@@ -10120,6 +10120,38 @@
         "title": "WinningAutomation",
         "type": "object"
       },
+      "WorkspaceDeletion": {
+        "properties": {
+          "deletion_requested_at": {
+            "format": "date-time",
+            "title": "Deletion Requested At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "purge_by": {
+            "format": "date-time",
+            "title": "Purge By",
+            "type": "string"
+          },
+          "status": {
+            "const": "deleting",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "deletion_requested_at",
+          "purge_by"
+        ],
+        "title": "WorkspaceDeletion",
+        "type": "object"
+      },
       "WorkspaceList": {
         "properties": {
           "items": {
@@ -10680,6 +10712,68 @@
       }
     },
     "/v1/w/{wid}": {
+      "delete": {
+        "operationId": "delete_workspace",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "confirm_name",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 1,
+              "title": "Confirm Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceDeletion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Workspace",
+        "tags": [
+          "workspaces"
+        ]
+      },
       "get": {
         "description": "Also remembers this workspace as the user's last one, for /app (F-02).",
         "operationId": "get_workspace",

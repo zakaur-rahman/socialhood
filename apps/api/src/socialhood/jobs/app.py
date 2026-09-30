@@ -39,6 +39,7 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.emails",
     "socialhood.jobs.tasks.push",
     "socialhood.jobs.tasks.digests",
+    "socialhood.jobs.tasks.purge",
 ]
 
 configure_logging(get_settings().log_level)
