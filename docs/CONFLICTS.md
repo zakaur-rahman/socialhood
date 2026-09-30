@@ -634,3 +634,28 @@ intent becomes "other", decided in code after the model answers, so it is never 
   If Dodo fails the workspace is still deleted and an error log names the Dodo subscription id;
   reconcile can't catch it (the subscriptions row goes with the workspace), so it is cancelled by
   hand. DELETE /v1/w/{wid} (FR-ACC-05) is left to T9.6 (TODO in services/workspaces.py).
+
+## C-053 · P8 notification decisions (T8.5–T8.7)
+- Producers pass only a notification type; services/notifications.py picks the channels. Email
+  goes to owners and admins only (account_needs_reconnect, post_failed, payment_problem,
+  plan_activated, plan_downgraded; not optional). Push switches: needs_you (ai_escalated),
+  new_lead, window_closing, account (account_needs_reconnect, account_disconnected). In-app is
+  always on.
+- Delivery jobs are queued by an after_commit listener, so a rollback queues nothing. Emails: 5
+  tries (10/20/40/80 s), a sweeper every minute, failed after 24 h queued; skipped if the member
+  left or turned the digest off. Resend's Idempotency-Key is {workspace_id}:{dedupe_key}; 5xx and
+  rate-limit errors retry, daily and monthly quota errors don't.
+- Push: endpoints must belong to a browser push service (FCM, Mozilla, Apple, WNS) over https
+  (SSRF guard); at most 10 browsers per user (least recently used dropped); 404/410 deletes the
+  subscription, 5 failures in a row disable it. Payload {title, body, url, tag}: title 80 and
+  body 240 characters, url /w/{slug}{link}, TTL 24 h. No push sweeper: a late push is useless.
+- new_lead fires once per conversation when the lead score crosses 70, naming the intent, never
+  quoting the message.
+- Weekly digest: send_weekly_digests runs every 15 minutes (so UTC+05:30 gets 09:00, not 09:30);
+  a workspace is due Monday from 09:00 local until the day ends, claimed by a weekly_digests row;
+  it covers the previous local Monday to Sunday; a quiet week is recorded as skipped. Its numbers
+  come from services/overview_stats.py, which T9.1's overview must use (reply rate per
+  conversation, handled by AI, median first response per customer turn, top intents without
+  other and spam, needs you, open questions from 30 days, comments without deleted ones).
+- Unsubscribe: an HMAC token computed at send time and never stored; POST only (404 for a bad
+  token, safe to repeat); List-Unsubscribe headers only when API_BASE_URL is set.
