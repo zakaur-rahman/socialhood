@@ -12,6 +12,8 @@ import type {
   AnalysisCorrection,
   Conversation,
   MessageAnalysis,
+  PolishRequest,
+  PolishResult,
   Suggestion,
 } from "../types";
 import { keys } from "./keys";
@@ -123,6 +125,22 @@ export function useRefreshSummary(wid: string, conversationId: string) {
       expectOk(
         api.POST("/v1/w/{wid}/conversations/{conversation_id}/summary", {
           params: { path: { wid, conversation_id: conversationId } },
+        }),
+      ),
+  });
+}
+
+// ---- AI Polish (C-063)
+
+/** The composer's AI Polish: the draft back with its grammar and clarity fixed (1 credit). */
+export function usePolishReply(wid: string, conversationId: string) {
+  const api = useApi();
+  return useMutation<PolishResult, Error, PolishRequest>({
+    mutationFn: (body) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/conversations/{conversation_id}/polish", {
+          params: { path: { wid, conversation_id: conversationId } },
+          body,
         }),
       ),
   });

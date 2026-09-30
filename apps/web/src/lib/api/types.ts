@@ -107,6 +107,9 @@ export type TakeoverMinutes = AiSettings["takeover_minutes"];
 export type AnalysisCorrection = Schemas["AnalysisCorrection"];
 export type AiDecision = Schemas["AiDecision"];
 export type AiDecisionCheck = Schemas["AiDecisionCheck"];
+/** The composer's AI Polish (C-063). */
+export type PolishRequest = Schemas["PolishRequest"];
+export type PolishResult = Schemas["PolishResult"];
 
 // ---- knowledge (P5: FR-KB-01…06, UX-SCR-06)
 

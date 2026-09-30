@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Conversation, MediaAsset } from "@/lib/api/types";
 import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
-import { conversation, json, renderWithApi } from "@/test/api";
+import { conversation, json, problem, renderWithApi, type Call } from "@/test/api";
 
 import { Composer, type Uploader } from "./Composer";
 
@@ -278,5 +278,81 @@ describe("Schedule popover (F-10)", () => {
       },
     ]);
     expect(useInboxStore.getState().drafts).toEqual({});
+  });
+});
+
+describe("AI Polish (C-063)", () => {
+  function renderWithPolish(respond: (call: Call) => Response | Promise<Response>) {
+    return renderWithApi(
+      <Composer
+        wid="w1"
+        slug="maple"
+        timeZone="Asia/Kolkata"
+        conversation={conversation()}
+        lastInboundAt="2026-09-28T11:55:00Z"
+        now={now}
+        onSend={vi.fn()}
+        scheduleOpen={false}
+        onScheduleOpenChange={() => {}}
+        onChooseTemplate={() => {}}
+        canAttach
+      />,
+      { handlers: { "POST /v1/w/:wid/conversations/:id/polish": respond } },
+    );
+  }
+
+  it("is off while the reply is empty", async () => {
+    const user = userEvent.setup();
+    renderWithPolish(() => json({ text: "" }));
+    const polish = screen.getByRole("button", { name: "AI Polish" });
+    expect(polish).toBeDisabled();
+    await user.type(textbox(), "   ");
+    expect(polish).toBeDisabled();
+    await user.type(textbox(), "hi");
+    expect(polish).toBeEnabled();
+  });
+
+  it("replaces the reply with a spinner while it works, and Undo brings the original back", async () => {
+    const user = userEvent.setup();
+    let release: (response: Response) => void = () => {};
+    const { calls } = renderWithPolish(() => new Promise<Response>((resolve) => (release = resolve)));
+    await user.type(textbox(), "haan ji cake ready hai kal tak");
+
+    await user.click(screen.getByRole("button", { name: "AI Polish" }));
+    const busy = await screen.findByRole("button", { name: "Polishing…" });
+    expect(busy).toBeDisabled();
+    expect(busy.querySelector("svg.animate-spin")).not.toBeNull();
+    expect(calls.find((c) => c.path === "/v1/w/w1/conversations/c1/polish")?.body).toEqual({
+      text: "haan ji cake ready hai kal tak",
+    });
+
+    await act(async () => release(json({ text: "Haan ji, cake kal tak ready ho jayega." })));
+    await waitFor(() => expect(textbox()).toHaveValue("Haan ji, cake kal tak ready ho jayega."));
+    expect(screen.getByRole("button", { name: "AI Polish" })).toBeEnabled();
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+    expect(textbox()).toHaveValue("haan ji cake ready hai kal tak");
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  });
+
+  it("Undo goes once the member edits the polished reply", async () => {
+    const user = userEvent.setup();
+    renderWithPolish(() => json({ text: "Yes, we deliver on Sundays." }));
+    await user.type(textbox(), "yes we deliver sunday");
+    await user.click(screen.getByRole("button", { name: "AI Polish" }));
+    await waitFor(() => expect(textbox()).toHaveValue("Yes, we deliver on Sundays."));
+    expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+    await user.type(textbox(), " See you!");
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  });
+
+  it("a failure keeps the reply as it was", async () => {
+    const user = userEvent.setup();
+    renderWithPolish(() => problem(503, "service_unavailable", "The AI couldn't polish this just now. Try again."));
+    await user.type(textbox(), "yes we deliver sunday");
+    await user.click(screen.getByRole("button", { name: "AI Polish" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "AI Polish" })).toBeEnabled());
+    expect(textbox()).toHaveValue("yes we deliver sunday");
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   });
 });
