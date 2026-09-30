@@ -235,12 +235,14 @@ async def summarize_post(
         except AIError as error:
             if error.retryable:
                 raise
-            log.warning("post_summary_failed", media_item_id=str(media_item_id), code=error.code)
+            log.warning(
+                "post_summary_failed", media_item_id=str(media_item_id), error_code=error.code
+            )
             return SummaryRun("failed")
 
         summary = " ".join(result.value.summary.split())[:SUMMARY_CHARS]
         if not summary:
-            log.warning("post_summary_failed", media_item_id=str(media_item_id), code="empty")
+            log.warning("post_summary_failed", media_item_id=str(media_item_id), error_code="empty")
             return SummaryRun("failed")
         async with sessionmaker() as session:
             topic_names = [topic for topic, _ in topics]

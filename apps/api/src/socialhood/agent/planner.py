@@ -214,7 +214,7 @@ class MeteredModel(WrapperModel):
             except AIError as error:
                 if not error.retryable or attempt == MODEL_ATTEMPTS:
                     raise ModelUnavailable(error.code) from error
-                log.info("agent_turn_retry", run_id=str(self.state.run_id), code=error.code)
+                log.info("agent_turn_retry", run_id=str(self.state.run_id), error_code=error.code)
                 continue
             await self.state.store_usage()
             return response

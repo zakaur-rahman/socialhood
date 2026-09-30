@@ -160,12 +160,12 @@ async def summarize_conversation(
     except AIError as error:
         if error.retryable:
             raise
-        log.warning("summary_failed", conversation_id=str(conversation_id), code=error.code)
+        log.warning("summary_failed", conversation_id=str(conversation_id), error_code=error.code)
         return SummaryRun("failed")
 
     summary = _clean(result.value.summary, SUMMARY_CHARS)
     if summary is None:
-        log.warning("summary_failed", conversation_id=str(conversation_id), code="empty")
+        log.warning("summary_failed", conversation_id=str(conversation_id), error_code="empty")
         return SummaryRun("failed")
     next_step = _clean(result.value.next_step, NEXT_STEP_CHARS)
     with workspace_scope(workspace_id):

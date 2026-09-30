@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from socialhood.observability.logging import REDACTED, TEXT_LIMIT, RedactProcessor
+import ast
+from pathlib import Path
+
+import socialhood
+from socialhood.observability.logging import REDACTED, TEXT_LIMIT, RedactProcessor, is_secret_key
+
+LOG_METHODS = {"debug", "info", "warning", "error", "exception", "critical"}
 
 
 def run(event: dict[str, object], *, truncate: bool = True) -> dict[str, object]:
@@ -43,3 +49,24 @@ def test_text_and_body_are_truncated_at_info() -> None:
 def test_text_is_kept_at_debug() -> None:
     long = "x" * 100
     assert run({"text": long}, truncate=False)["text"] == long
+
+
+def test_no_log_call_names_a_diagnostic_code_field_the_redaction_blanks() -> None:
+    """A field named ``code`` (or ``*_code`` outside the safe list) is blanked as a possible
+    OAuth code, so an error code logged under it is lost: log it as ``error_code``."""
+    root = Path(socialhood.__file__).parent
+    blanked = []
+    for path in sorted(root.rglob("*.py")):
+        for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
+            if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+                continue
+            if node.func.attr not in LOG_METHODS or not isinstance(node.func.value, ast.Name):
+                continue
+            if node.func.value.id != "log":
+                continue
+            blanked += [
+                f"{path.relative_to(root)}:{kw.value.lineno} {kw.arg}"
+                for kw in node.keywords
+                if kw.arg and kw.arg.lower().endswith("code") and is_secret_key(kw.arg)
+            ]
+    assert blanked == []

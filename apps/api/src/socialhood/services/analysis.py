@@ -376,7 +376,7 @@ async def analyze_conversation(
     except AIError as error:
         if error.retryable:
             raise
-        log.warning("analysis_failed", conversation_id=str(conversation_id), code=error.code)
+        log.warning("analysis_failed", conversation_id=str(conversation_id), error_code=error.code)
         return AnalysisRun("failed")
 
     values = _values(result.value, ctx=ctx, model=result.model, version=prompt.version, meter=meter)

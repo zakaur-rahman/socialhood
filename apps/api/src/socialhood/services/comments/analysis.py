@@ -341,7 +341,9 @@ async def analyze_batch(
         except AIError as error:
             if error.retryable:
                 raise
-            log.warning("comment_analysis_failed", account_id=str(account_id), code=error.code)
+            log.warning(
+                "comment_analysis_failed", account_id=str(account_id), error_code=error.code
+            )
             return BatchRun("failed", skipped=prepared.skipped, more=True)
         async with sessionmaker() as session:
             triggered = await automation_runs.comments_with_runs(session, list(read.by_comment))
@@ -435,7 +437,7 @@ async def _read_all(
                 "comment_analysis_split",
                 account_id=str(batch.acct.id),
                 size=len(part),
-                code=getattr(error, "code", ""),
+                error_code=getattr(error, "code", ""),
             )
             if len(part) == 1:
                 read.given_up.add(part[0][1].id)

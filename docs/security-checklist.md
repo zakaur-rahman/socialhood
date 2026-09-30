@@ -103,7 +103,7 @@ and the `code=` log fields (SEC-07).
   - :40 cuts `text` and `body` to 40 characters at INFO.
   - :83 holds httpx and httpcore at WARNING (C-010).
 - **Tests.** `unit/test_logging.py` :10, :30, :35 and :43.
-- **Note.** Redacting keys named `code` also blanks about 12 diagnostic `code=error.code` log fields (captions, knowledge, analysis, summaries, planner). This loses diagnostics but leaks nothing. Renaming those fields to `error_code` is a follow-up for ops (T9.3).
+- **Note.** Redacting keys named `code` also blanked 13 diagnostic `code=error.code` log fields (captions, knowledge, analysis, summaries, planner). The integration pass renamed them to `error_code`, which is on the safe list, and `unit/test_logging.py::test_no_log_call_names_a_diagnostic_code_field_the_redaction_blanks` fails on any new one.
 
 ### SEC-08: input limits
 - **Body size.**
