@@ -241,6 +241,29 @@ async def test_sse_connections_and_build_info_are_exported(
     assert 'socialhood_build_info{version="' in body
     assert 'environment="test"} 1' in body
 
+    # CLIENT LIST spans the whole server: a stream on another db (another deployment, or another
+    # parallel test worker) is not counted, one on this deployment's db is.
+    here = redis.connection_pool.connection_kwargs
+    db = int(here.get("db", 0))
+
+    def stream(on_db: int) -> Redis:
+        return Redis(
+            host=here["host"],
+            port=here["port"],
+            db=on_db,
+            client_name=f"sse:{uuid.uuid4()}",
+            single_connection_client=True,
+        )
+
+    ours, elsewhere = stream(db), stream((db + 1) % 16)
+    try:
+        await ours.ping()
+        await elsewhere.ping()
+        assert "socialhood_sse_connections 1" in await scrape(client)
+    finally:
+        await ours.aclose()
+        await elsewhere.aclose()
+
 
 # ---------------------------------------------------------------- sends and AI calls
 
