@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import uuid
 from typing import Any
+from urllib.parse import parse_qsl
 
 import httpx
 import pytest
@@ -13,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.media.cloudinary import sign
+from socialhood.services.media_assets import delivery_url
 from socialhood.settings import Settings
 from tests.support.api import Clerk, sign_in
 
@@ -245,3 +247,68 @@ async def test_a_pdf_the_storage_will_not_deliver_is_refused_with_the_fix(
     assert response.status_code == expected, response.text
     if expected == 503:
         assert "Allow delivery of PDF and ZIP files" in response.json()["detail"]
+
+
+# ---------------------------------------------------------------- post video delivery (C-060)
+
+EXPLICIT = f"https://api.cloudinary.com/v1_1/{CLOUD}/video/explicit"
+
+
+@pytest.mark.parametrize("fmt", ["mp4", "mov"])
+async def test_a_post_video_starts_rendering_its_delivery_version_at_once(
+    client: httpx.AsyncClient, clerk: Clerk, fmt: str
+) -> None:
+    """Rendered on Instagram's first fetch, a 48 MB video took about 20 s (P7b spike): the
+    render the publisher's URL names starts when the video is registered."""
+    headers, wid = await owner(client, clerk)
+    public_id = f"ws/{wid}/post/reel1"
+    body = resource(public_id, resource_type="video", format=fmt, duration=30.0, bytes=48 * MB)
+    clerk.router.get(f"{RESOURCES}/video/upload/{public_id}").respond(200, json=body)
+    explicit = clerk.router.post(EXPLICIT).respond(200, json={"eager": [{"status": "processing"}]})
+
+    response = await register(client, headers, wid, public_id, "video")
+    assert response.status_code == 201, response.text
+    assert explicit.call_count == 1
+    sent = dict(parse_qsl(explicit.calls.last.request.content.decode()))
+    signed = {k: sent[k] for k in ("public_id", "type", "eager", "eager_async", "timestamp")}
+    assert signed | {"timestamp": "t"} == {
+        "public_id": public_id,
+        "type": "upload",
+        "eager": "vc_h264,ac_aac,f_mp4/mp4",
+        "eager_async": "true",
+        "timestamp": "t",
+    }
+    assert sent["signature"] == sign(signed, API_SECRET)
+    # The render started is exactly the URL the publisher gives Instagram.
+    assert delivery_url(body["secure_url"], "video") == (
+        f"https://res.cloudinary.com/{CLOUD}/video/upload/vc_h264,ac_aac,f_mp4/v1/{public_id}.mp4"
+    )
+
+
+async def test_a_failed_render_start_never_blocks_the_upload(
+    client: httpx.AsyncClient, clerk: Clerk
+) -> None:
+    headers, wid = await owner(client, clerk)
+    public_id = f"ws/{wid}/post/reel2"
+    clerk.router.get(f"{RESOURCES}/video/upload/{public_id}").respond(
+        200, json=resource(public_id, resource_type="video", format="mp4", duration=10.0)
+    )
+    explicit = clerk.router.post(EXPLICIT).respond(500)
+    response = await register(client, headers, wid, public_id, "video")
+    assert response.status_code == 201, response.text
+    assert explicit.call_count == 1
+
+
+async def test_only_post_videos_are_rendered_ahead(client: httpx.AsyncClient, clerk: Clerk) -> None:
+    headers, wid = await owner(client, clerk)
+    explicit = clerk.router.post(url__startswith=f"https://api.cloudinary.com/v1_1/{CLOUD}/")
+    explicit.respond(200, json={})
+    for public_id, kind, fmt in (
+        (f"ws/{wid}/message/dm-video", "video", "mp4"),
+        (f"ws/{wid}/post/photo", "image", "jpg"),
+    ):
+        clerk.router.get(f"{RESOURCES}/{kind}/upload/{public_id}").respond(
+            200, json=resource(public_id, resource_type=kind, format=fmt, duration=10.0)
+        )
+        assert (await register(client, headers, wid, public_id, kind)).status_code == 201
+    assert explicit.call_count == 0

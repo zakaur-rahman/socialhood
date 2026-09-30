@@ -175,7 +175,7 @@ async def try_question(
     try:
         hits = await retrieve(session, question)
     except AIError as error:
-        log.warning("knowledge_test_retrieval_failed", code=error.code)
+        log.warning("knowledge_test_retrieval_failed", error_code=error.code)
         raise ApiError("service_unavailable", AI_UNAVAILABLE) from error
     ai = (await session.scalars(select(AiSettingsRow))).one_or_none()
     system = suggest_system(
@@ -207,7 +207,7 @@ async def try_question(
     except QuotaExceeded as error:
         raise ApiError("quota_exceeded", "Your AI credits for this period are used up.") from error
     except AIError as error:
-        log.warning("knowledge_test_failed", code=error.code)
+        log.warning("knowledge_test_failed", error_code=error.code)
         raise ApiError("service_unavailable", AI_UNAVAILABLE) from error
     out = result.value
     reply = (out.reply or "").strip()

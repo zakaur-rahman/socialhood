@@ -659,3 +659,140 @@ intent becomes "other", decided in code after the model answers, so it is never 
   other and spam, needs you, open questions from 30 days, comments without deleted ones).
 - Unsubscribe: an HMAC token computed at send time and never stored; POST only (404 for a bad
   token, safe to repeat); List-Unsubscribe headers only when API_BASE_URL is set.
+
+## C-055 · P9 Home decisions (T9.1)
+- The range is 7 or 30 local days up to today in the workspace's time zone; each tile's trend
+  compares with as many full days just before it (`previous`), not a rolling window.
+- Every number comes from services/overview_stats.py, the weekly digest's functions (C-053), so
+  Home and the digest agree; Needs reply is the inbox chip's own count.
+- Handled by AI trends in a neutral colour: more or less AI is neither good nor bad news. Faster
+  first responses and a higher reply rate are good (green), the opposite red.
+- Sentiment bars split positive, neutral and negative; spam is counted apart, beside the bar.
+- Most commented posts show each post's own sentiment split, as the Comments page does.
+- Accounts needing attention (needs reconnect or error) are listed with their status.
+- Response fields are strict and nullable: no data is null ("—" and a hint), never a zero or a
+  fake chart.
+- Switching range keeps the previous numbers on screen until the new ones arrive, never another
+  workspace's; Home refetches after relevant real-time events (throttled) and every 5 minutes.
+
+## C-056 · P9 workspace deletion decisions (T9.6; FR-ACC-05, F-16, §5.9)
+- DELETE /v1/w/{wid}: owner only, the typed workspace name confirms (422 on a mismatch), 202 with
+  purge_by (24 hours). Web: Settings → Workspace danger zone, owners only.
+- Two steps. In the request: status deleting (who and when), tokens destroyed, accounts
+  disconnected, automations paused, unstarted scheduled messages and posts cancelled, queued
+  emails skipped. The API answers 404 for a workspace that isn't active.
+- The owner lands in another of their workspaces, or a new personal one when it was the last.
+- purge_workspace (bulk lane, lock purge:{id}) is queued after the commit and cancels Dodo first,
+  at once rather than at the period end; "nothing to cancel" counts as done.
+- Tenant tables are deleted from the TenantScoped registry, children first, in committed batches,
+  so a new table is covered and a stopped run resumes; a run hands over after 540 s.
+- Then its webhook events, Valkey keys (every key naming the workspace or its accounts) and the
+  Cloudinary folder ws/{id}/.
+- The subscription and workspace rows go last, only once Dodo, keys and media are done, so a
+  failed cancel is retried (8 tries with backoff).
+- sweep_deletions (every 15 minutes) re-queues every deleting workspace and alerts after 6 hours.
+- Clerk user.deleted takes the same path; migration 0015 lets a deleting workspace outlive its
+  owner and records who asked.
+- purge_expired (daily 04:00 UTC): webhook events 30 days, notifications 90, AI usage 13 months,
+  finished agent runs 180 days, Free message history 90 days (emptied conversations too),
+  finished queue jobs 30 days.
+- Idempotency keys expire in Valkey (24 hours) and R1 has no audit_logs, so neither has a rule.
+
+## C-057 · P9 ops decisions (T9.3, T9.5)
+- Sentry on the API, worker and web, a no-op without a DSN. Scrubbed: no headers, cookies,
+  bodies, query strings, emails, tokens or message text; the user keeps only an id; no local
+  variables; the Gemini and Pydantic AI integrations stay off.
+- Only a job's final failure reaches Sentry (tagged job, lane, workspace_id), not its retries;
+  error-level logs (`log.error("alert", kind=…)`) arrive as `alert_kind` events.
+- /metrics serves Prometheus text behind METRICS_TOKEN (constant time; 404 unset, 401 wrong).
+- The worker has no endpoint: every process buffers its counts and flushes them to a shared
+  Valkey registry every 5 s, so one scrape of any API instance covers everything. Labels come
+  from code (route templates, task names), never ids.
+- The four T9.3 alerts (dispatcher lag, webhook, send and AI failure rates) are Prometheus rules
+  for Grafana Cloud, with promtool tests, plus worker down, backlog, failed jobs, 5xx and scrape
+  health; Sentry can't compute the ratios.
+- Render Blueprint: one project, a production stack (branch production) and a staging stack
+  (main), Singapore, deploys after CI passes. Secrets live in a hand-made group per environment,
+  because a Blueprint-managed group can't hold them.
+- Migrations run only in the API's pre-deploy and stay expand-only, so a worker that starts first
+  is safe; DATABASE_URL accepts Render's postgresql:// string.
+- SENTRY_RELEASE defaults to RENDER_GIT_COMMIT; the web is on Vercel (sin1, Node 24).
+- Backups are Render's point-in-time recovery (7 days on Pro); the restore rehearsal script ran
+  read-only against the dev database (49 tables and 56,827 rows matched).
+
+## C-058 · P9 security pass decisions (T9.2)
+Evidence per item: docs/security-checklist.md.
+- Webhooks are not IP-limited (Meta shares IPs); their bodies stay capped at 5 MB.
+- Scheduled messages and publish-now count as sends (60 a minute per workspace).
+- The AI class (20 a minute) covers every model call a member can trigger: agent runs,
+  summaries and hashtags as well as the spec's three.
+- Public routes get 60 a minute per IP; the OAuth callback keeps the spec's 30.
+- The checkout return has no public route: the billing page polls under the per-user limit.
+- Limits fail open when Valkey is down, like idempotency and last-seen.
+- New settings: RATE_LIMITS_ENABLED (refused false in production) and CLIENT_IP_HEADER (required
+  in production; the integration pass changed Render's value, C-060).
+- The web CSP is built from the build's NEXT_PUBLIC_* values (API, Clerk, Sentry);
+  upgrade-insecure-requests only when the API is https.
+- No per-operation 429 in the OpenAPI document: the default problem response covers it.
+- X-1 (login CSRF on Instagram connect) was left as a gap for the integration pass (fixed, C-060).
+- Accepted risks:
+  - A-1: Instagram inbound media downloads skip the SSRF guard (Meta-signed URLs, Meta-hosted
+    kinds only, 100 MB and 60 s caps); allowlist Meta's CDN hosts once live payloads confirm them.
+  - A-2: WhatsApp media sends the bearer token to the URL Graph returns (trusted; no redirects).
+  - A-3: the Cloudinary upload signature signs only folder and timestamp; registration enforces
+    size and format, and unregistered files are never served.
+  - A-4: the web CSP keeps `script-src 'unsafe-inline'` (Next.js bootstrap) and allows Meta's
+    SDK app-wide (a CSP belongs to the document, and client navigations keep it).
+
+## C-059 · P9 end-to-end suite decisions (T9.4)
+- Only Clerk is real: its development instance with testing tokens, one reused test user signed
+  in with a sign-in token; F-01 signs up a throwaway `+clerk_test` user and deletes it after.
+- Everything else is the sandbox platform and fakes (AI, Dodo, email, push), on its own stack:
+  socialhood_test_6, Valkey db 5, ports 8100 and 3100, refusing the development stack. The API
+  and worker run where no .env is loaded, so local and CI runs see the same settings.
+- Test-only seed routes (/__e2e, behind a per-run token) live in a separate e2e API entry that
+  refuses to start unless the sandbox is on, Dodo is the fake and the app isn't production.
+- A fresh workspace per test; the web is a production build (next build, next start).
+- The worker's fake AI gives one fixed suggestion, and "can't answer" for `[e2e:unknown]`.
+- Nightly in CI at 21:30 UTC with one retry (none locally), artifacts kept 7 days; T9.4 is done
+  after three green nights. The suite found two app bugs (F-01's session wait, F-08's card
+  coming back), fixed with unit tests.
+
+## C-060 · P9 integration pass (p9/integration)
+- X-1 fixed (login CSRF): the OAuth callback no longer connects. It keeps the code, encrypted,
+  under a one-time nonce in Valkey (`oauth:held:{nonce}`, 10 minutes) with the state's user and
+  workspace, and redirects to Connections with `?instagram={nonce}`. The page posts it to
+  `POST …/social-accounts/instagram/complete` (Admin), which takes it with GETDEL and connects
+  only for that user in that workspace. The code is kept rather than the token: short-lived,
+  single-use and useless without the app secret.
+- The complete call's answers: 404 expired or used ("That connection link expired."), 403
+  someone else's, 409 account_in_use, 402 quota_exceeded, the new 422 `ig_not_professional`
+  (§4.7's code) and 502 platform_error. A 402 now opens the upgrade dialog like every other 402,
+  instead of the old toast. The spec's F-03 steps are updated.
+- WhatsApp Embedded Signup is not affected: the code comes back to the signed-in page's own
+  JavaScript and is posted with the member's bearer token.
+- No connect for a workspace being deleted: the callback refuses one that isn't active, and the
+  Instagram and WhatsApp connects re-read the workspace row FOR SHARE before storing an account.
+- A live Dodo subscription whose workspace is missing or deleting (a checkout paid after the
+  deletion) raises `alert_kind:billing_orphan_subscription` and queues
+  `cancel_orphan_subscription` (bulk lane, one per subscription): cancel now, retried about 25
+  minutes while Dodo fails. An event with neither our metadata nor a stored subscription is not
+  ours and is left alone.
+- Client IP on Render: Render documents only X-Forwarded-For, so `CLIENT_IP_HEADER` is
+  `x-forwarded-for`, read from the right past Cloudflare's published ranges and private ranges
+  (the rightmost untrusted hop), not `true-client-ip`. uvicorn runs with `--no-server-header`;
+  its own client address (the header's first entry) is used for nothing.
+- Log fields named `code` are blanked by the redaction (SEC-07); the 13 error codes are logged
+  as `error_code` now, and a unit test fails on a new one.
+- "Choose an AI mode" (Q-008) is done when any connected account's AI mode is Suggest or Auto,
+  and links to Settings → Connections, where the mode is set; it usually ticks with the first
+  account, since new accounts start in Suggest (FR-SUG-01).
+- A post video's delivery version (`vc_h264,ac_aac,f_mp4`) is rendered eagerly when the video is
+  registered, so Instagram's fetch doesn't wait about 20 s for an on-the-fly render (P7b spike).
+  The transformation stays: posts take MP4 and MOV in any codec. Best effort; the URL still
+  renders on first fetch if Cloudinary refused.
+- Tests: the tenancy route walk mints a token per request (it outlived the 60 s token); the new
+  route has its isolation example body.
+- e2e: the stack runs with `RATE_LIMITS_ENABLED=false` (one Clerk user from three workers passes
+  the per-user 300 a minute), and its user cleanup route deletes the workspace row directly
+  (the deletion pass removed `repositories.workspaces.delete_workspace`).

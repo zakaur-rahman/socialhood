@@ -5487,6 +5487,23 @@
         "title": "InboxCounts",
         "type": "object"
       },
+      "InstagramConnectComplete": {
+        "additionalProperties": false,
+        "description": "The nonce the OAuth callback put in the Connections page's URL (?instagram=\u2026, X-1).",
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "InstagramConnectComplete",
+        "type": "object"
+      },
       "IntentCount": {
         "properties": {
           "count": {
@@ -18846,6 +18863,70 @@
           }
         },
         "summary": "List Social Accounts",
+        "tags": [
+          "accounts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/instagram/complete": {
+      "post": {
+        "description": "Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only\nthe member who started the connect, in the workspace they started it in, can finish it; the\nnonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else\nstarted it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,\n502 when Instagram fails.",
+        "operationId": "complete_instagram_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstagramConnectComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Complete Instagram Connect",
         "tags": [
           "accounts"
         ]

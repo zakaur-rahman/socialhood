@@ -109,6 +109,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "waba_id": "1",
         "phone_number_id": "2",
     },
+    ("POST", "/v1/w/{wid}/social-accounts/instagram/complete"): {"nonce": "not-yours"},
 }
 
 EXAMPLE_BODIES.update(
@@ -485,9 +486,11 @@ async def test_every_route_with_a_path_id_hides_other_workspaces(
     nested, _ = plan_calls(app.openapi(), own, nested_only=True)
     assert nested, "no nested routes found"
 
-    headers = clerk.headers(member_a)
     for call in calls + nested:
         before = await snapshot(engine, seed.workspace_id)
+        # A fresh session token per request: the walk takes about a minute, as long as a token
+        # lives (the fake Clerk's 60 s, like Clerk's own).
+        headers = clerk.headers(member_a)
         response = await client.request(
             call.method, call.url, json=call.body, headers={**headers, **call.headers}
         )

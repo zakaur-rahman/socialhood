@@ -183,7 +183,7 @@ async def generate_caption(
     except QuotaExceeded as error:
         raise await _quota_error(session) from error
     except AIError as error:
-        log.warning("caption_generation_failed", code=error.code, task="caption")
+        log.warning("caption_generation_failed", error_code=error.code, task="caption")
         raise ApiError("service_unavailable", AI_UNAVAILABLE) from error
     return CaptionSuggestion(caption=caption)
 
@@ -222,7 +222,7 @@ async def suggest_hashtags(
     except QuotaExceeded as error:
         raise await _quota_error(session) from error
     except AIError as error:
-        log.warning("caption_generation_failed", code=error.code, task="hashtags")
+        log.warning("caption_generation_failed", error_code=error.code, task="hashtags")
         raise ApiError("service_unavailable", AI_UNAVAILABLE) from error
     return HashtagSuggestion(
         hashtags=clean_hashtags(result.value.hashtags, leave_out=leave_out, count=body.count)

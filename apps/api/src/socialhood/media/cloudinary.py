@@ -144,6 +144,23 @@ class Cloudinary:
             raise CloudinaryError(f"lookup failed with HTTP {response.status_code}")
         return StoredResource.from_api(response.json())
 
+    async def eager(self, public_id: str, resource_type: ResourceType, eager: str) -> None:
+        """Start rendering a derived version now (``{transformation}/{extension}``), in the
+        background: Cloudinary answers at once and later serves that transformation's URL from
+        the stored render instead of rendering it on the first fetch (Explicit API)."""
+        self._require()
+        params: dict[str, Any] = {
+            "public_id": public_id,
+            "type": "upload",
+            "eager": eager,
+            "eager_async": "true",
+            "timestamp": int(time.time()),
+        }
+        data = {**params, "api_key": self.api_key, "signature": sign(params, self.secret)}
+        response = await self.http.post(f"{API}/{self.cloud}/{resource_type}/explicit", data=data)
+        if response.status_code >= 400:
+            raise CloudinaryError(f"explicit failed with HTTP {response.status_code}")
+
     async def destroy(self, public_id: str, resource_type: ResourceType) -> None:
         self._require()
         params: dict[str, Any] = {"public_id": public_id, "timestamp": int(time.time())}

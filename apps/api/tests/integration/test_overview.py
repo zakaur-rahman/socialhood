@@ -631,7 +631,11 @@ async def test_the_seven_days_match_the_hand_written_sql_and_the_hand_counts(tea
         ("maple.outlet", "needs_reconnect"),
         ("maple.broken", "error"),
     ]
-    assert [s["key"] for s in body["checklist"]["steps"] if s["done"]] == ["connect_account"]
+    # The accounts start in Suggest, so the AI mode step is done with them (C-060).
+    assert [s["key"] for s in body["checklist"]["steps"] if s["done"]] == [
+        "connect_account",
+        "choose_ai_mode",
+    ]
 
 
 async def test_the_thirty_days_match_the_hand_written_sql(team: Team) -> None:

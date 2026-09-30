@@ -57,6 +57,10 @@ projects:
                 value: mailto:support@socialhood.com
               - key: SANDBOX_PLATFORM_ENABLED
                 value: "false" # SEC-14: production refuses to start otherwise
+              # Per-IP rate limits: Render gives the client address only in X-Forwarded-For,
+              # read from the right past Cloudflare and Render (security/client_ip.py).
+              - key: CLIENT_IP_HEADER
+                value: x-forwarded-for
               - key: AI_DAILY_SPEND_LIMIT_USD
                 value: "100"
               - key: BULK_CONCURRENCY_PER_WORKSPACE
@@ -80,9 +84,12 @@ projects:
             buildCommand: uv sync --locked --no-dev
             # TR-OPS-02: migrations run once per deploy, before the new code takes traffic.
             preDeployCommand: uv run --no-sync alembic upgrade head
+            # --no-server-header: no "server: uvicorn" (SEC-11). --proxy-headers takes the scheme
+            # from Render's proxy. uvicorn's client address is X-Forwarded-For's first entry,
+            # which the client controls: nothing relies on it; rate limits read CLIENT_IP_HEADER.
             startCommand: >-
               uv run --no-sync uvicorn socialhood.main:app --host 0.0.0.0 --port $PORT
-              --proxy-headers --forwarded-allow-ips="*" --no-access-log
+              --proxy-headers --forwarded-allow-ips="*" --no-server-header --no-access-log
             healthCheckPath: /healthz
             maxShutdownDelaySeconds: 30
             # Needs a Pro workspace plan or higher. Safe to scale out: rate limits, SSE streams and the
@@ -196,6 +203,8 @@ projects:
               # run end-to-end flows without Meta.
               - key: SANDBOX_PLATFORM_ENABLED
                 value: "true"
+              - key: CLIENT_IP_HEADER
+                value: x-forwarded-for
               - key: AI_DAILY_SPEND_LIMIT_USD
                 value: "10"
               - key: BULK_CONCURRENCY_PER_WORKSPACE
@@ -220,7 +229,7 @@ projects:
             preDeployCommand: uv run --no-sync alembic upgrade head
             startCommand: >-
               uv run --no-sync uvicorn socialhood.main:app --host 0.0.0.0 --port $PORT
-              --proxy-headers --forwarded-allow-ips="*" --no-access-log
+              --proxy-headers --forwarded-allow-ips="*" --no-server-header --no-access-log
             healthCheckPath: /healthz
             maxShutdownDelaySeconds: 30
             numInstances: 1

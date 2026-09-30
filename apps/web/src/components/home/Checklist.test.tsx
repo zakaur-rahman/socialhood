@@ -39,6 +39,13 @@ describe("Checklist (FR-ACC-04)", () => {
     expect(screen.getByRole("link", { name: "Browse templates" })).toHaveAttribute("href", "/w/aria/automations/new");
   });
 
+  it("sends Choose an AI mode to Connections, where each account's mode is set (C-060)", () => {
+    render(
+      <Checklist steps={steps({ connect_account: true, add_knowledge: true })} slug="aria" onDismiss={() => {}} />,
+    );
+    expect(screen.getByRole("link", { name: "Choose a mode" })).toHaveAttribute("href", "/w/aria/settings/connections");
+  });
+
   it("calls onDismiss", async () => {
     const onDismiss = vi.fn();
     render(<Checklist steps={steps()} slug="aria" onDismiss={onDismiss} />);

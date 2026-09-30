@@ -154,9 +154,10 @@ class Settings(BaseSettings):
     sandbox_platform_enabled: bool = False
 
     # TR-API-07 (security/ratelimit.py). Off only for local load or end-to-end runs; refused in
-    # production. CLIENT_IP_HEADER names the header the edge proxy sets to the caller's address
-    # (true-client-ip on Render, which Cloudflare overwrites); required in production, where the
-    # socket peer is the proxy and X-Forwarded-For's first entry is whatever the client sent.
+    # production. CLIENT_IP_HEADER names the header that carries the caller's address; required
+    # in production, where the socket peer is the proxy. On Render it is x-forwarded-for, read
+    # from the right past the proxies (security/client_ip.py), because its first entry is
+    # whatever the client sent. Any other header is taken as it is.
     rate_limits_enabled: bool = True
     client_ip_header: str | None = None
 

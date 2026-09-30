@@ -27,6 +27,7 @@ from starlette.requests import Request
 
 from socialhood.errors import ApiError
 from socialhood.observability.logging import get_logger
+from socialhood.security.client_ip import FORWARDED_FOR, MAX_KEY_CHARS, rightmost_untrusted
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -108,12 +109,19 @@ async def enforce(request: Request, name: str, subject: str) -> None:
 
 
 def client_ip(request: Request) -> str:
-    """The caller's address. Behind Render the edge (Cloudflare) sets True-Client-IP and
-    overwrites any value a client sends, so production names that header in CLIENT_IP_HEADER;
-    X-Forwarded-For's first entry is whatever the client wrote and is never used here."""
+    """The caller's address (security/client_ip.py). On Render CLIENT_IP_HEADER is
+    x-forwarded-for, read from the right: the rightmost entry that isn't one of the proxies.
+    Its first entry is whatever the client wrote and is never used. Without the header (local
+    runs, tests) it is the socket address."""
     settings: Settings = request.app.state.settings
-    if settings.client_ip_header:
-        value = request.headers.get(settings.client_ip_header, "").strip()
+    header = (settings.client_ip_header or "").strip().lower()
+    if header == FORWARDED_FOR:
+        # Every X-Forwarded-For line, in order, as one list (RFC 9110 §5.3).
+        found = rightmost_untrusted(", ".join(request.headers.getlist(FORWARDED_FOR)))
+        if found:
+            return found
+    elif header:
+        value = request.headers.get(header, "").strip()
         if value:
-            return value
+            return value[:MAX_KEY_CHARS]
     return request.client.host if request.client else "unknown"

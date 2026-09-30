@@ -21,6 +21,7 @@ from socialhood.platforms.sandbox.adapter import is_sandbox
 from socialhood.repositories import social_accounts as accounts
 from socialhood.schemas.accounts import (
     ConnectStart,
+    InstagramConnectComplete,
     SandboxInbound,
     SandboxInboundResult,
     SocialAccountList,
@@ -58,6 +59,28 @@ async def start_instagram_connect(request: Request, ctx: Admin, session: Session
         plan=await current_plan(session),
     )
     return ConnectStart(authorize_url=url)
+
+
+@router.post("/social-accounts/instagram/complete", operation_id="complete_instagram_connect")
+async def complete_instagram_connect(
+    request: Request, body: InstagramConnectComplete, ctx: Admin, session: Session
+) -> SocialAccountOut:
+    """Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only
+    the member who started the connect, in the workspace they started it in, can finish it; the
+    nonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else
+    started it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,
+    502 when Instagram fails."""
+    deps = _deps(request)
+    acct = await service.finish_instagram_connect(
+        session,
+        request.app.state.redis,
+        deps,
+        nonce=body.nonce,
+        workspace_id=ctx.workspace_id,
+        user_id=ctx.user.id,
+        plan=await current_plan(session),
+    )
+    return service.account_out(acct, deps)
 
 
 @router.patch("/social-accounts/{account_id}", operation_id="update_social_account")

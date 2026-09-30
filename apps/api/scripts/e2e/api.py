@@ -28,7 +28,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 
 from socialhood.auth.deps import CurrentUser, Owner, Session
 from socialhood.billing.registry import _process_fake
@@ -131,9 +131,8 @@ async def delete_user(clerk_user_id: str, session: Session) -> None:
     user = await users.get_by_clerk_id(session, clerk_user_id)
     if user is None:
         return
-    owned = await session.scalars(select(Workspace.id).where(Workspace.owner_user_id == user.id))
-    for workspace_id in owned.all():
-        await workspaces.delete_workspace(session, workspace_id)
+    # Test data only, so no purge job: the row goes at once and every tenant row cascades.
+    await session.execute(delete(Workspace).where(Workspace.owner_user_id == user.id))
     await session.execute(delete(User).where(User.id == user.id))
     await session.commit()
 

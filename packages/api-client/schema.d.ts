@@ -1971,6 +1971,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/social-accounts/instagram/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Instagram Connect
+         * @description Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only
+         *     the member who started the connect, in the workspace they started it in, can finish it; the
+         *     nonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else
+         *     started it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,
+         *     502 when Instagram fails.
+         */
+        post: operations["complete_instagram_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/social-accounts/instagram/connect": {
         parameters: {
             query?: never;
@@ -4055,6 +4079,14 @@ export interface components {
             needs_you: number;
             /** Unread */
             unread: number;
+        };
+        /**
+         * InstagramConnectComplete
+         * @description The nonce the OAuth callback put in the Connections page's URL (?instagram=…, X-1).
+         */
+        InstagramConnectComplete: {
+            /** Nonce */
+            nonce: string;
         };
         /** IntentCount */
         IntentCount: {
@@ -10752,6 +10784,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_instagram_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InstagramConnectComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountOut"];
                 };
             };
             /** @description Validation error */

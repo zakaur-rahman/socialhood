@@ -178,7 +178,7 @@ export type ConnectResult =
   | { kind: "success"; message: string }
   | { kind: "error"; message: string; retry: boolean };
 
-/** Codes the OAuth callback puts in ?error= (F-03 edge cases). */
+/** Codes the OAuth callback puts in ?error=, and the complete call's codes (F-03 edge cases). */
 export const CONNECT_ERRORS = [
   "access_denied",
   "state_invalid",
@@ -193,18 +193,44 @@ function plural(count: number, one: string, many: string): string {
   return `${count} ${count === 1 ? one : many}`;
 }
 
+export function instagramConnected(username?: string | null): ConnectResult {
+  return { kind: "success", message: username ? `Instagram connected: @${username}` : "Instagram connected" };
+}
+
 /** The toast for the ?connected= / ?error= the callback redirected with, or null for none. */
 export function connectResult(params: URLSearchParams, username?: string | null): ConnectResult | null {
-  if (params.get("connected") === "instagram") {
-    return { kind: "success", message: username ? `Instagram connected: @${username}` : "Instagram connected" };
-  }
+  if (params.get("connected") === "instagram") return instagramConnected(username);
   const error = params.get("error");
   if (!error) return null;
-  switch (error as ConnectError) {
+  return connectErrorResult(error, params.get("limit"));
+}
+
+/**
+ * The toast for a failed POST …/instagram/complete (X-1), or null when the upgrade dialog already
+ * explains it (a 402 opens it by itself).
+ */
+export function completeConnectResult(error: unknown): ConnectResult | null {
+  if (!(error instanceof ApiError)) return connectErrorResult("connect_failed");
+  if (error.status === 402) return null;
+  if (error.status === 404) return connectErrorResult("state_invalid");
+  if (error.status === 403) return connectErrorResult("not_yours");
+  return connectErrorResult(error.code);
+}
+
+function connectErrorResult(error: string, limitParam?: string | null): ConnectResult {
+  switch (error as ConnectError | "not_yours") {
     case "access_denied":
       return { kind: "error", message: "Connection cancelled", retry: false };
     case "state_invalid":
       return { kind: "error", message: "That connection link expired.", retry: true };
+    case "not_yours":
+      // X-1: the member who started this connect isn't the one signed in here (a shared link).
+      return {
+        kind: "error",
+        message:
+          "This Instagram connection was started by someone else, so it wasn't added. To connect your own account, use Connect Instagram.",
+        retry: false,
+      };
     case "ig_not_professional":
       return {
         kind: "error",
@@ -219,7 +245,7 @@ export function connectResult(params: URLSearchParams, username?: string | null)
         retry: false,
       };
     case "quota_exceeded": {
-      const limit = Number(params.get("limit"));
+      const limit = Number(limitParam);
       return {
         kind: "error",
         message: Number.isFinite(limit) && limit > 0

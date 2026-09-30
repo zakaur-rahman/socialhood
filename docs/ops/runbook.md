@@ -102,6 +102,17 @@ The interactive lane's oldest ready job is older than 30 seconds (TR-JOB-06).
 More than 20 jobs failed in the last hour. See which tasks in the dashboard ("Failed jobs by task")
 and Sentry (tag `job`), fix the cause, then `failed-jobs retry` with `--dry-run` first.
 
+## Billing alerts (Sentry)
+
+- `alert_kind:billing_orphan_subscription`: Dodo reported a live subscription whose workspace was
+  deleted (usually a checkout paid after the deletion). The worker cancels it at once
+  (`cancel_orphan_subscription`, retried for about 25 minutes while Dodo fails). Check in Dodo's
+  dashboard that it shows cancelled; if the job failed for good (Sentry, tag
+  `job:cancel_orphan_subscription`), cancel it there by hand, and refund the charge if the
+  customer asks.
+- `alert_kind:billing_duplicate_subscription`: two checkouts completed at once; the workspace
+  keeps the first. Cancel and refund the other one in Dodo's dashboard.
+
 ## API errors
 
 Over 1% of API requests return 5xx. Sentry has each exception with the route and request id. If it

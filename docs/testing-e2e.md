@@ -56,6 +56,8 @@ db 0 are refused (`apps/api/scripts/e2e/db.py` only drops `socialhood_test_<n>` 
 
 - `SANDBOX_PLATFORM_ENABLED=true`, `AI_PROVIDER=fake`, `DODO_PROVIDER=fake`,
   `EMAIL_PROVIDER=fake`, `PUSH_PROVIDER=fake`, `APP_ENV=test`;
+- `RATE_LIMITS_ENABLED=false`: every test is the same Clerk user, and three workers together pass
+  the per-user 300 requests a minute (the limits have their own tests in `apps/api`);
 - `TOKEN_ENCRYPTION_KEYS`, `DODO_WEBHOOK_SECRET` and the seed token are generated for each run;
 - `CLERK_ISSUER` and `CLERK_JWT_KEY` are derived from the publishable key (the Frontend API host
   and its JWKS).

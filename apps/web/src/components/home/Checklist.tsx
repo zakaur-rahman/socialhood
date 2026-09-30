@@ -28,7 +28,9 @@ const COPY: Record<ChecklistStep["key"], StepCopy> = {
     title: "Choose an AI mode",
     why: "Decide whether the AI suggests replies or answers on its own.",
     action: "Choose a mode",
-    href: (s) => `/w/${s}/settings/ai` as Route,
+    // Each account's mode is set on its card in Connections (AiModeControl); done once an
+    // account's mode is Suggest or Auto (C-060).
+    href: (s) => `/w/${s}/settings/connections` as Route,
   },
   create_automation: {
     title: "Create an automation",

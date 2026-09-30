@@ -61,6 +61,12 @@ class ConnectStart(ResponseModel):
     authorize_url: str
 
 
+class InstagramConnectComplete(RequestModel):
+    """The nonce the OAuth callback put in the Connections page's URL (?instagram=…, X-1)."""
+
+    nonce: str = Field(min_length=1, max_length=128)
+
+
 class SandboxInbound(RequestModel):
     account_id: uuid.UUID
     kind: Literal["dm", "comment"]

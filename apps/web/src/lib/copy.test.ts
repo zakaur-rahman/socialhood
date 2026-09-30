@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { CONNECT_ERRORS, connectResult, reconnectBanner, sendFailure, whatsappConnected } from "./copy";
+import { ApiError } from "./api/errors";
+import {
+  CONNECT_ERRORS,
+  completeConnectResult,
+  connectResult,
+  reconnectBanner,
+  sendFailure,
+  whatsappConnected,
+} from "./copy";
 import { relativeTime } from "./time";
 
 function result(query: string, username?: string) {
@@ -47,6 +55,36 @@ describe("connect results (F-03, §4.7)", () => {
   it("treats an unknown code as a failed connect and no parameters as nothing", () => {
     expect(result("error=something_new")?.message).toBe("Instagram didn't respond. Try again.");
     expect(result("")).toBeNull();
+  });
+});
+
+describe("finishing an Instagram connect (X-1)", () => {
+  const problem = (status: number, code: string) =>
+    new ApiError({ type: "about:blank", title: "x", status, code, detail: "from the API" });
+
+  it.each([
+    [404, "not_found", "That connection link expired.", true],
+    [
+      403,
+      "forbidden",
+      "This Instagram connection was started by someone else, so it wasn't added. To connect your own account, use Connect Instagram.",
+      false,
+    ],
+    [
+      422,
+      "ig_not_professional",
+      "Only Instagram business and creator accounts can connect. Switch the account type in the Instagram app, then try again.",
+      true,
+    ],
+    [409, "account_in_use", "This account is connected to another Social Hood workspace. Disconnect it there first.", false],
+    [502, "platform_error", "Instagram didn't respond. Try again.", true],
+  ])("%s %s shows its copy", (status, code, message, retry) => {
+    expect(completeConnectResult(problem(status, code))).toEqual({ kind: "error", message, retry });
+  });
+
+  it("leaves a plan limit to the upgrade dialog and treats anything else as a failed connect", () => {
+    expect(completeConnectResult(problem(402, "quota_exceeded"))).toBeNull();
+    expect(completeConnectResult(new Error("offline"))?.message).toBe("Instagram didn't respond. Try again.");
   });
 });
 

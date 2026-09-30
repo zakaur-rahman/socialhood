@@ -246,7 +246,7 @@ async def _embed(contents: Sequence[str]) -> list[list[float]]:
         try:
             out = await provider.embed(batch, kind="document")
         except AIError as error:
-            log.warning("knowledge_embed_failed", code=error.code, retryable=error.retryable)
+            log.warning("knowledge_embed_failed", error_code=error.code, retryable=error.retryable)
             if error.retryable:
                 raise _Transient(GENERIC_FAILURE) from error
             raise _Failed(GENERIC_FAILURE) from error
