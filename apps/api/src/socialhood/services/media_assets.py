@@ -121,6 +121,11 @@ MIME_TYPES = {
 # What platforms fetch: images as JPEG and video as H.264 MP4 (TR-MED-02), whatever was uploaded.
 IMAGE_DELIVERY = "f_jpg,q_auto,w_1440,c_limit"
 VIDEO_DELIVERY = "vc_h264,ac_aac,f_mp4"
+# Posts accept MP4 and MOV in any codec, and phones write HEVC, HDR or a trailing moov atom that
+# Instagram refuses, so a post's video is always sent through VIDEO_DELIVERY. Rendered on the
+# first fetch that takes about 20 s for 48 MB (P7b spike), long enough for Instagram's fetch to
+# fail, so the render is started when the video is registered (C-060).
+VIDEO_DELIVERY_EAGER = f"{VIDEO_DELIVERY}/mp4"
 
 
 # ---------------------------------------------------------------- upload and registration
@@ -231,7 +236,19 @@ async def register(
             raise
         return existing
     await session.commit()
+    if purpose == AssetPurpose.POST and asset.resource_type == "video":
+        await prepare_video_delivery(cloudinary, public_id)
     return asset
+
+
+async def prepare_video_delivery(cloudinary: Cloudinary, public_id: str) -> None:
+    """Start rendering the post video's delivery version (VIDEO_DELIVERY_EAGER), so it exists
+    before Instagram fetches it. Best effort: if Cloudinary refuses, the URL still renders on the
+    first fetch, as before."""
+    try:
+        await cloudinary.eager(public_id, "video", VIDEO_DELIVERY_EAGER)
+    except Exception as error:
+        log.warning("media_eager_failed", public_id=public_id, error=type(error).__name__)
 
 
 # Cloudinary blocks delivery of PDF and ZIP files on new accounts; platforms then fail to fetch
