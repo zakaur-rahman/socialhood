@@ -18,7 +18,9 @@ job:
    lead_score, priority, last_intent and last_sentiment follow the latest analysis; needs_human is
    only ever raised here (with its reason), because a later calm message must not clear an
    escalation nobody has answered (a business reply clears it, F-09). It also refreshes
-   ``messages_since_summary``. Then it publishes analysis.created and conversation.updated;
+   ``messages_since_summary``. A lead score crossing 70 notifies every member once per
+   conversation (``new_lead``: in-app, and push under the "new lead" switch; FR-NOT-03). Then it
+   publishes analysis.created and conversation.updated;
 5. queues ``suggest_reply`` when TARGET needs a reply and the effective AI mode is Suggest or Auto,
    a summary refresh once 8 messages arrived since the last summary (FR-AI-03), and itself again
    when a newer customer message arrived during the call.
@@ -52,7 +54,8 @@ from socialhood.errors import ApiError, FieldError
 from socialhood.models.ai import AiSettings, MessageAnalysis
 from socialhood.models.connections import AiMode, SocialAccount
 from socialhood.models.identity import Workspace
-from socialhood.models.inbox import Conversation, Direction, Message, MessageSource
+from socialhood.models.inbox import Contact, Conversation, Direction, Message, MessageSource
+from socialhood.models.notifications import NotificationType
 from socialhood.observability.logging import get_logger
 from socialhood.realtime import events
 from socialhood.repositories import analyses, inbox, social_accounts
@@ -61,6 +64,7 @@ from socialhood.schemas.ai import AnalysisCorrection, SentimentName
 from socialhood.schemas.inbox import EscalationReason, IntentName
 from socialhood.schemas.inbox import MessageAnalysis as MessageAnalysisOut
 from socialhood.services.inbox_views import ATTACHMENT_PREVIEW, human_agent_allowed
+from socialhood.services.notifications import notify_members
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -76,6 +80,15 @@ LANGUAGE_CHARS = 35
 SUMMARY_AFTER = 8  # FR-AI-03
 SUGGEST_MODES = frozenset({AiMode.SUGGEST, AiMode.AUTO})
 NO_DESCRIPTION = "no description given yet"
+NEW_LEAD_SCORE = 70  # FR-NOT-03: "a new lead (lead score reaches 70)"
+LEAD_WANTS = {  # the new-lead notification's body, by intent
+    "pricing": "asked about prices",
+    "product_inquiry": "asked about a product",
+    "purchase": "wants to buy",
+    "order_status": "asked about an order",
+    "shipping": "asked about shipping",
+    "collaboration": "wants to collaborate",
+}
 
 PriorityName = Literal["critical", "high", "medium", "low"]
 
@@ -282,6 +295,38 @@ def _apply_signals(conv: Conversation, row: MessageAnalysis) -> None:
         conv.needs_human_reason = row.needs_human_reason or conv.needs_human_reason
 
 
+def _contact_name(contact: Contact | None) -> str:
+    if contact is not None and contact.display_name:
+        return contact.display_name
+    if contact is not None and contact.username:
+        return f"@{contact.username}"
+    return "A customer"
+
+
+async def _announce_lead(
+    session: AsyncSession, conv: Conversation, row: MessageAnalysis, previous_score: int | None
+) -> None:
+    """FR-NOT-03's new lead: the conversation's lead score reached NEW_LEAD_SCORE. Once per
+    conversation (the dedupe key), when the score crosses it, so a conversation that was a lead
+    already never announces itself again. Every member is told (in-app, and push under the "new
+    lead" switch); the caller commits."""
+    if row.lead_score < NEW_LEAD_SCORE or (
+        previous_score is not None and previous_score >= NEW_LEAD_SCORE
+    ):
+        return
+    name = _contact_name(await inbox.get_contact(session, conv.contact_id))
+    wants = LEAD_WANTS.get(row.corrected_intent or row.intent, "is interested")
+    await notify_members(
+        session,
+        type=NotificationType.NEW_LEAD,
+        severity="info",
+        title=f"New lead: {name}",
+        body=f"{name} {wants}. Lead score {row.lead_score}.",
+        link=f"/inbox/{conv.id}",
+        dedupe_key=f"new_lead:{conv.id}",
+    )
+
+
 async def analyze_conversation(
     sessionmaker: async_sessionmaker[AsyncSession],
     redis: Redis,
@@ -357,7 +402,9 @@ async def _store(
             if row is None or conv is None or acct is None:
                 await session.rollback()
                 return AnalysisRun("already_analysed" if row is None else "not_found")
+            previous_score = conv.lead_score
             _apply_signals(conv, row)
+            await _announce_lead(session, conv, row, previous_score)
             conv.messages_since_summary = await analyses.messages_since(
                 session, conv.id, conv.summary_updated_at
             )

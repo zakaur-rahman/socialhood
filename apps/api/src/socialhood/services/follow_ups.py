@@ -64,7 +64,6 @@ async def remind(
         body=f"Follow up with {name}: the reply window closes in {_hours_left(last, now)} h.",
         link=f"/inbox/{conv.id}?schedule=1",
         dedupe_key=f"window_closing:{conv.id}:{last.isoformat()}",
-        channels=("in_app", "push"),
     )
     if contact is not None:
         await events.queue_conversation(

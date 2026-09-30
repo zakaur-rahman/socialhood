@@ -71,12 +71,12 @@ BILLING_ROUTES = {
 
 # Notification settings (T8.6, T8.7).
 NOTIFICATION_ROUTES = {
-    "get_notification_preferences": ("get", "/v1/w/{wid}/notification-preferences", "T8.6"),
-    "update_notification_preferences": ("put", "/v1/w/{wid}/notification-preferences", "T8.6"),
+    "get_notification_preferences": ("get", "/v1/w/{wid}/notification-preferences", None),
+    "update_notification_preferences": ("put", "/v1/w/{wid}/notification-preferences", None),
     "get_push_config": ("get", "/v1/push/config", None),
-    "create_push_subscription": ("post", "/v1/me/push-subscriptions", "T8.6"),
-    "delete_push_subscription": ("delete", "/v1/me/push-subscriptions", "T8.6"),
-    "unsubscribe_digest": ("post", "/v1/digest/unsubscribe", "T8.7"),
+    "create_push_subscription": ("post", "/v1/me/push-subscriptions", None),
+    "delete_push_subscription": ("delete", "/v1/me/push-subscriptions", None),
+    "unsubscribe_digest": ("post", "/v1/digest/unsubscribe", None),
 }
 
 P8_ROUTES = {**BILLING_ROUTES, **NOTIFICATION_ROUTES}
