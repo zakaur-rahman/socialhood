@@ -1,10 +1,11 @@
 "use client";
 
-import { RotateCw } from "lucide-react";
-import type { ReactNode } from "react";
-import { toast } from "sonner";
+import { BellRing, Mail, RotateCw } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
-import { PageFrame } from "@/components/shell/PageFrame";
+import { SaveBar } from "@/components/settings/SaveBar";
+import { SettingsCard } from "@/components/settings/SettingsCard";
+import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
@@ -56,17 +57,23 @@ function SwitchRow({
   );
 }
 
-function Section({ id, title, hint, children }: { id: string; title: string; hint?: string; children: ReactNode }) {
+function Section({
+  id,
+  title,
+  hint,
+  icon,
+  children,
+}: {
+  id: string;
+  title: string;
+  hint?: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
   return (
-    <section aria-labelledby={id} className="space-y-3 rounded-xl border border-line bg-panel p-5">
-      <div>
-        <h2 id={id} className="text-base font-semibold">
-          {title}
-        </h2>
-        {hint ? <p className="text-xs text-fg-secondary">{hint}</p> : null}
-      </div>
-      {children}
-    </section>
+    <SettingsCard id={id} title={title} description={hint} icon={icon}>
+      <div className="space-y-3">{children}</div>
+    </SettingsCard>
   );
 }
 
@@ -74,14 +81,19 @@ function Section({ id, title, hint, children }: { id: string; title: string; hin
  * UX-SCR-07 Notifications (FR-NOT-03, FR-NOT-04, F-19): the member's weekly digest switch, this
  * device's push state, and a switch per push event. The switches are the member's own, for this
  * workspace (C-049); PUT sends the whole object, and a switch that fails to save moves back.
+ * C-066: the settings header and cards; switches still save as they change, so the save bar only
+ * says so (saving, saved, or why the last change didn't save).
  */
 export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBrowser }) {
   const workspace = useCurrentWorkspace();
   const prefs = useNotificationPreferences(workspace.id);
   const update = useUpdateNotificationPreferences(workspace.id);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const save = (next: NotificationPreferences) =>
-    update.mutate(next, { onError: (error) => toast.error(errorMessage(error)) });
+  const save = (next: NotificationPreferences) => {
+    setSaveError(null);
+    update.mutate(next, { onError: (error) => setSaveError(errorMessage(error)) });
+  };
 
   const loading = (
     <div className="space-y-3" aria-busy="true" aria-label="Loading">
@@ -99,9 +111,17 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
   );
 
   return (
-    <PageFrame title="Notifications">
-      <div className="max-w-2xl space-y-6">
-        <Section id="digest-title" title="Email">
+    <SettingsFrame
+      header={
+        <SettingsPageHeader
+          label="Alerts"
+          title="Notifications"
+          description={`Your own email digest and push alerts for ${workspace.name}. Each member chooses theirs.`}
+        />
+      }
+    >
+      <div className="grid gap-6 xl:grid-cols-2 xl:items-start">
+        <Section id="digest" title="Email" icon={<Mail />}>
           {prefs.isPending ? (
             loading
           ) : prefs.isError ? (
@@ -118,9 +138,10 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
         </Section>
 
         <Section
-          id="push-title"
+          id="push"
           title="Push notifications"
           hint="Alerts on your phone or computer, even when Social Hood isn't open."
+          icon={<BellRing />}
         >
           <InstallPrompt
             storageKey="socialhood:install-dismissed"
@@ -153,6 +174,7 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
           </div>
         </Section>
       </div>
-    </PageFrame>
+      <SaveBar dirty={false} saving={update.isPending} error={saveError} />
+    </SettingsFrame>
   );
 }
