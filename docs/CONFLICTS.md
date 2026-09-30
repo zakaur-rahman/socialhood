@@ -949,3 +949,54 @@ The layout and structure follow the owner's mockup; colours stay ours (tokens an
   as `gap_id`, so saving answers it. Owners and admins only, like knowledge.
 - The mobile and tablet single-pane navigation is unchanged; the panel opens as a sheet from
   the header toggle. The sidebar is unchanged.
+
+## C-065 · Home redesign (owner-approved layout, feat/home-redesign)
+- Layout from design/social_hood_home, our tokens and theme. Header: the greeting; "Overview
+  across Instagram & WhatsApp" names the platforms of active accounts ("No channels connected
+  yet" without any); "Last 7 days · 24–30 Sep" is the API's local days; the pill counts active
+  accounts; 7 days / 30 days / Custom; Refresh refetches the overview (the spinner is
+  motion-safe). A failed refresh keeps the last numbers with a notice.
+- Custom range: GET …/overview?from=YYYY-MM-DD&to=YYYY-MM-DD, local days in the workspace's time
+  zone, both included, at most 90 days, `to` no later than today; 422 with the field (`from`
+  after `to` or over 90 days: from; in the future or missing: to; `range` with from/to: range).
+  `previous` is as many days just before (`period_before`, as for 7d/30d). The response says
+  `range: "custom"` and `days`. The web checks the same rules before sending and remembers the
+  choice per workspace (`custom:{from}:{to}`); a stored range that no longer holds falls back to
+  7 days. States (needs reply, queue, gaps) stay "now" whatever the range.
+- Badges are rules, not scores: **Attention** on Needs reply when it is above 0 and the
+  longest-waiting "Needs reply" conversation's unanswered turn began more than an hour ago
+  (`oldest_waiting_since`: the first customer message after the business last wrote, else the
+  last customer message); **Fast** when the median first response is under 5 minutes.
+- Priority queue: `Overview.priority_queue` (up to 5), not a separate route, so it refreshes with
+  Home and matches the Needs reply count it sits beside (services/priority_queue.py). Candidates
+  are the inbox's own sets: open conversations with a message that need you (`needs_human`) or a
+  reply (`awaiting_reply`). Order: needs you first; then lead score (none last), analysis
+  priority (critical to low, none last), the longest wait (`waiting_since`), the id. Left out:
+  archived ones always; needs-reply ones whose window is closed (no free-form reply: Instagram
+  after 24 h, or 7 days for a person with Human Agent; WhatsApp after 24 h, template only). A
+  needs-you conversation stays whatever its window. `has_pending_suggestion` is a pending
+  suggestion that can answer and has text (a pending "can't answer" card is no draft). Row
+  action: Review & Send with a draft, else Open chat; both open /inbox/{id}, where the draft
+  shows. The row shows the customer's last message (not unsent), clipped to 140 characters.
+- Real time: suggestion.created and suggestion.updated join the events that refetch Home
+  (throttled, as before), so "AI draft ready" appears; a message or a reply was already one.
+- Knowledge gaps: no migration. A gap's `example_message_ids` (newest first) already name where
+  it came from, so `latest_gap` is the open gap asked most recently (30 days) with its newest
+  example that still exists and isn't unsent: its text is the question, its conversation is
+  View thread. A comment's gap has no example: no View thread, and the question is the topic.
+  Train AI (admins, who manage knowledge) opens the FAQ sheet with that question and the gap's
+  id (lib/knowledge/prefill.ts, shaped like SourceSheet's create mode so the inbox's Teach AI can
+  share it); saving is POST …/knowledge-sources with `gap_id`, which answers the gap (F-17).
+  Agents see the banner with View thread only.
+- Engagement rate on Most commented: only from post metric snapshots captured in the range: per
+  post, its latest such snapshot with reach and all four counts, (likes + comments + shares +
+  saves) ÷ reach in % (the analytics definition); `top_posts_engagement` is the mean over the
+  posts that have one, with how many. No snapshot, no figure.
+- Dropped from the mockup: "NLP Engine", "AI Classified", "98.4% Confidence", "Overall tone",
+  "Accuracy 98%", "Instagram Graph", "Engagement +14.2%" (no such values exist), the "Needs Input"
+  chip on the gap banner, and the emoji in the greeting. "7 total queries" became "n messages in
+  these topics" (the sum of the listed intents). Kept from before: the onboarding checklist and
+  account health, which the mockup doesn't show.
+- The digest's functions and numbers are unchanged; Home's additions live beside them in
+  services/overview_stats.py (accounts connected, latest question, engagement) and
+  services/priority_queue.py, and the digest doesn't read them (C-053).

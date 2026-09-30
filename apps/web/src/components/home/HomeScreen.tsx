@@ -1,129 +1,212 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
+import { useState } from "react";
 import { toast } from "sonner";
 
-import { PageFrame } from "@/components/shell/PageFrame";
+import { SourceSheet, type SourceSheetMode } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { useMe, useOverview, useUpdateWorkspace } from "@/lib/api/queries";
+import { useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
+import type { Overview } from "@/lib/api/types";
 import { errorMessage, greeting } from "@/lib/copy";
-import { useStoredString } from "@/lib/use-browser-state";
+import { gapPrefill } from "@/lib/knowledge/prefill";
+import { dayKey } from "@/lib/tz";
+import { useNow, useStoredString } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AccountHealth } from "./AccountHealth";
 import { Checklist } from "./Checklist";
-import { formatSpan, RANGE_LABEL, RANGES, type OverviewRange } from "./format";
-import { KnowledgeGapsRow } from "./KnowledgeGapsRow";
+import { channelsConnected, channelsLine, formatSpan, periodLabel, periodPhrase, rangeHeading } from "./format";
+import { KnowledgeGapBanner } from "./KnowledgeGapBanner";
 import { MetricTiles, MetricTilesSkeleton } from "./MetricTiles";
+import { PriorityQueue, PriorityQueueSkeleton } from "./PriorityQueue";
+import { parseStoredRange, storedRange } from "./range";
+import { RangeControl } from "./RangeControl";
 import { SentimentCard } from "./SentimentCard";
 import { TopIntentsCard } from "./TopIntentsCard";
 import { TopPostsCard } from "./TopPostsCard";
 
-function isRange(value: string): value is OverviewRange {
-  return (RANGES as string[]).includes(value);
-}
-
 /**
- * Home (UX-SCR-01, FR-HOME-01): greeting, the onboarding checklist until dismissed, the metric
- * tiles, sentiment, the most commented posts, what customers asked about, open questions and
- * account health, all from GET …/overview over 7 or 30 days (remembered on this device). Real
- * data only: a metric without data shows "—" and a hint.
+ * Home (UX-SCR-01, FR-HOME-01; redesigned, C-065): the greeting with the channels and the period,
+ * the channels pill, 7 days / 30 days / Custom (remembered on this device) and refresh; the
+ * onboarding checklist until dismissed; accounts to fix; the metric tiles with their Attention and
+ * Fast labels; sentiment, the most commented posts and what customers asked about; open questions
+ * with View thread and Train AI; and the Live Priority Queue. All from GET …/overview. Real data
+ * only: a metric without data shows "—" and a hint, and nothing is shown that the API didn't count.
  */
 export function HomeScreen() {
   const workspace = useCurrentWorkspace();
   const me = useMe();
-  const [stored, setRange] = useStoredString<OverviewRange>(`socialhood:home-range:${workspace.id}`, "7d");
-  const range: OverviewRange = isRange(stored) ? stored : "7d";
-  const overview = useOverview(workspace.id, range);
+  const now = useNow();
+  const today = dayKey(now, workspace.timezone);
+  const [stored, setStored] = useStoredString<string>(`socialhood:home-range:${workspace.id}`, "7d");
+  const query = parseStoredRange(stored, today);
+  const overview = useOverview(workspace.id, query);
   const update = useUpdateWorkspace(workspace.id);
+  const [sheet, setSheet] = useState<SourceSheetMode | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const firstName = me.data?.name?.split(" ")[0];
   const title = me.data ? greeting(new Date(), firstName) : "Home";
   const canManage = workspace.role !== "agent";
+  const data = overview.data;
 
   const dismiss = () =>
     update.mutate({ checklist_dismissed: true }, { onError: (error) => toast.error(errorMessage(error)) });
 
-  if (overview.isPending) {
-    return (
-      <PageFrame title={title}>
-        <div className="space-y-6" aria-busy="true">
-          <Skeleton className="h-10 w-full max-w-sm rounded-lg bg-panel" />
+  const refresh = () => {
+    setRefreshing(true);
+    void overview.refetch().finally(() => setRefreshing(false));
+  };
+
+  const header = (
+    <header className="mb-6 flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0">
+        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        {data ? (
+          <p className="mt-1 text-sm text-fg-secondary" data-testid="home-subtitle">
+            {channelsLine(data.platforms_connected)}
+            <span aria-hidden> · </span>
+            <span className="text-brand-fg tabular-nums">
+              {rangeHeading(data)} · {formatSpan(data.current.since, data.current.until)}
+            </span>
+          </p>
+        ) : (
+          <Skeleton className="mt-2 h-4 w-72 max-w-full bg-panel" />
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {data ? (
+          <span
+            data-testid="channels-pill"
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-3 text-xs font-medium md:min-h-8"
+          >
+            <span
+              className={cn("size-2 rounded-full", data.accounts_connected > 0 ? "bg-success" : "bg-fg-secondary")}
+              aria-hidden
+            />
+            {channelsConnected(data.accounts_connected)}
+          </span>
+        ) : null}
+        <RangeControl value={query} today={today} onChange={(next: OverviewQuery) => setStored(storedRange(next))} />
+        <Button
+          variant="outline"
+          size="icon"
+          className="size-10 md:size-8"
+          aria-label="Refresh"
+          aria-busy={refreshing}
+          disabled={refreshing || overview.isPending}
+          onClick={refresh}
+        >
+          <RefreshCw className={cn(refreshing && "motion-safe:animate-spin")} aria-hidden />
+        </Button>
+      </div>
+    </header>
+  );
+
+  return (
+    <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+      {header}
+      {overview.isPending ? (
+        <div className="space-y-6" aria-busy="true" aria-label="Loading Home">
           <MetricTilesSkeleton />
           <div className="grid gap-3 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-48 rounded-xl bg-panel" />
+              <Skeleton key={i} className="h-56 rounded-xl bg-panel" />
             ))}
           </div>
+          <PriorityQueueSkeleton />
         </div>
-      </PageFrame>
-    );
-  }
-  if (overview.isError) {
-    return (
-      <PageFrame title={title}>
+      ) : !data ? (
         <ErrorState error={overview.error} onRetry={() => void overview.refetch()} />
-      </PageFrame>
-    );
-  }
+      ) : (
+        <Body
+          data={data}
+          slug={workspace.slug}
+          canManage={canManage}
+          now={now}
+          // While another range loads, the previous one stays on screen, dimmed.
+          switching={overview.isPlaceholderData}
+          staleError={overview.isError ? overview.error : null}
+          onRetry={refresh}
+          onDismissChecklist={dismiss}
+          dismissing={update.isPending}
+          onTrain={(gap) => setSheet(gapPrefill(gap))}
+        />
+      )}
+      <SourceSheet mode={sheet} onOpenChange={(open) => (open ? undefined : setSheet(null))} />
+    </div>
+  );
+}
 
-  const data = overview.data;
+function Body({
+  data,
+  slug,
+  canManage,
+  now,
+  switching,
+  staleError,
+  onRetry,
+  onDismissChecklist,
+  dismissing,
+  onTrain,
+}: {
+  data: Overview;
+  slug: string;
+  canManage: boolean;
+  now: Date;
+  switching: boolean;
+  staleError: unknown;
+  onRetry: () => void;
+  onDismissChecklist: () => void;
+  dismissing: boolean;
+  onTrain: (gap: NonNullable<Overview["latest_gap"]>) => void;
+}) {
   const connected = data.checklist.steps.some((step) => step.key === "connect_account" && step.done);
-  // While another range loads, the previous one stays on screen, dimmed.
-  const switching = overview.isPlaceholderData;
+  const period = periodLabel(data.days);
+  const within = periodPhrase(data);
   return (
-    <PageFrame title={title}>
-      <div className="space-y-6">
-        {data.checklist.dismissed ? null : (
-          <Checklist steps={data.checklist.steps} slug={workspace.slug} onDismiss={dismiss} dismissing={update.isPending} />
-        )}
+    <div className="space-y-6">
+      {staleError ? (
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning">
+          <p className="flex-1">Couldn&apos;t refresh: {errorMessage(staleError)} These are the last numbers that loaded.</p>
+          <Button variant="ghost" className="min-h-10 md:min-h-8" onClick={onRetry}>
+            Try again
+          </Button>
+        </div>
+      ) : null}
+      {data.checklist.dismissed ? null : (
+        <Checklist steps={data.checklist.steps} slug={slug} onDismiss={onDismissChecklist} dismissing={dismissing} />
+      )}
+      <AccountHealth accounts={data.accounts_needing_attention} slug={slug} canManage={canManage} />
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-fg-secondary">
-            Last {RANGE_LABEL[data.range]}
-            <span className="tabular-nums"> · {formatSpan(data.current.since, data.current.until)}</span>
-          </p>
-          <ToggleGroup
-            aria-label="Period"
-            value={range}
-            onValueChange={(value) => {
-              if (isRange(value)) setRange(value);
-            }}
-            className="w-auto"
-          >
-            {RANGES.map((option) => (
-              <ToggleGroupItem key={option} value={option} className="min-h-10 px-3 md:min-h-8">
-                {RANGE_LABEL[option]}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+      <div
+        aria-busy={switching}
+        className={cn("space-y-6 motion-safe:transition-opacity", switching && "opacity-60")}
+        data-testid="overview"
+      >
+        <MetricTiles overview={data} slug={slug} connected={connected} now={now} />
+
+        <div className="grid gap-3 lg:grid-cols-3">
+          <SentimentCard messages={data.message_sentiment} comments={data.comment_sentiment} period={period} within={within} />
+          <TopPostsCard posts={data.top_posts} engagement={data.top_posts_engagement} period={period} within={within} slug={slug} />
+          <TopIntentsCard intents={data.top_intents} period={period} within={within} />
         </div>
 
-        <div
-          aria-busy={switching}
-          className={cn("space-y-6 transition-opacity", switching && "opacity-60")}
-          data-testid="overview"
-        >
-          <MetricTiles overview={data} slug={workspace.slug} connected={connected} />
+        <KnowledgeGapBanner
+          count={data.knowledge_gaps_open}
+          topics={data.top_questions.map((question) => question.topic)}
+          latest={data.latest_gap}
+          slug={slug}
+          canManage={canManage}
+          onTrain={onTrain}
+        />
 
-          <div className="grid gap-3 lg:grid-cols-3">
-            <SentimentCard messages={data.message_sentiment} comments={data.comment_sentiment} range={data.range} />
-            <TopPostsCard posts={data.top_posts} range={data.range} slug={workspace.slug} />
-            <TopIntentsCard intents={data.top_intents} range={data.range} />
-          </div>
-
-          {canManage ? (
-            <KnowledgeGapsRow
-              count={data.knowledge_gaps_open}
-              slug={workspace.slug}
-              topics={data.top_questions.map((question) => question.topic)}
-            />
-          ) : null}
-          <AccountHealth accounts={data.accounts_needing_attention} slug={workspace.slug} canManage={canManage} />
-        </div>
+        <PriorityQueue items={data.priority_queue} needsReply={data.needs_reply} slug={slug} now={now} />
       </div>
-    </PageFrame>
+    </div>
   );
 }

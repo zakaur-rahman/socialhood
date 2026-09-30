@@ -32,7 +32,8 @@ export const keys = {
   me: ["me"] as const,
   workspaces: ["workspaces"] as const,
   workspace: (wid: string) => ["w", wid, "workspace"] as const,
-  overview: (wid: string, range: "7d" | "30d") => ["w", wid, "overview", range] as const,
+  /** `range` is "7d", "30d" or "custom:{from}:{to}" (Home's range control). */
+  overview: (wid: string, range: string) => ["w", wid, "overview", range] as const,
   accounts: (wid: string) => ["w", wid, "social-accounts"] as const,
   notifications: (wid: string) => ["w", wid, "notifications"] as const,
   // inbox (P3)

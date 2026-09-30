@@ -3,13 +3,35 @@
  * …/overview, whose definitions it shares with the weekly digest): these functions only format
  * them and compare a period with the one before it. Pure, tested directly.
  */
-import type { Overview } from "@/lib/api/types";
+import type { Overview, Platform } from "@/lib/api/types";
+import { PLATFORM_LABEL } from "@/lib/inbox/format";
 
-export type OverviewRange = Overview["range"];
+/** A period's length in words: "1 day", "7 days", "12 days". */
+export function periodLabel(days: number): string {
+  return `${days} ${days === 1 ? "day" : "days"}`;
+}
 
-export const RANGES: OverviewRange[] = ["7d", "30d"];
+/** The header's period: "Last 7 days", "Last 30 days", or a custom range's length. */
+export function rangeHeading(overview: Pick<Overview, "range" | "days">): string {
+  return overview.range === "custom" ? periodLabel(overview.days) : `Last ${periodLabel(overview.days)}`;
+}
 
-export const RANGE_LABEL: Record<OverviewRange, string> = { "7d": "7 days", "30d": "30 days" };
+/** For sentences: "the last 7 days", or "these 12 days" for a custom range. */
+export function periodPhrase(overview: Pick<Overview, "range" | "days">): string {
+  return `${overview.range === "custom" ? "these" : "the last"} ${periodLabel(overview.days)}`;
+}
+
+/** "Overview across Instagram & WhatsApp", from the connected accounts' platforms. */
+export function channelsLine(platforms: Platform[]): string {
+  if (platforms.length === 0) return "No channels connected yet";
+  return `Overview across ${platforms.map((platform) => PLATFORM_LABEL[platform]).join(" & ")}`;
+}
+
+/** "2 channels connected" (active accounts). */
+export function channelsConnected(count: number): string {
+  if (count === 0) return "No channels connected";
+  return `${count} ${count === 1 ? "channel" : "channels"} connected`;
+}
 
 const count = new Intl.NumberFormat("en-US");
 const oneDecimal = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
@@ -58,8 +80,8 @@ type Better = "higher" | "lower" | "neither";
 
 const UNIT = { percent: { short: "%", long: "%" }, points: { short: " pts", long: " points" } } as const;
 
-function trend(delta: number, size: string, unit: keyof typeof UNIT, range: OverviewRange, better: Better): Trend {
-  const before = `from the previous ${RANGE_LABEL[range]}`;
+function trend(delta: number, size: string, unit: keyof typeof UNIT, period: string, better: Better): Trend {
+  const before = `from the previous ${period}`;
   if (size === "0") {
     return { direction: "flat", good: null, text: "No change", words: `no change ${before}` };
   }
@@ -73,39 +95,40 @@ function trend(delta: number, size: string, unit: keyof typeof UNIT, range: Over
   };
 }
 
-/** A count against the period before: the relative change, none when there was nothing before. */
+/** A count against the period before: the relative change, none when there was nothing before.
+ * `period` names the length of both ("7 days"). */
 export function countTrend(
   current: number,
   previous: number,
-  range: OverviewRange,
+  period: string,
   better: Better = "neither",
 ): Trend | null {
   if (previous <= 0) return null;
   const change = ((current - previous) / previous) * 100;
-  return trend(change, count.format(Math.round(Math.abs(change))), "percent", range, better);
+  return trend(change, count.format(Math.round(Math.abs(change))), "percent", period, better);
 }
 
 /** A share (0-100) against the period before, in percentage points. */
 export function rateTrend(
   current: number | null | undefined,
   previous: number | null | undefined,
-  range: OverviewRange,
+  period: string,
   better: Better = "higher",
 ): Trend | null {
   if (current === null || current === undefined || previous === null || previous === undefined) return null;
   const change = current - previous;
-  return trend(change, oneDecimal.format(Math.abs(change)), "points", range, better);
+  return trend(change, oneDecimal.format(Math.abs(change)), "points", period, better);
 }
 
 /** A wait against the period before: the relative change; shorter is better. */
 export function waitTrend(
   current: number | null | undefined,
   previous: number | null | undefined,
-  range: OverviewRange,
+  period: string,
 ): Trend | null {
   if (current === null || current === undefined || !previous) return null;
   const change = ((current - previous) / previous) * 100;
-  return trend(change, count.format(Math.round(Math.abs(change))), "percent", range, "lower");
+  return trend(change, count.format(Math.round(Math.abs(change))), "percent", period, "lower");
 }
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -118,6 +141,12 @@ export function formatSpan(since: string, until: string): string {
   if (sy === uy && sm === um) return `${sd}–${ud} ${month(um)}`;
   if (sy === uy) return `${sd} ${month(sm)}–${ud} ${month(um)}`;
   return `${sd} ${month(sm)} ${sy}–${ud} ${month(um)} ${uy}`;
+}
+
+/** "12m ago", "just now", "3d ago", "28 Sep": how long ago the customer wrote. */
+export function agoLabel(relative: string): string {
+  if (relative === "now") return "just now";
+  return /^\d+[mhd]$/.test(relative) ? `${relative} ago` : relative;
 }
 
 /** Whole-number shares for a legend: "57%"; "—" when nothing was analysed. */

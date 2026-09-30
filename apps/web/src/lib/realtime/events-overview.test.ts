@@ -57,9 +57,20 @@ describe("Home stays fresh (FR-HOME-01)", () => {
     expect(overviewRefetches(invalidate)).toBe(0);
 
     queryClient.setQueryData(keys.overview(wid, "30d"), { range: "30d" });
-    send(queryClient, "suggestion.created", {});
     send(queryClient, "notification.created", {});
+    send(queryClient, "usage.updated", {});
     vi.advanceTimersByTime(OVERVIEW_REFRESH_MS);
     expect(overviewRefetches(invalidate)).toBe(0);
+  });
+
+  it("a suggested reply refreshes the priority queue's AI draft ready (a custom range too)", () => {
+    queryClient.setQueryData(keys.overview(wid, "custom:2026-09-19:2026-09-30"), { range: "custom" });
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    send(queryClient, "suggestion.created", { conversation_id: "c1" });
+    send(queryClient, "suggestion.updated", { conversation_id: "c1" });
+    vi.advanceTimersByTime(OVERVIEW_REFRESH_MS);
+
+    expect(overviewRefetches(invalidate)).toBe(1);
   });
 });

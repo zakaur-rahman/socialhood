@@ -2,7 +2,7 @@ import { SentimentBar } from "@/components/comments/SentimentBar";
 import type { SentimentSplit } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
-import { formatCount, formatShare, RANGE_LABEL, type OverviewRange } from "./format";
+import { formatCount, formatShare } from "./format";
 
 const KEY = [
   { key: "positive", label: "Positive", dot: "bg-success" },
@@ -10,7 +10,7 @@ const KEY = [
   { key: "negative", label: "Negative", dot: "bg-danger" },
 ] as const;
 
-function SplitRow({ title, noun, split, days }: { title: string; noun: string; split: SentimentSplit; days: string }) {
+function SplitRow({ title, noun, split, within }: { title: string; noun: string; split: SentimentSplit; within: string }) {
   const clean = split.positive + split.neutral + split.negative;
   return (
     <div data-testid={`sentiment-${noun}`} className="space-y-2">
@@ -25,16 +25,16 @@ function SplitRow({ title, noun, split, days }: { title: string; noun: string; s
       {clean > 0 ? (
         <>
           <SentimentBar positive={split.positive} neutral={split.neutral} negative={split.negative} />
-          <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-fg-secondary" aria-label={`${title} by sentiment`}>
+          <ul className="grid grid-cols-3 gap-x-3 gap-y-1 text-xs text-fg-secondary" aria-label={`${title} by sentiment`}>
             {KEY.map((item) => (
               <li key={item.key} className="inline-flex items-center gap-1.5">
-                <span className={cn("size-2 rounded-full", item.dot)} aria-hidden />
+                <span className={cn("size-2 shrink-0 rounded-full", item.dot)} aria-hidden />
                 {item.label} <span className="text-fg tabular-nums">{formatShare(split[`${item.key}_pct`])}</span>
               </li>
             ))}
             {split.spam > 0 ? (
               <li className="inline-flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-warning" aria-hidden />
+                <span className="size-2 shrink-0 rounded-full bg-warning" aria-hidden />
                 Spam <span className="text-fg tabular-nums">{formatCount(split.spam)}</span>
               </li>
             ) : null}
@@ -42,7 +42,7 @@ function SplitRow({ title, noun, split, days }: { title: string; noun: string; s
         </>
       ) : (
         <p className="text-xs text-fg-secondary">
-          {split.total === 0 ? `No ${noun} in the last ${days}.` : "Not analysed yet."}
+          {split.total === 0 ? `No ${noun} in ${within}.` : "Not analysed yet."}
         </p>
       )}
     </div>
@@ -53,20 +53,23 @@ function SplitRow({ title, noun, split, days }: { title: string; noun: string; s
 export function SentimentCard({
   messages,
   comments,
-  range,
+  period,
+  within,
 }: {
   messages: SentimentSplit;
   comments: SentimentSplit;
-  range: OverviewRange;
+  /** "7 days" */
+  period: string;
+  /** "the last 7 days" */
+  within: string;
 }) {
-  const days = RANGE_LABEL[range];
   return (
-    <section aria-labelledby="home-sentiment" className="space-y-4 rounded-xl border border-line bg-panel p-4">
+    <section aria-labelledby="home-sentiment" className="flex flex-col gap-5 rounded-xl border border-line bg-panel p-4">
       <h2 id="home-sentiment" className="text-base font-semibold">
-        Sentiment, {days}
+        Sentiment, {period}
       </h2>
-      <SplitRow title="Messages" noun="messages" split={messages} days={days} />
-      <SplitRow title="Comments" noun="comments" split={comments} days={days} />
+      <SplitRow title="Messages" noun="messages" split={messages} within={within} />
+      <SplitRow title="Comments" noun="comments" split={comments} within={within} />
     </section>
   );
 }

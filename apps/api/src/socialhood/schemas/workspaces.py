@@ -9,7 +9,7 @@ from typing import Literal
 from pydantic import Field
 
 from socialhood.schemas.common import RequestModel, ResponseModel
-from socialhood.schemas.inbox import IntentName, PlatformName
+from socialhood.schemas.inbox import ContactSummary, EscalationReason, IntentName, PlatformName
 from socialhood.schemas.posts import CommentStats
 
 RoleName = Literal["owner", "admin", "agent"]
@@ -76,7 +76,9 @@ class Checklist(ResponseModel):
     steps: list[ChecklistStep]
 
 
-OverviewRange = Literal["7d", "30d"]
+OverviewPreset = Literal["7d", "30d"]  # ?range=
+OverviewRange = Literal["7d", "30d", "custom"]  # "custom": ?from=&to=
+PriorityName = Literal["critical", "high", "medium", "low"]
 
 
 class OverviewPeriod(ResponseModel):
@@ -136,6 +138,48 @@ class OverviewPost(ResponseModel):
     posted_at: datetime
     comments: int  # made in the period
     stats: CommentStats
+    # (likes + comments + shares + saves) / reach in %, from the post's latest metric snapshot
+    # captured in the period; None without one (or without reach). Never estimated.
+    engagement_rate: float | None
+
+
+class OverviewEngagement(ResponseModel):
+    """The mean engagement rate of the most commented posts that have one (``posts`` of them)."""
+
+    rate: float
+    posts: int
+
+
+class OverviewGap(ResponseModel):
+    """The open knowledge gap asked most recently: Home's View thread and Train AI. ``question``
+    is the customer's newest example message (the topic when there is none); the conversation
+    and message are where it came from, None for a comment's gap or a deleted message."""
+
+    id: uuid.UUID
+    topic: str
+    question: str
+    asked: int
+    last_seen_at: datetime
+    conversation_id: uuid.UUID | None
+    message_id: uuid.UUID | None
+
+
+class PriorityConversation(ResponseModel):
+    """One row of Home's Live Priority Queue (services/priority_queue.py has the rules)."""
+
+    id: uuid.UUID
+    platform: PlatformName
+    contact: ContactSummary
+    last_customer_message: str | None  # clipped; "Photo" and the like for attachments
+    last_customer_message_at: datetime | None
+    waiting_since: datetime | None  # when the customer's unanswered turn began
+    needs_you: bool
+    needs_human_reason: EscalationReason | None
+    awaiting_reply: bool
+    has_pending_suggestion: bool  # a pending suggested reply with a draft (can answer)
+    window_closes_at: datetime | None  # the reply window, None when closed
+    lead_score: int | None
+    priority: PriorityName | None
 
 
 class AccountAttention(ResponseModel):
@@ -147,18 +191,25 @@ class AccountAttention(ResponseModel):
 
 class Overview(ResponseModel):
     """GET …/overview (FR-HOME-01, UX-SCR-01). Flows cover ``current`` (the range: 7 or 30 local
-    days up to and including today) and ``previous`` (as many days just before it); states are as
-    of now."""
+    days up to and including today, or the custom ``from``..``to``) and ``previous`` (as many days
+    just before it); states are as of now."""
 
     range: OverviewRange
+    days: int  # local days in ``current``
     timezone: str
     checklist: Checklist
     # states
     needs_reply: int  # the inbox's "Needs reply" view
     needs_you: int  # open conversations the AI handed to a person
+    # When the longest-waiting "Needs reply" conversation's unanswered turn began.
+    oldest_waiting_since: datetime | None
     knowledge_gaps_open: int = 0  # FR-KB-06: Home's "Questions the AI couldn't answer" (T5.10)
     top_questions: list[QuestionCount]  # most asked first
+    latest_gap: OverviewGap | None
     accounts_needing_attention: list[AccountAttention]
+    accounts_connected: int  # active accounts
+    platforms_connected: list[PlatformName]  # of the active accounts
+    priority_queue: list[PriorityConversation]  # up to 5
     # flows
     messages_today: int
     current: OverviewPeriod
@@ -167,3 +218,4 @@ class Overview(ResponseModel):
     message_sentiment: SentimentSplit
     comment_sentiment: SentimentSplit
     top_posts: list[OverviewPost]
+    top_posts_engagement: OverviewEngagement | None

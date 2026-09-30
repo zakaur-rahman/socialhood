@@ -40,6 +40,17 @@ Ranges are local calendar days in the workspace's time zone (services/analytics/
   sentiment.py; C-039): comments made in the range and not deleted, spam apart.
 - **Accounts needing attention**: connected accounts that need reconnecting or are in error.
 Percentages are 0 to 100 with one decimal, None when there is nothing to divide.
+
+Home only (the digest doesn't read these; C-065):
+
+- **Accounts connected**: active accounts, and their platforms.
+- **Latest question**: the open knowledge gap asked most recently (in the 30 days), with the
+  customer's newest example message and its conversation, when the gap has one (a comment's
+  automation reply records none; a deleted message is skipped).
+- **Engagement rate** of a post: (likes + comments + shares + saves) / reach in % (the
+  analytics definition, services/analytics/stats.py), from its latest metric snapshot captured
+  in the range that has reach and all four counts; posts without one have none. The most
+  commented posts' rate is the mean of those that have one, with how many that is.
 """
 
 from __future__ import annotations
@@ -54,7 +65,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
 from socialhood.db.tenancy import require_workspace
-from socialhood.models.ai import GapStatus, MessageAnalysis, Sentiment
+from socialhood.models.ai import GapStatus, KnowledgeGap, MessageAnalysis, Sentiment
+from socialhood.models.analytics import PostMetricSnapshot
 from socialhood.models.automations import Comment
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.inbox import (
@@ -70,6 +82,7 @@ from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import knowledge as knowledge_repo
 from socialhood.services.analytics.common import DateRange, View, date_range, zone
 from socialhood.services.analytics.sentiment import sentiment_distribution
+from socialhood.services.analytics.stats import engagement_rate
 from socialhood.services.knowledge import gaps
 
 REPLY_SOURCES = (
@@ -234,6 +247,23 @@ class AccountAttention:
     platform: str
     username: str | None
     status: str  # needs_reconnect or error
+
+
+@dataclass(frozen=True)
+class LatestQuestion:
+    gap_id: uuid.UUID
+    topic: str
+    question: str  # the newest example message's text, else the topic
+    asked: int
+    last_seen_at: datetime
+    conversation_id: uuid.UUID | None
+    message_id: uuid.UUID | None
+
+
+@dataclass(frozen=True)
+class Engagement:
+    rate: float  # mean of the posts' rates, 0-100 with two decimals
+    posts: int  # posts with a rate
 
 
 def pct(part: int, whole: int) -> float | None:
@@ -533,6 +563,87 @@ async def accounts_needing_attention(session: AsyncSession) -> list[AccountAtten
         )
         for row in rows
     ]
+
+
+async def accounts_connected(session: AsyncSession) -> tuple[int, list[str]]:
+    """Active accounts, and their platforms (Instagram first)."""
+    ws = require_workspace()
+    rows = (
+        await session.execute(
+            select(SocialAccount.platform, func.count())
+            .where(SocialAccount.workspace_id == ws, SocialAccount.status == AccountStatus.ACTIVE)
+            .group_by(SocialAccount.platform)
+            .order_by(SocialAccount.platform)
+        )
+    ).all()
+    return sum(int(n) for _, n in rows), [str(platform) for platform, _ in rows]
+
+
+async def latest_question(session: AsyncSession, *, now: datetime) -> LatestQuestion | None:
+    """The open gap asked most recently in the 30 days, with where it came from."""
+    gap = await session.scalar(
+        select(KnowledgeGap)
+        .where(
+            KnowledgeGap.workspace_id == require_workspace(),
+            KnowledgeGap.status == GapStatus.OPEN,
+            KnowledgeGap.last_seen_at >= now - gaps.WINDOW,
+        )
+        .order_by(KnowledgeGap.last_seen_at.desc(), KnowledgeGap.id)
+        .limit(1)
+    )
+    if gap is None:
+        return None
+    ids = list(gap.example_message_ids or [])  # newest first
+    found = await knowledge_repo.messages_by_id(session, ids)
+    source = next(
+        (found[i] for i in ids if i in found and found[i].deleted_at is None),
+        None,
+    )
+    text = " ".join((source.text or "").split()) if source is not None else ""
+    return LatestQuestion(
+        gap_id=gap.id,
+        topic=gap.topic,
+        question=text or gap.topic,
+        asked=gap.occurrences,
+        last_seen_at=gap.last_seen_at,
+        conversation_id=source.conversation_id if source is not None else None,
+        message_id=source.id if source is not None else None,
+    )
+
+
+async def engagement_rates(
+    session: AsyncSession, post_ids: list[uuid.UUID], span: DateRange
+) -> dict[uuid.UUID, float]:
+    """Each post's engagement rate from its latest snapshot captured in the range that has one."""
+    if not post_ids:
+        return {}
+    snaps = await session.scalars(
+        select(PostMetricSnapshot)
+        .where(
+            PostMetricSnapshot.workspace_id == require_workspace(),
+            PostMetricSnapshot.media_item_id.in_(post_ids),
+            PostMetricSnapshot.captured_at >= span.start,
+            PostMetricSnapshot.captured_at < span.end,
+        )
+        .order_by(PostMetricSnapshot.captured_at.desc(), PostMetricSnapshot.id)
+    )
+    rates: dict[uuid.UUID, float] = {}
+    for snap in snaps.all():
+        if snap.media_item_id in rates:
+            continue
+        values = {
+            k: v
+            for k, v in (snap.metrics or {}).items()
+            if isinstance(v, int) and not isinstance(v, bool)
+        }
+        rate = engagement_rate(values)
+        if rate is not None:
+            rates[snap.media_item_id] = rate
+    return rates
+
+
+def mean_engagement(rates: list[float]) -> Engagement | None:
+    return Engagement(round(sum(rates) / len(rates), 2), len(rates)) if rates else None
 
 
 async def unanswered_questions(

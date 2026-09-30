@@ -38,17 +38,24 @@ export function useWorkspace(wid: string) {
   });
 }
 
+/** GET …/overview's period: the last 7 or 30 days, or local days `from`..`to` (YYYY-MM-DD). */
+export type OverviewQuery = { range: "7d" | "30d" } | { from: string; to: string };
+
+export function overviewKey(query: OverviewQuery): string {
+  return "range" in query ? query.range : `custom:${query.from}:${query.to}`;
+}
+
 /**
- * Home (FR-HOME-01). Real-time events that change its numbers refetch it (lib/realtime/events.ts);
- * the interval covers the local day rolling over. Switching range keeps the last one on screen
- * (never another workspace's).
+ * Home (FR-HOME-01). Real-time events that change its numbers or its priority queue refetch it
+ * (lib/realtime/events.ts); the interval covers the local day rolling over. Switching range
+ * keeps the last one on screen (never another workspace's).
  */
-export function useOverview(wid: string, range: "7d" | "30d" = "7d") {
+export function useOverview(wid: string, query: OverviewQuery = { range: "7d" }) {
   const api = useApi();
   return useQuery<Overview>({
-    queryKey: keys.overview(wid, range),
+    queryKey: keys.overview(wid, overviewKey(query)),
     queryFn: () =>
-      unwrap(api.GET("/v1/w/{wid}/overview", { params: { path: { wid }, query: { range } } })),
+      unwrap(api.GET("/v1/w/{wid}/overview", { params: { path: { wid }, query } })),
     placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === wid ? previous : undefined),
     refetchInterval: 5 * 60_000,
   });
