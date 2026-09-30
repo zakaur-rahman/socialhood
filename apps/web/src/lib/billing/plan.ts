@@ -96,7 +96,7 @@ export function planStatus(billing: BillingState, timeZone: string, now: Date = 
       if (billing.cancel_at_period_end) {
         return {
           plan: name,
-          badge: { label: "Cancelled", tone: "warning" },
+          badge: { label: "Cancelling", tone: "warning" },
           line: ends
             ? `${billingCopy.cancelled(name, ends)}. Then the workspace moves to Free.`
             : `${name} ends at the end of this period.`,
@@ -116,7 +116,7 @@ export function planStatus(billing: BillingState, timeZone: string, now: Date = 
       const grace = date(billing.grace_until);
       return {
         plan: name,
-        badge: { label: "Payment failed", tone: "danger" },
+        badge: { label: "On hold", tone: "danger" },
         line: grace
           ? `Update your payment method by ${grace} to keep ${name}.`
           : `Update your payment method to keep ${name}.`,
@@ -153,6 +153,8 @@ const METERS: Record<string, { label: string; unit: string; periodic?: boolean }
   active_automations: { label: "Active automations", unit: "automations" },
   pending_scheduled_messages: { label: "Scheduled messages", unit: "waiting" },
   social_accounts: { label: "Connected accounts", unit: "accounts" },
+  instagram_accounts: { label: "Instagram accounts", unit: "connected" },
+  whatsapp_accounts: { label: "WhatsApp accounts", unit: "connected" },
   accounts_per_platform: { label: "Accounts per platform", unit: "accounts" },
   members: { label: "Members", unit: "members" },
 };

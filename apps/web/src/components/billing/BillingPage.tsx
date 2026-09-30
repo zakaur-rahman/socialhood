@@ -1,12 +1,24 @@
 "use client";
 
-import { ExternalLink } from "lucide-react";
+import {
+  BookOpen,
+  CalendarClock,
+  Clock,
+  CreditCard,
+  ExternalLink,
+  Gauge,
+  Layers,
+  Sparkles,
+  Zap,
+} from "lucide-react";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { PageFrame } from "@/components/shell/PageFrame";
+import { PLATFORM_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { SettingsCard } from "@/components/settings/SettingsCard";
+import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import {
@@ -29,6 +41,7 @@ import {
   meterViews,
   planStatus,
   priceOf,
+  type MeterView,
   type StatusTone,
 } from "@/lib/billing/plan";
 import { PLAN_NAME, billingCopy, errorMessage, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
@@ -42,8 +55,9 @@ import {
   isConfirmed,
   useCheckoutConfirmation,
 } from "./CheckoutReturn";
+import { PaymentHistory } from "./PaymentHistory";
 import { PlanCards } from "./PlanCards";
-import { UsageMeter } from "./UsageMeter";
+import { meterLevel, type MeterLevel } from "./UsageMeter";
 import { useOpenPortal, useStartCheckout } from "./use-billing-actions";
 
 const BADGE: Record<StatusTone, string> = {
@@ -57,7 +71,32 @@ const BADGE: Record<StatusTone, string> = {
 const ENTITLEMENT_FOR_METRIC: Record<string, string> = {
   ai_credits: "ai_credits_monthly",
   scheduled_posts: "scheduled_posts_monthly",
+  instagram_accounts: "accounts_per_platform",
+  whatsapp_accounts: "accounts_per_platform",
 };
+
+const METER_ICON: Record<string, ReactNode> = {
+  ai_credits: <Sparkles />,
+  scheduled_posts: <CalendarClock />,
+  knowledge_characters: <BookOpen />,
+  active_automations: <Zap />,
+  pending_scheduled_messages: <Clock />,
+  instagram_accounts: <PlatformGlyph platform="instagram" />,
+  whatsapp_accounts: <PlatformGlyph platform="whatsapp" />,
+};
+
+const METER_ICON_BG: Record<string, string> = {
+  instagram_accounts: `${PLATFORM_BG.instagram} text-white`,
+  whatsapp_accounts: `${PLATFORM_BG.whatsapp} text-white`,
+};
+
+const FILL: Record<MeterLevel, string> = {
+  normal: "bg-brand-gradient-decor",
+  warning: "bg-warning",
+  full: "bg-danger",
+};
+
+const count = new Intl.NumberFormat("en-US");
 
 /** FR-BIL-07, said before the owner cancels: what moving to Free changes. Nothing is deleted. */
 const DOWNGRADE_EFFECTS =
@@ -69,6 +108,7 @@ const DOWNGRADE_EFFECTS =
  * portal, cancel and resume, each confirmed). After checkout Dodo returns here with
  * ?checkout=return; the page waits for the webhook and never assumes the payment worked.
  * Owners manage; admins see it read-only; agents are sent to their own notification settings.
+ * C-066: a plan hero, a grid of quota meters, the plans side by side and the payment history.
  */
 export function BillingPage() {
   const workspace = useCurrentWorkspace();
@@ -111,8 +151,16 @@ export function BillingPage() {
   const state = billing.data;
   const isOwner = workspace.role === "owner";
   return (
-    <PageFrame title="Billing">
-      <div className="max-w-4xl space-y-6">
+    <SettingsFrame
+      header={
+        <SettingsPageHeader
+          label="Plan & usage"
+          title="Billing & Usage"
+          description="Your plan, what this workspace has used of it, and every payment."
+        />
+      }
+    >
+      <div className="space-y-6">
         {phase && !noticeDone ? (
           <CheckoutReturn phase={phase} billing={state} onDone={() => setNoticeDone(true)} />
         ) : null}
@@ -123,14 +171,18 @@ export function BillingPage() {
           trialDays={plans.data?.items.find((offer) => offer.plan === "pro")?.trial_days || TRIAL_DAYS}
         />
         <Usage billing={state} />
-        <section aria-labelledby="plans-title" className="space-y-3">
-          <h2 id="plans-title" className="text-base font-semibold">
-            Plans
-          </h2>
+        <section aria-labelledby="plans-title" className="space-y-4">
+          <div className="space-y-1">
+            <h2 id="plans-title" className="text-lg font-semibold tracking-tight">
+              Compare plans
+            </h2>
+            <p className="text-sm text-fg-secondary">What each plan includes. Max is coming soon.</p>
+          </div>
           <PlanCards plans={plans} billing={state} isOwner={isOwner} checkout={checkout} />
         </section>
+        <PaymentHistory />
       </div>
-    </PageFrame>
+    </SettingsFrame>
   );
 }
 
@@ -173,7 +225,7 @@ function CurrentPlan({
     });
 
   const actions = isOwner ? (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 md:justify-end">
       {mayCheckout ? (
         <Button
           className="bg-brand-gradient min-h-10 text-white md:min-h-9"
@@ -213,22 +265,32 @@ function CurrentPlan({
   );
 
   return (
-    <section aria-labelledby="plan-title" className="space-y-4 rounded-xl border border-line bg-panel p-5">
-      <div className="space-y-1">
-        <p className="text-xs font-medium text-fg-secondary">Current plan</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <h2 id="plan-title" className="text-xl font-semibold tracking-tight">
-            {status.plan}
-          </h2>
-          <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", BADGE[status.badge.tone])}>
-            {status.badge.label}
+    <section
+      aria-labelledby="plan-title"
+      className="space-y-4 rounded-2xl border border-brand-line bg-panel bg-[radial-gradient(120%_140%_at_0%_0%,var(--color-brand-soft),transparent_60%)] p-5 md:p-6"
+    >
+      <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+        <div className="flex min-w-0 items-start gap-4">
+          <span aria-hidden className="bg-shell-gradient grid size-12 shrink-0 place-items-center rounded-xl text-white">
+            <CreditCard className="size-6" />
           </span>
+          <div className="min-w-0 space-y-1">
+            <p className="text-[11px] font-semibold tracking-[0.12em] text-fg-secondary uppercase">Current plan</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 id="plan-title" className="text-2xl font-semibold tracking-tight">
+                {status.plan}
+              </h2>
+              <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", BADGE[status.badge.tone])}>
+                {status.badge.label}
+              </span>
+            </div>
+            <p className={cn("text-sm", status.badge.tone === "danger" ? "text-danger-fg" : "text-fg-secondary")}>
+              {status.line}
+            </p>
+          </div>
         </div>
-        <p className={cn("text-sm", status.badge.tone === "danger" ? "text-danger-fg" : "text-fg-secondary")}>
-          {status.line}
-        </p>
+        {actions}
       </div>
-      {actions}
       {checkout.error ? (
         <p role="alert" className="text-sm text-danger-fg">
           {checkout.error}
@@ -278,8 +340,9 @@ function CurrentPlan({
 }
 
 /**
- * FR-BIL-05: a meter for every limit GET …/billing counts, warning at 80 % and danger at 100 %;
- * the plan's other limits are listed (the UI never counts usage itself, TR-BIL-04).
+ * FR-BIL-05 "Resource quotas & usage" (C-066): a meter for every limit GET …/billing counts, with
+ * its percentage and, for a monthly allowance, when it resets; warning at 80 % and danger at
+ * 100 %. The plan's other limits are listed (the UI never counts usage itself, TR-BIL-04).
  */
 function Usage({ billing }: { billing: BillingState }) {
   const workspace = useCurrentWorkspace();
@@ -290,32 +353,32 @@ function Usage({ billing }: { billing: BillingState }) {
   ).filter((line): line is string => Boolean(line));
   if (meters.length === 0 && others.length === 0) return null;
   return (
-    <section aria-labelledby="usage-title" className="space-y-4 rounded-xl border border-line bg-panel p-5">
-      <h2 id="usage-title" className="text-base font-semibold">
-        Usage
-      </h2>
+    <SettingsCard
+      id="usage"
+      icon={<Gauge />}
+      title="Resource quotas & usage"
+      description={`What this workspace has used of ${PLAN_NAME[billing.plan]}'s limits.`}
+    >
       {meters.length > 0 ? (
-        <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+        <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Usage">
           {meters.map((meter) => {
             const key = ENTITLEMENT_FOR_METRIC[meter.metric] ?? meter.metric;
             return (
-              <div key={meter.metric} className="space-y-1">
-                <UsageMeter
-                  label={meter.label}
-                  used={meter.used}
-                  limit={meter.limit}
-                  unit={meter.unit}
-                  fullMessage={meter.limit ? (planIncludes(key, meter.limit, billing.plan) ?? undefined) : undefined}
-                />
-                {meter.note ? <p className="text-xs text-fg-secondary">{meter.note}</p> : null}
-              </div>
+              <QuotaTile
+                key={meter.metric}
+                meter={meter}
+                fullMessage={meter.limit ? (planIncludes(key, meter.limit, billing.plan) ?? undefined) : undefined}
+              />
             );
           })}
-        </div>
+        </ul>
       ) : null}
       {others.length > 0 ? (
-        <div className="space-y-1.5 border-t border-line-subtle pt-4">
-          <p className="text-xs font-medium text-fg-secondary">{PLAN_NAME[billing.plan]} also includes</p>
+        <div className="mt-5 space-y-1.5 border-t border-line-subtle pt-4">
+          <p className="flex items-center gap-2 text-xs font-medium text-fg-secondary">
+            <Layers className="size-3.5" aria-hidden />
+            {PLAN_NAME[billing.plan]} also includes
+          </p>
           <ul className="grid gap-x-8 gap-y-1 text-sm sm:grid-cols-2" aria-label="Other limits">
             {others.map((line) => (
               <li key={line}>{line.charAt(0).toUpperCase() + line.slice(1)}</li>
@@ -323,6 +386,67 @@ function Usage({ billing }: { billing: BillingState }) {
           </ul>
         </div>
       ) : null}
-    </section>
+    </SettingsCard>
+  );
+}
+
+function percentText(used: number, limit: number): string {
+  const share = (used / limit) * 100;
+  if (used > 0 && share < 1) return "<1%";
+  return `${Math.min(999, Math.round(share))}%`;
+}
+
+/** One quota: label, percentage, "{used} / {limit} {unit}", a bar, and when it resets. */
+function QuotaTile({ meter, fullMessage }: { meter: MeterView; fullMessage?: string }) {
+  const limit = meter.limit ?? 0;
+  const level = meterLevel(meter.used, limit);
+  const width = limit ? Math.min(100, Math.round((meter.used / limit) * 100)) : 0;
+  const valueText = `${count.format(meter.used)} of ${count.format(limit)} ${meter.unit}`.trim();
+  return (
+    <li data-level={level} className="flex min-w-0 flex-col gap-3 rounded-xl border border-line-subtle bg-field/60 p-4">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span
+            aria-hidden
+            className={cn(
+              "grid size-8 shrink-0 place-items-center rounded-lg bg-raised text-brand-fg [&_svg]:size-4",
+              METER_ICON_BG[meter.metric],
+            )}
+          >
+            {METER_ICON[meter.metric] ?? <Gauge />}
+          </span>
+          <p className="text-sm font-medium">{meter.label}</p>
+        </div>
+        <span
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
+            level === "full" ? "bg-danger/15 text-danger-fg" : level === "warning" ? "bg-warning/15 text-warning" : "bg-raised text-fg-secondary",
+          )}
+        >
+          {percentText(meter.used, limit)}
+        </span>
+      </div>
+      <p className="text-sm text-fg-secondary tabular-nums">
+        <span className="text-lg font-semibold text-fg">{count.format(meter.used)}</span> / {count.format(limit)}{" "}
+        {meter.unit}
+      </p>
+      <div
+        role="meter"
+        aria-label={meter.label}
+        aria-valuemin={0}
+        aria-valuemax={limit}
+        aria-valuenow={Math.min(meter.used, limit)}
+        aria-valuetext={valueText}
+        className="h-1.5 overflow-hidden rounded-full bg-raised"
+      >
+        <span className={cn("block h-full rounded-full", FILL[level])} style={{ width: `${width}%` }} />
+      </div>
+      {meter.note ? <p className="text-xs text-fg-secondary">{meter.note}</p> : null}
+      {level === "full" && fullMessage ? (
+        <p className="text-xs text-danger-fg" role="status">
+          {fullMessage}
+        </p>
+      ) : null}
+    </li>
   );
 }
