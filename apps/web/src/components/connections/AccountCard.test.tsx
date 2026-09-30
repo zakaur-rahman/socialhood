@@ -22,6 +22,7 @@ const base: SocialAccount = {
   token_expires_at: "2026-11-27T10:00:00Z",
   capabilities: ["dm_send"],
   sandbox: false,
+  last_synced_at: null,
 };
 
 const idle = { saving: false, reconnecting: false, retrying: false, disconnecting: false };
@@ -94,6 +95,27 @@ describe("AccountCard (UX-SCR-07)", () => {
   it("marks sandbox accounts", () => {
     const { card } = renderCard({ sandbox: true });
     expect(within(card).getByText("Sandbox")).toBeInTheDocument();
+  });
+
+  it("names the API it uses and when it last synced, when it has (C-066)", () => {
+    const threeHoursAgo = new Date(Date.now() - 3 * 3_600_000 - 60_000).toISOString();
+    const { card } = renderCard({ last_synced_at: threeHoursAgo });
+    expect(within(card).getByText("Instagram API")).toBeInTheDocument();
+    expect(within(card).getByText("Last synced 3h ago")).toBeInTheDocument();
+    expect(within(card).getByRole("img", { name: "Instagram" })).toBeInTheDocument();
+  });
+
+  it("says nothing about syncing before the first sync; WhatsApp is the Cloud API", () => {
+    const { card } = renderCard({ platform: "whatsapp", last_synced_at: null });
+    expect(within(card).getByText("WhatsApp Cloud API")).toBeInTheDocument();
+    expect(within(card).queryByText(/Last synced/)).toBeNull();
+    // No spam switch: WhatsApp has no comments.
+    expect(within(card).queryByRole("switch", { name: /Hide spam comments/ })).toBeNull();
+  });
+
+  it("a disconnected card keeps only Reconnect", () => {
+    const { card } = renderCard({ status: "disconnected" });
+    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual(["Reconnect"]);
   });
 
   it("asks before disconnecting and passes the delete-data choice (FR-CON-06)", async () => {

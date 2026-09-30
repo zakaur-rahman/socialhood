@@ -241,6 +241,47 @@ async def test_a_thread_filter_lists_only_your_own_runs(team: Team) -> None:
     assert listed["items"] == []
 
 
+async def test_the_history_filters_by_status_and_searches_requests(team: Team) -> None:
+    """Settings → Agent's chips and search (C-066): any case, LIKE wildcards taken literally."""
+    base = datetime.now(UTC) - timedelta(hours=1)
+    answered = await team.run(request="How did my latest post do?", created_at=base)
+    partly = await team.run(
+        request="Top posts, 100% honest", status="partial", created_at=base + timedelta(minutes=1)
+    )
+    failed = await team.run(
+        request="Which POSTS got negative comments?",
+        status="failed",
+        answer=None,
+        created_at=base + timedelta(minutes=2),
+    )
+    theirs = await team.run(
+        requested_by_user_id=team.member_id,
+        request="Posts this week",
+        status="failed",
+        answer=None,
+        created_at=base + timedelta(minutes=3),
+    )
+
+    async def ids(who: str | None = None, **params: Any) -> list[str]:
+        response = await team.get("/agent/runs", who=who, **params)
+        assert response.status_code == 200, response.text
+        return [r["id"] for r in response.json()["items"]]
+
+    assert await ids(status=["succeeded", "partial"]) == [str(partly), str(answered)]
+    assert await ids(status="failed") == [str(theirs), str(failed)]
+    assert await ids(q="posts") == [str(theirs), str(failed), str(partly)]
+    assert await ids(q="%") == [str(partly)]
+    assert await ids(q="  negative ", status="failed") == [str(failed)]
+    assert await ids(status="awaiting_approval") == []
+    # A member's filters still reach only their own runs.
+    assert await ids(who=team.member, status="failed") == [str(theirs)]
+    assert (await team.get("/agent/runs", status="done")).status_code == 422
+
+    page = (await team.get("/agent/runs", q="posts", limit=2)).json()
+    rest = await ids(q="posts", limit=2, cursor=page["next_cursor"])
+    assert [r["id"] for r in page["items"]] + rest == [str(theirs), str(failed), str(partly)]
+
+
 async def test_a_run_opens_with_its_steps_for_its_member_and_admins(team: Team) -> None:
     theirs = await team.run(requested_by_user_id=team.member_id)
     own = await team.get(f"/agent/runs/{theirs}", who=team.member)

@@ -51,6 +51,7 @@ class WorkspaceOut(ResponseModel):
     automation_disclosure: str | None = None
     checklist_dismissed_at: datetime | None = None
     created_at: datetime
+    member_count: int  # Settings → Workspace's summary (C-066)
 
 
 class WorkspacePatch(RequestModel):

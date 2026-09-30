@@ -257,7 +257,9 @@ export interface paths {
          * List Agent Runs
          * @description FR-AGT-07 run history, newest first: the caller's runs, or every run for owners and
          *     admins. ``thread_id`` keeps one thread's runs (the Ask panel reverses them into a
-         *     conversation); a thread that isn't the caller's lists nothing.
+         *     conversation); a thread that isn't the caller's lists nothing. ``status`` (repeatable) keeps
+         *     runs in those statuses and ``q`` those whose request contains the text, in any case
+         *     (Settings → Agent's history filters and search).
          */
         get: operations["list_agent_runs"];
         put?: never;
@@ -817,6 +819,29 @@ export interface paths {
          *     isn't configured or doesn't answer. Nothing changes until Dodo's signed webhook arrives.
          */
         post: operations["create_billing_checkout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/billing/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Billing Payments
+         * @description Payment history for owners and admins (admins see billing read-only, §3.1): the
+         *     workspace's Dodo payments, newest first (``occurred_at``), paged by ``cursor``. Amounts are
+         *     in minor units of ``currency``; ``invoice_url`` is Dodo's, null when Dodo gave none. Rows
+         *     arrive from Dodo's signed payment.* webhooks only (TR-BIL-02).
+         */
+        get: operations["list_billing_payments"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4811,6 +4836,43 @@ export interface components {
             /** Thumbnail Url */
             thumbnail_url: string | null;
         };
+        /** PaymentList */
+        PaymentList: {
+            /** Items */
+            items: components["schemas"]["PaymentOut"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * PaymentOut
+         * @description One Dodo payment (§5.8 payments), as upserted from payment.* webhooks. ``invoice_url`` is
+         *     Dodo's own (never constructed); ``failure_reason`` is Dodo's reason for a failed payment.
+         */
+        PaymentOut: {
+            /** Amount Minor */
+            amount_minor: number;
+            /** Currency */
+            currency: string;
+            /** Failure Reason */
+            failure_reason?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invoice Url */
+            invoice_url?: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "succeeded" | "failed" | "refunded" | "pending";
+        };
         /** PlanList */
         PlanList: {
             /** Items */
@@ -5786,6 +5848,8 @@ export interface components {
             id: string;
             /** Last Error */
             last_error?: string | null;
+            /** Last Synced At */
+            last_synced_at?: string | null;
             /** Phone Number */
             phone_number?: string | null;
             /**
@@ -6074,6 +6138,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Member Count */
+            member_count: number;
             /** Name */
             name: string;
             /**
@@ -6739,6 +6805,8 @@ export interface operations {
                 thread_id?: string | null;
                 cursor?: string | null;
                 limit?: number;
+                status?: ("queued" | "planning" | "running" | "awaiting_approval" | "succeeded" | "partial" | "failed" | "cancelled" | "expired")[] | null;
+                q?: string | null;
             };
             header?: never;
             path: {
@@ -8083,6 +8151,49 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CheckoutSession"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_billing_payments: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentList"];
                 };
             };
             /** @description Validation error */

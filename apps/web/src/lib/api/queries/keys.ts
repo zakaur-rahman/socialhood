@@ -1,5 +1,6 @@
 import type {
   AgeName,
+  AgentRunStatus,
   AutomationSort,
   AutomationStatus,
   CommentFilter,
@@ -75,6 +76,7 @@ export const keys = {
   knowledgeSources: (wid: string) => ["w", wid, "knowledge-sources"] as const,
   knowledgeGaps: (wid: string) => ["w", wid, "knowledge-gaps"] as const,
   billing: (wid: string) => ["w", wid, "billing"] as const,
+  billingPayments: (wid: string) => ["w", wid, "billing", "payments"] as const,
   // P8: public plans, and the member's own notification settings and push
   billingPlans: ["billing-plans"] as const,
   notificationPreferences: (wid: string) => ["w", wid, "notification-preferences"] as const,
@@ -91,6 +93,9 @@ export const keys = {
   agentRunLists: (wid: string) => ["w", wid, "agent", "runs"] as const,
   agentThreadRuns: (wid: string, threadId: string) => ["w", wid, "agent", "runs", "thread", threadId] as const,
   agentRunHistory: (wid: string) => ["w", wid, "agent", "runs", "history"] as const,
+  /** The history narrowed by status and text (Settings → Agent, C-066); under the same prefix. */
+  agentRunHistoryFiltered: (wid: string, statuses: readonly AgentRunStatus[], q: string) =>
+    ["w", wid, "agent", "runs", "history", { statuses, q }] as const,
   agentRun: (wid: string, runId: string) => ["w", wid, "agent", "run", runId] as const,
   agentThreads: (wid: string) => ["w", wid, "agent", "threads"] as const,
   agentPolicy: (wid: string) => ["w", wid, "agent", "policy"] as const,

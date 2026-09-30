@@ -4,6 +4,7 @@ public plan list."""
 
 from __future__ import annotations
 
+import uuid
 from datetime import date, datetime
 from typing import Literal
 
@@ -14,6 +15,7 @@ from socialhood.schemas.common import RequestModel, ResponseModel
 PlanName = Literal["free", "pro", "max"]
 PaidPlanName = Literal["pro", "max"]
 SubscriptionStatusName = Literal["free", "trialing", "active", "on_hold", "expired"]
+PaymentStatusName = Literal["succeeded", "failed", "refunded", "pending"]
 
 
 class BillingPrice(ResponseModel):
@@ -85,3 +87,24 @@ class PlanOffer(ResponseModel):
 
 class PlanList(ResponseModel):
     items: list[PlanOffer]
+
+
+# ---------------------------------------------------------------- payment history (C-066)
+
+
+class PaymentOut(ResponseModel):
+    """One Dodo payment (§5.8 payments), as upserted from payment.* webhooks. ``invoice_url`` is
+    Dodo's own (never constructed); ``failure_reason`` is Dodo's reason for a failed payment."""
+
+    id: uuid.UUID
+    occurred_at: datetime
+    amount_minor: int
+    currency: str  # ISO 4217
+    status: PaymentStatusName
+    invoice_url: str | None = None
+    failure_reason: str | None = None
+
+
+class PaymentList(ResponseModel):
+    items: list[PaymentOut]
+    next_cursor: str | None = None

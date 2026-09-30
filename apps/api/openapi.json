@@ -7543,6 +7543,97 @@
         "title": "OverviewPost",
         "type": "object"
       },
+      "PaymentList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "PaymentList",
+        "type": "object"
+      },
+      "PaymentOut": {
+        "description": "One Dodo payment (\u00a75.8 payments), as upserted from payment.* webhooks. ``invoice_url`` is\nDodo's own (never constructed); ``failure_reason`` is Dodo's reason for a failed payment.",
+        "properties": {
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invoice_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Url"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "succeeded",
+              "failed",
+              "refunded",
+              "pending"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "occurred_at",
+          "amount_minor",
+          "currency",
+          "status"
+        ],
+        "title": "PaymentOut",
+        "type": "object"
+      },
       "PlanList": {
         "properties": {
           "items": {
@@ -10311,6 +10402,18 @@
             ],
             "title": "Last Error"
           },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
           "phone_number": {
             "anyOf": [
               {
@@ -11048,6 +11151,10 @@
             "title": "Id",
             "type": "string"
           },
+          "member_count": {
+            "title": "Member Count",
+            "type": "integer"
+          },
           "name": {
             "title": "Name",
             "type": "string"
@@ -11100,7 +11207,8 @@
           "status",
           "role",
           "plan",
-          "created_at"
+          "created_at",
+          "member_count"
         ],
         "title": "WorkspaceOut",
         "type": "object"
@@ -12082,7 +12190,7 @@
     },
     "/v1/w/{wid}/agent/runs": {
       "get": {
-        "description": "FR-AGT-07 run history, newest first: the caller's runs, or every run for owners and\nadmins. ``thread_id`` keeps one thread's runs (the Ask panel reverses them into a\nconversation); a thread that isn't the caller's lists nothing.",
+        "description": "FR-AGT-07 run history, newest first: the caller's runs, or every run for owners and\nadmins. ``thread_id`` keeps one thread's runs (the Ask panel reverses them into a\nconversation); a thread that isn't the caller's lists nothing. ``status`` (repeatable) keeps\nruns in those statuses and ``q`` those whose request contains the text, in any case\n(Settings \u2192 Agent's history filters and search).",
         "operationId": "list_agent_runs",
         "parameters": [
           {
@@ -12139,6 +12247,53 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "queued",
+                      "planning",
+                      "running",
+                      "awaiting_approval",
+                      "succeeded",
+                      "partial",
+                      "failed",
+                      "cancelled",
+                      "expired"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
             }
           }
         ],
@@ -14542,6 +14697,89 @@
           }
         },
         "summary": "Create Billing Checkout",
+        "tags": [
+          "billing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/billing/payments": {
+      "get": {
+        "description": "Payment history for owners and admins (admins see billing read-only, \u00a73.1): the\nworkspace's Dodo payments, newest first (``occurred_at``), paged by ``cursor``. Amounts are\nin minor units of ``currency``; ``invoice_url`` is Dodo's, null when Dodo gave none. Rows\narrive from Dodo's signed payment.* webhooks only (TR-BIL-02).",
+        "operationId": "list_billing_payments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Billing Payments",
         "tags": [
           "billing"
         ]

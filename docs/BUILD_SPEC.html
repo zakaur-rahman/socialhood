@@ -1800,13 +1800,14 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
       <tr><td class="m">POST</td><td class="m">…/ai/caption · …/ai/hashtags</td><td>Generate caption or hashtags</td><td>admin · credits</td></tr>
       <tr><td class="m">GET</td><td class="m">…/billing</td><td>Plan, status, entitlements, usage, prices</td><td>agent</td></tr>
       <tr><td class="m">POST</td><td class="m">…/billing/checkout · /portal · /cancel · /resume</td><td>Billing actions</td><td>owner</td></tr>
+      <tr><td class="m">GET</td><td class="m">…/billing/payments?cursor&amp;limit</td><td>Payment history from Dodo's payment.* webhooks, newest first (C-066)</td><td>admin</td></tr>
       <tr><td class="m">GET · POST</td><td class="m">…/notifications · …/notifications/read</td><td>List; mark read <code>{ids}</code> or all</td><td>agent</td></tr>
       <tr><td class="m">GET · PUT</td><td class="m">…/notification-preferences</td><td>The member's email digest and push event toggles</td><td>agent</td></tr>
       <tr><td class="m">POST · DELETE</td><td class="m">/v1/me/push-subscriptions</td><td>Register or remove this device's push subscription</td><td>any user</td></tr>
       <tr><td class="m">GET</td><td class="m">…/knowledge-gaps?status=open</td><td>Questions the AI couldn't answer (30 days)</td><td>admin</td></tr>
       <tr><td class="m">POST</td><td class="m">…/knowledge-gaps/{id}/dismiss</td><td>Dismiss a gap (answering is creating an FAQ with <code>gap_id</code>)</td><td>admin</td></tr>
       <tr><td class="m">POST</td><td class="m">…/agent/runs</td><td>Ask Social Hood: start a run {request, thread_id?}; 202 with the run</td><td>agent</td></tr>
-      <tr><td class="m">GET</td><td class="m">…/agent/runs?thread_id&amp;cursor · …/agent/runs/{id}</td><td>Run history; one run with its steps</td><td>agent</td></tr>
+      <tr><td class="m">GET</td><td class="m">…/agent/runs?thread_id&amp;status&amp;q&amp;cursor · …/agent/runs/{id}</td><td>Run history; one run with its steps</td><td>agent</td></tr>
       <tr><td class="m">POST</td><td class="m">…/agent/runs/{id}/cancel</td><td>Stop at the next step</td><td>agent</td></tr>
       <tr><td class="m">GET</td><td class="m">…/agent/threads</td><td>Ask panel threads</td><td>agent</td></tr>
       <tr><td class="m">GET · PUT</td><td class="m">…/agent/policy</td><td>Agent mode, capability switches, limits (R2)</td><td>admin</td></tr>

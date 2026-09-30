@@ -34,6 +34,7 @@ from socialhood.schemas.agent import (
     AgentRunCreate,
     AgentRunDetail,
     AgentRunList,
+    AgentRunStatusName,
     AgentThreadList,
     ApprovalApprove,
     ApprovalStatusName,
@@ -72,11 +73,23 @@ async def list_agent_runs(
     thread_id: Annotated[uuid.UUID | None, Query()] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    status: Annotated[list[AgentRunStatusName] | None, Query()] = None,
+    q: Annotated[str | None, Query(max_length=200)] = None,
 ) -> AgentRunList:
     """FR-AGT-07 run history, newest first: the caller's runs, or every run for owners and
     admins. ``thread_id`` keeps one thread's runs (the Ask panel reverses them into a
-    conversation); a thread that isn't the caller's lists nothing."""
-    return await agent_runs.list_runs(session, ctx, thread_id=thread_id, cursor=cursor, limit=limit)
+    conversation); a thread that isn't the caller's lists nothing. ``status`` (repeatable) keeps
+    runs in those statuses and ``q`` those whose request contains the text, in any case
+    (Settings → Agent's history filters and search)."""
+    return await agent_runs.list_runs(
+        session,
+        ctx,
+        thread_id=thread_id,
+        cursor=cursor,
+        limit=limit,
+        statuses=status or (),
+        q=q,
+    )
 
 
 @router.get("/agent/runs/{run_id}", operation_id="get_agent_run")

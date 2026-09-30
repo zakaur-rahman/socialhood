@@ -34,7 +34,7 @@ export function DisconnectDialog({
   return (
     <AlertDialog onOpenChange={(open) => (open ? setDeleteData(false) : undefined)}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="text-danger-fg hover:bg-danger/10 hover:text-danger-fg">
+        <Button variant="ghost" className="min-h-10 px-3 text-danger-fg hover:bg-danger/10 hover:text-danger-fg md:min-h-9">
           Disconnect
         </Button>
       </AlertDialogTrigger>

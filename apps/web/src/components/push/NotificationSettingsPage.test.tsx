@@ -66,7 +66,10 @@ describe("Settings → Notifications (UX-SCR-07, FR-NOT-03, FR-NOT-04)", () => {
     setup(() => problem(500, "internal"));
     const lead = await screen.findByRole("switch", { name: "New lead" });
     await user.click(lead);
-    await waitFor(() => expect(toast.error).toHaveBeenCalled());
+    // C-066: the save bar says why, in place (the switches still save as they change).
+    const bar = screen.getByRole("region", { name: "Save changes" });
+    expect(await within(bar).findByRole("alert")).toHaveTextContent(/./);
     await waitFor(() => expect(screen.getByRole("switch", { name: "New lead" })).toBeChecked());
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

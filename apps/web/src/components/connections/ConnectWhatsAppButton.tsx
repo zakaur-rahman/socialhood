@@ -83,6 +83,7 @@ export function ConnectWhatsAppButton({ wid }: { wid: string }) {
   return (
     <Button
       variant="secondary"
+      className="min-h-10 px-4 md:min-h-9"
       disabled={!configured || busy}
       title={configured ? undefined : "WhatsApp isn't set up for this app yet"}
       onClick={connect}

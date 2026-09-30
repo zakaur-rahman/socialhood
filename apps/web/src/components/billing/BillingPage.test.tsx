@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { keys } from "@/lib/api/queries";
-import type { BillingState } from "@/lib/api/types";
+import type { BillingState, Payment } from "@/lib/api/types";
 import { browser } from "@/lib/billing/browser";
 import { billingState, json, planList, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
@@ -54,6 +54,7 @@ function setup({
       "GET /v1/billing/plans": () => json(planList()),
       "POST /v1/w/:wid/billing/checkout": () => json({ checkout_url: "https://checkout.dodo.test/s/1", trial: true }),
       "POST /v1/w/:wid/billing/portal": () => json({ portal_url: "https://portal.dodo.test/p/1" }),
+      "GET /v1/w/:wid/billing/payments": () => json({ items: [], next_cursor: null }),
       "POST /v1/w/:wid/billing/cancel": () => {
         state.billing = { ...state.billing, cancel_at_period_end: true };
         return json(state.billing);
@@ -156,6 +157,7 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
 
     await waitFor(() => expect(posts("/billing/cancel")).toHaveLength(1));
     await waitFor(() => expect(current).toHaveTextContent("Pro until 1 Nov. Then the workspace moves to Free."));
+    expect(current).toHaveTextContent("Cancelling");
     expect(toast.success).toHaveBeenCalledWith("Pro until 1 Nov");
 
     await user.click(within(current).getByRole("button", { name: "Resume Pro" }));
@@ -169,7 +171,7 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
   it("on hold: payment failed, the grace end, and Update payment method", async () => {
     setup({ billing: billingState({ status: "on_hold", grace_until: "2026-10-03T06:00:00Z" }) });
     const current = await screen.findByRole("region", { name: "Pro" });
-    expect(current).toHaveTextContent("Payment failed");
+    expect(current).toHaveTextContent("On hold");
     expect(current).toHaveTextContent("Update your payment method by 3 Oct to keep Pro.");
     expect(within(current).getByRole("button", { name: "Update payment method" })).toBeInTheDocument();
     expect(within(current).queryByRole("button", { name: "Cancel plan" })).not.toBeInTheDocument();
@@ -225,5 +227,109 @@ describe("checkout return (F-15, FR-BIL-02)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+function payment(overrides: Partial<Payment> = {}): Payment {
+  return {
+    id: "p1",
+    occurred_at: "2026-09-28T06:00:00Z",
+    amount_minor: 99_900,
+    currency: "INR",
+    status: "succeeded",
+    invoice_url: "https://invoices.dodo.test/p1",
+    failure_reason: null,
+    ...overrides,
+  };
+}
+
+describe("payment history (C-066)", () => {
+  it("lists payments newest first: date, amount and currency, status, invoice; older ones on demand", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({
+      billing: pro,
+      handlers: {
+        "GET /v1/w/:wid/billing/payments": (call) =>
+          call.url.searchParams.get("cursor") === "c2"
+            ? json({ items: [payment({ id: "p4", occurred_at: "2026-06-28T06:00:00Z" })], next_cursor: null })
+            : json({
+                items: [
+                  payment(),
+                  payment({
+                    id: "p2",
+                    occurred_at: "2026-08-28T06:00:00Z",
+                    status: "failed",
+                    invoice_url: null,
+                    failure_reason: "The card was declined.",
+                  }),
+                  payment({ id: "p3", occurred_at: "2026-07-28T06:00:00Z", status: "refunded", amount_minor: 1_299, currency: "USD" }),
+                ],
+                next_cursor: "c2",
+              }),
+      },
+    });
+    const card = await screen.findByRole("region", { name: "Payment history" });
+    const table = await within(card).findByRole("table", { name: "Payments, newest first" });
+    const rows = () => within(table).getAllByRole("row").slice(1);
+    expect(rows()).toHaveLength(3);
+    expect(rows()[0]).toHaveTextContent("28 Sep");
+    expect(rows()[0]).toHaveTextContent("₹999");
+    expect(rows()[0]).toHaveTextContent("INR");
+    expect(rows()[0]).toHaveTextContent("Paid");
+    const invoice = within(rows()[0]).getByRole("link", { name: "Invoice for 28 Sep (opens in a new tab)" });
+    expect(invoice).toHaveAttribute("href", "https://invoices.dodo.test/p1");
+    expect(invoice).toHaveAttribute("target", "_blank");
+    expect(rows()[1]).toHaveTextContent("Failed");
+    expect(rows()[1]).toHaveTextContent("The card was declined.");
+    expect(rows()[1]).toHaveTextContent("No invoice");
+    expect(rows()[2]).toHaveTextContent("Refunded");
+    expect(rows()[2]).toHaveTextContent("$12.99");
+    expect(rows()[2]).toHaveTextContent("USD");
+
+    await user.click(within(card).getByRole("button", { name: "Show older payments" }));
+    await waitFor(() => expect(rows()).toHaveLength(4));
+    expect(rows()[3]).toHaveTextContent("28 Jun");
+    expect(within(card).queryByRole("button", { name: "Show older payments" })).toBeNull();
+    const cursors = calls.filter((c) => c.path === "/v1/w/w1/billing/payments").map((c) => c.url.searchParams.get("cursor"));
+    expect(cursors).toEqual([null, "c2"]);
+  });
+
+  it("an empty history says so", async () => {
+    setup();
+    const card = await screen.findByRole("region", { name: "Payment history" });
+    expect(await within(card).findByText("No payments yet")).toBeInTheDocument();
+    expect(within(card).queryByRole("table")).toBeNull();
+  });
+
+  it("admins see the history too", async () => {
+    setup({ role: "admin", billing: pro, handlers: { "GET /v1/w/:wid/billing/payments": () => json({ items: [payment()], next_cursor: null }) } });
+    const card = await screen.findByRole("region", { name: "Payment history" });
+    expect(await within(card).findByRole("table")).toBeInTheDocument();
+  });
+});
+
+describe("plan hero and quotas (C-066)", () => {
+  it("a meter per metric GET …/billing counts, with its percentage and reset date", async () => {
+    setup({
+      billing: billingState({
+        usage: [
+          { metric: "ai_credits", used: 64, limit: 5000, period_end: "2026-10-28" },
+          { metric: "instagram_accounts", used: 2, limit: 3 },
+          { metric: "whatsapp_accounts", used: 1, limit: 3 },
+        ],
+      }),
+    });
+    const usage = await screen.findByRole("list", { name: "Usage" });
+    const tiles = within(usage).getAllByRole("listitem");
+    expect(tiles).toHaveLength(3);
+    expect(tiles[0]).toHaveTextContent("AI credits");
+    expect(tiles[0]).toHaveTextContent("1%");
+    expect(tiles[0]).toHaveTextContent("Resets on 28 Oct");
+    expect(tiles[1]).toHaveTextContent("Instagram accounts");
+    expect(tiles[1]).toHaveTextContent("67%");
+    expect(within(tiles[2]).getByRole("meter", { name: "WhatsApp accounts" })).toHaveAttribute(
+      "aria-valuetext",
+      "1 of 3 connected",
+    );
   });
 });

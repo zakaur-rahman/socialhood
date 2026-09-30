@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -369,6 +370,32 @@ async def test_account_settings(
     )
     assert auto.status_code == 402
     assert auto.json()["code"] == "entitlement_required"
+
+
+async def test_last_synced_is_the_later_of_the_media_sync_and_the_backfill(
+    client: httpx.AsyncClient, clerk: Clerk, instagram: FakeInstagram, engine: AsyncEngine
+) -> None:
+    """Settings → Connections' "Last synced" (C-066): when posts or history were last pulled."""
+    clerk_id, ws = await owner(client, clerk)
+    await connect(client, clerk, clerk_id, ws["id"])
+    url = f"/v1/w/{ws['id']}/social-accounts"
+
+    async def synced(media: datetime | None, backfill: datetime | None) -> str | None:
+        async with engine.begin() as conn:
+            await conn.execute(
+                text("UPDATE social_accounts SET media_synced_at = :m, backfilled_at = :b"),
+                {"m": media, "b": backfill},
+            )
+        [acct] = (await client.get(url, headers=clerk.headers(clerk_id))).json()["items"]
+        value: str | None = acct["last_synced_at"]
+        return value
+
+    earlier = datetime(2026, 9, 29, 6, 0, tzinfo=UTC)
+    later = datetime(2026, 9, 30, 6, 0, tzinfo=UTC)
+    assert await synced(None, None) is None
+    assert await synced(later, earlier) == "2026-09-30T06:00:00Z"
+    assert await synced(earlier, later) == "2026-09-30T06:00:00Z"
+    assert await synced(None, earlier) == "2026-09-29T06:00:00Z"
 
 
 async def test_disconnect_deletes_the_token_and_clears_caches(

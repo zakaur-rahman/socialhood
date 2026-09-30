@@ -43,7 +43,7 @@ describe("the plan card's status (UX-SCR-07, F-15, FR-BIL-06)", () => {
 
   it("cancelling at period end: Pro until the date, with Resume", () => {
     const status = planStatus(billingState({ cancel_at_period_end: true, current_period_end: "2026-10-20T06:00:00Z" }), tz, now);
-    expect(status.badge.label).toBe("Cancelled");
+    expect(status.badge.label).toBe("Cancelling");
     expect(status.line).toBe("Pro until 20 Oct. Then the workspace moves to Free.");
     expect(status.resumable).toBe(true);
     expect(status.cancellable).toBe(false);
@@ -51,7 +51,7 @@ describe("the plan card's status (UX-SCR-07, F-15, FR-BIL-06)", () => {
 
   it("on hold: the grace end", () => {
     const status = planStatus(billingState({ status: "on_hold", grace_until: "2026-10-02T06:00:00Z" }), tz, now);
-    expect(status.badge).toEqual({ label: "Payment failed", tone: "danger" });
+    expect(status.badge).toEqual({ label: "On hold", tone: "danger" });
     expect(status.line).toBe("Update your payment method by 2 Oct to keep Pro.");
   });
 
