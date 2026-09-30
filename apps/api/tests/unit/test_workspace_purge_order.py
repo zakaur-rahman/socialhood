@@ -3,13 +3,16 @@ children before parents, so no foreign key refuses a delete (FR-ACC-05)."""
 
 from __future__ import annotations
 
-from socialhood.db.tenancy import _tenant_tables
-from socialhood.repositories.workspace_deletion import BILLING_TABLES, workspace_tables
+from socialhood.repositories.workspace_deletion import (
+    BILLING_TABLES,
+    tenant_tables,
+    workspace_tables,
+)
 
 
 def test_every_tenant_table_is_purged() -> None:
     purged = {table.name for table in workspace_tables()}
-    registry = {table.name for table in _tenant_tables()}
+    registry = {table.name for table in tenant_tables()}
     assert purged >= registry | BILLING_TABLES
 
 

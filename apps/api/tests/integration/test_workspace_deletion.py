@@ -23,10 +23,10 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.billing.dodo import DodoError
 from socialhood.billing.dodo_fake import FakeDodo
-from socialhood.db.tenancy import _tenant_tables
 from socialhood.jobs.app import app as jobs_app
 from socialhood.media.cloudinary import CloudinaryError
 from socialhood.media.purge import use_media_purger
+from socialhood.repositories.workspace_deletion import tenant_tables
 from socialhood.services import workspace_deletion as deletion
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation, make_media_item
@@ -36,7 +36,7 @@ from tests.support.notify import make_email_delivery
 from tests.support.publishing import make_scheduled_post
 from tests.tenancy.test_isolation import seed_workspace_b
 
-TENANT_TABLES = sorted(table.name for table in _tenant_tables())
+TENANT_TABLES = sorted(table.name for table in tenant_tables())
 
 
 @dataclass

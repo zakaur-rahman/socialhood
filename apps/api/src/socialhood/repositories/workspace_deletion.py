@@ -120,10 +120,16 @@ def _references_workspaces(table: Table) -> bool:
     )
 
 
+def tenant_tables() -> set[Table]:
+    """The application's tenant tables: the TenantScoped registry limited to the app's own
+    metadata, so a TenantScoped model defined elsewhere (a test's own schema) never counts."""
+    return {table for table in _tenant_tables() if table.metadata is Base.metadata}
+
+
 def workspace_tables() -> list[Table]:
     """Every table holding a workspace's rows, children before parents (reverse dependency
     order), so a restrictive foreign key never blocks a delete and cascades find nothing left."""
-    registry = _tenant_tables()
+    registry = tenant_tables()
     return [
         table
         for table in reversed(Base.metadata.sorted_tables)
