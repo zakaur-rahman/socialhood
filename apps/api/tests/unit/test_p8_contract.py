@@ -61,11 +61,11 @@ from tests.unit.test_settings import complete_production
 # Billing (T8.2).
 BILLING_ROUTES = {
     "get_billing": ("get", "/v1/w/{wid}/billing", None),
-    "create_billing_checkout": ("post", "/v1/w/{wid}/billing/checkout", "T8.2"),
-    "create_billing_portal": ("post", "/v1/w/{wid}/billing/portal", "T8.2"),
-    "cancel_billing": ("post", "/v1/w/{wid}/billing/cancel", "T8.2"),
-    "resume_billing": ("post", "/v1/w/{wid}/billing/resume", "T8.2"),
-    "list_billing_plans": ("get", "/v1/billing/plans", "T8.2"),
+    "create_billing_checkout": ("post", "/v1/w/{wid}/billing/checkout", None),
+    "create_billing_portal": ("post", "/v1/w/{wid}/billing/portal", None),
+    "cancel_billing": ("post", "/v1/w/{wid}/billing/cancel", None),
+    "resume_billing": ("post", "/v1/w/{wid}/billing/resume", None),
+    "list_billing_plans": ("get", "/v1/billing/plans", None),
 }
 
 

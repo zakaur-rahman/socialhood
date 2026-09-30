@@ -1,0 +1,4 @@
+{
+  "code": "NOT_FOUND",
+  "message": "The requested resource could not be found. This might be because the ID doesn't exist or the resource has been deleted. Please verify your request parameters and try again."
+}

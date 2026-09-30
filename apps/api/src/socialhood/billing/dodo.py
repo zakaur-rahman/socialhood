@@ -15,24 +15,28 @@ on 2026-09-30:
 
 - create_checkout: POST /checkouts {product_cart: [{product_id, quantity: 1}], customer: {email,
   name}, return_url, metadata: {workspace_id}, subscription_data: {trial_period_days}} ->
-  {session_id, checkout_url}.
+  {session_id, checkout_url}. The product carries its own trial (7 days on the test-mode Pro), so
+  the trial is always sent: 7 when eligible, 0 otherwise (0 was verified live to remove it).
 - get_subscription: GET /subscriptions/{id} -> subscription_id, status (pending, active, on_hold,
   paused, cancelled, failed, expired, past_due), product_id, customer {customer_id, email, name},
-  previous_billing_date, next_billing_date, trial_period_days, cancel_at_next_billing_date,
-  cancelled_at, expires_at, metadata.
+  created_at, previous_billing_date, next_billing_date, trial_period_days,
+  cancel_at_next_billing_date, cancelled_at, expires_at, metadata. Webhook ``data`` for
+  subscription.* events is the same object (payload_type "Subscription").
 - set_cancel_at_period_end: PATCH /subscriptions/{id} {cancel_at_next_billing_date: bool}.
 - cancel_now: PATCH /subscriptions/{id} {status: "cancelled"} (workspace deletion, F-16).
 - create_portal_session: POST /customers/{customer_id}/customer-portal/session?return_url= ->
   {link}.
 - get_product_price: GET /products/{id} -> price {type: recurring_price, price (minor units),
   currency, payment_frequency_interval (Month), trial_period_days}; cached for 1 h by the caller.
+
+Recorded test-mode responses (anonymised) are in tests/fixtures/dodo/.
 """
 
 from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Literal, Protocol
 
 # Dodo's subscription statuses (GET /subscriptions/{id}).
@@ -98,6 +102,19 @@ class DodoSubscription:
     cancelled_at: datetime | None = None
     expires_at: datetime | None = None
     metadata: Mapping[str, str] = field(default_factory=dict)
+    # When Dodo created it: a subscription is in its trial until created_at + trial_period_days
+    # (trial_period_days stays set after the trial ends).
+    created_at: datetime | None = None
+
+    def trial_ends_at(self) -> datetime | None:
+        start = self.created_at or self.previous_billing_date
+        if self.trial_period_days <= 0 or start is None:
+            return None
+        return start + timedelta(days=self.trial_period_days)
+
+    def in_trial(self, at: datetime) -> bool:
+        ends = self.trial_ends_at()
+        return ends is not None and at < ends
 
 
 @dataclass(frozen=True)

@@ -23,6 +23,7 @@ import uuid
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import quota_error
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.ai import KnowledgeSource as SourceRow
@@ -313,8 +314,9 @@ async def _check_quota(
         return
     used = await repo.characters_used(session, exclude=exclude)
     if used + adding > limit or (adding == 0 and used >= limit):
-        raise ApiError(
-            "quota_exceeded",
+        raise quota_error(
+            "knowledge_characters",
+            limit,
             f"Your plan includes {limit:,} characters of knowledge and {used:,} are in use. "
             "Remove a source or upgrade to add more.",
         )

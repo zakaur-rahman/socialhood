@@ -1,0 +1,4 @@
+{
+  "code": "INVALID_REQUEST_PARAMETERS",
+  "message": "Product pdt_doesnotexist does not exist"
+}

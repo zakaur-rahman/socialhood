@@ -10377,7 +10377,7 @@
   "paths": {
     "/v1/billing/plans": {
       "get": {
-        "description": "Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their \u00a71.7\nentitlements and Dodo prices (cached 1 h), for the /pricing page and the upgrade dialog's\ncomparison. The same numbers as GET \u2026/billing.",
+        "description": "Public, no sign-in: Free, Pro and Max (``available: false`` until R2) with their \u00a71.7\nentitlements and Dodo prices (cached 1 h; null when Dodo can't be reached), for the /pricing\npage and the upgrade dialog's comparison. The same numbers as GET \u2026/billing.",
         "operationId": "list_billing_plans",
         "responses": {
           "200": {
@@ -10404,8 +10404,7 @@
         "summary": "List Billing Plans",
         "tags": [
           "billing"
-        ],
-        "x-pending": "T8.2"
+        ]
       }
     },
     "/v1/data-deletion/{code}": {
@@ -13451,7 +13450,7 @@
     },
     "/v1/w/{wid}/billing": {
       "get": {
-        "description": "Plan, status, entitlements, usage (AI credits, scheduled posts, knowledge characters),\ntrial eligibility (TR-BIL-05) and, from T8.2, the paid plans' prices from Dodo (cached 1 h;\nempty when Dodo can't be reached).",
+        "description": "Plan, status, entitlements, usage (AI credits and scheduled posts this period; knowledge\ncharacters, active automations, pending scheduled messages and connected accounts per\nplatform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo\n(cached 1 h; a price Dodo can't give now is left out).",
         "operationId": "get_billing",
         "parameters": [
           {
@@ -13505,7 +13504,7 @@
     },
     "/v1/w/{wid}/billing/cancel": {
       "post": {
-        "description": "FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's\ncancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays\nuntil the period ends (subscription.cancelled, then expired). 409 on the Free plan.",
+        "description": "FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's\ncancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays\nuntil the period ends (subscription.cancelled, then Free). 409 on the Free plan; cancelling\nagain answers the same.",
         "operationId": "cancel_billing",
         "parameters": [
           {
@@ -13554,13 +13553,12 @@
         "summary": "Cancel Billing",
         "tags": [
           "billing"
-        ],
-        "x-pending": "T8.2"
+        ]
       }
     },
     "/v1/w/{wid}/billing/checkout": {
       "post": {
-        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to\n/w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial\nonly when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan\n(active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo\nisn't configured or doesn't answer.",
+        "description": "F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to\n/w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial\nonly when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan\n(active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo\nisn't configured or doesn't answer. Nothing changes until Dodo's signed webhook arrives.",
         "operationId": "create_billing_checkout",
         "parameters": [
           {
@@ -13619,13 +13617,12 @@
         "summary": "Create Billing Checkout",
         "tags": [
           "billing"
-        ],
-        "x-pending": "T8.2"
+        ]
       }
     },
     "/v1/w/{wid}/billing/portal": {
       "post": {
-        "description": "FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened\nin a new tab. 409 conflict when the workspace has never had a Dodo customer.",
+        "description": "FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened\nin a new tab. 409 conflict when the workspace has never had a Dodo customer; 503 when Dodo\ndoesn't answer.",
         "operationId": "create_billing_portal",
         "parameters": [
           {
@@ -13674,13 +13671,12 @@
         "summary": "Create Billing Portal",
         "tags": [
           "billing"
-        ],
-        "x-pending": "T8.2"
+        ]
       }
     },
     "/v1/w/{wid}/billing/resume": {
       "post": {
-        "description": "Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``.",
+        "description": "Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``, or when\nDodo has already ended the plan.",
         "operationId": "resume_billing",
         "parameters": [
           {
@@ -13729,8 +13725,7 @@
         "summary": "Resume Billing",
         "tags": [
           "billing"
-        ],
-        "x-pending": "T8.2"
+        ]
       }
     },
     "/v1/w/{wid}/calendar": {

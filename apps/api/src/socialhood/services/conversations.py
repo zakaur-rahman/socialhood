@@ -39,7 +39,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.billing.plans import current_plan, entitlement
+from socialhood.billing.entitlements import check_entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.identity import User
 from socialhood.models.inbox import (
@@ -494,8 +494,7 @@ async def update_conversation(
     if patch.status is not None and patch.status != conv.status:
         values["status"] = patch.status
     if patch.ai_mode_override is not None:
-        if patch.ai_mode_override not in entitlement(await current_plan(session), "ai_modes"):
-            raise ApiError("entitlement_required", "Auto mode is part of Pro.")
+        await check_entitlement(session, "ai_modes", patch.ai_mode_override)
         if patch.ai_mode_override != conv.ai_mode_override:
             values["ai_mode_override"] = patch.ai_mode_override
     elif patch.clear_ai_mode_override and conv.ai_mode_override is not None:
