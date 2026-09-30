@@ -41,6 +41,12 @@ SUBSCRIBE_FAILED = "Couldn't subscribe to messages. Try again."
 # ---------------------------------------------------------------- read
 
 
+def _last_synced(acct: SocialAccount) -> datetime | None:
+    """The later of the media sync (posts) and the conversation backfill (services/sync.py)."""
+    times = [t for t in (acct.media_synced_at, acct.backfilled_at) if t is not None]
+    return max(times) if times else None
+
+
 def account_out(acct: SocialAccount, deps: PlatformDeps) -> SocialAccountOut:
     try:
         capabilities = sorted(adapter_for(acct, deps).capabilities_for(acct))
@@ -62,6 +68,7 @@ def account_out(acct: SocialAccount, deps: PlatformDeps) -> SocialAccountOut:
             "auto_hide_spam": acct.auto_hide_spam,
             "connected_at": acct.connected_at,
             "token_expires_at": acct.token_expires_at,
+            "last_synced_at": _last_synced(acct),
             "capabilities": capabilities if live else [],
             "sandbox": is_sandbox(acct),
         }

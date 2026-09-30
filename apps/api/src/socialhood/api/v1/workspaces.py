@@ -7,11 +7,12 @@ from datetime import UTC, date, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from socialhood.auth.deps import Admin, AnyMember, Session
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.billing import Subscription
+from socialhood.models.identity import WorkspaceMember
 from socialhood.repositories import users
 from socialhood.schemas.workspaces import Overview, OverviewPreset, WorkspaceOut, WorkspacePatch
 from socialhood.services import overview as overview_service
@@ -22,6 +23,7 @@ router = APIRouter(prefix="/v1/w/{wid}", tags=["workspaces"])
 
 async def _out(session: Session, ctx: AnyMember) -> WorkspaceOut:
     plan = await session.scalar(select(Subscription.plan))  # filtered to this workspace
+    members = await session.scalar(select(func.count()).select_from(WorkspaceMember))
     ws = ctx.workspace
     return WorkspaceOut.model_validate(
         {
@@ -36,6 +38,7 @@ async def _out(session: Session, ctx: AnyMember) -> WorkspaceOut:
             "automation_disclosure": ws.automation_disclosure,
             "checklist_dismissed_at": ws.checklist_dismissed_at,
             "created_at": ws.created_at,
+            "member_count": int(members or 1),  # filtered to this workspace; the caller is one
         }
     )
 

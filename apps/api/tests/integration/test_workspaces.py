@@ -23,6 +23,33 @@ async def test_members_read_their_workspace(client: httpx.AsyncClient, clerk: Cl
     assert body["checklist_dismissed_at"] is None
 
 
+async def test_the_member_count_is_this_workspaces(
+    client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
+) -> None:
+    """Settings → Workspace's summary (C-065): members of this workspace only."""
+    clerk_id, me = await sign_in(client, clerk, email="owner@example.com")
+    wid = me["workspaces"][0]["id"]
+    _, other = await sign_in(client, clerk, email="other@example.com")  # a workspace of its own
+    assert (await client.get(f"/v1/w/{wid}", headers=clerk.headers(clerk_id))).json()[
+        "member_count"
+    ] == 1
+
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "INSERT INTO workspace_members (workspace_id, user_id, role)"
+                " VALUES (:w, :u, 'agent')"
+            ),
+            {"w": wid, "u": other["id"]},
+        )
+    body = (await client.get(f"/v1/w/{wid}", headers=clerk.headers(clerk_id))).json()
+    assert body["member_count"] == 2
+    patched = await client.patch(
+        f"/v1/w/{wid}", headers=clerk.headers(clerk_id), json={"name": "Two of us"}
+    )
+    assert patched.json()["member_count"] == 2
+
+
 async def test_a_non_member_gets_404(client: httpx.AsyncClient, clerk: Clerk) -> None:
     _, owner = await sign_in(client, clerk, email="owner@example.com")
     stranger, _ = await sign_in(client, clerk, email="stranger@example.com")

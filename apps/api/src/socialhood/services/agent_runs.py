@@ -14,6 +14,7 @@ show the tool in plain words (agent/progress.py).
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Any
 
@@ -180,9 +181,11 @@ async def list_runs(
     thread_id: uuid.UUID | None,
     cursor: str | None,
     limit: int,
+    statuses: Sequence[str] = (),
+    q: str | None = None,
 ) -> schemas.AgentRunList:
     """Newest first. A thread is always the caller's own; without one, owners and admins see
-    every run."""
+    every run. ``statuses`` and ``q`` narrow the list (Settings → Agent's history, C-065)."""
     mine_only = thread_id is not None or not sees_every_run(ctx)
     rows = await repo.list_runs(
         session,
@@ -190,6 +193,8 @@ async def list_runs(
         thread_id=thread_id,
         before=decode_cursor(cursor) if cursor else None,
         limit=limit,
+        statuses=statuses,
+        q=q.strip() if q and q.strip() else None,
     )
     page = rows[:limit]
     return schemas.AgentRunList(

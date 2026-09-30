@@ -9,17 +9,19 @@ plan: Dodo's signed webhook does (webhooks/dodo.py, TR-BIL-02). The public plan 
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Annotated
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import AnyMember, Owner, Session
+from socialhood.auth.deps import Admin, AnyMember, Owner, Session
 from socialhood.billing.dodo import DodoClient
 from socialhood.billing.registry import get_dodo
 from socialhood.schemas.billing import (
     BillingState,
     CheckoutRequest,
     CheckoutSession,
+    PaymentList,
     PlanList,
     PortalSession,
 )
@@ -47,6 +49,20 @@ async def get_billing(request: Request, ctx: AnyMember, session: Session) -> Bil
     platform counted live), trial eligibility (TR-BIL-05) and the paid plans' prices from Dodo
     (cached 1 h; a price Dodo can't give now is left out)."""
     return await _state(request, ctx, session)
+
+
+@router.get("/billing/payments", operation_id="list_billing_payments")
+async def list_billing_payments(
+    ctx: Admin,
+    session: Session,
+    cursor: Annotated[str | None, Query(max_length=200)] = None,
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> PaymentList:
+    """Payment history for owners and admins (admins see billing read-only, §3.1): the
+    workspace's Dodo payments, newest first (``occurred_at``), paged by ``cursor``. Amounts are
+    in minor units of ``currency``; ``invoice_url`` is Dodo's, null when Dodo gave none. Rows
+    arrive from Dodo's signed payment.* webhooks only (TR-BIL-02)."""
+    return await service.payment_history(session, cursor=cursor, limit=limit)
 
 
 @router.post("/billing/checkout", operation_id="create_billing_checkout")

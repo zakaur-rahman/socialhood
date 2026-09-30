@@ -44,7 +44,7 @@ from socialhood.models.connections import Platform
 from socialhood.models.identity import Workspace
 from socialhood.observability.logging import get_logger
 from socialhood.realtime import events
-from socialhood.repositories import social_accounts, subscriptions, workspaces
+from socialhood.repositories import payments, social_accounts, subscriptions, workspaces
 from socialhood.repositories.subscriptions import LIVE_STATUSES
 from socialhood.schemas.billing import (
     BillingPrice,
@@ -52,11 +52,14 @@ from socialhood.schemas.billing import (
     CheckoutRequest,
     CheckoutSession,
     EntitlementValue,
+    PaymentList,
+    PaymentOut,
     PlanList,
     PlanOffer,
     PortalSession,
     UsageMeter,
 )
+from socialhood.services.conversations import decode_cursor, encode_cursor
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -209,6 +212,23 @@ async def billing_state(
         prices=list((prices or {}).values()),
         entitlements=entitlements_of(plan),
         usage=meters,
+    )
+
+
+# ---------------------------------------------------------------- payment history (C-065)
+
+
+async def payment_history(session: AsyncSession, *, cursor: str | None, limit: int) -> PaymentList:
+    """The workspace's Dodo payments (§5.8), newest first, ``limit`` a page."""
+    rows = await payments.page(
+        session, before=decode_cursor(cursor) if cursor else None, limit=limit
+    )
+    page = rows[:limit]
+    return PaymentList(
+        items=[PaymentOut.model_validate(row) for row in page],
+        next_cursor=(
+            encode_cursor(page[-1].occurred_at, page[-1].id) if len(rows) > limit else None
+        ),
     )
 
 

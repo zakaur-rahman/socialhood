@@ -34,6 +34,7 @@ from socialhood.models.agent import (
 )
 from socialhood.models.billing import AiFeature, AiUsageEvent
 from socialhood.models.identity import User, WorkspaceMember
+from socialhood.repositories.automations import escape_like
 from socialhood.repositories.base import scoped_update
 
 REF_TYPE = "agent_run"  # ai_usage_events.ref_type of a run's AI calls
@@ -75,14 +76,21 @@ async def list_runs(
     thread_id: uuid.UUID | None,
     before: tuple[datetime, uuid.UUID] | None,
     limit: int,
+    statuses: Collection[str] = (),
+    q: str | None = None,
 ) -> list[AgentRun]:
     """Newest first, one more than ``limit`` (the caller pages); ``user_id`` keeps one member's
-    runs, ``thread_id`` one thread's."""
+    runs, ``thread_id`` one thread's, ``statuses`` those statuses and ``q`` requests containing
+    the text (any case)."""
     statement = select(AgentRun).order_by(AgentRun.created_at.desc(), AgentRun.id.desc())
     if user_id is not None:
         statement = statement.where(AgentRun.requested_by_user_id == user_id)
     if thread_id is not None:
         statement = statement.where(AgentRun.thread_id == thread_id)
+    if statuses:
+        statement = statement.where(AgentRun.status.in_(list(statuses)))
+    if q:
+        statement = statement.where(AgentRun.request.ilike(f"%{escape_like(q)}%", escape="\\"))
     if before is not None:
         statement = statement.where(
             tuple_(AgentRun.created_at, AgentRun.id)

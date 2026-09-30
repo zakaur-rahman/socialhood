@@ -19,7 +19,7 @@ from socialhood.billing.dodo import DodoError
 from socialhood.billing.dodo_fake import FAKE_CHECKOUT_BASE, FAKE_PORTAL_BASE, FakeDodo
 from socialhood.billing.plans import ENTITLEMENTS, entitlement
 from tests.support.api import WEB, Clerk, sign_in
-from tests.support.billing import PRO_PRICE_MINOR, PRO_PRODUCT, set_subscription
+from tests.support.billing import PRO_PRICE_MINOR, PRO_PRODUCT, make_payment, set_subscription
 from tests.support.ingest import stream
 
 
@@ -35,6 +35,11 @@ class Owner:
     async def post(self, path: str, json: Any = None) -> httpx.Response:
         return await self.client.post(
             f"/v1/w/{self.wid}{path}", json=json, headers=self.clerk.headers(self.clerk_id)
+        )
+
+    async def get(self, path: str, **params: Any) -> httpx.Response:
+        return await self.client.get(
+            f"/v1/w/{self.wid}{path}", params=params, headers=self.clerk.headers(self.clerk_id)
         )
 
     async def billing(self) -> dict[str, Any]:
@@ -283,3 +288,94 @@ async def test_get_billing_has_prices_and_a_meter_for_every_limit(owner: Owner) 
     assert (meters["instagram_accounts"]["used"], meters["instagram_accounts"]["limit"]) == (0, 1)
     assert meters["ai_credits"]["period_end"] == meters["scheduled_posts"]["period_end"]
     assert billing["trial_eligible"] is True
+
+
+# ---------------------------------------------------------------- payment history (C-065)
+
+
+async def test_payment_history_is_newest_first_with_dodos_fields_and_pages(owner: Owner) -> None:
+    now = datetime.now(UTC).replace(microsecond=0)
+    first = await make_payment(
+        owner.engine, workspace_id=owner.wid, occurred_at=now - timedelta(days=62)
+    )
+    failed = await make_payment(
+        owner.engine,
+        workspace_id=owner.wid,
+        occurred_at=now - timedelta(days=31),
+        status="failed",
+        invoice_url=None,
+        failure_reason="The card was declined.",
+    )
+    latest = await make_payment(
+        owner.engine,
+        workspace_id=owner.wid,
+        occurred_at=now - timedelta(days=1),
+        amount_minor=129900,
+        currency="USD",
+        invoice_url="https://invoices.dodo.invalid/pay_latest",
+    )
+
+    response = await owner.get("/billing/payments")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert [item["id"] for item in body["items"]] == [str(latest), str(failed), str(first)]
+    assert body["next_cursor"] is None
+    assert body["items"][0] == {
+        "id": str(latest),
+        "occurred_at": (now - timedelta(days=1)).isoformat().replace("+00:00", "Z"),
+        "amount_minor": 129900,
+        "currency": "USD",
+        "status": "succeeded",
+        "invoice_url": "https://invoices.dodo.invalid/pay_latest",
+        "failure_reason": None,
+    }
+    assert body["items"][1]["status"] == "failed"
+    assert body["items"][1]["invoice_url"] is None
+    assert body["items"][1]["failure_reason"] == "The card was declined."
+    assert body["items"][2]["amount_minor"] == PRO_PRICE_MINOR
+
+    page = (await owner.get("/billing/payments", limit=2)).json()
+    assert [item["id"] for item in page["items"]] == [str(latest), str(failed)]
+    rest = (await owner.get("/billing/payments", limit=2, cursor=page["next_cursor"])).json()
+    assert [item["id"] for item in rest["items"]] == [str(first)]
+    assert rest["next_cursor"] is None
+    assert (await owner.get("/billing/payments", cursor="nope")).status_code == 422
+    assert (await owner.get("/billing/payments", limit=51)).status_code == 422
+
+
+async def test_payment_history_is_empty_before_the_first_payment(owner: Owner) -> None:
+    response = await owner.get("/billing/payments")
+    assert response.status_code == 200, response.text
+    assert response.json() == {"items": [], "next_cursor": None}
+
+
+@pytest.mark.parametrize(("role", "status"), [("admin", 200), ("agent", 403)])
+async def test_payment_history_is_for_owners_and_admins(
+    owner: Owner, role: str, status: int
+) -> None:
+    await make_payment(owner.engine, workspace_id=owner.wid)
+    await owner.execute(
+        "UPDATE workspace_members SET role = :r WHERE workspace_id = :w", r=role, w=owner.wid
+    )
+    assert (await owner.get("/billing/payments")).status_code == status
+
+
+async def test_payment_history_never_shows_another_workspaces_payments(
+    owner: Owner, client: httpx.AsyncClient, clerk: Clerk
+) -> None:
+    mine = await make_payment(owner.engine, workspace_id=owner.wid)
+    other_clerk, other_me = await sign_in(client, clerk, email="other@example.com")
+    other_wid = other_me["workspaces"][0]["id"]
+    theirs = await make_payment(owner.engine, workspace_id=other_wid)
+
+    listed = (await owner.get("/billing/payments")).json()["items"]
+    assert [item["id"] for item in listed] == [str(mine)]
+    their_list = await client.get(
+        f"/v1/w/{other_wid}/billing/payments", headers=clerk.headers(other_clerk)
+    )
+    assert [item["id"] for item in their_list.json()["items"]] == [str(theirs)]
+    # Another workspace's history is 404 to a non-member (TR-API-03), never 403.
+    crossed = await client.get(
+        f"/v1/w/{other_wid}/billing/payments", headers=clerk.headers(owner.clerk_id)
+    )
+    assert crossed.status_code == 404

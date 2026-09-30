@@ -4,10 +4,11 @@ failed retry, refunded after succeeded), so a late or repeated event can't undo 
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, case, func, select
+from sqlalchemy import ColumnElement, DateTime, Uuid, case, func, literal, select, tuple_
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -70,6 +71,19 @@ async def upsert(
         where=(Payment.workspace_id == workspace_id) & (_rank(new.status) >= _rank(Payment.status)),
     ).returning(Payment.id)
     return (await session.execute(statement)).scalar_one_or_none() is not None
+
+
+async def page(
+    session: AsyncSession, *, before: tuple[datetime, uuid.UUID] | None, limit: int
+) -> list[Payment]:
+    """The workspace's payments, newest first, one more than ``limit`` (the caller pages)."""
+    statement = select(Payment).order_by(Payment.occurred_at.desc(), Payment.id.desc())
+    if before is not None:
+        statement = statement.where(
+            tuple_(Payment.occurred_at, Payment.id)
+            < tuple_(literal(before[0], DateTime(timezone=True)), literal(before[1], Uuid()))
+        )
+    return list((await session.scalars(statement.limit(limit + 1))).all())
 
 
 async def recent(session: AsyncSession, *, limit: int = 20) -> list[Payment]:
