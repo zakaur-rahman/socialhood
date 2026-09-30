@@ -45,7 +45,9 @@ async def send_message(
     """Queue a reply; it is sent by the worker and progress arrives as message.updated events.
 
     Any member may reply. The same Idempotency-Key with the same body returns the first response
-    and sends nothing more; with a different body it is 409 idempotency_conflict.
+    and sends nothing more; with a different body it is 409 idempotency_conflict. 402
+    quota_exceeded (accounts_per_platform) when the conversation's account is read-only after a
+    downgrade (FR-BIL-07).
     """
     conv = await inbox.get_conversation(session, conversation_id)
     if conv is None:
@@ -102,7 +104,8 @@ async def retry_message(
     request: Request, message_id: uuid.UUID, ctx: AnyMember, session: Session
 ) -> Message:
     """Send a failed message again (the same row). A message already queued or sending is
-    returned as it is, so a second click never sends it twice."""
+    returned as it is, so a second click never sends it twice. 402 as for ``send_message`` from
+    a read-only account."""
     msg = await messages_repo.get(session, message_id)
     if msg is None:
         raise ApiError("not_found")

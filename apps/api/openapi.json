@@ -2697,7 +2697,8 @@
               "skipped_cooldown",
               "skipped_expired",
               "escalated",
-              "awaiting_reply"
+              "awaiting_reply",
+              "skipped_read_only"
             ],
             "title": "Result",
             "type": "string"
@@ -11254,7 +11255,7 @@
         ]
       },
       "post": {
-        "description": "FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent\nis enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing\nis reserved yet. 404 when ``thread_id`` isn't one of the caller's threads; 402 quota_exceeded\nwhen the workspace has no AI credits left (nothing is stored).",
+        "description": "FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent\nis enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing\nis reserved yet. 404 when ``thread_id`` isn't one of the caller's threads; 402 quota_exceeded\n(ai_credits_monthly, with the plan's limit) when the workspace has no AI credits left\n(nothing is stored).",
         "operationId": "create_agent_run",
         "parameters": [
           {
@@ -13217,7 +13218,8 @@
                     "skipped_cooldown",
                     "skipped_expired",
                     "escalated",
-                    "awaiting_reply"
+                    "awaiting_reply",
+                    "skipped_read_only"
                   ],
                   "type": "string"
                 },
@@ -14023,7 +14025,7 @@
     },
     "/v1/w/{wid}/comments/{comment_id}/private-reply": {
       "post": {
-        "description": "A DM to the commenter, addressed by the comment: queued as an outbound message in their\nconversation (created if needed), which message.* events follow. The answer is the comment\nwith ``private_reply`` set. Instagram allows one per comment within 7 days: a second is 409\nconflict. Idempotency-Key as for ``reply_to_comment``.",
+        "description": "A DM to the commenter, addressed by the comment: queued as an outbound message in their\nconversation (created if needed), which message.* events follow. The answer is the comment\nwith ``private_reply`` set. Instagram allows one per comment within 7 days: a second is 409\nconflict. Idempotency-Key and the read-only 402 as for ``reply_to_comment``.",
         "operationId": "private_reply_to_comment",
         "parameters": [
           {
@@ -14108,7 +14110,7 @@
     },
     "/v1/w/{wid}/comments/{comment_id}/reply": {
       "post": {
-        "description": "A public reply under the comment, posted on Instagram before the answer (the comment's\n``public_reply`` holds it). The same Idempotency-Key with the same body returns the first\nanswer and posts nothing more (TR-API-05).",
+        "description": "A public reply under the comment, posted on Instagram before the answer (the comment's\n``public_reply`` holds it). The same Idempotency-Key with the same body returns the first\nanswer and posts nothing more (TR-API-05). 402 quota_exceeded (accounts_per_platform) when\nthe account is read-only after a downgrade (FR-BIL-07).",
         "operationId": "reply_to_comment",
         "parameters": [
           {
@@ -14691,7 +14693,7 @@
         ]
       },
       "post": {
-        "description": "Queue a reply; it is sent by the worker and progress arrives as message.updated events.\n\nAny member may reply. The same Idempotency-Key with the same body returns the first response\nand sends nothing more; with a different body it is 409 idempotency_conflict.",
+        "description": "Queue a reply; it is sent by the worker and progress arrives as message.updated events.\n\nAny member may reply. The same Idempotency-Key with the same body returns the first response\nand sends nothing more; with a different body it is 409 idempotency_conflict. 402\nquota_exceeded (accounts_per_platform) when the conversation's account is read-only after a\ndowngrade (FR-BIL-07).",
         "operationId": "send_message",
         "parameters": [
           {
@@ -16494,7 +16496,7 @@
     },
     "/v1/w/{wid}/messages/{message_id}/retry": {
       "post": {
-        "description": "Send a failed message again (the same row). A message already queued or sending is\nreturned as it is, so a second click never sends it twice.",
+        "description": "Send a failed message again (the same row). A message already queued or sending is\nreturned as it is, so a second click never sends it twice. 402 as for ``send_message`` from\na read-only account.",
         "operationId": "retry_message",
         "parameters": [
           {
@@ -17175,7 +17177,7 @@
     },
     "/v1/w/{wid}/posts/{post_id}/summary": {
       "post": {
-        "description": "The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated\ncarries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post\nhas no analysed comments yet, or AI analysis is off for its account.",
+        "description": "The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated\ncarries the new summary and topics. 402 quota_exceeded (ai_credits_monthly, with the plan's\nlimit) without AI credits; 409 when the post has no analysed comments yet, or AI analysis is\noff for its account.",
         "operationId": "refresh_post_summary",
         "parameters": [
           {

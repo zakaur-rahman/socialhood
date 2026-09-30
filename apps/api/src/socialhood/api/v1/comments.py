@@ -3,7 +3,9 @@ and delete; and the Comments nav badge's count. Each action changes the comment 
 first, then here, and publishes comment.updated with the new ``Comment`` (TR-RT-03). Platform
 refusals: account_needs_reconnect (409), rate_limited (429) or platform_error (502) with the reason
 (TR-PL-03); an account without comments (WhatsApp) is 409 capability_unavailable; another
-workspace's comment is 404 not_found. The rules are in services/comments/actions.py.
+workspace's comment is 404 not_found. Replies from an account that is read-only after a downgrade
+are 402 quota_exceeded (FR-BIL-07); hide, unhide and delete are not. The rules are in
+services/comments/actions.py.
 
 Replies take an Idempotency-Key (TR-API-05, as sends and scheduled messages do): the same key with
 the same body returns the first answer and does nothing more; with a different body it is 409
@@ -71,7 +73,8 @@ async def reply_to_comment(
 ) -> Comment:
     """A public reply under the comment, posted on Instagram before the answer (the comment's
     ``public_reply`` holds it). The same Idempotency-Key with the same body returns the first
-    answer and posts nothing more (TR-API-05)."""
+    answer and posts nothing more (TR-API-05). 402 quota_exceeded (accounts_per_platform) when
+    the account is read-only after a downgrade (FR-BIL-07)."""
     redis = request.app.state.redis
     claim = _claim(request, ctx, idempotency_key, body)
     stored = await claim.begin()
@@ -105,7 +108,7 @@ async def private_reply_to_comment(
     """A DM to the commenter, addressed by the comment: queued as an outbound message in their
     conversation (created if needed), which message.* events follow. The answer is the comment
     with ``private_reply`` set. Instagram allows one per comment within 7 days: a second is 409
-    conflict. Idempotency-Key as for ``reply_to_comment``."""
+    conflict. Idempotency-Key and the read-only 402 as for ``reply_to_comment``."""
     redis = request.app.state.redis
     claim = _claim(request, ctx, idempotency_key, body)
     stored = await claim.begin()

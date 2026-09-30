@@ -67,6 +67,7 @@ export const RESULT_LABEL: Record<RunResult, string> = {
   skipped_expired: "Skipped: 7-day limit passed",
   escalated: "Escalated",
   awaiting_reply: "Waiting for tap",
+  skipped_read_only: "Skipped: account is read-only",
 };
 
 const numberFormat = new Intl.NumberFormat("en-US");

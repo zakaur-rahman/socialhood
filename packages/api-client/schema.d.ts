@@ -263,7 +263,8 @@ export interface paths {
          * @description FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent
          *     is enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing
          *     is reserved yet. 404 when ``thread_id`` isn't one of the caller's threads; 402 quota_exceeded
-         *     when the workspace has no AI credits left (nothing is stored).
+         *     (ai_credits_monthly, with the plan's limit) when the workspace has no AI credits left
+         *     (nothing is stored).
          */
         post: operations["create_agent_run"];
         delete?: never;
@@ -962,7 +963,7 @@ export interface paths {
          * @description A DM to the commenter, addressed by the comment: queued as an outbound message in their
          *     conversation (created if needed), which message.* events follow. The answer is the comment
          *     with ``private_reply`` set. Instagram allows one per comment within 7 days: a second is 409
-         *     conflict. Idempotency-Key as for ``reply_to_comment``.
+         *     conflict. Idempotency-Key and the read-only 402 as for ``reply_to_comment``.
          */
         post: operations["private_reply_to_comment"];
         delete?: never;
@@ -984,7 +985,8 @@ export interface paths {
          * Reply To Comment
          * @description A public reply under the comment, posted on Instagram before the answer (the comment's
          *     ``public_reply`` holds it). The same Idempotency-Key with the same body returns the first
-         *     answer and posts nothing more (TR-API-05).
+         *     answer and posts nothing more (TR-API-05). 402 quota_exceeded (accounts_per_platform) when
+         *     the account is read-only after a downgrade (FR-BIL-07).
          */
         post: operations["reply_to_comment"];
         delete?: never;
@@ -1087,7 +1089,9 @@ export interface paths {
          * @description Queue a reply; it is sent by the worker and progress arrives as message.updated events.
          *
          *     Any member may reply. The same Idempotency-Key with the same body returns the first response
-         *     and sends nothing more; with a different body it is 409 idempotency_conflict.
+         *     and sends nothing more; with a different body it is 409 idempotency_conflict. 402
+         *     quota_exceeded (accounts_per_platform) when the conversation's account is read-only after a
+         *     downgrade (FR-BIL-07).
          */
         post: operations["send_message"];
         delete?: never;
@@ -1519,7 +1523,8 @@ export interface paths {
         /**
          * Retry Message
          * @description Send a failed message again (the same row). A message already queued or sending is
-         *     returned as it is, so a second click never sends it twice.
+         *     returned as it is, so a second click never sends it twice. 402 as for ``send_message`` from
+         *     a read-only account.
          */
         post: operations["retry_message"];
         delete?: never;
@@ -1678,8 +1683,9 @@ export interface paths {
         /**
          * Refresh Post Summary
          * @description The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated
-         *     carries the new summary and topics. 402 quota_exceeded without AI credits; 409 when the post
-         *     has no analysed comments yet, or AI analysis is off for its account.
+         *     carries the new summary and topics. 402 quota_exceeded (ai_credits_monthly, with the plan's
+         *     limit) without AI credits; 409 when the post has no analysed comments yet, or AI analysis is
+         *     off for its account.
          */
         post: operations["refresh_post_summary"];
         delete?: never;
@@ -3010,7 +3016,7 @@ export interface components {
              * Result
              * @enum {string}
              */
-            result: "queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated" | "awaiting_reply";
+            result: "queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated" | "awaiting_reply" | "skipped_read_only";
             /**
              * Trigger Kind
              * @enum {string}
@@ -7439,7 +7445,7 @@ export interface operations {
     list_automation_runs: {
         parameters: {
             query?: {
-                result?: ("queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated" | "awaiting_reply") | null;
+                result?: ("queued" | "sent" | "partial" | "failed" | "skipped_cooldown" | "skipped_expired" | "escalated" | "awaiting_reply" | "skipped_read_only") | null;
                 cursor?: string | null;
                 limit?: number;
             };

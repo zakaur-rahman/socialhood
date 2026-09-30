@@ -7,7 +7,10 @@ message as ``queued``, updates the conversation, queues real-time events and enq
 ``send_message``. It runs in the caller's transaction and workspace scope and does not commit;
 the caller commits with ``realtime.events.commit_and_publish``. Rule failures raise ``ApiError``
 with the §4.7 codes (reply_window_closed, account_needs_reconnect, capability_unavailable,
-validation_error, unsupported_media). Calling it again with the same client_id in the
+validation_error, unsupported_media), and 402 quota_exceeded (accounts_per_platform) from an
+account that is read-only after a downgrade (FR-BIL-07; ``retry`` too, so every source that
+sends through here, scheduled messages, AI replies and automations included, is refused). Calling
+it again with the same client_id in the
 conversation returns the existing message and sends nothing more. A ``suggestion_id`` must name
 a suggestion of the conversation (422 otherwise); it becomes sent or edited_sent, and a person's
 reply without one dismisses the pending suggestion (services/suggestions, FR-SUG-02).
@@ -37,6 +40,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from socialhood.billing.entitlements import check_account_writable
 from socialhood.errors import ApiError, FieldError
 from socialhood.jobs.enqueue import enqueue
 from socialhood.models.ai import AiSettings
@@ -281,6 +285,7 @@ async def queue_outbound(
     if acct is None:
         raise ApiError("not_found")
     check_account(acct)
+    await check_account_writable(session, acct)
     caps = capabilities(acct, deps or _worker_deps())
     require(caps, Capability.DM_SEND)
     _check_content(
@@ -612,6 +617,7 @@ async def retry(
     if conv is None or acct is None:
         raise ApiError("not_found")
     check_account(acct)
+    await check_account_writable(session, acct)
     caps = capabilities(acct, deps)
     require(caps, Capability.DM_SEND)
     window = reply_window(

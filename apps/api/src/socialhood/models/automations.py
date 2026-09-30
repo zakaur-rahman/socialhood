@@ -73,6 +73,8 @@ class RunResult(StrEnum):
     ESCALATED = "escalated"  # an AI reply could not answer from knowledge (P5)
     # Tap first (FR-AUT-21): the opening went out; the message follows their tap or reply.
     AWAITING_REPLY = "awaiting_reply"
+    # The account is read-only after a downgrade (FR-BIL-07): nothing was sent.
+    SKIPPED_READ_ONLY = "skipped_read_only"
 
 
 class AnalysisStatus(StrEnum):

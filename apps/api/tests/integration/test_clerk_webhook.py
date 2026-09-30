@@ -13,10 +13,13 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 from svix.webhooks import Webhook
 
+from socialhood.billing.dodo import DodoError
+from socialhood.billing.dodo_fake import FakeDodo
 from socialhood.jobs.app import app as jobs_app
 from socialhood.models.platform import WebhookStatus
 from socialhood.services.webhook_processing import process_event
 from tests.support.api import Clerk, sign_in
+from tests.support.billing import PRO_PRODUCT, set_subscription
 from tests.support.identity import WEBHOOK_SECRET, clerk_user
 
 
@@ -129,6 +132,73 @@ async def test_user_deleted_removes_solely_owned_workspaces(
         emails = (await conn.execute(text("SELECT email FROM users"))).scalars().all()
     assert [str(w) for w in workspaces] == [survivor["workspaces"][0]["id"]]
     assert emails == ["survivor@example.com"]
+
+
+async def _paid(engine: AsyncEngine, fake_dodo: FakeDodo, wid: str, sub_id: str) -> None:
+    fake_dodo.add_subscription(
+        sub_id, product_id=PRO_PRODUCT, status="active", customer_id=f"cus_{sub_id}"
+    )
+    await set_subscription(
+        engine,
+        workspace_id=wid,
+        plan="pro",
+        status="active",
+        dodo_subscription_id=sub_id,
+        dodo_customer_id=f"cus_{sub_id}",
+        dodo_product_id=PRO_PRODUCT,
+    )
+
+
+async def test_user_deleted_cancels_the_deleted_workspaces_dodo_subscription(
+    client: httpx.AsyncClient, app: FastAPI, clerk: Clerk, engine: AsyncEngine, fake_dodo: FakeDodo
+) -> None:
+    """F-16: a solely owned workspace's subscription is cancelled at Dodo before it is deleted;
+    a shared one keeps its subscription with its new owner."""
+    doomed, me = await sign_in(client, clerk, email="doomed@example.com")
+    _, partner = await sign_in(client, clerk, email="partner@example.com")
+    await _paid(engine, fake_dodo, me["workspaces"][0]["id"], "sub_mine")
+    await _paid(engine, fake_dodo, partner["workspaces"][0]["id"], "sub_theirs")
+    shared = partner["workspaces"][0]["id"]
+    async with engine.begin() as conn:
+        await conn.execute(
+            text(
+                "INSERT INTO workspace_members (workspace_id, user_id, role) "
+                "VALUES (:w, :u, 'owner')"
+            ),
+            {"w": shared, "u": me["id"]},
+        )
+        await conn.execute(
+            text("UPDATE workspaces SET owner_user_id = :u WHERE id = :w"),
+            {"w": shared, "u": me["id"]},
+        )
+
+    status = await _deliver_and_process(
+        client, app, {"type": "user.deleted", "data": {"id": doomed, "deleted": True}}
+    )
+    assert status is WebhookStatus.PROCESSED
+    assert fake_dodo.subscriptions["sub_mine"].status == "cancelled"
+    assert fake_dodo.subscriptions["sub_theirs"].status == "active"
+    async with engine.connect() as conn:
+        left = (await conn.execute(text("SELECT id FROM workspaces"))).scalars().all()
+    assert [str(w) for w in left] == [shared]
+
+
+async def test_user_deleted_still_deletes_when_dodo_fails(
+    client: httpx.AsyncClient, app: FastAPI, clerk: Clerk, engine: AsyncEngine, fake_dodo: FakeDodo
+) -> None:
+    """Dodo not answering doesn't keep a deleted person's workspace: it is logged instead."""
+    doomed, me = await sign_in(client, clerk, email="doomed@example.com")
+    await _paid(engine, fake_dodo, me["workspaces"][0]["id"], "sub_mine")
+    fake_dodo.fail_next(DodoError("down", status=503, retryable=True))
+
+    status = await _deliver_and_process(
+        client, app, {"type": "user.deleted", "data": {"id": doomed, "deleted": True}}
+    )
+    assert status is WebhookStatus.PROCESSED
+    assert fake_dodo.subscriptions["sub_mine"].status == "active"  # left for a person to cancel
+    async with engine.connect() as conn:
+        assert (await conn.execute(text("SELECT id FROM workspaces"))).scalars().all() == []
+        assert (await conn.execute(text("SELECT id FROM users"))).scalars().all() == []
 
 
 async def test_user_deleted_hands_shared_workspaces_to_another_owner(

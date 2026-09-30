@@ -19,7 +19,8 @@ like the others. A draft that cannot answer escalates and settles the run instea
 drafts per pass.
 
 A paused automation holds its runs (they still expire); one whose run window ended keeps sending
-what matched inside it. A reconnect-needed account holds the whole queue. Each private reply is
+what matched inside it. A reconnect-needed account holds the whole queue, and so does an account
+that is read-only after a downgrade (FR-BIL-07; its runs still expire). Each private reply is
 stored as an outbound message (source ``automation``) in the commenter's conversation, created if
 needed, inserted as ``sending`` and committed before the call (so a run is never sent twice, and
 an early echo finds the message, C-011), and linked from the run and
@@ -48,6 +49,7 @@ from redis.asyncio import Redis
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from socialhood.billing.entitlements import read_only_error
 from socialhood.models.automations import (
     Automation,
     AutomationAction,
@@ -247,13 +249,16 @@ async def drain(
             if automation.surge_order == SurgeOrder.PUBLIC_ONLY:
                 settled += await _settle_public_only(session, automation, acct.id, cutoff)
         disclosure = await actions.disclosure(session)
+        read_only = await read_only_error(session, acct) is not None
         await session.commit()
     ai = [a for a in queued if _sends(a, now) and a.action == AutomationAction.AI_REPLY]
     sendable = [a for a in queued if _sends(a, now) and a.action != AutomationAction.AI_REPLY]
     held = any(not _sends(a, now) and a.surge_order != SurgeOrder.PUBLIC_ONLY for a in queued)
 
     adapter: PlatformAdapter | None = None
-    if acct.status not in BLOCKED_STATUSES:
+    if read_only:
+        log.info("private_replies_held", account_id=str(acct.id), error_code="read_only")
+    elif acct.status not in BLOCKED_STATUSES:
         try:
             adapter = adapter_for(acct, deps)
         except PlatformError as error:

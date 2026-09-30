@@ -575,3 +575,62 @@ intent becomes "other", decided in code after the model answers, so it is never 
   page, /unsubscribe?token=, which posts.
 - DODO_PROVIDER, EMAIL_PROVIDER and PUSH_PROVIDER (`fake` for local runs, refused in production)
   mirror AI_PROVIDER. Migration 0013 gives any workspace without a subscription row a Free one.
+
+## C-050 · P8 billing decisions (T8.1–T8.3)
+- The reconcile job is `reconcile_billing` (every 6 h): the job catalogue's reconcile_subscriptions
+  is already the webhook re-subscription task (TR-WH-08).
+- `credits_gate` wraps the credit routes at service level, so a service's own refusals (a 409 for
+  AI that is off) come first and its credits 402 leaves with `ai_credits_monthly` and the limit.
+- Read-only accounts (FR-BIL-07) are computed, not stored: each platform's earliest connected
+  accounts keep the plan's slots (`read_only_accounts`), so an upgrade or a disconnect frees them
+  at once. Publishing is not gated by it (scheduled_posts_monthly is the publishing gate).
+- Anchor day: Dodo's period start on a paid plan, the workspace's creation day on Free; a plan
+  change gives the current period's counters the new plan's limits.
+- Checkout always sends the trial, 7 days when eligible (TR-BIL-05) or 0, because the Dodo product
+  carries its own; 409 while a paid plan is live, 422 for Max until R2, 503 when Dodo fails.
+- Cancel and resume mirror Dodo's answer (the subscription Dodo returns), not the request.
+- Reconcile never makes a Free workspace paid: only a signed event grants a plan.
+- Payment events write `payments` (status only moves forward) and never move
+  `subscriptions.last_event_at`, so a late payment event can't hide a newer subscription event.
+- A second live subscription (two checkouts at once) is logged as an alert
+  (`billing_duplicate_subscription`) and ignored; someone cancels and refunds it in Dodo.
+- State machine (TR-BIL-02 plus C-049's mapping): active and renewed grant (trialing inside the
+  trial); plan_changed moves the plan; on_hold, past_due and paused hold with 3 days' grace;
+  unpaused restores; cancelled keeps the plan to the period end; failed and expired go to Free
+  with the downgrade effects. Events older than last_event_at are ignored.
+
+## C-051 · P8 web decisions (T8.4, T8.6 web)
+- Billing actions (checkout, portal, cancel, resume) are owner-only; admins get the page
+  read-only; agents are redirected to Notifications.
+- One global 402 handler (lib/api/provider.tsx) opens the upgrade dialog for any query or
+  mutation. A screen that explains the limit inline opts out with `meta: INLINE_PLAN_LIMITS` and
+  shows Upgrade beside its message; `toastError()` skips the toast for plan limits, so each 402
+  shows one message.
+- After "Not now" the same limit doesn't reopen the dialog for 30 s (no reopen loop).
+- Checkout return polls GET …/billing every 3 s for 60 s ("Confirming your payment…") and never
+  assumes success; usage.updated also refetches.
+- A trial-ending banner (owners, last 3 days, dismissible) is not in the spec.
+- The service worker registers only in production builds or with NEXT_PUBLIC_ENABLE_SW=1.
+- The /unsubscribe page posts the token from the browser after it loads (no GET unsubscribes, so
+  link scanners can't).
+- Sign-out first removes this browser's push subscription (DELETE while still signed in, then
+  unsubscribe), best effort, capped at 2 s.
+
+## C-052 · P8 billing follow-ups
+- FR-BIL-07 at send time: `services/sending.queue_outbound` and `retry` refuse a read-only
+  account with the 402 (quota_exceeded, `accounts_per_platform`, the limit). Every sender goes
+  through it: the send route, scheduled messages, AI Auto, automation DMs, tap-first answers and
+  nudges. Comment replies (public and private) check too; hide, unhide and delete don't (they send
+  nothing). Reading, syncing and publishing stay allowed.
+- A due scheduled message on a read-only account fails like any pipeline refusal: `failed` with
+  error_code quota_exceeded and the 402's reason; no notification (only expiry notifies).
+- The automation runtime records a new run result, `skipped_read_only` (migration 0014; error_code
+  `read_only`, the 402's reason), for the first match that isn't cooling down, and sends nothing.
+  The private-reply queue holds a read-only account's queue like a reconnect-needed one (runs
+  still expire after 7 days). The stats' skipped counts don't list it (contract unchanged).
+- The agent run and post summary 402s now go through `credits_gate`, so they carry
+  `ai_credits_monthly` and the limit, with §4.7's credits copy.
+- Clerk user.deleted cancels each solely owned workspace's Dodo subscription before deleting it.
+  If Dodo fails the workspace is still deleted and an error log names the Dodo subscription id;
+  reconcile can't catch it (the subscriptions row goes with the workspace), so it is cancelled by
+  hand. DELETE /v1/w/{wid} (FR-ACC-05) is left to T9.6 (TODO in services/workspaces.py).
