@@ -35,7 +35,8 @@ cd apps/web && pnpm exec playwright test f06 --headed
 
 The Clerk keys come from `apps/web/.env.local` (`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`) and
 `apps/api/.env` (`CLERK_SECRET_KEY`), or from the environment. Nothing else is read from those
-files. A cold run takes about 5 minutes on a laptop: 2 for the web build, 3 for the tests.
+files. On a laptop a cold run takes about 3 minutes (the stack is up in 1 to 1.5 with the web
+build), 2.5 with `--skip-build`; the tests themselves take under 2 minutes with 3 workers.
 
 ## The stack (`scripts/e2e-stack.mjs`)
 
