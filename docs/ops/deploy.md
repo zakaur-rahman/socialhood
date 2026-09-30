@@ -157,9 +157,23 @@ API and worker read the same variables.
 | `VAPID_PRIVATE_KEY` | secrets | yes | same pair |
 | `VAPID_SUBJECT` | config | no | `mailto:support@socialhood.com` |
 | `SANDBOX_PLATFORM_ENABLED` | config | no | `false` (production refuses `true`) |
+| `CLIENT_IP_HEADER` | config | no | `x-forwarded-for` (required in production; see "Client IP" below) |
+| `RATE_LIMITS_ENABLED` | default | no | `true` (production refuses `false`) |
 | `WORKER_INTERACTIVE_CONCURRENCY` · `WORKER_BULK_CONCURRENCY` | config | no | `20` · `8` (worker only) |
 
 \* Not secret, but specific to one vendor account and environment, so it lives with the secrets.
+
+**Client IP (per-IP rate limits).** Render documents only `X-Forwarded-For` for the caller's
+address (render.com/articles/how-render-handles-ddos-attacks); `True-Client-IP` and
+`CF-Connecting-IP` are Cloudflare headers Render does not promise to pass. A client can send its
+own `X-Forwarded-For`, which stays on the left, so its first entry is never used. With
+`CLIENT_IP_HEADER=x-forwarded-for` the API reads the list from the right and takes the first
+entry that is not a proxy: Cloudflare's published ranges and the private ranges Render's load
+balancers use (`apps/api/src/socialhood/security/client_ip.py`; update `CLOUDFLARE_RANGES` there
+if https://www.cloudflare.com/ips/ changes). The start command's `--proxy-headers
+--forwarded-allow-ips="*"` only gives the app the https scheme; the address uvicorn derives from
+the header's first entry is not used for anything. `--no-server-header` drops `server: uvicorn`
+(SEC-11).
 
 ### Web (Vercel → Settings → Environment Variables, per environment)
 
@@ -232,6 +246,21 @@ Staging first, then production. Tick each line.
 - [ ] API pre-deploy ran `alembic upgrade head`; `/healthz` is `{"status":"ok"}`; `/readyz` with
       the token is `ready`.
 - [ ] `/metrics` returns 401 without the token and metrics with it (launch checklist).
+- [ ] No `server` header: `curl -sI https://api.staging.socialhood.com/healthz | grep -i ^server`
+      shows nothing (or only Cloudflare's `server: cloudflare`).
+- [ ] The per-IP limit keys on the real client, not on a forged `X-Forwarded-For`: from one
+      machine, 61 requests to `/v1/billing/plans`, each with a different forged header, and the
+      61st is 429:
+
+      ```sh
+      for i in $(seq 1 61); do
+        curl -s -o /dev/null -w "%{http_code}\n" -H "X-Forwarded-For: 198.51.100.$i" \
+          https://api.staging.socialhood.com/v1/billing/plans
+      done | sort | uniq -c    # 60 × 200 and 1 × 429
+      ```
+
+      If every request is 200, Render's `X-Forwarded-For` doesn't have the layout described
+      under "Client IP" (section 4): fix `security/client_ip.py` before launch.
 - [ ] Worker log shows both lanes and the `ping` job every minute.
 - [ ] Vercel production and staging deploy; sign-in works; the web talks to the right API.
 - [ ] Sentry: a test error from each of API, worker and web arrives, tagged with the environment

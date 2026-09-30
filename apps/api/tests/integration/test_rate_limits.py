@@ -200,6 +200,24 @@ async def test_the_client_ip_comes_from_the_configured_edge_header(
     assert other.status_code == 404, other.text
 
 
+async def test_behind_render_the_client_ip_is_the_rightmost_untrusted_hop(
+    app: FastAPI, client: httpx.AsyncClient, redis: Redis
+) -> None:
+    """Production: CLIENT_IP_HEADER=x-forwarded-for. Cloudflare and Render's load balancer
+    append; a client's own X-Forwarded-For stays on the left and can't pick its bucket."""
+    app.state.settings.client_ip_header = "X-Forwarded-For"
+    await fill(redis, "public", "203.0.113.7")
+    path = "/v1/data-deletion/forged-code"
+    edge = "162.158.12.34, 10.204.1.9"  # Cloudflare, then Render's load balancer
+
+    assert_limited(await client.get(path, headers={"X-Forwarded-For": f"203.0.113.7, {edge}"}))
+    for forged in ("198.51.100.1", "203.0.113.8, 10.0.0.1"):
+        spoofed = {"X-Forwarded-For": f"{forged}, 203.0.113.7, {edge}"}
+        assert_limited(await client.get(path, headers=spoofed))
+    other = await client.get(path, headers={"X-Forwarded-For": f"203.0.113.8, {edge}"})
+    assert other.status_code == 404, other.text
+
+
 async def test_webhooks_are_not_limited_by_ip(client: httpx.AsyncClient) -> None:
     # TR-API-07: Meta delivers from shared IPs; only the body size is capped.
     for _ in range(LIMITS["public"].max_requests + 5):

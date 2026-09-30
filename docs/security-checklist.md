@@ -183,7 +183,7 @@ and the `code=` log fields (SEC-07).
   - Checked with `next build` and `next start`, then `curl -D -` on `/`, `/sw.js` and `/w/acme/settings/connections`. Every header was present, and `/sw.js` keeps its own stricter CSP.
   - Headless Chromium loaded `/sign-in` and `/unsubscribe` with the CSP. Clerk rendered the sign-in form, and the console showed no CSP violations.
 - **Accepted (A-4):** `script-src 'unsafe-inline'`, and Meta's SDK allowed app-wide.
-- **Needs infra (agent C, T9.5):** uvicorn sends `server: uvicorn` unless it is started with `--no-server-header`. The app cannot remove it. Add the flag to the start command in `infra/render.yaml`.
+- **Infra (done in the integration pass):** uvicorn sends `server: uvicorn` unless it is started with `--no-server-header`, which the app cannot change. Both API start commands in `infra/render.yaml` now pass it.
 
 ### SEC-12: operational endpoints
 - **`/healthz`** returns `{"status":"ok"}` only (`api/health.py:31`).
@@ -254,9 +254,15 @@ and recorded in one Lua call. The rules:
 **Workspace limits.** These resolve the same cached `workspace_ctx` first. A caller who is not a
 member gets 404 and spends nothing from that workspace's budget.
 
-**Client IP.** Taken from `CLIENT_IP_HEADER`: `true-client-ip` on Render, which Cloudflare
-overwrites. It is never taken from X-Forwarded-For's first entry, which is what the client sent and
-what uvicorn trusts with `--forwarded-allow-ips="*"`.
+**Client IP.** Taken from `CLIENT_IP_HEADER`, which is `x-forwarded-for` on Render (integration
+pass, C-060). Render documents no other client-IP header; `true-client-ip` was an assumption about
+Cloudflare that Render doesn't promise. `security/client_ip.py` reads the list from the right and
+takes the first entry that isn't a proxy (Cloudflare's published ranges, private and shared
+ranges): the rightmost untrusted hop. A client's own entries stay on the left, so it can't choose
+its key. X-Forwarded-For's first entry, which uvicorn uses with `--forwarded-allow-ips="*"`, is
+never used. Tests: `unit/test_client_ip.py` (layouts, spoofed prefixes, ports, IPv6, garbage) and
+`test_rate_limits.py::test_behind_render_the_client_ip_is_the_rightmost_untrusted_hop`. The
+staging check is in `docs/ops/deploy.md` section 7.
 
 **Tests.** `tests/integration/test_rate_limits.py`, 28 tests:
 - the window arithmetic;
@@ -394,6 +400,6 @@ SDK after client-side navigation. Only that page injects the script
 4. **Public routes get 60/min per IP.** The OAuth callback keeps the spec's 30. The data-deletion page is server-rendered on Vercel, so its lookups share Vercel's IPs; 60/min is ample for it.
 5. **"The checkout return" has no public API route.** The return lands on the signed-in billing page, which polls `GET …/billing` under the per-user limit.
 6. **Limits fail open when Valkey is down.** This matches the idempotency and last-seen behaviour.
-7. **`RATE_LIMITS_ENABLED` and `CLIENT_IP_HEADER` are new settings.** The first is refused as false in production. The second is required in production (`true-client-ip` on Render).
+7. **`RATE_LIMITS_ENABLED` and `CLIENT_IP_HEADER` are new settings.** The first is refused as false in production. The second is required in production (`x-forwarded-for` on Render, read from the right; changed from `true-client-ip` in the integration pass).
 8. **The web CSP comes from the build's `NEXT_PUBLIC_*` values.** These are the API URL, the Clerk publishable key and the Sentry DSN. `upgrade-insecure-requests` is added only when the API is https, so local production builds keep working.
 9. **No explicit 429 in the OpenAPI document.** The `default` problem response already covers it, which avoids contract churn.
