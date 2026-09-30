@@ -1924,11 +1924,11 @@ export function makeApi(getToken: () =&gt; Promise&lt;string | null&gt;) {
   <ol class="steps">
     <li>User clicks Connect WhatsApp. The page loads Meta's JS SDK (only on this page) and calls <code>FB.login</code> with <code>config_id</code> for Embedded Signup v4.</li>
     <li>User completes Meta's dialog, choosing business, WhatsApp Business Account and number. The page receives the <code>code</code> from <code>FB.login</code> and <code>waba_id</code> and <code>phone_number_id</code> from Meta's session-info <code>message</code> event.</li>
-    <li>Web calls <code>POST …/social-accounts/whatsapp/embedded-signup {code, waba_id, phone_number_id}</code>.</li>
-    <li>API exchanges the code, reads the number's details, subscribes the app to the WABA, stores the account and returns it.</li>
+    <li>Web calls <code>POST …/social-accounts/whatsapp/embedded-signup {code, waba_id?, phone_number_id?}</code> once it has the code, with whichever ids the session info gave within 5 s (C-061).</li>
+    <li>API exchanges the code, finds any missing id with the business token (the WABA from <code>debug_token</code>'s <code>whatsapp_business_management</code> targets, the number from <code>/{waba_id}/phone_numbers</code>), reads the number's details, subscribes the app to the WABA, stores the account and returns it.</li>
     <li>Toast "WhatsApp connected: {display name} ({number})".</li>
   </ol>
-  <p><strong>Edge cases.</strong> The dialog closes without finishing: no request, a neutral toast. The number is already connected elsewhere: 409 <code>account_in_use</code>. Meta refuses because Social Hood's weekly onboarding allowance is used up: "WhatsApp connections are paused for a few days. We'll email you when you can connect.", and the attempt is logged for follow-up. No history exists to backfill; the inbox fills as customers write.</p>
+  <p><strong>Edge cases.</strong> The dialog closes without finishing: no request, a neutral toast. The number is already connected elsewhere: 409 <code>account_in_use</code>. The ids don't settle on one number: 422 <code>wa_choose_business_account</code> (no single shared WABA), <code>wa_no_phone_number</code> (the WABA has none; Meta's test numbers can't be connected through Embedded Signup) or <code>wa_choose_number</code> (several). Meta refuses because Social Hood's weekly onboarding allowance is used up: "WhatsApp connections are paused for a few days. We'll email you when you can connect.", and the attempt is logged for follow-up. No history exists to backfill; the inbox fills as customers write.</p>
 
   <h3>F-05 Reconnect after a token failure</h3>
   <ol class="steps">
@@ -2580,6 +2580,9 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
       <tr><td class="m">unsupported_media</td><td>"Instagram can't publish this file. Use JPEG or PNG images, or MP4 video up to 90 seconds."</td><td></td></tr>
       <tr><td class="m">ig_not_professional</td><td>"Only Instagram business and creator accounts can connect. Switch the account type in the Instagram app, then try again."</td><td>Try again</td></tr>
       <tr><td class="m">account_in_use</td><td>"This account is connected to another Social Hood workspace. Disconnect it there first."</td><td></td></tr>
+      <tr><td class="m">wa_choose_business_account</td><td>"Meta didn't say which WhatsApp Business Account to connect. Connect again and choose one in Meta's popup."</td><td>Connect again</td></tr>
+      <tr><td class="m">wa_no_phone_number</td><td>"This WhatsApp Business Account has no phone number yet. Add and verify one in Meta's popup or in WhatsApp Manager, then connect again. Meta's test numbers can't be connected this way; use a number your business owns."</td><td>Connect again</td></tr>
+      <tr><td class="m">wa_choose_number</td><td>"This WhatsApp Business Account has more than one number. Connect again and pick the one to use in Meta's popup."</td><td>Connect again</td></tr>
       <tr><td class="m">state_invalid</td><td>"That connection link expired."</td><td>Try again</td></tr>
       <tr><td class="m">validation_error</td><td>Field messages inline, e.g. "Add at least one keyword."</td><td></td></tr>
       <tr><td class="m">offline (client)</td><td>"You're offline. Reconnect to send messages."</td><td></td></tr>

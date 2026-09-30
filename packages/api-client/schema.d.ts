@@ -2023,8 +2023,12 @@ export interface paths {
         put?: never;
         /**
          * Complete Whatsapp Signup
-         * @description Finish Embedded Signup: store the number and subscribe to its webhooks. 409
-         *     account_in_use when the number is connected to another workspace.
+         * @description Finish Embedded Signup: store the number and subscribe to its webhooks. waba_id and
+         *     phone_number_id come from Meta's session info when it arrived; without them the API finds
+         *     the shared WhatsApp Business Account (debug_token) and its one number. 422
+         *     wa_choose_business_account, wa_no_phone_number or wa_choose_number when that doesn't settle
+         *     on one number, 409 account_in_use when the number is connected to another workspace, 402
+         *     over accounts_per_platform, 502 when Meta fails.
          */
         post: operations["complete_whatsapp_signup"];
         delete?: never;
@@ -3959,15 +3963,17 @@ export interface components {
         };
         /**
          * EmbeddedSignup
-         * @description What the page receives from Meta's Embedded Signup v4 (FB.login code + session info).
+         * @description What the page receives from Meta's Embedded Signup v4: the FB.login code, and the ids from
+         *     the session-info message when it arrived. A missing id is looked up with the business token
+         *     (the shared WhatsApp Business Account from debug_token, its number from phone_numbers).
          */
         EmbeddedSignup: {
             /** Code */
             code: string;
             /** Phone Number Id */
-            phone_number_id: string;
+            phone_number_id?: string | null;
             /** Waba Id */
-            waba_id: string;
+            waba_id?: string | null;
         };
         /** EntitlementValue */
         EntitlementValue: {

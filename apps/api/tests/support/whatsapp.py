@@ -57,6 +57,10 @@ class FakeWhatsApp:
         fixture("whatsapp_subscribed_apps_success.json"),
     )
     register: tuple[int, dict[str, Any]] = (200, {"success": True})
+    # Found when the session info didn't name them: the shared accounts, then the numbers.
+    debug_token: tuple[int, dict[str, Any]] = (200, fixture("whatsapp_debug_token.json"))
+    phone_numbers: tuple[int, dict[str, Any]] = (200, fixture("whatsapp_phone_numbers.json"))
+    debug_requests: list[dict[str, str]] = field(default_factory=list)  # {auth, input_token}
     pins: list[str] = field(default_factory=list)
     templates: tuple[int, dict[str, Any]] | None = None  # None: the two fixture pages
     calls: list[str] = field(default_factory=list)
@@ -65,6 +69,8 @@ class FakeWhatsApp:
 
     def install(self, router: respx.MockRouter) -> None:
         router.get(url__regex=_graph("oauth/access_token")).mock(side_effect=self._exchange)
+        router.get(url__regex=_graph("debug_token")).mock(side_effect=self._debug_token)
+        router.get(url__regex=_graph(r"\d+/phone_numbers")).mock(side_effect=self._phone_numbers)
         router.get(url__regex=_graph(r"\d+")).mock(side_effect=self._number)
         router.post(url__regex=_graph(r"\d+/subscribed_apps")).mock(side_effect=self._subscribe)
         router.post(url__regex=_graph(r"\d+/register")).mock(side_effect=self._register)
@@ -79,6 +85,21 @@ class FakeWhatsApp:
         self.calls.append("exchange")
         self.exchange_params.append(dict(request.url.params))
         return httpx.Response(self.exchange[0], json=self.exchange[1])
+
+    def _debug_token(self, request: httpx.Request) -> httpx.Response:
+        self.calls.append("debug_token")
+        self.debug_requests.append(
+            {
+                "auth": request.headers.get("authorization", ""),
+                "input_token": request.url.params.get("input_token", ""),
+            }
+        )
+        return httpx.Response(self.debug_token[0], json=self.debug_token[1])
+
+    def _phone_numbers(self, request: httpx.Request) -> httpx.Response:
+        self.calls.append("phone_numbers")
+        self._auth(request)
+        return httpx.Response(self.phone_numbers[0], json=self.phone_numbers[1])
 
     def _number(self, request: httpx.Request) -> httpx.Response:
         self.calls.append("number")
@@ -119,11 +140,36 @@ async def signup(
     wid: str,
     *,
     code: str = "wa-code-1",
-    waba_id: str = WABA_ID,
-    phone_number_id: str = PHONE_NUMBER_ID,
+    waba_id: str | None = WABA_ID,
+    phone_number_id: str | None = PHONE_NUMBER_ID,
 ) -> httpx.Response:
+    """None leaves the id out, as when Meta's session info didn't arrive or named no number."""
+    ids = {"waba_id": waba_id, "phone_number_id": phone_number_id}
     return await client.post(
         f"/v1/w/{wid}/social-accounts/whatsapp/embedded-signup",
-        json={"code": code, "waba_id": waba_id, "phone_number_id": phone_number_id},
+        json={"code": code, **{k: v for k, v in ids.items() if v is not None}},
         headers=clerk.headers(clerk_id),
     )
+
+
+def shared_wabas(*ids: str) -> dict[str, Any]:
+    """A debug_token body whose WhatsApp scopes list these accounts."""
+    body = fixture("whatsapp_debug_token.json")
+    for scope in body["data"]["granular_scopes"]:
+        scope["target_ids"] = list(ids)
+    return body
+
+
+def numbers(*ids: str) -> dict[str, Any]:
+    """A phone_numbers page with these numbers."""
+    return {
+        "data": [
+            {
+                "verified_name": "Maple Bakery",
+                "display_phone_number": f"+91 98765 {index:05d}",
+                "id": number_id,
+                "quality_rating": "GREEN",
+            }
+            for index, number_id in enumerate(ids)
+        ]
+    }

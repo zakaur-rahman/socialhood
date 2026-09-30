@@ -7,7 +7,9 @@ import {
   connectResult,
   reconnectBanner,
   sendFailure,
+  WHATSAPP_CONNECT_ERRORS,
   whatsappConnected,
+  whatsappConnectError,
 } from "./copy";
 import { relativeTime } from "./time";
 
@@ -151,6 +153,14 @@ describe("send failures (§4.7 error codes)", () => {
 describe("WhatsApp connected toast (F-04)", () => {
   it("names the number", () => {
     expect(whatsappConnected("Maple Bakery", "+91 98765 43210")).toBe("WhatsApp connected: Maple Bakery (+91 98765 43210)");
+  });
+
+  it("has copy for every refusal of the completion, and none for other codes", () => {
+    for (const code of WHATSAPP_CONNECT_ERRORS) expect(whatsappConnectError(code)).toMatch(/\.$/);
+    expect(whatsappConnectError("wa_no_phone_number")).toContain("Meta's test numbers can't be connected this way");
+    expect(whatsappConnectError("platform_error")).toBeNull();
+    expect(whatsappConnectError("toString")).toBeNull();
+    expect(whatsappConnectError(undefined)).toBeNull();
   });
 });
 

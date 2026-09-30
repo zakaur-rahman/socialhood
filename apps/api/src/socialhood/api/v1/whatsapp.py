@@ -29,8 +29,12 @@ def _deps(request: Request) -> PlatformDeps:
 async def complete_whatsapp_signup(
     request: Request, body: EmbeddedSignup, ctx: Admin, session: Session
 ) -> SocialAccountOut:
-    """Finish Embedded Signup: store the number and subscribe to its webhooks. 409
-    account_in_use when the number is connected to another workspace."""
+    """Finish Embedded Signup: store the number and subscribe to its webhooks. waba_id and
+    phone_number_id come from Meta's session info when it arrived; without them the API finds
+    the shared WhatsApp Business Account (debug_token) and its one number. 422
+    wa_choose_business_account, wa_no_phone_number or wa_choose_number when that doesn't settle
+    on one number, 409 account_in_use when the number is connected to another workspace, 402
+    over accounts_per_platform, 502 when Meta fails."""
     deps = _deps(request)
     acct = await whatsapp_connect.complete_signup(
         session,

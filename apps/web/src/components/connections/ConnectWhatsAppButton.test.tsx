@@ -9,10 +9,16 @@ import { ConnectWhatsAppButton } from "./ConnectWhatsAppButton";
 const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
-// Meta's SDK: FB.login answers with a code and Meta posts the session info.
-const sdk = vi.hoisted(() => ({ outcome: "finish" as "finish" | "cancel" }));
+// Meta's SDK: FB.login answers with a code and Meta posts the session info: both ids (FINISH),
+// the account only (FINISH_ONLY_WABA), or a finish naming neither.
+const sdk = vi.hoisted(() => ({ outcome: "finish" as "finish" | "only_waba" | "no_ids" | "cancel" }));
 vi.mock("@/lib/whatsapp/embedded-signup", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/whatsapp/embedded-signup")>();
+  const sessionInfo = {
+    finish: { event: "FINISH", data: { phone_number_id: "1098765", waba_id: "2045678" } },
+    only_waba: { event: "FINISH_ONLY_WABA", data: { waba_id: "2045678" } },
+    no_ids: { event: "FINISH_GRANT_ONLY_API_ACCESS", data: {} },
+  };
   return {
     ...real,
     loadFacebookSdk: vi.fn(async () => ({
@@ -22,11 +28,7 @@ vi.mock("@/lib/whatsapp/embedded-signup", async (importOriginal) => {
         window.dispatchEvent(
           new MessageEvent("message", {
             origin: "https://www.facebook.com",
-            data: JSON.stringify({
-              type: "WA_EMBEDDED_SIGNUP",
-              event: "FINISH",
-              data: { phone_number_id: "1098765", waba_id: "2045678" },
-            }),
+            data: JSON.stringify({ type: "WA_EMBEDDED_SIGNUP", ...sessionInfo[sdk.outcome] }),
           }),
         );
         callback({ authResponse: { code: "AQB-code" } });
@@ -59,6 +61,39 @@ describe("Connect WhatsApp (F-04)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("WhatsApp connected: Maple Bakery (+91 98765 43210)"));
     expect(calls[0].body).toEqual({ code: "AQB-code", waba_id: "2045678", phone_number_id: "1098765" });
+  });
+
+  it.each([
+    ["only_waba", { code: "AQB-code", waba_id: "2045678" }],
+    ["no_ids", { code: "AQB-code" }],
+  ] as const)("a finish without every id (%s) still completes, sending the ids it has", async (outcome, body) => {
+    sdk.outcome = outcome;
+    const { calls } = await renderButton(() =>
+      json(account({ id: "a2", platform: "whatsapp", display_name: "Maple Bakery", phone_number: "+91 98765 43210" }), 201),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("WhatsApp connected: Maple Bakery (+91 98765 43210)"));
+    expect(calls[0].body).toEqual(body);
+  });
+
+  it.each([
+    [
+      "wa_no_phone_number",
+      "This WhatsApp Business Account has no phone number yet. Add and verify one in Meta's popup or in WhatsApp Manager, then connect again. Meta's test numbers can't be connected this way; use a number your business owns.",
+    ],
+    [
+      "wa_choose_number",
+      "This WhatsApp Business Account has more than one number. Connect again and pick the one to use in Meta's popup.",
+    ],
+    [
+      "wa_choose_business_account",
+      "Meta didn't say which WhatsApp Business Account to connect. Connect again and choose one in Meta's popup.",
+    ],
+  ])("the API's %s gets its copy", async (code, message) => {
+    sdk.outcome = "only_waba";
+    await renderButton(() => problem(422, code, "from the API"));
+    await userEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(message));
   });
 
   it("is disabled until the Meta app is configured", () => {

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
 import { useCompleteWhatsAppSignup } from "@/lib/api/queries";
-import { errorMessage, whatsappConnected } from "@/lib/copy";
+import { errorMessage, whatsappConnectError, whatsappConnected } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { loadFacebookSdk, runEmbeddedSignup } from "@/lib/whatsapp/embedded-signup";
 
@@ -22,8 +22,9 @@ function metaConfig() {
 
 /** The copy for a failed Embedded Signup completion (F-04 edge cases, §4.7). */
 export function whatsappSignupError(error: unknown): string {
-  if (error instanceof ApiError && error.code === "account_in_use") {
-    return "This account is connected to another Social Hood workspace. Disconnect it there first.";
+  if (error instanceof ApiError) {
+    const copy = whatsappConnectError(error.code);
+    if (copy) return copy;
   }
   // Other refusals (Meta's weekly onboarding allowance) carry their copy in detail; a plan limit
   // (402) is the upgrade dialog's.
@@ -32,7 +33,8 @@ export function whatsappSignupError(error: unknown): string {
 
 /**
  * F-04: loads Meta's SDK on first use (only on this page), runs Embedded Signup, sends the
- * code and ids to the API, and names the connected number. Used to connect and to reconnect.
+ * code and whichever ids Meta's session info gave to the API (it finds the rest), and names the
+ * connected number. Used to connect and to reconnect.
  */
 export function useWhatsAppConnect(wid: string) {
   const complete = useCompleteWhatsAppSignup(wid);
@@ -53,8 +55,9 @@ export function useWhatsAppConnect(wid: string) {
         toast.error(result.message);
         return;
       }
+      const { code, waba_id, phone_number_id } = result;
       complete.mutate(
-        { code: result.code, waba_id: result.waba_id, phone_number_id: result.phone_number_id },
+        { code, ...(waba_id ? { waba_id } : {}), ...(phone_number_id ? { phone_number_id } : {}) },
         {
           onSuccess: (account) => toast.success(whatsappConnected(account.display_name, account.phone_number)),
           // Over accounts_per_platform (402): the upgrade dialog says so.
