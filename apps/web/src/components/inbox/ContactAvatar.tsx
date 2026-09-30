@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 
 const SIZE = {
   48: { root: "size-12", text: "text-lg", badge: "size-4", glyph: "size-2.5" },
+  40: { root: "size-10", text: "text-base", badge: "size-4", glyph: "size-2.5" },
   32: { root: "size-8", text: "text-sm", badge: "size-3.5", glyph: "size-2" },
   24: { root: "size-6", text: "text-[11px]", badge: "", glyph: "" },
 } as const;

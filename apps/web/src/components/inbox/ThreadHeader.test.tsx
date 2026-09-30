@@ -30,10 +30,12 @@ function renderHeader(overrides: Partial<Conversation> = {}, props: Partial<Para
   return handlers;
 }
 
-describe("ReplyWindowChip (UX-INB-05)", () => {
+describe("ReplyWindowChip (UX-INB-05, C-063)", () => {
   it.each([
-    [{ state: "open", closes_at: inHours(18) }, "Window: 18h left", "neutral"],
-    [{ state: "open", closes_at: inHours(1) }, "Window: 1h left", "warning"],
+    [{ state: "open", closes_at: inHours(23) }, "Window: 23h left", "neutral"],
+    [{ state: "open", closes_at: inHours(2) }, "Window: 2h left", "neutral"],
+    [{ state: "open", closes_at: inHours(1.99) }, "Window: 1h left", "warning"],
+    [{ state: "open", closes_at: inHours(0.25) }, "Window: 15m left", "warning"],
     [{ state: "human_agent", closes_at: inHours(120) }, "Human Agent: 5d left", "warning"],
     [{ state: "closed" }, "Window closed", "danger"],
     [{ state: "template_only" }, "Template only", "warning"],
@@ -42,14 +44,25 @@ describe("ReplyWindowChip (UX-INB-05)", () => {
     const chip = screen.getByText(label);
     expect(chip).toHaveAttribute("data-tone", tone);
   });
+
+  it("neutral is outlined, amber under 2 h, red once closed", () => {
+    const { rerender } = render(<ReplyWindowChip window={{ state: "open", closes_at: inHours(23) }} now={now} />);
+    expect(screen.getByText("Window: 23h left")).toHaveClass("border-line", "text-fg-secondary");
+    rerender(<ReplyWindowChip window={{ state: "open", closes_at: inHours(1) }} now={now} />);
+    expect(screen.getByText("Window: 1h left")).toHaveClass("bg-warning/15", "text-warning");
+    rerender(<ReplyWindowChip window={{ state: "closed" }} now={now} />);
+    expect(screen.getByText("Window closed")).toHaveClass("bg-danger/15", "text-danger-fg");
+  });
 });
 
 describe("ThreadHeader (UX-INB-05)", () => {
-  it("shows the contact, platform and AI mode", () => {
+  it("shows the contact, handle, platform, our linked account and AI mode", () => {
     renderHeader();
-    expect(screen.getByRole("heading", { name: "Priya Nair" })).toBeInTheDocument();
-    expect(screen.getByText("@priya.styles · Instagram")).toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: "Priya Nair" });
+    expect(screen.getByTestId("thread-identity")).toHaveTextContent("@priya.styles · Instagram · @maple.bakery");
     expect(screen.getByText("AI: Suggest")).toBeInTheDocument();
+    // The window chip sits beside the name.
+    expect(heading.parentElement).toContainElement(screen.getByText("Window: 23h left"));
   });
 
   it("AI auto, paused and needs you", () => {
@@ -88,10 +101,14 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(screen.queryByText("AI: Suggest")).not.toBeInTheDocument();
   });
 
-  it("names the account when several are connected, and offers Back on phones", () => {
-    renderHeader({}, { showAccount: true, backHref: "/w/maple/inbox" as Route });
-    expect(screen.getByText("@priya.styles · Instagram · @maple.bakery")).toBeInTheDocument();
+  it("offers Back on phones", () => {
+    renderHeader({}, { backHref: "/w/maple/inbox" as Route });
     expect(screen.getByRole("link", { name: "Back to conversations" })).toHaveAttribute("href", "/w/maple/inbox");
+  });
+
+  it("the panel toggle shows whether the panel is open", () => {
+    renderHeader({}, { detailsOpen: true });
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-pressed", "true");
   });
 
   it("toggles details and schedules", async () => {

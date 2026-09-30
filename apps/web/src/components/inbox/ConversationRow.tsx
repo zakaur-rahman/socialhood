@@ -3,8 +3,8 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { Ref } from "react";
 
-import type { ConversationListItem, MessageKind } from "@/lib/api/types";
-import { contactName, previewPrefix, previewText, signalChip, TONE_CLASS } from "@/lib/inbox/format";
+import type { AiMode, ConversationListItem, MessageKind } from "@/lib/api/types";
+import { contactName, previewPrefix, previewText, rowBadges, TONE_CLASS } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -21,24 +21,35 @@ const KIND_ICON: Partial<Record<MessageKind, LucideIcon>> = {
   share: Share2,
 };
 
+/** Row heights, fixed so the virtualised list can place rows without measuring (TR-FE-08). */
+export const ROW_HEIGHT = 68;
+export const ROW_HEIGHT_WITH_BADGES = 90;
+
 type Props = {
   item: ConversationListItem;
   href: Route;
   selected: boolean;
   now: Date;
+  /** The AI mode that applies (the conversation's own, else its account's): "AI Auto" badge. */
+  aiMode?: AiMode | null;
   index?: number;
   onNavigate?: () => void;
   ref?: Ref<HTMLAnchorElement>;
 };
 
-/** UX-INB-04: one conversation, as a link (v1 rows were unfocusable divs). */
-export function ConversationRow({ item, href, selected, now, index, onNavigate, ref }: Props) {
+/** How tall a row is: two lines, or three with badges. */
+export function rowHeight(item: ConversationListItem, now: Date, aiMode: AiMode | null = null): number {
+  return rowBadges(item, now, aiMode).length > 0 ? ROW_HEIGHT_WITH_BADGES : ROW_HEIGHT;
+}
+
+/** UX-INB-04, restyled (C-063): one conversation, as a link (v1 rows were unfocusable divs). */
+export function ConversationRow({ item, href, selected, now, aiMode = null, index, onNavigate, ref }: Props) {
   const name = contactName(item.contact, item.platform);
   const unread = item.unread_count > 0;
   const prefix = previewPrefix(item);
   const text = previewText(item);
   const Icon = item.last_message_kind ? KIND_ICON[item.last_message_kind] : undefined;
-  const chip = signalChip(item, now);
+  const badges = rowBadges(item, now, aiMode);
 
   return (
     <Link
@@ -49,18 +60,23 @@ export function ConversationRow({ item, href, selected, now, index, onNavigate, 
       data-index={index}
       data-conversation-row={item.id}
       className={cn(
-        "flex h-[72px] items-center gap-3 px-4 py-3 outline-offset-[-2px] hover:bg-white/5",
-        selected && "bg-raised shadow-[inset_-2px_0_0_var(--color-brand)] hover:bg-raised",
+        "relative flex items-start gap-3 px-4 py-3 outline-offset-[-2px] hover:bg-white/5",
+        badges.length > 0 ? "h-[90px]" : "h-[68px]",
+        selected && "bg-raised hover:bg-raised",
       )}
     >
-      <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} platform={item.platform} />
+      {selected ? <span className="absolute inset-y-0 left-0 w-[3px] bg-brand" data-testid="row-accent" aria-hidden /> : null}
+      <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} platform={item.platform} size={40} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
           <span className={cn("min-w-0 flex-1 truncate text-sm font-semibold", unread ? "text-fg" : "text-fg-secondary")}>
             {name}
           </span>
           {item.last_message_at ? (
-            <time dateTime={item.last_message_at} className="shrink-0 text-xs text-fg-secondary tabular-nums">
+            <time
+              dateTime={item.last_message_at}
+              className={cn("shrink-0 text-xs tabular-nums", unread ? "font-medium text-brand-fg" : "text-fg-secondary")}
+            >
               {relativeTime(item.last_message_at, now)}
             </time>
           ) : null}
@@ -78,15 +94,24 @@ export function ConversationRow({ item, href, selected, now, index, onNavigate, 
               {text}
             </span>
           </span>
-          {chip ? (
-            <span className={cn("shrink-0 rounded-full px-2 text-[11px] leading-5 font-medium", TONE_CLASS[chip.tone])}>
-              {chip.label}
-            </span>
-          ) : null}
           {unread ? (
             <span className="size-2 shrink-0 rounded-full bg-brand" role="img" aria-label="unread" />
           ) : null}
         </span>
+        {badges.length > 0 ? (
+          <span className="mt-1.5 flex gap-1 overflow-hidden">
+            {badges.map((badge) => (
+              <span
+                key={badge.key}
+                title={badge.title}
+                data-badge={badge.key}
+                className={cn("shrink-0 rounded px-1.5 text-[11px] leading-[18px] font-medium tabular-nums", TONE_CLASS[badge.tone])}
+              >
+                {badge.label}
+              </span>
+            ))}
+          </span>
+        ) : null}
       </span>
     </Link>
   );

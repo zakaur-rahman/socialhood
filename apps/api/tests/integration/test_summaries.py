@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.ai.fake import FakeProvider
 from socialhood.jobs.app import app as jobs_app
+from tests.support.ai import make_source, make_suggestion
 from tests.support.analysis import Inbox, make_inbox, use_credits
 from tests.support.ingest import stream
 
@@ -100,6 +101,47 @@ async def test_the_summary_refreshes_after_eight_new_messages(
     )
     conv = await inbox.conversation(conv_id)
     assert (conv["summary"], conv["summary_next_step"]) == ("Arjun ordered the blue kurta.", None)
+
+
+async def test_the_next_step_is_grounded_in_the_knowledge_the_latest_draft_used(
+    inbox: Inbox, engine: AsyncEngine, fake_ai: FakeProvider
+) -> None:
+    """summary.v2 (C-063): KNOWLEDGE is the chunks of the newest draft that used any, read from
+    the database: the same single call, no retrieval (no embedding call)."""
+    message_id = await inbox.dm(CUSTOMER, "How much is shipping to Pune?")
+    conv_id = await inbox.conversation_id(CUSTOMER)
+    fake_ai.respond(
+        "summary",
+        {"summary": "Arjun asked about shipping.", "next_step": None},
+        {
+            "summary": "Arjun asked about shipping to Pune.",
+            "next_step": "  Tell him shipping is free on orders over ₹999.  ",
+        },
+    )
+    await inbox.summarize(conv_id)
+    [first] = fake_ai.calls_for("summary")
+    assert len(first.contents) == 1  # no draft used knowledge yet
+
+    source = await make_source(engine, workspace_id=inbox.wid)
+    [chunk] = await inbox.rows("SELECT id FROM knowledge_chunks WHERE source_id = :s", s=source)
+    common = {"workspace_id": inbox.wid, "conversation_id": conv_id, "message_id": message_id}
+    await make_suggestion(engine, **common, status="sent", used_chunk_ids=[chunk["id"]])
+    # A newer draft without knowledge doesn't hide it.
+    await make_suggestion(
+        engine, **common, status="dismissed", can_answer=False, regeneration_index=1
+    )
+
+    assert (await inbox.summarize(conv_id)).outcome == "summarised"
+
+    second = fake_ai.calls_for("summary")[1]
+    assert "next_step: one short sentence" in second.system
+    assert second.contents[1].text == (
+        "KNOWLEDGE:\n- [How much is shipping?] Q: How much is shipping? "
+        "A: Shipping is free on orders over ₹999."
+    )
+    assert fake_ai.embed_calls == []
+    conv = await inbox.conversation(conv_id)
+    assert conv["summary_next_step"] == "Tell him shipping is free on orders over ₹999."
 
 
 async def test_no_summary_with_analysis_off_or_credits_used_up(

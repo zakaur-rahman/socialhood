@@ -8,9 +8,13 @@ refreshed after 8 new messages or on request.
   per-workspace bulk slot (TR-JOB-06).
 - The job reads the last 50 messages (the earlier summary, when there is one, comes first as
   context), reserves 1 credit and calls the provider with AI_MODEL_REPLY and the versioned prompt
-  ``summary.v1``; the conversation is data in the contents (TR-AI-04). With AI analysis off for the
+  ``summary.v2``; the conversation is data in the contents (TR-AI-04). With AI analysis off for the
   account nothing is sent (FR-PRV-02); with the credits used up it stops before any call
   (FR-AI-05).
+- The next step (summary.v2, C-063) is one concrete sentence for the member, grounded only in the
+  conversation and KNOWLEDGE: the chunks the conversation's newest knowledge-backed draft used,
+  read from the database (at most 4, no retrieval, so no extra model or embedding call). Old
+  summaries keep a null next step.
 - It stores summary, summary_next_step and summary_updated_at, resets the counter and publishes
   conversation.updated, whose payload also carries ``summary`` (the list item has no summary).
 """
@@ -38,6 +42,7 @@ from socialhood.observability.logging import get_logger
 from socialhood.realtime import events
 from socialhood.repositories import analyses, inbox, social_accounts
 from socialhood.repositories import ingest as ingest_rows
+from socialhood.repositories import suggestions as suggestions_repo
 from socialhood.schemas.inbox import ConversationSummary
 from socialhood.services.analysis import business_profile, transcript
 from socialhood.services.inbox_views import human_agent_allowed, list_item
@@ -52,6 +57,8 @@ TEMPERATURE = 0.2
 TIMEOUT_S = 12.0
 SUMMARY_CHARS = 600
 NEXT_STEP_CHARS = 200
+KNOWLEDGE_CHUNKS = 4  # of the newest knowledge-backed draft (summary.v2's grounding)
+KNOWLEDGE_CHUNK_CHARS = 600
 ANALYSIS_OFF = "AI analysis is off for this account, so its conversations are not summarised."
 NO_CREDITS = "Your AI credits are used up until they reset."
 
@@ -105,6 +112,13 @@ def _clean(text: str | None, limit: int) -> str | None:
     return cleaned or None
 
 
+def knowledge_block(chunks: list[str]) -> str | None:
+    """KNOWLEDGE for summary.v2: one line per chunk (a chunk can't start a fake new section)."""
+    lines = [_clean(chunk, KNOWLEDGE_CHUNK_CHARS) for chunk in chunks]
+    kept = [f"- {line}" for line in lines if line]
+    return "KNOWLEDGE:\n" + "\n".join(kept) if kept else None
+
+
 async def summarize_conversation(
     sessionmaker: async_sessionmaker[AsyncSession],
     redis: Redis,
@@ -129,10 +143,17 @@ async def summarize_conversation(
                 return SummaryRun("no_messages")
             name, description = await business_profile(session)
             earlier = conv.summary
+            chunk_ids = await suggestions_repo.latest_used_chunk_ids(session, conv.id)
+            knowledge = knowledge_block(
+                await suggestions_repo.chunk_texts(session, chunk_ids[:KNOWLEDGE_CHUNKS])
+            )
 
     text = transcript(messages)
     if earlier:
         text = f"EARLIER SUMMARY: {earlier}\n\n{text}"
+    contents = [Turn("user", text)]
+    if knowledge:
+        contents.append(Turn("user", knowledge))
     prompt = prompts.load("summary")
     try:
         async with metered(
@@ -147,7 +168,7 @@ async def summarize_conversation(
                 task="summary",
                 schema=SummaryOut,
                 system=prompt.render(business_name=name, business_description=description),
-                contents=[Turn("user", text)],
+                contents=contents,
                 model=settings.ai_model_reply,
                 max_output_tokens=MAX_OUTPUT_TOKENS,
                 temperature=TEMPERATURE,

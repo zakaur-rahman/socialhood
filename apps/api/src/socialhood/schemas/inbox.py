@@ -67,7 +67,7 @@ IntentName = Literal[
 Signal = Literal["needs_you", "complaint", "closing_soon", "lead", "negative"]
 WindowState = Literal["open", "human_agent", "template_only", "closed"]
 InboxView = Literal[
-    "all", "unread", "needs_reply", "leads", "closing_soon", "ai_handled", "archived"
+    "all", "unread", "needs_reply", "needs_you", "leads", "closing_soon", "ai_handled", "archived"
 ]
 
 
@@ -110,6 +110,8 @@ class ConversationListItem(ResponseModel):
     signal: Signal | None = None  # computed, in UX-INB-04's priority order
     reply_window_closes_at: datetime | None = None  # for the "Closing in 3h" chip
     lead_score: int | None = None
+    # The conversation's own AI mode, if set; else the account's applies (the row's AI badge).
+    ai_mode_override: AiModeName | None = None
 
 
 class ReplyWindow(ResponseModel):
@@ -163,6 +165,8 @@ class Suggestion(ResponseModel):
 
 class ConversationSummary(ResponseModel):
     text: str
+    # One concrete suggestion for the member (summary.v2, C-063); null on older summaries and
+    # when nothing is open.
     next_step: str | None = None
     updated_at: datetime
 

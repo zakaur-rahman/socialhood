@@ -1103,6 +1103,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/conversations/{conversation_id}/polish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Polish Reply
+         * @description AI Polish (C-063): the member's draft with its grammar and clarity fixed, in the same
+         *     language (English, Hindi or Hinglish), meaning and roughly length; it never adds facts,
+         *     prices or promises. 1 credit; nothing is stored or sent. 402 quota_exceeded without credits;
+         *     503 when the AI can't answer or its answer changed the draft's details.
+         */
+        post: operations["polish_reply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations/{conversation_id}/read": {
         parameters: {
             query?: never;
@@ -3756,6 +3779,8 @@ export interface components {
         /** Conversation */
         Conversation: {
             ai: components["schemas"]["ConversationAi"];
+            /** Ai Mode Override */
+            ai_mode_override?: ("off" | "suggest" | "auto") | null;
             /** Awaiting Reply */
             awaiting_reply: boolean;
             contact: components["schemas"]["ContactDetail"];
@@ -3846,6 +3871,8 @@ export interface components {
         };
         /** ConversationListItem */
         ConversationListItem: {
+            /** Ai Mode Override */
+            ai_mode_override?: ("off" | "suggest" | "auto") | null;
             /** Awaiting Reply */
             awaiting_reply: boolean;
             contact: components["schemas"]["ContactSummary"];
@@ -4753,6 +4780,26 @@ export interface components {
             price?: components["schemas"]["BillingPrice"] | null;
             /** Trial Days */
             trial_days: number;
+        };
+        /**
+         * PolishRequest
+         * @description POST …/conversations/{id}/polish (C-063): the member's draft reply. ``tone`` overrides the
+         *     brand voice's tone for this rewrite.
+         */
+        PolishRequest: {
+            /** Text */
+            text: string;
+            /** Tone */
+            tone?: ("friendly" | "professional") | null;
+        };
+        /**
+         * PolishResult
+         * @description The polished draft: the same language, meaning and roughly the length, with no fact,
+         *     number, link or promise the draft didn't have. Nothing is stored or sent.
+         */
+        PolishResult: {
+            /** Text */
+            text: string;
         };
         /**
          * PortalSession
@@ -8350,7 +8397,7 @@ export interface operations {
     list_conversations: {
         parameters: {
             query?: {
-                view?: "all" | "unread" | "needs_reply" | "leads" | "closing_soon" | "ai_handled" | "archived";
+                view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "archived";
                 platform?: ("instagram" | "whatsapp") | null;
                 account_id?: string | null;
                 q?: string | null;
@@ -8589,6 +8636,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    polish_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PolishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PolishResult"];
                 };
             };
             /** @description Validation error */

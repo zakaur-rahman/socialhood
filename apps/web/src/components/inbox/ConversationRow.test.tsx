@@ -37,21 +37,47 @@ describe("ConversationRow (UX-INB-04)", () => {
     expect(screen.getByLabelText("unread")).toBeInTheDocument();
   });
 
-  it("selected: marked current with the accent bar", () => {
+  it("selected: marked current with the brand accent bar", () => {
     const row = renderRow({}, true);
     expect(row).toHaveAttribute("aria-current", "page");
     expect(row.className).toContain("bg-raised");
+    expect(screen.getByTestId("row-accent")).toHaveClass("bg-brand");
+  });
+
+  it("without badges the row is two lines", () => {
+    const row = renderRow();
+    expect(row).toHaveClass("h-[68px]");
+    expect(row.querySelector("[data-badge]")).toBeNull();
   });
 
   it.each([
-    ["needs_you", "Needs you"],
     ["complaint", "Complaint"],
     ["closing_soon", "Closing in 3h"],
-    ["lead", "Lead"],
     ["negative", "Negative"],
-  ] as const)("signal %s shows one chip: %s", (signal, label) => {
-    renderRow({ signal, reply_window_closes_at: "2026-09-28T15:00:00Z" });
+  ] as const)("signal %s shows its badge: %s", (signal, label) => {
+    const row = renderRow({ signal, reply_window_closes_at: "2026-09-28T15:00:00Z" });
     expect(screen.getByText(label)).toBeInTheDocument();
+    expect(row).toHaveClass("h-[90px]");
+  });
+
+  it("Needs you when escalated, Lead with the score at the threshold (60)", () => {
+    renderRow({ needs_human: true, needs_human_reason: "refund", signal: "needs_you", lead_score: 72 });
+    expect(screen.getByText("Needs you")).toHaveAttribute("title", "The AI handed this over: refund");
+    expect(screen.getByText("Lead 72/100")).toBeInTheDocument();
+  });
+
+  it("no Lead badge below the threshold", () => {
+    renderRow({ lead_score: 59, signal: null });
+    expect(screen.queryByText(/Lead/)).not.toBeInTheDocument();
+  });
+
+  it("AI Auto when the AI replies on its own", () => {
+    const { rerender } = render(
+      <ConversationRow item={listItem()} href={"/w/maple/inbox/c1" as Route} selected={false} now={now} aiMode="auto" />,
+    );
+    expect(screen.getByText("AI Auto")).toHaveAttribute("title", "The AI replies on its own in this conversation");
+    rerender(<ConversationRow item={listItem()} href={"/w/maple/inbox/c1" as Route} selected={false} now={now} aiMode="suggest" />);
+    expect(screen.queryByText("AI Auto")).not.toBeInTheDocument();
   });
 
   it("prefixes outbound previews", () => {

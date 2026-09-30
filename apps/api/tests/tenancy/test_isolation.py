@@ -131,6 +131,8 @@ EXAMPLE_BODIES.update(
         ("PATCH", "/v1/w/{wid}/knowledge-sources/{source_id}"): {"title": "Taken over"},
         ("POST", "/v1/w/{wid}/ai-decisions/{decision_id}/feedback"): {"feedback": "bad"},
         ("PUT", "/v1/w/{wid}/ai-settings"): {"tone": "playful", "takeover_minutes": 30},
+        # AI Polish (C-063): polishing against B's conversation is 404 and spends nothing.
+        ("POST", "/v1/w/{wid}/conversations/{conversation_id}/polish"): {"text": "hi there"},
     }
 )
 

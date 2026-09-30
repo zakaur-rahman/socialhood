@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Heart, Paperclip, SendHorizontal, Smile, Sticker } from "lucide-react";
+import { Clock, Heart, Loader2, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -12,13 +12,14 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useApi } from "@/lib/api/provider";
-import { useCreateScheduled, type ReplyInput } from "@/lib/api/queries";
+import { useCreateScheduled, usePolishReply, type ReplyInput } from "@/lib/api/queries";
 import type { Conversation, MediaAsset } from "@/lib/api/types";
 import { composerCopy, errorMessage } from "@/lib/copy";
 import { contactName, firstName, timeLeft } from "@/lib/inbox/format";
 import { useInboxStore } from "@/lib/inbox/store";
 import { ATTACHMENT_RULES, STICKER_RULE, UploadError, uploadAsset } from "@/lib/media/upload";
 import { relativeTime } from "@/lib/time";
+import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/uuid";
@@ -42,6 +43,8 @@ const EmojiPicker = dynamic(() => import("./EmojiPicker"), {
 const MIN_HEIGHT = 40;
 const MAX_HEIGHT = 160;
 const MAX_ATTACHMENTS = 10;
+/** The composer's toolbar icon buttons. */
+const TOOL = "size-10 rounded-md text-fg-secondary md:size-8";
 
 export type Uploader = (
   file: File,
@@ -74,8 +77,8 @@ type Mode = "reply" | "blocked" | "closed" | "template_only";
 
 /**
  * UX-INB-07, F-07: autosizing textarea (40–160 px, reset after send), Enter sends and
- * Shift+Enter adds a line, lazy emoji, attachments, scheduling, and the window states.
- * The draft lives in the store by conversation id (TR-FE-06).
+ * Shift+Enter adds a line, lazy emoji, attachments, AI Polish with Undo (C-063), scheduling,
+ * and the window states. The draft lives in the store by conversation id (TR-FE-06).
  */
 export function Composer({
   wid,
@@ -142,6 +145,46 @@ export function Composer({
     tray.clear();
     const el = textRef.current;
     if (el) el.style.height = ""; // back to the 40 px minimum (v1 kept the tall box)
+  };
+
+  // ---- AI Polish (C-063): the draft back with its grammar and clarity fixed; Undo restores it.
+  const polish = usePolishReply(wid, conversationId);
+  const [polished, setPolished] = useState<{ before: string; after: string } | null>(null);
+  // Undo lasts while the box still holds the polished text.
+  const canUndoPolish = polished !== null && draft === polished.after;
+
+  const polishDraft = () => {
+    const before = draft;
+    if (before.trim() === "" || polish.isPending) return;
+    polish.mutate(
+      { text: before },
+      {
+        onSuccess: ({ text }) => {
+          // Typed on while it polished: keep what they wrote.
+          if (useInboxStore.getState().drafts[conversationId] !== before) {
+            toast("Your reply changed while it was polished, so it was kept. Polish it again if you like.");
+            return;
+          }
+          setDraft(conversationId, text);
+          setPolished({ before, after: text });
+          requestAnimationFrame(() => {
+            resize();
+            textRef.current?.focus();
+          });
+        },
+        onError: (error) => toastError(error), // out of credits (402): the upgrade dialog says so
+      },
+    );
+  };
+
+  const undoPolish = () => {
+    if (!polished) return;
+    setDraft(conversationId, polished.before);
+    setPolished(null);
+    requestAnimationFrame(() => {
+      resize();
+      textRef.current?.focus();
+    });
   };
 
   const send = () => {
@@ -246,29 +289,7 @@ export function Composer({
   return (
     <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
       <AttachmentTray items={tray.items} onRemove={tray.remove} onRetry={tray.retry} />
-      <div className="flex items-end gap-2">
-        {canAttach ? (
-          <>
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              className="size-10 rounded-full text-fg-secondary md:size-9"
-              aria-label="Attach files"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Paperclip aria-hidden />
-            </Button>
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              hidden
-              accept={ATTACHMENT_RULES[conversation.platform].accept}
-              onChange={onFiles}
-              data-testid="composer-file-input"
-            />
-          </>
-        ) : null}
+      <div className="rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised">
         <label htmlFor={`composer-${conversationId}`} className="sr-only">
           Reply to {name}
         </label>
@@ -284,90 +305,122 @@ export function Composer({
           onKeyDown={onKeyDown}
           placeholder={`Reply to ${firstName(name)}…`}
           maxLength={4096}
-          className="min-h-10 max-h-40 flex-1 resize-none rounded-[20px] border border-line bg-field px-4 py-2 text-sm leading-relaxed outline-none focus:bg-raised"
+          aria-busy={polish.isPending}
+          className="block max-h-40 min-h-10 w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed outline-none"
         />
-        {conversation.platform === "instagram" ? (
+        <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
+          {canAttach ? (
+            <>
+              <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Attach files" onClick={() => fileRef.current?.click()}>
+                <Paperclip aria-hidden />
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                multiple
+                hidden
+                accept={ATTACHMENT_RULES[conversation.platform].accept}
+                onChange={onFiles}
+                data-testid="composer-file-input"
+              />
+            </>
+          ) : null}
+          <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Add emoji">
+                <Smile aria-hidden />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" side="top" className="w-auto border-line bg-panel p-2 shadow-xl">
+              {emojiOpen ? <EmojiPicker onPick={insertEmoji} /> : null}
+            </PopoverContent>
+          </Popover>
+          {conversation.platform === "instagram" ? (
+            <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Send a heart" onClick={sendHeart}>
+              <Heart aria-hidden />
+            </Button>
+          ) : canAttach ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                className={TOOL}
+                aria-label="Send a sticker"
+                disabled={sticker.busy}
+                onClick={() => stickerRef.current?.click()}
+              >
+                <Sticker aria-hidden />
+              </Button>
+              <input
+                ref={stickerRef}
+                type="file"
+                hidden
+                accept={STICKER_RULE.accept}
+                onChange={(event) => void onStickerFile(event)}
+                data-testid="composer-sticker-input"
+              />
+            </>
+          ) : null}
           <Button
             variant="ghost"
-            size="icon-lg"
-            className="size-10 rounded-full text-fg-secondary md:size-9"
-            aria-label="Send a heart"
-            onClick={sendHeart}
+            size="sm"
+            className="ml-1 h-8 gap-1 rounded-md border border-brand-line px-2 text-xs font-medium text-brand-fg hover:bg-brand-soft disabled:border-line disabled:text-fg-disabled"
+            disabled={draft.trim() === "" || polish.isPending}
+            title={draft.trim() === "" ? "Write a reply to polish" : "Fix grammar and clarity, in the same language (1 AI credit)"}
+            onClick={polishDraft}
           >
-            <Heart aria-hidden />
+            {polish.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Sparkles className="size-3.5" aria-hidden />}
+            {polish.isPending ? "Polishing…" : "AI Polish"}
           </Button>
-        ) : canAttach ? (
-          <>
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              className="size-10 rounded-full text-fg-secondary md:size-9"
-              aria-label="Send a sticker"
-              disabled={sticker.busy}
-              onClick={() => stickerRef.current?.click()}
-            >
-              <Sticker aria-hidden />
+          {canUndoPolish ? (
+            <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs text-fg-secondary" onClick={undoPolish}>
+              <Undo2 className="size-3.5" aria-hidden /> Undo
             </Button>
-            <input
-              ref={stickerRef}
-              type="file"
-              hidden
-              accept={STICKER_RULE.accept}
-              onChange={(event) => void onStickerFile(event)}
-              data-testid="composer-sticker-input"
-            />
-          </>
-        ) : null}
-        <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-lg" className="size-10 rounded-full text-fg-secondary md:size-9" aria-label="Add emoji">
-              <Smile aria-hidden />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" side="top" className="w-auto border-line bg-panel p-2 shadow-xl">
-            {emojiOpen ? <EmojiPicker onPick={insertEmoji} /> : null}
-          </PopoverContent>
-        </Popover>
-        <Popover open={scheduleOpen} onOpenChange={onScheduleOpenChange}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-lg" className="size-10 rounded-full text-fg-secondary md:size-9" aria-label="Schedule for later">
-              <Clock aria-hidden />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent align="end" side="top" className="w-80 border-line bg-panel p-3 shadow-xl">
-            {scheduleOpen ? (
-              <SchedulePanel
-                key={scheduleAt ?? "default"}
-                wid={wid}
-                conversation={conversation}
-                timeZone={timeZone}
-                now={now}
-                text={draft}
-                assets={ready.map((item) => item.asset!).filter(Boolean)}
-                blocked={uploading}
-                initialAt={scheduleAt}
-                onScheduled={() => {
-                  resetAfterSend();
-                  onScheduleOpenChange(false);
-                }}
-              />
-            ) : null}
-          </PopoverContent>
-        </Popover>
-        <button
-          type="button"
-          onClick={send}
-          disabled={!canSend}
-          aria-label="Send"
-          className={cn(
-            "grid size-10 shrink-0 place-items-center rounded-full md:size-9",
-            canSend
-              ? "bg-brand-gradient text-white motion-safe:animate-in motion-safe:zoom-in-75 motion-safe:duration-[120ms]"
-              : "bg-raised text-fg-disabled",
-          )}
-        >
-          <SendHorizontal className="size-4" aria-hidden />
-        </button>
+          ) : null}
+          <Popover open={scheduleOpen} onOpenChange={onScheduleOpenChange}>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Schedule for later">
+                <Clock aria-hidden />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" side="top" className="w-80 border-line bg-panel p-3 shadow-xl">
+              {scheduleOpen ? (
+                <SchedulePanel
+                  key={scheduleAt ?? "default"}
+                  wid={wid}
+                  conversation={conversation}
+                  timeZone={timeZone}
+                  now={now}
+                  text={draft}
+                  assets={ready.map((item) => item.asset!).filter(Boolean)}
+                  blocked={uploading}
+                  initialAt={scheduleAt}
+                  onScheduled={() => {
+                    resetAfterSend();
+                    onScheduleOpenChange(false);
+                  }}
+                />
+              ) : null}
+            </PopoverContent>
+          </Popover>
+          <button
+            type="button"
+            onClick={send}
+            disabled={!canSend}
+            aria-label="Send"
+            className={cn(
+              "ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium md:h-8",
+              canSend
+                ? "bg-brand-gradient text-white motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-[120ms]"
+                : "bg-raised text-fg-disabled",
+            )}
+          >
+            <span className="hidden sm:inline" aria-hidden>
+              Send
+            </span>
+            <SendHorizontal className="size-4" aria-hidden />
+          </button>
+        </div>
       </div>
       {replyWindow.state === "human_agent" && replyWindow.closes_at ? (
         <p className="mt-2 text-xs text-fg-secondary">{composerCopy.humanAgent(timeLeft(replyWindow.closes_at, now))}</p>

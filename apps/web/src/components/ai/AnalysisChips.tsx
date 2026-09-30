@@ -111,7 +111,7 @@ export function CorrectAnalysis({
           </button>
         ) : (
           <Button variant="ghost" size="xs" className="text-brand-fg">
-            Correct
+            Correct the AI
           </Button>
         )}
       </PopoverTrigger>
@@ -169,52 +169,40 @@ export function CorrectAnalysis({
   );
 }
 
-/** UX-INB-09 "Latest message": chips, lead score bar, topics and Correct. */
+/**
+ * UX-INB-09 "Latest message" (C-063): intent, sentiment, priority and the analysis's topics, with
+ * "Correct the AI". The lead score is on the customer card.
+ */
 export function AnalysisDetails({ analysis, conversationId }: { analysis: MessageAnalysis | null | undefined; conversationId: string }) {
   if (!analysis) {
     return <p className="text-sm text-fg-secondary">Not analysed yet. New customer messages are analysed as they arrive.</p>;
   }
-  const lead = Math.max(0, Math.min(100, analysis.lead_score));
   return (
     <div className="space-y-3">
       <dl className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-2 text-sm">
         <dt className="text-fg-secondary">Intent</dt>
-        <dd>
+        <dd className="justify-self-end">
           <IntentChip intent={analysis.intent} />
         </dd>
         <dt className="text-fg-secondary">Sentiment</dt>
-        <dd>
+        <dd className="justify-self-end">
           <SentimentChip sentiment={analysis.sentiment} />
         </dd>
         <dt className="text-fg-secondary">Priority</dt>
-        <dd>
+        <dd className="justify-self-end">
           <PriorityChip priority={analysis.priority} />
-        </dd>
-        <dt className="text-fg-secondary">Lead</dt>
-        <dd className="flex items-center gap-2">
-          <span
-            role="meter"
-            aria-label="Lead score"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={lead}
-            className="h-1.5 flex-1 overflow-hidden rounded-full bg-raised"
-          >
-            <span className="bg-brand-gradient-decor block h-full rounded-full" style={{ width: `${lead}%` }} />
-          </span>
-          <span className="text-xs tabular-nums text-fg-secondary">{lead} / 100</span>
         </dd>
       </dl>
       {analysis.topics.length > 0 ? (
         <ul aria-label="Topics" className="flex flex-wrap gap-1">
           {analysis.topics.map((topic) => (
-            <li key={topic} className={cn(CHIP, TONE_CLASS.neutral)}>
+            <li key={topic} className={cn(CHIP, "border border-line", TONE_CLASS.neutral)}>
               {topic}
             </li>
           ))}
         </ul>
       ) : null}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 border-t border-line pt-2">
         <p className="text-xs text-fg-secondary">{analysis.corrected ? "Corrected by your team" : "Wrong? Correct it to teach the AI."}</p>
         <CorrectAnalysis analysis={analysis} conversationId={conversationId} variant="text" />
       </div>

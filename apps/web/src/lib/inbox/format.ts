@@ -1,5 +1,6 @@
 /** Presentation rules for the inbox (UX-INB-04…07). Pure functions, tested directly. */
 import type {
+  AiMode,
   ContactSummary,
   ConversationListItem,
   EscalationReason,
@@ -64,14 +65,59 @@ export function timeLeft(closesAt: string, now: Date): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
-export type Tone = "neutral" | "warning" | "danger" | "brand";
+export type Tone = "neutral" | "warning" | "danger" | "brand" | "success";
 
 export const TONE_CLASS: Record<Tone, string> = {
   neutral: "bg-white/5 text-fg-secondary",
   warning: "bg-warning/15 text-warning",
   danger: "bg-danger/15 text-danger-fg",
   brand: "bg-brand-soft text-brand-fg",
+  success: "bg-success/15 text-success",
 };
+
+/** FR-INB-01 "Leads" and the Lead badge: the API's inbox_views.LEAD_SCORE. */
+export const LEAD_SCORE = 60;
+
+export type RowBadge = { key: string; label: string; tone: Tone; title?: string };
+
+/** The AI mode that applies to a conversation: its own, else its account's (FR-SUG-01). */
+export function effectiveAiMode(
+  item: Pick<ConversationListItem, "ai_mode_override">,
+  accountMode: AiMode | null | undefined,
+): AiMode | null {
+  return item.ai_mode_override ?? accountMode ?? null;
+}
+
+/**
+ * The row's small badges (UX-INB-04, C-063): "Needs you" when escalated, the other signals
+ * (complaint, closing soon, negative), "Lead 72/100" at the lead threshold, and "AI Auto" when
+ * the AI replies on its own.
+ */
+export function rowBadges(
+  item: Pick<
+    ConversationListItem,
+    "needs_human" | "needs_human_reason" | "signal" | "reply_window_closes_at" | "lead_score"
+  >,
+  now: Date,
+  aiMode: AiMode | null,
+): RowBadge[] {
+  const badges: RowBadge[] = [];
+  if (item.needs_human) {
+    const reason = item.needs_human_reason ? ESCALATION_LABEL[item.needs_human_reason] : null;
+    badges.push({ key: "needs_you", label: "Needs you", tone: "danger", title: reason ? `The AI handed this over: ${reason}` : undefined });
+  }
+  if (item.signal === "complaint" || item.signal === "closing_soon" || item.signal === "negative") {
+    const chip = signalChip(item, now);
+    if (chip) badges.push({ key: item.signal, ...chip });
+  }
+  if (item.lead_score !== null && item.lead_score !== undefined && item.lead_score >= LEAD_SCORE) {
+    badges.push({ key: "lead", label: `Lead ${item.lead_score}/100`, tone: "brand", title: "Lead score" });
+  }
+  if (aiMode === "auto") {
+    badges.push({ key: "ai", label: "AI Auto", tone: "success", title: "The AI replies on its own in this conversation" });
+  }
+  return badges;
+}
 
 /** The one signal chip of a row (UX-INB-04), or null. */
 export function signalChip(

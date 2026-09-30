@@ -55,6 +55,26 @@ describe("ConversationList (UX-INB-04, TR-FE-08)", () => {
     expect(screen.queryAllByRole("link").length).toBeLessThan(VIRTUALIZE_ABOVE);
   });
 
+  it("AI Auto follows the conversation's own mode, else its account's (C-063)", () => {
+    const [first, second, third] = items(3);
+    render(
+      <ConversationList
+        items={[first, { ...second, ai_mode_override: "off" }, { ...third, social_account_id: "a2", ai_mode_override: "auto" }]}
+        slug="maple"
+        selectedId={null}
+        now={now}
+        hasNextPage={false}
+        isFetchingNextPage={false}
+        fetchNextPage={() => {}}
+        accountModes={{ a1: "auto", a2: "suggest" }}
+      />,
+    );
+    const rows = screen.getAllByRole("link");
+    expect(rows.map((row) => row.querySelector('[data-badge="ai"]') !== null)).toEqual([true, false, true]);
+    expect(rows[0]).toHaveClass("h-[90px]");
+    expect(rows[1]).toHaveClass("h-[68px]");
+  });
+
   it("moves focus between rows with the arrow keys (UX-A11Y-02)", async () => {
     const user = userEvent.setup();
     renderList(items(3));

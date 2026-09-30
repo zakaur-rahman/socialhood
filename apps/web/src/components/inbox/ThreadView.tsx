@@ -179,9 +179,6 @@ function Thread({
   const name = contactName(conversation.contact, conversation.platform);
   const account = accounts.data?.find((a) => a.id === conversation.social_account_id);
   const canAttach = account ? account.capabilities.includes("dm_attachments") : true;
-  const sameplatformAccounts = (accounts.data ?? []).filter(
-    (a) => a.platform === conversation.platform && a.status !== "disconnected",
-  ).length;
   const handle =
     conversation.platform === "instagram"
       ? conversation.social_account.username
@@ -217,7 +214,6 @@ function Thread({
         conversation={conversation}
         now={now}
         backHref={ui?.layout === "phone" ? (`/w/${workspace.slug}/inbox` as Route) : undefined}
-        showAccount={sameplatformAccounts > 1}
         detailsOpen={ui?.detailsOpen ?? false}
         onToggleDetails={() => ui?.toggleDetails()}
         canSchedule={canSchedule}

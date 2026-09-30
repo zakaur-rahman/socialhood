@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Loader2, Pencil, RefreshCw, Sparkles, X } from "lucide-react";
+import { AlertTriangle, CornerDownLeft, Loader2, RefreshCw, SendHorizontal, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,14 @@ import { aiCopy } from "@/lib/copy";
 import { TONE_CLASS } from "@/lib/inbox/format";
 import { cn } from "@/lib/utils";
 
-/** Longer replies start clamped to six lines with "More" (UX-INB-08). */
-const LONG_REPLY = 280;
+/** Longer drafts start clamped to two lines with "More" (UX-INB-08). */
+const LONG_REPLY = 160;
 
 export type SuggestionActions = {
   onSend: () => void;
+  /** Insert: the draft goes into the composer to edit (F-08 Edit). */
   onEdit: () => void;
+  /** Draft again (F-08 Regenerate). */
   onRegenerate: () => void;
   onDismiss: () => void;
   onWriteReply: () => void;
@@ -24,13 +26,16 @@ export type SuggestionActions = {
   onAddToKnowledge?: () => void;
 };
 
-const CARD =
-  "mx-4 mb-2 rounded-xl border border-brand-line bg-panel p-3 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-[180ms]";
-const ACTION = "h-10 rounded-md px-3 text-xs font-medium md:h-8";
+const BAR =
+  "mx-4 mb-2 rounded-lg border px-3 py-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-[180ms]";
+const ACTION = "h-9 rounded-md px-2.5 text-xs font-medium md:h-7";
+const META = "max-w-40 truncate rounded px-1.5 text-[11px] leading-[18px]";
 
 /**
- * UX-INB-08: the suggested reply between the messages and the composer. States: generating,
- * ready (with sources, "Check this" under 0.6 confidence, regenerations left), not in knowledge.
+ * UX-INB-08 as a slim bar right above the composer (C-063): the one AI draft ("AI draft: …")
+ * with Insert, Send, Draft again and Dismiss; while drafting, a shimmer; when the answer isn't in
+ * the knowledge, "Not in your knowledge: …" with Add to knowledge. One draft, never a set of
+ * quick replies.
  */
 export function SuggestionCard({
   suggestion,
@@ -38,6 +43,7 @@ export function SuggestionCard({
   customerName,
   canSend,
   busy = false,
+  addingToKnowledge = false,
   actions,
 }: {
   suggestion: Suggestion | null;
@@ -49,19 +55,19 @@ export function SuggestionCard({
   canSend: boolean;
   /** A dismiss or regenerate request is in flight. */
   busy?: boolean;
+  /** Add to knowledge is looking up the question's knowledge gap. */
+  addingToKnowledge?: boolean;
   actions: SuggestionActions;
 }) {
   if (generating || !suggestion) {
     return (
-      <section aria-label="Suggested reply" className={CARD} data-state="generating">
-        <p className="flex items-center gap-1.5 text-xs font-medium text-brand-fg">
-          <Sparkles className="size-3.5" aria-hidden /> Suggested reply
-        </p>
-        <div className="mt-2 space-y-2" aria-hidden>
-          <Skeleton className="h-3 w-11/12 bg-raised" />
-          <Skeleton className="h-3 w-2/3 bg-raised" />
+      <section aria-label="Suggested reply" className={cn(BAR, "border-brand-line bg-panel")} data-state="generating">
+        <div className="flex items-center gap-2">
+          <Sparkles className="size-3.5 shrink-0 text-brand-fg" aria-hidden />
+          <span className="shrink-0 text-xs font-medium text-brand-fg">AI draft:</span>
+          <Skeleton className="h-3 flex-1 bg-raised" aria-hidden />
         </div>
-        <p role="status" className="mt-2 text-xs text-fg-secondary">
+        <p role="status" className="mt-1 pl-5.5 text-xs text-fg-secondary">
           {aiCopy.drafting}
         </p>
       </section>
@@ -69,33 +75,39 @@ export function SuggestionCard({
   }
   if (!suggestion.can_answer) {
     return (
-      <section aria-label={aiCopy.notInKnowledge} className={CARD} data-state="not_in_knowledge">
-        <div className="flex items-center gap-2">
-          <p className="flex flex-1 items-center gap-1.5 text-xs font-medium text-warning">
-            <AlertTriangle className="size-3.5" aria-hidden /> {aiCopy.notInKnowledge}
+      <section aria-label={aiCopy.notInKnowledge} className={cn(BAR, "border-warning/40 bg-panel")} data-state="not_in_knowledge">
+        <div className="flex items-start gap-2">
+          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden />
+          <p className="min-w-0 flex-1 text-sm">
+            <span className="font-medium text-warning">{aiCopy.notInKnowledge}: </span>
+            <span>
+              {customerName} asked about {suggestion.missing_info?.trim() || "something your knowledge doesn't cover"}.
+            </span>
           </p>
           <DismissButton onDismiss={actions.onDismiss} disabled={busy} />
         </div>
-        <p className="mt-1.5 text-sm text-fg">
-          {customerName} asked about {suggestion.missing_info?.trim() || "something your knowledge doesn't cover"}.
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
+          <Button variant="ghost" className={ACTION} onClick={actions.onWriteReply}>
+            Write reply
+          </Button>
           {actions.onAddToKnowledge ? (
-            <Button className={cn(ACTION, "bg-brand-gradient text-white")} onClick={actions.onAddToKnowledge}>
+            <Button
+              className={cn(ACTION, "bg-brand-gradient text-white")}
+              disabled={addingToKnowledge}
+              onClick={actions.onAddToKnowledge}
+            >
+              {addingToKnowledge ? <Loader2 className="animate-spin" aria-hidden /> : null}
               Add to knowledge
             </Button>
           ) : null}
-          <Button variant="secondary" className={ACTION} onClick={actions.onWriteReply}>
-            Write reply
-          </Button>
         </div>
       </section>
     );
   }
-  return <ReadyCard suggestion={suggestion} canSend={canSend} busy={busy} actions={actions} />;
+  return <ReadyBar suggestion={suggestion} canSend={canSend} busy={busy} actions={actions} />;
 }
 
-function ReadyCard({
+function ReadyBar({
   suggestion,
   canSend,
   busy,
@@ -108,65 +120,67 @@ function ReadyCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const text = suggestion.reply_text ?? "";
-  const long = text.length > LONG_REPLY || text.split("\n").length > 6;
+  const long = text.length > LONG_REPLY || text.includes("\n");
   const { shown, more } = sourceChips(suggestion.sources);
   const left = suggestion.regenerations_left;
 
   return (
-    <section aria-label="Suggested reply" className={CARD} data-state="ready">
-      <div className="flex flex-wrap items-center gap-1.5">
-        <p className="flex flex-1 items-center gap-1.5 text-xs font-medium text-brand-fg">
-          <Sparkles className="size-3.5" aria-hidden /> Suggested reply
-        </p>
+    <section aria-label="Suggested reply" className={cn(BAR, "border-brand-line bg-panel")} data-state="ready">
+      <div className="flex items-start gap-2">
+        <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-fg" aria-hidden />
+        <div className="min-w-0 flex-1">
+          <p className={cn("text-sm whitespace-pre-wrap break-words text-fg", long && !expanded && "line-clamp-2")}>
+            <span className="font-medium text-brand-fg">AI draft: </span>
+            {text}
+          </p>
+          {long ? (
+            <button
+              type="button"
+              className="text-xs font-medium text-brand-fg hover:underline"
+              aria-expanded={expanded}
+              onClick={() => setExpanded(!expanded)}
+            >
+              {expanded ? "Less" : "More"}
+            </button>
+          ) : null}
+        </div>
+        <DismissButton onDismiss={actions.onDismiss} disabled={busy} />
+      </div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-5.5">
         {shown.map((source) => (
-          <span key={source.id} className={cn("max-w-40 truncate rounded-full px-2 py-0.5 text-[11px]", TONE_CLASS.neutral)}>
+          <span key={source.id} className={cn(META, TONE_CLASS.neutral)}>
             From: {source.title}
           </span>
         ))}
         {more > 0 ? (
-          <span
-            className={cn("rounded-full px-2 py-0.5 text-[11px]", TONE_CLASS.neutral)}
-            title={suggestion.sources.slice(2).map((s) => s.title).join(", ")}
-          >
+          <span className={cn(META, TONE_CLASS.neutral)} title={suggestion.sources.slice(2).map((s) => s.title).join(", ")}>
             +{more}
           </span>
         ) : null}
         {suggestion.low_confidence ? (
-          <span className={cn("rounded-full px-2 py-0.5 text-[11px] font-medium", TONE_CLASS.warning)} title="The AI isn't sure about this one">
+          <span className={cn(META, "font-medium", TONE_CLASS.warning)} title="The AI isn't sure about this one">
             Check this
           </span>
         ) : null}
-        <DismissButton onDismiss={actions.onDismiss} disabled={busy} />
-      </div>
-      <p className={cn("mt-1.5 text-sm whitespace-pre-wrap break-words text-fg", long && !expanded && "line-clamp-6")}>{text}</p>
-      {long ? (
-        <button
-          type="button"
-          className="mt-1 text-xs font-medium text-brand-fg hover:underline"
-          aria-expanded={expanded}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? "Less" : "More"}
-        </button>
-      ) : null}
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button className={cn(ACTION, "bg-brand-gradient text-white")} disabled={!canSend || !text} onClick={actions.onSend}>
-          Send
-        </Button>
-        <Button variant="secondary" className={ACTION} onClick={actions.onEdit}>
-          <Pencil aria-hidden /> Edit
-        </Button>
-        <Button
-          variant="ghost"
-          className={ACTION}
-          disabled={left <= 0 || busy}
-          title={left <= 0 ? "No more drafts for this message" : undefined}
-          onClick={actions.onRegenerate}
-        >
-          {busy ? <Loader2 className="animate-spin" aria-hidden /> : <RefreshCw aria-hidden />} Regenerate
-        </Button>
-        <span className="text-xs text-fg-secondary tabular-nums">
-          {left > 0 ? `${left} ${left === 1 ? "draft" : "drafts"} left` : "No drafts left"}
+        <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+          <span className="text-[11px] text-fg-secondary tabular-nums">
+            {left > 0 ? `${left} ${left === 1 ? "draft" : "drafts"} left` : "No drafts left"}
+          </span>
+          <Button
+            variant="ghost"
+            className={ACTION}
+            disabled={left <= 0 || busy}
+            title={left <= 0 ? "No more drafts for this message" : "Write a different draft"}
+            onClick={actions.onRegenerate}
+          >
+            {busy ? <Loader2 className="animate-spin" aria-hidden /> : <RefreshCw aria-hidden />} Draft again
+          </Button>
+          <Button variant="secondary" className={ACTION} title="Put the draft in the reply box to edit" onClick={actions.onEdit}>
+            <CornerDownLeft aria-hidden /> Insert
+          </Button>
+          <Button className={cn(ACTION, "bg-brand-gradient text-white")} disabled={!canSend || !text} onClick={actions.onSend}>
+            <SendHorizontal aria-hidden /> Send
+          </Button>
         </span>
       </div>
     </section>
@@ -180,14 +194,14 @@ function DismissButton({ onDismiss, disabled }: { onDismiss: () => void; disable
       aria-label="Dismiss suggestion"
       disabled={disabled}
       onClick={onDismiss}
-      className="grid size-10 place-items-center rounded-full text-fg-secondary hover:bg-white/5 hover:text-fg disabled:opacity-50 md:size-7"
+      className="-my-1 grid size-9 shrink-0 place-items-center rounded-full text-fg-secondary hover:bg-white/5 hover:text-fg disabled:opacity-50 md:size-7"
     >
       <X className="size-4" aria-hidden />
     </button>
   );
 }
 
-/** F-08 Edit: the card collapses to one line while its text is in the composer. */
+/** F-08 Insert: the bar collapses to one line while its text is in the composer. */
 export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
   return (
     <div className="mx-4 mb-2 flex items-center gap-2">
@@ -206,7 +220,7 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
   );
 }
 
-/** Escalated in Auto (F-09): above the card, "AI didn't reply: {reason}". */
+/** Escalated in Auto (F-09): above the bar, "AI didn't reply: {reason}". */
 export function EscalationBanner({ message }: { message: string }) {
   return (
     <div role="status" className="mx-4 mb-2 flex items-center gap-2 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning">

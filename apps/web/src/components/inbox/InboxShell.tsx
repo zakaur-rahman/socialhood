@@ -19,9 +19,9 @@ import {
   useUpdateConversation,
 } from "@/lib/api/queries";
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
-import type { Conversation, InboxView, Platform, SocialAccount } from "@/lib/api/types";
+import type { AiMode, Conversation, InboxView, Platform, SocialAccount } from "@/lib/api/types";
 import { emptyStates, errorMessage, inboxFilterEmpty } from "@/lib/copy";
-import { useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
+import { useMediaQuery, useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -34,6 +34,11 @@ import { ScheduledList } from "./ScheduledList";
 import { useInboxShortcuts } from "./use-inbox-shortcuts";
 
 const PLATFORM_ORDER: Platform[] = ["instagram", "whatsapp"];
+
+/** The context panel starts open from this width; narrower screens start with it collapsed. */
+export const CONTEXT_PANEL_OPEN_FROM = 1440;
+/** Remembered per device (try/catch-guarded localStorage, lib/use-browser-state). */
+export const CONTEXT_PANEL_KEY = "socialhood:inbox-details";
 
 /** Accounts that can still hold conversations. */
 function liveAccounts(accounts: SocialAccount[]): SocialAccount[] {
@@ -48,8 +53,9 @@ const LIST_WIDTH: Record<InboxLayout, string> = {
 };
 
 /**
- * The inbox (UX-INB-01…03): list pane, thread pane (the route's page) and the details panel,
- * laid out for the four widths. Filters live here, so switching conversations keeps the list.
+ * The inbox (UX-INB-01…03, C-063): list pane, thread pane (the route's page) and the context
+ * panel, laid out for the four widths. Filters live here, so switching conversations keeps the
+ * list.
  */
 export function InboxShell({ children }: { children: ReactNode }) {
   const workspace = useCurrentWorkspace();
@@ -135,9 +141,15 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   const scheduled = useScheduledMessages(wid);
   const scheduledCount =
     scheduled.data?.pages.reduce((sum, page) => sum + page.items.filter((s) => s.status === "scheduled").length, 0) ?? 0;
+  const accountModes = useMemo(
+    () => Object.fromEntries(accounts.map((account) => [account.id, account.ai_mode])) as Record<string, AiMode>,
+    [accounts],
+  );
 
-  // ---- details panel: inline and remembered at ≥ 1280 px, a sheet below
-  const [inlineDetails, setInlineDetails] = useStoredFlag("socialhood:inbox-details", true);
+  // ---- context panel: inline at ≥ 1280 px, a sheet below. Collapsible from the header; the
+  // choice is remembered per device, and until there is one it starts open only from 1440 px.
+  const roomy = useMediaQuery(`(min-width: ${CONTEXT_PANEL_OPEN_FROM}px)`);
+  const [inlineDetails, setInlineDetails] = useStoredFlag(CONTEXT_PANEL_KEY, roomy);
   const [sheetDetails, setSheetDetails] = useState(false);
   const detailsOpen = layout === "wide" ? inlineDetails : sheetDetails;
   const toggleDetails = useCallback(() => {
@@ -260,7 +272,6 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                 setStoredPlatform(choice);
                 setAccountId(null);
               }}
-              showLabels={layout === "wide"}
             />
             <ListHeader
               tab={tab}
@@ -312,6 +323,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                 hasNextPage={conversations.hasNextPage}
                 isFetchingNextPage={conversations.isFetchingNextPage}
                 fetchNextPage={() => void conversations.fetchNextPage()}
+                accountModes={accountModes}
               />
             )}
           </section>
@@ -324,7 +336,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
         ) : null}
 
         {selectedId && detailsOpen && layout === "wide" ? (
-          <aside aria-label="Details" data-pane="details" className="w-[300px] shrink-0 overflow-y-auto border-l border-line bg-panel">
+          <aside aria-label="Details" data-pane="details" className="w-[300px] shrink-0 overflow-y-auto border-l border-line bg-panel min-[1440px]:w-[320px]">
             <DetailsPanel conversationId={selectedId} />
           </aside>
         ) : null}

@@ -5,14 +5,13 @@ import type { Route } from "next";
 import { useEffect, useRef, useState, type KeyboardEvent, type UIEvent } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ConversationListItem } from "@/lib/api/types";
-import { contactName } from "@/lib/inbox/format";
+import type { AiMode, ConversationListItem } from "@/lib/api/types";
+import { contactName, effectiveAiMode } from "@/lib/inbox/format";
 
-import { ConversationRow } from "./ConversationRow";
+import { ConversationRow, rowHeight } from "./ConversationRow";
 
 /** TR-FE-08: lists are virtualised above 100 rows. */
 export const VIRTUALIZE_ABOVE = 100;
-const ROW_HEIGHT = 72;
 const LOAD_MORE_WITHIN_PX = 400;
 
 type Props = {
@@ -23,17 +22,30 @@ type Props = {
   hasNextPage: boolean;
   isFetchingNextPage: boolean;
   fetchNextPage: () => void;
+  /** Each account's AI mode, by account id: a row without its own mode shows its account's. */
+  accountModes?: Record<string, AiMode>;
 };
 
 /** The conversation rows with cursor pagination; arrow keys move between rows (UX-A11Y-02). */
-export function ConversationList({ items, slug, selectedId, now, hasNextPage, isFetchingNextPage, fetchNextPage }: Props) {
+export function ConversationList({
+  items,
+  slug,
+  selectedId,
+  now,
+  hasNextPage,
+  isFetchingNextPage,
+  fetchNextPage,
+  accountModes = {},
+}: Props) {
+  const aiModeOf = (item: ConversationListItem) => effectiveAiMode(item, accountModes[item.social_account_id]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtual = items.length > VIRTUALIZE_ABOVE;
   // eslint-disable-next-line react-hooks/incompatible-library -- TanStack Virtual returns functions React Compiler must not memoise; this component opts out.
   const virtualizer = useVirtualizer({
     count: virtual ? items.length : 0,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    // Rows are two lines, or three with badges; both heights are fixed (ConversationRow).
+    estimateSize: (index) => (items[index] ? rowHeight(items[index], now, aiModeOf(items[index])) : 68),
     overscan: 8,
     getItemKey: (index) => items[index]?.id ?? index,
   });
@@ -65,6 +77,7 @@ export function ConversationList({ items, slug, selectedId, now, hasNextPage, is
       href={`/w/${slug}/inbox/${item.id}` as Route}
       selected={item.id === selectedId}
       now={now}
+      aiMode={aiModeOf(item)}
     />
   );
 
@@ -108,8 +121,8 @@ export function RowSkeletons({ count = 8 }: { count?: number }) {
   return (
     <div aria-busy="true" aria-label="Loading conversations">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex h-[72px] items-center gap-3 px-4 py-3">
-          <Skeleton className="size-12 shrink-0 rounded-full bg-raised" />
+        <div key={i} className="flex h-[68px] items-center gap-3 px-4 py-3">
+          <Skeleton className="size-10 shrink-0 rounded-full bg-raised" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3 w-1/3 bg-raised" />
             <Skeleton className="h-3 w-2/3 bg-raised" />

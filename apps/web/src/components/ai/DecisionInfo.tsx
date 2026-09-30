@@ -35,7 +35,7 @@ export function DecisionInfo({ messageId }: { messageId: string }) {
         <button
           type="button"
           aria-label="Why the AI sent this"
-          className="-my-1 ml-0.5 grid size-6 place-items-center rounded-full text-white/90 hover:bg-white/15"
+          className="-my-1 ml-0.5 grid size-6 place-items-center rounded-full text-fg-secondary hover:bg-white/10 hover:text-fg"
         >
           <Info className="size-3.5" aria-hidden />
         </button>

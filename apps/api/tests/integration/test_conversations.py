@@ -168,7 +168,9 @@ async def test_views(owner: Owner, engine: AsyncEngine) -> None:
     cold = await thread_at(engine, owner, 4, unread_count=0, awaiting_reply=False, lead_score=59)
     archived = await thread_at(engine, owner, 5, unread_count=1, status="archived")
     by_ai = await thread_at(engine, owner, 6, unread_count=0, awaiting_reply=False)
-    escalated = await thread_at(engine, owner, 7, unread_count=0, needs_human=True)
+    escalated = await thread_at(
+        engine, owner, 7, unread_count=0, needs_human=True, ai_mode_override="auto"
+    )
     for thread in (by_ai, escalated):
         await add_message(
             engine, owner, thread, body="Yes!", at=NOW - timedelta(hours=1), source="ai_auto"
@@ -177,6 +179,7 @@ async def test_views(owner: Owner, engine: AsyncEngine) -> None:
     assert await owner.ids() == ids_of(quiet, unread, lead, cold, by_ai, escalated)
     assert await owner.ids(view="unread") == ids_of(unread)
     assert await owner.ids(view="needs_reply") == ids_of(unread, escalated)
+    assert await owner.ids(view="needs_you") == ids_of(escalated)  # the escalated view (C-063)
     assert await owner.ids(view="leads") == ids_of(lead)
     assert await owner.ids(view="ai_handled") == ids_of(by_ai)
     assert await owner.ids(view="archived") == ids_of(archived)
@@ -186,6 +189,10 @@ async def test_views(owner: Owner, engine: AsyncEngine) -> None:
     assert item["unread_count"] == 2
     assert item["last_message_preview"] == "Do you ship to Pune?"
     assert item["signal"] is None
+    assert item["ai_mode_override"] is None
+    # The row's AI badge: the conversation's own mode, when it has one (C-063).
+    [needs_you] = (await owner.call("GET", "/conversations", view="needs_you")).json()["items"]
+    assert (needs_you["signal"], needs_you["ai_mode_override"]) == ("needs_you", "auto")
 
 
 async def test_unknown_view_is_a_validation_error(owner: Owner) -> None:

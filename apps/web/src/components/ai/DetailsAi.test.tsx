@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DetailsPanel } from "@/components/inbox/DetailsPanel";
 import { ThreadView } from "@/components/inbox/ThreadView";
-import type { Conversation, MessageAnalysis } from "@/lib/api/types";
+import type { Conversation, KnowledgeGap, KnowledgeSourceCreate, MessageAnalysis } from "@/lib/api/types";
 import { resetInboxStore } from "@/lib/inbox/store";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
 import {
@@ -14,10 +14,13 @@ import {
   billingState,
   conversation,
   json,
+  knowledgeGap,
+  knowledgeSource,
   listItem,
   message,
   noContent,
   renderWithApi,
+  workspace,
   type Call,
 } from "@/test/api";
 
@@ -78,15 +81,19 @@ describe("Analysis (FR-AI-02, FR-AI-04)", () => {
 
   it("Correct changes the intent and sentiment; the chips follow", async () => {
     const user = userEvent.setup();
-    const state = { detail: conversation({ latest_analysis: analysis() }) };
+    const state = { detail: conversation({ latest_analysis: analysis(), lead_score: 72 }) };
     const { calls } = renderWithApi(<DetailsPanel conversationId="c1" />, { handlers: handlers(state) });
 
     const section = await screen.findByRole("region", { name: "Latest message" });
     expect(within(section).getByText("Shipping")).toBeInTheDocument();
-    expect(within(section).getByRole("meter", { name: "Lead score" })).toHaveAttribute("aria-valuenow", "72");
-    expect(within(section).getByText("shipping to uae")).toBeInTheDocument();
+    // Topics come from the analysis as they are.
+    expect(within(within(section).getByRole("list", { name: "Topics" })).getByText("shipping to uae")).toBeInTheDocument();
+    // The lead score is on the customer card.
+    const customer = screen.getByRole("region", { name: "Customer" });
+    expect(within(customer).getByRole("meter", { name: "Lead score" })).toHaveAttribute("aria-valuenow", "72");
+    expect(within(customer).getByText("72 / 100")).toBeInTheDocument();
 
-    await user.click(within(section).getByRole("button", { name: "Correct" }));
+    await user.click(within(section).getByRole("button", { name: "Correct the AI" }));
     const popover = await screen.findByRole("group", { name: "Correct the analysis" });
     const save = within(popover).getByRole("button", { name: "Save" });
     expect(save).toBeDisabled();
@@ -129,7 +136,10 @@ describe("Summary (FR-AI-03)", () => {
     });
     const section = await screen.findByRole("region", { name: "Summary" });
     expect(within(section).getByText("Asked about the Aria dress in size S and got a yes.")).toBeInTheDocument();
-    expect(within(section).getByText("Confirm shipping and share the product link.")).toBeInTheDocument();
+    // The next step is a callout of its own (summary.v2, C-063).
+    expect(within(section).getByRole("note", { name: "Next step" })).toHaveTextContent(
+      "Next stepConfirm shipping and share the product link.",
+    );
 
     await user.click(within(section).getByRole("button", { name: "Refresh" }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path.endsWith("/summary"))).toBe(true));
@@ -165,5 +175,121 @@ describe("Summary (FR-AI-03)", () => {
     expect(within(section).getByText(/No summary yet/)).toBeInTheDocument();
     await user.click(within(section).getByRole("button", { name: "Summarize" }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/conversations/c1/summary")).toBe(true));
+  });
+});
+
+describe("Summary next step (C-063)", () => {
+  it("an older summary without a next step shows no callout", async () => {
+    const state = {
+      detail: conversation({
+        summary: { text: "Asked about sizes.", next_step: null, updated_at: "2026-09-28T11:00:00Z" },
+      }),
+    };
+    renderWithApi(<DetailsPanel conversationId="c1" />, { handlers: handlers(state) });
+    const section = await screen.findByRole("region", { name: "Summary" });
+    expect(within(section).getByText("Asked about sizes.")).toBeInTheDocument();
+    expect(within(section).queryByRole("note", { name: "Next step" })).not.toBeInTheDocument();
+  });
+});
+
+describe("The context panel's customer card (C-063)", () => {
+  it("customer since, linked account, Open in Instagram, and the escalation and pause as notes", async () => {
+    const state = {
+      detail: conversation({
+        needs_human: true,
+        needs_human_reason: "refund",
+        ai: { effective_mode: "auto", override: "auto", paused_until: "2099-01-01T00:00:00Z" },
+      }),
+    };
+    renderWithApi(<DetailsPanel conversationId="c1" />, { handlers: handlers(state) });
+    const customer = await screen.findByRole("region", { name: "Customer" });
+    expect(within(customer).getByText("Customer since").nextSibling).toHaveTextContent("27 Sep");
+    expect(within(customer).getByText("Linked account").nextSibling).toHaveTextContent("@maple.bakery");
+    expect(within(customer).getByRole("link", { name: /Open in Instagram/ })).toHaveAttribute(
+      "href",
+      "https://www.instagram.com/priya.styles/",
+    );
+    const notes = within(customer).getByRole("list", { name: "Attention" });
+    expect(notes).toHaveTextContent("Needs you: refund");
+    expect(notes).toHaveTextContent("AI paused until you resume it");
+  });
+});
+
+describe("Teach AI (C-063)", () => {
+  function teachSetup(gaps: KnowledgeGap[]) {
+    const state = { detail: conversation({ latest_analysis: analysis({ message_id: "m1" }) }) };
+    const view = renderWithApi(<DetailsPanel conversationId="c1" />, {
+      handlers: handlers(state, {
+        "GET /v1/w/:wid/knowledge-gaps": () => json({ items: gaps }),
+        "POST /v1/w/:wid/knowledge-sources": (call: Call) => json(knowledgeSource({ ...(call.body as object) }), 201),
+        "GET /v1/w/:wid/knowledge-sources": () => json({ items: [], usage: { characters_used: 0, characters_limit: 200000 } }),
+      }),
+    });
+    // The thread has loaded the customer's message.
+    view.queryClient.setQueryData(["w", "w1", "messages", "c1"], {
+      pages: [{ items: [message({ id: "m1", text: "Do you deliver to Pune on Sundays?" })], next_cursor: null }],
+      pageParams: [null],
+    });
+    return view;
+  }
+
+  async function teach(calls: Call[]) {
+    const user = userEvent.setup();
+    const section = await screen.findByRole("region", { name: "Latest message" });
+    await user.click(within(section).getByRole("button", { name: "Teach AI" }));
+    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    expect(within(form).getByLabelText("Question")).toHaveValue("Do you deliver to Pune on Sundays?");
+    expect(within(form).getByLabelText("Answer")).toHaveValue("");
+    await user.type(within(form).getByLabelText("Answer"), "Yes, until 2 pm.");
+    await user.click(within(form).getByRole("button", { name: "Add" }));
+    await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources")).toBe(true));
+    return calls.find((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources")?.body as KnowledgeSourceCreate;
+  }
+
+  it("prefills the latest customer message as an FAQ question; the member types the answer", async () => {
+    const { calls } = teachSetup([]);
+    const body = await teach(calls);
+    expect(body).toMatchObject({ type: "faq", question: "Do you deliver to Pune on Sundays?", body: "Yes, until 2 pm." });
+    expect(body.gap_id ?? null).toBeNull();
+  });
+
+  it("links the knowledge gap the message was counted in, so answering resolves it", async () => {
+    const { calls } = teachSetup([knowledgeGap({ id: "g2", examples: [] }), knowledgeGap({ id: "g1" })]);
+    const body = await teach(calls);
+    expect(body).toMatchObject({ question: "Do you deliver to Pune on Sundays?", gap_id: "g1" });
+  });
+
+  it("agents can't teach (knowledge is for owners and admins)", async () => {
+    const state = { detail: conversation({ latest_analysis: analysis() }) };
+    renderWithApi(<DetailsPanel conversationId="c1" />, {
+      ws: { ...workspace, role: "agent" },
+      handlers: handlers(state),
+    });
+    const section = await screen.findByRole("region", { name: "Latest message" });
+    expect(within(section).queryByRole("button", { name: "Teach AI" })).not.toBeInTheDocument();
+  });
+});
+
+describe("One AI mode control (C-063)", () => {
+  it("the thread header has it; the context panel doesn't repeat it", async () => {
+    const state = { detail: conversation({ latest_analysis: analysis({ message_id: "m1" }) }) };
+    renderWithApi(
+      <>
+        <ThreadView key="c1" conversationId="c1" />
+        <DetailsPanel conversationId="c1" />
+      </>,
+      {
+        handlers: handlers(state, {
+          "GET /v1/w/:wid/conversations/:id/messages": () => json({ items: [message({ id: "m1" })], next_cursor: null }),
+          "POST /v1/w/:wid/conversations/:id/read": () => noContent(),
+        }),
+      },
+    );
+    await screen.findByRole("region", { name: "Summary" });
+    const controls = await screen.findAllByRole("button", { name: /^AI mode: / });
+    expect(controls).toHaveLength(1);
+    expect(controls[0].closest("header")).not.toBeNull();
+    expect(screen.queryByRole("radiogroup", { name: "AI in this conversation" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "AI in this conversation" })).not.toBeInTheDocument();
   });
 });
