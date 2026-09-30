@@ -23,6 +23,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import Admin, Session, WorkspaceContext
 from socialhood.platforms.deps import deps_from
 from socialhood.realtime.events import commit_and_publish
@@ -166,6 +167,7 @@ async def unschedule_post(
     "/scheduled-posts/{scheduled_post_id}/publish-now",
     status_code=202,
     operation_id="publish_post_now",
+    dependencies=[ratelimit.SENDS],
 )
 async def publish_post_now(
     request: Request, scheduled_post_id: uuid.UUID, ctx: Admin, session: Session

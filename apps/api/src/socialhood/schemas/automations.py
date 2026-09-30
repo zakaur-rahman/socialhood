@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field
 
@@ -149,14 +149,19 @@ class AutomationDefinition(RequestModel):
     name: str = Field(min_length=1, max_length=80)
     social_account_id: uuid.UUID | None = None
     trigger: TriggerName | None = None
-    keywords: list[str] = Field(default_factory=list, max_length=50)
+    # SEC-08 backstops on each item; validation.py's tighter limits give the field messages.
+    keywords: list[Annotated[str, Field(max_length=500)]] = Field(
+        default_factory=list, max_length=50
+    )
     match_mode: MatchModeName = "word"
     action: ActionName | None = None
     message_text: str | None = Field(default=None, max_length=4000)  # bytes checked on activation
     message_buttons: list[LinkButtonIn] = Field(default_factory=list, max_length=3)
     message_media_asset_id: uuid.UUID | None = None
     ai_instructions: str | None = Field(default=None, max_length=2000)
-    public_reply_texts: list[str] = Field(default_factory=list, max_length=5)
+    public_reply_texts: list[Annotated[str, Field(max_length=2000)]] = Field(
+        default_factory=list, max_length=5
+    )
     post_scope: PostScopeName = "all"
     media_item_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
     scheduled_post_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)

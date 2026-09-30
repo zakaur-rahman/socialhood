@@ -6,6 +6,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Path
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import Session
 from socialhood.errors import ApiError
 from socialhood.repositories import data_deletion
@@ -14,7 +15,11 @@ from socialhood.schemas.accounts import DataDeletionStatus
 router = APIRouter(prefix="/v1", tags=["privacy"])
 
 
-@router.get("/data-deletion/{code}", operation_id="get_data_deletion_status")
+@router.get(
+    "/data-deletion/{code}",
+    operation_id="get_data_deletion_status",
+    dependencies=[ratelimit.PUBLIC],
+)
 async def get_data_deletion_status(
     code: Annotated[str, Path(min_length=8, max_length=64)], session: Session
 ) -> DataDeletionStatus:

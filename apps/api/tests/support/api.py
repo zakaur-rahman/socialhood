@@ -75,6 +75,11 @@ def api_settings(keys: Keys) -> Settings:
 @pytest.fixture
 async def app(api_settings: Settings, clean_db: None) -> AsyncIterator[FastAPI]:
     application = create_app(api_settings)
+    # Every test client is 127.0.0.1, so the per-IP rate-limit windows (TR-API-07) start empty
+    # for each test instead of filling up across the suite.
+    stale = [key async for key in application.state.redis.scan_iter("rl:*")]
+    if stale:
+        await application.state.redis.delete(*stale)
     yield application
     await application.state.http.aclose()
     await application.state.redis.aclose()

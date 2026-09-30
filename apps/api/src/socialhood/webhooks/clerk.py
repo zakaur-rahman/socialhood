@@ -10,7 +10,7 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Request, Response
-from svix.webhooks import Webhook, WebhookVerificationError
+from svix.webhooks import Webhook
 
 from socialhood.auth.deps import Session
 from socialhood.errors import ApiError
@@ -40,7 +40,9 @@ async def clerk_webhook(request: Request, session: Session) -> Response:
     secret = configured.get_secret_value()
     try:
         Webhook(secret).verify(raw, headers)  # raises on a bad or missing signature
-    except WebhookVerificationError as error:
+    except Exception as error:
+        # WebhookVerificationError, and what svix lets through for a malformed signature
+        # (binascii.Error for bad base64, ValueError without a comma): 401, never a 500.
         log.warning("webhook_signature_invalid", provider="clerk")
         raise ApiError("unauthorized") from error
     payload: Any = json.loads(raw)

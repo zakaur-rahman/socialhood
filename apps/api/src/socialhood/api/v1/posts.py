@@ -12,6 +12,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import AnyMember, Session
 from socialhood.billing.entitlements import credits_gate
 from socialhood.schemas.posts import CommentFilter, CommentList, PostDetail, PostList
@@ -43,7 +44,12 @@ async def get_post(post_id: uuid.UUID, ctx: AnyMember, session: Session) -> Post
     return await comment_queries.get_post(session, post_id)
 
 
-@router.post("/posts/{post_id}/summary", status_code=202, operation_id="refresh_post_summary")
+@router.post(
+    "/posts/{post_id}/summary",
+    status_code=202,
+    operation_id="refresh_post_summary",
+    dependencies=[ratelimit.AI],
+)
 async def refresh_post_summary(post_id: uuid.UUID, ctx: AnyMember, session: Session) -> Response:
     """The summary card's Refresh (UX-SCR-05): queue summarize_post now (TR-AI-11); post.updated
     carries the new summary and topics. 402 quota_exceeded (ai_credits_monthly, with the plan's

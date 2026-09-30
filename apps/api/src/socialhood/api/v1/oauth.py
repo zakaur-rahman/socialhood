@@ -8,6 +8,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request
 from fastapi.responses import RedirectResponse
 
+from socialhood.api import ratelimit
 from socialhood.billing.plans import current_plan
 from socialhood.db.tenancy import workspace_scope
 from socialhood.observability.logging import get_logger
@@ -23,7 +24,12 @@ def _web(settings: Settings) -> str:
     return (settings.web_base_url or "http://localhost:3000").rstrip("/")
 
 
-@router.get("/instagram/callback", operation_id="instagram_oauth_callback", include_in_schema=False)
+@router.get(
+    "/instagram/callback",
+    operation_id="instagram_oauth_callback",
+    dependencies=[ratelimit.OAUTH_CALLBACK],
+    include_in_schema=False,
+)
 async def instagram_callback(
     request: Request,
     code: Annotated[str | None, Query(max_length=2048)] = None,

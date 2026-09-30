@@ -9,6 +9,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Header, Request
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import AnyMember, Session
 from socialhood.errors import ApiError
 from socialhood.platforms.base import OutboundTemplate
@@ -33,6 +34,7 @@ def _deps(request: Request) -> PlatformDeps:
     "/conversations/{conversation_id}/messages",
     status_code=202,
     operation_id="send_message",
+    dependencies=[ratelimit.SENDS],
 )
 async def send_message(
     request: Request,
@@ -99,6 +101,7 @@ async def send_message(
     "/messages/{message_id}/retry",
     status_code=202,
     operation_id="retry_message",
+    dependencies=[ratelimit.SENDS],
 )
 async def retry_message(
     request: Request, message_id: uuid.UUID, ctx: AnyMember, session: Session

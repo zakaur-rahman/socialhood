@@ -24,6 +24,7 @@ import {
   useUpdateAccount,
 } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
+import { browser } from "@/lib/billing/browser";
 import { connectResult, emptyStates, errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -54,7 +55,7 @@ function Connections() {
 
   const startConnect = useCallback(() => {
     connect.mutate(undefined, {
-      onSuccess: (url) => window.location.assign(url),
+      onSuccess: (url) => browser.assign(url),
       // Over accounts_per_platform (402): the upgrade dialog says so.
       onError: (error) => toastError(error),
     });

@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Request, Response
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import Admin, AnyMember, Session
 from socialhood.billing.entitlements import credits_gate
 from socialhood.errors import ApiError
@@ -80,6 +81,7 @@ async def correct_message_analysis(
     "/conversations/{conversation_id}/suggestions",
     status_code=202,
     operation_id="regenerate_suggestion",
+    dependencies=[ratelimit.AI],
 )
 async def regenerate_suggestion(
     conversation_id: uuid.UUID, ctx: AnyMember, session: Session
@@ -115,6 +117,7 @@ async def dismiss_suggestion(
     "/conversations/{conversation_id}/summary",
     status_code=202,
     operation_id="refresh_summary",
+    dependencies=[ratelimit.AI],
 )
 async def refresh_summary(conversation_id: uuid.UUID, ctx: AnyMember, session: Session) -> Response:
     """FR-AI-03 on request; conversation.updated carries the new summary (its ``summary`` key).

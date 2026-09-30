@@ -20,6 +20,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request
 
 from socialhood.agent import orchestrator
+from socialhood.api import ratelimit
 from socialhood.api.v1.ai import pending
 from socialhood.auth.deps import Admin, AnyMember, Session
 from socialhood.billing.entitlements import credits_gate
@@ -45,7 +46,9 @@ router = APIRouter(prefix="/v1/w/{wid}", tags=["agent"])
 # ---------------------------------------------------------------- runs (TA.1)
 
 
-@router.post("/agent/runs", status_code=202, operation_id="create_agent_run")
+@router.post(
+    "/agent/runs", status_code=202, operation_id="create_agent_run", dependencies=[ratelimit.AI]
+)
 async def create_agent_run(
     request: Request, body: AgentRunCreate, ctx: AnyMember, session: Session
 ) -> AgentRun:

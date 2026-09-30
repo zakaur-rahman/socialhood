@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
+from socialhood.api import ratelimit
 from socialhood.auth.deps import Admin, Session
 from socialhood.schemas.publishing import (
     CaptionRequest,
@@ -24,7 +25,7 @@ from socialhood.services import captions
 router = APIRouter(prefix="/v1/w/{wid}", tags=["publishing"])
 
 
-@router.post("/ai/caption", operation_id="generate_caption")
+@router.post("/ai/caption", operation_id="generate_caption", dependencies=[ratelimit.AI])
 async def generate_caption(
     request: Request, body: CaptionRequest, ctx: Admin, session: Session
 ) -> CaptionSuggestion:
@@ -36,7 +37,7 @@ async def generate_caption(
     )
 
 
-@router.post("/ai/hashtags", operation_id="suggest_hashtags")
+@router.post("/ai/hashtags", operation_id="suggest_hashtags", dependencies=[ratelimit.AI])
 async def suggest_hashtags(
     request: Request, body: HashtagSuggestionRequest, ctx: Admin, session: Session
 ) -> HashtagSuggestion:

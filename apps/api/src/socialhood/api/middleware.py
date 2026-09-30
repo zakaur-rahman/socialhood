@@ -10,6 +10,7 @@ import json
 import time
 
 import structlog
+from starlette.exceptions import HTTPException
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from socialhood.errors import problem_body
@@ -105,12 +106,16 @@ WEBHOOK_BODY_LIMIT = 5 * 1024 * 1024
 API_BODY_LIMIT = 1024 * 1024
 
 
-class _BodyTooLarge(Exception):
-    pass
+class _BodyTooLarge(HTTPException):
+    """Raised by receive() once a streamed body passes the limit. An HTTPException because
+    FastAPI's body parsing re-raises those and turns anything else into a 400."""
+
+    def __init__(self) -> None:
+        super().__init__(status_code=413)
 
 
 class BodyLimitMiddleware:
-    """SEC-09: 5 MB for webhook deliveries, 1 MB for everything else. Checks Content-Length up
+    """SEC-08: 5 MB for webhook deliveries, 1 MB for everything else. Checks Content-Length up
     front and counts streamed bytes, so a chunked body cannot get past the limit either."""
 
     def __init__(self, app: ASGIApp) -> None:
