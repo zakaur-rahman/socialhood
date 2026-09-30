@@ -48,6 +48,13 @@ not done until their tables arrive: create_automation (T4.1), add_knowledge (T5.
 (connect_account is computed from `social_accounts` since P2.) "Choose an AI mode" needs a definition: proposed as "at least one
 connected account whose `ai_mode` was changed from its default, or the AI settings saved once".
 
+**Decided (P9 integration, C-060).** The step is done when any connected account's `ai_mode` is
+Suggest or Auto, and it links to Settings → Connections, where each account's mode is set
+(AiModeControl on its card); Settings → AI has no mode control. FR-ACC-04 only says the step
+ticks from data. New accounts start in Suggest when the plan has AI credits (FR-SUG-01), so the
+step usually ticks with the first account; the "changed from its default" rule was dropped
+because nothing records a default, and an owner who is happy with Suggest has chosen.
+
 ## Q-009 · Delete workspace in Settings
 UX-SCR-07 puts Delete workspace in the Workspace page's danger zone, but the deletion itself
 (FR-ACC-05, purge) is built in T9.6. The page leaves the danger zone out until then rather than

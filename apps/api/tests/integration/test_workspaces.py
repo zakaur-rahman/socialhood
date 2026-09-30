@@ -7,6 +7,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.support.api import Clerk, sign_in
+from tests.support.inbox import make_account
 
 
 async def test_members_read_their_workspace(client: httpx.AsyncClient, clerk: Clerk) -> None:
@@ -160,3 +161,31 @@ async def test_checklist_is_computed_and_dismiss_persists(
     await client.patch(f"/v1/w/{wid}", headers=headers, json={"checklist_dismissed": False})
     restored = (await client.get(f"/v1/w/{wid}/overview", headers=headers)).json()
     assert restored["checklist"]["dismissed"] is False
+
+
+async def test_the_ai_mode_step_is_done_once_a_connected_account_uses_ai(
+    client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
+) -> None:
+    """C-060 (Q-008): Suggest or Auto on any connected account; Off everywhere leaves it open."""
+    clerk_id, me = await sign_in(client, clerk)
+    wid = me["workspaces"][0]["id"]
+    headers = clerk.headers(clerk_id)
+
+    async def steps() -> dict[str, bool]:
+        body = (await client.get(f"/v1/w/{wid}/overview", headers=headers)).json()
+        return {s["key"]: s["done"] for s in body["checklist"]["steps"]}
+
+    account = await make_account(engine, wid)
+    async with engine.begin() as conn:
+        await conn.execute(text("UPDATE social_accounts SET ai_mode = 'off'"))
+    assert (await steps())["choose_ai_mode"] is False
+
+    patched = await client.patch(
+        f"/v1/w/{wid}/social-accounts/{account}", headers=headers, json={"ai_mode": "suggest"}
+    )
+    assert patched.status_code == 200, patched.text
+    assert (await steps())["choose_ai_mode"] is True
+
+    async with engine.begin() as conn:  # a disconnected account doesn't count
+        await conn.execute(text("UPDATE social_accounts SET status = 'disconnected'"))
+    assert (await steps())["choose_ai_mode"] is False

@@ -125,20 +125,22 @@ async def cancel_dodo_subscription(session: AsyncSession, dodo: DodoClient) -> b
     return True
 
 
-# Each checklist step is computed from data (FR-ACC-04). Steps whose tables arrive in later
-# phases report False until then: choose_ai_mode (T5.x). See docs/QUESTIONS.md Q-008.
-# add_knowledge is done once the workspace has any knowledge source (T5.3). create_automation is
-# done once an automation has been activated (a draft is not yet an automation that answers
-# anyone; pausing or ending it later keeps the step done).
+# Each checklist step is computed from data (FR-ACC-04; docs/QUESTIONS.md Q-008).
+# add_knowledge is done once the workspace has any knowledge source (T5.3). choose_ai_mode is done
+# once a connected account's AI mode is Suggest or Auto (C-060): new accounts start in Suggest
+# when the plan has AI credits (FR-SUG-01), so it usually ticks with the first account and stays
+# open while every account has AI off. create_automation is done once an automation has been
+# activated (a draft is not yet an automation that answers anyone; pausing or ending it later
+# keeps the step done).
 StepCheck = Callable[[AsyncSession, uuid.UUID], Awaitable[bool]]
-
-
-async def _not_available_yet(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
-    return False
 
 
 async def _account_connected(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
     return await social_accounts.any_live(session)
+
+
+async def _ai_mode_chosen(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
+    return await social_accounts.any_live_with_ai(session)
 
 
 async def _automation_created(session: AsyncSession, workspace_id: uuid.UUID) -> bool:
@@ -152,7 +154,7 @@ async def _knowledge_added(session: AsyncSession, workspace_id: uuid.UUID) -> bo
 CHECKLIST: dict[ChecklistKey, StepCheck] = {
     "connect_account": _account_connected,
     "add_knowledge": _knowledge_added,
-    "choose_ai_mode": _not_available_yet,
+    "choose_ai_mode": _ai_mode_chosen,
     "create_automation": _automation_created,
 }
 

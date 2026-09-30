@@ -8,7 +8,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.models.connections import AccountStatus, SocialAccount
+from socialhood.models.connections import AccountStatus, AiMode, SocialAccount
 from socialhood.repositories.base import scoped_update
 
 
@@ -63,6 +63,19 @@ async def any_live(session: AsyncSession) -> bool:
         select(func.count())
         .select_from(SocialAccount)
         .where(SocialAccount.status != AccountStatus.DISCONNECTED)
+    )
+    return bool(count)
+
+
+async def any_live_with_ai(session: AsyncSession) -> bool:
+    """A connected account whose AI mode is Suggest or Auto (the checklist's AI step, C-060)."""
+    count = await session.scalar(
+        select(func.count())
+        .select_from(SocialAccount)
+        .where(
+            SocialAccount.status != AccountStatus.DISCONNECTED,
+            SocialAccount.ai_mode != AiMode.OFF,
+        )
     )
     return bool(count)
 
