@@ -16,7 +16,7 @@ import respx
 from pydantic import SecretStr
 
 from socialhood.media.cloudinary import API, CloudinaryError
-from socialhood.media.purge import CloudinaryPurger
+from socialhood.media.purge import CloudinaryPurger, StoredFile
 from socialhood.settings import Settings
 
 CLOUD = "demo-cloud"
@@ -113,3 +113,60 @@ async def test_without_credentials_nothing_was_uploaded_so_nothing_is_called(
     unconfigured = api_settings.model_copy(update={"cloudinary_cloud_name": None})
     with respx.mock(assert_all_mocked=True):
         await CloudinaryPurger(http, unconfigured).delete_workspace_folder(WID)
+
+
+# ---------------------------------------------------------------- one account's files (C-067)
+
+
+async def test_named_files_are_deleted_by_public_id_per_type_100_at_a_time(
+    settings: Settings, http: httpx.AsyncClient
+) -> None:
+    """DELETE /resources/{type}/upload?public_ids[]=… (up to 100 per call); a file outside the
+    workspace's folder is never sent."""
+    images = [StoredFile(f"ws/{WID}/inbound/2026/10/img{i}", "image") for i in range(101)]
+    video = StoredFile(f"ws/{WID}/message/clip", "video")
+    elsewhere = StoredFile(f"ws/{uuid.uuid4()}/message/not-ours", "image")
+    with respx.mock(assert_all_called=True) as router:
+        image = router.delete(resources("image")).mock(
+            side_effect=[
+                httpx.Response(
+                    200, json={"deleted": {f.public_id: "deleted" for f in images[:100]}}
+                ),
+                httpx.Response(200, json={"deleted": {images[100].public_id: "not_found"}}),
+            ]
+        )
+        clip = router.delete(resources("video")).respond(
+            200, json={"deleted": {video.public_id: "deleted"}}
+        )
+        await CloudinaryPurger(http, settings).delete_files(WID, [*images, video, elsewhere])
+
+    first, second = image.calls
+    assert first.request.url.params.get_list("public_ids[]") == [f.public_id for f in images[:100]]
+    assert second.request.url.params.get_list("public_ids[]") == [images[100].public_id]
+    assert clip.calls.last.request.url.params.get_list("public_ids[]") == [video.public_id]
+    sent = [p for call in image.calls for p in call.request.url.params.get_list("public_ids[]")]
+    assert elsewhere.public_id not in sent
+    basic = "Basic " + base64.b64encode(f"{KEY}:{SECRET}".encode()).decode()
+    assert first.request.headers["authorization"] == basic
+
+
+async def test_a_refused_file_delete_raises_so_the_purge_tries_again(
+    settings: Settings, http: httpx.AsyncClient
+) -> None:
+    with respx.mock() as router:
+        router.delete(resources("image")).respond(500, json={})
+        with pytest.raises(CloudinaryError):
+            await CloudinaryPurger(http, settings).delete_files(
+                WID, [StoredFile(f"ws/{WID}/inbound/a", "image")]
+            )
+
+
+async def test_no_files_or_no_credentials_call_nothing(
+    api_settings: Settings, settings: Settings, http: httpx.AsyncClient
+) -> None:
+    unconfigured = api_settings.model_copy(update={"cloudinary_cloud_name": None})
+    with respx.mock(assert_all_mocked=True):
+        await CloudinaryPurger(http, settings).delete_files(WID, [])
+        await CloudinaryPurger(http, unconfigured).delete_files(
+            WID, [StoredFile(f"ws/{WID}/inbound/a", "image")]
+        )
