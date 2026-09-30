@@ -25,9 +25,14 @@ from tests.support.whatsapp import (
     WABA_ID,
     FakeWhatsApp,
     install,
+    numbers,
+    shared_wabas,
     signup,
     with_whatsapp,
 )
+
+OTHER_WABA = "102290129340399"
+OTHER_NUMBER = "106540352242923"
 
 
 @pytest.fixture
@@ -195,6 +200,128 @@ async def test_ids_must_be_metas_numeric_ids(
     assert response.status_code == 422
     assert response.json()["errors"][0]["field"] == field
     assert whatsapp.calls == []
+
+
+# ---------------------------------------------------------------- ids the session info didn't give
+
+
+async def test_without_session_info_the_account_and_number_are_found(
+    client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
+) -> None:
+    clerk_id, ws = await owner(client, clerk)
+    response = await signup(client, clerk, clerk_id, ws["id"], waba_id=None, phone_number_id=None)
+
+    assert response.status_code == 201, response.text
+    assert (response.json()["display_name"], response.json()["phone_number"]) == (
+        "Maple Bakery",
+        "+91 98765 43210",
+    )
+    # The listed number's details are used as they are: no separate read of the number.
+    assert whatsapp.calls == ["exchange", "debug_token", "phone_numbers", "subscribe", "register"]
+    # debug_token is read with the app token; the business token is only what it inspects.
+    assert whatsapp.debug_requests == [
+        {"auth": f"Bearer {META_APP_ID}|{META_APP_SECRET}", "input_token": BUSINESS_TOKEN}
+    ]
+    assert whatsapp.tokens_seen == [BUSINESS_TOKEN, BUSINESS_TOKEN]
+    [row] = await rows(engine)
+    assert (row["platform_account_id"], row["waba_id"], row["status"]) == (
+        PHONE_NUMBER_ID,
+        WABA_ID,
+        "active",
+    )
+    assert TokenCipher([TOKEN_KEY]).decrypt(row["access_token_enc"]) == BUSINESS_TOKEN
+
+
+@pytest.mark.parametrize("shared", [(), (WABA_ID, OTHER_WABA)])
+async def test_no_single_shared_account_asks_to_choose_one(
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    whatsapp: FakeWhatsApp,
+    engine: AsyncEngine,
+    shared: tuple[str, ...],
+) -> None:
+    whatsapp.debug_token = (200, shared_wabas(*shared))
+    clerk_id, ws = await owner(client, clerk)
+    response = await signup(client, clerk, clerk_id, ws["id"], waba_id=None, phone_number_id=None)
+    assert response.status_code == 422
+    assert response.json()["code"] == "wa_choose_business_account"
+    assert "choose one" in response.json()["detail"]
+    assert whatsapp.calls == ["exchange", "debug_token"]
+    assert await rows(engine) == []
+
+
+async def test_the_account_the_session_info_named_is_used(
+    client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
+) -> None:
+    """FINISH_ONLY_WABA: the account came from the session info, the number did not."""
+    whatsapp.debug_token = (200, shared_wabas(OTHER_WABA, WABA_ID))  # never asked
+    clerk_id, ws = await owner(client, clerk)
+    response = await signup(client, clerk, clerk_id, ws["id"], phone_number_id=None)
+    assert response.status_code == 201, response.text
+    assert whatsapp.calls == ["exchange", "phone_numbers", "subscribe", "register"]
+    [row] = await rows(engine)
+    assert (row["platform_account_id"], row["waba_id"]) == (PHONE_NUMBER_ID, WABA_ID)
+
+
+@pytest.mark.parametrize(
+    ("listed", "code", "copy"),
+    [
+        ((), "wa_no_phone_number", "Meta's test numbers can't be connected this way"),
+        ((PHONE_NUMBER_ID, OTHER_NUMBER), "wa_choose_number", "pick the one to use"),
+    ],
+)
+async def test_no_single_number_is_the_owners_to_settle(
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    whatsapp: FakeWhatsApp,
+    engine: AsyncEngine,
+    listed: tuple[str, ...],
+    code: str,
+    copy: str,
+) -> None:
+    whatsapp.phone_numbers = (200, numbers(*listed))
+    clerk_id, ws = await owner(client, clerk)
+    response = await signup(client, clerk, clerk_id, ws["id"], phone_number_id=None)
+    assert response.status_code == 422
+    assert response.json()["code"] == code
+    assert copy in response.json()["detail"]
+    assert whatsapp.calls == ["exchange", "phone_numbers"]
+    assert await rows(engine) == []
+
+
+async def test_a_found_number_counts_against_the_plan(
+    client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
+) -> None:
+    clerk_id, ws = await owner(client, clerk)
+    assert (await signup(client, clerk, clerk_id, ws["id"])).status_code == 201
+    whatsapp.phone_numbers = (200, numbers(OTHER_NUMBER))
+    second = await signup(client, clerk, clerk_id, ws["id"], code="c2", phone_number_id=None)
+    assert second.status_code == 402
+    assert second.json()["code"] == "quota_exceeded"
+    assert len(await rows(engine)) == 1
+
+
+async def test_reconnecting_a_found_number_uses_its_own_slot(
+    client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
+) -> None:
+    clerk_id, ws = await owner(client, clerk)
+    assert (await signup(client, clerk, clerk_id, ws["id"])).status_code == 201
+    again = await signup(
+        client, clerk, clerk_id, ws["id"], code="c2", waba_id=None, phone_number_id=None
+    )
+    assert again.status_code == 201, again.text
+    assert len(await rows(engine)) == 1
+
+
+async def test_a_failed_lookup_stores_nothing(
+    client: httpx.AsyncClient, clerk: Clerk, whatsapp: FakeWhatsApp, engine: AsyncEngine
+) -> None:
+    whatsapp.debug_token = (400, {"error": {"message": "Invalid OAuth access token", "code": 190}})
+    clerk_id, ws = await owner(client, clerk)
+    response = await signup(client, clerk, clerk_id, ws["id"], waba_id=None, phone_number_id=None)
+    assert response.status_code == 502
+    assert response.json()["code"] == "platform_error"
+    assert await rows(engine) == []
 
 
 async def test_signup_needs_the_meta_app(

@@ -1,0 +1,27 @@
+{
+  "data": {
+    "app_id": "9876543210",
+    "type": "SYSTEM_USER",
+    "application": "Social Hood",
+    "data_access_expires_at": 0,
+    "expires_at": 0,
+    "is_valid": true,
+    "issued_at": 1759200000,
+    "scopes": [
+      "whatsapp_business_management",
+      "whatsapp_business_messaging",
+      "public_profile"
+    ],
+    "granular_scopes": [
+      {
+        "scope": "whatsapp_business_management",
+        "target_ids": ["102290129340398"]
+      },
+      {
+        "scope": "whatsapp_business_messaging",
+        "target_ids": ["102290129340398"]
+      }
+    ],
+    "user_id": "122100000000000001"
+  }
+}

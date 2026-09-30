@@ -136,6 +136,64 @@ async def test_the_numbers_details(http: httpx.AsyncClient) -> None:
 
 
 @respx.mock
+async def test_debug_token_names_the_shared_business_accounts(http: httpx.AsyncClient) -> None:
+    route = respx.get(f"{V}/debug_token").respond(200, json=fixture("whatsapp_debug_token.json"))
+    ids = await signup.shared_waba_ids(WhatsAppHttp(http, SETTINGS), SETTINGS, BUSINESS_TOKEN)
+    assert ids == [WABA_ID]
+    request = route.calls.last.request
+    # Read with the app token, in the header; the business token is only the one inspected.
+    assert request.headers["authorization"] == f"Bearer {META_APP_ID}|meta-secret"
+    assert dict(request.url.params) == {"input_token": BUSINESS_TOKEN}
+
+
+@respx.mock
+async def test_debug_token_reads_only_the_management_scope(http: httpx.AsyncClient) -> None:
+    body = {
+        "data": {
+            "granular_scopes": [
+                {"scope": "whatsapp_business_messaging", "target_ids": ["111"]},
+                {"scope": "whatsapp_business_management", "target_ids": ["222", 333, "222", "x"]},
+                {"scope": "business_management"},
+            ]
+        }
+    }
+    respx.get(f"{V}/debug_token").respond(200, json=body)
+    ids = await signup.shared_waba_ids(WhatsAppHttp(http, SETTINGS), SETTINGS, BUSINESS_TOKEN)
+    assert ids == ["222", "333"]  # Meta's order kept, repeats and non-ids dropped
+
+
+@respx.mock
+async def test_debug_token_without_a_scope_names_none(http: httpx.AsyncClient) -> None:
+    respx.get(f"{V}/debug_token").respond(200, json={"data": {"scopes": ["public_profile"]}})
+    wa = WhatsAppHttp(http, SETTINGS)
+    assert await signup.shared_waba_ids(wa, SETTINGS, BUSINESS_TOKEN) == []
+
+
+@respx.mock
+async def test_the_business_accounts_numbers(http: httpx.AsyncClient) -> None:
+    route = respx.get(f"{V}/{WABA_ID}/phone_numbers").respond(
+        200, json=fixture("whatsapp_phone_numbers.json")
+    )
+    [number] = await signup.phone_numbers(WhatsAppHttp(http, SETTINGS), BUSINESS_TOKEN, WABA_ID)
+    assert (number.id, number.verified_name, number.display_phone_number) == (
+        PHONE_NUMBER_ID,
+        "Maple Bakery",
+        "+91 98765 43210",
+    )
+    request = route.calls.last.request
+    assert request.url.params["fields"] == "id,display_phone_number,verified_name,quality_rating"
+    assert request.headers["authorization"] == f"Bearer {BUSINESS_TOKEN}"
+
+
+@respx.mock
+async def test_a_number_list_without_data_is_an_error(http: httpx.AsyncClient) -> None:
+    respx.get(f"{V}/{WABA_ID}/phone_numbers").respond(200, json={"error": "?"})
+    with pytest.raises(PlatformError) as caught:
+        await signup.phone_numbers(WhatsAppHttp(http, SETTINGS), BUSINESS_TOKEN, WABA_ID)
+    assert caught.value.code == "platform_rejected"
+
+
+@respx.mock
 async def test_subscribing_the_app_to_the_business_account(
     adapter: WhatsAppAdapter, acct: SocialAccount
 ) -> None:

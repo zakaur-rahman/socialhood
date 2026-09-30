@@ -28,6 +28,11 @@ ERROR_CODES: dict[str, ErrorCode] = {
     "account_in_use": ErrorCode(409, "The account is connected to another workspace"),  # F-04
     # F-03: a personal Instagram account came back from the connect (§4.7's copy, C-060).
     "ig_not_professional": ErrorCode(422, "Only business and creator accounts can connect"),
+    # F-04: Embedded Signup finished without saying which WhatsApp account or number to connect,
+    # and Meta's lists didn't settle it (docs/verification.md item 14).
+    "wa_choose_business_account": ErrorCode(422, "Choose one WhatsApp Business Account"),
+    "wa_no_phone_number": ErrorCode(422, "The WhatsApp Business Account has no phone number"),
+    "wa_choose_number": ErrorCode(422, "Choose one WhatsApp number"),
     "entitlement_required": ErrorCode(402, "Upgrade required"),
     "quota_exceeded": ErrorCode(402, "Plan limit reached"),
     "unsupported_media": ErrorCode(415, "Unsupported media"),

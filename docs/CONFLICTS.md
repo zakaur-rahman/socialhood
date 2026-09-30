@@ -796,3 +796,26 @@ Evidence per item: docs/security-checklist.md.
 - e2e: the stack runs with `RATE_LIMITS_ENABLED=false` (one Clerk user from three workers passes
   the per-user 300 a minute), and its user cleanup route deletes the workspace row directly
   (the deletion pass removed `repositories.workspaces.delete_workspace`).
+
+## C-061 · WhatsApp Embedded Signup without full session info (F-04, verification item 14)
+- Seen live: Meta's popup finished, the page never got a session info with both ids and showed
+  "Meta didn't say which number was chosen" without calling the API. The code is what matters
+  now: once FB.login returns it, the page waits at most 5 s for the session info and completes
+  through the API either way, sending only the ids it got. Every `FINISH*` event counts as a
+  finish (`FINISH_ONLY_WABA` names the WABA but no number). A closed dialog (no code), `CANCEL`
+  and `ERROR` are unchanged. Development builds log event names, FB.login's status and whether a
+  code came to the console, never the code.
+- `waba_id` and `phone_number_id` are optional in the request. The API fills a missing WABA from
+  Meta's documented fallback, `debug_token` read with the app token
+  (`whatsapp_business_management` `target_ids`), and a missing number from
+  `/{waba_id}/phone_numbers`. It takes the only one; none or several is a 422 for the owner to
+  settle in Meta's popup: `wa_choose_business_account`, `wa_no_phone_number` (its copy says
+  Meta's test numbers can't be connected this way) or `wa_choose_number`. Meta says the newest
+  WABA is listed first; we don't guess from that. A discovered number is checked against the
+  plan after the code exchange (a known one still before). The discovery path is logged
+  (`whatsapp_signup_ids`: waba_source, phone_source), never a token.
+- After the token, Embedded Signup and the new development script
+  (`scripts/connect_whatsapp_number.py`, docs/dev-whatsapp.md) share `connect_number`: plan limit,
+  active workspace (FOR SHARE), `account_in_use`, the encrypted token, `subscribed_apps` and
+  registration. The script is for Meta's test number, which Embedded Signup can't connect; it
+  takes the token from `WHATSAPP_DEV_TOKEN` and refuses production.

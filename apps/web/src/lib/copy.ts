@@ -172,6 +172,27 @@ export function whatsappConnected(displayName: string | null | undefined, number
   return `WhatsApp connected: ${displayName ?? number ?? "your number"}`;
 }
 
+/**
+ * F-04: the Embedded Signup completion's refusals. Meta's popup can finish without naming a
+ * number (FINISH_ONLY_WABA), and its test numbers can't be connected this way at all.
+ */
+const WHATSAPP_CONNECT_COPY = {
+  account_in_use: "This account is connected to another Social Hood workspace. Disconnect it there first.",
+  wa_choose_business_account:
+    "Meta didn't say which WhatsApp Business Account to connect. Connect again and choose one in Meta's popup.",
+  wa_no_phone_number:
+    "This WhatsApp Business Account has no phone number yet. Add and verify one in Meta's popup or in WhatsApp Manager, then connect again. Meta's test numbers can't be connected this way; use a number your business owns.",
+  wa_choose_number:
+    "This WhatsApp Business Account has more than one number. Connect again and pick the one to use in Meta's popup.",
+} as const;
+export const WHATSAPP_CONNECT_ERRORS = Object.keys(WHATSAPP_CONNECT_COPY) as (keyof typeof WHATSAPP_CONNECT_COPY)[];
+
+export function whatsappConnectError(code: string | undefined): string | null {
+  return code && Object.hasOwn(WHATSAPP_CONNECT_COPY, code)
+    ? WHATSAPP_CONNECT_COPY[code as keyof typeof WHATSAPP_CONNECT_COPY]
+    : null;
+}
+
 // ---- connecting accounts (F-03, §4.7)
 
 export type ConnectResult =

@@ -2,7 +2,9 @@
  * Meta's Embedded Signup for WhatsApp (F-04, FR-CON-02). The Facebook JS SDK is loaded only
  * when the user clicks Connect WhatsApp on Settings → Connections (TR-FE-08, SEC CSP note).
  * FB.login returns an authorization code; the WABA and phone number ids arrive separately in
- * a "session info" window message. Both are needed before calling the API.
+ * a "session info" window message. The code is what matters: once it is in, the signup always
+ * completes through the API, with whichever ids the session info gave. The API finds the rest
+ * with the business token (FINISH_ONLY_WABA names no number; the message may not come at all).
  *
  * Verify at build time (docs/verification.md item 14): the session-info event shape for the
  * configuration's Embedded Signup version.
@@ -10,6 +12,8 @@
 
 export const META_SDK_URL = "https://connect.facebook.net/en_US/sdk.js";
 const GRAPH_VERSION = "v25.0"; // same as the API's META_GRAPH_VERSION
+/** How long to wait for the session info once the code is in, before going on without it. */
+export const SESSION_INFO_WAIT_MS = 5_000;
 
 type LoginResponse = { authResponse?: { code?: string } | null; status?: string };
 
@@ -25,8 +29,11 @@ declare global {
   }
 }
 
+/** The ids Meta's session info named, when it did. */
+export type SignupIds = { waba_id?: string; phone_number_id?: string };
+
 export type SignupResult =
-  | { kind: "finished"; code: string; waba_id: string; phone_number_id: string }
+  | ({ kind: "finished"; code: string } & SignupIds)
   | { kind: "cancelled" }
   | { kind: "error"; message: string };
 
@@ -59,12 +66,14 @@ export function loadFacebookSdk(appId: string): Promise<FacebookSdk> {
 }
 
 type SessionInfo =
-  | { event: "finish"; waba_id: string; phone_number_id: string }
+  | ({ event: "finish" } & SignupIds)
   | { event: "cancel" }
   | { event: "error"; message: string };
 
-/** Reads Meta's WA_EMBEDDED_SIGNUP window message; null for anything else. */
-export function parseSessionInfo(origin: string, data: unknown): SessionInfo | null {
+type SignupMessage = { name: string; data: Record<string, unknown> };
+
+/** Meta's WA_EMBEDDED_SIGNUP window message from a facebook.com origin; null for anything else. */
+function readSignupMessage(origin: string, data: unknown): SignupMessage | null {
   let host: string;
   try {
     host = new URL(origin).hostname;
@@ -81,28 +90,59 @@ export function parseSessionInfo(origin: string, data: unknown): SessionInfo | n
     }
   }
   if (typeof payload !== "object" || payload === null) return null;
-  const p = payload as { type?: string; event?: string; data?: Record<string, unknown> };
+  const p = payload as { type?: unknown; event?: unknown; data?: unknown };
   if (p.type !== "WA_EMBEDDED_SIGNUP") return null;
-  const event = String(p.event ?? "").toUpperCase();
-  if (event.startsWith("FINISH")) {
-    const waba = p.data?.waba_id;
-    const phone = p.data?.phone_number_id;
-    if (typeof waba === "string" && typeof phone === "string" && waba && phone) {
-      return { event: "finish", waba_id: waba, phone_number_id: phone };
-    }
-    return { event: "error", message: "Meta didn't say which number was chosen. Try again." };
-  }
-  if (event === "CANCEL") return { event: "cancel" };
-  if (event === "ERROR") {
-    const message = p.data?.error_message;
+  const fields = typeof p.data === "object" && p.data !== null ? (p.data as Record<string, unknown>) : {};
+  return { name: String(p.event ?? "").toUpperCase(), data: fields };
+}
+
+function id(value: unknown): string | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** Only the ids that are there, so an absent one is left out of the request. */
+function presentIds(source: { waba_id?: unknown; phone_number_id?: unknown }): SignupIds {
+  const ids: SignupIds = {};
+  const waba = id(source.waba_id);
+  const phone = id(source.phone_number_id);
+  if (waba) ids.waba_id = waba;
+  if (phone) ids.phone_number_id = phone;
+  return ids;
+}
+
+/**
+ * Every FINISH* event (FINISH, FINISH_ONLY_WABA, FINISH_WHATSAPP_BUSINESS_APP_ONBOARDING, …) is a
+ * finish with whatever ids it carries; CANCEL and ERROR as before; anything else is ignored.
+ */
+function toSessionInfo({ name, data }: SignupMessage): SessionInfo | null {
+  if (name.startsWith("FINISH")) return { event: "finish", ...presentIds(data) };
+  if (name === "CANCEL") return { event: "cancel" };
+  if (name === "ERROR") {
+    const message = data.error_message;
     return { event: "error", message: typeof message === "string" && message ? message : "Meta couldn't finish the signup." };
   }
   return null;
 }
 
+/** Reads Meta's WA_EMBEDDED_SIGNUP window message; null for anything else. */
+export function parseSessionInfo(origin: string, data: unknown): SessionInfo | null {
+  const message = readSignupMessage(origin, data);
+  return message && toSessionInfo(message);
+}
+
 /**
- * Opens Meta's dialog and resolves once both the code (FB.login) and the session info
- * (message event) are in, or when the user closes the dialog.
+ * Development builds only: what Meta sent, to debug the flow in the console. Names, the login
+ * status and whether a code came, never the code or a token.
+ */
+function diagnose(message: string, details: Record<string, unknown>): void {
+  if (process.env.NODE_ENV === "production") return;
+  console.info(`[whatsapp signup] ${message}`, details);
+}
+
+/**
+ * Opens Meta's dialog and resolves once the code (FB.login) is in, with the session info's ids if
+ * it came within SESSION_INFO_WAIT_MS of the code, or when the user closes the dialog.
  */
 export function runEmbeddedSignup(fb: FacebookSdk, configId: string): Promise<SignupResult> {
   return new Promise((resolve) => {
@@ -117,25 +157,36 @@ export function runEmbeddedSignup(fb: FacebookSdk, configId: string): Promise<Si
       settled = true;
       window.removeEventListener("message", onMessage);
       window.clearTimeout(timer);
+      diagnose("result", { kind: result.kind });
       resolve(result);
+    };
+    const finished = (ids: SignupIds) => {
+      if (code) finish({ kind: "finished", code, ...ids });
     };
     const check = () => {
       if (info?.event === "error") return finish({ kind: "error", message: info.message });
-      if (code && info?.event === "finish") {
-        return finish({ kind: "finished", code, waba_id: info.waba_id, phone_number_id: info.phone_number_id });
-      }
-      if (loginDone && !code) return finish({ kind: "cancelled" });
       if (info?.event === "cancel" && loginDone) return finish({ kind: "cancelled" });
-      if (loginDone && code && !info) {
-        // The code came first; the session info should follow within moments.
-        timer = window.setTimeout(
-          () => finish({ kind: "error", message: "Meta didn't say which number was chosen. Try again." }),
-          10_000,
-        );
+      if (!loginDone) return;
+      if (!code) return finish({ kind: "cancelled" }); // the dialog closed without a code
+      if (info?.event === "finish") return finished(presentIds(info));
+      // The code came first; the session info should follow within moments. Without it the API
+      // finds the account and number itself.
+      if (timer === undefined) {
+        timer = window.setTimeout(() => {
+          diagnose("no session info in time; completing with the code alone", {});
+          finished({});
+        }, SESSION_INFO_WAIT_MS);
       }
     };
     const onMessage = (event: MessageEvent) => {
-      const parsed = parseSessionInfo(event.origin, event.data);
+      const message = readSignupMessage(event.origin, event.data);
+      if (!message) return;
+      diagnose("session info", {
+        event: message.name,
+        waba_id: "waba_id" in message.data,
+        phone_number_id: "phone_number_id" in message.data,
+      });
+      const parsed = toSessionInfo(message);
       if (!parsed) return;
       info = parsed;
       check();
@@ -147,6 +198,7 @@ export function runEmbeddedSignup(fb: FacebookSdk, configId: string): Promise<Si
       (response) => {
         loginDone = true;
         code = response.authResponse?.code ?? null;
+        diagnose("FB.login", { status: response.status ?? null, code: Boolean(code) });
         check();
       },
       {

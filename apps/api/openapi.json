@@ -5168,7 +5168,7 @@
       },
       "EmbeddedSignup": {
         "additionalProperties": false,
-        "description": "What the page receives from Meta's Embedded Signup v4 (FB.login code + session info).",
+        "description": "What the page receives from Meta's Embedded Signup v4: the FB.login code, and the ids from\nthe session-info message when it arrived. A missing id is looked up with the business token\n(the shared WhatsApp Business Account from debug_token, its number from phone_numbers).",
         "properties": {
           "code": {
             "maxLength": 2048,
@@ -5177,22 +5177,34 @@
             "type": "string"
           },
           "phone_number_id": {
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Phone Number Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Number Id"
           },
           "waba_id": {
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Waba Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Waba Id"
           }
         },
         "required": [
-          "code",
-          "waba_id",
-          "phone_number_id"
+          "code"
         ],
         "title": "EmbeddedSignup",
         "type": "object"
@@ -18987,7 +18999,7 @@
     },
     "/v1/w/{wid}/social-accounts/whatsapp/embedded-signup": {
       "post": {
-        "description": "Finish Embedded Signup: store the number and subscribe to its webhooks. 409\naccount_in_use when the number is connected to another workspace.",
+        "description": "Finish Embedded Signup: store the number and subscribe to its webhooks. waba_id and\nphone_number_id come from Meta's session info when it arrived; without them the API finds\nthe shared WhatsApp Business Account (debug_token) and its one number. 422\nwa_choose_business_account, wa_no_phone_number or wa_choose_number when that doesn't settle\non one number, 409 account_in_use when the number is connected to another workspace, 402\nover accounts_per_platform, 502 when Meta fails.",
         "operationId": "complete_whatsapp_signup",
         "parameters": [
           {
