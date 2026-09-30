@@ -163,6 +163,9 @@ export type PlanOffer = Schemas["PlanOffer"];
 export type PlanList = Schemas["PlanList"];
 export type CheckoutSession = Schemas["CheckoutSession"];
 export type PortalSession = Schemas["PortalSession"];
+/** Payment history (C-066): the workspace's Dodo payments, newest first. */
+export type Payment = Schemas["PaymentOut"];
+export type PaymentList = Schemas["PaymentList"];
 
 // ---- notification preferences and push (P8: FR-NOT-03, FR-NOT-04, TR-FE-09, C-049)
 

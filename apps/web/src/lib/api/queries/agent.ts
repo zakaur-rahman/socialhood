@@ -1,6 +1,6 @@
 "use client";
 
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient, type QueryKey } from "@tanstack/react-query";
 
 import { addRunToThread, putRun, type RunPages, type ThreadPages } from "@/lib/agent/cache";
 import { definitionFromDraft } from "@/lib/agent/draft";
@@ -14,6 +14,7 @@ import type {
   AgentRunCreate,
   AgentRunDetail,
   AgentRunList,
+  AgentRunStatus,
   AgentThreadList,
   Automation,
   AutomationDraftPrefill,
@@ -23,7 +24,8 @@ import { unwrap } from "./unwrap";
 
 const THREAD_RUNS_PAGE = 20;
 const THREADS_PAGE = 20;
-const HISTORY_PAGE = 30;
+/** Settings → Agent shows the history a page (of the API) at a time (C-066). */
+const HISTORY_PAGE = 10;
 
 /**
  * agent.* events keep a working run fresh. This slower poll is the fallback for a stream that is
@@ -82,17 +84,34 @@ export function useAgentRun(wid: string, runId: string | null, enabled = true) {
   });
 }
 
-/** FR-AGT-07: every run, newest first. Owners and admins get the workspace's; members their own. */
-export function useAgentRunHistory(wid: string, enabled = true) {
+/** Settings → Agent's narrowing of the history (C-066): statuses and request text. */
+export type RunHistoryFilters = { statuses?: readonly AgentRunStatus[]; q?: string };
+
+/**
+ * FR-AGT-07: every run, newest first. Owners and admins get the workspace's; members their own.
+ * With filters, only runs in those statuses whose request contains the text (C-066).
+ */
+export function useAgentRunHistory(wid: string, enabled = true, filters: RunHistoryFilters = {}) {
   const api = useApi();
-  return useInfiniteQuery<AgentRunList, Error, RunPages, ReturnType<typeof keys.agentRunHistory>, string | null>({
-    queryKey: keys.agentRunHistory(wid),
+  const statuses = filters.statuses ?? [];
+  const q = filters.q?.trim() ?? "";
+  const filtered = statuses.length > 0 || q !== "";
+  return useInfiniteQuery<AgentRunList, Error, RunPages, QueryKey, string | null>({
+    queryKey: filtered ? keys.agentRunHistoryFiltered(wid, statuses, q) : keys.agentRunHistory(wid),
     enabled,
     initialPageParam: null,
     queryFn: ({ pageParam }) =>
       unwrap(
         api.GET("/v1/w/{wid}/agent/runs", {
-          params: { path: { wid }, query: { cursor: pageParam ?? undefined, limit: HISTORY_PAGE } },
+          params: {
+            path: { wid },
+            query: {
+              cursor: pageParam ?? undefined,
+              limit: HISTORY_PAGE,
+              ...(statuses.length > 0 ? { status: [...statuses] } : {}),
+              ...(q ? { q } : {}),
+            },
+          },
         }),
       ),
     getNextPageParam: (last) => last.next_cursor ?? null,

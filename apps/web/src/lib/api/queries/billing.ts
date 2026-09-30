@@ -1,9 +1,16 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type InfiniteData,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
 
 import { useApi } from "../provider";
-import type { BillingState, CheckoutSession, Plan, PlanList, PortalSession, UsageMeter } from "../types";
+import type { BillingState, CheckoutSession, PaymentList, Plan, PlanList, PortalSession, UsageMeter } from "../types";
 import { keys } from "./keys";
 import { unwrap } from "./unwrap";
 
@@ -31,6 +38,31 @@ export function useBillingPlans(enabled = true) {
     enabled,
     staleTime: 60 * 60_000, // the API caches Dodo's prices for an hour too
     queryFn: () => unwrap(api.GET("/v1/billing/plans")),
+  });
+}
+
+const PAYMENTS_PAGE = 20;
+
+/** C-066 payment history (owners and admins): Dodo payments, newest first, a page at a time. */
+export function useBillingPayments(wid: string, enabled = true) {
+  const api = useApi();
+  return useInfiniteQuery<
+    PaymentList,
+    Error,
+    InfiniteData<PaymentList, string | null>,
+    ReturnType<typeof keys.billingPayments>,
+    string | null
+  >({
+    queryKey: keys.billingPayments(wid),
+    enabled,
+    initialPageParam: null,
+    queryFn: ({ pageParam }) =>
+      unwrap(
+        api.GET("/v1/w/{wid}/billing/payments", {
+          params: { path: { wid }, query: { cursor: pageParam ?? undefined, limit: PAYMENTS_PAGE } },
+        }),
+      ),
+    getNextPageParam: (last) => last.next_cursor ?? null,
   });
 }
 
