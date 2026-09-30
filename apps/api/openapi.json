@@ -4422,6 +4422,22 @@
           "ai": {
             "$ref": "#/components/schemas/ConversationAi"
           },
+          "ai_mode_override": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "suggest",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Mode Override"
+          },
           "awaiting_reply": {
             "title": "Awaiting Reply",
             "type": "boolean"
@@ -4799,6 +4815,22 @@
       },
       "ConversationListItem": {
         "properties": {
+          "ai_mode_override": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "suggest",
+                  "auto"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Mode Override"
+          },
           "awaiting_reply": {
             "title": "Awaiting Reply",
             "type": "boolean"
@@ -7414,6 +7446,52 @@
           "available"
         ],
         "title": "PlanOffer",
+        "type": "object"
+      },
+      "PolishRequest": {
+        "additionalProperties": false,
+        "description": "POST \u2026/conversations/{id}/polish (C-063): the member's draft reply. ``tone`` overrides the\nbrand voice's tone for this rewrite.",
+        "properties": {
+          "text": {
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "tone": {
+            "anyOf": [
+              {
+                "enum": [
+                  "friendly",
+                  "professional"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "PolishRequest",
+        "type": "object"
+      },
+      "PolishResult": {
+        "description": "The polished draft: the same language, meaning and roughly the length, with no fact,\nnumber, link or promise the draft didn't have. Nothing is stored or sent.",
+        "properties": {
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "PolishResult",
         "type": "object"
       },
       "PortalSession": {
@@ -14819,6 +14897,7 @@
                 "all",
                 "unread",
                 "needs_reply",
+                "needs_you",
                 "leads",
                 "closing_soon",
                 "ai_handled",
@@ -15311,6 +15390,80 @@
         "summary": "Send Message",
         "tags": [
           "inbox"
+        ]
+      }
+    },
+    "/v1/w/{wid}/conversations/{conversation_id}/polish": {
+      "post": {
+        "description": "AI Polish (C-063): the member's draft with its grammar and clarity fixed, in the same\nlanguage (English, Hindi or Hinglish), meaning and roughly length; it never adds facts,\nprices or promises. 1 credit; nothing is stored or sent. 402 quota_exceeded without credits;\n503 when the AI can't answer or its answer changed the draft's details.",
+        "operationId": "polish_reply",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolishRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PolishResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Polish Reply",
+        "tags": [
+          "ai"
         ]
       }
     },
