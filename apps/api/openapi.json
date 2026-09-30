@@ -1,6 +1,50 @@
 {
   "components": {
     "schemas": {
+      "AccountAttention": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "platform": {
+            "enum": [
+              "instagram",
+              "whatsapp"
+            ],
+            "title": "Platform",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "needs_reconnect",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "platform",
+          "username",
+          "status"
+        ],
+        "title": "AccountAttention",
+        "type": "object"
+      },
       "Actor": {
         "properties": {
           "id": {
@@ -5441,6 +5485,39 @@
         "title": "InboxCounts",
         "type": "object"
       },
+      "IntentCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "intent": {
+            "enum": [
+              "pricing",
+              "product_inquiry",
+              "purchase",
+              "order_status",
+              "shipping",
+              "support",
+              "complaint",
+              "refund",
+              "feedback",
+              "collaboration",
+              "greeting",
+              "spam",
+              "other"
+            ],
+            "title": "Intent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "intent",
+          "count"
+        ],
+        "title": "IntentCount",
+        "type": "object"
+      },
       "KnowledgeGap": {
         "properties": {
           "examples": {
@@ -6974,14 +7051,46 @@
         "type": "object"
       },
       "Overview": {
+        "description": "GET \u2026/overview (FR-HOME-01, UX-SCR-01). Flows cover ``current`` (the range: 7 or 30 local\ndays up to and including today) and ``previous`` (as many days just before it); states are as\nof now.",
         "properties": {
+          "accounts_needing_attention": {
+            "items": {
+              "$ref": "#/components/schemas/AccountAttention"
+            },
+            "title": "Accounts Needing Attention",
+            "type": "array"
+          },
           "checklist": {
             "$ref": "#/components/schemas/Checklist"
+          },
+          "comment_sentiment": {
+            "$ref": "#/components/schemas/SentimentSplit"
+          },
+          "current": {
+            "$ref": "#/components/schemas/OverviewPeriod"
           },
           "knowledge_gaps_open": {
             "default": 0,
             "title": "Knowledge Gaps Open",
             "type": "integer"
+          },
+          "message_sentiment": {
+            "$ref": "#/components/schemas/SentimentSplit"
+          },
+          "messages_today": {
+            "title": "Messages Today",
+            "type": "integer"
+          },
+          "needs_reply": {
+            "title": "Needs Reply",
+            "type": "integer"
+          },
+          "needs_you": {
+            "title": "Needs You",
+            "type": "integer"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/OverviewPeriod"
           },
           "range": {
             "enum": [
@@ -6990,13 +7099,226 @@
             ],
             "title": "Range",
             "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          },
+          "top_intents": {
+            "items": {
+              "$ref": "#/components/schemas/IntentCount"
+            },
+            "title": "Top Intents",
+            "type": "array"
+          },
+          "top_posts": {
+            "items": {
+              "$ref": "#/components/schemas/OverviewPost"
+            },
+            "title": "Top Posts",
+            "type": "array"
+          },
+          "top_questions": {
+            "items": {
+              "$ref": "#/components/schemas/QuestionCount"
+            },
+            "title": "Top Questions",
+            "type": "array"
           }
         },
         "required": [
           "range",
-          "checklist"
+          "timezone",
+          "checklist",
+          "needs_reply",
+          "needs_you",
+          "top_questions",
+          "accounts_needing_attention",
+          "messages_today",
+          "current",
+          "previous",
+          "top_intents",
+          "message_sentiment",
+          "comment_sentiment",
+          "top_posts"
         ],
         "title": "Overview",
+        "type": "object"
+      },
+      "OverviewPeriod": {
+        "description": "One period's flows (services/overview_stats.py has the definitions, shared with the weekly\ndigest): local days ``since`` to ``until``, both included, in the workspace's time zone.\nPercentages are 0 to 100 with one decimal, None when there is nothing to divide.",
+        "properties": {
+          "comments_received": {
+            "title": "Comments Received",
+            "type": "integer"
+          },
+          "conversations": {
+            "title": "Conversations",
+            "type": "integer"
+          },
+          "conversations_replied": {
+            "title": "Conversations Replied",
+            "type": "integer"
+          },
+          "first_responses": {
+            "title": "First Responses",
+            "type": "integer"
+          },
+          "handled_by_ai": {
+            "title": "Handled By Ai",
+            "type": "integer"
+          },
+          "handled_by_ai_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handled By Ai Rate"
+          },
+          "median_first_response_s": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median First Response S"
+          },
+          "messages_received": {
+            "title": "Messages Received",
+            "type": "integer"
+          },
+          "reply_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Rate"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "since",
+          "until",
+          "messages_received",
+          "conversations",
+          "conversations_replied",
+          "reply_rate",
+          "handled_by_ai",
+          "handled_by_ai_rate",
+          "first_responses",
+          "median_first_response_s",
+          "comments_received"
+        ],
+        "title": "OverviewPeriod",
+        "type": "object"
+      },
+      "OverviewPost": {
+        "description": "One of the posts with the most comments in the period; ``stats`` is the post's own\ncomment split, as on the Comments page.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "comments": {
+            "title": "Comments",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "media_type": {
+            "title": "Media Type",
+            "type": "string"
+          },
+          "media_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Url"
+          },
+          "permalink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permalink"
+          },
+          "posted_at": {
+            "format": "date-time",
+            "title": "Posted At",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "stats": {
+            "$ref": "#/components/schemas/CommentStats"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          }
+        },
+        "required": [
+          "id",
+          "social_account_id",
+          "media_type",
+          "caption",
+          "media_url",
+          "thumbnail_url",
+          "permalink",
+          "posted_at",
+          "comments",
+          "stats"
+        ],
+        "title": "OverviewPost",
         "type": "object"
       },
       "PlanList": {
@@ -8128,6 +8450,24 @@
           "keys"
         ],
         "title": "PushSubscriptionCreate",
+        "type": "object"
+      },
+      "QuestionCount": {
+        "properties": {
+          "asked": {
+            "title": "Asked",
+            "type": "integer"
+          },
+          "topic": {
+            "title": "Topic",
+            "type": "string"
+          }
+        },
+        "required": [
+          "topic",
+          "asked"
+        ],
+        "title": "QuestionCount",
         "type": "object"
       },
       "QueueInfo": {
@@ -9347,6 +9687,81 @@
           "spam"
         ],
         "title": "SentimentDistribution",
+        "type": "object"
+      },
+      "SentimentSplit": {
+        "description": "Messages (customer, received) or comments (not deleted) in the period by sentiment.\n``positive + neutral + negative`` are analysed and not spam; the shares are of that sum.",
+        "properties": {
+          "analysed": {
+            "title": "Analysed",
+            "type": "integer"
+          },
+          "negative": {
+            "title": "Negative",
+            "type": "integer"
+          },
+          "negative_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Negative Pct"
+          },
+          "neutral": {
+            "title": "Neutral",
+            "type": "integer"
+          },
+          "neutral_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Neutral Pct"
+          },
+          "positive": {
+            "title": "Positive",
+            "type": "integer"
+          },
+          "positive_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Positive Pct"
+          },
+          "spam": {
+            "title": "Spam",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "analysed",
+          "positive",
+          "neutral",
+          "negative",
+          "spam",
+          "positive_pct",
+          "neutral_pct",
+          "negative_pct"
+        ],
+        "title": "SentimentSplit",
         "type": "object"
       },
       "SkippedCounts": {
@@ -16811,6 +17226,7 @@
     },
     "/v1/w/{wid}/overview": {
       "get": {
+        "description": "Home's metrics over the last 7 or 30 days (today included) in the workspace's time zone,\nwith the same number of days before them for comparison.",
         "operationId": "get_overview",
         "parameters": [
           {

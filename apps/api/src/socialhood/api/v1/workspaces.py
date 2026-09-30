@@ -1,10 +1,9 @@
-"""Workspace settings (FR-ACC-03) and the Home overview (FR-ACC-04, FR-KB-06's open questions;
-metrics arrive in T9.1)."""
+"""Workspace settings (FR-ACC-03) and the Home overview (FR-HOME-01, UX-SCR-01: the metrics of
+services/overview.py, the onboarding checklist of FR-ACC-04 and FR-KB-06's open questions)."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Literal
 
 from fastapi import APIRouter
 from sqlalchemy import select
@@ -12,9 +11,9 @@ from sqlalchemy import select
 from socialhood.auth.deps import Admin, AnyMember, Session
 from socialhood.models.billing import Subscription
 from socialhood.repositories import users
-from socialhood.schemas.workspaces import Overview, WorkspaceOut, WorkspacePatch
+from socialhood.schemas.workspaces import Overview, OverviewRange, WorkspaceOut, WorkspacePatch
+from socialhood.services import overview as overview_service
 from socialhood.services import workspaces as service
-from socialhood.services.knowledge import gaps
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["workspaces"])
 
@@ -54,11 +53,9 @@ async def update_workspace(body: WorkspacePatch, ctx: Admin, session: Session) -
 
 
 @router.get("/overview", operation_id="get_overview")
-async def get_overview(
-    ctx: AnyMember, session: Session, range: Literal["7d", "30d"] = "7d"
-) -> Overview:
-    return Overview(
-        range=range,
-        checklist=await service.checklist(session, ctx.workspace),
-        knowledge_gaps_open=await gaps.count_open(session, now=datetime.now(UTC)),
+async def get_overview(ctx: AnyMember, session: Session, range: OverviewRange = "7d") -> Overview:
+    """Home's metrics over the last 7 or 30 days (today included) in the workspace's time zone,
+    with the same number of days before them for comparison."""
+    return await overview_service.overview(
+        session, ctx.workspace, range_=range, now=datetime.now(UTC)
     )

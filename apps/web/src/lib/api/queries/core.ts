@@ -38,12 +38,19 @@ export function useWorkspace(wid: string) {
   });
 }
 
+/**
+ * Home (FR-HOME-01). Real-time events that change its numbers refetch it (lib/realtime/events.ts);
+ * the interval covers the local day rolling over. Switching range keeps the last one on screen
+ * (never another workspace's).
+ */
 export function useOverview(wid: string, range: "7d" | "30d" = "7d") {
   const api = useApi();
   return useQuery<Overview>({
     queryKey: keys.overview(wid, range),
     queryFn: () =>
       unwrap(api.GET("/v1/w/{wid}/overview", { params: { path: { wid }, query: { range } } })),
+    placeholderData: (previous, previousQuery) => (previousQuery?.queryKey[1] === wid ? previous : undefined),
+    refetchInterval: 5 * 60_000,
   });
 }
 
