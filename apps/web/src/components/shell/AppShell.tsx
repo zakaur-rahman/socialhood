@@ -24,6 +24,7 @@ import {
   useWorkspaces,
 } from "@/lib/api/queries";
 import type { BillingState, Plan, Role, SocialAccount } from "@/lib/api/types";
+import { minWidth } from "@/lib/breakpoints";
 import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
 import { useReconnecting } from "@/lib/realtime/status";
 import { useMediaQuery, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
@@ -122,15 +123,20 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
   );
 }
 
+const SIDEBAR_COLLAPSED_KEY = "socialhood:sidebar-collapsed";
+
 /**
- * UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there (1024 px
- * elsewhere); above that the choice is remembered per browser. The loading shell uses it too, so
- * the sidebar has its final width before the workspace loads.
+ * UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there (`xl`; `lg`,
+ * 1024 px, elsewhere); above that the choice is remembered per browser. The loading shell has the
+ * same widths in CSS, so the sidebar has its final width before the workspace loads.
  */
 function useSidebarState(pathname: string, slug: string) {
   const inbox = activeSegment(pathname, slug) === "inbox";
-  const wide = useMediaQuery(inbox ? "(min-width: 1280px)" : "(min-width: 1024px)");
-  const [collapsedPreference, setCollapsedPreference] = useStoredFlag("socialhood:sidebar-collapsed");
+  // Server value: expanded (desktop). Below md the sidebar is hidden by CSS, so the guess only
+  // shows from 768 px, where desktops are the common case. (The shell mounts after the workspace
+  // loads, in the browser, so today this is a fallback.)
+  const wide = useMediaQuery(minWidth(inbox ? "xl" : "lg"), true);
+  const [collapsedPreference, setCollapsedPreference] = useStoredFlag(SIDEBAR_COLLAPSED_KEY);
   return {
     collapsed: !wide || collapsedPreference,
     toggle: wide ? () => setCollapsedPreference(!collapsedPreference) : undefined,
@@ -176,12 +182,15 @@ export function ShellFrame({
 /**
  * The shell while the workspace loads (UI-ISS-114): the same frame, with the phone top bar and the
  * sidebar at their final size, and the page's skeleton in `<main>`, so nothing moves when
- * GET /v1/workspaces answers.
+ * GET /v1/workspaces answers. This is what the server renders, so the sidebar's width comes from
+ * CSS breakpoints, which are right at the first paint; a media-query hook would paint its server
+ * guess until hydration (UI-ISS-059). Only a remembered "collapsed" waits for hydration.
  */
 export function ShellSkeleton() {
   const pathname = usePathname();
   const { slug } = useParams<{ slug: string }>();
-  const sidebar = useSidebarState(pathname, slug);
+  const inbox = activeSegment(pathname, slug) === "inbox";
+  const [collapsedPreference] = useStoredFlag(SIDEBAR_COLLAPSED_KEY);
   return (
     <ShellFrame
       topBar={
@@ -192,7 +201,10 @@ export function ShellSkeleton() {
       sidebar={
         <div
           aria-hidden
-          className={cn("h-full rounded-xl border border-line bg-panel", sidebar.collapsed ? "w-16" : "w-[232px]")}
+          className={cn(
+            "h-full w-16 rounded-xl border border-line bg-panel",
+            !collapsedPreference && (inbox ? "xl:w-[232px]" : "lg:w-[232px]"),
+          )}
         />
       }
     >

@@ -2,8 +2,16 @@
 
 import { useCallback, useMemo, useSyncExternalStore } from "react";
 
-/** A media query as React state; the server snapshot assumes a desktop screen. */
-export function useMediaQuery(query: string, serverValue = true): boolean {
+/**
+ * A media query as React state (widths from `lib/breakpoints`: `useMediaQuery(minWidth("md"), …)`).
+ *
+ * `serverValue` is the answer the server render and hydration use, before the browser can be
+ * asked. There is no default: each call chooses it and says why (DESIGN_SYSTEM §9): phone-first
+ * (`false` for a min-width query) where a desktop layout on a phone would cover content,
+ * desktop-first where the phone layout on a desktop would be the worse jump. Prefer CSS
+ * (`hidden md:flex`) when only visibility changes; it is right from the first paint.
+ */
+export function useMediaQuery(query: string, serverValue: boolean): boolean {
   const subscribe = useCallback(
     (onChange: () => void) => {
       const list = window.matchMedia(query);
