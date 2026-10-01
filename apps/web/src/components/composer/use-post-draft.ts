@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useLeaveWarning } from "@/components/settings/SaveBar";
 import { toApiError, type ApiError } from "@/lib/api/errors";
 import { useSaveComposerPost } from "@/lib/api/queries/scheduledPosts";
 import type { ScheduledPost, ScheduledPostDraft } from "@/lib/publishing/types";
@@ -54,7 +55,8 @@ type Patch = Partial<Draft> | ((draft: Draft) => Partial<Draft>);
  * post is PUT; saves never overlap, and an edit made during a save is sent after it. A scheduled
  * post doesn't autosave: its edits wait for Update schedule, because a PUT changes what will be
  * published. Pending autosaves are sent when the composer unmounts; closing the tab with unsaved
- * edits asks first.
+ * edits asks first, and so does leaving a scheduled post's unsaved edits through an in-app link
+ * (the sidebar, the breadcrumb, a notification).
  */
 export function usePostDraft(
   wid: string,
@@ -194,5 +196,8 @@ export function usePostDraft(
   }, [flush]);
 
   const dirty = status !== "saved";
+  // A draft's edits are saved on the way out (above); a scheduled post's would be lost, so leaving
+  // through an in-app link asks first (UI-ISS-022).
+  useLeaveWarning(dirty && !autosave);
   return { draft, update, flush, settle, reset, discard, status, error, dirty };
 }

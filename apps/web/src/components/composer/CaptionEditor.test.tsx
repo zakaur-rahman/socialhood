@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState, type ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -119,7 +119,34 @@ describe("CaptionField (UX-SCR-13, FR-PUB-10)", () => {
     await user.click(screen.getByRole("button", { name: "Write caption" }));
     await waitFor(() => expect(caption().value).toBe("Linen season is here ☀️ #linen"));
     expect(calls[0].body).toEqual({ mode: "write", brief: "linen dresses" });
-    expect(toast.success).toHaveBeenCalledWith("Caption written. Change anything you like.");
+    expect(toast.success).toHaveBeenCalledWith(
+      "Caption written. Change anything you like.",
+      expect.objectContaining({ duration: 10_000, action: expect.objectContaining({ label: "Undo" }) }),
+    );
+  });
+
+  it.each([
+    ["write", "Write caption", "Caption written. Change anything you like."],
+    ["improve", "Improve my caption", "Caption improved. Change anything you like."],
+  ])("Undo on the toast puts back the caption %s replaced, exactly", async (_mode, button, message) => {
+    const user = userEvent.setup();
+    const before = "  Linen dresses,\n\nback in stock 🌿  #linen #summer\n";
+    const onValue = vi.fn();
+    toast.success.mockClear();
+    renderWithApi(<Harness initial={before} onValue={onValue} />, {
+      handlers: { "POST /v1/w/:wid/ai/caption": () => json({ caption: "Linen season is here ☀️ #linen" }) },
+    });
+    await user.click(screen.getByRole("button", { name: "Write with AI" }));
+    await user.type(screen.getByRole("textbox", { name: "What's the post about?" }), "linen dresses");
+    await user.click(screen.getByRole("button", { name: button }));
+    await waitFor(() => expect(caption().value).toBe("Linen season is here ☀️ #linen"));
+
+    const [text, options] = toast.success.mock.calls.at(-1) as [string, { action: { label: string; onClick: () => void } }];
+    expect(text).toBe(message);
+    expect(options.action.label).toBe("Undo");
+    act(() => options.action.onClick());
+    expect(caption().value).toBe(before);
+    expect(onValue).toHaveBeenLastCalledWith(before);
   });
 
   it("improves the caption, and shows the credit limit when AI credits are used up", async () => {

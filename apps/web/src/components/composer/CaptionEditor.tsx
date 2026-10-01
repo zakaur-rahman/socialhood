@@ -3,7 +3,7 @@
 import { AlertCircle, Hash, Loader2, Plus, Sparkles, Tags, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { UpgradeAction } from "@/components/billing/UpgradeAction";
@@ -339,7 +339,10 @@ export function FirstCommentEditor({
   );
 }
 
-/** FR-PUB-02: write a caption from a brief, or improve the one written, in the brand voice. */
+/**
+ * FR-PUB-02: write a caption from a brief, or improve the one written, in the brand voice. The
+ * result replaces the caption; the success toast's Undo puts back the one it replaced (UI-ISS-082).
+ */
 function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string; onWritten: (caption: string) => void }) {
   const [open, setOpen] = useState(false);
   const [brief, setBrief] = useState("");
@@ -347,16 +350,27 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
   const [failure, setFailure] = useState<unknown>(null);
   const generate = useGenerateCaption(wid);
   const briefId = useId();
+  // The caption as it is when the result arrives (it can change while the AI writes), and the box
+  // to write to then and on Undo.
+  const latest = useRef({ caption, onWritten });
+  useEffect(() => {
+    latest.current = { caption, onWritten };
+  });
 
   const run = (mode: "write" | "improve") => {
     setError(null);
     setFailure(null);
     generate.mutate(mode === "write" ? { mode, brief: brief.trim() } : { mode, caption, brief: brief.trim() || null }, {
       onSuccess: (result) => {
-        onWritten(result.caption);
+        const previous = latest.current.caption;
+        latest.current.onWritten(result.caption);
         setOpen(false);
         setBrief("");
-        toast.success(mode === "write" ? "Caption written. Change anything you like." : "Caption improved. Change anything you like.");
+        toast.success(mode === "write" ? "Caption written. Change anything you like." : "Caption improved. Change anything you like.", {
+          // Toasts with an action stay 10 s or more (AGENT_CONTEXT §6).
+          duration: 10_000,
+          action: { label: "Undo", onClick: () => latest.current.onWritten(previous) },
+        });
       },
       // A 402 stays here beside the brief (INLINE_PLAN_LIMITS), with Upgrade opening the dialog.
       onError: (caught) => {
