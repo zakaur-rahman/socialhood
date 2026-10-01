@@ -61,7 +61,7 @@ import { meterLevel, type MeterLevel } from "./UsageMeter";
 import { useOpenPortal, useStartCheckout } from "./use-billing-actions";
 
 const BADGE: Record<StatusTone, string> = {
-  neutral: "bg-white/10 text-fg-secondary",
+  neutral: "bg-hover text-fg-secondary", // on white/10, fg-secondary was 4.45:1 (UI-ISS-007)
   brand: "bg-brand-soft text-brand-fg",
   warning: "bg-warning/15 text-warning",
   danger: "bg-danger/15 text-danger-fg",

@@ -51,7 +51,8 @@ export function PlatformStrip({
               onClick={() => onChange(choice)}
               className={cn(
                 "flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium",
-                active ? "bg-brand text-white shadow-sm" : "text-fg-secondary hover:bg-white/5 hover:text-fg",
+                // brand-strong, not brand: white on brand is 3.63:1 (UI-ISS-005); on brand-strong, 4.85:1.
+                active ? "bg-brand-strong text-on-brand shadow-sm" : "text-fg-secondary hover:bg-white/5 hover:text-fg",
               )}
             >
               {choice === "all" ? (

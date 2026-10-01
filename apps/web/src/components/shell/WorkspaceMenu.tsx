@@ -26,7 +26,7 @@ export function PlanBadge({ plan, className }: { plan: Plan; className?: string 
     <span
       className={cn(
         "shrink-0 rounded px-1.5 text-[10px] leading-4 font-semibold",
-        plan === "free" ? "bg-white/10 text-fg-secondary" : "bg-brand-soft text-brand-fg",
+        plan === "free" ? "bg-hover text-fg-secondary" : "bg-brand-soft text-brand-fg",
         className,
       )}
     >
@@ -61,7 +61,7 @@ export function WorkspaceMenu({
     <DropdownMenuTrigger
       aria-label={`Workspace menu: ${workspace.name}`}
       className={cn(
-        "relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-white/5 data-[state=open]:bg-white/5 motion-safe:transition-colors",
+        "relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-white/5 data-[state=open]:bg-white/5 motion-safe:transition-[color,background-color]",
         collapsed && "size-10 justify-center p-0",
       )}
     >
