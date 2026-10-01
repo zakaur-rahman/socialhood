@@ -134,7 +134,10 @@ describe("The Ask page (FR-AGT-01)", () => {
   it("at 375 px the thread history is a menu and the page fills the screen below the top bar", async () => {
     const user = userEvent.setup();
     renderWithApi(<AskPage />, { handlers: handlers() });
-    expect(screen.getByTestId("ask-page")).toHaveClass("h-[calc(100dvh-56px)]", "md:h-[calc(100dvh-32px)]");
+    // It fills what the shell's <main> leaves under the top bar and any banner (UI-006), not 100dvh minus a constant.
+    const page = screen.getByTestId("ask-page");
+    expect(page).toHaveClass("flex-1", "min-h-0");
+    expect(page).toHaveAttribute("data-shell-fill");
     // The column shows from 1024 px; below that the menu and New thread sit in the header.
     expect(screen.getByRole("complementary", { name: "Thread history" })).toHaveClass("hidden", "lg:flex");
     const header = screen.getByTestId("ask-header");
