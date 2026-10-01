@@ -1,15 +1,20 @@
+"use client"
+
 import * as React from "react"
+
+import { useFieldControl } from "@/components/ui/field"
+import { fieldControlClass } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
+/** Input's field look (surface, edge, text size, focus, invalid), grown to its content. */
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+  const fieldProps = useFieldControl(props)
   return (
     <textarea
       data-slot="textarea"
-      className={cn(
-        "flex field-sizing-content min-h-20 w-full rounded-lg border border-input bg-field px-3 py-2 text-sm leading-relaxed transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:bg-raised focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
-        className
-      )}
+      className={cn(fieldControlClass, "flex field-sizing-content min-h-20 py-2 leading-relaxed", className)}
       {...props}
+      {...fieldProps}
     />
   )
 }

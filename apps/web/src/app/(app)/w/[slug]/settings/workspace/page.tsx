@@ -200,7 +200,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                       disabled={!canEdit}
                       aria-invalid={!!errors.slug}
                       aria-describedby="slug-prefix"
-                      className="min-h-10 rounded-none border-0 bg-transparent focus-visible:ring-0"
+                      className="min-h-10 rounded-none border-0 bg-transparent focus-visible:outline-none"
                       {...form.register("slug")}
                     />
                   </div>
