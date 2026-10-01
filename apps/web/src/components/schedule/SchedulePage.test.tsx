@@ -393,6 +393,21 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     expect(within(day("Friday 2 October")).getByRole("link", { name: /^Linen styles/ })).toBeInTheDocument();
   });
 
+  it('Esc in "Move to…" puts focus back on the post\'s menu button (UX-A11Y-02)', async () => {
+    const user = userEvent.setup();
+    setup();
+    await card("p-linen");
+    const trigger = within(day("Tuesday 29 September")).getByRole("button", { name: "Actions for Linen styles" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Move to…" })).toHaveFocus());
+    await user.keyboard("{Enter}");
+    await screen.findByRole("dialog", { name: "Move to…" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it('"Move to…" refuses a time less than 5 minutes away and says so', async () => {
     const user = userEvent.setup();
     const { calls } = setup();
@@ -574,6 +589,21 @@ describe("Schedule page: List (UX-SCR-04, FR-PUB-14)", () => {
     await waitFor(() => expect(callsTo(calls, "POST", /bulk$/)).toHaveLength(1));
     expect(callsTo(calls, "POST", /bulk$/)[0].body).toEqual({ ids: ["p-linen", "p-lookbook"], action: "shift", shift_minutes: 120 });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("2 posts moved."));
+  });
+
+  it("Esc in Shift times puts focus back on its button (UX-A11Y-02)", async () => {
+    const user = userEvent.setup();
+    setup();
+    await card("p-linen");
+    await user.click(screen.getByRole("radio", { name: "List" }));
+    await user.click(await screen.findByRole("checkbox", { name: "Select Linen styles" }));
+    const shift = screen.getByRole("button", { name: "Shift times" });
+    shift.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("dialog", { name: "Shift times" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(shift).toHaveFocus());
   });
 
   it("deletes the selected posts after confirming, and reports skipped ones", async () => {

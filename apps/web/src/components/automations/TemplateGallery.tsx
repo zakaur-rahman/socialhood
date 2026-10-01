@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -81,6 +82,9 @@ export function TemplateGallery({
   );
   const [accountId, setAccountId] = useState<string | null>(accounts[0]?.id ?? null);
   const { start, pending, pendingKey } = useStartAutomation();
+  // No Radix trigger opens it (New automation, Browse all templates, a template card), so focus
+  // goes back by hand to what had it (UX-A11Y-02).
+  const returnFocus = useReturnFocus();
 
   const choose = (choice: Choice) => {
     if (accounts.length > 1) {
@@ -100,7 +104,7 @@ export function TemplateGallery({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-3xl">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-3xl" {...returnFocus}>
         {asking ? (
           <AccountQuestion
             choice={asking.choice}

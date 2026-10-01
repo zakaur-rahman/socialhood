@@ -114,7 +114,7 @@ export function TemplatePicker({
                       id={`template-param-${i}`}
                       value={value}
                       onChange={(event) => setParams(params.map((p, j) => (j === i ? event.target.value : p)))}
-                      className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm outline-none focus:bg-raised"
+                      className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm focus:bg-raised"
                     />
                   </div>
                 ))}

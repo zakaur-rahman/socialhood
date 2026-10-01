@@ -272,7 +272,7 @@ function DayRow({
                   add();
                 }
               }}
-              className="h-10 rounded-lg border border-line bg-field px-2 text-sm tabular-nums outline-none focus:bg-raised md:h-8"
+              className="h-10 rounded-lg border border-line bg-field px-2 text-sm tabular-nums focus:bg-raised md:h-8"
             />
             <Button variant="secondary" size="sm" className="min-h-10 md:min-h-8" onClick={add} disabled={!adding} aria-label={`Add time on ${name}`}>
               <Plus aria-hidden /> Add

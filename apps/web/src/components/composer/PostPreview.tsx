@@ -136,7 +136,7 @@ export function PostPreview({
               id="preview-account"
               value={account?.id ?? ""}
               onChange={(event) => setChosenId(event.target.value)}
-              className="h-10 rounded-lg border border-line bg-field px-2 text-sm outline-none focus:bg-raised md:h-9"
+              className="h-10 rounded-lg border border-line bg-field px-2 text-sm focus:bg-raised md:h-9"
             >
               {accounts.map((item) => (
                 <option key={item.id} value={item.id}>
