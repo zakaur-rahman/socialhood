@@ -22,7 +22,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-dvh flex-col">
       <a
         href="#main"
-        className="sr-only z-50 rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:inline-flex focus:min-h-10 focus:items-center"
+        className="sr-only z-50 rounded-lg bg-brand-strong text-sm font-medium text-on-brand focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:inline-flex focus:min-h-10 focus:items-center focus:px-4"
       >
         Skip to content
       </a>
