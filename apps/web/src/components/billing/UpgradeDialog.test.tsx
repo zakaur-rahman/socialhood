@@ -165,6 +165,18 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("Esc gives focus back to what had it, though no trigger opened it (UX-A11Y-02)", async () => {
+    const user = userEvent.setup();
+    setup();
+    const activate = screen.getByRole("button", { name: "Activate" });
+    await user.click(activate);
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() => expect(dialog).toContainElement(document.activeElement as HTMLElement));
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(activate).toHaveFocus();
+  });
+
   it("other errors don't open it, and a mutation can opt out", async () => {
     const user = userEvent.setup();
     const first = setup({ gate: () => problem(409, "conflict", "Busy") });
