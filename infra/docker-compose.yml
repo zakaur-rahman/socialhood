@@ -4,6 +4,9 @@ name: socialhood
 services:
   postgres:
     image: pgvector/pgvector:pg18
+    # 300, not the default 100: the dev stack holds about 25 connections and each isolated e2e or
+    # screenshot stack 22-37 (API and worker pools), so parallel agents ran out ("too many clients").
+    command: ["postgres", "-c", "max_connections=300"]
     environment:
       POSTGRES_USER: socialhood
       POSTGRES_PASSWORD: socialhood
