@@ -852,7 +852,8 @@ function AiReplyFields({
         {canManageKnowledge ? (
           <>
             {" "}
-            <Link href={`/w/${workspace.slug}/knowledge` as Route} className="text-brand-fg underline-offset-4 hover:underline">
+            {/* Underlined at rest: in a line of text, colour alone doesn't mark a link (WCAG 1.4.1). */}
+            <Link href={`/w/${workspace.slug}/knowledge` as Route} className="text-brand-fg underline underline-offset-4">
               Open Knowledge
             </Link>
           </>
