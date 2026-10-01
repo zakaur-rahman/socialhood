@@ -46,6 +46,8 @@ class SocialAccountOut(ResponseModel):
     last_synced_at: datetime | None = None
     capabilities: list[CapabilityName]
     sandbox: bool = False
+    # Its data is being deleted (C-067): disconnected, and gone once the purge finishes.
+    deleting: bool = False
 
 
 class SocialAccountList(ResponseModel):
@@ -108,6 +110,7 @@ class MarkRead(RequestModel):
 
 class DataDeletionStatus(ResponseModel):
     confirmation_code: str
-    status: Literal["received", "processing", "completed"]
+    # received (pending) → processing → completed; failed while a purge is being retried.
+    status: Literal["received", "processing", "completed", "failed"]
     created_at: datetime
     completed_at: datetime | None = None

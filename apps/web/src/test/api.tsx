@@ -159,6 +159,7 @@ export function account(overrides: Partial<SocialAccount> = {}): SocialAccount {
     token_expires_at: null,
     capabilities: ["dm_send", "dm_attachments"],
     sandbox: false,
+    deleting: false,
     ...overrides,
   };
 }

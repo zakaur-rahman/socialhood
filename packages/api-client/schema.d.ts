@@ -2097,7 +2097,22 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Disconnect Social Account */
+        /**
+         * Disconnect Social Account
+         * @description Owners and admins. Three uses (FR-CON-06, C-067):
+         *
+         *     - Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop
+         *       and automations pause; what was stored stays.
+         *     - Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects
+         *       the same way, then every row, file and cached key of the account is purged in the
+         *       background. Knowledge, workspace settings, billing and other accounts are kept.
+         *     - Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox
+         *       account; 409 for a live one (disconnect first, or use Disconnect and delete data).
+         *
+         *     ``confirm`` is the account's handle (with or without "@") or number, else its name; a
+         *     mismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``
+         *     true; it is gone from the list once done (a ``resync`` event follows).
+         */
         delete: operations["disconnect_social_account"];
         options?: never;
         head?: never;
@@ -4002,7 +4017,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "received" | "processing" | "completed";
+            status: "received" | "processing" | "completed" | "failed";
         };
         /**
          * DigestUnsubscribed
@@ -5839,6 +5854,11 @@ export interface components {
             capabilities: ("dm_send" | "dm_attachments" | "read_receipts" | "human_agent" | "templates" | "conversation_backfill" | "comments" | "private_reply" | "publish" | "post_insights" | "account_insights")[];
             /** Connected At */
             connected_at?: string | null;
+            /**
+             * Deleting
+             * @default false
+             */
+            deleting: boolean;
             /** Display Name */
             display_name?: string | null;
             /**
@@ -11240,6 +11260,7 @@ export interface operations {
         parameters: {
             query?: {
                 delete_data?: boolean;
+                confirm?: string | null;
             };
             header?: never;
             path: {

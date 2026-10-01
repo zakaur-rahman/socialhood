@@ -176,15 +176,37 @@ export function useResubscribeAccount(wid: string) {
   );
 }
 
+/** FR-CON-06: the token goes at once; what was stored for the account stays. */
 export function useDisconnectAccount(wid: string) {
   const api = useApi();
-  return useAccountMutation(wid, async ({ id, deleteData }: { id: string; deleteData: boolean }) => {
+  return useAccountMutation(wid, async ({ id }: { id: string }) => {
     const { error, response } = await api.DELETE("/v1/w/{wid}/social-accounts/{account_id}", {
-      params: { path: { wid, account_id: id }, query: { delete_data: deleteData } },
+      params: { path: { wid, account_id: id } },
     });
     if (!response.ok) throw toApiError(error, response.status);
     return null;
   });
+}
+
+/**
+ * C-067: delete an account's data with the handle or number the member typed (the API checks it
+ * too: 422 on `confirm`). "disconnect" is Disconnect and delete data for a connected account;
+ * "remove" is Remove for a disconnected or sandbox one (409 for a connected one). The account is
+ * listed with `deleting` until the purge removes it; its resync event then refetches everything.
+ */
+export function useDeleteAccountData(wid: string) {
+  const api = useApi();
+  return useAccountMutation(
+    wid,
+    async ({ id, confirm, mode }: { id: string; confirm: string; mode: "disconnect" | "remove" }) => {
+      const query = mode === "disconnect" ? { delete_data: true, confirm } : { confirm };
+      const { error, response } = await api.DELETE("/v1/w/{wid}/social-accounts/{account_id}", {
+        params: { path: { wid, account_id: id }, query },
+      });
+      if (!response.ok) throw toApiError(error, response.status);
+      return null;
+    },
+  );
 }
 
 /** TR-PL-07: a fake Instagram account for local development (404 unless the API enables it). */

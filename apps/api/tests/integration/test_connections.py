@@ -415,9 +415,7 @@ async def test_disconnect_deletes_the_token_and_clears_caches(
     await make_automation(engine, workspace_id=ws["id"], account_id=row["id"], status="draft")
 
     url = f"/v1/w/{ws['id']}/social-accounts/{row['id']}"
-    response = await client.delete(
-        url, params={"delete_data": "true"}, headers=clerk.headers(clerk_id)
-    )
+    response = await client.delete(url, headers=clerk.headers(clerk_id))
     assert response.status_code == 204
 
     [row] = await rows(engine)

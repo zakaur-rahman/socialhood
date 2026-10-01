@@ -27,6 +27,7 @@ import { ApiError, isPlanLimitError } from "@/lib/api/errors";
 import {
   useCompleteInstagramConnect,
   useCreateSandboxAccount,
+  useDeleteAccountData,
   useDisconnectAccount,
   useResubscribeAccount,
   useSocialAccounts,
@@ -51,7 +52,7 @@ const SANDBOX_TOOLS = process.env.NODE_ENV !== "production";
 /**
  * UX-SCR-07 Connections, F-03 (connect Instagram), F-04 (connect WhatsApp), F-05 (reconnect),
  * FR-CON-06 (disconnect). C-066: search and a segmented filter with counts over the list, and
- * two columns of account cards on wide screens.
+ * two columns of account cards on wide screens. C-067: Disconnect and delete data, and Remove.
  */
 export default function ConnectionsPage() {
   return (
@@ -70,6 +71,7 @@ function Connections() {
   const update = useUpdateAccount(wid);
   const resubscribe = useResubscribeAccount(wid);
   const disconnect = useDisconnectAccount(wid);
+  const deleteData = useDeleteAccountData(wid);
   const sandbox = useCreateSandboxAccount(wid);
   const whatsapp = useWhatsAppConnect(wid);
   const [confirmAuto, setConfirmAuto] = useState<SocialAccount | null>(null);
@@ -215,6 +217,7 @@ function Connections() {
                     reconnecting: account.platform === "whatsapp" ? whatsapp.busy : connect.isPending,
                     retrying: resubscribe.isPending && resubscribe.variables === account.id,
                     disconnecting: disconnect.isPending && disconnect.variables?.id === account.id,
+                    deleting: deleteData.isPending && deleteData.variables?.id === account.id,
                   }}
                   actions={{
                     onChange: (patch) =>
@@ -237,14 +240,25 @@ function Connections() {
                             : toast.error(saved?.last_error ?? "Couldn't subscribe to messages. Try again."),
                         onError: (error) => toast.error(errorMessage(error)),
                       }),
-                    onDisconnect: (deleteData) =>
+                    onDisconnect: () =>
                       disconnect.mutate(
-                        { id: account.id, deleteData },
+                        { id: account.id },
                         {
                           onSuccess: () => toast.success(`${handleOf(account)} disconnected`),
                           onError: (error) => toast.error(errorMessage(error)),
                         },
                       ),
+                    // C-067: the dialog stays open on a refusal; a typed-handle mismatch shows
+                    // under its field, anything else as a toast.
+                    onDelete: async (confirm, mode) => {
+                      try {
+                        await deleteData.mutateAsync({ id: account.id, confirm, mode });
+                      } catch (error) {
+                        if (!isConfirmError(error)) toast.error(errorMessage(error));
+                        throw error;
+                      }
+                      toast.success(`Deleting ${handleOf(account)} and its data`);
+                    },
                   }}
                 />
               ))}
@@ -274,6 +288,10 @@ function Connections() {
 
 function handleOf(account: SocialAccount): string {
   return account.username ? `@${account.username}` : (account.display_name ?? "Account");
+}
+
+function isConfirmError(error: unknown): boolean {
+  return error instanceof ApiError && error.errors.some((e) => e.field === "confirm");
 }
 
 function showConnectResult(result: ConnectResult | null, retry: () => void) {

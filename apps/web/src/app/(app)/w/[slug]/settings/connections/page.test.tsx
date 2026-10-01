@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { account, json, problem, renderWithApi, type Call } from "@/test/api";
+import { account, json, noContent, problem, renderWithApi, type Call } from "@/test/api";
 
 import ConnectionsPage from "./page";
 
@@ -151,11 +151,74 @@ describe("search and filters (C-066)", () => {
     expect(screen.getByRole("searchbox", { name: "Search accounts" })).toHaveValue("");
   });
 
+  it("lists an account being deleted as Deleting…, among the disconnected ones", async () => {
+    renderWithApi(<ConnectionsPage />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () =>
+          json({ items: [account({ id: "a9", display_name: "Gone Soon", status: "disconnected", deleting: true })] }),
+      },
+    });
+    const card = await screen.findByRole("article", { name: "Gone Soon" });
+    expect(within(card).getByText("Deleting…")).toBeInTheDocument();
+    expect(within(card).queryAllByRole("button")).toEqual([]);
+    const filters = screen.getByRole("radiogroup", { name: "Show accounts" });
+    expect(counts(filters)).toEqual(["All1", "Connected0", "Disconnected1", "Sandboxes0"]);
+  });
+
   it("names the page's tab in the breadcrumb and keeps the connect actions", async () => {
     renderList();
     const trail = await screen.findByRole("navigation", { name: "Breadcrumb" });
     expect(within(trail).getByText("Connections")).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("button", { name: /Connect Instagram/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Connect WhatsApp/ })).toBeInTheDocument();
+  });
+});
+
+describe("deleting an account's data (C-067)", () => {
+  it("Disconnect and delete data sends the typed handle, then the list shows Deleting…", async () => {
+    const user = userEvent.setup();
+    let deleting = false;
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () =>
+          json({ items: [account(deleting ? { status: "disconnected", deleting: true } : {})] }),
+        "DELETE /v1/w/:wid/social-accounts/:account_id": () => {
+          deleting = true;
+          return noContent();
+        },
+      },
+    });
+    const card = await screen.findByRole("article", { name: "Maple Bakery" });
+    await user.click(within(card).getByRole("button", { name: "Disconnect and delete data" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.type(within(dialog).getByLabelText(/to confirm/), "@maple.bakery");
+    await user.click(within(dialog).getByRole("button", { name: "Disconnect and delete" }));
+
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Deleting @maple.bakery and its data"));
+    const sent = calls.find((c) => c.method === "DELETE");
+    expect(sent?.path).toBe("/v1/w/w1/social-accounts/a1");
+    expect(Object.fromEntries(sent?.url.searchParams ?? [])).toEqual({
+      delete_data: "true",
+      confirm: "@maple.bakery",
+    });
+    expect(await within(card).findByText("Deleting…")).toBeInTheDocument();
+  });
+
+  it("a refusal other than the typed handle is a toast", async () => {
+    const user = userEvent.setup();
+    renderWithApi(<ConnectionsPage />, {
+      handlers: {
+        "GET /v1/w/:wid/social-accounts": () => json({ items: [account({ status: "disconnected" })] }),
+        "DELETE /v1/w/:wid/social-accounts/:account_id": () =>
+          problem(409, "conflict", "Disconnect this account first, or use Disconnect and delete data."),
+      },
+    });
+    const card = await screen.findByRole("article", { name: "Maple Bakery" });
+    await user.click(within(card).getByRole("button", { name: "Remove" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.type(within(dialog).getByLabelText(/to confirm/), "maple.bakery");
+    await user.click(within(dialog).getByRole("button", { name: "Remove account" }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
   });
 });

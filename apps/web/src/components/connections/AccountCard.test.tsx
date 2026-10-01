@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { ApiError } from "@/lib/api/errors";
 import type { SocialAccount } from "@/lib/api/types";
 
 import { AccountCard, type AccountActions } from "./AccountCard";
@@ -22,13 +23,20 @@ const base: SocialAccount = {
   token_expires_at: "2026-11-27T10:00:00Z",
   capabilities: ["dm_send"],
   sandbox: false,
+  deleting: false,
   last_synced_at: null,
 };
 
-const idle = { saving: false, reconnecting: false, retrying: false, disconnecting: false };
+const idle = { saving: false, reconnecting: false, retrying: false, disconnecting: false, deleting: false };
 
 function actions(): AccountActions {
-  return { onChange: vi.fn(), onReconnect: vi.fn(), onRetrySubscribe: vi.fn(), onDisconnect: vi.fn() };
+  return {
+    onChange: vi.fn(),
+    onReconnect: vi.fn(),
+    onRetrySubscribe: vi.fn(),
+    onDisconnect: vi.fn(),
+    onDelete: vi.fn().mockResolvedValue(undefined),
+  };
 }
 
 function renderCard(account: Partial<SocialAccount> = {}, props: { canManage?: boolean; plan?: "free" | "pro" } = {}) {
@@ -113,26 +121,106 @@ describe("AccountCard (UX-SCR-07)", () => {
     expect(within(card).queryByRole("switch", { name: /Hide spam comments/ })).toBeNull();
   });
 
-  it("a disconnected card keeps only Reconnect", () => {
+  it("a disconnected card offers Reconnect and Remove (C-067)", () => {
     const { card } = renderCard({ status: "disconnected" });
-    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual(["Reconnect"]);
+    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual(["Reconnect", "Remove"]);
   });
 
-  it("asks before disconnecting and passes the delete-data choice (FR-CON-06)", async () => {
+  it("a connected card offers Disconnect and Disconnect and delete data; a sandbox, Remove", () => {
+    const { card } = renderCard();
+    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual([
+      "Disconnect",
+      "Disconnect and delete data",
+    ]);
+  });
+
+  it("a connected sandbox can be removed straight away", () => {
+    const { card } = renderCard({ sandbox: true });
+    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual(["Disconnect", "Remove"]);
+  });
+
+  it("asks before disconnecting, and keeps the data (FR-CON-06)", async () => {
     const { card, handlers } = renderCard();
     await userEvent.click(within(card).getByRole("button", { name: "Disconnect" }));
     const dialog = await screen.findByRole("alertdialog");
     expect(within(dialog).getByText("Disconnect @maple.bakery?")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("checkbox"));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Disconnect and delete" }));
-    expect(handlers.onDisconnect).toHaveBeenCalledWith(true);
+    expect(within(dialog).getByText(/stay here for reference/)).toBeInTheDocument();
+    expect(within(dialog).queryByRole("checkbox")).toBeNull();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Disconnect" }));
+    expect(handlers.onDisconnect).toHaveBeenCalledOnce();
+    expect(handlers.onDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("deleting an account's data (C-067)", () => {
+  async function open(card: HTMLElement, trigger: string) {
+    const user = userEvent.setup();
+    await user.click(within(card).getByRole("button", { name: trigger }));
+    const dialog = await screen.findByRole("alertdialog");
+    return { user, dialog, input: within(dialog).getByLabelText(/to confirm/) };
+  }
+
+  it("Disconnect and delete data says what goes and what stays, and needs the handle typed", async () => {
+    const { card, handlers } = renderCard();
+    const { user, dialog, input } = await open(card, "Disconnect and delete data");
+    expect(within(dialog).getByText("Disconnect @maple.bakery and delete its data?")).toBeInTheDocument();
+    const deleted = within(dialog).getByRole("region", { name: "Deleted" });
+    expect(within(deleted).getByText("Its conversations, messages and contacts")).toBeInTheDocument();
+    const kept = within(dialog).getByRole("region", { name: "Kept" });
+    expect(within(kept).getByText("Your knowledge base and AI settings")).toBeInTheDocument();
+    expect(within(kept).getByText("Workspace settings, members and billing")).toBeInTheDocument();
+
+    const confirm = within(dialog).getByRole("button", { name: "Disconnect and delete" });
+    expect(confirm).toBeDisabled();
+    await user.type(input, "maple");
+    expect(confirm).toBeDisabled();
+    await user.clear(input);
+    await user.type(input, "MAPLE.bakery");
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+    expect(handlers.onDelete).toHaveBeenCalledWith("MAPLE.bakery", "disconnect");
+    await vi.waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   });
 
-  it("keeps data by default", async () => {
+  it("Remove uses the same dialog; a WhatsApp number can be typed with any spacing", async () => {
+    const { card, handlers } = renderCard({
+      status: "disconnected",
+      platform: "whatsapp",
+      username: null,
+      phone_number: "+91 98765 43210",
+    });
+    const { user, dialog, input } = await open(card, "Remove");
+    expect(within(dialog).getByText("Remove Maple Bakery?")).toBeInTheDocument();
+    expect(within(dialog).getByText("+91 98765 43210")).toBeInTheDocument();
+    await user.type(input, "919876543210");
+    await user.click(within(dialog).getByRole("button", { name: "Remove account" }));
+    expect(handlers.onDelete).toHaveBeenCalledWith("919876543210", "remove");
+  });
+
+  it("shows the API's refusal of the typed handle under the field and stays open", async () => {
     const { card, handlers } = renderCard();
-    await userEvent.click(within(card).getByRole("button", { name: "Disconnect" }));
-    const dialog = await screen.findByRole("alertdialog");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Disconnect" }));
-    expect(handlers.onDisconnect).toHaveBeenCalledWith(false);
+    vi.mocked(handlers.onDelete).mockRejectedValueOnce(
+      new ApiError({
+        type: "https://api.socialhood.com/errors/validation_error",
+        title: "The request is not valid",
+        status: 422,
+        code: "validation_error",
+        errors: [{ field: "confirm", message: "Type @maple.bakery exactly as shown to confirm." }],
+      }),
+    );
+    const { user, dialog, input } = await open(card, "Disconnect and delete data");
+    await user.type(input, "@maple.bakery");
+    await user.click(within(dialog).getByRole("button", { name: "Disconnect and delete" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Type @maple.bakery exactly as shown to confirm.");
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+  });
+
+  it("a deleting account says so and offers nothing", () => {
+    const { card } = renderCard({ status: "disconnected", deleting: true });
+    expect(card).toHaveAttribute("data-status", "deleting");
+    expect(within(card).getByText("Deleting…")).toBeInTheDocument();
+    expect(within(card).getByRole("status")).toHaveTextContent("It disappears from this list when done.");
+    expect(within(card).queryAllByRole("button")).toEqual([]);
+    expect(within(card).queryByRole("switch")).toBeNull();
   });
 });

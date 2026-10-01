@@ -2,6 +2,19 @@
 
 Both send a form field ``signed_request`` signed with an app secret. Which secret signs the
 Instagram Login callbacks is a T0.9 question, so both the Instagram and Meta app secrets are tried.
+The payload's ``user_id`` is the person who connected their account through Instagram (or
+Facebook) Login: their accounts are found in every workspace by that id (the tenant bypass, in
+webhooks/routing.py).
+
+- Deauthorize: they removed our app. Tokens are deleted, the accounts disconnected, the owners
+  told; what was stored stays.
+- Data deletion: they asked Meta to delete their data. A ``data_deletion_requests`` row with a
+  confirmation code is stored ``received`` and ``delete_platform_user_data`` queued; the answer
+  is Meta's ``{url, confirmation_code}``, the url being the public status page. The job
+  disconnects every one of those accounts and purges each (C-067: its conversations, messages,
+  comments, contacts, posts, automations, files and the account itself; jobs/tasks/privacy.py
+  and services/account_deletion.py). The status goes received, then processing, then completed
+  once every purge has finished; failed while one is retried.
 """
 
 from __future__ import annotations
@@ -15,7 +28,6 @@ from fastapi.responses import JSONResponse
 from socialhood.auth.deps import Session
 from socialhood.db.tenancy import workspace_scope
 from socialhood.errors import ApiError
-from socialhood.jobs.enqueue import enqueue
 from socialhood.models.platform import DataDeletionRequest
 from socialhood.observability.logging import get_logger
 from socialhood.repositories import social_accounts as accounts
@@ -70,8 +82,8 @@ async def data_deletion(
         DataDeletionRequest(confirmation_code=code, platform="instagram", platform_user_id=user_id)
     )
     await session.commit()
-    from socialhood.jobs.tasks.privacy import delete_platform_user_data
+    from socialhood.jobs.tasks.privacy import enqueue_request
 
-    await enqueue(delete_platform_user_data, key=f"deletion:{code}", confirmation_code=code)
+    await enqueue_request(code)  # a lost enqueue is re-queued by sweep_deletions
     web = (settings.web_base_url or "http://localhost:3000").rstrip("/")
     return JSONResponse({"url": f"{web}/data-deletion?code={code}", "confirmation_code": code})

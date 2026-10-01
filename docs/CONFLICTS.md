@@ -1074,3 +1074,67 @@ Behaviour, routes, permissions and API calls are unchanged except where listed u
   the SOC-2 and audit cards, "Download all CSV", "Auto-renew enabled" and "Encrypted Stripe
   billing", the policy version and 2FA link, screenshots, a retention label (not a setting),
   version badges, Audit Log, Save All, disclosure reach, sync health and custom slug routing.
+
+## C-067 · Deleting a connected account's data (owner-approved, feature/account-data-deletion)
+The owner approved permanently deleting one account's data, with safeguards. It fills three
+gaps: Disconnect's `delete_data` deleted nothing (Q-014's TODO), Meta's data-deletion callback
+removed only the token and Meta's raw events, and backup exports had no retention.
+- One purge, `purge_account_data(workspace_id, account_id)` (services/account_deletion.py; bulk
+  lane, key and lock `acctpurge:{id}`, RECOVERY RETRY), idempotent and resumable in committed
+  batches like purge_workspace. Its tables come from the schema: every table reachable from
+  social_accounts through ON DELETE CASCADE keys, which is what deleting the row would take
+  (repositories/account_deletion.account_tables). Today: conversations, messages,
+  message_analyses, reply_suggestions, ai_decisions, scheduled_messages, contacts, comments,
+  comment_analyses, media_items, post_metric_snapshots, account_daily_metrics, automations,
+  automation_keywords, automation_posts, automation_runs (the private-reply queue),
+  scheduled_post_targets and posting_slots. tests/unit/test_account_purge_tables.py fails for an
+  `*account_id` column without a key to social_accounts, or a key into these tables that would
+  block the delete. Then the webhook payloads routed to the workspace for its platform id, its
+  Valkey keys (`*{account_id}*`: rate buckets, profile and template caches) and the account row.
+- Files: those its messages own (purpose `message` or `inbound`, named in its messages' or
+  scheduled messages' attachments) are deleted from Cloudinary by public id (media purger
+  `delete_files`), before the messages, so they can be found. A file anything else names (another
+  account's message or scheduled message, a library post, a knowledge file, another account's
+  automation; every foreign key to media_assets is checked) is kept, and library and knowledge
+  files never count as a message's.
+- Scheduled posts: when deletion starts, the account's pending targets are canceled and each
+  post's status follows F-13 (a post whose only account it was becomes canceled). After the
+  purge, a post left with no account that had published only there is deleted with that
+  account's posts; one still scheduled or publishing is canceled; drafts stay.
+- Realtime: `social_account.updated` when deletion starts (`deleting: true`), and when it ends the
+  workspace's event stream is cleared (its entries can carry the account's messages) and a
+  `resync` published, so every open page refetches. No new event type.
+- Audit: structlog `account_data_purged` (and `account_purge_continues` for a run that hands
+  over) with workspace, account, platform, requester (null for Meta) and rows per table; never
+  content or confirmation codes.
+- Kept: knowledge, AI settings, workspace settings, members, billing, usage counters, agent runs,
+  notifications and other accounts. Plan slots count live accounts (billing/entitlements.py), so
+  a deleting account stops counting at once; its active automations pause.
+- API: `DELETE …/social-accounts/{id}` keeps its path and 204 and gains `confirm`. Without
+  `delete_data` or `confirm` it disconnects as before. `delete_data=true&confirm=` disconnects,
+  then purges. `confirm=` alone is Remove, for a disconnected or sandbox account; 409 for a live
+  one ("Disconnect this account first, or use Disconnect and delete data."). One route because
+  the spec gives Remove the disconnect route's path. Owners and admins (as before). `confirm` is
+  the handle with or without "@" in any case, else the number with any spacing, else the name;
+  422 on `confirm` otherwise. Asking again while it deletes is a 204 that re-queues the purge.
+  Covered by the per-user rate limit like every signed-in route.
+- `SocialAccountOut.deleting`. Migration 0017: social_accounts.deletion_requested_at and
+  deletion_requested_by_user_id (SET NULL), and data_deletion_requests.status takes `failed`. An
+  account being deleted can't be reconnected in that workspace until it's gone (409), since its
+  row would come back and be purged; resubscribe refuses it too.
+- Meta's callback (FR-PRV-01, F-16): `delete_platform_user_data` finds every account with the
+  signed request's user id (app-scoped or platform id) in every workspace (tenant bypass, as
+  before), disconnects each (owners told, as for deauthorize), marks it deleting, queues its
+  purge and deletes Meta's raw events for it. Status: received, then processing, then completed
+  when the last purge finishes (each purge settles the requests naming its account); failed while
+  a purge or the job is retried, back to processing on the retry. A request with no account left
+  completes at once. The job now retries with backoff; sweep_deletions re-queues requests still
+  received or failed and settles finished ones, and re-queues accounts still deleting, alerting
+  after 6 hours.
+- Web: Settings → Connections cards get Disconnect and delete data (connected) and Remove
+  (disconnected, or a sandbox), one dialog listing what is deleted and kept with the handle or
+  number typed to confirm; "Deleting…" with no actions while it runs. Disconnect's checkbox is
+  gone: plain Disconnect keeps the data and says so. /data-deletion shows the failed status.
+- Backups: exports are kept 30 days, then deleted. No script in the repo makes or keeps exports,
+  so docs/ops/backup.md makes it a required setting (one bucket, a 30-day lifecycle rule, a
+  monthly check). The privacy policy states it, and that deletion covers the account's data.

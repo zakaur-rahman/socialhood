@@ -72,9 +72,10 @@ class WebhookEvent(IdMixin, Base):
 
 
 class DeletionStatus(StrEnum):
-    RECEIVED = "received"
-    PROCESSING = "processing"
-    COMPLETED = "completed"
+    RECEIVED = "received"  # pending: the job hasn't started
+    PROCESSING = "processing"  # in progress: accounts disconnected, their purges running
+    COMPLETED = "completed"  # every purge finished
+    FAILED = "failed"  # a purge failed and is being retried (back to processing on the retry)
 
 
 class DataDeletionRequest(IdMixin, Base):
