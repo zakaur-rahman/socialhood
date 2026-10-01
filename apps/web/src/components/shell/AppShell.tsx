@@ -159,7 +159,7 @@ export function ShellFrame({
     <div className="flex min-h-dvh flex-col has-[[data-shell-fill]]:h-dvh md:flex-row">
       <a
         href="#main"
-        className="sr-only rounded-lg bg-panel text-sm font-medium text-fg focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:inline-flex focus:min-h-10 focus:items-center focus:px-4"
+        className="sr-only rounded-lg bg-brand-strong text-sm font-medium text-on-brand focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:inline-flex focus:min-h-10 focus:items-center focus:px-4"
       >
         Skip to content
       </a>

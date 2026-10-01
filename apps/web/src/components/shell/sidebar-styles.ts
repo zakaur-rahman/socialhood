@@ -8,7 +8,9 @@ import { cn } from "@/lib/utils";
 export function sidebarRowClass({ active = false, collapsed }: { active?: boolean; collapsed: boolean }): string {
   return cn(
     "relative flex h-9 w-full items-center gap-3 rounded-lg px-3 text-sm font-medium text-fg-secondary pointer-coarse:h-10",
-    "hover:bg-white/5 hover:text-fg motion-safe:transition-colors",
+    // Colours only: transition-colors includes outline-color, which faded the focus outline in from
+    // grey (A11Y-023); the outline must appear in brand at once (DESIGN_SYSTEM §7.3).
+    "hover:bg-white/5 hover:text-fg motion-safe:transition-[color,background-color]",
     active &&
       "bg-raised text-fg hover:bg-raised before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-brand",
     collapsed && "size-10 justify-center gap-0 px-0 pointer-coarse:size-10",

@@ -19,14 +19,15 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     expect(screen.getByRole("button", { name: "WhatsApp" })).toBeInTheDocument();
   });
 
+  // UI-002: the fill is brand-strong with on-brand text (4.85:1), not brand (3.63:1, UI-ISS-005).
   it("the active segment is filled; the others stay on the track", () => {
     const { rerender } = render(<PlatformStrip platforms={["instagram", "whatsapp"]} value="all" onChange={() => {}} />);
-    expect(screen.getByRole("button", { name: "All" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("button", { name: "All" })).toHaveClass("bg-brand-strong", "text-on-brand");
     rerender(<PlatformStrip platforms={["instagram", "whatsapp"]} value="instagram" onChange={() => {}} />);
     expect(screen.getByRole("group")).toHaveAttribute("data-active", "instagram");
-    expect(screen.getByRole("button", { name: "Instagram" })).toHaveClass("bg-brand");
+    expect(screen.getByRole("button", { name: "Instagram" })).toHaveClass("bg-brand-strong", "text-on-brand");
     expect(screen.getByRole("button", { name: "Instagram" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "WhatsApp" })).not.toHaveClass("bg-brand");
+    expect(screen.getByRole("button", { name: "WhatsApp" })).not.toHaveClass("bg-brand-strong");
   });
 
   it("labels every segment and reports the choice", async () => {

@@ -69,8 +69,12 @@ export function PlanCards({
             aria-current={isCurrent ? "true" : undefined}
             className={cn(
               "relative flex flex-col rounded-2xl border bg-panel p-5 md:p-6",
-              isCurrent ? "border-brand ring-1 ring-brand-line shadow-lg shadow-brand/10" : "border-line",
-              !offer.available && !isCurrent && "opacity-80",
+              // A plan that isn't available yet dims its edge and fill, never its text (UI-ISS-007).
+              isCurrent
+                ? "border-brand ring-1 ring-brand-line shadow-lg shadow-brand/10"
+                : offer.available
+                  ? "border-line"
+                  : "border-line-subtle bg-panel/50",
             )}
           >
             {isCurrent ? (
@@ -81,7 +85,7 @@ export function PlanCards({
               {isCurrent ? (
                 <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-fg">Current plan</span>
               ) : !offer.available ? (
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-medium text-fg-secondary">Coming soon</span>
+                <span className="rounded-full bg-hover px-2 py-0.5 text-xs font-medium text-fg-secondary">Coming soon</span>
               ) : null}
             </div>
             <p className="text-xs text-fg-secondary">{TAGLINE[offer.plan]}</p>

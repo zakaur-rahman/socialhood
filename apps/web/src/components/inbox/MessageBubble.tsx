@@ -100,7 +100,8 @@ export function MessageBubble({
     pending && "opacity-80",
     failed && "bg-danger-fill text-white",
   );
-  const metaClass = outbound && !nativeApp && !sticker ? "text-white/75" : "text-fg-secondary";
+  // On a coloured bubble, labels are on-brand at full strength: white/75 was 3.46:1 at the gradient's light end.
+  const metaClass = outbound && !nativeApp && !sticker ? "text-on-brand" : "text-fg-secondary";
 
   // Written by the AI (an auto reply) or an automation: "AI Assisted" under the bubble (C-063).
   const assisted =
@@ -162,7 +163,7 @@ export function MessageBubble({
               )}
               data-testid="unsupported-card"
             >
-              <span className={outbound && !nativeApp ? "text-white/90" : "text-fg-secondary"}>Unsupported message format</span>
+              <span className={outbound && !nativeApp ? "text-on-brand" : "text-fg-secondary"}>Unsupported message format</span>
               <a
                 href={platform === "instagram" ? "https://www.instagram.com/direct/inbox/" : "https://web.whatsapp.com/"}
                 target="_blank"

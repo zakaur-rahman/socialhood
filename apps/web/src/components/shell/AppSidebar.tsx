@@ -216,7 +216,7 @@ function AskCard({ ask, collapsed, hint }: { ask: ReactNode; collapsed: boolean;
       data-testid="ask-card"
       className={cn(
         "relative mt-3 flex w-full items-center gap-2.5 rounded-xl border border-brand-line bg-brand-soft p-2",
-        "hover:border-brand/60 hover:bg-brand/20 motion-safe:transition-colors",
+        "hover:border-brand/60 hover:bg-brand/20 motion-safe:transition-[color,background-color,border-color]",
         "has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-brand",
       )}
     >
@@ -254,7 +254,7 @@ function NavSection({ group, collapsed, children }: { group: NavGroup; collapsed
           </span>
         </>
       ) : (
-        <p id={id} className="mb-1 px-3 text-[11px] leading-4 font-semibold tracking-[0.08em] text-fg-secondary/70 uppercase">
+        <p id={id} className="mb-1 px-3 text-[11px] leading-4 font-semibold tracking-[0.08em] text-fg-secondary uppercase">
           {group.label}
         </p>
       )}
