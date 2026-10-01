@@ -106,6 +106,12 @@ ships this week."` for every customer message, and "can't answer" for one contai
 | F-13 Schedule and publish | `f13-schedule-post.spec.ts` | account, library photo and caption fill the checklist and the live preview; Schedule sends the chosen UTC time and the post shows as Scheduled and in the list view; Publish now goes through the jobs to Published, and the post reaches Comments |
 | F-15 Upgrade | `f15-upgrade.spec.ts` | a fourth automation on Free gets 402 and the dialog "Automation limit reached", "Free includes 3 active automations", the Pro offer and price; "Start 7-day trial" goes to the fake Dodo and back; the page waits ("Confirming your payment…") and stays Free until a `subscription.active` webhook, signed with the run's `DODO_WEBHOOK_SECRET`, arrives; then "Your Pro trial has started", the limits say 50, and the fourth automation activates |
 
+## Landing page screenshots
+
+The landing page's product screenshots (`apps/web/public/marketing/*.webp`) come from this stack
+too: with it up (`--serve`), `pnpm shots:marketing` in `apps/web` seeds a demo workspace and
+captures them. See `apps/web/scripts/marketing-shots/README.md`.
+
 ## Writing tests
 
 - Import `test` and `expect` from `./support/fixtures`. Fixtures: `workspace` (a fresh

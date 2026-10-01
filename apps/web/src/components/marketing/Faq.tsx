@@ -11,13 +11,13 @@ import { Container, SectionHeading } from "./primitives";
  */
 export function Faq() {
   return (
-    <section id={SECTION_IDS.faq} aria-labelledby="faq-title" className="scroll-mt-20 border-t border-line-subtle bg-panel/40 py-20 sm:py-24">
+    <section id={SECTION_IDS.faq} aria-labelledby="faq-title" className="scroll-mt-24 border-t border-line-subtle py-20 sm:py-24">
       <Container>
         <SectionHeading id="faq-title" eyebrow="FAQ" title="Common questions" />
-        <div className="mx-auto mt-12 max-w-3xl divide-y divide-line rounded-2xl border border-line bg-canvas">
+        <div data-reveal className="mx-auto mt-12 max-w-3xl divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel/40">
           {FAQ.map((item) => (
             <details key={item.question} className="group">
-              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-4 px-5 py-3 text-left text-base font-medium [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-4 px-5 py-3 text-left text-base font-medium transition-colors duration-150 hover:bg-raised/50 focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
                 <h3 className="flex-1 text-base font-medium">{item.question}</h3>
                 <ChevronDown
                   className="size-5 shrink-0 text-fg-secondary transition-transform group-open:rotate-180 motion-reduce:transition-none"

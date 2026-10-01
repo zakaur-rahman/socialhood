@@ -29,11 +29,12 @@ export function Logo({ className }: { className?: string }) {
 }
 
 // Focus rings come from globals.css (:focus-visible, the brand outline).
+// C-068: a small lift on hover, only without reduced motion.
 const CTA_BASE =
-  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium whitespace-nowrap transition-[filter,background-color,color]";
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium whitespace-nowrap transition-[filter,background-color,color,translate,box-shadow] duration-150 motion-safe:hover:-translate-y-0.5";
 
 export const CTA_CLASS = {
-  primary: cn(CTA_BASE, "bg-brand-gradient text-white shadow-lg shadow-brand/25 hover:brightness-110"),
+  primary: cn(CTA_BASE, "bg-brand-gradient text-white shadow-lg shadow-brand/25 hover:shadow-brand/40 hover:brightness-110"),
   secondary: cn(CTA_BASE, "border border-line-strong bg-raised text-fg hover:bg-raised-hover"),
   ghost: cn(CTA_BASE, "text-fg-secondary hover:bg-raised hover:text-fg"),
 } as const;

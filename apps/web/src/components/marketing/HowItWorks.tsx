@@ -1,49 +1,65 @@
+import Image from "next/image";
+
 import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
 
+import { Timeline } from "./effects/timeline";
 import { Container, CtaLink, SectionHeading } from "./primitives";
+import { SHOTS, type Shot } from "./shots";
 
-const STEPS = [
+const STEPS: { title: string; body: string; shot: Shot; maxWidth: string }[] = [
   {
     title: "Connect your accounts",
     body: "Connect your Instagram professional account with Instagram's own login, and your WhatsApp Business number through Meta's official setup. Social Hood never asks for your password.",
+    shot: SHOTS.connect,
+    maxWidth: "max-w-xl",
   },
   {
     title: "Add your knowledge",
     body: "Prices, products, delivery, returns, timings and FAQs, as text, a link or a file. Test a question to see how the AI would answer before customers ask.",
+    shot: SHOTS.knowledge,
+    maxWidth: "max-w-md",
   },
   {
     title: "Let the AI draft or reply",
     body: "Start with Suggest and send the drafts you like. On Pro, switch an account to Auto: the AI replies when it's confident and hands everything else to you.",
+    shot: SHOTS.aiDraft,
+    maxWidth: "max-w-lg",
   },
 ];
 
+/** The three setup steps on a timeline whose rail fills as they scroll past, each with its real screen. */
 export function HowItWorks() {
   return (
     <section
       id={SECTION_IDS.howItWorks}
       aria-labelledby="how-title"
-      className="scroll-mt-20 border-t border-line-subtle bg-panel/40 py-20 sm:py-24"
+      className="scroll-mt-24 border-t border-line-subtle bg-panel/30 py-20 sm:py-24"
     >
       <Container>
-        <SectionHeading id="how-title" eyebrow="How it works" title="Set up in three steps" />
-        <ol className="mt-14 grid gap-4 md:grid-cols-3">
-          {STEPS.map((step, index) => (
-            <li key={step.title} className="relative rounded-2xl border border-line bg-canvas p-6">
-              <span
-                aria-hidden
-                className="bg-brand-gradient grid size-9 place-items-center rounded-full text-sm font-semibold text-white tabular-nums"
-              >
-                {index + 1}
-              </span>
-              <h3 className="mt-4 text-base font-semibold">
-                <span className="sr-only">Step {index + 1}: </span>
-                {step.title}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-fg-secondary">{step.body}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="mt-10 flex justify-center">
+        <SectionHeading id="how-title" eyebrow="How it works" title="Set up in three steps" intro="Screens from the app, with example data." />
+        <div className="mx-auto mt-14 max-w-5xl">
+          <Timeline
+            items={STEPS.map((step) => ({
+              title: step.title,
+              content: (
+                <div data-reveal>
+                  <p className="max-w-xl text-base leading-relaxed text-fg-secondary">{step.body}</p>
+                  <div className={`mt-6 overflow-hidden rounded-2xl border border-line bg-panel p-1.5 shadow-2xl shadow-black/40 ${step.maxWidth}`}>
+                    <Image
+                      src={step.shot.src}
+                      width={step.shot.width}
+                      height={step.shot.height}
+                      alt={step.shot.alt}
+                      sizes="(min-width: 768px) 36rem, calc(100vw - 6rem)"
+                      className="h-auto w-full rounded-xl"
+                    />
+                  </div>
+                </div>
+              ),
+            }))}
+          />
+        </div>
+        <div className="mt-14 flex justify-center">
           <CtaLink href={SIGN_UP_PATH} prefetch={false}>
             Start free
           </CtaLink>

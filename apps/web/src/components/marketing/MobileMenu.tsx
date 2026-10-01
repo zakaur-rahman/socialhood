@@ -10,8 +10,8 @@ import { NAV_LINKS } from "@/lib/marketing/site";
 import { HeaderAuth } from "./HeaderAuth";
 
 /**
- * The phone menu (below md): a disclosure under the header with the section links and the account
- * actions. Escape or following a link closes it; Escape returns focus to the button.
+ * The phone menu (below md): a disclosure under the header bar with the section links and the
+ * account actions. Escape or following a link closes it; Escape returns focus to the button.
  */
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -49,16 +49,16 @@ export function MobileMenu() {
         aria-controls={panelId}
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((value) => !value)}
-        className="grid size-11 place-items-center rounded-lg text-fg hover:bg-raised"
+        className="grid size-11 place-items-center rounded-lg text-fg transition-colors duration-150 hover:bg-raised"
       >
         {open ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
       </button>
       <div
         id={panelId}
         hidden={!open}
-        className="absolute inset-x-0 top-full border-b border-line bg-panel shadow-2xl shadow-black/60"
+        className="absolute inset-x-0 top-full mt-2 rounded-2xl border border-line bg-panel shadow-2xl shadow-black/60"
       >
-        <nav aria-label="Main" className="mx-auto max-w-6xl px-4 pt-2 pb-4">
+        <nav aria-label="Main" className="px-3 pt-2 pb-4">
           <ul className="grid">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
