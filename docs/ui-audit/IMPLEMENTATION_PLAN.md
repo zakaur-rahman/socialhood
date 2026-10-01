@@ -16,9 +16,10 @@ How the 116 issues in [UI_AUDIT.md](UI_AUDIT.md) get fixed, reaching the system 
   QA, Final Design-System Reviewer (Reviewer). A role can run several instances in parallel on
   different tasks.
 
-**Counts.** 67 tasks: 56 can start as soon as their dependencies merge; 11 wait for an owner
-decision, and 5 more have a part that waits (UI-030, UI-037, UI-040, UI-051, UI-052). See "Ready
-now, and blocked" below.
+**Counts.** 67 tasks. The 17 owner decisions were approved on 2026-10-01, each with the
+recommended option (C-069), so no task waits for a decision any more: a "**blocked: D-xx**" label
+below now only names the decision the task applies. D-04 option 1 means no UI-029; D-17 option 1
+means UI-010 as written.
 
 | Agent | Tasks | IDs |
 |---|---:|---|
@@ -730,7 +731,7 @@ and UI-019's baseline capture.
 UI-020, UI-022; then UI-009 (with UI-008), UI-021 (with UI-011), UI-023 (with UI-014), UI-024
 (with UI-010), UI-025 (with UI-011 and UI-006), UI-026 (with UI-020), UI-028 (with UI-006).
 
-**Blocked on an owner decision:**
+**Were blocked on an owner decision** (all approved on 2026-10-01, C-069; kept for traceability):
 
 | Decision | Blocks | Partly blocks |
 |---|---|---|
@@ -752,8 +753,8 @@ UI-020, UI-022; then UI-009 (with UI-008), UI-021 (with UI-011), UI-023 (with UI
 | D-16 spec layouts | UI-065 | UI-040 (composer radius), sweeps (icon-button radius) |
 | D-17 Devanagari | — | UI-010 (only under option 2) |
 
-Fully blocked tasks: UI-017, UI-018, UI-027, UI-050, UI-053, UI-055, UI-059, UI-060, UI-062,
-UI-065, UI-069 (11).
+Formerly blocked tasks: UI-017, UI-018, UI-027, UI-050, UI-053, UI-055, UI-059, UI-060, UI-062,
+UI-065, UI-069 (11). UI-018 and UI-017 can start as soon as their dependencies merge.
 
 ---
 

@@ -1030,10 +1030,11 @@ DESIGN_SYSTEM.md and the evidence in the source audits. An index from every sour
 
 ## D. Owner decisions needed
 
+**Decided on 2026-10-01: the owner approved the recommendation for all 17 (C-069).** The
+blocked tasks are now ordered by their dependencies only.
+
 Each item changes an approved decision (C-0xx), the spec, or the look. The recommendation is the
-architect's; nothing in this list is implemented until the owner answers. Once decided, the
-Design System Architect records it in CONFLICTS.md and AGENT_CONTEXT.md, and the blocked task
-starts. Items marked **non-blocking defaults** in DESIGN_SYSTEM.md (token additions with no visible
+architect's. Items marked **non-blocking defaults** in DESIGN_SYSTEM.md (token additions with no visible
 change) are only logged for confirmation, like C-002.
 
 ### D-01 · A stronger control-border token

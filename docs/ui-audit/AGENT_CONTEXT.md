@@ -157,7 +157,7 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
 - **Destructive:** the confirming button is `destructive` (solid); a row or card trigger that opens
   the confirmation is `destructive-ghost`; permanent actions confirm in an AlertDialog (inside a
   dialog, an inline confirm); typed confirmation only for account and workspace data.
-- **Primary:** `default` Button. One per view region is the recommended rule (D-10, pending): don't
+- **Primary:** `default` Button. One per view region (D-10): don't
   add new gradient buttons to rows or cards.
 - **Toasts:** errors through `toastError(e)`; toasts with an action last 10 s or more.
 
@@ -257,27 +257,29 @@ per-site overlay patches.
   (logged for confirmation).
 - No `shadow-raised`, RadioGroup, Calendar, Command, info or chart colour tokens for now.
 
-**Owner decisions** (the DSA updates this table when one lands; until then use the current value):
+**Owner decisions.** All 17 were approved on 2026-10-01 with the recommended option (C-069). Each
+applies through the task the plan names; until that task merges, the current look stays, so build
+new work to the decided rule:
 
-| ID | Topic | Status | Recommended |
+| ID | Topic | Status | Decision |
 |---|---|---|---|
-| D-01 | Control-border token `line-control` and its scope | Pending | Checkbox, radio, switch **and** text fields |
-| D-02 | Card radius | Pending | `xl` everywhere |
-| D-03 | Tooltip colour | Pending | Dark, like other floating surfaces |
-| D-04 | Native date and time pickers in R1 | Pending | Accept native |
-| D-05 | Page and pane title sizes | Pending | 24 px page, 18 px pane |
-| D-06 | Placeholder colour | Pending | `fg-secondary` |
-| D-07 | "AI Assisted" and AI/automation labels (C-063) | Pending | "Sent by AI" / "Automation · {name}" |
-| D-08 | Settings breadcrumb, eyebrow, tab labels, save bar, Agent tiles (C-066) | Pending | Drop, match, only when needed, one sentence |
-| D-09 | "Remove" and account-card destructive actions (C-067) | Pending | Disconnect visible; "Delete account and data" in ⋯ |
-| D-10 | Gradient on every primary (VH-003) | Pending | One per view region |
-| D-11 | Comments needs-reply API (UX-001) | Pending | Per-post count and filter now |
-| D-12 | Overlay surface and elevation shadows | Pending | Adopt |
-| D-13 | Identity palette | Pending | Up to four pairs from existing values |
-| D-14 | Single-key shortcuts | Pending | A per-device switch |
-| D-15 | Inbox refinements (C-063) | Pending | Neutral segment, heart in emoji popover, composer-only scheduling, Archived chip |
-| D-16 | Spec-prescribed layouts (back link, editor panel, icon-button and composer radius) | Pending | Back link, panel after steps, `rounded-lg`, `rounded-xl` |
-| D-17 | Devanagari fallback font | Pending | System fallback in R1 |
+| D-01 | Control-border token `line-control` and its scope | Approved | Checkbox, radio, switch **and** text fields |
+| D-02 | Card radius | Approved | `xl` everywhere |
+| D-03 | Tooltip colour | Approved | Dark, like other floating surfaces |
+| D-04 | Native date and time pickers in R1 | Approved | Accept native |
+| D-05 | Page and pane title sizes | Approved | 24 px page, 18 px pane |
+| D-06 | Placeholder colour | Approved | `fg-secondary` |
+| D-07 | "AI Assisted" and AI/automation labels (C-063) | Approved | "Sent by AI" / "Automation · {name}" |
+| D-08 | Settings breadcrumb, eyebrow, tab labels, save bar, Agent tiles (C-066) | Approved | Drop, match, only when needed, one sentence |
+| D-09 | "Remove" and account-card destructive actions (C-067) | Approved | Disconnect visible; "Delete account and data" in ⋯ |
+| D-10 | Gradient on every primary (VH-003) | Approved | One per view region |
+| D-11 | Comments needs-reply API (UX-001) | Approved | Per-post count and filter now |
+| D-12 | Overlay surface and elevation shadows | Approved | Adopt |
+| D-13 | Identity palette | Approved | Up to four pairs from existing values |
+| D-14 | Single-key shortcuts | Approved | A per-device switch |
+| D-15 | Inbox refinements (C-063) | Approved | Neutral segment, heart in emoji popover, composer-only scheduling, Archived chip |
+| D-16 | Spec-prescribed layouts (back link, editor panel, icon-button and composer radius) | Approved | Back link, panel after steps, `rounded-lg`, `rounded-xl` |
+| D-17 | Devanagari fallback font | Approved | System fallback in R1 |
 
 ## 11. Working environment: renders, screens and tests
 
