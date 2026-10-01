@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
@@ -99,6 +99,44 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(screen.getByText("Needs you: refund")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "AI control" })).toBeInTheDocument();
     expect(screen.queryByText("AI: Suggest")).not.toBeInTheDocument();
+  });
+
+  it("narrow headers: Needs you and the window chip join the handle line, compact; screen readers hear them whole (UI-004)", () => {
+    renderHeader({ needs_human: true, needs_human_reason: "refund" });
+    const heading = screen.getByRole("heading", { name: "Priya Nair" });
+    // The container query shows one of each pair: beside the name when the header is wide…
+    const nameLine = heading.parentElement as HTMLElement;
+    expect(within(nameLine).getByText("Window: 23h left")).toBeInTheDocument();
+    expect(within(nameLine).getByText("Needs you: refund")).toBeInTheDocument();
+    // …on the handle line when it is narrow, without "Window:" and the reason, which stay for screen readers.
+    const handleLine = screen.getByTestId("thread-identity").parentElement as HTMLElement;
+    expect(within(handleLine).getByText("23h left")).toHaveTextContent("Window: 23h left");
+    expect(within(handleLine).getByText("Needs you")).toHaveTextContent("Needs you: refund");
+    // The name keeps 80 px; the other items move first (UI-ISS-019).
+    expect(heading).toHaveClass("min-w-20");
+  });
+
+  it("the platform name is secondary text beside its glyph, which carries the colour (UI-ISS-006)", () => {
+    renderHeader();
+    const platform = within(screen.getByTestId("thread-identity")).getByText("Instagram");
+    expect(platform).not.toHaveClass("text-instagram");
+    expect(platform.querySelector("svg")).toHaveClass("text-instagram");
+  });
+
+  it("on the narrowest phones the panel toggle is in More", async () => {
+    const handlers = renderHeader();
+    // CSS hides the toggle below 352 px (a container query jsdom doesn't run), so hide it here.
+    screen.getByRole("button", { name: "Details" }).style.display = "none";
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Customer details" }));
+    expect(handlers.onToggleDetails).toHaveBeenCalledOnce();
+  });
+
+  it("with the toggle showing, More doesn't repeat it", async () => {
+    renderHeader();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Customer details" })).not.toBeInTheDocument();
   });
 
   it("offers Back on phones", () => {
