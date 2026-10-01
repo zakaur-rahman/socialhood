@@ -9,7 +9,8 @@
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
-    "shots:marketing": "playwright test -c scripts/marketing-shots/playwright.config.ts"
+    "shots:marketing": "playwright test -c scripts/marketing-shots/playwright.config.ts",
+    "shots:ui": "playwright test -c scripts/ui-shots/playwright.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.7",
@@ -36,6 +37,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@clerk/testing": "^2.2.40",
     "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
