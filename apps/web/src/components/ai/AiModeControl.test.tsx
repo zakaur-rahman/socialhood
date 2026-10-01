@@ -144,6 +144,8 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
       ai: { effective_mode: "auto", override: null, paused_until: "2026-09-28T13:40:00Z" },
     });
     expect(screen.getByText("AI paused")).toBeInTheDocument();
+    // In a narrow thread header only Resume shows; it still says what is paused.
+    expect(screen.getByRole("button", { name: "Resume" })).toHaveAccessibleDescription("AI paused");
     await user.click(screen.getByRole("button", { name: "Resume" }));
     await waitFor(() => expect(patches()).toHaveLength(1));
     expect(patches()[0]).toMatchObject({ resume_ai: true });

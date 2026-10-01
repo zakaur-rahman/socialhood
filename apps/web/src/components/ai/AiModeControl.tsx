@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 
 import { ProBadge } from "@/components/automations/TemplateGallery";
@@ -99,18 +99,22 @@ function defaultLabel(accountMode: AiMode | null): string {
 
 /**
  * UX-INB-05: the one AI mode control (C-063), a compact menu in the thread header: the account
- * default and each mode; "AI paused" with Resume during a takeover.
+ * default and each mode; "AI paused" with Resume during a takeover. In a thread header narrower
+ * than 576 px (its `header` container, UI-ISS-019) the menu shows as its icon and a pause as
+ * Resume alone; the button's name, and Resume's description, still say the mode or the pause.
  */
 export function AiModeMenu({ conversation, now }: { conversation: Conversation; now: Date }) {
   const control = useConversationAiMode(conversation);
   const paused = pausedUntil(conversation, now);
   const workspace = useCurrentWorkspace();
+  const pausedId = useId();
 
   if (paused) {
     return (
       <span className="inline-flex shrink-0 items-center gap-1">
         <span
-          className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.warning)}
+          id={pausedId}
+          className={cn("hidden rounded-full px-2 py-0.5 text-xs font-medium @xl/header:inline", TONE_CLASS.warning)}
           title={`Paused until ${formatDayTime(paused, workspace.timezone, now)} because you replied`}
         >
           AI paused
@@ -119,6 +123,7 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
           variant="ghost"
           size="xs"
           className="text-brand-fg"
+          aria-describedby={pausedId}
           disabled={control.pending}
           onClick={control.resume}
         >
@@ -146,8 +151,8 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
             className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-brand-line bg-brand-soft px-2 text-xs font-medium text-brand-fg hover:bg-brand/25"
           >
             <Sparkles className="size-3.5" aria-hidden />
-            AI: {label}
-            <ChevronDown className="size-3" aria-hidden />
+            <span className="hidden @xl/header:inline">AI: {label}</span>
+            <ChevronDown className="hidden size-3 @xl/header:block" aria-hidden />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="w-60 border-line bg-panel shadow-xl">
