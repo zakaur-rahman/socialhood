@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "shots:marketing": "playwright test -c scripts/marketing-shots/playwright.config.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.7",
