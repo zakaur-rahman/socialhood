@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { BILLING_HREF } from "@/components/shell/nav";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -47,6 +48,8 @@ export function UpgradeDialog() {
   const billing = useBilling(workspace.id, open);
   const plans = useBillingPlans(open);
   const checkout = useStartCheckout(workspace.id);
+  // A 402 opens it from the store, not a trigger: give focus back to where it was (UX-A11Y-02).
+  const returnFocus = useReturnFocus();
 
   if (!shown) return null;
 
@@ -75,7 +78,7 @@ export function UpgradeDialog() {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-line bg-panel sm:max-w-md" data-testid="upgrade-dialog">
+      <DialogContent className="border-line bg-panel sm:max-w-md" data-testid="upgrade-dialog" {...returnFocus}>
         <DialogHeader>
           <DialogTitle>{copy.title}</DialogTitle>
           <DialogDescription className="text-fg-secondary">{copy.body}</DialogDescription>
