@@ -46,12 +46,12 @@ test.describe("F-08 use a suggested reply", () => {
     await expect(card).toBeHidden();
   });
 
-  test("Edit moves the text into the composer; the edited reply goes out", async ({ page, api, sandbox }) => {
+  test("Insert moves the text into the composer; the edited reply goes out", async ({ page, api, sandbox }) => {
     const { workspace, account } = sandbox;
     const { thread, log, card, composer } = await conversationWithSuggestion(page, api, workspace, account, unique("Is the red one in stock?"), "e2e_f08_edit");
 
     await expect(card).toContainText(SUGGESTED);
-    await card.getByRole("button", { name: "Edit" }).click();
+    await card.getByRole("button", { name: "Insert" }).click();
     await expect(composer).toHaveValue(SUGGESTED);
     await expect(thread.getByText("Editing suggestion")).toBeVisible();
     await expect(card).toBeHidden();
@@ -69,13 +69,13 @@ test.describe("F-08 use a suggested reply", () => {
     await expect(card).toBeHidden();
   });
 
-  test("Regenerate drafts again with one draft fewer; Dismiss closes the card", async ({ page, api, sandbox }) => {
+  test("Draft again drafts with one draft fewer; Dismiss closes the card", async ({ page, api, sandbox }) => {
     const { workspace, account } = sandbox;
     const { card } = await conversationWithSuggestion(page, api, workspace, account, unique("Do you deliver on Sundays?"), "e2e_f08_regen");
 
     await expect(card).toContainText("5 drafts left");
     const regenerated = page.waitForResponse((r) => /\/conversations\/[^/]+\/suggestions$/.test(r.url()) && r.request().method() === "POST");
-    await card.getByRole("button", { name: "Regenerate" }).click();
+    await card.getByRole("button", { name: "Draft again" }).click();
     expect((await regenerated).status()).toBe(202);
     await expect(card).toContainText("4 drafts left");
     await expect(card).toContainText(SUGGESTED);
