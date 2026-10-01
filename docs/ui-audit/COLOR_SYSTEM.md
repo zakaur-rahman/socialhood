@@ -170,9 +170,10 @@ Base layer (`globals.css:123-129`): every border defaults to `line`; `body` is c
 
 **How primary actions are built.** There is no primary Button variant.
 
-- 54 `<Button>`s use the default variant and add `className="bg-brand-gradient text-white"`.
-  About 12 more hand-rolled buttons and links do the same, for example the composer Send button
-  (`Composer.tsx:414`).
+- 54 `<Button>`s use the default variant: 50 add `className="bg-brand-gradient text-white"` and
+  4 add `bg-danger-fill`. About 12 more hand-rolled buttons and links use the gradient, for
+  example the composer Send button (`Composer.tsx:414`). (Corrected in the synthesis: this line
+  first said all 54 add the gradient.)
 - No `<Button>` relies on the plain default (`bg-primary`). Every default-variant Button is
   overridden.
 
@@ -740,7 +741,7 @@ Optional: `*-line` at 40% for each status, only if a lint rule bans opacity modi
 - **Evidence:**
   - **Gradient primary buttons.** `cn(buttonVariants(), "bg-brand-gradient text-white")` keeps
     `hover:bg-primary/80` (checked with the project's `cn`). The compiled rule sets
-    `background-color` under the gradient image, so nothing changes. That covers 54 `<Button>`s
+    `background-color` under the gradient image, so nothing changes. That covers 50 `<Button>`s
     and about 12 hand-rolled controls, including Send (`Composer.tsx:414`). Only 3 have
     `hover:brightness-110`.
   - **Ghost buttons.** `ui/button.tsx:17`: `dark:hover:bg-muted/50` is `field` at 50%, which is

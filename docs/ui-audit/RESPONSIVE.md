@@ -147,7 +147,7 @@ history doesn't overflow at 320 px.
     at 375 px is 499 px wide.
   - Offending elements: `section` "What customers asked about" (w = 483) and the top-post caption
     span (w = 389).
-  - Sources: `components/home/HomeScreen.tsx:197` (`grid gap-3 lg:grid-cols-3`) and
+  - Sources: `components/home/HomeScreen.tsx:193` (`grid gap-3 lg:grid-cols-3`) and
     `components/home/TopPostsCard.tsx:59-63` (the flex row and the `truncate` caption).
 - **Affected.** `HomeScreen.tsx`, `TopPostsCard.tsx`, `SentimentCard.tsx`, `TopIntentsCard.tsx`.
 - **Recommendation.**
