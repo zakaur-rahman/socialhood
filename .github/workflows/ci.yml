@@ -136,6 +136,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # On pull requests the action lists the PR's commits through the API.
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
