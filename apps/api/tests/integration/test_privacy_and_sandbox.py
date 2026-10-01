@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
@@ -12,9 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.jobs.app import app as jobs_app
 from socialhood.jobs.tasks.privacy import delete_user_data
+from socialhood.jobs.tasks.purge import run_account_purge
+from socialhood.media.purge import StoredFile, get_media_purger, use_media_purger
 from socialhood.models.platform import WebhookStatus
 from socialhood.platforms.deps import deps_from
 from socialhood.security.signatures import sign_request
+from socialhood.services.account_deletion import PurgeDeps
 from socialhood.services.webhook_handlers import instagram as instagram_handler
 from socialhood.services.webhook_processing import process_event
 from tests.support.api import IG_APP_SECRET, META_APP_SECRET, WEB, Clerk, sign_in
@@ -22,6 +27,16 @@ from tests.support.automations import make_automation
 from tests.support.instagram import FakeInstagram, connect, fixture, signed_delivery
 
 APP_SCOPED_ID = "26000000000000001"  # me_business.json "id"
+
+
+class NoMedia:
+    """The media purger for an account whose messages own no files."""
+
+    async def delete_workspace_folder(self, workspace_id: uuid.UUID) -> None:
+        raise AssertionError("no workspace is deleted here")
+
+    async def delete_files(self, workspace_id: uuid.UUID, files: Sequence[StoredFile]) -> None:
+        assert not files
 
 
 def signed_form(user_id: str, secret: str = IG_APP_SECRET) -> dict[str, str]:
@@ -101,15 +116,38 @@ async def test_data_deletion_returns_a_status_url_and_deletes(
     status = (await client.get(f"/v1/data-deletion/{code}")).json()
     assert status["status"] == "received"
 
-    assert await delete_user_data(app.state.sessionmaker, code) is True
-    assert await delete_user_data(app.state.sessionmaker, code) is False  # already done
+    deps = deps_from(app.state.http, app.state.settings)
+    assert await delete_user_data(app.state.sessionmaker, app.state.redis, deps, code) is True
 
+    # The account is disconnected at once and its purge queued (C-067); the request is in
+    # progress until the purge has removed it.
+    status = (await client.get(f"/v1/data-deletion/{code}")).json()
+    assert status["status"] == "processing"
+    row = await one(
+        engine, "SELECT id, status, access_token_enc, deletion_requested_at FROM social_accounts"
+    )
+    assert (row["status"], row["access_token_enc"]) == ("disconnected", None)
+    assert row["deletion_requested_at"] is not None
+    assert (await one(engine, "SELECT count(*) AS n FROM webhook_events"))["n"] == 0
+    [purge] = await jobs_app.connector.execute_query_all_async(
+        "SELECT args FROM procrastinate_jobs WHERE task_name = 'purge_account_data'"
+    )
+    assert purge["args"]["account_id"] == str(row["id"])
+
+    with use_media_purger(NoMedia()):
+        media = get_media_purger(app.state.http, app.state.settings)
+        await run_account_purge(
+            PurgeDeps(sessionmaker=app.state.sessionmaker, redis=app.state.redis, media=media),
+            uuid.UUID(purge["args"]["workspace_id"]),
+            row["id"],
+        )
     status = (await client.get(f"/v1/data-deletion/{code}")).json()
     assert status["status"] == "completed"
     assert status["completed_at"] is not None
-    row = await one(engine, "SELECT status, access_token_enc FROM social_accounts")
-    assert (row["status"], row["access_token_enc"]) == ("disconnected", None)
-    assert (await one(engine, "SELECT count(*) AS n FROM webhook_events"))["n"] == 0
+    assert (await one(engine, "SELECT count(*) AS n FROM social_accounts"))["n"] == 0
+    assert (await one(engine, "SELECT count(*) AS n FROM messages"))["n"] == 0
+    # Already done.
+    assert await delete_user_data(app.state.sessionmaker, app.state.redis, deps, code) is False
 
 
 async def test_an_unknown_deletion_code(client: httpx.AsyncClient) -> None:

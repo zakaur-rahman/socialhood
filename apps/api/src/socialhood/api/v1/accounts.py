@@ -28,6 +28,7 @@ from socialhood.schemas.accounts import (
     SocialAccountOut,
     SocialAccountPatch,
 )
+from socialhood.services import account_deletion
 from socialhood.services import connections as service
 from socialhood.services.webhook_intake import store_and_enqueue
 
@@ -101,9 +102,34 @@ async def disconnect_social_account(
     ctx: Admin,
     session: Session,
     delete_data: Annotated[bool, Query()] = False,
+    confirm: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
 ) -> Response:
+    """Owners and admins. Three uses (FR-CON-06, C-067):
+
+    - Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop
+      and automations pause; what was stored stays.
+    - Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects
+      the same way, then every row, file and cached key of the account is purged in the
+      background. Knowledge, workspace settings, billing and other accounts are kept.
+    - Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox
+      account; 409 for a live one (disconnect first, or use Disconnect and delete data).
+
+    ``confirm`` is the account's handle (with or without "@") or number, else its name; a
+    mismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``
+    true; it is gone from the list once done (a ``resync`` event follows)."""
     acct = await service.get_or_404(session, account_id)
-    await service.disconnect(session, request.app.state.redis, acct, delete_data=delete_data)
+    if delete_data or confirm is not None:
+        await account_deletion.request(
+            session,
+            request.app.state.redis,
+            _deps(request),
+            acct,
+            user_id=ctx.user.id,
+            confirm=confirm,
+            delete_data=delete_data,
+        )
+    else:
+        await service.disconnect(session, request.app.state.redis, acct)
     return Response(status_code=204)
 
 
@@ -113,6 +139,8 @@ async def resubscribe_social_account(
 ) -> SocialAccountOut:
     """Retry the webhook subscription after it failed (F-03 edge case)."""
     acct = await service.get_or_404(session, account_id)
+    if acct.deletion_requested_at is not None:
+        raise ApiError("conflict", service.BEING_DELETED)
     await service.subscribe(session, acct, _deps(request))
     await session.commit()
     await session.refresh(acct)

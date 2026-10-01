@@ -4,9 +4,14 @@ services/workspace_deletion.py, the retention deletes in repositories/retention.
 - purge_workspace(workspace_id): bulk lane, queueing lock and run lock ``purge:{id}`` (queued when
   a deletion commits). Retries any failure with backoff (10 s doubling, capped at 10 minutes, 8
   tries); a run that uses up its time budget queues the next one.
+- purge_account_data(workspace_id, account_id): bulk lane, queueing lock and run lock
+  ``acctpurge:{id}`` (C-067; queued when an account's deletion commits: Disconnect and delete
+  data, Remove, or Meta's data-deletion callback). The purge is services/account_deletion.py;
+  this keeps the Meta requests waiting on the account in step (jobs/tasks/privacy.py). Same
+  retries as purge_workspace; a run that uses up its time budget queues the next one.
 - sweep_deletions: periodic, every 15 minutes (bulk lane, singleton). Re-queues the purge of every
-  workspace still deleting (a lost enqueue, a purge that ran out of retries) and alerts on one
-  still deleting after 6 hours.
+  workspace and every account still deleting (a lost enqueue, a purge that ran out of retries),
+  alerts on one still deleting after 6 hours, and re-queues or settles open Meta requests.
 - purge_expired: periodic, daily 04:00 UTC (bulk lane, singleton, 600 s), §5.9's retention:
   webhook events 30 days (TR-WH-07; failed ones too, TR-OPS-04), notifications 90 days, AI usage
   events 13 months, finished agent runs 180 days (TR-AGT-08), messages beyond the plan's
@@ -34,9 +39,12 @@ from socialhood.db.tenancy import tenant_bypass_scope, workspace_scope
 from socialhood.jobs.app import BULK, app
 from socialhood.jobs.retry import BASE_DELAY_S, MAX_DELAY_S
 from socialhood.jobs.runtime import runtime
+from socialhood.jobs.tasks import privacy
 from socialhood.media.purge import get_media_purger
 from socialhood.observability.logging import get_logger
+from socialhood.repositories import account_deletion as account_rows
 from socialhood.repositories import retention
+from socialhood.services import account_deletion
 from socialhood.services import workspace_deletion as deletion
 
 log = get_logger(__name__)
@@ -85,10 +93,58 @@ async def purge_workspace(workspace_id: str) -> None:
         await deletion.enqueue_purge(wid)
 
 
+# ---------------------------------------------------------------- purge_account_data
+
+
+@app.task(name="purge_account_data", queue=BULK, retry=PurgeRetry())
+async def purge_account_data(workspace_id: str, account_id: str) -> None:
+    rt = runtime()
+    deps = account_deletion.PurgeDeps(
+        sessionmaker=rt.sessionmaker,
+        redis=rt.redis,
+        media=get_media_purger(rt.http, rt.settings),
+    )
+    await run_account_purge(deps, uuid.UUID(workspace_id), uuid.UUID(account_id))
+
+
+async def run_account_purge(
+    deps: account_deletion.PurgeDeps, workspace_id: uuid.UUID, account_id: uuid.UUID
+) -> account_deletion.PurgeResult:
+    """One run of the account's purge, with the Meta requests waiting on it kept in step:
+    in progress while it runs, failed when it fails (the job retries), completed when it was the
+    last of the platform user's accounts."""
+    ids = await privacy.platform_ids(deps.sessionmaker, workspace_id, account_id)
+    await privacy.purge_started(deps.sessionmaker, ids)
+    try:
+        result = await account_deletion.purge_account(deps, workspace_id, account_id)
+    except Exception:
+        await privacy.purge_failed(deps.sessionmaker, ids)
+        raise
+    if result.status == "continue":
+        await account_deletion.enqueue_purge(workspace_id, account_id)
+    else:
+        await privacy.settle_requests(deps.sessionmaker, ids)
+    return result
+
+
+# ---------------------------------------------------------------- sweep_deletions
+
+
+async def sweep_all(sessionmaker: async_sessionmaker[AsyncSession], now: datetime) -> None:
+    """Workspaces and accounts still deleting get their purge queued again; open Meta requests
+    are re-queued or settled."""
+    await deletion.sweep(sessionmaker, now)
+    async with sessionmaker() as session:
+        with tenant_bypass_scope():  # every workspace's deleting accounts
+            pending = await account_rows.deleting_accounts(session)
+    await account_deletion.sweep(pending, now)
+    await privacy.sweep_requests(sessionmaker)
+
+
 @app.periodic(cron="*/15 * * * *", periodic_id="sweep_deletions")
 @app.task(name="sweep_deletions", queue=BULK, queueing_lock="sweep_deletions")
 async def sweep_deletions(timestamp: int) -> None:
-    await deletion.sweep(runtime().sessionmaker, datetime.now(UTC))
+    await sweep_all(runtime().sessionmaker, datetime.now(UTC))
 
 
 # ---------------------------------------------------------------- purge_expired
@@ -214,7 +270,7 @@ async def _purge_expired() -> None:
     rt = runtime()
     await purge_expired_rows(rt.sessionmaker)
     await delete_finished_jobs()
-    await deletion.sweep(rt.sessionmaker, datetime.now(UTC))
+    await sweep_all(rt.sessionmaker, datetime.now(UTC))
 
 
 @app.periodic(cron="0 4 * * *", periodic_id="purge_expired")

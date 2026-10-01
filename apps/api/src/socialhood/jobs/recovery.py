@@ -100,6 +100,7 @@ RECOVERY: dict[str, Recovery] = {
     "drain_private_replies": R,  # each reply is committed ``sending`` before the call
     "delete_platform_user_data": R,  # until the request is completed
     "purge_workspace": R,  # retried on any error already; sweep_deletions re-queues it
+    "purge_account_data": R,  # the same: every step is safe to repeat (C-067)
     "cancel_orphan_subscription": R,  # an ended subscription counts as done
     # ---- recovered by their own sweepers (never run again here)
     "send_message": S,  # sweep_messages: sending → delivery_unknown, queued → enqueued again

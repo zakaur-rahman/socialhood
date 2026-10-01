@@ -71,6 +71,7 @@ def account_out(acct: SocialAccount, deps: PlatformDeps) -> SocialAccountOut:
             "last_synced_at": _last_synced(acct),
             "capabilities": capabilities if live else [],
             "sandbox": is_sandbox(acct),
+            "deleting": acct.deletion_requested_at is not None,
         }
     )
 
@@ -166,6 +167,9 @@ NOT_PROFESSIONAL = (
     "Instagram app, then try again."
 )
 IN_USE = "This account is connected to another Social Hood workspace. Disconnect it there first."
+BEING_DELETED = (
+    "This account's data is being deleted. Connect it again once it's gone from this page."
+)
 
 
 def _held_key(nonce: str) -> str:
@@ -278,10 +282,13 @@ async def _upsert(
     session: AsyncSession, platform: str, platform_account_id: str, values: dict[str, Any]
 ) -> SocialAccount | None:
     """Reconnect updates the existing row; otherwise insert. None when the account is live in
-    another workspace (the partial unique index refuses it)."""
+    another workspace (the partial unique index refuses it); 409 while this workspace's row is
+    being deleted (C-067: its purge would take the new connection with it)."""
     try:
         async with session.begin_nested():
             existing = await accounts.find(session, platform, platform_account_id)
+            if existing is not None and existing.deletion_requested_at is not None:
+                raise ApiError("conflict", BEING_DELETED)
             if existing is not None:
                 await accounts.update(session, existing.id, **values)
                 await session.flush()
@@ -375,15 +382,12 @@ async def update_account(
     return acct
 
 
-async def disconnect(
-    session: AsyncSession, redis: Redis, acct: SocialAccount, *, delete_data: bool
-) -> None:
+async def disconnect(session: AsyncSession, redis: Redis, acct: SocialAccount) -> None:
     """Delete the token at once, stop processing the account's webhooks and pause its automations
-    (FR-CON-06, F-15).
-
-    Deleting the account's conversations and comments arrives with those tables (P3, P6); until
-    then there is nothing else stored for it.
-    """
+    (FR-CON-06, F-15). What was stored for it stays; Disconnect and delete data
+    (services/account_deletion.request) disconnects the same way and then purges it."""
+    if acct.deletion_requested_at is not None:
+        return  # already disconnected, and on its way out
     now = datetime.now(UTC)
     await accounts.update(
         session,
@@ -396,7 +400,7 @@ async def disconnect(
     await pause_for_account(session, acct.id, now=now)
     await session.commit()
     await _clear_caches(redis, acct.id)
-    log.info("account_disconnected", account_id=str(acct.id), delete_data=delete_data)
+    log.info("account_disconnected", account_id=str(acct.id))
 
 
 async def _clear_caches(redis: Redis, account_id: uuid.UUID) -> None:

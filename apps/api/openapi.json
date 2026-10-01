@@ -5165,7 +5165,8 @@
             "enum": [
               "received",
               "processing",
-              "completed"
+              "completed",
+              "failed"
             ],
             "title": "Status",
             "type": "string"
@@ -10374,6 +10375,11 @@
               }
             ],
             "title": "Connected At"
+          },
+          "deleting": {
+            "default": false,
+            "title": "Deleting",
+            "type": "boolean"
           },
           "display_name": {
             "anyOf": [
@@ -19803,6 +19809,7 @@
     },
     "/v1/w/{wid}/social-accounts/{account_id}": {
       "delete": {
+        "description": "Owners and admins. Three uses (FR-CON-06, C-067):\n\n- Disconnect (no ``delete_data``, no ``confirm``): the token is deleted at once, webhooks stop\n  and automations pause; what was stored stays.\n- Disconnect and delete data (``delete_data=true&confirm=<handle or number>``): disconnects\n  the same way, then every row, file and cached key of the account is purged in the\n  background. Knowledge, workspace settings, billing and other accounts are kept.\n- Remove (``confirm=<handle or number>`` alone): the same purge, for a disconnected or sandbox\n  account; 409 for a live one (disconnect first, or use Disconnect and delete data).\n\n``confirm`` is the account's handle (with or without \"@\") or number, else its name; a\nmismatch is 422 on ``confirm``. While the purge runs the account is listed with ``deleting``\ntrue; it is gone from the list once done (a ``resync`` event follows).",
         "operationId": "disconnect_social_account",
         "parameters": [
           {
@@ -19833,6 +19840,24 @@
               "default": false,
               "title": "Delete Data",
               "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "confirm",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Confirm"
             }
           }
         ],
