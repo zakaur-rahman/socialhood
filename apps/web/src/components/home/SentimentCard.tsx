@@ -64,7 +64,7 @@ export function SentimentCard({
   within: string;
 }) {
   return (
-    <section aria-labelledby="home-sentiment" className="flex flex-col gap-5 rounded-xl border border-line bg-panel p-4">
+    <section aria-labelledby="home-sentiment" className="flex min-w-0 flex-col gap-5 rounded-xl border border-line bg-panel p-4">
       <h2 id="home-sentiment" className="text-base font-semibold">
         Sentiment, {period}
       </h2>
