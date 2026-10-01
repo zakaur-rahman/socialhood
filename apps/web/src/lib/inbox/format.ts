@@ -9,6 +9,7 @@ import type {
   ReplyWindow,
   Signal,
 } from "@/lib/api/types";
+import type { Tone } from "@/lib/ui/tone";
 
 export const PLATFORM_LABEL: Record<Platform, string> = { instagram: "Instagram", whatsapp: "WhatsApp" };
 
@@ -65,15 +66,9 @@ export function timeLeft(closesAt: string, now: Date): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
-export type Tone = "neutral" | "warning" | "danger" | "brand" | "success";
-
-export const TONE_CLASS: Record<Tone, string> = {
-  neutral: "bg-white/5 text-fg-secondary",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-danger/15 text-danger-fg",
-  brand: "bg-brand-soft text-brand-fg",
-  success: "bg-success/15 text-success",
-};
+/** The status tones live in lib/ui/tone (Badge's source); re-exported until the sweeps import it. */
+export type { Tone };
+export { TONE_CLASS } from "@/lib/ui/tone";
 
 /** FR-INB-01 "Leads" and the Lead badge: the API's inbox_views.LEAD_SCORE. */
 export const LEAD_SCORE = 60;
