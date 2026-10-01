@@ -262,23 +262,32 @@ describe("AutomationsPage (UX-SCR-02)", () => {
       "Giveaway replies",
       "Price on request",
     ]);
-    await user.click(screen.getByRole("button", { name: "Browse all templates" }));
+    const browse = screen.getByRole("button", { name: "Browse all templates" });
+    browse.focus();
+    await user.keyboard("{Enter}");
     const dialog = await screen.findByRole("dialog", { name: "New automation" });
     expect(within(dialog).getByRole("article", { name: "Catalogue by DM" })).toBeInTheDocument();
+    // Esc puts focus back on what opened it (UX-A11Y-02).
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(browse).toHaveFocus());
   });
 
-  it("New automation opens the gallery; after Esc the next opening starts fresh", async () => {
+  it("New automation opens the gallery; Esc puts focus back on it, and the next opening starts fresh", async () => {
     const user = userEvent.setup();
     const templates = [template({ key: "t1", name: "Send a link to commenters" }), template({ key: "t4", name: "Catalogue by DM", category: "sell" })];
     renderWithApi(<AutomationsPage />, { handlers: handlers({ templates }) });
     await screen.findByRole("link", { name: "Comment LINK, DM the link" });
 
-    await user.click(screen.getByRole("button", { name: "New automation" }));
+    const newAutomation = screen.getByRole("button", { name: "New automation" });
+    newAutomation.focus();
+    await user.keyboard("{Enter}");
     const dialog = await screen.findByRole("dialog", { name: "New automation" });
     const categories = within(dialog).getByRole("group", { name: "Categories" });
     await user.click(within(categories).getAllByRole("button").find((button) => button.textContent !== "All")!);
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(newAutomation).toHaveFocus());
     expect(nav.replace).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "New automation" }));
