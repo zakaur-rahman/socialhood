@@ -52,7 +52,9 @@ export function Hero() {
             <span className="sr-only">{HERO_TITLE}</span>
             <span aria-hidden>
               <span className="block">
-                Reply to <FlipWords words={HERO_WORDS} className="text-brand-fg" />
+                Reply to{" "}
+                {/* On phones the word takes its own line, centred; wider, it follows "Reply to". */}
+                <FlipWords words={HERO_WORDS} className="text-brand-fg max-sm:grid max-sm:justify-items-center" />
               </span>
               <span className="block text-balance">with AI that knows your business</span>
             </span>
