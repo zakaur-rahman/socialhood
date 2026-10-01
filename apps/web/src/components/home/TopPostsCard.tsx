@@ -35,7 +35,7 @@ export function TopPostsCard({
   slug: string;
 }) {
   return (
-    <section aria-labelledby="home-top-posts" className="flex flex-col rounded-xl border border-line bg-panel p-4">
+    <section aria-labelledby="home-top-posts" className="flex min-w-0 flex-col rounded-xl border border-line bg-panel p-4">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 id="home-top-posts" className="text-base font-semibold">
           Most commented, {period}
