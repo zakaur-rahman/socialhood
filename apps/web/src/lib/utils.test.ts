@@ -7,6 +7,14 @@ describe("cn knows the design system's utilities (C-070)", () => {
     expect(cn("bg-panel", "bg-glow-brand")).toBe("bg-panel bg-glow-brand");
     expect(cn("bg-brand-gradient", "bg-glow-brand")).toBe("bg-glow-brand");
     expect(cn("bg-shell-gradient", "bg-brand-gradient-decor")).toBe("bg-brand-gradient-decor");
+    expect(cn("bg-[url(/a.png)]", "bg-glow-brand")).toBe("bg-glow-brand");
+  });
+
+  it("lets a colour given later replace a gradient (a danger override on a gradient Button)", () => {
+    expect(cn("bg-brand-gradient text-on-brand", "bg-danger-fill")).toBe("text-on-brand bg-danger-fill");
+    expect(cn("hover:bg-brand-gradient", "hover:bg-hover")).toBe("hover:bg-hover");
+    // A gradient given later still layers over the variant's colour.
+    expect(cn("bg-primary", "bg-brand-gradient")).toBe("bg-primary bg-brand-gradient");
   });
 
   it("lets a motion token replace a duration or an easing", () => {
