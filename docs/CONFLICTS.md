@@ -1229,3 +1229,50 @@ plan names; until that task merges, the current look stays.
   panel comes after the steps; icon-only buttons `rounded-lg` (amends spec §4.2's `rounded-full`,
   which stays for circles); composer shells `rounded-xl` (amends UX-INB-07's pill).
 - **D-17:** the system fallback for Devanagari in R1; `latin-ext` is added regardless (UI-010).
+
+## C-070 · `globals.css` token foundation (open: confirm, feature/ui-tokens)
+UX-TOK-01 says the tokens file is used "exactly as below"; C-002 added two lines. UI-001 adds the
+**Add** items of `docs/ui-audit/DESIGN_SYSTEM.md` (§1.13, §1.9, §2, §7), each marked "C-070" in
+`apps/web/src/styles/globals.css` and mirrored in `styles/tokens.ts`, which `/dev/tokens` renders
+and `tokens.test.ts` checks against the CSS. They name values the app already draws. No owner
+decision is applied here: `line-control` (D-01), the placeholder colour (D-06) and the overlay
+surface and shadows (D-12) come with UI-018.
+- **Colours:** `hover` (white 5%), `pressed` (white 10%), `scrim` (black 60%), `media-scrim`
+  (black, on media only, with an opacity), `on-brand` (white), `brand-strong` (`#4467E6`, the
+  brand gradient's existing end stop), `success-soft`, `warning-soft`, `danger-soft` (15% of the
+  base colour). They replace `bg-white/5`, `bg-white/10`, `bg-black/60`, `text-white` and the
+  `/10`–`/30` status fills as the area sweeps reach them.
+- **Type:** `text-2xs` (11/16) and `text-md` (15/24), for `text-[11px]` and `text-[15px]`. The type
+  roles are importable constants in `styles/tokens.ts` (`EYEBROW`, `CHIP`, `CARD_TITLE` …), with
+  one eyebrow tracking (0.08em).
+- **Motion:** `--motion-fast` 120 ms, `--motion-normal` 150 ms and `--motion-slow` 200 ms, with
+  `duration-fast|normal|slow` (they set `--tw-duration`, which tw-animate-css reads), and the
+  easings `ease-standard`, `ease-enter`, `ease-exit`. The primitives adopt them in their own tasks.
+- **Breakpoint:** `wide` (1440 px), for today's `min-[1440px]:`.
+- **Gradients:** the three gradient utilities take their stops from tokens (the same pixels; the
+  brand gradient ends at `brand-strong`). `bg-glow-brand` is the plan hero's radial glow
+  (`brand-soft` from the top-left corner), one per view at most; the marketing hero keeps its own
+  centred glow unless UI-042 moves it onto the utility. `mask-fade-x` fades the trailing 1rem of a
+  row that scrolls sideways (the sidebar's bottom fade, turned sideways); the row gets `pe-4` so its
+  last item can scroll clear of the fade.
+- **shadcn aliases:** `--primary` → `brand-strong` (was `brand`), `--primary-foreground` →
+  `on-brand` (was a literal `#FFFFFF`), `--accent` → `hover` (was `raised`: the same pixel on
+  `panel`, where every menu and select sits). `card-`, `popover-`, `secondary-` and
+  `accent-foreground` get their `--color-*` mappings, so their utilities generate CSS; every
+  `:root` alias is now mapped. `--radius` stays, commented as inert.
+- **Base layer:** `strong, b { font-weight: 600 }` (weights stop at 600); a reduced-motion safety
+  net that removes animations and transitions from `[data-slot$="-overlay"]`,
+  `[data-slot$="-content"]` and `[data-slot="skeleton"]` (spec §4.2 "Motion": instant under
+  reduced motion); `scroll-padding-top: 4rem` below `md`, so a control scrolled into view isn't
+  hidden under the phone's sticky top bar (WCAG 2.4.11).
+- **What changes on screen:**
+  - The switch's checked track and the checkbox's checked fill go from `#567FF8` to `#4467E6`
+    (3.4:1 on `panel`, above the 3:1 for state indicators). Every Button `default` call site paints
+    its own gradient and both `link` call sites set `brand-fg`, so neither changes.
+  - Bare `<strong>` on the legal pages is 600 instead of 700.
+  - The now-working foreground utilities: in a highlighted menu or select item, icons and secondary
+    text turn `fg` (the primitives' `focus:**:text-accent-foreground` rule applies; UI-013 redraws
+    the highlight), and a `secondary` Button no longer inherits a coloured parent's text colour.
+  - Under reduced motion, dialogs, alert dialogs, sheets (the phone drawer), popovers, menus,
+    selects, tooltips and skeletons no longer animate.
+- The spec's §4.2 text (UX-TOK-01's list, the type table, the motion line) follows in UI-071.
