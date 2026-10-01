@@ -49,9 +49,9 @@ describe("ReplyWindowChip (UX-INB-05, C-063)", () => {
     const { rerender } = render(<ReplyWindowChip window={{ state: "open", closes_at: inHours(23) }} now={now} />);
     expect(screen.getByText("Window: 23h left")).toHaveClass("border-line", "text-fg-secondary");
     rerender(<ReplyWindowChip window={{ state: "open", closes_at: inHours(1) }} now={now} />);
-    expect(screen.getByText("Window: 1h left")).toHaveClass("bg-warning/15", "text-warning");
+    expect(screen.getByText("Window: 1h left")).toHaveClass("bg-warning-soft", "text-warning");
     rerender(<ReplyWindowChip window={{ state: "closed" }} now={now} />);
-    expect(screen.getByText("Window closed")).toHaveClass("bg-danger/15", "text-danger-fg");
+    expect(screen.getByText("Window closed")).toHaveClass("bg-danger-soft", "text-danger-fg");
   });
 });
 

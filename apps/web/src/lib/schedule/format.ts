@@ -35,13 +35,8 @@ export const POST_STATUS: Record<ScheduledPostStatus, StatusMeta> = {
   canceled: { label: "Canceled", tone: "neutral", border: "border-l-danger", group: "failed" },
 };
 
-export const CHIP_CLASS: Record<StatusMeta["tone"], string> = {
-  neutral: "bg-white/5 text-fg-secondary",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-danger/15 text-danger-fg",
-  brand: "bg-brand-soft text-brand-fg",
-  success: "bg-success/15 text-success",
-};
+/** The post status chip's fill and text: the one tone map (lib/ui/tone), under its old name. */
+export { TONE_CLASS as CHIP_CLASS } from "@/lib/ui/tone";
 
 /** The List view's tabs and the status filter, in order (UX-SCR-04). */
 export const STATUS_GROUPS: { value: ScheduledPostView; label: string }[] = [

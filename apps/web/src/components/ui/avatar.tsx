@@ -16,7 +16,8 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten",
+        // The app is dark only (C-002): the edge lightens the picture (shadcn's dark pair, without `dark:`).
+        "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-lighten data-[size=lg]:size-10 data-[size=sm]:size-6",
         className
       )}
       {...props}
@@ -56,15 +57,23 @@ function AvatarFallback({
   )
 }
 
+/**
+ * The platform badge at the avatar's bottom right (DESIGN_SYSTEM §5, §8.2): a platform fill from
+ * the caller (`PLATFORM_BG`) with the glyph in `on-brand`, cut out of the picture by a 2 px ring in
+ * the panel colour. A ring, not a border, so the glyph keeps its size. ContactAvatar (and the
+ * account avatars) draw their badge with it; the identity colours stay where they are (D-13).
+ *
+ *   <Avatar size="lg">…<AvatarBadge className={PLATFORM_BG.instagram}><PlatformGlyph … /></AvatarBadge></Avatar>
+ */
 function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
   return (
     <span
       data-slot="avatar-badge"
       className={cn(
-        "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground bg-blend-color ring-2 ring-background select-none",
+        "absolute -right-0.5 -bottom-0.5 z-10 inline-flex items-center justify-center rounded-full bg-primary text-on-brand ring-2 ring-panel select-none [&>svg]:shrink-0",
         "group-data-[size=sm]/avatar:size-2 group-data-[size=sm]/avatar:[&>svg]:hidden",
-        "group-data-[size=default]/avatar:size-2.5 group-data-[size=default]/avatar:[&>svg]:size-2",
-        "group-data-[size=lg]/avatar:size-3 group-data-[size=lg]/avatar:[&>svg]:size-2",
+        "group-data-[size=default]/avatar:size-3.5 group-data-[size=default]/avatar:[&>svg]:size-2",
+        "group-data-[size=lg]/avatar:size-4 group-data-[size=lg]/avatar:[&>svg]:size-2.5",
         className
       )}
       {...props}
