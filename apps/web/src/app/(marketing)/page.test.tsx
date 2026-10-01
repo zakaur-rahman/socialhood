@@ -1,6 +1,8 @@
 import { render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { HERO_TITLE } from "@/components/marketing/Hero";
+import { SHOTS } from "@/components/marketing/shots";
 import { FAQ } from "@/lib/marketing/faq";
 import { plansFetch, plansFixture } from "@/test/plans";
 
@@ -11,10 +13,21 @@ function jsonLd(container: HTMLElement) {
   return JSON.parse(script?.textContent ?? "null") as Record<string, unknown>;
 }
 
+/** jsdom has no IntersectionObserver; nothing is ever on screen here, so effects stay idle. */
+class IdleObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+
 describe("the landing page", () => {
   beforeEach(() => {
     vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "https://api.socialhood.test");
     vi.stubEnv("NEXT_PUBLIC_SITE_URL", "https://socialhood.example");
+    vi.stubGlobal("IntersectionObserver", IdleObserver);
   });
 
   afterEach(() => {
@@ -29,15 +42,19 @@ describe("the landing page", () => {
 
     expect(fetcher).toHaveBeenCalledOnce();
     expect(screen.getByRole("main")).toHaveAttribute("id", "main");
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-      "The AI inbox for businesses that sell on Instagram and WhatsApp",
-    );
+    // One h1, named in full for screen readers; the cycling word is decorative.
+    const h1 = screen.getByRole("heading", { level: 1 });
+    expect(h1).toHaveAccessibleName(HERO_TITLE);
+    expect(h1.querySelector("[data-flip-words]")).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
     expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "Built on Meta's official APIs",
       "Everything your customer conversations need",
       "Set up in three steps",
-      "Built on Meta's official APIs",
-      "Your customers' messages, handled with care",
+      "Comment LINK, get the link in a DM",
+      "Replies in English, Hindi and Hinglish",
       "Start free, upgrade when you grow",
+      "Your customers' messages, handled with care",
       "Common questions",
       "Bring every customer conversation into one inbox",
     ]);
@@ -45,17 +62,37 @@ describe("the landing page", () => {
       expect(container.querySelector(`section#${id}`)).not.toBeNull();
     }
 
-    // Hero: the two ways in, and the illustration labelled as one.
+    // Hero: the two ways in, and the real product, labelled as example data.
     expect(screen.getAllByRole("link", { name: /Start free/ })[0]).toHaveAttribute("href", "/sign-up");
     expect(screen.getByRole("link", { name: "See how it works" })).toHaveAttribute("href", "#how-it-works");
-    expect(screen.getByRole("img", { name: /Illustration of the Social Hood inbox/ })).toBeInTheDocument();
-    expect(screen.getByText(/Illustration of the inbox\. The people, messages and prices are examples\./)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: SHOTS.inbox.alt })).toBeInTheDocument();
+    expect(screen.getByText(/The Social Hood inbox with example data\. The shop, people and messages are made up\./)).toBeInTheDocument();
+    expect(screen.getByText("Official Meta APIs", { selector: "li" })).toBeInTheDocument();
 
     // Features and product rules.
     expect(screen.getByRole("heading", { name: "Ask Social Hood" })).toBeInTheDocument();
     expect(screen.getByText("Never sends, changes or deletes anything by itself")).toBeInTheDocument();
-    expect(screen.getByText(/never a condition for getting the link/)).toBeInTheDocument();
+    expect(screen.getByText("Illustrations with example data.")).toBeInTheDocument();
     expect(screen.getByText("Coming later")).toBeInTheDocument();
+
+    // How it works: three steps, each with a real screen.
+    const how = within(container.querySelector("section#how-it-works") as HTMLElement);
+    expect(how.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Step 1: Connect your accounts",
+      "Step 2: Add your knowledge",
+      "Step 3: Let the AI draft or reply",
+    ]);
+    for (const shot of [SHOTS.connect, SHOTS.knowledge, SHOTS.aiDraft]) expect(how.getByRole("img", { name: shot.alt })).toBeInTheDocument();
+
+    // The automation showcase: tap first, and the follow nudge is never a condition.
+    expect(screen.getByRole("heading", { name: "Step 3: Tap first" })).toBeInTheDocument();
+    expect(screen.getByText(/never a condition for getting the link/)).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: SHOTS.automationPreview.alt })).toBeInTheDocument();
+
+    // Languages: the examples carry their language for screen readers.
+    expect(container.querySelector('[lang="hi"]')?.textContent).toMatch(/[ऀ-ॿ]/);
+    expect(container.querySelector('[lang="hi-Latn"]')).not.toBeNull();
+    expect(screen.getByText(/Example replies for a made-up shop/)).toBeInTheDocument();
 
     // Pricing from the API.
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
@@ -76,13 +113,15 @@ describe("the landing page", () => {
     expect(data).not.toHaveProperty("review");
   });
 
-  it("claims nothing we don't have: no testimonials, logos, user counts, ratings or certifications", async () => {
+  it("claims nothing we don't have: no testimonials, logos, user counts, ratings, made-up metrics or certifications", async () => {
     vi.stubGlobal("fetch", vi.fn(plansFetch(plansFixture())));
     const { container } = render(await HomePage());
     const text = container.textContent ?? "";
     expect(text).not.toMatch(
-      /trusted by|testimonial|customers love|\d+\+? (businesses|users|customers)|★|\bratings?\b|SOC ?2|ISO 27001|HIPAA|GDPR[- ]compliant|\bHSM\b|uptime|99\.9/i,
+      /trusted by|testimonial|customers love|loved by|as seen (on|in)|\d[\d,.]*\+?\s?k?\+? (businesses|users|customers|brands|sellers|shops|creators|teams)|★|⭐|\bratings?\b|\d+ reviews?|customer reviews|SOC ?2|ISO 27001|HIPAA|GDPR[- ]compliant|\bHSM\b|uptime|99\.9|\d+(\.\d+)?\s?[x×] (faster|more)|\d+% (faster|more|increase|higher|of (businesses|customers|users))|(save|saves) \d+ hours?|#1\b|best[- ]in[- ]class|award/i,
     );
+    // Logos are only the platforms we connect to; no customer logos.
+    for (const image of container.querySelectorAll("img")) expect(image.getAttribute("src")).toMatch(/marketing%2F|\/marketing\//);
   });
 
   it("when the plan list can't load: features without prices, and no offers in the structured data", async () => {
@@ -96,7 +135,20 @@ describe("the landing page", () => {
     const pricing = within(container.querySelector("section#pricing") as HTMLElement);
     expect(pricing.getByText("See pricing when you sign up")).toBeInTheDocument();
     expect(pricing.getByText("3 active automations")).toBeInTheDocument();
+    expect(pricing.getByText(/Prices couldn't be loaded just now/)).toBeInTheDocument();
+    expect(container.querySelector("section#pricing")?.textContent).not.toMatch(/[$₹€£]\s?\d/);
     expect(jsonLd(container)).not.toHaveProperty("offers");
+  });
+
+  it("without an API address it doesn't call out at all, and still lists the plans", async () => {
+    vi.stubEnv("NEXT_PUBLIC_API_BASE_URL", "");
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const { container } = render(await HomePage());
+    expect(fetcher).not.toHaveBeenCalled();
+    const pricing = within(container.querySelector("section#pricing") as HTMLElement);
+    expect(pricing.getByRole("heading", { level: 3, name: "Pro" })).toBeInTheDocument();
+    expect(pricing.getAllByText("Coming soon").length).toBeGreaterThan(0);
   });
 
   it("is revalidated hourly and has its own title, description and canonical URL", () => {

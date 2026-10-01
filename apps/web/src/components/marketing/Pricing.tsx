@@ -1,9 +1,11 @@
 import { Check, Coins } from "lucide-react";
+import type { CSSProperties } from "react";
 
 import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/marketing/plans";
 import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
 
+import { MovingBorderFrame } from "./effects/moving-border";
 import { Container, CtaLink, SectionHeading } from "./primitives";
 
 const count = new Intl.NumberFormat("en-US");
@@ -34,16 +36,31 @@ function PriceLine({ card }: { card: PlanCard }) {
   return <p className="mt-5 text-lg font-semibold text-fg">{PRICE_AT_SIGN_UP}</p>;
 }
 
-function PlanCardView({ card }: { card: PlanCard }) {
+function PlanCardView({ card, index }: { card: PlanCard; index: number }) {
   const featured = card.plan === "pro" && card.available;
+  const body = <PlanCardBody card={card} featured={featured} />;
   return (
-    <li
-      className={cn(
-        "relative flex flex-col rounded-2xl border p-6",
-        featured ? "border-brand-line bg-panel shadow-2xl shadow-brand/10" : "border-line bg-panel",
-        !card.available && "border-dashed bg-panel/50",
+    <li data-reveal style={{ "--reveal-delay": `${index * 100}ms` } as CSSProperties} className="relative flex flex-col">
+      {featured ? (
+        // C-068: Pro's edge carries a moving brand glow (still with reduced motion).
+        <MovingBorderFrame className="flex-1 shadow-2xl shadow-brand/15">{body}</MovingBorderFrame>
+      ) : (
+        <div
+          className={cn(
+            "flex-1 rounded-2xl border bg-panel transition-colors duration-200",
+            card.available ? "border-line hover:border-line-strong" : "border-dashed border-line bg-panel/50",
+          )}
+        >
+          {body}
+        </div>
       )}
-    >
+    </li>
+  );
+}
+
+function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean }) {
+  return (
+    <div className="flex h-full flex-col p-6">
       <div className="flex items-center gap-2">
         <h3 id={`plan-${card.plan}`} className="text-lg font-semibold">
           {card.name}
@@ -92,18 +109,19 @@ function PlanCardView({ card }: { card: PlanCard }) {
           A larger plan for teams with multiple members is planned. It isn&apos;t available to buy yet.
         </p>
       )}
-    </li>
+    </div>
   );
 }
 
 /**
  * Free, Pro and Max from GET /v1/billing/plans (lib/marketing/plans.ts). Prices come only from
- * the API; without one the card says the price is shown at sign-up.
+ * the API; without one the card says the price is shown at sign-up. Pro's card has the moving
+ * border (C-068); Max is "Coming soon".
  */
 export function Pricing({ pricing }: { pricing: PricingData }) {
   const { free, pro } = pricing.credits;
   return (
-    <section id={SECTION_IDS.pricing} aria-labelledby="pricing-title" className="scroll-mt-20 border-t border-line-subtle py-20 sm:py-24">
+    <section id={SECTION_IDS.pricing} aria-labelledby="pricing-title" className="scroll-mt-24 border-t border-line-subtle py-20 sm:py-24">
       <Container>
         <SectionHeading
           id="pricing-title"
@@ -112,8 +130,8 @@ export function Pricing({ pricing }: { pricing: PricingData }) {
           intro="Pro adds Auto replies, more accounts, more automations and more AI credits. Cancel anytime: Pro stays until the end of the period you've paid for."
         />
         <ul className="mx-auto mt-14 grid max-w-5xl gap-4 lg:grid-cols-3" aria-label="Plans">
-          {pricing.plans.map((card) => (
-            <PlanCardView key={card.plan} card={card} />
+          {pricing.plans.map((card, index) => (
+            <PlanCardView key={card.plan} card={card} index={index} />
           ))}
         </ul>
         <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-relaxed text-fg-secondary">
@@ -122,7 +140,7 @@ export function Pricing({ pricing }: { pricing: PricingData }) {
           which Meta charges directly to your business.
         </p>
 
-        <div className="mx-auto mt-12 max-w-5xl rounded-2xl border border-line bg-panel/60 p-6 sm:p-8">
+        <div data-reveal className="mx-auto mt-12 max-w-5xl rounded-2xl border border-line bg-panel/60 p-6 sm:p-8">
           <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
             <div>
               <div className="flex items-center gap-3">

@@ -1138,3 +1138,48 @@ removed only the token and Meta's raw events, and backup exports had no retentio
 - Backups: exports are kept 30 days, then deleted. No script in the repo makes or keeps exports,
   so docs/ops/backup.md makes it a required setting (one bucket, a 30-day lifecycle rule, a
   monthly check). The privacy policy states it, and that deletion covers the account's data.
+
+## C-068 · Expressive motion and effects on the marketing site (owner decision, feature/landing-redesign)
+The owner allowed the public marketing site expressive motion and decorative effects, for the
+landing page's redesign with Aceternity UI's free components. DESIGN_SYSTEM §7.3 ("no motion for
+decoration") and AGENT_CONTEXT's rejected patterns (gradients without a job, blur for
+decoration) still hold in the app. The scope is the marketing pages only:
+`apps/web/src/app/(marketing)` and `apps/web/src/components/marketing`.
+- Allowed there: entrances on scroll (once), hover lifts on cards and calls to action, one
+  background effect per view (the hero's Spotlight), decorative glows and gradients built from the
+  brand tokens (Spotlight, Lamp, Pro's moving border, the illustrations' backdrops),
+  scroll-linked movement (the product screenshot's tilt, the timeline's rail) and small loops (the
+  headline's flip words, the automation beam's pulse, the moving border).
+- Still required:
+  - Tokens only: every colour from `globals.css` (canvas, panel, raised, line, brand, brand-fg,
+    brand-deep, brand-soft, brand-line, the status and platform colours). The Aceternity components
+    were adapted from their neutral, slate and cyan values.
+  - Contrast: text stays on canvas or panel at AA; effects sit behind headings or beside text,
+    never under body copy.
+  - Reduced motion: `MotionConfig reducedMotion="user"` wraps the landing page. Every loop stops
+    (flip words, beam pulse, moving border, spotlight drift, caret), scroll-linked transforms are
+    overridden flat, entrances are instant and scroll reveals never hide anything. CSS animations
+    are `motion-safe:` only.
+  - Accessibility: decorative layers are `aria-hidden` with no pointer events; the flip-word
+    headline gives screen readers its whole sentence; one h1, headings in order, a skip link,
+    focus visible (inset where a container clips), 40 px touch targets.
+  - Performance: the hero's text is server-rendered and still (it is the largest paint); motion's
+    animation code loads after hydration (LazyMotion with domAnimation, `m` components); the
+    feature illustrations load when near the screen; loops run only while on screen; only
+    transforms and opacity animate (the header uses CSS transitions; no layout animations); lazy
+    boxes have fixed sizes (no layout shift). No canvas, WebGL, external scripts, fonts or images:
+    the CSP is unchanged.
+  - Motion values: the UI audit's tokens for hover and press (120, 150 and 200 ms; enter, exit and
+    standard easings), plus two marketing-only ones, `reveal` 600 ms and `expressive` 450 ms with
+    an expressive ease (`components/marketing/effects/motion.ts`).
+  - Honesty: illustrations and screenshots are labelled as example data. The screenshots are the
+    real app on the e2e stack with sandbox data and made-up names
+    (`apps/web/scripts/marketing-shots`); no testimonials, ratings, counts or logos.
+- Components and dependency: installed with the shadcn CLI from Aceternity's registry
+  (`@aceternity` in `components.json`), then moved from `components/ui` to
+  `components/marketing/effects` and adapted (Tabler icons swapped for lucide). The one new
+  dependency is `framer-motion`, the library `motion` wraps: `motion/react` re-exports it through
+  a namespace import that Turbopack can't tree-shake, which bundled drag and layout projection
+  (about 20 KB more, gzipped).
+- The marketing header's blur stays DESIGN_SYSTEM §6's documented exception; the header now floats
+  as a rounded bar after 64 px of scroll.
