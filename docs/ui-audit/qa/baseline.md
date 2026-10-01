@@ -29,8 +29,10 @@ task's before-and-after shots. Nothing here changes the app; issue numbers are f
 
 ## Screens
 
-31 screens at four widths plus the phone drawer at 375. Full page unless marked "viewport" (an open
-overlay, or the banner over the inbox). A width in **bold** means the page scrolls sideways.
+31 screens at four widths plus the phone drawer at 375. Image sizes in px; "viewport" means the
+image is the screen size, either because the screen is viewport-only (an open overlay, the banner
+over the inbox) or because the page itself doesn't scroll (the inbox, comments grid and calendar
+views scroll inside). A width in **bold** means the page scrolls sideways.
 
 | Screen | What it shows | 375 | 768 | 1280 | 1536 |
 |---|---|---|---|---|---|
