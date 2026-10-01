@@ -1,6 +1,8 @@
 "use client";
 
 import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, Loader2, Plus, Sparkles, X } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { useRef, useState, type ChangeEvent, type RefObject } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -52,6 +54,7 @@ import {
 } from "@/lib/automations/render";
 import { ATTACHMENT_RULES, UploadError, uploadAsset } from "@/lib/media/upload";
 import { cn } from "@/lib/utils";
+import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { StepCard, type StepState } from "../StepCard";
 import { ProBadge } from "../TemplateGallery";
@@ -814,6 +817,9 @@ function AiReplyFields({
 }) {
   const text = draft.ai_instructions ?? "";
   const error = errorsFor(errors, "ai_instructions")[0];
+  const workspace = useCurrentWorkspace();
+  // Knowledge is for owners and admins (agents don't see Grow).
+  const canManageKnowledge = workspace.role !== "agent";
   return (
     <div className="space-y-3">
       {plan === "free" ? (
@@ -837,9 +843,21 @@ function AiReplyFields({
           {formatCount(text.length)} / {formatCount(AI_INSTRUCTIONS_MAX)}
         </p>
       </div>
-      <p id="automation-ai-note" className="text-xs text-fg-secondary">
-        The AI answers from your knowledge base, so AI replies start working when Knowledge arrives in Social Hood.
-        When it can&apos;t answer from what you&apos;ve taught it, it sends nothing and flags the conversation for you.
+      <p className="text-xs text-fg-secondary">
+        {/* The sentence alone describes the field; the link is its own stop. */}
+        <span id="automation-ai-note">
+          The AI answers from your knowledge. When the answer isn&apos;t there, it sends nothing and moves the
+          conversation to Needs you.
+        </span>
+        {canManageKnowledge ? (
+          <>
+            {" "}
+            {/* Underlined at rest: in a line of text, colour alone doesn't mark a link (WCAG 1.4.1). */}
+            <Link href={`/w/${workspace.slug}/knowledge` as Route} className="text-brand-fg underline underline-offset-4">
+              Open Knowledge
+            </Link>
+          </>
+        ) : null}
       </p>
     </div>
   );
