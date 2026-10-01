@@ -1183,3 +1183,49 @@ decoration) still hold in the app. The scope is the marketing pages only:
   (about 20 KB more, gzipped).
 - The marketing header's blur stays DESIGN_SYSTEM §6's documented exception; the header now floats
   as a rounded bar after 64 px of scroll.
+
+## C-069 · UI audit owner decisions D-01 to D-17 (owner decision, feature/ui-audit)
+The owner approved the architect's recommendation for all 17 decisions in
+`docs/ui-audit/UI_AUDIT.md` §D on 2026-10-01. Each one is applied by the task the implementation
+plan names; until that task merges, the current look stays.
+- **D-01:** `line-control` (white 40%) on checkbox, radio and switch edges **and** on text inputs,
+  selects and textareas (`--input` → `line-control`). Amends UX-A11Y-01's scope note.
+- **D-02:** `rounded-xl` for every app card (amends C-066's `rounded-2xl`); inset panels
+  `rounded-lg`; `2xl` stays for message bubbles and marketing.
+- **D-03:** a dark tooltip: the `overlay` surface, `fg` text, a `line` edge and the floating shadow.
+- **D-04:** native date and time inputs for R1, styled like Input. A deviation from UX-CMP-01's
+  Calendar; Calendar comes when a range picker or R2 needs it (no UI-029).
+- **D-05:** page H1 24 px everywhere (amends C-066's 30 px settings title); pane H1 18 px for
+  Inbox, Ask and the phone top bar; the spec's pane title becomes `text-lg`.
+- **D-06:** placeholders `fg-secondary`; `fg-disabled` for disabled controls only. Amends spec
+  §4.2.
+- **D-07:** `ai_auto` → "Sent by AI" with the info button; `automation` → "Automation · {name}"
+  with a zap icon ("AI" only when the step was an AI reply); list prefix "Automation:"; the row
+  badge "Auto replies", neutral, at most two badges per row. Amends C-063, follows UX-INB-06.
+- **D-08:** no settings breadcrumb or eyebrow; tab labels match the page titles ("Ask Social
+  Hood", "Billing and usage", "AI rules and takeover"); the save bar shows only when dirty, saving
+  or failed, with an inline "Saved" status on autosave pages; the Agent tab's six tiles become one
+  sentence. Amends C-066.
+- **D-09:** Disconnect stays visible as a neutral ghost button; one "Delete account and data" item
+  for both modes in a ⋯ menu, opening the same typed-confirm dialog. Amends C-067's labels and
+  placement; the API is unchanged.
+- **D-10:** at most one gradient primary per view region (page header, dialog footer, composer);
+  row and card actions are secondary.
+- **D-11:** per post now: `needs_reply_count` on PostSummary and a `needs_reply` filter on a
+  post's comments, with the API, the generated client and the UI in one task (UI-055). A cross-post
+  list later if usage shows the need.
+- **D-12:** an `overlay` surface (`#262626`) and two dark elevation shadows (floating, overlay)
+  replacing `shadow-md`/`xl` and the 10% ring on floating and modal surfaces.
+- **D-13:** up to four identity gradient pairs built only from existing brand, shell and
+  platform-blue values, every stop 4.5:1 or more with white, no status colour; shared by avatar
+  fallbacks and schedule account rings.
+- **D-14:** a per-device "Single-key shortcuts" switch, on by default, in a Keyboard shortcuts
+  dialog opened from the inbox list header and with "?".
+- **D-15:** the active platform segment neutral (`raised` with `brand-fg`); the heart moves into
+  the emoji popover ("Send a heart"); scheduling only from the composer, named "Schedule message";
+  Archived as a plain chip. Amends C-063.
+- **D-16:** PageFrame's "‹ Parent" back link on the automation editor, post composer and post
+  detail (amends UX-SCR-03; e2e F-11 and F-13 change in UI-065); below 1280 px the editor's side
+  panel comes after the steps; icon-only buttons `rounded-lg` (amends spec §4.2's `rounded-full`,
+  which stays for circles); composer shells `rounded-xl` (amends UX-INB-07's pill).
+- **D-17:** the system fallback for Devanagari in R1; `latin-ext` is added regardless (UI-010).
