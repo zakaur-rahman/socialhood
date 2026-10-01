@@ -113,7 +113,7 @@ export function HomeScreen() {
       {overview.isPending ? (
         <div className="space-y-6" aria-busy="true" aria-label="Loading Home">
           <MetricTilesSkeleton />
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
               <Skeleton key={i} className="h-56 rounded-xl bg-panel" />
             ))}
@@ -190,7 +190,7 @@ function Body({
       >
         <MetricTiles overview={data} slug={slug} connected={connected} now={now} />
 
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <SentimentCard messages={data.message_sentiment} comments={data.comment_sentiment} period={period} within={within} />
           <TopPostsCard posts={data.top_posts} engagement={data.top_posts_engagement} period={period} within={within} slug={slug} />
           <TopIntentsCard intents={data.top_intents} period={period} within={within} />
