@@ -4,10 +4,9 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { AppShell } from "@/components/shell/AppShell";
+import { AppShell, ShellSkeleton } from "@/components/shell/AppShell";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
-import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { useWorkspace, useWorkspaces } from "@/lib/api/queries";
 import { useWorkspaceEvents } from "@/lib/realtime/use-workspace-events";
 import { WorkspaceProvider } from "@/lib/workspace";
@@ -20,7 +19,8 @@ export default function WorkspaceLayout({ children }: { children: ReactNode }) {
   const { slug } = useParams<{ slug: string; id?: string }>();
   const workspaces = useWorkspaces();
 
-  if (workspaces.isPending) return <PageSkeleton fullPage />;
+  // The shell frame stays put while the workspace loads (UI-ISS-114).
+  if (workspaces.isPending) return <ShellSkeleton />;
   if (workspaces.isError) {
     return <ErrorState fullPage error={workspaces.error} onRetry={() => void workspaces.refetch()} />;
   }

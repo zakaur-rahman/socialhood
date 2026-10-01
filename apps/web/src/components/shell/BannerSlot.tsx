@@ -28,11 +28,12 @@ const actionClass =
 /**
  * UX-SH-04: app-level banners above page content (account needs reconnecting, payment on hold,
  * AI credits exhausted, trial ending). One action each; critical states cannot be dismissed.
+ * They sit in `<main>`'s flow and keep their height; a full-height frame below takes the rest.
  */
 export function BannerSlot({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
   return (
-    <div className="space-y-2 px-4 pt-4 md:px-6" role="status">
+    <div className="shrink-0 space-y-2 px-4 pt-4 md:px-6" role="status">
       {banners.map((banner) => (
         <div
           key={banner.id}

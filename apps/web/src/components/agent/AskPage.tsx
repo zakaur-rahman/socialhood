@@ -24,9 +24,11 @@ export function AskPage() {
   const focus = () => document.getElementById(PAGE_COMPOSER_ID)?.focus();
 
   return (
+    // Fills what <main> has left under any banner (data-shell-fill, AppShell's ShellFrame).
     <div
-      className="flex h-[calc(100dvh-56px)] overflow-hidden bg-canvas md:mx-4 md:mt-4 md:h-[calc(100dvh-32px)] md:rounded-xl md:border md:border-line"
+      className="flex min-h-0 flex-1 overflow-hidden bg-canvas md:m-4 md:rounded-xl md:border md:border-line"
       data-testid="ask-page"
+      data-shell-fill
     >
       <aside aria-label="Thread history" className="hidden w-[272px] shrink-0 flex-col border-r border-line bg-panel lg:flex">
         <div className="p-3">

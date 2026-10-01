@@ -89,15 +89,19 @@ export function InboxShell({ children }: { children: ReactNode }) {
   return <Inbox accounts={live}>{children}</Inbox>;
 }
 
-/** The inbox fills the height, inset like the sidebar, left corners rounded (UX-SH-03). */
+/**
+ * The inbox fills the height, inset like the sidebar, left corners rounded (UX-SH-03): it takes
+ * what `<main>` has left under any banner (data-shell-fill, AppShell's ShellFrame).
+ */
 function InboxFrame({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <div
       className={cn(
-        "flex h-[calc(100dvh-56px)] overflow-hidden bg-panel md:mt-4 md:ml-4 md:h-[calc(100dvh-32px)] md:rounded-l-xl md:border md:border-r-0 md:border-line",
+        "flex min-h-0 flex-1 overflow-hidden bg-panel md:my-4 md:ml-4 md:rounded-l-xl md:border md:border-r-0 md:border-line",
         className,
       )}
       data-testid="inbox"
+      data-shell-fill
     >
       {children}
     </div>
