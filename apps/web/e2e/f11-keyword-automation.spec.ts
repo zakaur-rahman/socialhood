@@ -64,8 +64,10 @@ test.describe("F-11 create a keyword automation", () => {
     await page.getByRole("list", { name: "Conversations" }).getByRole("link").filter({ hasText: "Here's our latest catalogue." }).click();
     const log = page.getByRole("log", { name: /^Messages with / });
     await expect(log.getByText(question)).toBeVisible();
-    const reply = log.locator("[data-direction='outbound']").filter({ hasText: "Automation · Catalogue by DM" });
-    await expect(reply).toContainText("Here's our latest catalogue.");
+    // The bubble's label is C-063's "AI Assisted" until UI-050 applies D-07 ("Automation · {name}");
+    // UI-050 asserts the label here again.
+    const reply = log.locator("[data-direction='outbound']").filter({ hasText: "Here's our latest catalogue." });
+    await expect(reply).toBeVisible();
     await expect(reply.getByRole("img", { name: "Sent" })).toBeVisible();
 
     await page.goto(`/w/${workspace.slug}/automations`);
