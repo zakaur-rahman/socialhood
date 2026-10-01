@@ -289,7 +289,8 @@ export function Composer({
   return (
     <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
       <AttachmentTray items={tray.items} onRemove={tray.remove} onRetry={tray.retry} />
-      <div className="rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised">
+      {/* The textarea draws no outline of its own; this wrapper shows the focus outline (DESIGN_SYSTEM §8.3). */}
+      <div className="rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
         <label htmlFor={`composer-${conversationId}`} className="sr-only">
           Reply to {name}
         </label>
@@ -409,7 +410,7 @@ export function Composer({
             disabled={!canSend}
             aria-label="Send"
             className={cn(
-              "ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium md:h-8",
+              "ml-auto inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium md:h-8",
               canSend
                 ? "bg-brand-gradient text-white motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-[120ms]"
                 : "bg-raised text-fg-disabled",

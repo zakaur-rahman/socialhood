@@ -76,7 +76,7 @@ export function ScheduleFields({
   const minDay = toZonedInputs(limits.min, timeZone).date;
   const maxDay = limits.max ? toZonedInputs(limits.max, timeZone).date : undefined;
   const inputClass =
-    "w-full rounded-lg border border-line bg-field px-3 py-2 text-sm outline-none focus:bg-raised aria-invalid:border-danger";
+    "w-full rounded-lg border border-line bg-field px-3 py-2 text-sm focus:bg-raised aria-invalid:border-danger";
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">

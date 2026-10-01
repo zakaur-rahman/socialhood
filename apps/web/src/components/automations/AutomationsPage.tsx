@@ -128,10 +128,13 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
 
   // ---- gallery (UX-SCR-11)
-  const [gallery, setGallery] = useState<{ open: boolean; choice?: Choice }>({ open: openGallery });
+  // The gallery stays mounted, so closing it plays its exit. Its state is its own; a new key on
+  // each opening starts it fresh (and at the account question when a template card opened it).
+  const [gallery, setGallery] = useState<{ open: boolean; choice?: Choice; key: number }>({ open: openGallery, key: 0 });
+  const showGallery = (choice?: Choice) => setGallery((current) => ({ open: true, choice, key: current.key + 1 }));
   const { start, pending: starting } = useStartAutomation();
   const closeGallery = () => {
-    setGallery({ open: false });
+    setGallery((current) => ({ ...current, open: false }));
     if (openGallery) router.replace(`/w/${workspace.slug}/automations` as Route);
   };
   // FR-AGT-03: an automation draft handed over by Ask Social Hood shows first (instead of the
@@ -139,17 +142,19 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const draftHandoff = useAgentHandoff((state) => state.automationDraft);
   const takeAutomationDraft = useAgentHandoff((state) => state.takeAutomationDraft);
   const [agentDraft, setAgentDraft] = useState<AutomationDraftHandoff | null>(null);
+  const [draftOpen, setDraftOpen] = useState(false);
   const [draftTaken, setDraftTaken] = useState<string | null>(null);
   if (draftHandoff && draftHandoff.nonce !== draftTaken) {
     setDraftTaken(draftHandoff.nonce);
     setAgentDraft(draftHandoff);
+    setDraftOpen(true);
   }
   useEffect(() => {
     if (draftHandoff) takeAutomationDraft(draftHandoff.nonce);
   }, [draftHandoff, takeAutomationDraft]);
 
   const quickStart = (choice: Choice) => {
-    if (accounts.length > 1) setGallery({ open: true, choice });
+    if (accounts.length > 1) showGallery(choice);
     else start(choice, accounts[0]?.id ?? null);
   };
 
@@ -256,7 +261,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         plan={workspace.plan}
         starting={starting}
         onUse={quickStart}
-        onBrowse={() => setGallery({ open: true })}
+        onBrowse={() => showGallery()}
       />
     );
   } else if (items.length === 0) {
@@ -295,7 +300,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
     <PageFrame
       title="Automations"
       actions={
-        <Button className="bg-brand-gradient h-9 text-white" onClick={() => setGallery({ open: true })}>
+        <Button className="bg-brand-gradient h-9 text-white" onClick={() => showGallery()}>
           <Plus aria-hidden /> New automation
         </Button>
       }
@@ -316,7 +321,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
               onChange={(event) => setText(event.target.value)}
               placeholder="Search by name or keyword"
               autoComplete="off"
-              className="h-9 w-full rounded-lg border border-line bg-field pr-3 pl-10 text-sm outline-none focus:bg-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="h-9 w-full rounded-lg border border-line bg-field pr-3 pl-10 text-sm focus:bg-raised focus-visible:ring-3 focus-visible:ring-ring/50"
             />
           </div>
           {accounts.length > 1 ? (
@@ -396,28 +401,25 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         {content}
       </div>
 
-      {gallery.open && !agentDraft ? (
-        <TemplateGallery
-          open
-          onOpenChange={(open) => (open ? undefined : closeGallery())}
-          templates={templates.data ?? []}
-          templatesLoading={templates.isPending}
-          accounts={accounts}
-          initialChoice={gallery.choice}
-          plan={workspace.plan}
-        />
-      ) : null}
-      {agentDraft ? (
-        <AgentDraftDialog
-          key={agentDraft.nonce}
-          draft={agentDraft}
-          accounts={accounts}
-          onClose={() => {
-            setAgentDraft(null);
-            closeGallery();
-          }}
-        />
-      ) : null}
+      <TemplateGallery
+        key={gallery.key}
+        open={gallery.open && !draftOpen}
+        onOpenChange={(open) => (open ? undefined : closeGallery())}
+        templates={templates.data ?? []}
+        templatesLoading={templates.isPending}
+        accounts={accounts}
+        initialChoice={gallery.choice}
+        plan={workspace.plan}
+      />
+      <AgentDraftDialog
+        open={draftOpen}
+        draft={agentDraft}
+        accounts={accounts}
+        onClose={() => {
+          setDraftOpen(false);
+          closeGallery();
+        }}
+      />
     </PageFrame>
   );
 }

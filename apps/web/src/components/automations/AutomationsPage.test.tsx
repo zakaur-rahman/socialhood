@@ -267,6 +267,25 @@ describe("AutomationsPage (UX-SCR-02)", () => {
     expect(within(dialog).getByRole("article", { name: "Catalogue by DM" })).toBeInTheDocument();
   });
 
+  it("New automation opens the gallery; after Esc the next opening starts fresh", async () => {
+    const user = userEvent.setup();
+    const templates = [template({ key: "t1", name: "Send a link to commenters" }), template({ key: "t4", name: "Catalogue by DM", category: "sell" })];
+    renderWithApi(<AutomationsPage />, { handlers: handlers({ templates }) });
+    await screen.findByRole("link", { name: "Comment LINK, DM the link" });
+
+    await user.click(screen.getByRole("button", { name: "New automation" }));
+    const dialog = await screen.findByRole("dialog", { name: "New automation" });
+    const categories = within(dialog).getByRole("group", { name: "Categories" });
+    await user.click(within(categories).getAllByRole("button").find((button) => button.textContent !== "All")!);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(nav.replace).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "New automation" }));
+    const again = await screen.findByRole("dialog", { name: "New automation" });
+    expect(within(again).getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("shows skeleton rows while loading", () => {
     renderWithApi(<AutomationsPage />, {
       handlers: { ...handlers(), "GET /v1/w/:wid/automations": () => new Promise<Response>(() => {}) },

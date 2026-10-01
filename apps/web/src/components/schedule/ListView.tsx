@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
+import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
@@ -182,14 +183,13 @@ export function ListView({
         </TabsList>
         <TabsContent value={tab}>{content}</TabsContent>
       </Tabs>
-      {shifting ? (
-        <ShiftDialog
-          count={chosen.length}
-          pending={bulk.isPending}
-          onClose={() => setShifting(false)}
-          onShift={(minutes) => run({ action: "shift", shift_minutes: minutes }, () => setShifting(false))}
-        />
-      ) : null}
+      <ShiftDialog
+        open={shifting}
+        onOpenChange={setShifting}
+        count={chosen.length}
+        pending={bulk.isPending}
+        onShift={(minutes) => run({ action: "shift", shift_minutes: minutes }, () => setShifting(false))}
+      />
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent className="border-line bg-panel">
           <AlertDialogHeader>
@@ -274,18 +274,47 @@ const UNITS = [
   { value: "days", label: "days", factor: 24 * 60 },
 ] as const;
 
-/** FR-PUB-14: move the selected posts later or earlier by the same amount. */
+/**
+ * FR-PUB-14: move the selected posts later or earlier by the same amount. Opened from Shift times,
+ * so focus goes back there when it closes (UX-A11Y-02).
+ */
 function ShiftDialog({
+  open,
+  onOpenChange,
   count,
   pending,
-  onClose,
+  onShift,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  count: number;
+  pending: boolean;
+  onShift: (minutes: number) => void;
+}) {
+  const returnFocus = useReturnFocus();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="border-line bg-panel sm:max-w-md" {...returnFocus}>
+        <ShiftForm count={count} pending={pending} onCancel={() => onOpenChange(false)} onShift={onShift} />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Inside the dialog's content, so each opening starts from 1 hour later. */
+function ShiftForm({
+  count: selectedCount,
+  pending,
+  onCancel,
   onShift,
 }: {
   count: number;
   pending: boolean;
-  onClose: () => void;
+  onCancel: () => void;
   onShift: (minutes: number) => void;
 }) {
+  // A successful shift clears the selection; the dialog keeps the number it showed while it closes.
+  const [count] = useState(selectedCount);
   const [amount, setAmount] = useState("1");
   const [unit, setUnit] = useState<(typeof UNITS)[number]["value"]>("hours");
   const [direction, setDirection] = useState<"later" | "earlier">("later");
@@ -302,77 +331,73 @@ function ShiftDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="border-line bg-panel sm:max-w-md">
-        <form onSubmit={submit} className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>Shift times</DialogTitle>
-            <DialogDescription className="text-fg-secondary">
-              Move {count} {count === 1 ? "post" : "posts"} by the same amount. Posts that would land less than 5
-              minutes from now stay where they are.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="space-y-1">
-              <Label htmlFor="shift-amount" className="text-xs text-fg-secondary">
-                Amount
-              </Label>
-              <input
-                id="shift-amount"
-                inputMode="numeric"
-                value={amount}
-                aria-invalid={Boolean(error)}
-                onChange={(event) => setAmount(event.target.value)}
-                className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm tabular-nums outline-none focus:bg-raised aria-invalid:border-danger"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="shift-unit" className="text-xs text-fg-secondary">
-                Unit
-              </Label>
-              <Select value={unit} onValueChange={(value) => setUnit(value as typeof unit)}>
-                <SelectTrigger id="shift-unit" className="h-9 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {UNITS.map((u) => (
-                    <SelectItem key={u.value} value={u.value}>
-                      {u.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="shift-direction" className="text-xs text-fg-secondary">
-                Direction
-              </Label>
-              <Select value={direction} onValueChange={(value) => setDirection(value as typeof direction)}>
-                <SelectTrigger id="shift-direction" className="h-9 w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="later">Later</SelectItem>
-                  <SelectItem value="earlier">Earlier</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          {error ? (
-            <p role="alert" className="text-xs text-danger-fg">
-              {error}
-            </p>
-          ) : null}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" className="bg-brand-gradient text-white" disabled={pending}>
-              Shift {count} {count === 1 ? "post" : "posts"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <form onSubmit={submit} className="grid gap-4">
+      <DialogHeader>
+        <DialogTitle>Shift times</DialogTitle>
+        <DialogDescription className="text-fg-secondary">
+          Move {count} {count === 1 ? "post" : "posts"} by the same amount. Posts that would land less than 5
+          minutes from now stay where they are.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="space-y-1">
+          <Label htmlFor="shift-amount" className="text-xs text-fg-secondary">
+            Amount
+          </Label>
+          <input
+            id="shift-amount"
+            inputMode="numeric"
+            value={amount}
+            aria-invalid={Boolean(error)}
+            onChange={(event) => setAmount(event.target.value)}
+            className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm tabular-nums focus:bg-raised aria-invalid:border-danger"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="shift-unit" className="text-xs text-fg-secondary">
+            Unit
+          </Label>
+          <Select value={unit} onValueChange={(value) => setUnit(value as typeof unit)}>
+            <SelectTrigger id="shift-unit" className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {UNITS.map((u) => (
+                <SelectItem key={u.value} value={u.value}>
+                  {u.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="shift-direction" className="text-xs text-fg-secondary">
+            Direction
+          </Label>
+          <Select value={direction} onValueChange={(value) => setDirection(value as typeof direction)}>
+            <SelectTrigger id="shift-direction" className="h-9 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="later">Later</SelectItem>
+              <SelectItem value="earlier">Earlier</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+      {error ? (
+        <p role="alert" className="text-xs text-danger-fg">
+          {error}
+        </p>
+      ) : null}
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" className="bg-brand-gradient text-white" disabled={pending}>
+          Shift {count} {count === 1 ? "post" : "posts"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

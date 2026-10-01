@@ -85,7 +85,7 @@ export function MediaLibraryDialog({
               value={since}
               max={until || undefined}
               onChange={(event) => setSince(event.target.value)}
-              className="h-10 rounded-lg border border-line bg-field px-3 text-sm outline-none focus:bg-raised md:h-9"
+              className="h-10 rounded-lg border border-line bg-field px-3 text-sm focus:bg-raised md:h-9"
             />
           </div>
           <div className="space-y-1">
@@ -98,7 +98,7 @@ export function MediaLibraryDialog({
               value={until}
               min={since || undefined}
               onChange={(event) => setUntil(event.target.value)}
-              className="h-10 rounded-lg border border-line bg-field px-3 text-sm outline-none focus:bg-raised md:h-9"
+              className="h-10 rounded-lg border border-line bg-field px-3 text-sm focus:bg-raised md:h-9"
             />
           </div>
         </div>

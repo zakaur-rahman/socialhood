@@ -98,7 +98,7 @@ export default function EmojiPicker({ onPick }: { onPick: (emoji: string) => voi
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search emoji"
         autoFocus
-        className="w-full rounded-lg border border-line bg-field px-3 py-1.5 text-sm outline-none focus:bg-raised"
+        className="w-full rounded-lg border border-line bg-field px-3 py-1.5 text-sm focus:bg-raised"
       />
       <div className="max-h-64 overflow-y-auto">
         {results ? (
