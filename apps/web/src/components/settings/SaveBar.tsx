@@ -3,7 +3,9 @@
 import { CheckCircle2, CircleAlert, Loader2 } from "lucide-react";
 import { useEffect } from "react";
 
+import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const LEAVE_WARNING = "You have unsaved changes. Leave this page without saving them?";
 
@@ -49,6 +51,10 @@ export function useLeaveWarning(dirty: boolean) {
  * spinner while saving; a failed save's error in place. While dirty, leaving warns first.
  * A page whose switches save as they change (Notifications) passes `dirty={false}` and gets the
  * saving and error states only.
+ *
+ * It floats (DESIGN_SYSTEM §6): opaque `panel` with the spec's shadow, no blur. It reserves its
+ * height so a focused control is never under it, and stays in the flow on short viewports
+ * (UI-ISS-014, `shell/sticky-bar.ts`).
  */
 export function SaveBar({
   dirty,
@@ -66,8 +72,13 @@ export function SaveBar({
   useLeaveWarning(dirty);
   const showActions = (dirty || saving) && onSave;
   return (
-    <div role="region" aria-label="Save changes" className="sticky bottom-0 z-20 pt-2 pb-4">
-      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-panel/95 px-4 py-3 shadow-2xl shadow-black/40 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
+    <div
+      ref={reserveBottomBar}
+      role="region"
+      aria-label="Save changes"
+      className={cn("sticky bottom-0 z-20 pt-2 pb-4", BOTTOM_BAR)}
+    >
+      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-panel px-4 py-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p role="status" aria-live="polite" className="flex min-h-6 items-center gap-2 text-sm font-medium">
             {saving ? (

@@ -110,6 +110,14 @@ describe("SaveBar (C-066)", () => {
     expect(navigated).toHaveBeenCalledTimes(2);
   });
 
+  it("floats opaque, without blur; sticks, but not on short viewports (UI-ISS-014, UI-ISS-031)", () => {
+    const { bar } = renderBar();
+    expect(bar()).toHaveClass("sticky", "bottom-0", "[@media(max-height:500px)]:static");
+    const surface = bar().firstElementChild;
+    expect(surface).toHaveClass("bg-panel", "shadow-xl");
+    expect(surface?.className).not.toMatch(/backdrop-blur|bg-panel\/|shadow-2xl/);
+  });
+
   it("status only (switches that save as they change): saving, saved, or the error", () => {
     const { bar, rerender } = renderBar({ onReset: undefined, onSave: undefined, saving: true });
     expect(within(bar()).getByRole("status")).toHaveTextContent("Saving…");
