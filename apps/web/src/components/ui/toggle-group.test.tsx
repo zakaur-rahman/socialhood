@@ -1,9 +1,11 @@
 import { useState } from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 
+import { DisabledReason } from "./disabled-reason"
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group"
+import { TooltipProvider } from "./tooltip"
 
 const classes = (el: Element) => (el.getAttribute("class") ?? "").split(/\s+/).filter(Boolean)
 
@@ -152,6 +154,63 @@ describe("ToggleGroup (segmented)", () => {
     await userEvent.keyboard("{ArrowRight}{ArrowRight}")
     expect(custom).not.toHaveFocus()
     expect(onValueChange).not.toHaveBeenCalled()
+  })
+})
+
+describe("ToggleGroup with DisabledReason (UI-ISS-026)", () => {
+  const REASON = "Custom ranges are part of Pro"
+
+  function Locked() {
+    const [value, setValue] = useState("7d")
+    return (
+      <TooltipProvider delayDuration={0}>
+        <button type="button">Before</button>
+        <ToggleGroup aria-label="Period" value={value} onValueChange={setValue}>
+          <ToggleGroupItem value="7d">7 days</ToggleGroupItem>
+          <ToggleGroupItem value="30d">30 days</ToggleGroupItem>
+          <DisabledReason reason={REASON} className="flex-1">
+            <ToggleGroupItem value="custom" disabled className="w-full">
+              Custom
+            </ToggleGroupItem>
+          </DisabledReason>
+        </ToggleGroup>
+      </TooltipProvider>
+    )
+  }
+
+  it("says why a segment is disabled, by keyboard: arrows skip it, Tab reaches its reason", async () => {
+    const user = userEvent.setup()
+    render(<Locked />)
+    const custom = screen.getByRole("radio", { name: "Custom" })
+    expect(custom).toBeDisabled()
+    const wrapper = custom.closest('[data-slot="disabled-reason"]')!
+    expect(wrapper).toHaveClass("flex-1")
+
+    await user.click(screen.getByRole("button", { name: "Before" }))
+    await user.tab()
+    expect(screen.getByRole("radio", { name: "7 days" })).toHaveFocus()
+    await user.keyboard("{ArrowRight}{ArrowRight}")
+    expect(custom).not.toHaveFocus()
+    await user.tab()
+    expect(wrapper).toHaveFocus()
+    expect(wrapper).toHaveAccessibleDescription(REASON)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(REASON)
+  })
+
+  it("says why on hover and on a tap, and the disabled segment stays unchosen", async () => {
+    const user = userEvent.setup()
+    render(<Locked />)
+    const custom = screen.getByRole("radio", { name: "Custom" })
+    const wrapper = custom.closest('[data-slot="disabled-reason"]')!
+    await user.hover(wrapper)
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(REASON)
+    await user.unhover(wrapper)
+    await user.keyboard("{Escape}")
+    await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull())
+    await user.pointer({ keys: "[TouchA]", target: wrapper })
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(REASON)
+    expect(custom).toHaveAttribute("aria-checked", "false")
+    expect(screen.getByRole("radio", { name: "7 days" })).toHaveAttribute("aria-checked", "true")
   })
 })
 
