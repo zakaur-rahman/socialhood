@@ -69,6 +69,7 @@ jobs:
           APP_ENV: test
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
           DATABASE_URL_DIRECT: ${{ env.TEST_DATABASE_URL_DIRECT }}
+          REDIS_URL: ${{ env.TEST_REDIS_URL }}
         run: |
           uv run alembic upgrade head
           uv run alembic check
@@ -135,6 +136,8 @@ jobs:
     timeout-minutes: 10
     permissions:
       contents: read
+      # On pull requests the action lists the PR's commits through the API.
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
