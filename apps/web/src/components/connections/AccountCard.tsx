@@ -13,6 +13,7 @@ import { relativeTime } from "@/lib/time";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 
+import { DeleteAccountDialog, type DeleteMode } from "./DeleteAccountDialog";
 import { DisconnectDialog } from "./DisconnectDialog";
 import { PLATFORM_BG, PlatformGlyph } from "./PlatformGlyph";
 
@@ -22,6 +23,8 @@ const STATUS_TONE: Record<AccountStatus, { pill: string; dot: string }> = {
   error: { pill: "bg-danger/15 text-danger-fg", dot: "bg-danger" },
   disconnected: { pill: "bg-white/5 text-fg-secondary", dot: "bg-fg-secondary" },
 };
+/** C-067: while its data is being deleted, whatever its status. */
+const DELETING_TONE = { pill: "bg-danger/15 text-danger-fg", dot: "animate-pulse bg-danger" };
 
 const AI_MODES: { value: AiMode; label: string; hint: string }[] = [
   { value: "off", label: "Off", hint: "No AI replies" },
@@ -36,7 +39,17 @@ export type AccountActions = {
   onChange: (patch: SocialAccountPatch) => void;
   onReconnect: () => void;
   onRetrySubscribe: () => void;
-  onDisconnect: (deleteData: boolean) => void;
+  onDisconnect: () => void;
+  /** C-067: Disconnect and delete data, or Remove; resolves once the API accepted it. */
+  onDelete: (confirm: string, mode: DeleteMode) => Promise<void>;
+};
+
+export type AccountBusy = {
+  saving: boolean;
+  reconnecting: boolean;
+  retrying: boolean;
+  disconnecting: boolean;
+  deleting: boolean;
 };
 
 /** "Last synced 3h ago", or on a date once it's a week old. */
@@ -49,7 +62,9 @@ export function lastSyncedText(iso: string, now: Date): string {
 /**
  * UX-SCR-07: one card per account (C-066). Avatar with the platform's badge, name and handle,
  * the status; while connected, its AI settings in an inner panel; the API it uses and when it
- * last synced; Reconnect, Retry or Disconnect for owners and admins.
+ * last synced; Reconnect, Retry or Disconnect for owners and admins. C-067: Disconnect and delete
+ * data on a connected account, Remove on a disconnected or sandbox one, and "Deleting…" with no
+ * actions until the purge has removed it.
  */
 export function AccountCard({
   account,
@@ -61,7 +76,7 @@ export function AccountCard({
   account: SocialAccount;
   plan: Plan;
   canManage: boolean;
-  busy: { saving: boolean; reconnecting: boolean; retrying: boolean; disconnecting: boolean };
+  busy: AccountBusy;
   actions: AccountActions;
 }) {
   const now = useNow();
@@ -70,16 +85,19 @@ export function AccountCard({
   const handle = account.username ? `@${account.username}` : (account.display_name ?? account.phone_number ?? "this account");
   const name = account.display_name ?? account.username ?? `${platformName} account`;
   const subtitle = account.username ? `@${account.username}` : (account.phone_number ?? platformName);
-  const live = account.status !== "disconnected";
+  const deleting = account.deleting;
+  const live = account.status !== "disconnected" && !deleting;
   const autoLocked = plan === "free";
-  const tone = STATUS_TONE[account.status];
-  const reconnectable = account.status === "needs_reconnect" || account.status === "disconnected";
+  const tone = deleting ? DELETING_TONE : STATUS_TONE[account.status];
+  const reconnectable = !deleting && (account.status === "needs_reconnect" || account.status === "disconnected");
+  const removable = !deleting && (!live || account.sandbox);
+  const onDelete = (mode: DeleteMode) => (confirm: string) => actions.onDelete(confirm, mode);
 
   return (
     <article
       aria-label={name}
       className={cn("flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-panel p-5", !live && "bg-panel/60")}
-      data-status={account.status}
+      data-status={deleting ? "deleting" : account.status}
     >
       <header className="flex items-start gap-3">
         <div className="relative shrink-0">
@@ -114,11 +132,15 @@ export function AccountCard({
           )}
         >
           <span className={cn("size-1.5 rounded-full", tone.dot)} aria-hidden />
-          {accountStatusLabel[account.status]}
+          {deleting ? "Deleting…" : accountStatusLabel[account.status]}
         </span>
       </header>
 
-      {account.last_error && account.status !== "active" ? (
+      {deleting ? (
+        <p role="status" className="text-sm text-fg-secondary">
+          Deleting this account and everything stored for it. It disappears from this list when done.
+        </p>
+      ) : account.last_error && account.status !== "active" ? (
         <p role="status" className={cn("text-sm", account.status === "error" ? "text-danger-fg" : "text-warning")}>
           {account.last_error}
         </p>
@@ -182,7 +204,7 @@ export function AccountCard({
             </>
           ) : null}
         </p>
-        {canManage ? (
+        {canManage && !deleting ? (
           <div className="flex flex-wrap items-center gap-2">
             {reconnectable ? (
               <Button
@@ -199,6 +221,24 @@ export function AccountCard({
               </Button>
             ) : null}
             {live ? <DisconnectDialog handle={handle} pending={busy.disconnecting} onConfirm={actions.onDisconnect} /> : null}
+            {live && !account.sandbox ? (
+              <DeleteAccountDialog
+                account={account}
+                handle={handle}
+                mode="disconnect"
+                pending={busy.deleting}
+                onConfirm={onDelete("disconnect")}
+              />
+            ) : null}
+            {removable ? (
+              <DeleteAccountDialog
+                account={account}
+                handle={handle}
+                mode="remove"
+                pending={busy.deleting}
+                onConfirm={onDelete("remove")}
+              />
+            ) : null}
           </div>
         ) : null}
       </footer>

@@ -20,11 +20,15 @@ const STATUS_COPY: Record<DataDeletionStatus["status"], { title: string; body: s
   },
   processing: {
     title: "Deleting your data",
-    body: "We are deleting the data we hold for your Instagram account.",
+    body: "We have disconnected your Instagram account and are deleting the data we hold for it.",
   },
   completed: {
     title: "Data deleted",
-    body: "We have deleted the data we held for your Instagram account and disconnected it.",
+    body: "We have disconnected your Instagram account and deleted the data we held for it: its conversations, messages, comments, contacts, posts and automations.",
+  },
+  failed: {
+    title: "Still deleting your data",
+    body: "Part of the deletion didn't finish on the first try. We are retrying it automatically; check back soon.",
   },
 };
 
@@ -51,6 +55,12 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
         <li className="rounded-xl border border-line bg-panel p-5">
           <strong className="text-fg">Workspace owners</strong>: delete the workspace in Settings → Workspace. Everything
           stops at once, and the workspace&apos;s data, including uploaded media, is permanently removed within 24 hours.
+        </li>
+        <li className="rounded-xl border border-line bg-panel p-5">
+          <strong className="text-fg">Owners and admins, for one account</strong>: in Settings → Connections, use
+          Disconnect and delete data (or Remove, for an account already disconnected). The account&apos;s
+          conversations, messages, comments, contacts, posts and automations are permanently deleted; the
+          workspace&apos;s knowledge, settings and billing stay.
         </li>
         <li className="rounded-xl border border-line bg-panel p-5">
           <strong className="text-fg">Removed Social Hood in Instagram?</strong> If you asked Instagram to delete your
