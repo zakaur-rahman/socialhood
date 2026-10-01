@@ -168,7 +168,13 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   const [railOpen, setRailOpen] = useState(false);
   const [postingOpen, setPostingOpen] = useState(false);
   const [hashtagsOpen, setHashtagsOpen] = useState(false);
+  // Move to… stays mounted and keeps its last request while it closes (its exit plays).
   const [moveRequest, setMoveRequest] = useState<MoveRequest | null>(null);
+  const [moveOpen, setMoveOpen] = useState(false);
+  const openMove = (request: MoveRequest) => {
+    setMoveRequest(request);
+    setMoveOpen(true);
+  };
   const [deleteRequest, setDeleteRequest] = useState<MoveRequest | null>(null);
   const [announcement, setAnnouncement] = useState("");
 
@@ -232,7 +238,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
     const { post } = source;
     const at = dropTime(post, target);
     if (!at) {
-      setMoveRequest({ post, day: target.day });
+      openMove({ post, day: target.day });
       return;
     }
     if (post.publish_at && new Date(post.publish_at).getTime() === at.getTime() && post.status === "scheduled") return;
@@ -274,7 +280,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   };
 
   const actions: PostActions = {
-    moveTo: (post, returnFocus, day) => setMoveRequest({ post, returnFocus, day }),
+    moveTo: (post, returnFocus, day) => openMove({ post, returnFocus, day }),
     queue: (post) =>
       queue.mutate(post, {
         onSuccess: (saved) => {
@@ -569,20 +575,19 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
         <PostingTimesDrawer open={postingOpen} onOpenChange={setPostingOpen} accounts={accounts} />
         <HashtagGroupsDialog open={hashtagsOpen} onOpenChange={setHashtagsOpen} />
 
-        {moveRequest ? (
-          <MoveToDialog
-            key={moveRequest.post.id}
-            request={moveRequest}
-            timeZone={timeZone}
-            now={clock()}
-            onClose={() => setMoveRequest(null)}
-            onMove={async (at) => {
-              const problem = await move(moveRequest.post, at);
-              if (!problem) setMoveRequest(null);
-              return problem;
-            }}
-          />
-        ) : null}
+        <MoveToDialog
+          open={moveOpen}
+          request={moveRequest}
+          timeZone={timeZone}
+          now={clock()}
+          onClose={() => setMoveOpen(false)}
+          onMove={async (at) => {
+            if (!moveRequest) return null;
+            const problem = await move(moveRequest.post, at);
+            if (!problem) setMoveOpen(false);
+            return problem;
+          }}
+        />
 
         <AlertDialog open={Boolean(deleteRequest)} onOpenChange={(open) => (open ? undefined : setDeleteRequest(null))}>
           <AlertDialogContent

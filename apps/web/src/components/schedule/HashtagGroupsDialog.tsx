@@ -216,7 +216,7 @@ function GroupEditor({ group, onDone }: { group: HashtagGroup | null; onDone: ()
           aria-invalid={Boolean(errors.name)}
           aria-describedby={errors.name ? "hashtag-group-name-error" : undefined}
           onChange={(event) => setName(event.target.value)}
-          className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm outline-none focus:bg-raised aria-invalid:border-danger"
+          className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm focus:bg-raised aria-invalid:border-danger"
         />
         {errors.name ? (
           <p id="hashtag-group-name-error" className="text-xs text-danger-fg">
@@ -244,7 +244,7 @@ function GroupEditor({ group, onDone }: { group: HashtagGroup | null; onDone: ()
           aria-invalid={Boolean(errors.hashtags) || over}
           aria-describedby="hashtag-group-tags-help"
           onChange={(event) => setText(event.target.value)}
-          className="w-full resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm leading-relaxed outline-none focus:bg-raised aria-invalid:border-danger"
+          className="w-full resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm leading-relaxed focus:bg-raised aria-invalid:border-danger"
         />
         <p id="hashtag-group-tags-help" className="text-xs text-fg-secondary">
           Separate them with spaces, commas or new lines. The # is optional.

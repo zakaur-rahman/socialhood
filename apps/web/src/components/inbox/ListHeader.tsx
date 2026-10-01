@@ -139,7 +139,7 @@ export function ListHeader({
                 }}
                 placeholder="Search people and messages"
                 autoComplete="off"
-                className="w-full rounded-lg border border-line bg-field py-2 pr-3 pl-9 text-sm outline-none focus:bg-raised"
+                className="w-full rounded-lg border border-line bg-field py-2 pr-3 pl-9 text-sm focus:bg-raised"
               />
             </div>
             {accounts.length > 1 ? (

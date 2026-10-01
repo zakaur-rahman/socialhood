@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -45,7 +46,9 @@ export function ScheduledList({ onOpen, now }: { onOpen: (conversationId: string
   const workspace = useCurrentWorkspace();
   const scheduled = useScheduledMessages(workspace.id);
   const cancel = useCancelScheduled(workspace.id);
+  // The edit dialog stays mounted and keeps the last message while it closes, so its exit plays.
   const [editing, setEditing] = useState<ScheduledMessage | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   if (scheduled.isPending) return <RowSkeletons count={4} />;
   if (scheduled.isError) return <ErrorState error={scheduled.error} onRetry={() => void scheduled.refetch()} />;
@@ -71,7 +74,10 @@ export function ScheduledList({ onOpen, now }: { onOpen: (conversationId: string
               timeZone={workspace.timezone}
               now={now}
               onOpen={() => onOpen(item.conversation_id)}
-              onEdit={() => setEditing(item)}
+              onEdit={() => {
+                setEditing(item);
+                setEditOpen(true);
+              }}
               canceling={cancel.isPending && cancel.variables?.id === item.id}
               onCancel={() =>
                 cancel.mutate(item, {
@@ -83,15 +89,13 @@ export function ScheduledList({ onOpen, now }: { onOpen: (conversationId: string
           </li>
         ))}
       </ul>
-      {editing ? (
-        <EditScheduledDialog
-          key={editing.id}
-          item={editing}
-          timeZone={workspace.timezone}
-          now={now}
-          onClose={() => setEditing(null)}
-        />
-      ) : null}
+      <EditScheduledDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        item={editing}
+        timeZone={workspace.timezone}
+        now={now}
+      />
     </div>
   );
 }
@@ -168,8 +172,37 @@ export function ScheduledCard({
   );
 }
 
-/** FR-SMS-02: change the text or the time of a pending scheduled message. */
+/**
+ * FR-SMS-02: change the text or the time of a pending scheduled message. Opened from a card's
+ * Edit, so focus goes back there when it closes (UX-A11Y-02).
+ */
 function EditScheduledDialog({
+  open,
+  onOpenChange,
+  item,
+  timeZone,
+  now,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  item: ScheduledMessage | null;
+  timeZone: string;
+  now: Date;
+}) {
+  const returnFocus = useReturnFocus();
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="border-line bg-panel sm:max-w-md" {...returnFocus}>
+        {item ? (
+          <EditScheduledForm key={item.id} item={item} timeZone={timeZone} now={now} onClose={() => onOpenChange(false)} />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Inside the dialog's content, so each opening starts from the message as it is. */
+function EditScheduledForm({
   item,
   timeZone,
   now,
@@ -206,37 +239,35 @@ function EditScheduledDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent className="border-line bg-panel sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Edit scheduled message</DialogTitle>
-          <DialogDescription className="text-fg-secondary">
-            To {contactName(item.contact, item.platform)}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-1">
-          <Label htmlFor="scheduled-text" className="text-xs text-fg-secondary">
-            Message
-          </Label>
-          <textarea
-            id="scheduled-text"
-            value={text}
-            maxLength={2000}
-            rows={4}
-            onChange={(event) => setText(event.target.value)}
-            className="w-full resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm leading-relaxed outline-none focus:bg-raised"
-          />
-        </div>
-        <ScheduleFields idPrefix="edit-scheduled" value={when} onChange={setWhen} timeZone={timeZone} limits={limits} error={error} />
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
-            Keep as is
-          </Button>
-          <Button className="bg-brand-gradient text-white" disabled={update.isPending} onClick={save}>
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <>
+      <DialogHeader>
+        <DialogTitle>Edit scheduled message</DialogTitle>
+        <DialogDescription className="text-fg-secondary">
+          To {contactName(item.contact, item.platform)}
+        </DialogDescription>
+      </DialogHeader>
+      <div className="space-y-1">
+        <Label htmlFor="scheduled-text" className="text-xs text-fg-secondary">
+          Message
+        </Label>
+        <textarea
+          id="scheduled-text"
+          value={text}
+          maxLength={2000}
+          rows={4}
+          onChange={(event) => setText(event.target.value)}
+          className="w-full resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm leading-relaxed focus:bg-raised"
+        />
+      </div>
+      <ScheduleFields idPrefix="edit-scheduled" value={when} onChange={setWhen} timeZone={timeZone} limits={limits} error={error} />
+      <DialogFooter>
+        <Button variant="ghost" onClick={onClose}>
+          Keep as is
+        </Button>
+        <Button className="bg-brand-gradient text-white" disabled={update.isPending} onClick={save}>
+          Save
+        </Button>
+      </DialogFooter>
+    </>
   );
 }
