@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils";
  * Spotlight, from Aceternity UI's free "spotlight-new" (ui.aceternity.com/components/spotlight-new),
  * adapted for Social Hood (C-068):
  * - brand-tinted light from the tokens instead of fixed blue HSL values;
- * - the fade-in and the slow drift are CSS animations (effects.css), so it ships no JavaScript and
- *   the drift runs on the compositor; both run only without prefers-reduced-motion;
+ * - no fade-in: the first paint is the finished hero (the original faded in over 1.5 s);
+ * - the slow drift is a CSS animation (effects.css), so it ships no JavaScript and runs on the
+ *   compositor, only without prefers-reduced-motion;
  * - decorative: aria-hidden, no pointer events, clipped by its section.
  */
 
@@ -64,7 +65,7 @@ export function Spotlight({
       aria-hidden
       data-effect="spotlight"
       className={cn(
-        "pointer-events-none absolute inset-0 overflow-hidden motion-safe:animate-[sh-spotlight-in_1.5s_ease-out_both]",
+        "pointer-events-none absolute inset-0 overflow-hidden",
         className,
       )}
     >

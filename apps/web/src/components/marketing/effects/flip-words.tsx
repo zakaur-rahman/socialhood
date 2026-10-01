@@ -17,7 +17,18 @@ import { DURATION, EASE_EXPRESSIVE } from "./motion";
  * - aria-hidden: the heading carries the full sentence for screen readers (see Hero);
  * - brand-coloured from the tokens; `m` components for LazyMotion.
  */
-export function FlipWords({ words, interval = 2800, className }: { words: string[]; interval?: number; className?: string }) {
+export function FlipWords({
+  words,
+  interval = 2800,
+  firstDelay = 4000,
+  className,
+}: {
+  words: string[];
+  interval?: number;
+  /** The first word stays longer, so the page has finished loading before anything moves. */
+  firstDelay?: number;
+  className?: string;
+}) {
   const [index, setIndex] = useState(0);
   // The first word renders as it is (server-rendered, no entrance); later words animate in.
   const [flipped, setFlipped] = useState(false);
@@ -27,12 +38,20 @@ export function FlipWords({ words, interval = 2800, className }: { words: string
 
   useEffect(() => {
     if (reduce || !inView || words.length < 2) return;
-    const id = window.setInterval(() => {
+    let repeat: number | undefined;
+    const next = () => {
       setFlipped(true);
       setIndex((current) => (current + 1) % words.length);
-    }, interval);
-    return () => window.clearInterval(id);
-  }, [reduce, inView, interval, words.length]);
+    };
+    const first = window.setTimeout(() => {
+      next();
+      repeat = window.setInterval(next, interval);
+    }, flipped ? interval : firstDelay);
+    return () => {
+      window.clearTimeout(first);
+      window.clearInterval(repeat);
+    };
+  }, [reduce, inView, interval, firstDelay, flipped, words.length]);
 
   const word = words[index] ?? "";
   return (

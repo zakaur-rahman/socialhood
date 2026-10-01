@@ -17,11 +17,7 @@
   }
 }
 
-/* ---- Spotlight (spotlight-new.tsx): fade in once, then drift slowly. */
-@keyframes sh-spotlight-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+/* ---- Spotlight (spotlight-new.tsx): a slow drift. */
 @keyframes sh-drift-right {
   from { translate: 0 0; }
   to { translate: 6.25rem 0; }

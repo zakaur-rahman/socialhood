@@ -99,8 +99,10 @@ describe("FlipWords", () => {
   it("otherwise it moves to the next word while on screen", () => {
     env.setReduce(false);
     vi.useFakeTimers();
-    const { container } = render(<FlipWords words={WORDS} interval={1000} />);
-    act(() => vi.advanceTimersByTime(1100));
+    const { container } = render(<FlipWords words={WORDS} interval={1000} firstDelay={3000} />);
+    act(() => vi.advanceTimersByTime(2900));
+    expect(shownWords(container)).toEqual(["DMs"]);
+    act(() => vi.advanceTimersByTime(200));
     expect(shownWords(container)).toContain("comments");
   });
 
@@ -231,7 +233,7 @@ describe("decorative effects", () => {
   it("are hidden from assistive technology and animate only without reduced motion", () => {
     const spotlight = render(<Spotlight />).container.firstElementChild as HTMLElement;
     expect(spotlight).toHaveAttribute("aria-hidden", "true");
-    expect(spotlight.className).toMatch(/motion-safe:animate-/);
+    expect(spotlight.innerHTML).toMatch(/motion-safe:animate-\[sh-drift/);
     expect(spotlight.innerHTML).not.toMatch(/(?<!motion-safe:)animate-\[/);
 
     const lamp = render(<LampGlow />).container.firstElementChild as HTMLElement;
