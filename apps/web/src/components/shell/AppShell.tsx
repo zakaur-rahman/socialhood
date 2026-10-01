@@ -2,7 +2,7 @@
 
 import { UserButton } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
-import { usePathname } from "next/navigation";
+import { useParams, usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
 
 import type { Route } from "next";
@@ -12,6 +12,7 @@ import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { useOpenPortal } from "@/components/billing/use-billing-actions";
 import { PushSignOutCleanup } from "@/components/push/PushSignOutCleanup";
 import { ServiceWorkerRegistrar } from "@/components/push/ServiceWorkerRegistrar";
+import { PageSkeleton } from "@/components/states/PageSkeleton";
 import {
   exhaustedAiCredits,
   keys,
@@ -26,6 +27,7 @@ import type { BillingState, Plan, Role, SocialAccount } from "@/lib/api/types";
 import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
 import { useReconnecting } from "@/lib/realtime/status";
 import { useMediaQuery, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
+import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AppSidebar } from "./AppSidebar";
@@ -68,11 +70,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
   const workspaces = useWorkspaces(); // already loaded by the workspace layout
   const reconnecting = useReconnecting();
   const pathname = usePathname();
-  // UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there.
-  const inbox = activeSegment(pathname, workspace.slug) === "inbox";
-  const wide = useMediaQuery(inbox ? "(min-width: 1280px)" : "(min-width: 1024px)");
-  const [collapsedPreference, setCollapsedPreference] = useStoredFlag("socialhood:sidebar-collapsed");
-  const collapsed = !wide || collapsedPreference;
+  const sidebar = useSidebarState(pathname, workspace.slug);
 
   const shared = {
     workspace,
@@ -87,35 +85,119 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
   };
 
   return (
-    <div className="min-h-dvh md:flex">
-      <MobileNav
-        {...shared}
-        title={pageTitle(pathname, workspace.slug)}
-        notifications={<NotificationsButton collapsed={false} />}
-        ask={<AskButton variant="topbar" />}
-      />
-      <aside className="sticky top-0 hidden h-dvh shrink-0 p-4 pr-0 md:block">
+    <ShellFrame
+      topBar={
+        <MobileNav
+          {...shared}
+          title={pageTitle(pathname, workspace.slug)}
+          notifications={<NotificationsButton collapsed={false} />}
+          ask={<AskButton variant="topbar" />}
+        />
+      }
+      sidebar={
         <AppSidebar
           {...shared}
-          collapsed={collapsed}
-          onToggleCollapsed={wide ? () => setCollapsedPreference(!collapsedPreference) : undefined}
-          notifications={<NotificationsButton collapsed={collapsed} />}
-          ask={<AskButton variant="sidebar" collapsed={collapsed} />}
+          collapsed={sidebar.collapsed}
+          onToggleCollapsed={sidebar.toggle}
+          notifications={<NotificationsButton collapsed={sidebar.collapsed} />}
+          ask={<AskButton variant="sidebar" collapsed={sidebar.collapsed} />}
         />
-      </aside>
-      <main className="min-w-0 flex-1">
-        <BannerSlot banners={allBanners} />
+      }
+      overlays={
+        <>
+          {/* FR-AGT-01: Ask Social Hood on every page, with its Ctrl/⌘ K shortcut. */}
+          <AskRoot />
+          {/* F-15: any 402 opens the upgrade dialog (lib/api/provider.tsx). */}
+          <UpgradeDialog />
+          {/* TR-FE-09: the push service worker (production builds) and this device's subscription. */}
+          <ServiceWorkerRegistrar />
+          {/* Signing out removes this browser's push first, so a shared device stops getting alerts. */}
+          <PushSignOutCleanup />
+        </>
+      }
+    >
+      <BannerSlot banners={allBanners} />
+      {children}
+    </ShellFrame>
+  );
+}
+
+/**
+ * UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there (1024 px
+ * elsewhere); above that the choice is remembered per browser. The loading shell uses it too, so
+ * the sidebar has its final width before the workspace loads.
+ */
+function useSidebarState(pathname: string, slug: string) {
+  const inbox = activeSegment(pathname, slug) === "inbox";
+  const wide = useMediaQuery(inbox ? "(min-width: 1280px)" : "(min-width: 1024px)");
+  const [collapsedPreference, setCollapsedPreference] = useStoredFlag("socialhood:sidebar-collapsed");
+  return {
+    collapsed: !wide || collapsedPreference,
+    toggle: wide ? () => setCollapsedPreference(!collapsedPreference) : undefined,
+  };
+}
+
+/**
+ * The shell's frame (UX-SH-01…03, UX-A11Y-01): "Skip to content" first, the phone top bar, the
+ * sidebar from 768 px and `<main>`. `<main>` is a full-height flex column: banners sit in its flow,
+ * and a full-height frame (the inbox, the Ask page) marks itself `data-shell-fill` and takes the
+ * rest with `flex-1 min-h-0`, which caps the shell at the viewport's height, so a banner never
+ * pushes the composer off-screen (UI-ISS-020). Unsized text in the app is 14 px (`text-sm`).
+ */
+export function ShellFrame({
+  topBar,
+  sidebar,
+  overlays,
+  children,
+}: {
+  topBar: ReactNode;
+  sidebar: ReactNode;
+  overlays?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex min-h-dvh flex-col has-[[data-shell-fill]]:h-dvh md:flex-row">
+      <a
+        href="#main"
+        className="sr-only rounded-lg bg-panel text-sm font-medium text-fg focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:inline-flex focus:min-h-10 focus:items-center focus:px-4"
+      >
+        Skip to content
+      </a>
+      {topBar}
+      <div className="sticky top-0 hidden h-dvh shrink-0 p-4 pr-0 md:block">{sidebar}</div>
+      <main id="main" tabIndex={-1} className="flex min-h-0 min-w-0 flex-1 flex-col text-sm outline-none">
         {children}
       </main>
-      {/* FR-AGT-01: Ask Social Hood on every page, with its Ctrl/⌘ K shortcut. */}
-      <AskRoot />
-      {/* F-15: any 402 opens the upgrade dialog (lib/api/provider.tsx). */}
-      <UpgradeDialog />
-      {/* TR-FE-09: the push service worker (production builds) and this device's subscription. */}
-      <ServiceWorkerRegistrar />
-      {/* Signing out removes this browser's push first, so a shared device stops getting alerts. */}
-      <PushSignOutCleanup />
+      {overlays}
     </div>
+  );
+}
+
+/**
+ * The shell while the workspace loads (UI-ISS-114): the same frame, with the phone top bar and the
+ * sidebar at their final size, and the page's skeleton in `<main>`, so nothing moves when
+ * GET /v1/workspaces answers.
+ */
+export function ShellSkeleton() {
+  const pathname = usePathname();
+  const { slug } = useParams<{ slug: string }>();
+  const sidebar = useSidebarState(pathname, slug);
+  return (
+    <ShellFrame
+      topBar={
+        <div aria-hidden className="sticky top-0 z-40 flex h-14 items-center border-b border-line bg-panel px-4 md:hidden">
+          <span className="bg-shell-gradient size-8 shrink-0 rounded-lg" />
+        </div>
+      }
+      sidebar={
+        <div
+          aria-hidden
+          className={cn("h-full rounded-xl border border-line bg-panel", sidebar.collapsed ? "w-16" : "w-[232px]")}
+        />
+      }
+    >
+      <PageSkeleton />
+    </ShellFrame>
   );
 }
 
