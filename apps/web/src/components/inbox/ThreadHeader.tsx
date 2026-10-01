@@ -3,9 +3,10 @@
 import { ArrowLeft, Clock, EllipsisVertical, PanelRight } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
+import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,7 +24,10 @@ import { ReplyWindowChip } from "./ReplyWindowChip";
 
 const AI_LABEL = { off: "AI: Off", suggest: "AI: Suggest", auto: "AI: Auto" } as const;
 
-const PLATFORM_TEXT = { instagram: "text-instagram", whatsapp: "text-whatsapp" } as const;
+/** Platform colours are for glyphs and fills, never text (DESIGN_SYSTEM §1.6). */
+const PLATFORM_GLYPH = { instagram: "text-instagram", whatsapp: "text-whatsapp" } as const;
+
+const NEEDS_YOU_CHIP = cn("shrink-0 rounded-full py-0.5 text-xs font-medium", TONE_CLASS.danger);
 
 type Props = {
   conversation: Conversation;
@@ -45,6 +49,13 @@ type Props = {
  * UX-INB-05, re-arranged (C-063): who (avatar, name, handle, platform and our linked account),
  * the reply-window chip beside the name, then the AI mode menu, scheduling, the context panel
  * toggle and the conversation's other actions.
+ *
+ * The header follows the thread pane's width, not the viewport's (a container query: the pane is
+ * 370 px on a tablet and 395 px at 1280 px with the panel open). The name keeps at least 80 px and
+ * the other items move first (UI-ISS-019): below 672 px "Needs you" goes to the handle line
+ * (without its reason, which screen readers still hear); below 576 px the window chip joins it,
+ * without "Window:", and the AI menu shows as its icon; below 352 px the panel toggle moves into
+ * More. From 672 px it is C-063's layout.
  */
 export function ThreadHeader({
   conversation,
@@ -65,101 +76,135 @@ export function ThreadHeader({
     : conversation.social_account.display_name;
   const paused = conversation.ai.paused_until && new Date(conversation.ai.paused_until) > now;
   const archived = conversation.status === "archived";
-  const needsYou = conversation.needs_human ? (
-    <span className={cn("hidden shrink-0 rounded-full px-2 py-0.5 text-xs font-medium md:inline-flex", TONE_CLASS.danger)}>
-      Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
-    </span>
-  ) : null;
+  const reason = conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : "";
+  // The panel toggle is hidden on the narrowest phones (CSS); More offers it then.
+  const detailsRef = useRef<HTMLButtonElement>(null);
+  const [detailsInMenu, setDetailsInMenu] = useState(false);
 
   return (
-    <header className="flex h-16 shrink-0 items-center gap-3 border-b border-line bg-panel px-4">
-      {backHref ? (
-        <Link
-          href={backHref}
-          aria-label="Back to conversations"
-          className="-ml-2 grid size-10 shrink-0 place-items-center rounded-lg text-fg-secondary hover:bg-white/5 hover:text-fg"
-        >
-          <ArrowLeft className="size-5" aria-hidden />
-        </Link>
-      ) : null}
-      <ContactAvatar
-        id={conversation.contact.id}
-        name={name}
-        pictureUrl={conversation.contact.profile_picture_url}
-        platform={conversation.platform}
-        size={40}
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex min-w-0 items-center gap-2">
-          <h2 className="truncate text-sm font-semibold">{name}</h2>
-          <ReplyWindowChip window={conversation.reply_window} now={now} />
-          {needsYou}
-        </div>
-        <p className="truncate text-xs text-fg-secondary" data-testid="thread-identity">
-          {conversation.contact.username ? `@${conversation.contact.username} · ` : ""}
-          <span className={PLATFORM_TEXT[conversation.platform]}>{platform}</span>
-          {account ? ` · ${account}` : ""}
-        </p>
-      </div>
-      <div className="flex shrink-0 items-center gap-1">
-        {aiControl ?? (
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-              paused ? TONE_CLASS.warning : TONE_CLASS.brand,
-            )}
+    <header className="@container/header shrink-0 border-b border-line bg-panel">
+      <div className="@container/row flex h-16 items-center gap-2 px-4 @md/header:gap-3">
+        {backHref ? (
+          <Link
+            href={backHref}
+            aria-label="Back to conversations"
+            className="-ml-2 grid size-10 shrink-0 place-items-center rounded-lg text-fg-secondary hover:bg-white/5 hover:text-fg"
           >
-            {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}
-          </span>
-        )}
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          className="hidden size-9 md:inline-flex"
-          aria-label="Schedule a message"
-          title={canSchedule ? "Schedule a message" : "Scheduling needs an open reply window"}
-          disabled={!canSchedule}
-          onClick={onSchedule}
-        >
-          <Clock aria-hidden />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon-lg"
-          aria-label="Details"
-          title={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}
-          aria-pressed={detailsOpen}
-          onClick={onToggleDetails}
-          className={cn("size-10 md:size-9", detailsOpen && "bg-brand-soft text-brand-fg")}
-        >
-          <PanelRight aria-hidden />
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-lg" className="size-10 md:size-9" aria-label="More actions">
-              <EllipsisVertical aria-hidden />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 border-line bg-panel shadow-xl">
-            <DropdownMenuItem onSelect={() => onArchive(!archived)}>{archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={onMarkUnread}>Mark unread</DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <a href={platformContactUrl(conversation.platform, conversation.contact)} target="_blank" rel="noreferrer">
-                Open in {platform}
-              </a>
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                void navigator.clipboard
-                  ?.writeText(window.location.href)
-                  .then(() => toast.success("Link copied"), () => toast.error("Couldn't copy the link"));
-              }}
+            <ArrowLeft className="size-5" aria-hidden />
+          </Link>
+        ) : null}
+        <ContactAvatar
+          id={conversation.contact.id}
+          name={name}
+          pictureUrl={conversation.contact.profile_picture_url}
+          platform={conversation.platform}
+          size={40}
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-2">
+            <h2 className="min-w-20 truncate text-sm font-semibold @xl/header:min-w-0">{name}</h2>
+            <ReplyWindowChip window={conversation.reply_window} now={now} className="hidden @xl/header:inline-flex" />
+            {conversation.needs_human ? (
+              <span className={cn(NEEDS_YOU_CHIP, "hidden px-2 @2xl/header:inline-flex")}>Needs you{reason}</span>
+            ) : null}
+          </div>
+          <div className="flex min-w-0 items-center gap-1">
+            {conversation.needs_human ? (
+              <span className={cn(NEEDS_YOU_CHIP, "px-1.5 @2xl/header:hidden")}>
+                Needs you<span className="sr-only">{reason}</span>
+              </span>
+            ) : null}
+            <ReplyWindowChip
+              window={conversation.reply_window}
+              now={now}
+              compact
+              className="min-w-0 shrink truncate @xl/header:hidden"
+            />
+            <p className="min-w-0 flex-1 truncate text-xs text-fg-secondary" data-testid="thread-identity">
+              {conversation.contact.username ? `@${conversation.contact.username} · ` : ""}
+              <span>
+                <PlatformGlyph
+                  platform={conversation.platform}
+                  className={cn("mr-1 inline-block size-3 align-text-bottom", PLATFORM_GLYPH[conversation.platform])}
+                />
+                {platform}
+              </span>
+              {account ? ` · ${account}` : ""}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          {aiControl ?? (
+            <span
+              className={cn(
+                "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
+                paused ? TONE_CLASS.warning : TONE_CLASS.brand,
+              )}
             >
-              Copy link
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+              {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}
+            </span>
+          )}
+          <Button
+            variant="ghost"
+            size="icon-lg"
+            className="hidden size-9 md:inline-flex"
+            aria-label="Schedule a message"
+            title={canSchedule ? "Schedule a message" : "Scheduling needs an open reply window"}
+            disabled={!canSchedule}
+            onClick={onSchedule}
+          >
+            <Clock aria-hidden />
+          </Button>
+          <Button
+            ref={detailsRef}
+            variant="ghost"
+            size="icon-lg"
+            aria-label="Details"
+            title={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}
+            aria-pressed={detailsOpen}
+            onClick={onToggleDetails}
+            className={cn("hidden size-10 @xs/row:inline-flex md:size-9", detailsOpen && "bg-brand-soft text-brand-fg")}
+          >
+            <PanelRight aria-hidden />
+          </Button>
+          <DropdownMenu
+            onOpenChange={(open) => {
+              const toggle = detailsRef.current;
+              if (open) setDetailsInMenu(!toggle || getComputedStyle(toggle).display === "none");
+            }}
+          >
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon-lg" className="size-10 md:size-9" aria-label="More actions">
+                <EllipsisVertical aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48 border-line bg-panel shadow-xl">
+              {detailsInMenu ? (
+                <>
+                  <DropdownMenuItem onSelect={onToggleDetails}>Customer details</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+              <DropdownMenuItem onSelect={() => onArchive(!archived)}>{archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={onMarkUnread}>Mark unread</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <a href={platformContactUrl(conversation.platform, conversation.contact)} target="_blank" rel="noreferrer">
+                  Open in {platform}
+                </a>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  void navigator.clipboard
+                    ?.writeText(window.location.href)
+                    .then(() => toast.success("Link copied"), () => toast.error("Couldn't copy the link"));
+                }}
+              >
+                Copy link
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
     </header>
   );
