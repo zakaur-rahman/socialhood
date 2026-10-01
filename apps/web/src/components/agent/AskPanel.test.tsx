@@ -221,10 +221,11 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     const { panel } = await openPanel();
     const run = await within(panel).findByRole("article");
     expect(await within(run).findByText("Waiting to start…")).toBeInTheDocument();
-    // Counted from created_at (30 s ago); a slow, busy machine only makes the number bigger.
+    // Counted from created_at (30 s ago) on the shared clock, which ticks once a second, so it can
+    // read 29 s; a slow, busy machine only makes the number bigger.
     const elapsed = within(run).getByTestId("elapsed");
     expect(elapsed).toHaveTextContent(/^\d+ s$/);
-    expect(Number.parseInt(elapsed.textContent ?? "", 10)).toBeGreaterThanOrEqual(30);
+    expect(Number.parseInt(elapsed.textContent ?? "", 10)).toBeGreaterThanOrEqual(29);
   });
 
   it("Enter asks the typed question; Shift+Enter adds a line", async () => {

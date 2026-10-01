@@ -35,6 +35,7 @@ from socialhood.repositories.workspace_deletion import tenant_tables
 from socialhood.security.signatures import sign_request
 from socialhood.services import account_deletion as deletion
 from socialhood.services.connections import BEING_DELETED
+from socialhood.services.scheduled_posts import views as scheduled_post_views
 from tests.support.ai import make_analysis, make_decision, make_source, make_suggestion
 from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
 from tests.support.api import IG_APP_SECRET, Clerk, sign_in
@@ -72,6 +73,17 @@ def media() -> Iterator[FakeMedia]:
     fake = FakeMedia()
     with use_media_purger(fake):
         yield fake
+
+
+@pytest.fixture(autouse=True)
+def post_views_use_test_deps(app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Settling a scheduled post builds its event with the worker's deps (jobs/runtime, from the
+    environment, which has no token key in CI); use the test app's instead."""
+    monkeypatch.setattr(
+        scheduled_post_views,
+        "_worker_deps",
+        lambda: deps_from(app.state.http, app.state.settings),
+    )
 
 
 def deps(app: FastAPI, media: FakeMedia) -> deletion.PurgeDeps:
