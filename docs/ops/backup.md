@@ -20,7 +20,34 @@ a restore rehearsed once before launch.
   check it (below) before switching anything.
 - **Exports:** Render also offers logical exports (`pg_dump` files) from the same tab, kept for 7
   days. Download one monthly and keep it somewhere the business controls, for disasters that take
-  the Render workspace with them.
+  the Render workspace with them. Every export copy is deleted after **30 days** (below).
+
+## Retention: backup exports are deleted after 30 days [owner account]
+
+Deleted data (a workspace, an account's data, a Meta data-deletion request) leaves the live
+database within 24 hours, but stays in backups until they expire. The privacy policy promises:
+point-in-time recovery history for 7 days (Render's window, above), and **backup exports for 30
+days, then deleted**. Nothing in this repository makes exports: the local rehearsal script keeps
+none (it drops its scratch database), and Render's own exports expire after 7 days. The copies
+the business downloads are the ones to keep in step, so these are required settings:
+
+- **Where exports live:** one private storage bucket (or folder) used for nothing else, named in
+  the runbook's contacts. No copies on laptops or in email.
+- **Automatic deletion:** a lifecycle rule on that bucket that deletes objects 30 days after
+  they were created (S3 or R2: an expiration rule of 30 days on the whole bucket; Google Drive or
+  similar without lifecycle rules: not allowed, use a bucket). Versioning off, or noncurrent
+  versions expiring after 1 day, so a deleted export doesn't linger as an old version.
+- **File names:** `socialhood-db-YYYY-MM-DD.dump`, so an export's age is visible at a glance.
+- **Monthly check:** when downloading the month's export, confirm the bucket holds nothing older
+  than 30 days and the rule is still on; record the check in the table below.
+- **A restore from an export** brings back data deleted since it was made: after restoring, run
+  the deletion purges again (sweep_deletions re-queues every workspace and account still marked
+  deleting; deletions that had finished must be repeated by hand from the audit log's
+  `workspace_purged` and `account_data_purged` events).
+
+| Month | Export taken | Oldest export in the bucket | Lifecycle rule on | By |
+|---|---|---|---|---|
+| | | | | |
 - **What is not backed up:** Valkey holds only non-durable data (streams, rate limits, locks,
   metrics counters), so a lost Key Value instance is simply recreated. The job queue lives in
   Postgres and is restored with the data. Media lives in Cloudinary.

@@ -14,7 +14,8 @@ export const metadata = pageMetadata({
 const email = LEGAL.contactEmail;
 const mail = <a href={`mailto:${email}`}>{email}</a>;
 
-// Grounded in the built system: BUILD_SPEC §5.9 and C-056 (retention and deletion), C-049/C-053
+// Grounded in the built system: BUILD_SPEC §5.9, C-056 and C-067 (retention and deletion, an
+// account's data, backup exports: docs/ops/backup.md), C-049/C-053
 // (email and push), C-057 (Sentry scrubbing, Render and Vercel), FR-PRV-01/02 and SEC-11/12.
 // LAWYER REVIEW before launch (launch checklist §6.4), including the DPDP Act obligations.
 const SECTIONS: LegalSection[] = [
@@ -276,6 +277,20 @@ const SECTIONS: LegalSection[] = [
                 <td>While the workspace exists. Removed within 24 hours of deleting the workspace.</td>
               </tr>
               <tr>
+                <td>
+                  A connected account&apos;s data: its conversations, messages, contacts, comments, posts, automations and
+                  message files
+                </td>
+                <td>
+                  Until you delete that account&apos;s data (or Meta asks us to), then permanently removed within 24
+                  hours, usually within minutes.
+                </td>
+              </tr>
+              <tr>
+                <td>Database backups</td>
+                <td>Recovery history 7 days; backup exports 30 days, then deleted.</td>
+              </tr>
+              <tr>
                 <td>Messages on the Free plan (including after a paid plan ends)</td>
                 <td>
                   90 days, then deleted with their analysis. Conversations left with no messages are deleted too.
@@ -313,8 +328,9 @@ const SECTIONS: LegalSection[] = [
           </table>
         </div>
         <p>
-          Deleted data can remain in our database backups until those backups expire. Dodo Payments keeps payment records
-          for as long as the law requires.
+          Deleted data can remain in our database backups until those backups expire: the database&apos;s recovery history
+          is kept for 7 days, and backup exports for 30 days, after which they are deleted. Dodo Payments keeps payment
+          records for as long as the law requires.
         </p>
       </>
     ),
@@ -334,15 +350,23 @@ const SECTIONS: LegalSection[] = [
           </li>
           <li>
             <strong>Disconnect an account</strong> (Settings → Connections). Its access token is deleted at once and no new
-            messages or comments arrive for it. What was already stored stays in the workspace until you delete the
-            workspace or ask us to delete it.
+            messages or comments arrive for it. What was already stored stays in the workspace until you delete it.
+          </li>
+          <li>
+            <strong>Delete an account&apos;s data</strong> (Settings → Connections, owners and admins: Disconnect and delete
+            data, or Remove for an account already disconnected). The account is disconnected at once, then everything
+            stored for it is permanently deleted within 24 hours: its conversations and messages with their AI analysis and suggested
+            replies, its contacts, its comments, its posts and their statistics, the automations and scheduled messages
+            and posts for it, the photos and files received or sent in its messages, and the account itself. The
+            workspace&apos;s knowledge base, settings, members and billing, and its other accounts, are kept.
           </li>
           <li>
             <strong>Remove Social Hood from Instagram.</strong> Removing Social Hood in Instagram&apos;s settings disconnects
-            the account. If you also ask for your data to be deleted, Meta sends us your request: we disconnect the account,
-            delete its access token and the raw events Meta sent us for it, and give you a confirmation code you can check
-            on our <Link href="/data-deletion">data deletion page</Link>. To have the conversations and other data stored for
-            that account deleted too, delete the workspace or email us.
+            the account. If you also ask for your data to be deleted, Meta sends us your request: we disconnect every
+            account connected with your Instagram login, in every workspace, and delete each one&apos;s data as described
+            above, along with the raw events Meta sent us for it. You get a confirmation code you can check on our{" "}
+            <Link href="/data-deletion">data deletion page</Link>; it shows the request as completed once every
+            account&apos;s data is gone.
           </li>
           <li>
             <strong>Email us</strong> at {mail}. Anyone can ask, including customers of a business that uses Social Hood. We

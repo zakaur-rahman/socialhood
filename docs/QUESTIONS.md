@@ -86,6 +86,10 @@ FR-CON-06's choice is in the dialog and the API (`?delete_data=`), but conversat
 comments (P6) do not exist yet, so the flag is only recorded in the log. The deletion joins the
 disconnect when those tables arrive.
 
+**Decided (2026-10-01, owner):** Built as C-067: `delete_data=true` with the typed handle or
+number disconnects and then purges everything the account holds (purge_account_data); Remove
+does the same for a disconnected or sandbox account.
+
 ## Q-015 · When is a scheduled message "sent"?
 It becomes `sent` once its message is queued. If the platform then refuses the send, the thread
 shows that message as failed with Retry, but the scheduled row stays `sent`. F-10's "sent or
