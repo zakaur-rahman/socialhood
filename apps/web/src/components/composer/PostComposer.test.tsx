@@ -1,7 +1,10 @@
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import Link from "next/link";
+import type { ReactElement } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LEAVE_WARNING } from "@/components/settings/SaveBar";
 import { ApiError } from "@/lib/api/errors";
 import type { MediaAsset, SocialAccount } from "@/lib/api/types";
 import type { Cropper } from "@/lib/publishing/crop";
@@ -81,6 +84,7 @@ function renderComposer({
   upload,
   cropper,
   assets = [],
+  shell,
 }: {
   initial?: ScheduledPost;
   accounts?: SocialAccount[];
@@ -90,11 +94,14 @@ function renderComposer({
   cropper?: Cropper;
   /** Assets the fake API knows by id, as a PUT would return them. */
   assets?: ScheduledPost["assets"];
+  /** Rendered beside the composer, as the app shell's sidebar is. */
+  shell?: ReactElement;
 } = {}) {
   const known = new Map([...initial.assets, ...assets].map((asset) => [asset.id, asset]));
   const state = { current: initial };
   const puts: Call[] = [];
-  const view = renderWithApi(<PostComposer id={initial.id} upload={upload} cropper={cropper} />, {
+  const composer = <PostComposer id={initial.id} upload={upload} cropper={cropper} />;
+  const view = renderWithApi(shell ? <>{shell}{composer}</> : composer, {
     handlers: {
       "GET /v1/w/:wid/scheduled-posts/:id": () => json(state.current),
       "PUT /v1/w/:wid/scheduled-posts/:id": (call) => {
@@ -114,6 +121,21 @@ function renderComposer({
     upgradeDialog: true,
   });
   return { ...view, puts, state };
+}
+
+/** The sidebar's Inbox link; jsdom can't navigate, so reaching its click is "leaving". */
+function SidebarLink({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <Link
+      href="/w/maple/inbox"
+      onClick={(event) => {
+        event.preventDefault();
+        onNavigate();
+      }}
+    >
+      Inbox
+    </Link>
+  );
 }
 
 const captionBox = () => screen.getByRole("textbox", { name: "Caption" }) as HTMLTextAreaElement;
@@ -578,16 +600,38 @@ describe("PostComposer scheduled posts (FR-PUB-04)", () => {
     await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
   });
 
-  it("Save as draft unschedules it with its edits", async () => {
+  it("has no Save as draft: Update schedule is the save, and Unschedule is in More", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }) });
+    const actions = await screen.findByRole("region", { name: "Post actions" });
+    expect(within(actions).getByRole("button", { name: "Update schedule" })).toBeInTheDocument();
+    expect(within(actions).queryByRole("button", { name: /draft/i })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Unschedule" })).toBeInTheDocument();
+  });
+
+  it("a draft keeps Save draft, and has no Unschedule", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost() });
+    const actions = await screen.findByRole("region", { name: "Post actions" });
+    expect(within(actions).getByRole("button", { name: "Save draft" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await screen.findByRole("menuitem", { name: "Duplicate" });
+    expect(screen.queryByRole("menuitem", { name: "Unschedule" })).not.toBeInTheDocument();
+  });
+
+  it("Unschedule asks first: Cancel changes nothing; confirming makes it a draft with its edits", async () => {
     const user = userEvent.setup();
     const calls: string[] = [];
-    const publishAt = inTwoDays();
-    const { state } = renderComposer({
-      initial: readyPost({ status: "scheduled", publish_at: publishAt }),
+    const stored: { state?: { current: ScheduledPost } } = {};
+    const view = renderComposer({
+      initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }),
       handlers: {
         "POST /v1/w/:wid/scheduled-posts/:id/unschedule": () => {
           calls.push("unschedule");
-          return json(readyPost({ status: "draft", publish_at: publishAt }));
+          const state = stored.state as { current: ScheduledPost };
+          state.current = { ...state.current, status: "draft" };
+          return json(state.current);
         },
       },
       put: () => {
@@ -595,11 +639,26 @@ describe("PostComposer scheduled posts (FR-PUB-04)", () => {
         return undefined;
       },
     });
+    stored.state = view.state;
     await user.type(await screen.findByRole("textbox", { name: "Caption" }), "!");
-    await user.click(screen.getByRole("button", { name: "Save as draft" }));
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Unschedule" }));
+    const confirm = await screen.findByRole("alertdialog", { name: "Unschedule this post?" });
+    expect(confirm).toHaveTextContent("It won't publish until you schedule it again.");
+    await user.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(calls).toEqual([]);
+    expect(screen.getByTestId("status-pill")).toHaveTextContent("Scheduled");
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Unschedule" }));
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Unschedule" }));
     await waitFor(() => expect(calls).toEqual(["unschedule", "put"]));
-    expect(state.current.caption).toBe("New linen dresses are here #linen!");
+    expect(view.state.current.caption).toBe("New linen dresses are here #linen!");
     expect(toast.success).toHaveBeenCalledWith("Moved to drafts. It won't publish until you schedule it again.");
+    await waitFor(() => expect(screen.getByTestId("status-pill")).toHaveTextContent("Draft"));
+    expect(screen.getByRole("button", { name: "Save draft" })).toBeInTheDocument();
   });
 
   it("Publish now asks first, then the composer turns read-only", async () => {
@@ -618,6 +677,70 @@ describe("PostComposer scheduled posts (FR-PUB-04)", () => {
     expect(captionBox()).toBeDisabled();
     expect(screen.queryByRole("button", { name: "Schedule" })).not.toBeInTheDocument();
     expect(toast.success).toHaveBeenCalledWith("Publishing started.");
+  });
+});
+
+describe("PostComposer leaving with unsaved edits (C-044)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("a scheduled post with edits asks before a sidebar link leaves; staying keeps the edits", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const navigated = vi.fn();
+    renderComposer({
+      initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }),
+      shell: <SidebarLink onNavigate={navigated} />,
+    });
+    await user.type(await screen.findByRole("textbox", { name: "Caption" }), "!");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Unsaved changes");
+
+    await user.click(screen.getByRole("link", { name: "Inbox" }));
+    expect(confirm).toHaveBeenCalledWith(LEAVE_WARNING);
+    expect(navigated).not.toHaveBeenCalled();
+    expect(captionBox().value).toBe("New linen dresses are here #linen!");
+
+    confirm.mockReturnValue(true);
+    await user.click(screen.getByRole("link", { name: "Inbox" }));
+    expect(navigated).toHaveBeenCalledOnce();
+  });
+
+  it("a scheduled post without edits, or once Update schedule saved them, leaves without asking", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const navigated = vi.fn();
+    renderComposer({
+      initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }),
+      shell: <SidebarLink onNavigate={navigated} />,
+    });
+    await screen.findByRole("textbox", { name: "Caption" });
+    await user.click(screen.getByRole("link", { name: "Inbox" }));
+    expect(navigated).toHaveBeenCalledOnce();
+
+    await user.type(captionBox(), "!");
+    await user.click(scheduleButton("Update schedule"));
+    await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
+    await user.click(screen.getByRole("link", { name: "Inbox" }));
+    expect(navigated).toHaveBeenCalledTimes(2);
+    expect(confirm).not.toHaveBeenCalled();
+  });
+
+  it("a draft autosaves instead: leaving doesn't ask, and the edit is sent on the way out", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const navigated = vi.fn();
+    const { puts, unmount } = renderComposer({
+      initial: scheduledPost({ targets: [target()] }),
+      shell: <SidebarLink onNavigate={navigated} />,
+    });
+    await user.type(await screen.findByRole("textbox", { name: "Caption" }), "Hi");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Saving…");
+    await user.click(screen.getByRole("link", { name: "Inbox" }));
+    expect(confirm).not.toHaveBeenCalled();
+    expect(navigated).toHaveBeenCalledOnce();
+
+    unmount(); // the route changes
+    await waitFor(() => expect(puts).toHaveLength(1));
+    expect((puts[0].body as ScheduledPostDraft).caption).toBe("Hi");
   });
 });
 
