@@ -44,7 +44,9 @@ export function Hero() {
                 <PlatformGlyph platform="whatsapp" className="size-3 text-white" />
               </span>
             </span>
-            Inbox, AI replies and automations<span className="hidden sm:inline"> for Instagram and WhatsApp</span>
+            <span>
+              Inbox, AI replies and automations<span className="hidden sm:inline"> for Instagram and WhatsApp</span>
+            </span>
           </p>
           <h1 id="hero-title" className="mt-6 text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             <span className="sr-only">{HERO_TITLE}</span>
@@ -85,6 +87,9 @@ export function Hero() {
               height={SHOTS.inbox.height}
               alt={SHOTS.inbox.alt}
               sizes="(min-width: 1072px) 1008px, calc(100vw - 2.5rem)"
+              // On phones the screenshot is the largest paint: fetch it at once, first.
+              loading="eager"
+              fetchPriority="high"
               className="h-auto w-full"
             />
           </ContainerScroll>
