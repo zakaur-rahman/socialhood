@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { ChipListInput } from "@/components/ai/ChipListInput";
+import { useLeaveWarning } from "@/components/settings/SaveBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,6 +109,8 @@ function BrandVoiceForm({
   const update = useUpdateAiSettings(wid);
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: formValues(settings) });
   const { errors, isDirty } = form.formState;
+  // Brand voice saves with Save only: leaving with changes asks first (UI-ISS-022).
+  useLeaveWarning(isDirty);
 
   const onSubmit = form.handleSubmit((values) => {
     update.mutate(

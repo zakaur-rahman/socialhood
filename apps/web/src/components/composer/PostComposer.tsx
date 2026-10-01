@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Check, Copy, EllipsisVertical, Loader2, RotateCw, Send, Trash2 } from "lucide-react";
+import { AlertCircle, Check, Copy, EllipsisVertical, Loader2, RotateCw, Send, Trash2, Undo2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -414,6 +414,7 @@ function Composer({
   const duplicate = useComposerDuplicate(wid);
   const remove = useComposerDelete(wid);
   const [confirmPublish, setConfirmPublish] = useState(false);
+  const [confirmUnschedule, setConfirmUnschedule] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const acting = schedule.isPending || queuePost.isPending || publishNow.isPending || unschedule.isPending || put.isPending;
 
@@ -449,11 +450,12 @@ function Composer({
   };
 
   const onSaveDraft = async () => {
-    if (isDraft) {
-      if (await saveFirst()) toast.success("Draft saved.");
-      return;
-    }
-    // A scheduled post goes back to the drafts, with its edits.
+    if (await saveFirst()) toast.success("Draft saved.");
+  };
+
+  /** ⋯ Unschedule, once confirmed: the post goes back to the drafts, with its edits. */
+  const onUnschedule = async () => {
+    setConfirmUnschedule(false);
     try {
       await unschedule.mutateAsync();
       const post = await put.mutateAsync(toRequest(draft));
@@ -580,6 +582,11 @@ function Composer({
             <DropdownMenuItem onSelect={() => void onDuplicate()} disabled={duplicate.isPending}>
               <Copy aria-hidden /> Duplicate
             </DropdownMenuItem>
+            {server.status === "scheduled" ? (
+              <DropdownMenuItem onSelect={() => setConfirmUnschedule(true)} disabled={acting}>
+                <Undo2 aria-hidden /> Unschedule
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onSelect={() => setConfirmDelete(true)}
@@ -703,9 +710,12 @@ function Composer({
                 className="sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="ghost" className="h-10 md:h-9" onClick={() => void onSaveDraft()} disabled={acting}>
-                    {isDraft ? "Save draft" : "Save as draft"}
-                  </Button>
+                  {/* A scheduled post saves with Update schedule; unscheduling is in ⋯ and asks first. */}
+                  {isDraft ? (
+                    <Button variant="ghost" className="h-10 md:h-9" onClick={() => void onSaveDraft()} disabled={acting}>
+                      Save draft
+                    </Button>
+                  ) : null}
                   <Button
                     variant="secondary"
                     className="h-10 md:h-9"
@@ -792,6 +802,23 @@ function Composer({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={() => void onPublishNow()} className="bg-brand-gradient text-white">
               Publish now
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmUnschedule} onOpenChange={setConfirmUnschedule}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unschedule this post?</AlertDialogTitle>
+            <AlertDialogDescription>It won&apos;t publish until you schedule it again.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            {/* Publish now's look until Button's default is the primary (UI-011, swept by UI-032);
+                today's default is white on brand, 3.63:1. */}
+            <AlertDialogAction onClick={() => void onUnschedule()} className="bg-brand-gradient text-white">
+              Unschedule
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
