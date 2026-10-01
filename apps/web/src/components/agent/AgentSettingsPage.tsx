@@ -336,9 +336,9 @@ export function RunHistory() {
             className="min-h-10 pl-9"
           />
         </div>
-        <ToggleGroup value={filter} onValueChange={setFilter} aria-label="Filter runs" className="overflow-x-auto lg:w-auto">
+        <ToggleGroup value={filter} onValueChange={setFilter} aria-label="Filter runs" size="sm" className="overflow-x-auto lg:w-auto">
           {RUN_FILTERS.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value} className="min-h-9 shrink-0 px-3">
+            <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
               {option.label}
             </ToggleGroupItem>
           ))}
