@@ -1,36 +1,28 @@
 import { MessageCircle } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { cn } from "@/lib/utils";
 
-import { Container, SectionHeading } from "./primitives";
+import { Container } from "./primitives";
 
-type PlatformCard = {
-  name: string;
-  status: "available" | "later";
-  mark: ReactNode;
-  tile: string;
-  body: string;
-  points: string[];
-};
+type Platform = { name: string; status: "available" | "later"; mark: ReactNode; tile: string; body: string };
 
-const PLATFORMS: PlatformCard[] = [
+// The product guide's "Supported platforms". No customer logos: we show only what we connect to.
+const PLATFORMS: Platform[] = [
   {
     name: "Instagram",
     status: "available",
     mark: <PlatformGlyph platform="instagram" className="size-5 text-white" />,
     tile: "bg-instagram",
-    body: "Professional accounts (Business or Creator), connected with Instagram's own login.",
-    points: ["DMs, comments, publishing and insights", "Personal accounts can switch to professional for free in the Instagram app"],
+    body: "Professional accounts (Business or Creator), with Instagram's own login. DMs, comments, publishing and insights.",
   },
   {
     name: "WhatsApp",
     status: "available",
     mark: <PlatformGlyph platform="whatsapp" className="size-5 text-white" />,
     tile: "bg-whatsapp",
-    body: "WhatsApp Business numbers your business owns, connected through Meta's official Embedded Signup.",
-    points: ["Chats in the same inbox as Instagram", "Meta bills WhatsApp messaging fees directly to your business"],
+    body: "WhatsApp Business numbers your business owns, through Meta's Embedded Signup. Meta bills its messaging fees to you directly.",
   },
   {
     name: "Facebook Messenger",
@@ -38,54 +30,49 @@ const PLATFORMS: PlatformCard[] = [
     mark: <MessageCircle className="size-5 text-white" aria-hidden />,
     tile: "bg-facebook",
     body: "Messenger isn't supported yet.",
-    points: [],
   },
 ];
 
+/** The strip under the hero: where Social Hood works, and that it connects only the official way. */
 export function Platforms() {
   return (
-    <section aria-labelledby="platforms-title" className="border-t border-line-subtle py-20 sm:py-24">
+    <section aria-labelledby="platforms-title" className="relative py-14 sm:py-16">
       <Container>
-        <SectionHeading
-          id="platforms-title"
-          eyebrow="Platforms"
-          title="Built on Meta's official APIs"
-          intro="Social Hood connects only through Meta's official APIs for Instagram and WhatsApp."
-        />
-        <ul className="mt-14 grid gap-4 md:grid-cols-3">
-          {PLATFORMS.map((platform) => (
-            <li
-              key={platform.name}
-              className={cn(
-                "flex flex-col rounded-2xl border border-line bg-panel p-6",
-                platform.status === "later" && "border-dashed bg-panel/50",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <span className={cn("grid size-10 place-items-center rounded-xl", platform.tile, platform.status === "later" && "opacity-60")}>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <h2 id="platforms-title" className="text-xl font-semibold tracking-tight sm:text-2xl">
+            Built on Meta&apos;s official APIs
+          </h2>
+          <p className="max-w-xl text-sm text-fg-secondary">
+            Social Hood connects only through Meta&apos;s official APIs for Instagram and WhatsApp, and never asks for your password.
+          </p>
+        </div>
+        <ul className="mx-auto mt-8 grid max-w-5xl gap-3 md:grid-cols-3">
+          {PLATFORMS.map((platform, index) => (
+            <li key={platform.name} data-reveal style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}>
+              <div
+                className={cn(
+                  "flex h-full gap-4 rounded-2xl border p-4 transition-colors duration-200",
+                  platform.status === "available" ? "border-line bg-panel hover:border-line-strong" : "border-dashed border-line bg-panel/50",
+                )}
+              >
+                <span className={cn("grid size-10 shrink-0 place-items-center rounded-xl", platform.tile, platform.status === "later" && "opacity-60")}>
                   {platform.mark}
                 </span>
-                <h3 className="text-base font-semibold">{platform.name}</h3>
-                <span
-                  className={cn(
-                    "ml-auto rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
-                    platform.status === "available" ? "bg-success/15 text-success" : "bg-raised text-fg-secondary",
-                  )}
-                >
-                  {platform.status === "available" ? "Available" : "Coming later"}
-                </span>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h3 className="text-sm font-semibold">{platform.name}</h3>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
+                        platform.status === "available" ? "bg-success/15 text-success" : "bg-raised text-fg-secondary",
+                      )}
+                    >
+                      {platform.status === "available" ? "Official API" : "Coming later"}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-sm leading-relaxed text-fg-secondary">{platform.body}</p>
+                </div>
               </div>
-              <p className="mt-4 text-sm leading-relaxed text-fg-secondary">{platform.body}</p>
-              {platform.points.length ? (
-                <ul className="mt-4 space-y-2 text-sm">
-                  {platform.points.map((point) => (
-                    <li key={point} className="flex gap-2">
-                      <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-brand" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
             </li>
           ))}
         </ul>
