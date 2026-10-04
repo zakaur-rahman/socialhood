@@ -9,6 +9,7 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
+import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
@@ -552,6 +553,7 @@ function Composer({
   let publishBlock: string | null = null;
   if (failingExceptTime > 0) publishBlock = `Fix the checklist to publish now.`;
   else if (uploads.busy) publishBlock = "Wait for the uploads to finish.";
+  const publishReason = publishBlock !== scheduleBlock ? publishBlock : null; // said once when both match
   const scheduleLabel = !isDraft ? "Update schedule" : whenMode === "queue" ? "Add to queue" : "Schedule";
 
   const publishAtLabel = server.status === "scheduled" && server.publish_at ? server.publish_at : null;
@@ -704,10 +706,15 @@ function Composer({
                 hrefFor={(field) => `#${fieldTarget(field)}`}
                 onFix={focusField}
               />
+              {/* Sticky, but never over the focused control, and in the flow on short viewports (UI-ISS-014). */}
               <div
+                ref={reserveBottomBar}
                 role="region"
                 aria-label="Post actions"
-                className="sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel"
+                className={cn(
+                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel",
+                  BOTTOM_BAR,
+                )}
               >
                 <div className="flex flex-wrap items-center gap-2">
                   {/* A scheduled post saves with Update schedule; unscheduling is in ⋯ and asks first. */}
@@ -738,15 +745,21 @@ function Composer({
                     {scheduleLabel}
                   </Button>
                 </div>
-                {scheduleBlock ? (
-                  <p id="composer-schedule-reason" className="mt-2 text-xs text-fg-secondary" data-testid="schedule-reason">
-                    {scheduleLabel}: {scheduleBlock}
-                  </p>
-                ) : null}
-                {publishBlock && publishBlock !== scheduleBlock ? (
-                  <p id="composer-publish-reason" className="mt-1 text-xs text-fg-secondary">
-                    Publish now: {publishBlock}
-                  </p>
+                {scheduleBlock || publishReason ? (
+                  // On a short viewport the reasons share one line; the buttons keep the full text
+                  // through aria-describedby, and the checklist above lists every item to fix.
+                  <div className="mt-2 space-y-1 text-xs text-fg-secondary [@media(max-height:500px)]:truncate">
+                    {scheduleBlock ? (
+                      <p id="composer-schedule-reason" className="[@media(max-height:500px)]:inline" data-testid="schedule-reason">
+                        {scheduleLabel}: {scheduleBlock}
+                      </p>
+                    ) : null}{" "}
+                    {publishReason ? (
+                      <p id="composer-publish-reason" className="[@media(max-height:500px)]:inline">
+                        Publish now: {publishReason}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             </>
