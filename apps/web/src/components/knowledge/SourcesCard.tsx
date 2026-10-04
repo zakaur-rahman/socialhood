@@ -24,6 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { isProcessing, useDeleteKnowledgeSource } from "@/lib/api/queries";
 import type { KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
 import { emptyStates, errorMessage, knowledgeLimitReached } from "@/lib/copy";
@@ -107,7 +108,9 @@ export function SourcesCard({
   const { items, usage } = data;
 
   return (
-    <section aria-labelledby="sources-title" className="rounded-xl border border-line bg-panel">
+    // The table runs edge to edge; --card-padding (the header strip's 20 px) lines its edge cells up
+    // with the title until this card moves onto Card (UI-039).
+    <section aria-labelledby="sources-title" className="rounded-xl border border-line bg-panel [--card-padding:--spacing(5)]">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line p-5">
         <div>
           <h2 id="sources-title" className="text-base font-semibold">
@@ -133,96 +136,87 @@ export function SourcesCard({
           action={<AddKnowledgeMenu onChoose={onAdd} />}
         />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <caption className="sr-only">Knowledge sources</caption>
-            <thead>
-              <tr className="border-b border-line text-left text-xs text-fg-secondary">
-                <th scope="col" className="px-5 py-2 font-medium">
-                  Source
-                </th>
-                <th scope="col" className="px-3 py-2 font-medium">
-                  Status
-                </th>
-                <th scope="col" className="hidden px-3 py-2 text-right font-medium sm:table-cell">
-                  Characters
-                </th>
-                <th scope="col" className="hidden px-3 py-2 font-medium md:table-cell">
-                  Updated
-                </th>
-                <th scope="col" className="px-5 py-2 text-right font-medium">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((source) => {
-                const Icon = TYPE_ICON[source.type];
-                const sub = detail(source);
-                return (
-                  <tr key={source.id} className="border-b border-line-subtle last:border-0" data-status={source.status}>
-                    <td className="max-w-0 px-5 py-3">
-                      <div className="flex items-start gap-3">
-                        <Icon className="mt-0.5 size-4 shrink-0 text-fg-secondary" aria-hidden />
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">
-                            <span className="sr-only">{SOURCE_TYPE_LABEL[source.type]}: </span>
-                            {source.title}
-                          </p>
-                          {sub ? <p className="truncate text-xs text-fg-secondary">{sub}</p> : null}
-                          {source.status === "failed" && source.error ? (
-                            <p className="text-xs text-danger-fg">{source.error}</p>
-                          ) : null}
-                        </div>
+        <Table>
+          <TableCaption className="sr-only">Knowledge sources</TableCaption>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Source</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="hidden text-right sm:table-cell">Characters</TableHead>
+              <TableHead className="hidden md:table-cell">Updated</TableHead>
+              <TableHead className="text-right">
+                <span className="sr-only">Actions</span>
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {items.map((source) => {
+              const Icon = TYPE_ICON[source.type];
+              const sub = detail(source);
+              return (
+                <TableRow key={source.id} data-status={source.status}>
+                  {/* The name takes the room the other columns leave, and truncates in it. */}
+                  <TableCell className="w-full max-w-0">
+                    <div className="flex items-start gap-3">
+                      <Icon className="mt-0.5 size-4 shrink-0 text-fg-secondary" aria-hidden />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          <span className="sr-only">{SOURCE_TYPE_LABEL[source.type]}: </span>
+                          {source.title}
+                        </p>
+                        {sub ? <p className="truncate text-xs text-fg-secondary">{sub}</p> : null}
+                        {source.status === "failed" && source.error ? (
+                          <p className="text-xs text-danger-fg">{source.error}</p>
+                        ) : null}
                       </div>
-                    </td>
-                    <td className="px-3 py-3 align-top">
-                      <StatusChip source={source} />
-                    </td>
-                    <td className="hidden px-3 py-3 text-right align-top tabular-nums sm:table-cell">
-                      {source.status === "ready" ? (
-                        <>
-                          {count.format(source.char_count)}
-                          <span className="block text-xs text-fg-secondary">
-                            {source.chunk_count} {source.chunk_count === 1 ? "chunk" : "chunks"}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="text-fg-secondary">—</span>
-                      )}
-                    </td>
-                    <td className="hidden px-3 py-3 align-top text-fg-secondary tabular-nums md:table-cell">
-                      {relativeTime(source.updated_at, now)}
-                    </td>
-                    <td className="px-5 py-3 align-top">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-lg"
-                          className="size-10 md:size-8"
-                          aria-label={`Edit ${source.title}`}
-                          onClick={() => onEdit(source)}
-                        >
-                          <Pencil aria-hidden />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-lg"
-                          className="size-10 text-danger-fg hover:text-danger-fg md:size-8"
-                          aria-label={`Delete ${source.title}`}
-                          disabled={remove.isPending && remove.variables === source.id}
-                          onClick={() => setDeleting(source)}
-                        >
-                          <Trash2 aria-hidden />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <StatusChip source={source} />
+                  </TableCell>
+                  <TableCell className="hidden text-right sm:table-cell">
+                    {source.status === "ready" ? (
+                      <>
+                        {count.format(source.char_count)}
+                        <span className="block text-xs text-fg-secondary">
+                          {source.chunk_count} {source.chunk_count === 1 ? "chunk" : "chunks"}
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-fg-secondary">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden text-fg-secondary md:table-cell">
+                    {relativeTime(source.updated_at, now)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        className="size-10 md:size-8"
+                        aria-label={`Edit ${source.title}`}
+                        onClick={() => onEdit(source)}
+                      >
+                        <Pencil aria-hidden />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon-lg"
+                        className="size-10 text-danger-fg hover:text-danger-fg md:size-8"
+                        aria-label={`Delete ${source.title}`}
+                        disabled={remove.isPending && remove.variables === source.id}
+                        onClick={() => setDeleting(source)}
+                      >
+                        <Trash2 aria-hidden />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       )}
 
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => (open ? undefined : setDeleting(null))}>

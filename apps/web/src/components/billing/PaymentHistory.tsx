@@ -5,7 +5,9 @@ import { ExternalLink, Receipt, RotateCw } from "lucide-react";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Button } from "@/components/ui/button";
+import { CardBleed } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useBillingPayments } from "@/lib/api/queries";
 import type { Payment } from "@/lib/api/types";
 import { billingDate } from "@/lib/billing/plan";
@@ -19,8 +21,6 @@ const STATUS: Record<Payment["status"], { label: string; tone: string }> = {
   refunded: { label: "Refunded", tone: "bg-white/10 text-fg-secondary" },
   pending: { label: "Pending", tone: "bg-warning/15 text-warning" },
 };
-
-const TH = "px-5 py-2.5 text-left text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase md:px-6";
 
 /**
  * C-066 payment history for owners and admins: each Dodo payment's date, amount and currency,
@@ -61,46 +61,38 @@ export function PaymentHistory() {
   } else {
     content = (
       <>
-        <div className="-mx-5 overflow-x-auto md:-mx-6">
-          <table className="w-full min-w-[520px] text-sm">
-            <caption className="sr-only">Payments, newest first</caption>
-            <thead className="border-y border-line-subtle">
-              <tr>
-                <th scope="col" className={TH}>
-                  Date
-                </th>
-                <th scope="col" className={TH}>
-                  Amount
-                </th>
-                <th scope="col" className={TH}>
-                  Status
-                </th>
-                <th scope="col" className={cn(TH, "text-right")}>
-                  Invoice
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-line-subtle">
+        <CardBleed className="border-t border-line-subtle">
+          <Table className="min-w-130" scrollLabel="Payments">
+            <TableCaption className="sr-only">Payments, newest first</TableCaption>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Invoice</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {items.map((payment) => {
                 const date = billingDate(payment.occurred_at, workspace.timezone);
                 const status = STATUS[payment.status];
                 return (
-                  <tr key={payment.id}>
-                    <td className="px-5 py-3 whitespace-nowrap md:px-6">
+                  <TableRow key={payment.id}>
+                    <TableCell className="whitespace-nowrap">
                       <time dateTime={payment.occurred_at}>{date}</time>
-                    </td>
-                    <td className="px-5 py-3 whitespace-nowrap tabular-nums md:px-6">
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
                       {formatPrice(payment)} <span className="text-xs text-fg-secondary">{payment.currency}</span>
-                    </td>
-                    <td className="px-5 py-3 md:px-6">
+                    </TableCell>
+                    <TableCell>
                       <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", status.tone)}>
                         {status.label}
                       </span>
                       {payment.status === "failed" && payment.failure_reason ? (
                         <span className="mt-1 block text-xs text-fg-secondary">{payment.failure_reason}</span>
                       ) : null}
-                    </td>
-                    <td className="px-5 py-3 text-right md:px-6">
+                    </TableCell>
+                    <TableCell className="text-right">
                       {payment.invoice_url ? (
                         <a
                           href={payment.invoice_url}
@@ -117,13 +109,13 @@ export function PaymentHistory() {
                           <span className="sr-only">No invoice</span>
                         </span>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </CardBleed>
         {payments.hasNextPage ? (
           <div className="flex justify-center pt-4">
             <Button
@@ -141,8 +133,12 @@ export function PaymentHistory() {
   }
 
   return (
+    // --card-padding is the settings card's own padding (20 px, 24 px from md), so the table bleeds
+    // to its edges and its edge cells line up with the title; Card sets it once SettingsCard moves
+    // onto Card (UI-037).
     <SettingsCard
       id="payments"
+      className="[--card-padding:--spacing(5)] md:[--card-padding:--spacing(6)]"
       icon={<Receipt />}
       title="Payment history"
       description="Every charge Dodo Payments made for this workspace, newest first."
