@@ -46,6 +46,7 @@ import {
 import type { ScheduledPostSummary, ScheduledPostView } from "@/lib/api/types";
 import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
 import { isPlanLimitError } from "@/lib/api/errors";
+import { minWidth } from "@/lib/breakpoints";
 import { emptyStates, errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import {
@@ -121,8 +122,12 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   const now = fixedNow ?? liveNow;
   const clock = useCallback(() => fixedNow ?? new Date(), [fixedNow]);
 
-  const phone = !useMediaQuery("(min-width: 768px)");
-  const wide = useMediaQuery("(min-width: 1440px)");
+  // Server values: phone-first. A week grid squeezed onto a phone, or the 250 px rail inline beside
+  // it, would flash before the agenda; on a desktop the agenda and the "Drafts and queue" button
+  // show for a moment instead. (The page mounts after the workspace loads, in the browser, so
+  // today these are fallbacks.)
+  const phone = !useMediaQuery(minWidth("md"), false);
+  const wide = useMediaQuery(minWidth("wide"), false);
 
   // ---- view and range (UX-SCR-04: the view is remembered per browser)
   const [storedView, setView] = useStoredString<CalendarView>(VIEW_KEY, "week");

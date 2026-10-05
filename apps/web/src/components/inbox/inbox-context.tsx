@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 
+import { minWidth } from "@/lib/breakpoints";
 import { useMediaQuery } from "@/lib/use-browser-state";
 
 import type { InboxTab } from "./ListHeader";
@@ -13,9 +14,12 @@ import type { InboxTab } from "./ListHeader";
 export type InboxLayout = "wide" | "desktop" | "tablet" | "phone";
 
 export function useInboxLayout(): InboxLayout {
-  const xl = useMediaQuery("(min-width: 1280px)");
-  const lg = useMediaQuery("(min-width: 1024px)");
-  const md = useMediaQuery("(min-width: 768px)");
+  // Server value: phone-first. The desktop panes on a phone would squeeze the thread to a sliver
+  // until hydration; the phone layout on a desktop only shows one pane full width for a moment.
+  // (The inbox mounts after the workspace loads, in the browser, so today this is a fallback.)
+  const xl = useMediaQuery(minWidth("xl"), false);
+  const lg = useMediaQuery(minWidth("lg"), false);
+  const md = useMediaQuery(minWidth("md"), false);
   if (xl) return "wide";
   if (lg) return "desktop";
   if (md) return "tablet";

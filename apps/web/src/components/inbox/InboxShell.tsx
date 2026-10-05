@@ -20,6 +20,7 @@ import {
 } from "@/lib/api/queries";
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
 import type { AiMode, Conversation, InboxView, Platform, SocialAccount } from "@/lib/api/types";
+import { minWidth } from "@/lib/breakpoints";
 import { emptyStates, errorMessage, inboxFilterEmpty } from "@/lib/copy";
 import { useMediaQuery, useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -35,8 +36,6 @@ import { useInboxShortcuts } from "./use-inbox-shortcuts";
 
 const PLATFORM_ORDER: Platform[] = ["instagram", "whatsapp"];
 
-/** The context panel starts open from this width; narrower screens start with it collapsed. */
-export const CONTEXT_PANEL_OPEN_FROM = 1440;
 /** Remembered per device (try/catch-guarded localStorage, lib/use-browser-state). */
 export const CONTEXT_PANEL_KEY = "socialhood:inbox-details";
 
@@ -151,8 +150,10 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   );
 
   // ---- context panel: inline at ≥ 1280 px, a sheet below. Collapsible from the header; the
-  // choice is remembered per device, and until there is one it starts open only from 1440 px.
-  const roomy = useMediaQuery(`(min-width: ${CONTEXT_PANEL_OPEN_FROM}px)`);
+  // choice is remembered per device, and until there is one it starts open only from `wide`
+  // (1440 px). Server value: collapsed, as on every narrower screen; the panel is inline only
+  // from 1280 px, so a wrong guess can't cover a phone's thread.
+  const roomy = useMediaQuery(minWidth("wide"), false);
   const [inlineDetails, setInlineDetails] = useStoredFlag(CONTEXT_PANEL_KEY, roomy);
   const [sheetDetails, setSheetDetails] = useState(false);
   const detailsOpen = layout === "wide" ? inlineDetails : sheetDetails;
@@ -340,7 +341,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
         ) : null}
 
         {selectedId && detailsOpen && layout === "wide" ? (
-          <aside aria-label="Details" data-pane="details" className="w-[300px] shrink-0 overflow-y-auto border-l border-line bg-panel min-[1440px]:w-[320px]">
+          <aside aria-label="Details" data-pane="details" className="w-[300px] shrink-0 overflow-y-auto border-l border-line bg-panel wide:w-[320px]">
             <DetailsPanel conversationId={selectedId} />
           </aside>
         ) : null}
