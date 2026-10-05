@@ -5,6 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { minWidth } from "@/lib/breakpoints";
 import { NAV_LINKS } from "@/lib/marketing/site";
 
 import { HeaderAuth } from "./HeaderAuth";
@@ -26,7 +27,7 @@ export function MobileMenu() {
       button.current?.focus();
     };
     // Grown past the phone layout, the menu has nothing to show.
-    const wide = window.matchMedia("(min-width: 48rem)");
+    const wide = window.matchMedia(minWidth("md"));
     const onWide = () => {
       if (wide.matches) setOpen(false);
     };

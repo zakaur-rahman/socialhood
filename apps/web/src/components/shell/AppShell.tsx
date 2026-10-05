@@ -24,6 +24,7 @@ import {
   useWorkspaces,
 } from "@/lib/api/queries";
 import type { BillingState, Plan, Role, SocialAccount } from "@/lib/api/types";
+import { minWidth } from "@/lib/breakpoints";
 import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
 import { useReconnecting } from "@/lib/realtime/status";
 import { useMediaQuery, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
@@ -123,13 +124,16 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
 }
 
 /**
- * UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there (1024 px
- * elsewhere); above that the choice is remembered per browser. The loading shell uses it too, so
- * the sidebar has its final width before the workspace loads.
+ * UX-INB-01: the inbox needs the room, so the sidebar collapses below 1280 px there (`xl`; `lg`,
+ * 1024 px, elsewhere); above that the choice is remembered per browser. The loading shell uses it
+ * too, so the sidebar has its final width before the workspace loads.
  */
 function useSidebarState(pathname: string, slug: string) {
   const inbox = activeSegment(pathname, slug) === "inbox";
-  const wide = useMediaQuery(inbox ? "(min-width: 1280px)" : "(min-width: 1024px)");
+  // Server value: expanded (desktop). Below md the sidebar is hidden by CSS, so the guess only
+  // shows from 768 px, where desktops are the common case. (The shell, its loading skeleton
+  // included, mounts in the browser once Clerk has loaded, so today this is a fallback.)
+  const wide = useMediaQuery(minWidth(inbox ? "xl" : "lg"), true);
   const [collapsedPreference, setCollapsedPreference] = useStoredFlag("socialhood:sidebar-collapsed");
   return {
     collapsed: !wide || collapsedPreference,
