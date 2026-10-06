@@ -68,7 +68,7 @@ Use the utilities (`bg-panel`, `text-fg-secondary`, `border-line` …), never ra
 | `hover` | white 5% | A | `brand-deep` | `#20338A` (gradient start) | ✓ |
 | `pressed` | white 10% | A | `brand-fg` | `#9DB5FF` (brand text, links) | ✓ |
 | `scrim` | black 60% | A | `brand-soft` / `brand-line` | brand 15% / 35% | ✓ |
-| `media-scrim` | `#000` (on media only, with `/N`) | A | `shell-1` / `shell-2` | logo tile and Upgrade only | ✓ |
+| `media-scrim` | `#000` (on media only, with `/N`) | A | `shell-1` / `shell-2` | logo tile and Upgrade; one identity pair (D-13) | ✓ |
 
 | Lines | Value | | Status | Value | |
 |---|---|---|---|---|---|
@@ -83,7 +83,11 @@ Use the utilities (`bg-panel`, `text-fg-secondary`, `border-line` …), never ra
 - **Gradients:** `bg-brand-gradient` (primary buttons, outgoing bubbles, count badges),
   `bg-brand-gradient-decor` (meters and decorative tiles, never under text), `bg-shell-gradient`
   (logo and Upgrade only), `bg-glow-brand` (one per view; hero and plan hero; A). Dots and bars under
-  12 px are solid. No other gradients.
+  12 px are solid. No other gradients, except the identity palette's avatar fallbacks.
+- **Identity** (avatars, account rings and dots, categorical series): only through
+  `lib/ui/identity.ts` (D-13, C-072): three pairs from brand, shell and platform-blue values, every
+  stop ≥ 4.5:1 with `on-brand`, rings `brand`, `brand-fg`, `facebook` (≥ 3.19:1 on panel). Never a
+  status or platform colour as identity; the initial is `aria-hidden`.
 - **Contrast you can rely on:** `fg-secondary` ≥ 4.6:1 on every surface token from `canvas` to
   `raised-hover`, `overlay` included (but only 4.45:1 on `pressed`, so neutral badges sit on
   `hover`); `brand-fg` ≥ 6.3:1; `on-brand` on the gradient ≥ 4.85:1; `line-control` edges
@@ -279,7 +283,7 @@ new work to the decided rule:
 | D-10 | Gradient on every primary (VH-003) | Approved | One per view region |
 | D-11 | Comments needs-reply API (UX-001) | Approved | Per-post count and filter now |
 | D-12 | Overlay surface and elevation shadows | Applied (UI-018, C-071) | Adopt; the edge is a ring beside the shadow |
-| D-13 | Identity palette | Approved | Up to four pairs from existing values |
+| D-13 | Identity palette | Applied (UI-027, C-072) | Three pairs from existing values (`lib/ui/identity.ts`) |
 | D-14 | Single-key shortcuts | Approved | A per-device switch |
 | D-15 | Inbox refinements (C-063) | Approved | Neutral segment, heart in emoji popover, composer-only scheduling, Archived chip |
 | D-16 | Spec-prescribed layouts (back link, editor panel, icon-button and composer radius) | Approved | Back link, panel after steps, `rounded-lg`, `rounded-xl` |

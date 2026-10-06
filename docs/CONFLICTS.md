@@ -1340,3 +1340,32 @@ and shown on `/dev/tokens`. Ratios were measured in Chromium on the e2e stack at
   - **What waits for the area sweeps:** 54 overlay call sites still pass `border-line bg-panel`, and
     21 of them also pass `shadow-xl`. They stay on `panel` until the Wave-3 sweeps remove those
     patches (AGENT_CONTEXT §6). After that they float on `overlay` with no further token change.
+
+## C-072 · Identity palette D-13 applied (UI-027, feature/ui-identity-palette)
+UI-027 applies D-13 (C-069) in one module, `apps/web/src/lib/ui/identity.ts`, with no new token.
+It replaces UX-INB-04's "six pairs" and UX-SCR-04's ring colours, which borrowed warning,
+success, danger-fill, instagram and whatsapp. Ratios (WCAG, measured in Chromium on the e2e stack
+at 375 and 1280 px, and checked against the token values by `identity.test.ts`):
+- **Three identities, each a gradient pair for the avatar fallback and a ring and dot colour for
+  accounts:** `brand-deep → brand-strong` with `brand`; `shell-1 → shell-2` with `brand-fg`;
+  `linkedin → facebook` with `facebook`.
+  - White on every stop: 11.04 and 4.85; 6.52 and 12.66; 8.72 and 5.17. On the oklab midpoints
+    (Tailwind's `bg-linear-135` interpolates in oklab): 7.37, 9.19 and 6.72. Before, three of six
+    pairs failed (2.26–3.84:1).
+  - Rings on panel, their offset colour: 4.54, 8.23, 3.19 (on canvas 5.79, 10.49, 4.06). Rings
+    against each other: 1.42:1 or more (oklab ΔE 8.9 or more). Before, the instagram ring was
+    2.73:1 and brand next to brand-fg was the same hue.
+- **Three, not four (the DSA's choice within "up to four"):** the only values in these families
+  at 3:1 or more on panel are `brand-fg`, `brand`, `brand-strong` and `facebook`, and
+  `brand-strong` and `facebook` are 1.07:1 apart (ΔE 3.0), so a fourth account ring would look like
+  the third.
+- **The schedule's AccountAvatar** fills its fallback with its account's identity gradient, so the
+  ring and the avatar agree (it was `raised`). An unknown account keeps the `line-strong` ring.
+- **The initial is `aria-hidden`** on every avatar fallback: the name is beside it, or on the
+  button or group that holds it, so a conversation row's name no longer starts with the initial
+  ("linen.lover 4m …").
+- **Scope notes:** `shell-1` and `shell-2` keep the shell gradient to the logo and Upgrade; their
+  values also form one identity pair. The pair `brand-deep → brand-strong` is the brand gradient's
+  pair, so one in three contact avatars matches the primary button's colours.
+- **Also:** the Avatar primitive's default fallback fill is `raised` (was shadcn's `muted`, the
+  field colour, 1.02:1 on panel), like Skeleton.

@@ -32,6 +32,7 @@ import type { ScheduledPostSummary, SocialAccount } from "@/lib/api/types";
 import { formatCount } from "@/lib/automations/format";
 import { initial } from "@/lib/inbox/format";
 import { captionLine, CHIP_CLASS, POST_STATUS } from "@/lib/schedule/format";
+import { IDENTITY_FILL } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
 import { accountColor, useSchedule } from "./schedule-context";
@@ -81,6 +82,11 @@ export function PostThumbnail({
   );
 }
 
+/**
+ * The account's picture in its identity ring (UX-SCR-04), or its initial on the same identity's
+ * gradient (lib/ui/identity, D-13). The initial is decorative: the name is beside the avatar, or
+ * on the button or group that holds it.
+ */
 export function AccountAvatar({ account, accountId, size = 20 }: { account?: SocialAccount; accountId: string; size?: 20 | 28 | 36 }) {
   const schedule = useSchedule();
   const color = accountColor(schedule, accountId);
@@ -94,7 +100,14 @@ export function AccountAvatar({ account, accountId, size = 20 }: { account?: Soc
       )}
     >
       {account?.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
-      <AvatarFallback className={cn("bg-raised font-semibold text-fg", size === 36 ? "text-sm" : "text-[10px]")}>
+      <AvatarFallback
+        aria-hidden
+        className={cn(
+          "font-semibold",
+          color.gradient ? [IDENTITY_FILL, color.gradient] : "bg-raised text-fg",
+          size === 36 ? "text-sm" : "text-[10px]",
+        )}
+      >
         {initial(name)}
       </AvatarFallback>
     </Avatar>

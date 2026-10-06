@@ -9,6 +9,7 @@ import type {
   ReplyWindow,
   Signal,
 } from "@/lib/api/types";
+import { IDENTITIES, identityFor } from "@/lib/ui/identity";
 import type { Tone } from "@/lib/ui/tone";
 
 export const PLATFORM_LABEL: Record<Platform, string> = { instagram: "Instagram", whatsapp: "WhatsApp" };
@@ -176,20 +177,14 @@ export const ESCALATION_LABEL: Record<EscalationReason, string> = {
   output_blocked: "reply blocked",
 };
 
-/** Six gradient pairs from the tokens; the contact id picks one (UX-INB-04). */
-export const AVATAR_GRADIENTS = [
-  "from-brand-deep to-brand",
-  "from-instagram to-warning",
-  "from-whatsapp to-success",
-  "from-shell-1 to-shell-2",
-  "from-danger-fill to-warning",
-  "from-linkedin to-facebook",
-] as const;
+/**
+ * The avatar fallback's gradient pairs: the identity palette's (lib/ui/identity, D-13), not status
+ * or platform colours; the contact id picks one (UX-INB-04).
+ */
+export const AVATAR_GRADIENTS: readonly string[] = IDENTITIES.map((identity) => identity.gradient);
 
 export function avatarGradient(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+  return identityFor(id).gradient;
 }
 
 export function initial(name: string): string {

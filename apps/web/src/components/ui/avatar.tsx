@@ -49,7 +49,8 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+        // `raised`, like Skeleton: shadcn's `bg-muted` is the field colour, 1.02:1 on panel (COL-020).
+        "flex size-full items-center justify-center rounded-full bg-raised text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
         className
       )}
       {...props}

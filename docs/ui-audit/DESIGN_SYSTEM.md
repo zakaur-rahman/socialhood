@@ -95,13 +95,13 @@ theme swaps it with them.
 
 | Token | Value | Role | Status |
 |---|---|---|---|
-| `brand` | `#567FF8` | **Non-text marks only:** focus outline, unread dot, selection bar, switch on, **checkbox checked and indeterminate** (fill and edge; the tick is a graphic, `on-brand` 3.63:1; C-071), chart series, decorative gradient end. Never behind text. | Keep (rule tightened) |
+| `brand` | `#567FF8` | **Non-text marks only:** focus outline, unread dot, selection bar, switch on, **checkbox checked and indeterminate** (fill and edge; the tick is a graphic, `on-brand` 3.63:1; C-071), chart series, an identity ring (§1.7), decorative gradient end. Never behind text. | Keep (rule tightened) |
 | `brand-strong` | `#4467E6` | Solid brand fills that carry text or a glyph: a filled segment, the skip link, Clerk's primary, `--primary`; the gradient's end stop | **Add** (an existing value: white on it is 4.85:1) |
 | `brand-deep` | `#20338A` | Gradient start | Keep |
-| `brand-fg` | `#9DB5FF` | Brand text and icons on dark: links, active segment text, AI labels | Keep |
+| `brand-fg` | `#9DB5FF` | Brand text and icons on dark: links, active segment text, AI labels; an identity ring (§1.7) | Keep |
 | `brand-soft` | brand 15% | Chips, the AI pill, selected cards; the **info** tone | Keep |
 | `brand-line` | brand 35% | Brand borders (active filter chip) | Keep |
-| `shell-1`, `shell-2` | `#3352CC`, `#1C2D70` | The logo tile and Upgrade only (UX-SH-01) | Keep (scoped) |
+| `shell-1`, `shell-2` | `#3352CC`, `#1C2D70` | The logo tile and Upgrade (UX-SH-01; `bg-shell-gradient` stays theirs); one identity pair (§1.7, D-13) | Keep (scoped) |
 
 ### 1.5 Status
 
@@ -120,17 +120,32 @@ There is no separate info token: the **info** tone is `brand-soft` with `brand-f
 | Token | Value | Role | Status |
 |---|---|---|---|
 | `instagram`, `whatsapp` | `#BE185D`, `#16A34A` | Fills and glyphs only (avatar badges, platform tiles). **Never text, never a ring.** | Keep (rule added; COL-002) |
-| `facebook` | `#2563EB` | Marketing "later" tile | Keep |
-| `linkedin` | `#1E40AF` | No platform use; available to the identity palette | Keep |
+| `facebook` | `#2563EB` | Marketing "later" tile; an identity stop and ring (§1.7) | Keep |
+| `linkedin` | `#1E40AF` | No platform use; an identity stop (§1.7) | Keep |
 
 ### 1.7 Identity palette (avatars and account colours)
 
 Avatar fallbacks and schedule account rings use a separate identity palette, never status or
-platform colours as identity. Each stop is at least 4.5:1 against `on-brand`. **Owner D-13**
-(recommended: up to four pairs built from existing values, for example `brand-deep → brand-strong`,
-`shell-1 → shell-2`, `linkedin → facebook`). The palette lives in one module and is shared by
-ContactAvatar, AccountAvatar and the schedule filter. The initial is decorative (the name is always
-beside it) and gets `aria-hidden`.
+platform colours as identity. **Owner D-13**, applied (C-072): three identities built from existing
+brand, shell and platform-blue values, no new token, in `lib/ui/identity.ts`. ContactAvatar,
+AccountAvatar and the schedule's account rings and dots read it; categorical chart series should too.
+
+| Identity | Avatar gradient (135°, oklab) | White on the stops / midpoint | Ring and dot | Ring on panel |
+|---|---|---|---|---|
+| 1 | `brand-deep → brand-strong` | 11.04 / 4.85 / 7.37 | `brand` | 4.54 |
+| 2 | `shell-1 → shell-2` | 6.52 / 12.66 / 9.19 | `brand-fg` | 8.23 |
+| 3 | `linkedin → facebook` | 8.72 / 5.17 / 6.72 | `facebook` | 3.19 |
+
+- Every stop is 4.5:1 or more against the `on-brand` initial; every ring is 3:1 or more on `panel`
+  (the ring's offset colour) and on canvas; the rings are 1.42:1 or more apart from each other.
+- **Three, not four:** the only values in these families that reach 3:1 on panel are `brand-fg`,
+  `brand`, `brand-strong` and `facebook`, and `brand-strong` and `facebook` are 1.07:1 apart, so a
+  fourth ring would look like the third.
+- Contacts take the identity their id hashes to; a page that lists accounts gives them out in
+  order, so the first three accounts differ. An unknown account has a `line-strong` ring and a
+  `raised` fallback.
+- The initial is decorative (the name is always beside the avatar, or on the button or group that
+  holds it) and gets `aria-hidden`.
 
 ### 1.8 Charts
 
@@ -653,7 +668,7 @@ Where the audits proposed different values or patterns, one was chosen.
 | Page and pane title sizes | §2.1 | D-05 |
 | Placeholder colour | §1.3 | D-06 (applied, C-071) |
 | Overlay surface and elevation shadows | §1.1, §6 | D-12 (applied, C-071) |
-| Identity palette | §1.7 | D-13 |
+| Identity palette | §1.7 | D-13 (applied, C-072) |
 | Icon-button and composer radius | §4 | D-16 |
 | Latin-ext only, or Devanagari too | §2 | D-17 |
 
