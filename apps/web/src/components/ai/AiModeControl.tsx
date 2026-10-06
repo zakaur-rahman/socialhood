@@ -14,13 +14,12 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { isPlanLimitError } from "@/lib/api/errors";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { autoAllowed, useBilling, useSocialAccounts, useUpdateConversation } from "@/lib/api/queries";
 import type { AiMode, Conversation, ConversationPatch } from "@/lib/api/types";
 import { AI_MODE_LABEL, AI_MODES } from "@/lib/ai/format";
-import { errorMessage } from "@/lib/copy";
 import { TONE_CLASS } from "@/lib/inbox/format";
+import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -62,7 +61,7 @@ export function useConversationAiMode(conversation: Conversation) {
       { id: conversation.id, patch },
       {
         onSuccess: () => (done ? toast.success(done) : undefined),
-        onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+        onError: (error) => toastError(error),
       },
     );
 

@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
+import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import {
   exhaustedAiCredits,
   useBilling,
@@ -14,7 +15,6 @@ import {
 } from "@/lib/api/queries";
 import type { Conversation, Message, Suggestion } from "@/lib/api/types";
 import { escalationBanner } from "@/lib/ai/format";
-import { errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { setPendingSuggestion } from "@/lib/inbox/cache";
 import { contactName, firstName } from "@/lib/inbox/format";
@@ -148,7 +148,7 @@ export function useSuggestionSlot({
     if (!suggestion) return;
     setHandledFor(suggestion.message_id);
     setSuggestionEdit(conversationId, null);
-    dismiss.mutate(suggestion, { onError: (error) => toast.error(errorMessage(error)) });
+    dismiss.mutate(suggestion, { onError: (error) => toastError(error) });
   };
 
   const redraft = () => {
@@ -174,7 +174,10 @@ export function useSuggestionSlot({
     upload,
     onSaved: () => {
       if (suggestion && suggestion.regenerations_left > 0) {
-        toast("The AI can use it once it's processed.", { action: { label: "Draft again", onClick: redraft } });
+        toast("The AI can use it once it's processed.", {
+          action: { label: "Draft again", onClick: redraft },
+          duration: TOAST_ACTION_DURATION,
+        });
       }
     },
   });

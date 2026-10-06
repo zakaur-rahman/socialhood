@@ -27,8 +27,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBulkScheduledPosts, useScheduledPostList } from "@/lib/api/queries/calendar";
 import type { BulkScheduledPostRequest, ScheduledPostSummary, ScheduledPostView } from "@/lib/api/types";
-import { emptyStates, errorMessage } from "@/lib/copy";
+import { emptyStates } from "@/lib/copy";
 import { bulkResultMessage, captionLine, STATUS_GROUPS } from "@/lib/schedule/format";
+import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
@@ -88,7 +89,7 @@ export function ListView({
           setSelected(new Set());
           done?.();
         },
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       },
     );
 

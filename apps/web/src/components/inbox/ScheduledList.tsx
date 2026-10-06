@@ -24,6 +24,7 @@ import { useCancelScheduled, useScheduledMessages, useUpdateScheduled } from "@/
 import type { ScheduledMessage } from "@/lib/api/types";
 import { emptyStates, errorMessage } from "@/lib/copy";
 import { contactName, TONE_CLASS, type Tone } from "@/lib/inbox/format";
+import { toastError } from "@/lib/toast-error";
 import { formatDayTime, toZonedInputs } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -82,7 +83,7 @@ export function ScheduledList({ onOpen, now }: { onOpen: (conversationId: string
               onCancel={() =>
                 cancel.mutate(item, {
                   onSuccess: () => toast.success("Scheduled message canceled"),
-                  onError: (error) => toast.error(errorMessage(error)),
+                  onError: (error) => toastError(error),
                 })
               }
             />

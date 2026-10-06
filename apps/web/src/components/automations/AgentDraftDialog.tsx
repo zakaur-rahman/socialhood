@@ -14,7 +14,7 @@ import { useStartAutomationDraft } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
 import { TRIGGER_LABEL } from "@/lib/automations/format";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -88,7 +88,7 @@ function AgentDraftBody({
           if (!applied) toast.error("Some of the prepared settings didn't apply. Check each step before activating.");
           router.push(editorHref(workspace.slug, automation.id, true));
         },
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       },
     );
 

@@ -27,9 +27,10 @@ import {
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { isProcessing, useDeleteKnowledgeSource } from "@/lib/api/queries";
 import type { KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
-import { emptyStates, errorMessage, knowledgeLimitReached } from "@/lib/copy";
+import { emptyStates, knowledgeLimitReached } from "@/lib/copy";
 import { TONE_CLASS } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -236,7 +237,7 @@ export function SourcesCard({
                 if (!source) return;
                 remove.mutate(source.id, {
                   onSuccess: () => toast.success(`Deleted “${source.title}”`),
-                  onError: (error) => toast.error(errorMessage(error)),
+                  onError: (error) => toastError(error),
                 });
               }}
             >

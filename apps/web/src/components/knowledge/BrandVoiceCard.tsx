@@ -18,7 +18,8 @@ import { ApiError } from "@/lib/api/errors";
 import { toSettingsUpdate, useUpdateAiSettings } from "@/lib/api/queries";
 import type { AiSettings, BrandTone, EmojiPolicy } from "@/lib/api/types";
 import { EMOJI_OPTIONS, TONE_OPTIONS } from "@/lib/ai/format";
-import { aiCopy, errorMessage } from "@/lib/copy";
+import { aiCopy } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 
 const schema = z.object({
   business_name: z.string().trim().max(80, "Use 80 characters or fewer."),
@@ -139,7 +140,7 @@ function BrandVoiceForm({
             }
             return;
           }
-          toast.error(errorMessage(error));
+          toastError(error);
         },
       },
     );

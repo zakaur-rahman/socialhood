@@ -631,7 +631,7 @@ function useStickerUpload(wid: string, injected?: Uploader) {
       try {
         return await (injected ? injected(file, options) : uploadAsset(api, wid, file, options));
       } catch (error) {
-        toast.error(error instanceof UploadError ? error.message : errorMessage(error));
+        toastError(error, error instanceof UploadError ? error.message : undefined);
         return null;
       } finally {
         setBusy(false);

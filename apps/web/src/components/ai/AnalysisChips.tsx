@@ -18,8 +18,8 @@ import {
   SENTIMENT_LABEL,
   SENTIMENTS,
 } from "@/lib/ai/format";
-import { errorMessage } from "@/lib/copy";
 import { TONE_CLASS } from "@/lib/inbox/format";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -94,7 +94,7 @@ export function CorrectAnalysis({
           toast.success("Correction saved");
           setOpen(false);
         },
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       },
     );
 

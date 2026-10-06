@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from "sonner";
 
+import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { clerkAppearance } from "@/lib/clerk-appearance";
 import "@/styles/globals.css";
@@ -31,7 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           afterSignOutUrl="/"
         >
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
-          <Toaster theme="dark" position="bottom-right" />
+          <Toaster />
         </ClerkProvider>
       </body>
     </html>

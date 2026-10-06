@@ -22,8 +22,9 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ApiError, isPlanLimitError } from "@/lib/api/errors";
+import { ApiError } from "@/lib/api/errors";
 import {
   useCompleteInstagramConnect,
   useCreateSandboxAccount,
@@ -40,7 +41,6 @@ import {
   completeConnectResult,
   connectResult,
   emptyStates,
-  errorMessage,
   instagramConnected,
   type ConnectResult,
 } from "@/lib/copy";
@@ -102,10 +102,11 @@ function Connections() {
             sandbox.mutate(undefined, {
               onSuccess: () => toast.success("Sandbox account added"),
               onError: (error) =>
-                toast.error(
+                toastError(
+                  error,
                   error instanceof ApiError && error.status === 404
                     ? "The sandbox is off. Set SANDBOX_PLATFORM_ENABLED=true for the API."
-                    : errorMessage(error),
+                    : undefined,
                 ),
             })
           }
@@ -228,7 +229,7 @@ function Connections() {
                             { id: account.id, patch },
                             {
                               // A 402 opens the upgrade dialog by itself (lib/api/provider.tsx).
-                              onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+                              onError: (error) => toastError(error),
                             },
                           ),
                     onReconnect: account.platform === "whatsapp" ? whatsapp.connect : startConnect,
@@ -238,14 +239,14 @@ function Connections() {
                           saved?.status === "active"
                             ? toast.success("Subscribed to messages")
                             : toast.error(saved?.last_error ?? "Couldn't subscribe to messages. Try again."),
-                        onError: (error) => toast.error(errorMessage(error)),
+                        onError: (error) => toastError(error),
                       }),
                     onDisconnect: () =>
                       disconnect.mutate(
                         { id: account.id },
                         {
                           onSuccess: () => toast.success(`${handleOf(account)} disconnected`),
-                          onError: (error) => toast.error(errorMessage(error)),
+                          onError: (error) => toastError(error),
                         },
                       ),
                     // C-067: the dialog stays open on a refusal; a typed-handle mismatch shows
@@ -254,7 +255,7 @@ function Connections() {
                       try {
                         await deleteData.mutateAsync({ id: account.id, confirm, mode });
                       } catch (error) {
-                        if (!isConfirmError(error)) toast.error(errorMessage(error));
+                        if (!isConfirmError(error)) toastError(error);
                         throw error;
                       }
                       toast.success(`Deleting ${handleOf(account)} and its data`);
@@ -275,7 +276,7 @@ function Connections() {
             update.mutate(
               { id: confirmAuto.id, patch: { ai_mode: "auto" } },
               {
-                onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+                onError: (error) => toastError(error),
               },
             );
           }
@@ -297,7 +298,10 @@ function isConfirmError(error: unknown): boolean {
 function showConnectResult(result: ConnectResult | null, retry: () => void) {
   if (result?.kind === "success") toast.success(result.message);
   else if (result) {
-    toast.error(result.message, result.retry ? { action: { label: "Try again", onClick: retry } } : undefined);
+    toast.error(
+      result.message,
+      result.retry ? { action: { label: "Try again", onClick: retry }, duration: TOAST_ACTION_DURATION } : undefined,
+    );
   }
 }
 
