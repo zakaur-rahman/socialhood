@@ -16,7 +16,6 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { isPlanLimitError } from "@/lib/api/errors";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import {
   autoAllowed,
@@ -30,6 +29,7 @@ import {
 import type { AccountStatus, AiMode, AiSettings, SocialAccount, TakeoverMinutes } from "@/lib/api/types";
 import { AI_MODE_HINT, AI_MODE_LABEL, AI_MODES, BUILT_IN_ESCALATIONS, TAKEOVER_OPTIONS } from "@/lib/ai/format";
 import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -114,7 +114,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
       {
         onSuccess: () => toast.success(`${handleOf(account)}: AI ${AI_MODE_LABEL[mode]}`),
         // A 402 opens the upgrade dialog by itself (lib/api/provider.tsx).
-        onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+        onError: (error) => toastError(error),
       },
     );
 

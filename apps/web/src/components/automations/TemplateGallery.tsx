@@ -4,7 +4,6 @@ import { ArrowLeft, Loader2, Plus, Sparkles } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,7 @@ import type { AutomationTemplate, SocialAccount, TemplateCategory } from "@/lib/
 import { accountLabel } from "@/lib/automations/accounts";
 import { DEFAULT_NAME } from "@/lib/automations/definition";
 import { CATEGORY_LABEL, TRIGGER_LABEL } from "@/lib/automations/format";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -47,7 +46,7 @@ export function useStartAutomation() {
         : { name: DEFAULT_NAME, social_account_id: accountId },
       {
         onSuccess: (automation) => router.push(editorHref(workspace.slug, automation.id, true)),
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       },
     );
   return { start, pending: create.isPending, pendingKey: create.isPending ? (create.variables?.template_key ?? "blank") : null };

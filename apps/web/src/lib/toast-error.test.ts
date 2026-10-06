@@ -13,6 +13,8 @@ describe("toastError: one message per failure (T8.4)", () => {
   it("a plan limit (402) is left to the upgrade dialog", () => {
     toastError(toApiError({ type: "t", title: "t", status: 402, code: "quota_exceeded", detail: "Your plan includes 3." }));
     toastError(toApiError({ type: "t", title: "t", status: 402, code: "entitlement_required" }));
+    // The screen's own words don't bring it back (AutomationsPage's "The order didn't save.").
+    toastError(toApiError({ type: "t", title: "t", status: 402, code: "quota_exceeded" }), "The order didn't save.");
     expect(toast.error).not.toHaveBeenCalled();
   });
 

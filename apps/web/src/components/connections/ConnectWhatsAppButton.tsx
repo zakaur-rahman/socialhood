@@ -65,7 +65,7 @@ export function useWhatsAppConnect(wid: string) {
         },
       );
     } catch (error) {
-      toast.error(error instanceof Error && !(error instanceof ApiError) ? error.message : errorMessage(error));
+      toastError(error, error instanceof Error && !(error instanceof ApiError) ? error.message : undefined);
     } finally {
       setOpening(false);
     }

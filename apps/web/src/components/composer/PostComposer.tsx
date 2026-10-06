@@ -66,6 +66,7 @@ import {
   type AssetInfo,
 } from "@/lib/publishing/rules";
 import type { ChecklistItem, ScheduledPost } from "@/lib/publishing/types";
+import { toastError } from "@/lib/toast-error";
 import { formatDayTime, toZonedInputs, zonedToDate } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -430,7 +431,7 @@ function Composer({
       );
       return;
     }
-    toast.error(errorMessage(apiError));
+    toastError(apiError);
     // Publishing started elsewhere, or the post changed: show what is stored now.
     if (apiError.status === 409) void queryClient.invalidateQueries({ queryKey: composerKeys.post(wid, postId) });
   };
@@ -528,7 +529,7 @@ function Composer({
         toast.success("Duplicated. You're editing the copy.");
         router.push(composerHref(slug, copy.id));
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
   };
 
@@ -539,7 +540,7 @@ function Composer({
         toast.success("Post deleted.");
         router.push(scheduleHref(slug));
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
 
   // ---- what the buttons can do now, and why not (UX-SCR-13: disabled buttons say why)

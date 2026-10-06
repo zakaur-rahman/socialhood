@@ -11,6 +11,7 @@ import { useAiDecision, useAiDecisionFeedback } from "@/lib/api/queries";
 import type { AiDecision } from "@/lib/api/types";
 import { checkLabel, checkValue } from "@/lib/ai/format";
 import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -70,7 +71,7 @@ export function DecisionDetails({ decision, messageId }: { decision: AiDecision;
       { decisionId: decision.id, feedback: value },
       {
         onSuccess: () => (value ? toast.success("Thanks. Auto learns from this.") : undefined),
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       },
     );
 

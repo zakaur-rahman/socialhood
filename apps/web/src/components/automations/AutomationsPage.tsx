@@ -12,6 +12,7 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { useAgentHandoff, type AutomationDraftHandoff } from "@/lib/agent/handoff";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -185,7 +186,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
       if (!active) {
         pause.mutate(automation.id, {
           onSuccess: () => toast.success(`Paused ${automation.name}`),
-          onError: (error) => toast.error(errorMessage(error)),
+          onError: (error) => toastError(error),
         });
         return;
       }
@@ -197,6 +198,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           if (fields.length > 0) {
             toast.error(`${automation.name} isn't ready: ${fields[0].message}`, {
               action: { label: "Finish setup", onClick: () => router.push(editorHref(workspace.slug, automation.id)) },
+              duration: TOAST_ACTION_DURATION,
             });
           } else toastError(error); // a plan limit (402) is the upgrade dialog's to say
         },
@@ -207,8 +209,9 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         onSuccess: (copy) =>
           toast.success(`Duplicated as ${copy.name}`, {
             action: { label: "Open", onClick: () => router.push(editorHref(workspace.slug, copy.id)) },
+            duration: TOAST_ACTION_DURATION,
           }),
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       }),
     onDelete: (automation) =>
       remove.mutate(automation.id, {
@@ -220,7 +223,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             return next;
           });
         },
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       }),
   };
 
@@ -230,7 +233,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         toast.success(selectedIds.length === 1 ? "Paused 1 automation" : `Paused ${selectedIds.length} automations`);
         setSelected(new Set());
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
 
   // Reordering needs every automation of the account on screen, in the order they run.
@@ -238,7 +241,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const reorder = (groupAccountId: string) => (orderedIds: string[]) =>
     priorities.mutate(
       { accountId: groupAccountId, orderedIds },
-      { onError: (error) => toast.error(`The order didn't save. ${errorMessage(error)}`) },
+      { onError: (error) => toastError(error, `The order didn't save. ${errorMessage(error)}`) },
     );
 
   const groups = useMemo(() => groupByAccount(items, accounts, sort), [items, accounts, sort]);
