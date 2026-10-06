@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/lib/api/errors";
+import { IDENTITIES } from "@/lib/ui/identity";
 import { scheduledPost } from "@/test/schedule";
 
 import {
+  accountColors,
   bulkResultMessage,
   canMove,
   captionLine,
@@ -13,6 +15,7 @@ import {
   parseHashtags,
   postFormatLabel,
   summarizeSlots,
+  UNKNOWN_ACCOUNT_COLOR,
 } from "./format";
 
 function validation(fields: { field: string; message: string }[]) {
@@ -96,5 +99,16 @@ describe("schedule format", () => {
         skipped: [{ id: "c", code: "conflict", message: "Publishing started." }],
       }),
     ).toEqual({ message: "2 posts deleted.", skipped: "1 post skipped. Publishing started." });
+  });
+
+  it("gives each account its own identity in order, never a status or platform colour (UX-SCR-04, D-13)", () => {
+    const ids = Array.from({ length: IDENTITIES.length + 1 }, (_, i) => ({ id: `a${i}` }));
+    const colors = accountColors(ids);
+    IDENTITIES.forEach((identity, i) => expect(colors.get(`a${i}`)).toBe(identity));
+    expect(colors.get(`a${IDENTITIES.length}`)).toBe(IDENTITIES[0]);
+    for (const color of colors.values()) {
+      expect(`${color.ring} ${color.dot}`).not.toMatch(/success|warning|danger|instagram|whatsapp|fg-secondary/);
+    }
+    expect(UNKNOWN_ACCOUNT_COLOR).toEqual({ gradient: "", ring: "ring-line-strong", dot: "bg-line-strong" });
   });
 });

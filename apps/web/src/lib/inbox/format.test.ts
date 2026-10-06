@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { IDENTITIES } from "@/lib/ui/identity";
+
 import { AVATAR_GRADIENTS, avatarGradient, contactName, previewPrefix, signalChip, timeLeft, windowChip } from "./format";
 
 const now = new Date("2026-09-28T12:00:00Z");
@@ -68,10 +70,17 @@ describe("reply window chip (UX-INB-05)", () => {
 });
 
 describe("avatar gradients", () => {
-  it("picks the same pair for the same contact, from the six", () => {
+  it("picks the same pair for the same contact, from the identity palette (D-13)", () => {
     expect(avatarGradient("p1")).toBe(avatarGradient("p1"));
+    expect(AVATAR_GRADIENTS).toEqual(IDENTITIES.map((i) => i.gradient));
     expect(AVATAR_GRADIENTS).toContain(avatarGradient("0d9f3c1e-8a55-4c3e-9c43-1f7a2e6b8d10"));
     const used = new Set(Array.from({ length: 60 }, (_, i) => avatarGradient(`contact-${i}`)));
-    expect(used.size).toBeGreaterThan(3);
+    expect(used.size).toBe(AVATAR_GRADIENTS.length);
+  });
+
+  it("never paints a customer in a status or platform colour (UI-ISS-054)", () => {
+    for (const gradient of AVATAR_GRADIENTS) {
+      expect(gradient).not.toMatch(/success|warning|danger|instagram|whatsapp/);
+    }
   });
 });

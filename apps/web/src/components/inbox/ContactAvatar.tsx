@@ -2,6 +2,7 @@ import { PLATFORM_BG, PlatformGlyph } from "@/components/connections/PlatformGly
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { Platform } from "@/lib/api/types";
 import { avatarGradient, initial } from "@/lib/inbox/format";
+import { IDENTITY_FILL } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
 const SIZE = {
@@ -14,6 +15,9 @@ const SIZE = {
 /**
  * UX-INB-04: the contact's picture, or their initial on a gradient picked by hashing the
  * contact id; a platform badge at the bottom right (replaces v1's meaningless "online" dot).
+ * The gradient is the identity palette's (lib/ui/identity, D-13): every stop 4.5:1 or more with
+ * the `on-brand` initial. The initial is decorative, since the name is always beside the avatar,
+ * so it is hidden from screen readers.
  */
 export function ContactAvatar({
   id,
@@ -32,13 +36,15 @@ export function ContactAvatar({
   className?: string;
 }) {
   const s = SIZE[size];
+  const gradient = avatarGradient(id);
   return (
     <span className={cn("relative inline-flex shrink-0", className)} data-testid="contact-avatar">
       <Avatar className={s.root}>
         {pictureUrl ? <AvatarImage src={pictureUrl} alt="" /> : null}
         <AvatarFallback
-          className={cn("bg-linear-135 font-semibold text-white", s.text, avatarGradient(id))}
-          data-gradient={avatarGradient(id)}
+          aria-hidden
+          className={cn(IDENTITY_FILL, "font-semibold", s.text, gradient)}
+          data-gradient={gradient}
         >
           {initial(name)}
         </AvatarFallback>
