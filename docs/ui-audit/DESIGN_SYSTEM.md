@@ -497,7 +497,7 @@ and one safety net in `globals.css`:
 | Sheet | `ui/sheet` | `side`; **`size="panel"`** (full screen below `md`, fixed width above) | AskPanel and run detail on `DialogPrimitive` (D13) | Change |
 | Popover | `ui/popover` | — | per-site surface and shadow | Change |
 | Dropdown menu | `ui/dropdown-menu` | item `variant="destructive"` (`danger-fg`) · content `min-w-48 w-auto` | per-site widths and labels | Change |
-| Tooltip | `ui/tooltip` | — | native `title` on meaningful elements (D15) | Change; colour **Owner D-03** |
+| Tooltip | `ui/tooltip` (level 1 surface on `rounded-md`, an arrow with the same fill and edge) | — | native `title` on meaningful elements (D15) | Change; colour **Owner D-03**, applied (UI-017; C-069) |
 | Toaster | `ui/sonner` | `position` by width; action toasts last 10 s or more | bare `<Toaster>` | Add |
 | Badge | `ui/badge` | `tone`: `neutral` (`hover` fill), `brand` (info), `success`, `warning`, `danger` (soft fills), `count` (brand gradient, `on-brand`) · `size`: `sm` (11 px), `md` (12 px; counts) · `shape`: `pill`, `tag` (`rounded-sm`, thumbnail labels) | 77 ad-hoc badges, 8 tone maps, two `StatusChip`s (D6) | Change |
 | Card | `ui/card` (`Card`, `CardHeader`, `CardInset`) | `padding`: `standard`, `roomy` · `tone`: `default`, `danger`, `brand` · exposes its padding for bleeds | SettingsCard (becomes a thin wrapper), composer Section, 85 surfaces (D7) | Add; radius **Owner D-02** |
@@ -648,7 +648,7 @@ Where the audits proposed different values or patterns, one was chosen.
 |---|---|---|
 | `line-control` and its scope | §1.2, §5 | D-01 (applied, C-071) |
 | Card radius | §4 | D-02 |
-| Tooltip colour | §8.2 | D-03 |
+| Tooltip colour | §8.2 | D-03 (applied, UI-017) |
 | Native date and time inputs | §8.2, §8.5 | D-04 |
 | Page and pane title sizes | §2.1 | D-05 |
 | Placeholder colour | §1.3 | D-06 (applied, C-071) |
