@@ -10,10 +10,11 @@ export type ColorToken = { name: string; value: string; use: string; swatch: str
 export const colorTokens: ColorToken[] = [
   // Surfaces
   { name: "canvas", value: "#000000", use: "App and thread background", swatch: "bg-canvas" },
-  { name: "panel", value: "#1F1F1F", use: "Sidebar card, list pane, headers, composer bar, popovers", swatch: "bg-panel" },
+  { name: "panel", value: "#1F1F1F", use: "Cards, sidebar, list pane, headers, composer bar, the phone drawer", swatch: "bg-panel" },
   { name: "field", value: "#1D1D1D", use: "Inputs, incoming bubbles, segmented track", swatch: "bg-field" },
   { name: "raised", value: "#2A2A2A", use: "Selected row, active segment, focused input, secondary button", swatch: "bg-raised" },
   { name: "raised-hover", value: "#333333", use: "Hover on raised surfaces", swatch: "bg-raised-hover" },
+  { name: "overlay", value: "#262626", use: "What floats: popovers, menus, select options, dialogs, sheets, toasts (D-12)", swatch: "bg-overlay" },
   // States: overlays, so they work on any surface
   { name: "hover", value: "rgb(255 255 255 / 0.05)", use: "Hover fill on any surface; neutral chip fill", swatch: "bg-hover" },
   { name: "pressed", value: "rgb(255 255 255 / 0.10)", use: "Pressed or open (aria-expanded, data-state=open)", swatch: "bg-pressed" },
@@ -23,13 +24,14 @@ export const colorTokens: ColorToken[] = [
   { name: "line", value: "rgb(255 255 255 / 0.10)", use: "Borders", swatch: "bg-line" },
   { name: "line-subtle", value: "rgb(255 255 255 / 0.05)", use: "Faint borders", swatch: "bg-line-subtle" },
   { name: "line-strong", value: "rgb(255 255 255 / 0.20)", use: "Emphasised borders", swatch: "bg-line-strong" },
+  { name: "line-control", value: "rgb(255 255 255 / 0.40)", use: "Control edges, 3:1 or more on every surface: fields, selects, checkboxes, switches (--input; D-01)", swatch: "bg-line-control" },
   // Text
   { name: "fg", value: "#FFFFFF", use: "Primary text", swatch: "bg-fg" },
-  { name: "fg-secondary", value: "#9B9CA0", use: "Secondary and meta text, timestamps", swatch: "bg-fg-secondary" },
-  { name: "fg-disabled", value: "#71717A", use: "Disabled controls and placeholders only", swatch: "bg-fg-disabled" },
+  { name: "fg-secondary", value: "#9B9CA0", use: "Secondary and meta text, timestamps, placeholders (D-06)", swatch: "bg-fg-secondary" },
+  { name: "fg-disabled", value: "#71717A", use: "Disabled controls only", swatch: "bg-fg-disabled" },
   { name: "on-brand", value: "#FFFFFF", use: "Text and icons on the brand gradient, brand-strong, danger-fill, platform fills", swatch: "bg-on-brand" },
   // Brand
-  { name: "brand", value: "#567FF8", use: "Non-text marks: focus ring, dots, selection bar, switch on", swatch: "bg-brand" },
+  { name: "brand", value: "#567FF8", use: "Non-text marks: focus ring, dots, selection bar, switch on, checkbox checked", swatch: "bg-brand" },
   { name: "brand-strong", value: "#4467E6", use: "Solid brand fills that carry text; the gradient's end", swatch: "bg-brand-strong" },
   { name: "brand-deep", value: "#20338A", use: "Gradient start", swatch: "bg-brand-deep" },
   { name: "brand-fg", value: "#9DB5FF", use: "Brand-coloured text and icons on dark", swatch: "bg-brand-fg" },
@@ -86,7 +88,7 @@ export const shadcnAliases = [
   { alias: "foreground", token: "fg" },
   { alias: "card", token: "panel" },
   { alias: "card-foreground", token: "fg" },
-  { alias: "popover", token: "panel" },
+  { alias: "popover", token: "overlay" },
   { alias: "popover-foreground", token: "fg" },
   { alias: "primary", token: "brand-strong" },
   { alias: "primary-foreground", token: "on-brand" },
@@ -98,8 +100,29 @@ export const shadcnAliases = [
   { alias: "accent-foreground", token: "fg" },
   { alias: "destructive", token: "danger" },
   { alias: "border", token: "line" },
-  { alias: "input", token: "line" },
+  { alias: "input", token: "line-control" },
   { alias: "ring", token: "brand" },
+] as const;
+
+/**
+ * Elevation (DESIGN_SYSTEM §6; D-12): the two dark shadows, set by the primitives, never at call
+ * sites. The 1 px `line` edge is a separate `ring-1 ring-line` (a sheet: its side border), so a
+ * call site's leftover `shadow-xl` replaces only the drop shadow. `sample` is a literal class list
+ * so Tailwind emits it for /dev/tokens.
+ */
+export const shadowTokens = [
+  {
+    name: "shadow-floating",
+    value: "0 8px 24px -6px rgb(0 0 0 / 0.7)",
+    use: "Level 1, on overlay: popovers, menus, select options, toasts",
+    sample: "bg-overlay ring-1 ring-line shadow-floating",
+  },
+  {
+    name: "shadow-overlay",
+    value: "0 24px 64px -12px rgb(0 0 0 / 0.8)",
+    use: "Level 2, on overlay over the scrim: dialogs, alert dialogs, sheets",
+    sample: "bg-overlay ring-1 ring-line shadow-overlay",
+  },
 ] as const;
 
 /** The two sizes Tailwind's scale lacks; each carries its line height. */

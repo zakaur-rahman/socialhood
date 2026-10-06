@@ -71,7 +71,9 @@ describe("Toaster (UI-024)", () => {
     expect(item).toHaveAttribute("data-styled", "false");
     expect(item).toHaveAttribute("data-type", "error");
     expect(item).toHaveClass("bg-popover", "border", "border-line-strong", "text-fg", "data-[type=error]:text-danger-fg");
-    expect(item).toHaveClass("rounded-lg", "shadow-xl", "text-sm", "font-sans");
+    // The floating elevation (D-12): overlay through bg-popover, and the dark floating shadow.
+    expect(item).toHaveClass("rounded-lg", "shadow-floating", "focus-visible:shadow-floating!", "text-sm", "font-sans");
+    expect(classes(item).filter((c) => /shadow-(sm|md|lg|xl)/.test(c))).toEqual([]);
     expect(list()).not.toHaveAttribute("data-sonner-theme", "dark");
     expect(classes(item).filter((c) => /#|rgb|hsl|\[\d/.test(c))).toEqual([]);
   });

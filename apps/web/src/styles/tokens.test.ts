@@ -13,6 +13,7 @@ import {
   motionDurations,
   otherUtilities,
   shadcnAliases,
+  shadowTokens,
   typeRoles,
 } from "./tokens";
 
@@ -92,6 +93,27 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(declared("brand-fg")).toBe("#9DB5FF");
     expect(declared("fg-secondary")).toBe("#9B9CA0");
     expect(declared("danger-fill")).toBe("#C53030");
+  });
+
+  it("applies the owner's token decisions D-01, D-06 and D-12 (C-069, C-071)", () => {
+    // D-01: control edges are white 40%, through --input, so every field, select, checkbox and
+    // switch edge is 3:1 or more on every surface.
+    expect(declared("line-control")).toBe("rgb(255 255 255 / 0.40)");
+    expect(css).toMatch(/--input:\s*var\(--color-line-control\);/);
+    // D-06: placeholders are fg-secondary (text, 4.5:1), not fg-disabled.
+    const base = blocks(/@layer base/).join("\n");
+    expect(base).toMatch(/::placeholder \{ color: var\(--color-fg-secondary\); \}/);
+    expect(base).not.toMatch(/fg-disabled/);
+    // D-12: what floats sits on overlay, lighter than the panel cards beneath it.
+    expect(declared("overlay")).toBe("#262626");
+    expect(css).toMatch(/--popover:\s*var\(--color-overlay\);/);
+  });
+
+  it.each(shadowTokens)("defines the $name elevation shadow (D-12)", ({ name, value, sample }) => {
+    expect(css).toMatch(new RegExp(`--${name}:\\s*${value.replace(/[()/.]/g, "\\$&")};`));
+    expect(sample.split(" ")).toEqual(expect.arrayContaining(["bg-overlay", "ring-1", "ring-line", name]));
+    // Dark shadows only: no hue, and the edge is a ring, not part of the shadow.
+    expect(value).toMatch(/^0 \d+px \d+px -\d+px rgb\(0 0 0 \/ 0\.\d+\)$/);
   });
 
   it.each(fontSizes)("defines $name as $size with a $lineHeight line height", ({ name, size, lineHeight }) => {

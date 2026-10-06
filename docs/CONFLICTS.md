@@ -1276,3 +1276,67 @@ surface and shadows (D-12) come with UI-018.
   - Under reduced motion, dialogs, alert dialogs, sheets (the phone drawer), popovers, menus,
     selects, tooltips and skeletons no longer animate.
 - The spec's §4.2 text (UX-TOK-01's list, the type table, the motion line) follows in UI-071.
+
+## C-071 · Token decisions D-01, D-06 and D-12 applied (UI-018, feature/ui-token-decisions)
+UI-018 applies three of the decisions the owner approved in C-069. The values are marked "C-071"
+in `apps/web/src/styles/globals.css`, mirrored in `styles/tokens.ts`, checked by `tokens.test.ts`
+and shown on `/dev/tokens`. Ratios were measured in Chromium on the e2e stack at 375 and 1280 px
+(before: the old values restored in the page).
+- **D-01, control edges:** `line-control` (white 40%), with `--input` → `line-control`. Input,
+  Textarea, SelectTrigger, SearchInput, ChipInput, the checkbox and the switch's off edge follow it.
+  - A field draws its edge over its own fill, so the edge is `#777777` wherever the field sits:
+    3.70:1 on panel, 3.79:1 against the field inside, 3.40:1 on overlay and 3.22:1 on raised. Before,
+    it was 1.32:1 on panel.
+  - An unchecked checkbox is 3.77:1 on panel and 3.66:1 on canvas (before: 1.35:1 and 1.20:1).
+    Across the surfaces it ranges from 3.41:1 to 3.79:1. The switch's off edge is 4.53:1 (before:
+    1.85:1).
+  - **Checked checkbox: a `brand` fill (the DSA's choice).** It matches the switch's on track and
+    replaces `--primary` (`brand-strong`). A checked box's edge is its fill:
+    - `brand-strong` was 2.96:1 on a selected (`raised`) row and 2.60:1 on `raised-hover`;
+    - `brand` is 3.96:1 and 3.48:1 there, and 4.54:1 on panel, 4.17:1 on overlay and 5.79:1 on
+      canvas;
+    - the tick and the indeterminate minus are graphics, `on-brand` at 3.63:1 on `brand`, where 3:1
+      is needed.
+
+    The alternative was a `line-control` edge kept on checked boxes. It measures about 3.58:1 on
+    raised, but leaves the fill at 2.96:1 and puts a grey ring round a blue box. This amends C-070's
+    note that the checkbox fill became `#4467E6`, and DESIGN_SYSTEM §1.4.
+  - Settings › Workspace's URL field is a hand-built wrapper. Its edge moves from `border-line` to
+    `border-line-control`, so every field on that page passes. The other raw fields (about 27) keep
+    their own edges until the area sweeps move them onto Input.
+- **D-06, placeholders:** the base `::placeholder` is `fg-secondary` (it was `fg-disabled`).
+  - The primitives already used `fg-secondary`, so only raw fields change. The inbox composer and
+    list search go from 3.49:1 to 6.15:1 on field, and from 2.97:1 to 5.23:1 when focused (on raised).
+  - `fg-secondary` is 6.01:1 on panel, 6.15:1 on field, 5.52:1 on overlay and 5.23:1 on raised.
+  - `fg-disabled` is for disabled controls only.
+- **D-12, overlay surface and elevation:**
+  - **Values:**
+    - `overlay` is `#262626`: 1.09:1 against panel and 1.39:1 against canvas. `--popover` →
+      `overlay`.
+    - `shadow-floating`: `0 8px 24px -6px rgb(0 0 0 / 0.7)`.
+    - `shadow-overlay`: `0 24px 64px -12px rgb(0 0 0 / 0.8)`.
+  - **Where they apply:** the floating recipe (`ui/floating`, used by Popover, DropdownMenu and
+    Select) and the toast use `shadow-floating`. Dialog, AlertDialog and Sheet use
+    `shadow-overlay`. Together they replace `shadow-xl` and `ring-foreground/10`.
+  - **A deviation from DESIGN_SYSTEM §1.13:** the 1 px `line` edge sits outside the shadow tokens.
+    - Floating content and dialogs draw it as `ring-1 ring-line`, the same pixels as
+      `ring-foreground/10`. A sheet keeps its side border, and the toast its `line-strong` border.
+    - The reason: 21 menus and popovers still pass `shadow-xl` at the call site. With the edge
+      inside the token, `cn` would replace edge and shadow together, and those menus would lose
+      their outline on panel.
+  - **Supporting changes:**
+    - `cn` learns `shadow-floating` and `shadow-overlay` as shadow sizes. tailwind-merge read them
+      as colours, because `--color-overlay` exists.
+    - The phone drawer is `panel`, like the sidebar it holds (it was `canvas`). It keeps the sheet's
+      overlay shadow.
+  - **Text on overlay:**
+    - `fg` 15.1:1, `fg-secondary` 5.52:1, `brand-fg` 7.56:1, `danger-fg` 7.97:1;
+    - a highlighted menu item (`hover` over overlay, `#313131`): `fg-secondary` 4.75:1, the
+      keyboard outline 3.59:1.
+  - **What changes on screen now:**
+    - the 14 selects' options, the toast and the one dialog without a call-site surface (the
+      composer's "Unschedule this post?") move to `overlay`;
+    - every dialog, alert dialog and sheet gets the overlay shadow.
+  - **What waits for the area sweeps:** 54 overlay call sites still pass `border-line bg-panel`, and
+    21 of them also pass `shadow-xl`. They stay on `panel` until the Wave-3 sweeps remove those
+    patches (AGENT_CONTEXT §6). After that they float on `overlay` with no further token change.
