@@ -13,6 +13,7 @@ import type {
 } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import type { Tone } from "@/lib/inbox/format";
+import { type Identity, identityAt } from "@/lib/ui/identity";
 
 import { formatMinutes, TOO_SOON_MESSAGE, WEEKDAYS_SHORT } from "./dates";
 
@@ -83,17 +84,19 @@ export function postFormatLabel(post: Pick<ScheduledPostSummary, "format" | "ass
   }
 }
 
-/** Each account keeps one ring colour on the page (UX-SCR-04), from the tokens. */
-const RINGS = ["ring-brand", "ring-instagram", "ring-warning", "ring-whatsapp", "ring-brand-fg", "ring-fg-secondary"] as const;
-const DOTS = ["bg-brand", "bg-instagram", "bg-warning", "bg-whatsapp", "bg-brand-fg", "bg-fg-secondary"] as const;
-
-export type AccountColor = { ring: string; dot: string };
+/**
+ * Each account keeps one identity on the page (UX-SCR-04): its ring and dot, and its avatar's
+ * gradient when it has no picture, all from the identity palette (lib/ui/identity, D-13), never a
+ * status or platform colour. Accounts take the identities in order, so the first three differ.
+ */
+export type AccountColor = Identity;
 
 export function accountColors(accounts: Pick<SocialAccount, "id">[]): Map<string, AccountColor> {
-  return new Map(accounts.map((account, i) => [account.id, { ring: RINGS[i % RINGS.length], dot: DOTS[i % DOTS.length] }]));
+  return new Map(accounts.map((account, i) => [account.id, identityAt(i)]));
 }
 
-export const UNKNOWN_ACCOUNT_COLOR: AccountColor = { ring: "ring-line-strong", dot: "bg-line-strong" };
+/** An account the page doesn't know (disconnected): a neutral ring, no identity. */
+export const UNKNOWN_ACCOUNT_COLOR: AccountColor = { gradient: "", ring: "ring-line-strong", dot: "bg-line-strong" };
 
 /** "Mon, Wed, Fri 18:00 · Sat 10:00": weekly posting times grouped by time. */
 export function summarizeSlots(slots: PostingSlot[]): string {
