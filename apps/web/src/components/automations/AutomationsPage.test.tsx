@@ -1,11 +1,13 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { Toaster } from "@/components/ui/sonner";
 import { handOff, resetAgentHandoff } from "@/lib/agent/handoff";
 import type { Automation, AutomationTemplate, SocialAccount } from "@/lib/api/types";
 import { draftCard } from "@/test/agent";
-import { account, automation, json, noContent, problem, renderWithApi, template, type Call } from "@/test/api";
+import { account, automation, billingState, json, noContent, planList, problem, renderWithApi, template, type Call } from "@/test/api";
 
 import { AutomationsPage } from "./AutomationsPage";
 
@@ -300,6 +302,50 @@ describe("AutomationsPage (UX-SCR-02)", () => {
       handlers: { ...handlers(), "GET /v1/w/:wid/automations": () => new Promise<Response>(() => {}) },
     });
     expect(screen.getByLabelText("Loading automations")).toHaveAttribute("aria-busy", "true");
+  });
+});
+
+describe("A failed action says so once (UI-024, C-051)", () => {
+  /** The page with the app's Toaster and upgrade dialog, and Duplicate answering `duplicate`. */
+  async function duplicateBookACall(duplicate: () => Response) {
+    const user = userEvent.setup();
+    toast.dismiss(); // the earlier tests' toasts, which sonner would replay to this Toaster
+    renderWithApi(
+      <>
+        <AutomationsPage />
+        <Toaster />
+      </>,
+      {
+        upgradeDialog: true,
+        handlers: {
+          ...handlers(),
+          "POST /v1/w/:wid/automations/:id/duplicate": duplicate,
+          "GET /v1/w/:wid/billing": () => json(billingState({ plan: "free", status: "free" })),
+          "GET /v1/billing/plans": () => json(planList()),
+        },
+      },
+    );
+    await screen.findByRole("link", { name: "Book a call" });
+    await user.click(screen.getByRole("button", { name: "More actions for Book a call" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Duplicate" }));
+  }
+  const toasts = () => document.querySelectorAll("[data-sonner-toast]");
+
+  it("a plan limit (402) is the upgrade dialog's alone: no toast", async () => {
+    await duplicateBookACall(() =>
+      problem(402, "quota_exceeded", "Your plan includes 3 active automations.", { entitlement: "active_automations", limit: 3 }),
+    );
+    expect(await screen.findByRole("dialog", { name: "Automation limit reached" })).toBeInTheDocument();
+    // Sonner adds a toast on a timer after the call: give it the time it would take.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(toasts()).toHaveLength(0);
+  });
+
+  it("any other failure is an error toast", async () => {
+    await duplicateBookACall(() => problem(500, "internal"));
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    expect(toasts()[0]).toHaveAttribute("data-type", "error");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 

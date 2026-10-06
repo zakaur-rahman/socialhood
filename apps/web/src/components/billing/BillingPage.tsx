@@ -44,7 +44,8 @@ import {
   type MeterView,
   type StatusTone,
 } from "@/lib/billing/plan";
-import { PLAN_NAME, billingCopy, errorMessage, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
+import { PLAN_NAME, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -216,12 +217,12 @@ function CurrentPlan({
         const date = next.current_period_end ?? next.trial_ends_at;
         toast.success(date ? billingCopy.cancelled(name, billingDate(date, workspace.timezone)) : "Cancelled");
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
   const runResume = () =>
     resume.mutate(undefined, {
       onSuccess: () => toast.success(billingCopy.resumed(name)),
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
 
   const actions = isOwner ? (

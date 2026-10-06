@@ -11,6 +11,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import {
   useConversations,
   useMarkUnread,
@@ -21,7 +22,8 @@ import {
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
 import type { AiMode, Conversation, InboxView, Platform, SocialAccount } from "@/lib/api/types";
 import { minWidth } from "@/lib/breakpoints";
-import { emptyStates, errorMessage, inboxFilterEmpty } from "@/lib/copy";
+import { emptyStates, inboxFilterEmpty } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useMediaQuery, useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -191,9 +193,10 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
           onSuccess: () => {
             toast.success(archived ? "Conversation archived" : "Conversation moved to the inbox", {
               action: { label: "Undo", onClick: () => update.mutate({ id, patch: { status: archived ? "open" : "archived" } }) },
+              duration: TOAST_ACTION_DURATION,
             });
           },
-          onError: (error) => toast.error(errorMessage(error)),
+          onError: (error) => toastError(error),
         },
       );
       // Archiving the open conversation moves on to the next one, as mail apps do.
@@ -208,7 +211,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   const markUnread = useCallback(
     (id: string) => {
       setManualUnreadId(id);
-      unread.mutate(id, { onError: (error) => toast.error(errorMessage(error)) });
+      unread.mutate(id, { onError: (error) => toastError(error) });
     },
     [unread],
   );

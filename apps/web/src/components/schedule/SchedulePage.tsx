@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSocialAccounts } from "@/lib/api/queries";
 import {
@@ -47,7 +48,7 @@ import type { ScheduledPostSummary, ScheduledPostView } from "@/lib/api/types";
 import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
 import { isPlanLimitError } from "@/lib/api/errors";
 import { minWidth } from "@/lib/breakpoints";
-import { emptyStates, errorMessage } from "@/lib/copy";
+import { emptyStates } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import {
   CALENDAR_VIEWS,
@@ -279,7 +280,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
       { publishAt: at ? at.toISOString() : null },
       {
         onSuccess: (post) => openComposer(post, query),
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       },
     );
   };
@@ -308,8 +309,11 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
     duplicate: (post) =>
       duplicate.mutate(post, {
         onSuccess: (copy) =>
-          toast.success("Duplicated as a draft", { action: { label: "Open", onClick: () => openComposer(copy) } }),
-        onError: (error) => toast.error(errorMessage(error)),
+          toast.success("Duplicated as a draft", {
+            action: { label: "Open", onClick: () => openComposer(copy) },
+            duration: TOAST_ACTION_DURATION,
+          }),
+        onError: (error) => toastError(error),
       }),
     remove: (post, returnFocus) => setDeleteRequest({ post, returnFocus }),
     newPostAt: (at) => newPost(at),

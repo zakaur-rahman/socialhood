@@ -2,7 +2,6 @@
 
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { SourceSheet, type SourceSheetMode } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -12,6 +11,7 @@ import { useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/li
 import type { Overview } from "@/lib/api/types";
 import { errorMessage, greeting } from "@/lib/copy";
 import { gapPrefill } from "@/lib/knowledge/prefill";
+import { toastError } from "@/lib/toast-error";
 import { dayKey } from "@/lib/tz";
 import { useNow, useStoredString } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ export function HomeScreen() {
   const data = overview.data;
 
   const dismiss = () =>
-    update.mutate({ checklist_dismissed: true }, { onError: (error) => toast.error(errorMessage(error)) });
+    update.mutate({ checklist_dismissed: true }, { onError: (error) => toastError(error) });
 
   const refresh = () => {
     setRefreshing(true);

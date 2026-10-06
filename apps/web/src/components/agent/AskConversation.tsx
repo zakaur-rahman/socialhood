@@ -2,7 +2,6 @@
 
 import { ArrowDown, BarChart3, Inbox, MessageSquare, Sparkles, Zap, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
@@ -14,6 +13,7 @@ import { ApiError } from "@/lib/api/errors";
 import { upgradeRequestFrom, useUpgradeDialog } from "@/lib/api/provider";
 import { exhaustedAiCredits, useAskAgent, useBilling, useCancelAgentRun, useThreadRuns } from "@/lib/api/queries";
 import { aiCreditsExhausted, errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -133,7 +133,7 @@ export function AskConversation({
 
   const stop = () => {
     if (!latest) return;
-    cancel.mutate(latest.id, { onError: (caught) => toast.error(errorMessage(caught)) });
+    cancel.mutate(latest.id, { onError: (caught) => toastError(caught) });
   };
 
   const context: RunContext = {

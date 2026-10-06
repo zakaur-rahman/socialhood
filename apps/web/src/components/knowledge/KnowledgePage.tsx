@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAiSettings, useDismissKnowledgeGap, useKnowledgeGaps, useKnowledgeSources } from "@/lib/api/queries";
 import type { KnowledgeGap } from "@/lib/api/types";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -53,7 +53,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
   const dismiss = (gap: KnowledgeGap) =>
     dismissGap.mutate(gap.id, {
       onSuccess: () => toast.success("Dismissed. It comes back if a customer asks again."),
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
 
   const gapsCard = (

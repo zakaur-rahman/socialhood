@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/errors";
 import { useDeleteWorkspace } from "@/lib/api/queries/workspaceDeletion";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 /** What deleting removes (FR-ACC-05, F-16), in the order an owner would look for it. */
@@ -73,7 +73,7 @@ function DangerZone({ id, name }: { id: string; name: string }) {
       onError: (error) => {
         const field = error instanceof ApiError ? error.errors.find((e) => e.field === "confirm_name") : undefined;
         if (field) setFieldError(field.message);
-        else toast.error(errorMessage(error));
+        else toastError(error);
       },
     });
   };

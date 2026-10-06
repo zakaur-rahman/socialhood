@@ -20,6 +20,7 @@ import {
 import type { HashtagGroup } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import { HASHTAG_GROUP_NAME_MAX, MAX_HASHTAGS, parseHashtags } from "@/lib/schedule/format";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -110,7 +111,7 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
                           setConfirming(null);
                           toast.success(`${group.name} deleted`);
                         },
-                        onError: (error) => toast.error(errorMessage(error)),
+                        onError: (error) => toastError(error),
                       })
                     }
                   >

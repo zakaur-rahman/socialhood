@@ -200,7 +200,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const onPause = () =>
     pause.mutate(server.id, {
       onSuccess: () => toast.success("Paused. It won't answer until you activate it again."),
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
 
   const onDuplicate = async () => {
@@ -210,7 +210,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         toast.success(`Duplicated. You're editing ${copy.name}.`);
         router.push(editorHref(slug, copy.id));
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
   };
 
@@ -222,7 +222,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         toast.success(`Deleted ${draft.name}`);
         router.push(`/w/${slug}/automations` as Route);
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
   };
 
