@@ -7,6 +7,24 @@ before-and-after shots (IMPLEMENTATION_PLAN §H, item 8).
 
 - Dark, device scale factor 1, Chromium. Touch emulation (`hasTouch`, `isMobile`) below 1024 px,
   so at 375 and 768. Heights: 812, 1024, 800 and 864 px.
+- **Touch widths keep a coarse pointer** (the primitives' `pointer-coarse:` touch sizes depend
+  on it):
+  - Chromium's beyond-viewport capture, which Playwright's `fullPage` uses, drops touch
+    emulation: it renders the page with `pointer: fine` (desktop control heights, the page's
+    touch height, so blank space at the bottom) and leaves the page fine afterwards. So at 375
+    and 768 a full-page shot is **stitched from viewport captures**. The page never scrolls: each
+    tile after the first moves `<body>` with a transform, so sticky bars, scroll-linked effects
+    (the landing page's) and viewport units stay in their scroll-0 state, as `fullPage` draws
+    them, and fixed elements show in the first screen only; the page is restored before axe runs.
+    At 1280 and 1536 the tool keeps `fullPage` (its text anti-aliasing differs slightly from a
+    viewport capture on desktop).
+  - Touch emulation is also forced from a second CDP session (`Emulation.setTouchEmulationEnabled`;
+    `Emulation.setEmulatedMedia` ignores `pointer` and `hover` in Chromium).
+  - Before and after each shot the tool checks `matchMedia`: `(pointer: coarse)`,
+    `(any-pointer: coarse)` and `(hover: none)` match at 375 and 768 and not at 1280 or 1536, or
+    the shot fails. `meta/*.json` records the pointer.
+  - Shots taken before this fix (the UI-019 baseline and task folders until 2026-10-07) show
+    desktop heights in full-page touch shots, and their axe at 375 ran on that fine-pointer page.
 - Full page where the page scrolls; the viewport for "viewport-only" screens (an open dialog,
   menu, drawer or toast, and the banner over the inbox).
 - A full-page shot wider than its width means the page scrolls sideways (Home at 375 is 499 px
