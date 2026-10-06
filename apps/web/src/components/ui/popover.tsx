@@ -4,6 +4,8 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Popover as PopoverPrimitive } from "radix-ui"
 
+import { FLOATING_MOTION, FLOATING_SURFACE } from "@/components/ui/floating"
+
 function Popover({
   ...props
 }: React.ComponentProps<typeof PopoverPrimitive.Root>) {
@@ -16,6 +18,11 @@ function PopoverTrigger({
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
 }
 
+/**
+ * A popover on the floating surface and motion it shares with menus and selects (ui/floating), so a
+ * call site sets only its width and padding. Radix moves focus inside when it opens and back to the
+ * trigger when it closes.
+ */
 function PopoverContent({
   className,
   align = "center",
@@ -29,7 +36,11 @@ function PopoverContent({
         align={align}
         sideOffset={sideOffset}
         className={cn(
-          "z-50 flex w-72 origin-(--radix-popover-content-transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+          // The container takes focus only when it holds nothing focusable (Radix's fallback), so it
+          // draws no outline of its own; the controls inside keep theirs.
+          "z-50 flex w-72 origin-(--radix-popover-content-transform-origin) flex-col gap-2.5 p-2.5 text-sm outline-hidden",
+          FLOATING_SURFACE,
+          FLOATING_MOTION,
           className
         )}
         {...props}
