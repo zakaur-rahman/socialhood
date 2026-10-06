@@ -131,7 +131,8 @@ selected rows and nav; `border-l-2` status edges; `danger` for invalid; dashed `
 
 **Elevation:** flat cards (no shadow); floating surfaces and modals get their elevation **from the
 primitive** (D-12, C-071): `overlay` with a `ring-1 ring-line` edge plus `shadow-floating`
-(popovers, menus, select options, toasts) or `shadow-overlay` (dialogs, alert dialogs, sheets);
+(popovers, menus, select options, tooltips (D-03), toasts) or `shadow-overlay` (dialogs, alert
+dialogs, sheets);
 modals over `bg-scrim`; the phone drawer stays `panel`. No call-site `bg-panel` or `shadow-*` on
 overlays (they override the primitive). No backdrop blur in the app.
 
@@ -273,7 +274,7 @@ new work to the decided rule:
 |---|---|---|---|
 | D-01 | Control-border token `line-control` and its scope | Applied (UI-018, C-071) | Checkbox, radio, switch **and** text fields; checked boxes `brand` |
 | D-02 | Card radius | Approved | `xl` everywhere |
-| D-03 | Tooltip colour | Approved | Dark, like other floating surfaces |
+| D-03 | Tooltip colour | Applied (UI-017) | Dark, like other floating surfaces |
 | D-04 | Native date and time pickers in R1 | Approved | Accept native |
 | D-05 | Page and pane title sizes | Approved | 24 px page, 18 px pane |
 | D-06 | Placeholder colour | Applied (UI-018, C-071) | `fg-secondary` |
