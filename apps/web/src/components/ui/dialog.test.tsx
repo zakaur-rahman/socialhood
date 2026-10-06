@@ -46,9 +46,11 @@ describe("Dialog (UI-012)", () => {
     expectReducedMotionCancels(content);
   });
 
-  it("floats with the spec's shadow and scrolls within the viewport", () => {
+  it("floats on overlay with the overlay shadow and a line edge (D-12), and scrolls within the viewport", () => {
     render(<Example />);
-    expect(screen.getByRole("dialog")).toHaveClass("shadow-xl", "max-h-[calc(100dvh-2rem)]", "overflow-y-auto");
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveClass("bg-popover", "shadow-overlay", "ring-1", "ring-line", "max-h-[calc(100dvh-2rem)]", "overflow-y-auto");
+    expect(dialog).not.toHaveClass("shadow-xl", "ring-foreground/10");
   });
 
   it("sizes: today's four widths, sm by default; a call-site width still replaces it", () => {

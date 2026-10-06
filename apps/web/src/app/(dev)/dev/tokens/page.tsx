@@ -14,6 +14,7 @@ import {
   motionDurations,
   otherUtilities,
   shadcnAliases,
+  shadowTokens,
   typeRoles,
 } from "@/styles/tokens";
 
@@ -85,6 +86,22 @@ export default function TokensPage() {
             </li>
           ))}
         </ul>
+      </Section>
+
+      <Section title="Elevation">
+        <p className={META}>
+          Set by the primitives, never at call sites. Flat cards sit on panel; what floats sits on overlay with a
+          line edge and one of the two shadows.
+        </p>
+        <div className={`${CARD} grid grid-cols-1 gap-6 p-6 sm:grid-cols-2`}>
+          {shadowTokens.map((s) => (
+            <div key={s.name} className={`${s.sample} rounded-lg p-4`}>
+              <span className="block text-sm font-medium">{s.name}</span>
+              <span className="block font-mono text-xs break-words text-fg-secondary">{s.value}</span>
+              <span className="block text-xs text-fg-secondary">{s.use}</span>
+            </div>
+          ))}
+        </div>
       </Section>
 
       <Section title="Gradients">

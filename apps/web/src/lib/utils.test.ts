@@ -24,6 +24,15 @@ describe("cn knows the design system's utilities (C-070)", () => {
     expect(cn("ease-standard", "ease-exit")).toBe("ease-exit");
   });
 
+  it("treats the elevation shadows as shadow sizes, not colours (C-071)", () => {
+    expect(cn("shadow-floating", "shadow-xl")).toBe("shadow-xl");
+    expect(cn("shadow-xl", "shadow-overlay")).toBe("shadow-overlay");
+    expect(cn("shadow-floating", "shadow-none")).toBe("shadow-none");
+    // A shadow colour layers on a size; it doesn't replace it.
+    expect(cn("shadow-overlay", "shadow-black")).toBe("shadow-overlay shadow-black");
+    expect(cn("bg-popover", "bg-overlay")).toBe("bg-overlay");
+  });
+
   it("still merges colours and sizes as tailwind-merge does", () => {
     expect(cn("bg-primary", "bg-danger-fill")).toBe("bg-danger-fill");
     expect(cn("hover:bg-hover", "hover:bg-pressed")).toBe("hover:bg-pressed");

@@ -124,13 +124,14 @@ describe("DropdownMenu (UI-013)", () => {
     expectItemHighlight(item);
   });
 
-  it("floats at least 192 px wide and as wide as its items, with the spec's shadow", async () => {
+  it("floats at least 192 px wide and as wide as its items, with the floating shadow (D-12)", async () => {
     const user = userEvent.setup();
     render(<Menu />);
     await user.click(screen.getByRole("button", { name: "More actions" }));
     const content = await screen.findByRole("menu", { name: "More actions" });
     expect(content).toHaveAttribute("data-slot", "dropdown-menu-content");
-    expect(content).toHaveClass("w-auto", "min-w-48", "shadow-xl", "ring-1", "rounded-lg", "bg-popover", "p-1");
+    expect(content).toHaveClass("w-auto", "min-w-48", "shadow-floating", "ring-1", "ring-line", "rounded-lg", "bg-popover", "p-1");
+    expect(content).not.toHaveClass("shadow-xl");
     // Not the trigger's width (wrong for icon triggers), and never wider than the viewport allows.
     expect(classes(content).filter((c) => c.includes("trigger-width"))).toEqual([]);
     expect(content).toHaveClass("max-w-(--radix-dropdown-menu-content-available-width)");
@@ -143,6 +144,8 @@ describe("DropdownMenu (UI-013)", () => {
     expect(list.filter((c) => /^w-/.test(c))).toEqual(["w-44"]);
     expect(list.filter((c) => /^shadow-/.test(c))).toEqual(["shadow-xl"]);
     expect(list.filter((c) => /^bg-/.test(c))).toEqual(["bg-panel"]);
+    // The edge is a ring of its own, so the call site's shadow doesn't take it away.
+    expect(list.filter((c) => /^ring-/.test(c))).toEqual(["ring-1", "ring-line"]);
   });
 
   it("moves in 120 ms with the enter and exit easings, a 97% zoom and a 4 px slide, and not at all under reduced motion", async () => {
@@ -153,7 +156,7 @@ describe("DropdownMenu (UI-013)", () => {
     expect(content).not.toHaveClass("duration-100");
     expectReducedMotionCancels(content);
     const sub = document.querySelector('[data-slot="dropdown-menu-sub-content"]') as HTMLElement;
-    expect(sub).toHaveClass("shadow-xl", "min-w-48");
+    expect(sub).toHaveClass("shadow-floating", "bg-popover", "min-w-48");
     expectReducedMotionCancels(sub);
   });
 

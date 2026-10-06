@@ -8,8 +8,9 @@
 
 /* Additions marked "C-070" are the UI audit's token foundation (docs/ui-audit/DESIGN_SYSTEM.md
    §1.13, §1.9, §2, §7): names for values already in use; the few on-screen changes are listed in
-   docs/CONFLICTS.md C-070. styles/tokens.ts mirrors every value and tokens.test.ts checks this
-   file against it. */
+   docs/CONFLICTS.md C-070. Those marked "C-071" apply the owner's decisions D-01 (control edges),
+   D-06 (placeholders) and D-12 (overlay surface and elevation), approved in C-069. styles/tokens.ts
+   mirrors every value and tokens.test.ts checks this file against it. */
 
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
@@ -17,13 +18,15 @@
 
   /* Surfaces: the v1 ladder */
   --color-canvas: #000000;        /* app and thread background */
-  --color-panel: #1F1F1F;         /* sidebar card, list pane, headers, composer bar, popovers */
+  --color-panel: #1F1F1F;         /* cards, sidebar, list pane, headers, composer bar, the phone drawer */
   --color-field: #1D1D1D;         /* inputs, incoming bubbles, segmented track */
   --color-raised: #2A2A2A;        /* selected row, active segment, focused input, secondary button */
   --color-raised-hover: #333333;
+  --color-overlay: #262626;       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
   --color-line: rgb(255 255 255 / 0.10);
   --color-line-subtle: rgb(255 255 255 / 0.05);
   --color-line-strong: rgb(255 255 255 / 0.20);
+  --color-line-control: rgb(255 255 255 / 0.40);  /* edges that identify a control, 3:1 or more on every surface; --input (D-01, C-071) */
 
   /* States, as overlays so they work on any surface (C-070) */
   --color-hover: rgb(255 255 255 / 0.05);    /* hover fill on any surface; neutral chip fill */
@@ -33,8 +36,8 @@
 
   /* Text */
   --color-fg: #FFFFFF;
-  --color-fg-secondary: #9B9CA0;  /* all secondary and meta text, including timestamps */
-  --color-fg-disabled: #71717A;   /* disabled controls and placeholders only */
+  --color-fg-secondary: #9B9CA0;  /* all secondary and meta text, including timestamps; placeholders (D-06, C-071) */
+  --color-fg-disabled: #71717A;   /* disabled controls only (3.41:1 on panel: never readable text) */
   --color-on-brand: #FFFFFF;      /* text and icons on the brand gradient, brand-strong, danger-fill and platform fills (C-070) */
 
   /* Brand */
@@ -74,6 +77,14 @@
 
   /* Tailwind's breakpoints plus one (C-070) */
   --breakpoint-wide: 90rem;       /* 1440 px: inbox details open by default, schedule rail inline */
+
+  /* Elevation (DESIGN_SYSTEM §6; D-12, C-071): on near-black, Tailwind's 10% shadows don't show.
+     Only what floats gets one, from its primitive: floating (popovers, menus, select options,
+     toasts) and overlay (dialogs, alert dialogs, sheets, over the scrim). The 1 px `line` edge is a
+     separate ring-1 ring-line (or a sheet's side border), so a call site's leftover shadow can't
+     take the edge with it. */
+  --shadow-floating: 0 8px 24px -6px rgb(0 0 0 / 0.7);
+  --shadow-overlay: 0 24px 64px -12px rgb(0 0 0 / 0.8);
 }
 
 /* Gradients (DESIGN_SYSTEM §1.9): four, each with one job; the stops are tokens (C-070). */
@@ -148,13 +159,13 @@
      uses the tokens (DESIGN_SYSTEM §1.10). Every one has a --color-* mapping below (C-070). */
   --background: var(--color-canvas);   --foreground: var(--color-fg);
   --card: var(--color-panel);          --card-foreground: var(--color-fg);
-  --popover: var(--color-panel);       --popover-foreground: var(--color-fg);
+  --popover: var(--color-overlay);     --popover-foreground: var(--color-fg);
   --primary: var(--color-brand-strong); --primary-foreground: var(--color-on-brand);
   --secondary: var(--color-raised);    --secondary-foreground: var(--color-fg);
   --muted: var(--color-field);         --muted-foreground: var(--color-fg-secondary);
   --accent: var(--color-hover);        --accent-foreground: var(--color-fg);
   --destructive: var(--color-danger);
-  --border: var(--color-line);  --input: var(--color-line);  --ring: var(--color-brand);
+  --border: var(--color-line);  --input: var(--color-line-control);  --ring: var(--color-brand);
   --radius: 0.5rem;  /* inert: nothing reads it; Tailwind's default radii are the scale (DESIGN_SYSTEM §4) */
 }
 @theme inline {
@@ -176,7 +187,8 @@
   body { background: var(--color-canvas); color: var(--color-fg); }
   /* In the base layer, so utilities still win (v1's unlayered rule squared off focused pills) */
   :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-  ::placeholder { color: var(--color-fg-disabled); }
+  /* Placeholders are text: fg-secondary is 4.6:1 or more on every surface (D-06, C-071). */
+  ::placeholder { color: var(--color-fg-secondary); }
   /* Weights are 400, 500 and 600 only: bold text is 600, not the browser's 700 (TYP-013, C-070). */
   strong, b { font-weight: 600; }
   /* Reduced motion (DESIGN_SYSTEM §7.4, C-070): overlays, their scrims and skeletons appear and

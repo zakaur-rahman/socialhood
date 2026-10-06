@@ -26,12 +26,13 @@ export const TOAST_ACTION_DURATION = 10_000
 const TOAST = [
   // The width sonner gives the stack: 356 px, or the full width less 16 px a side below 600 px.
   "flex w-(--width) items-center gap-3 p-4 font-sans text-sm",
-  // The floating surface (DESIGN_SYSTEM §6; ui/floating's `bg-popover`, which D-12 moves to
-  // `overlay`) with a `line-strong` edge, because a toast lands on any surface, panels included.
-  // Errors read in `danger-fg`, icon and text.
-  "rounded-lg border border-line-strong bg-popover text-fg shadow-xl data-[type=error]:text-danger-fg",
-  // The toast is focusable (Alt+T, then Tab): the global focus outline, kept over sonner's `outline: 0`.
-  "focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-ring! focus-visible:shadow-xl!",
+  // The floating surface (DESIGN_SYSTEM §6, level 1; D-12): `bg-popover`, which is `overlay`, and
+  // `shadow-floating`, like ui/floating, with a `line-strong` edge, because a toast lands on any
+  // surface, panels included. Errors read in `danger-fg`, icon and text.
+  "rounded-lg border border-line-strong bg-popover text-fg shadow-floating data-[type=error]:text-danger-fg",
+  // The toast is focusable (Alt+T, then Tab): the global focus outline, kept over sonner's `outline: 0`,
+  // and its own shadow kept over sonner's focus shadow.
+  "focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-ring! focus-visible:shadow-floating!",
   // Motion (§7.2): in at `duration-slow` with `ease-enter`, out at `duration-fast` with `ease-exit`
   // (sonner unmounts 200 ms after the exit starts); nothing moves under reduced motion (§7.4).
   "duration-slow! ease-enter! data-[removed=true]:duration-fast! data-[removed=true]:ease-exit! motion-reduce:transition-none!",
