@@ -21,18 +21,20 @@ describe("Checkbox", () => {
     expect(icon(box, "minus")).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("fills checked and indeterminate alike with --primary and an on-brand glyph", () => {
+  it("fills checked and indeterminate alike with brand and an on-brand glyph (3:1 on raised, C-071)", () => {
     render(<Checkbox aria-label="Select" checked />);
     const box = screen.getByRole("checkbox", { name: "Select" });
     expect(box).toBeChecked();
     expect(box).toHaveClass(
-      "data-checked:bg-primary",
-      "data-checked:border-primary",
-      "data-checked:text-primary-foreground",
-      "data-[state=indeterminate]:bg-primary",
-      "data-[state=indeterminate]:border-primary",
-      "data-[state=indeterminate]:text-primary-foreground",
+      "data-checked:bg-brand",
+      "data-checked:border-brand",
+      "data-checked:text-on-brand",
+      "data-[state=indeterminate]:bg-brand",
+      "data-[state=indeterminate]:border-brand",
+      "data-[state=indeterminate]:text-on-brand",
     );
+    // Not brand-strong (--primary): 2.96:1 against a selected (raised) row.
+    expect(classes(box).filter((c) => c.includes("primary"))).toEqual([]);
     expect(icon(box, "check")).not.toBeNull();
   });
 

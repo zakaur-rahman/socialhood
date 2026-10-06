@@ -109,7 +109,9 @@ describe("AlertDialog (UI-012)", () => {
       ...MODAL_MOTION_CLASSES,
       "data-open:zoom-in-95",
       "data-closed:zoom-out-95",
-      "shadow-xl",
+      "shadow-overlay",
+      "ring-1",
+      "ring-line",
       "max-h-[calc(100dvh-2rem)]",
       "overflow-y-auto",
     );

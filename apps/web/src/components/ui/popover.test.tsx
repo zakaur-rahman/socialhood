@@ -25,14 +25,14 @@ function Example({ className }: { className?: string }) {
 }
 
 describe("Popover (UI-013)", () => {
-  it("floats on the shared surface with the spec's shadow, so call sites don't add one", async () => {
+  it("floats on the shared surface with the floating shadow, so call sites don't add one (D-12)", async () => {
     const user = userEvent.setup();
     render(<Example />);
     await user.click(screen.getByRole("button", { name: "Why this reply?" }));
     await screen.findByRole("dialog");
     expect(content()).toHaveClass(...words(FLOATING_SURFACE));
-    expect(content()).toHaveClass("shadow-xl", "ring-1", "bg-popover", "rounded-lg", "w-72");
-    expect(content()).not.toHaveClass("shadow-md");
+    expect(content()).toHaveClass("shadow-floating", "ring-1", "ring-line", "bg-popover", "rounded-lg", "w-72");
+    expect(content()).not.toHaveClass("shadow-md", "shadow-xl", "ring-foreground/10");
   });
 
   it("moves in 120 ms with the enter and exit easings, and not at all under reduced motion", async () => {
@@ -54,7 +54,9 @@ describe("Popover (UI-013)", () => {
     const list = classes(content());
     expect(list.filter((c) => /^w-/.test(c))).toEqual(["w-80"]);
     expect(list.filter((c) => /^p-/.test(c))).toEqual(["p-3"]);
+    // The call site's leftover shadow replaces the floating one; the edge ring stays.
     expect(list.filter((c) => /^shadow-/.test(c))).toEqual(["shadow-xl"]);
+    expect(list).toEqual(expect.arrayContaining(["ring-1", "ring-line"]));
   });
 
   it("keyboard: Enter opens with focus inside, Esc closes back on the trigger", async () => {

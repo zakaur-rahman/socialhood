@@ -51,10 +51,10 @@ describe("Sheet (UI-012)", () => {
     }
   });
 
-  it("floats with the spec's shadow", () => {
+  it("floats on overlay with the overlay shadow (D-12); its edge is the side border", () => {
     render(<Example />);
-    expect(screen.getByRole("dialog")).toHaveClass("shadow-xl");
-    expect(screen.getByRole("dialog")).not.toHaveClass("shadow-lg");
+    expect(screen.getByRole("dialog")).toHaveClass("bg-popover", "shadow-overlay", "data-[side=right]:border-l");
+    expect(screen.getByRole("dialog")).not.toHaveClass("shadow-lg", "shadow-xl");
   });
 
   it("default size: three quarters wide, at most 24 rem from 640 px (unchanged)", () => {
@@ -79,13 +79,14 @@ describe("Sheet (UI-012)", () => {
       <Example
         side="left"
         close={false}
-        className="w-[256px] gap-0 border-line bg-canvas p-3 data-[side=left]:w-[256px] sm:max-w-[256px] data-[side=left]:sm:max-w-[256px]"
+        className="w-[256px] gap-0 border-line bg-panel p-3 data-[side=left]:w-[256px] sm:max-w-[256px] data-[side=left]:sm:max-w-[256px]"
       />,
     );
     const list = classes(screen.getByRole("dialog"));
     expect(list.filter((c) => c.startsWith("data-[side=left]:w-"))).toEqual(["data-[side=left]:w-[256px]"]);
     expect(list.filter((c) => c.startsWith("data-[side=left]:sm:max-w-"))).toEqual(["data-[side=left]:sm:max-w-[256px]"]);
-    expect(list).toContain("bg-canvas");
+    // The drawer is panel, like the sidebar it holds (D-12), not the overlay surface.
+    expect(list).toContain("bg-panel");
     expect(list).not.toContain("bg-popover");
   });
 

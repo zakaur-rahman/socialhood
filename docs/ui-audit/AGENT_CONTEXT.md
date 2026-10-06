@@ -54,17 +54,17 @@ DESIGN_SYSTEM.md disagree, DESIGN_SYSTEM.md wins; tell the Design System Archite
 ## 4. Tokens (quick reference)
 
 Use the utilities (`bg-panel`, `text-fg-secondary`, `border-line` …), never raw values.
-**Status:** ✓ exists · **A** added by UI-001 · **D-xx** waits for that owner decision (until then,
-don't use it).
+**Status:** ✓ exists · **A** added by UI-001 · **T** added by UI-018 under an owner decision
+(C-071).
 
 | Surfaces and states | Value | | Text and brand | Value | |
 |---|---|---|---|---|---|
 | `canvas` | `#000000` | ✓ | `fg` | `#FFFFFF` | ✓ |
-| `panel` | `#1F1F1F` (cards, sidebar, panes, drawer) | ✓ | `fg-secondary` | `#9B9CA0` (meta, hints; placeholders under D-06) | ✓ |
+| `panel` | `#1F1F1F` (cards, sidebar, panes, drawer) | ✓ | `fg-secondary` | `#9B9CA0` (meta, hints, placeholders: D-06) | ✓ |
 | `field` | `#1D1D1D` (every input) | ✓ | `fg-disabled` | `#71717A` (disabled only) | ✓ |
 | `raised` | `#2A2A2A` (selected, active segment, skeleton) | ✓ | `on-brand` | `#FFFFFF` on gradients and fills | A |
-| `raised-hover` | `#333333` | ✓ | `brand` | `#567FF8` **non-text marks only** | ✓ |
-| `overlay` | `#262626` (floating surfaces) | D-12 | `brand-strong` | `#4467E6` (solid fills with text) | A |
+| `raised-hover` | `#333333` | ✓ | `brand` | `#567FF8` **non-text marks only** (incl. switch on, checkbox checked) | ✓ |
+| `overlay` | `#262626` (floating surfaces, through `--popover`; D-12) | T | `brand-strong` | `#4467E6` (solid fills with text) | A |
 | `hover` | white 5% | A | `brand-deep` | `#20338A` (gradient start) | ✓ |
 | `pressed` | white 10% | A | `brand-fg` | `#9DB5FF` (brand text, links) | ✓ |
 | `scrim` | black 60% | A | `brand-soft` / `brand-line` | brand 15% / 35% | ✓ |
@@ -75,7 +75,7 @@ don't use it).
 | `line` | white 10% (edges) | ✓ | `success` / `warning` | `#22C55E` / `#FB923C` | ✓ |
 | `line-subtle` | white 5% (row dividers) | ✓ | `danger` | `#EF4444` icons and borders, **never text** | ✓ |
 | `line-strong` | white 20% (hover edges, outline button) | ✓ | `danger-fg` | `#FCA5A5` danger text | ✓ |
-| `line-control` | white 40% (control edges) | D-01 | `danger-fill` | `#C53030` destructive fill | ✓ |
+| `line-control` | white 40% (control edges, through `--input`; D-01) | T | `danger-fill` | `#C53030` destructive fill | ✓ |
 | `ring` | brand (focus) | ✓ | `success-soft` / `warning-soft` / `danger-soft` | 15% fills | A |
 
 - **Platform colours** (`instagram`, `whatsapp`) are for fills and glyphs only: never text, never
@@ -85,8 +85,9 @@ don't use it).
   (logo and Upgrade only), `bg-glow-brand` (one per view; hero and plan hero; A). Dots and bars under
   12 px are solid. No other gradients.
 - **Contrast you can rely on:** `fg-secondary` ≥ 4.6:1 on every surface token from `canvas` to
-  `raised-hover` (but only 4.45:1 on `pressed`, so neutral badges sit on `hover`); `brand-fg`
-  ≥ 6.3:1; `on-brand` on the gradient ≥ 4.85:1. **Never** text on `brand` (3.63:1), `danger` as text,
+  `raised-hover`, `overlay` included (but only 4.45:1 on `pressed`, so neutral badges sit on
+  `hover`); `brand-fg` ≥ 6.3:1; `on-brand` on the gradient ≥ 4.85:1; `line-control` edges
+  ≥ 3.2:1 on every surface a control sits on. **Never** text on `brand` (3.63:1), `danger` as text,
   `fg-disabled` as readable text, opacity on text tokens (`fg-secondary/70`), or `opacity-*` to dim
   a container's text.
 
@@ -118,14 +119,17 @@ items, tooltips) · `lg` 8 (buttons, icon buttons, inputs, menus, alerts, inset 
 12 (**cards** (D-02), dialogs, sidebar, composer shells (D-16)) · `2xl` 16 (bubbles, marketing) ·
 `full` (avatars, dots, pills, switches). Inner radius = outer minus padding. No arbitrary radii.
 
-**Borders:** 1 px `line` for edges; `line-subtle` for row dividers; `--input` for control edges; 2 px
+**Borders:** 1 px `line` for edges; `line-subtle` for row dividers; `--input` (`line-control`) for
+control edges inside primitives, `border-line-control` on a hand-built field wrapper; 2 px
 `brand` for selected tiles; one **selection bar** (2 px brand, leading edge, inset 8 px, rounded) for
 selected rows and nav; `border-l-2` status edges; `danger` for invalid; dashed `line-strong` for
 "add" slots.
 
 **Elevation:** flat cards (no shadow); floating surfaces and modals get their elevation **from the
-primitive** (spec `shadow-xl` now; `shadow-floating` and `shadow-overlay` under D-12); modals over
-`bg-scrim`. No call-site shadows on overlays. No backdrop blur in the app.
+primitive** (D-12, C-071): `overlay` with a `ring-1 ring-line` edge plus `shadow-floating`
+(popovers, menus, select options, toasts) or `shadow-overlay` (dialogs, alert dialogs, sheets);
+modals over `bg-scrim`; the phone drawer stays `panel`. No call-site `bg-panel` or `shadow-*` on
+overlays (they override the primitive). No backdrop blur in the app.
 
 **Motion:** `duration-fast` 120 (hover, press, menus, popovers, tooltips, all exits), `duration-normal`
 150 (live message, inline reveals), `duration-slow` 200 (dialogs, sheets, panels, suggestion bar);
@@ -263,18 +267,18 @@ new work to the decided rule:
 
 | ID | Topic | Status | Decision |
 |---|---|---|---|
-| D-01 | Control-border token `line-control` and its scope | Approved | Checkbox, radio, switch **and** text fields |
+| D-01 | Control-border token `line-control` and its scope | Applied (UI-018, C-071) | Checkbox, radio, switch **and** text fields; checked boxes `brand` |
 | D-02 | Card radius | Approved | `xl` everywhere |
 | D-03 | Tooltip colour | Approved | Dark, like other floating surfaces |
 | D-04 | Native date and time pickers in R1 | Approved | Accept native |
 | D-05 | Page and pane title sizes | Approved | 24 px page, 18 px pane |
-| D-06 | Placeholder colour | Approved | `fg-secondary` |
+| D-06 | Placeholder colour | Applied (UI-018, C-071) | `fg-secondary` |
 | D-07 | "AI Assisted" and AI/automation labels (C-063) | Approved | "Sent by AI" / "Automation · {name}" |
 | D-08 | Settings breadcrumb, eyebrow, tab labels, save bar, Agent tiles (C-066) | Approved | Drop, match, only when needed, one sentence |
 | D-09 | "Remove" and account-card destructive actions (C-067) | Approved | Disconnect visible; "Delete account and data" in ⋯ |
 | D-10 | Gradient on every primary (VH-003) | Approved | One per view region |
 | D-11 | Comments needs-reply API (UX-001) | Approved | Per-post count and filter now |
-| D-12 | Overlay surface and elevation shadows | Approved | Adopt |
+| D-12 | Overlay surface and elevation shadows | Applied (UI-018, C-071) | Adopt; the edge is a ring beside the shadow |
 | D-13 | Identity palette | Approved | Up to four pairs from existing values |
 | D-14 | Single-key shortcuts | Approved | A per-device switch |
 | D-15 | Inbox refinements (C-063) | Approved | Neutral segment, heart in emoji popover, composer-only scheduling, Archived chip |

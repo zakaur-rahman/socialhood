@@ -191,7 +191,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                   hint="Changing it changes the address of every page in this workspace."
                   error={errors.slug?.message}
                 >
-                  <div className="flex min-h-10 items-stretch overflow-hidden rounded-lg border border-line bg-field focus-within:ring-2 focus-within:ring-brand">
+                  <div className="flex min-h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field focus-within:ring-2 focus-within:ring-brand">
                     <span className="flex items-center border-r border-line bg-raised/60 px-3 text-sm text-fg-secondary" aria-hidden>
                       …/w/
                     </span>

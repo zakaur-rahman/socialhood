@@ -52,11 +52,11 @@ System rules that follow from the audits:
 | Token | Value | Role | Status |
 |---|---|---|---|
 | `canvas` | `#000000` | App background, thread area, marketing | Keep |
-| `panel` | `#1F1F1F` | Cards, sidebar, panes, headers, composer bar; **the phone drawer** (today `canvas`) | Keep; drawer Change (COL-010) |
+| `panel` | `#1F1F1F` | Cards, sidebar, panes, headers, composer bar; **the phone drawer** | Keep; drawer Change (COL-010), applied (C-071) |
 | `field` | `#1D1D1D` | **Every** text field, select trigger and textarea; incoming bubbles; segmented tracks | Keep; Input and SelectTrigger move onto it (CMP-011) |
 | `raised` | `#2A2A2A` | Selected row, active segment, secondary button, skeleton, meter track | Keep |
 | `raised-hover` | `#333333` | Hover on `raised` (secondary button) | Keep |
-| `overlay` | `#262626` | Popovers, menus, select content, dialogs, sheets, toasts, tooltip | **Owner D-12** (the value already renders today as shadcn's input fill on panel) |
+| `overlay` | `#262626` | Popovers, menus, select content, dialogs, sheets, toasts, tooltip | **Owner D-12**, applied (C-071), through `--popover` |
 | `hover` | `rgb(255 255 255 / 0.05)` | Hover fill on any surface; neutral chip fill | **Add** (today's `bg-white/5`) |
 | `pressed` | `rgb(255 255 255 / 0.10)` | Pressed or open (`aria-expanded`, `data-state=open`) fill | **Add** (today's `bg-white/10`) |
 | `scrim` | `rgb(0 0 0 / 0.60)` | Modal and drawer backdrop | **Add** (UX-SH-02's value; Ask panel and Clerk use it) |
@@ -73,7 +73,7 @@ bar, so the two are told apart (§5).
 | `line` | white 10% | Card, pane and list edges; inset-panel edges | Keep |
 | `line-subtle` | white 5% | Row dividers inside a card | Keep |
 | `line-strong` | white 20% | Hover edge on interactive cards; dashed placeholders; outline button edge | Keep |
-| `line-control` | `rgb(255 255 255 / 0.40)` | Edges that identify a control: checkbox, radio, switch; text fields and selects through `--input` | **Owner D-01** |
+| `line-control` | `rgb(255 255 255 / 0.40)` | Edges that identify a control: checkbox, radio, switch; text fields and selects through `--input` | **Owner D-01**, applied (C-071) |
 | `--ring` (alias) | `brand` | The focus outline | Keep |
 
 `line-control` is white 40%, not a solid grey, because it must pass 3:1 on every surface a control
@@ -87,16 +87,16 @@ theme swaps it with them.
 | Token | Value | Role | Status |
 |---|---|---|---|
 | `fg` | `#FFFFFF` | Primary text | Keep |
-| `fg-secondary` | `#9B9CA0` | Secondary and meta text, timestamps, hints; **placeholders** | Keep; placeholders **Owner D-06** |
-| `fg-disabled` | `#71717A` | Disabled controls only (exempt from contrast) | Keep; loses placeholders under D-06 |
+| `fg-secondary` | `#9B9CA0` | Secondary and meta text, timestamps, hints; **placeholders** | Keep; placeholders **Owner D-06**, applied (C-071) |
+| `fg-disabled` | `#71717A` | Disabled controls only (exempt from contrast) | Keep; no placeholders (D-06, C-071) |
 | `on-brand` | `#FFFFFF` | Text and icons on the brand gradient, `brand-strong`, `danger-fill`, platform fills and avatars | **Add** (replaces 108 `text-white`) |
 
 ### 1.4 Brand
 
 | Token | Value | Role | Status |
 |---|---|---|---|
-| `brand` | `#567FF8` | **Non-text marks only:** focus outline, unread dot, selection bar, switch on, chart series, decorative gradient end. Never behind text. | Keep (rule tightened) |
-| `brand-strong` | `#4467E6` | Solid brand fills that carry text or a glyph: a filled segment, the skip link, the checkbox fill, Clerk's primary, `--primary`; the gradient's end stop | **Add** (an existing value: white on it is 4.85:1) |
+| `brand` | `#567FF8` | **Non-text marks only:** focus outline, unread dot, selection bar, switch on, **checkbox checked and indeterminate** (fill and edge; the tick is a graphic, `on-brand` 3.63:1; C-071), chart series, decorative gradient end. Never behind text. | Keep (rule tightened) |
+| `brand-strong` | `#4467E6` | Solid brand fills that carry text or a glyph: a filled segment, the skip link, Clerk's primary, `--primary`; the gradient's end stop | **Add** (an existing value: white on it is 4.85:1) |
 | `brand-deep` | `#20338A` | Gradient start | Keep |
 | `brand-fg` | `#9DB5FF` | Brand text and icons on dark: links, active segment text, AI labels | Keep |
 | `brand-soft` | brand 15% | Chips, the AI pill, selected cards; the **info** tone | Keep |
@@ -161,8 +161,8 @@ Aliases stay inside `components/ui`; app code uses the tokens.
 | `--primary` | `brand` | `brand-strong` | A text-bearing fill must pass 4.5:1 (UI-ISS-005) |
 | `--primary-foreground` | literal `#FFFFFF` | `on-brand` | No literals |
 | `--accent` | `raised` | `hover` | Base of the menu highlight; the same pixel on `panel` |
-| `--popover` | `panel` | `overlay` | **Owner D-12** |
-| `--input` | `line` | `line-control` | **Owner D-01** |
+| `--popover` | `panel` | `overlay` | **Owner D-12**, applied (C-071) |
+| `--input` | `line` | `line-control` | **Owner D-01**, applied (C-071) |
 | `--card-foreground`, `--popover-foreground`, `--secondary-foreground`, `--accent-foreground` | not mapped in `@theme inline` | mapped | Their utilities generate no CSS today (COL-009) |
 | `--background`, `--foreground`, `--card`, `--secondary`, `--muted`, `--muted-foreground`, `--destructive`, `--border`, `--ring` | unchanged | unchanged | |
 | `--radius` | `0.5rem`, read by nothing | unchanged, commented as inert | It is in UX-TOK-01's file; Tailwind's defaults are the radius scale |
@@ -184,7 +184,8 @@ composited on their real surface.
 | `danger-fg` on panel / danger-soft over panel | 8.68 / 7.42 | Errors |
 | `warning`, `success` on panel / on their soft fill | 7.28, 7.23 / 5.56, 5.57 | Status text |
 | `brand` focus outline on canvas / panel / field / overlay / raised / raised-hover | 5.79 / 4.54 / 4.65 / 4.17 / 3.96 / 3.48 | Focus |
-| `line-control` on every surface | 3.42–3.79 | Control edges (D-01) |
+| `line-control` on every surface | 3.42–3.79 | Control edges (D-01); a field draws it over its own fill (`#777777`): 3.70 on panel, 3.40 on overlay, 3.22 on raised |
+| `brand` (checkbox checked, switch on) on panel / overlay / raised / raised-hover | 4.54 / 4.17 / 3.96 / 3.48 | State fills (C-071; `brand-strong` is 2.96 on raised) |
 
 **Never:** text on `brand` (3.63:1), `danger` as text (4.38:1), `fg-disabled` as readable text
 (3.41:1), platform colours as text (Instagram 2.73:1), `brand` text on `raised` (3.96:1), opacity
@@ -234,16 +235,19 @@ The non-blocking additions (UI-001):
 }
 ```
 
-Waiting for the owner (UI-018):
+The owner's decisions, applied by UI-018 (C-071):
 
 ```css
 @theme {
-  --color-line-control: rgb(255 255 255 / 0.40);              /* D-01 */
-  --color-overlay: #262626;                                    /* D-12 */
-  --shadow-floating: 0 0 0 1px var(--color-line), 0 8px 24px -6px rgb(0 0 0 / 0.7);   /* D-12 */
-  --shadow-overlay: 0 0 0 1px var(--color-line), 0 24px 64px -12px rgb(0 0 0 / 0.8);  /* D-12 */
+  --color-line-control: rgb(255 255 255 / 0.40);              /* D-01; --input */
+  --color-overlay: #262626;                                    /* D-12; --popover */
+  --shadow-floating: 0 8px 24px -6px rgb(0 0 0 / 0.7);         /* D-12 */
+  --shadow-overlay: 0 24px 64px -12px rgb(0 0 0 / 0.8);        /* D-12 */
 }
 ```
+
+The 1 px `line` edge first drafted inside the two shadows is drawn beside them, as `ring-1 ring-line`
+(a sheet: its side border), so a call site's leftover `shadow-xl` replaces only the shadow (C-071).
 
 Motion durations, the reduced-motion safety net and the base-layer rules are in §2 and §7.
 
@@ -360,7 +364,7 @@ Retire `rounded-3xl`, `rounded-4xl` (Badge), `rounded-[10px]` and the `min()` ex
 | Card, pane and list edges | 1 px | `line` |
 | Row dividers inside a card | 1 px | `line-subtle` (the card's own edges stay `line`) |
 | Inset panel (a group inside a card) | 1 px | `line`, or a `raised` fill; never `line-subtle` on `field/60` |
-| Text field, select, checkbox, radio at rest | 1 px | `--input` (today `line`; `line-control` under D-01) |
+| Text field, select, checkbox, radio at rest | 1 px | `--input` = `line-control` (D-01); a checked checkbox is its `brand` fill |
 | Outline button | 1 px | `line-strong` |
 | Hover on an interactive card | 1 px | `line-strong` |
 | Focus | 2 px outline | `ring` (brand), see §8.3; fields also turn their border `ring` |
@@ -383,8 +387,8 @@ get one.
 | Level | Surface | Edge and shadow | Use | Status |
 |---|---|---|---|---|
 | 0 Flat | `panel` on `canvas` | `border-line`, no shadow | Cards, panes, sidebar, bubbles | Keep (drop the no-op `shadow-sm` on bubbles and active segments) |
-| 1 Floating | `overlay` | `shadow-floating` (a 1 px `line` ring plus a dark drop shadow) | Popovers, menus, selects, tooltip, toasts, the jump-to-latest pill, drag previews, the sticky save bar | **Owner D-12**; until then `panel` with the spec's `shadow-xl` set in the primitive |
-| 2 Overlay | `overlay` | `shadow-overlay`, over the `scrim` | Dialogs, alert dialogs, sheets, the phone drawer, the Ask panel, run detail | Scrim Change (UX-SH-02); surface and shadow **Owner D-12** |
+| 1 Floating | `overlay` | a 1 px `line` ring (`ring-1 ring-line`; the toast: a `line-strong` border) plus `shadow-floating`, a dark drop shadow | Popovers, menus, selects, tooltip, toasts, the jump-to-latest pill, drag previews, the sticky save bar | **Owner D-12**, applied (C-071) |
+| 2 Overlay | `overlay` (the phone drawer: `panel`, like the sidebar) | a `line` ring (a sheet: its side border) plus `shadow-overlay`, over the `scrim` | Dialogs, alert dialogs, sheets, the phone drawer, the Ask panel, run detail | Scrim Change (UX-SH-02); surface and shadow **Owner D-12**, applied (C-071) |
 | Marketing glow | — | `shadow-brand/10–25` | Marketing pages only | Keep (not in the app) |
 
 - **No blur.** Backdrop blur is not used to separate layers in the app (it costs a full-viewport
@@ -642,13 +646,13 @@ Where the audits proposed different values or patterns, one was chosen.
 
 | Item | Section | Decision |
 |---|---|---|
-| `line-control` and its scope | §1.2, §5 | D-01 |
+| `line-control` and its scope | §1.2, §5 | D-01 (applied, C-071) |
 | Card radius | §4 | D-02 |
 | Tooltip colour | §8.2 | D-03 |
 | Native date and time inputs | §8.2, §8.5 | D-04 |
 | Page and pane title sizes | §2.1 | D-05 |
-| Placeholder colour | §1.3 | D-06 |
-| Overlay surface and elevation shadows | §1.1, §6 | D-12 |
+| Placeholder colour | §1.3 | D-06 (applied, C-071) |
+| Overlay surface and elevation shadows | §1.1, §6 | D-12 (applied, C-071) |
 | Identity palette | §1.7 | D-13 |
 | Icon-button and composer radius | §4 | D-16 |
 | Latin-ext only, or Devanagari too | §2 | D-17 |

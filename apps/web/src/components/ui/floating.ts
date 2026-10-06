@@ -7,11 +7,12 @@ import type * as React from "react"
  */
 
 /**
- * The floating surface (DESIGN_SYSTEM §6, level 1): the popover surface with a 1 px `line` edge and
- * the spec's `shadow-xl`, set here so call sites don't add their own. D-12 (UI-018) moves it to the
- * `overlay` surface and `shadow-floating`.
+ * The floating surface (DESIGN_SYSTEM §6, level 1; D-12): `--popover`, which is `overlay`, a shade
+ * lighter than the panel cards beneath, with a 1 px `line` edge and the dark `shadow-floating`, set
+ * here so call sites don't add their own. The edge is a ring of its own, so a call site's leftover
+ * `shadow-xl` (until the area sweeps remove it) replaces only the shadow, never the edge.
  */
-export const FLOATING_SURFACE = "rounded-lg bg-popover text-popover-foreground shadow-xl ring-1 ring-foreground/10"
+export const FLOATING_SURFACE = "rounded-lg bg-popover text-popover-foreground ring-1 ring-line shadow-floating"
 
 /**
  * The floating motion (DESIGN_SYSTEM §7.2): in and out in `duration-fast` (120 ms), with
@@ -28,10 +29,10 @@ export const FLOATING_MOTION =
  * A menu or select item (DESIGN_SYSTEM §8.3, §8.4). Radix moves focus to the highlighted item for
  * the pointer and the keyboard alike, so `focus:` is the highlight: the `hover` fill for both, and
  * for the keyboard the focus outline drawn inset (the content clips it), brand on the highlight
- * 3.96:1. Nothing removes the outline. The keyboard outline shows on `:focus-visible`, and also on
- * the highlighted item while its content is marked `data-keyboard` (see `keyboardHighlight`).
- * 40 px tall on coarse pointers; desktop density unchanged. Icons and secondary text keep their
- * colours when highlighted (secondary text is 5.2:1 on the fill).
+ * 3.59:1 (over `overlay`). Nothing removes the outline. The keyboard outline shows on
+ * `:focus-visible`, and also on the highlighted item while its content is marked `data-keyboard`
+ * (see `keyboardHighlight`). 40 px tall on coarse pointers; desktop density unchanged. Icons and
+ * secondary text keep their colours when highlighted (secondary text is 4.75:1 on the fill).
  */
 export const FLOATING_ITEM =
   "relative flex cursor-default items-center gap-1.5 rounded-md py-1 text-sm select-none pointer-coarse:min-h-10 focus:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring group-data-keyboard/floating:data-highlighted:outline-2 group-data-keyboard/floating:data-highlighted:-outline-offset-2 group-data-keyboard/floating:data-highlighted:outline-ring data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
