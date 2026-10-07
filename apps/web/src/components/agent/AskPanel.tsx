@@ -4,7 +4,7 @@ import { Maximize2, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Dialog as DialogPrimitive } from "radix-ui";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
@@ -127,6 +127,8 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
   const setOpen = useAskStore((state) => state.setOpen);
   const onAskPage = isAskPage(usePathname());
   const key = useModifierKey();
+  const panelOpen = useAskStore((state) => state.open);
+  const [hint, setHint] = useState(false);
   const activate = () => (onAskPage ? focusComposer(PAGE_COMPOSER_ID) : setOpen(true));
 
   if (variant === "topbar") {
@@ -158,8 +160,10 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
       {collapsed ? null : <span className="min-w-0 flex-1 truncate">Ask Social Hood</span>}
     </button>
   );
+  // The hint stays shut while the panel is open: a tooltip is a dismiss layer, and one that opens
+  // under a resting pointer would take the panel's Esc.
   return (
-    <Tooltip>
+    <Tooltip open={hint && !panelOpen} onOpenChange={setHint}>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
       <TooltipContent side="right">{collapsed ? `Ask Social Hood (${key} K)` : `${key} K`}</TooltipContent>
     </Tooltip>
