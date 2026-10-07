@@ -170,3 +170,85 @@ describe("Select (UI-013)", () => {
     expect(trigger).toHaveFocus();
   });
 });
+
+/** A list like Settings › Workspace's: the chosen option, then options sharing first letters. */
+function Picker({ label, options, initial }: { label: string; options: string[]; initial: string }) {
+  const [value, setValue] = useState(initial);
+  return (
+    <>
+      <p>Saved: {value}</p>
+      <Select value={value} onValueChange={setValue}>
+        <SelectTrigger aria-label={label}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option} value={option}>
+              {option}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
+}
+
+const LANGUAGES = ["Customer's language", "English", "Hindi", "Tamil", "Telugu", "Marathi", "Malayalam", "Arabic"];
+const TIME_ZONES = ["Africa/Abidjan", "America/New York", "America/Nome", "Asia/Dubai", "Asia/Kolkata", "Indian/Maldives", "UTC"];
+
+/**
+ * Typeahead keeps what was typed for a second, so consecutive letters narrow the match. In the
+ * production build Radix kept only the last letter ("Asia/K" landed on Africa/Abidjan): Next's
+ * minifier dropped the call that stores the letters, which patches/ restores (radix-typeahead-build
+ * test). These run Radix unminified, so they guard the wrappers' own handlers (`keyboardHighlight`).
+ */
+describe("Select typeahead: consecutive letters", () => {
+  async function openWithKeyboard(name: string, selected: string) {
+    const user = userEvent.setup();
+    const trigger = screen.getByRole("combobox", { name });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByRole("option", { name: selected })).toHaveFocus());
+    return { user, trigger };
+  }
+
+  it('"Te" reaches Telugu past Tamil', async () => {
+    render(<Picker label="Reply language" options={LANGUAGES} initial="English" />);
+    const { user } = await openWithKeyboard("Reply language", "English");
+    await user.keyboard("T");
+    await waitFor(() => expect(screen.getByRole("option", { name: "Tamil" })).toHaveFocus());
+    await user.keyboard("e");
+    await waitFor(() => expect(screen.getByRole("option", { name: "Telugu" })).toHaveFocus());
+    // Still the keyboard's highlight: the outline's mark stays on.
+    expect(screen.getByRole("listbox")).toHaveAttribute("data-keyboard");
+  });
+
+  it('"Asia/K" reaches Asia/Kolkata, and Enter chooses it', async () => {
+    render(<Picker label="Time zone" options={TIME_ZONES} initial="UTC" />);
+    const { user, trigger } = await openWithKeyboard("Time zone", "UTC");
+    await user.keyboard("Asia/K");
+    await waitFor(() => expect(screen.getByRole("option", { name: "Asia/Kolkata" })).toHaveFocus());
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+    expect(screen.getByText("Saved: Asia/Kolkata")).toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("a space while typing is part of the search, not a choice", async () => {
+    render(<Picker label="Time zone" options={TIME_ZONES} initial="UTC" />);
+    const { user } = await openWithKeyboard("Time zone", "UTC");
+    await user.keyboard("America/New Y");
+    await waitFor(() => expect(screen.getByRole("option", { name: "America/New York" })).toHaveFocus());
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(screen.getByText("Saved: UTC")).toBeInTheDocument();
+  });
+
+  it("closed, typing on the trigger chooses as it goes: \"Mal\" is Malayalam past Marathi", async () => {
+    const user = userEvent.setup();
+    render(<Picker label="Reply language" options={LANGUAGES} initial="English" />);
+    screen.getByRole("combobox", { name: "Reply language" }).focus();
+    await user.keyboard("Mal");
+    expect(screen.getByText("Saved: Malayalam")).toBeInTheDocument();
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+});
