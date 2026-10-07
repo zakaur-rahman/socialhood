@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { FLOATING_SURFACE } from "@/components/ui/floating";
 import { Skeleton } from "@/components/ui/skeleton";
 import { threadRunsOldestFirst } from "@/lib/agent/cache";
 import { isActive, SUGGESTED_PROMPTS, type PromptArea } from "@/lib/agent/format";
@@ -153,12 +154,12 @@ export function AskConversation({
   } else if (runs.isPending) {
     body = (
       <div className="space-y-6" aria-busy="true" aria-label="Loading the thread">
-        <Skeleton className="ml-auto h-11 w-2/3 rounded-2xl bg-raised" />
+        <Skeleton className="ml-auto h-11 w-2/3 rounded-2xl" />
         <div className="flex gap-3">
-          <Skeleton className="size-7 shrink-0 rounded-full bg-raised" />
+          <Skeleton className="size-7 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-5/6 bg-raised" />
-            <Skeleton className="h-3 w-2/3 bg-raised" />
+            <Skeleton className="h-3 w-5/6" />
+            <Skeleton className="h-3 w-2/3" />
           </div>
         </div>
       </div>
@@ -220,7 +221,12 @@ export function AskConversation({
               setAway(false);
               toBottom(true);
             }}
-            className="absolute bottom-3 left-1/2 inline-flex min-h-10 -translate-x-1/2 items-center gap-1.5 rounded-full border border-line bg-panel px-3.5 text-sm shadow-xl hover:bg-raised md:min-h-8"
+            // It floats over the conversation: the floating surface and its shadow (DESIGN_SYSTEM §6,
+            // level 1), 32 px, 40 px on coarse pointers.
+            className={cn(
+              FLOATING_SURFACE,
+              "absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-1.5 rounded-full px-3.5 text-sm hover:bg-raised-hover motion-safe:transition-[background-color] pointer-coarse:h-10",
+            )}
           >
             <ArrowDown className="size-4" aria-hidden /> Jump to latest
           </button>
@@ -242,7 +248,6 @@ export function AskConversation({
               // The ask opts out of the automatic dialog (INLINE_PLAN_LIMITS): this message is the one.
               <Button
                 size="sm"
-                className="bg-brand-gradient min-h-10 text-white md:min-h-7"
                 onClick={() => (error instanceof ApiError ? upgrade.open(upgradeRequestFrom(error)) : undefined)}
               >
                 Upgrade
@@ -315,7 +320,7 @@ function Welcome({
                 disabled={disabled}
                 onClick={() => onPick(text)}
                 className={cn(
-                  "flex min-h-10 w-full items-start gap-3 rounded-xl border border-line bg-white/5 text-sm text-fg hover:border-line-strong hover:bg-white/10 disabled:opacity-50",
+                  "flex min-h-10 w-full items-start gap-3 rounded-xl border border-line bg-hover text-sm text-fg hover:border-line-strong hover:bg-pressed disabled:opacity-50",
                   variant === "page" ? "h-full px-4 py-3.5" : "px-3.5 py-2.5",
                 )}
               >

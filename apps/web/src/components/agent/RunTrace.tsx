@@ -20,15 +20,14 @@ import type { AgentRunDetail, AgentStep } from "@/lib/api/types";
 import { TONE_CLASS } from "@/lib/inbox/format";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 import { AnswerText, SourcesList } from "./AnswerText";
-
-const MICRO = "text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase";
 
 export function RunStatusChip({ status }: { status: AgentRunDetail["status"] }) {
   return (
     <span
-      className={cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap", TONE_CLASS[RUN_STATUS_TONE[status]])}
+      className={cn("inline-flex rounded-full px-2 py-0.5 text-2xs font-medium whitespace-nowrap", TONE_CLASS[RUN_STATUS_TONE[status]])}
       data-status={status}
     >
       {RUN_STATUS_LABEL[status]}
@@ -39,9 +38,11 @@ export function RunStatusChip({ status }: { status: AgentRunDetail["status"] }) 
 function Json({ label, value }: { label: string; value: unknown }) {
   return (
     <details className="group">
-      <summary className="min-h-8 cursor-pointer py-1 text-xs text-fg-secondary select-none hover:text-fg">{label}</summary>
+      <summary className="min-h-8 cursor-pointer py-1 text-xs text-fg-secondary select-none hover:text-fg pointer-coarse:min-h-10">
+        {label}
+      </summary>
       {/* Text only: arguments and results are shown, never interpreted. */}
-      <pre className="mt-1 max-h-64 overflow-auto rounded-md border border-line bg-canvas p-2 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-all">
+      <pre className="mt-1 max-h-64 overflow-auto rounded-md border border-line bg-canvas p-2 font-mono text-2xs leading-relaxed whitespace-pre-wrap break-all">
         {JSON.stringify(value, null, 2)}
       </pre>
     </details>
@@ -80,7 +81,7 @@ export function RunTrace({
   return (
     <div className="space-y-5" data-testid="run-trace">
       <section className="space-y-2">
-        <p className={MICRO}>Request</p>
+        <p className={EYEBROW}>Request</p>
         <p className="text-sm break-words whitespace-pre-wrap">{run.request}</p>
         <dl className="grid grid-cols-2 gap-3 pt-1 sm:grid-cols-3">
           <Fact label="Asked by">{run.requested_by?.name ?? (run.source === "standing" ? "Standing instruction" : "Former member")}</Fact>
@@ -98,7 +99,7 @@ export function RunTrace({
 
       {outcome || run.error ? (
         <section className="space-y-1" role="status">
-          <p className={MICRO}>{outcome?.title ?? "Error"}</p>
+          <p className={EYEBROW}>{outcome?.title ?? "Error"}</p>
           <p className="text-sm text-fg-secondary">
             {run.error ? `${run.error.message} (${run.error.code})` : outcome?.body}
           </p>
@@ -107,7 +108,7 @@ export function RunTrace({
 
       {run.answer?.trim() ? (
         <section className="space-y-3">
-          <p className={MICRO}>Answer</p>
+          <p className={EYEBROW}>Answer</p>
           <AnswerText answer={run.answer} refs={run.answer_refs} slug={slug} onNavigate={onNavigate} />
           <SourcesList refs={run.answer_refs} slug={slug} onNavigate={onNavigate} />
         </section>
@@ -115,13 +116,13 @@ export function RunTrace({
 
       {run.action_cards.length > 0 ? (
         <section className="space-y-2">
-          <p className={MICRO}>Prepared actions</p>
+          <p className={EYEBROW}>Prepared actions</p>
           <ul className="space-y-2">
             {run.action_cards.map((card, index) => (
               <li key={index} className="rounded-lg border border-line bg-field p-2 text-sm">
                 <p className="font-medium">{card.label}</p>
                 {card.note ? <p className="text-xs text-fg-secondary">{card.note}</p> : null}
-                <p className="font-mono text-[11px] break-all text-fg-secondary">{actionPath(card)}</p>
+                <p className="font-mono text-2xs break-all text-fg-secondary">{actionPath(card)}</p>
                 <Json label="Prefilled values" value={card.prefill} />
               </li>
             ))}
@@ -130,7 +131,7 @@ export function RunTrace({
       ) : null}
 
       <section className="space-y-2">
-        <p className={MICRO}>Steps</p>
+        <p className={EYEBROW}>Steps</p>
         {run.steps.length === 0 ? (
           <p className="text-sm text-fg-secondary">No steps ran.</p>
         ) : (
@@ -154,7 +155,7 @@ function StepTrace({ step }: { step: AgentStep }) {
         <span className="min-w-0 flex-1 text-sm font-medium break-words">{step.label}</span>
         <span
           className={cn(
-            "rounded-full px-2 py-0.5 text-[11px] font-medium",
+            "rounded-full px-2 py-0.5 text-2xs font-medium",
             failed ? TONE_CLASS.danger : step.status === "succeeded" ? TONE_CLASS.neutral : TONE_CLASS.warning,
           )}
         >
@@ -201,9 +202,9 @@ function StepTrace({ step }: { step: AgentStep }) {
 export function RunTraceSkeleton() {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="Loading the run">
-      <Skeleton className="h-4 w-3/4 bg-raised" />
-      <Skeleton className="h-16 w-full rounded-lg bg-raised" />
-      <Skeleton className="h-16 w-full rounded-lg bg-raised" />
+      <Skeleton className="h-4 w-3/4" />
+      <Skeleton className="h-16 w-full rounded-lg" />
+      <Skeleton className="h-16 w-full rounded-lg" />
     </div>
   );
 }

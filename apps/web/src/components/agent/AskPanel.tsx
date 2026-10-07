@@ -8,6 +8,7 @@ import { useSyncExternalStore } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { MODAL_OVERLAY } from "@/components/ui/dialog";
 import { modifierKey } from "@/lib/agent/format";
 import { askHref, isAskPage } from "@/lib/agent/routes";
 import { useAskStore } from "@/lib/agent/store";
@@ -66,7 +67,9 @@ export function AskRoot() {
 
 /**
  * The Ask Social Hood side sheet: 420 px on the right from 768 px, the full screen on phones. It
- * traps focus, closes on Esc and returns focus to what opened it (UX-A11Y-02).
+ * traps focus, closes on Esc and returns focus to what opened it (UX-A11Y-02). Its surface is the
+ * sheets' (DESIGN_SYSTEM §6, level 2; D-12): `overlay` with `shadow-overlay` and a `line` edge,
+ * over the modal scrim. UI-067 moves it onto SheetContent, with the sheets' motion.
  */
 export function AskPanel() {
   const workspace = useCurrentWorkspace();
@@ -79,7 +82,7 @@ export function AskPanel() {
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none" />
+        <DialogPrimitive.Overlay className={MODAL_OVERLAY} />
         <DialogPrimitive.Content
           aria-describedby={undefined}
           onOpenAutoFocus={(event) => {
@@ -88,7 +91,7 @@ export function AskPanel() {
             focusComposer(PANEL_COMPOSER_ID);
           }}
           onCloseAutoFocus={returnFocus.onCloseAutoFocus}
-          className="fixed inset-0 z-50 flex flex-col bg-panel shadow-xl outline-none duration-200 data-open:animate-in data-open:slide-in-from-right-10 data-closed:animate-out data-closed:slide-out-to-right-10 motion-reduce:animate-none md:inset-y-0 md:right-0 md:left-auto md:w-[420px] md:border-l md:border-line"
+          className="fixed inset-0 z-50 flex flex-col bg-overlay shadow-overlay outline-none duration-slow data-open:animate-in data-open:slide-in-from-right-10 data-closed:animate-out data-closed:slide-out-to-right-10 motion-reduce:animate-none md:inset-y-0 md:right-0 md:left-auto md:w-[420px] md:border-l md:border-line"
           data-testid="ask-panel"
         >
           <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line pr-2 pl-4">
@@ -98,13 +101,13 @@ export function AskPanel() {
             </DialogPrimitive.Title>
             <NewThreadButton wid={workspace.id} iconOnly onStart={() => focusComposer(PANEL_COMPOSER_ID)} />
             <ThreadMenu wid={workspace.id} now={now} />
-            <Button asChild variant="ghost" size="icon" className="size-10 text-fg-secondary md:size-8">
+            <Button asChild variant="ghost" size="icon" className="text-fg-secondary">
               <Link href={askHref(workspace.slug)} onClick={close} aria-label="Open the Ask page">
                 <Maximize2 aria-hidden />
               </Link>
             </Button>
             <DialogPrimitive.Close asChild>
-              <Button variant="ghost" size="icon" className="size-10 text-fg-secondary md:size-8" aria-label="Close">
+              <Button variant="ghost" size="icon" className="text-fg-secondary" aria-label="Close">
                 <X aria-hidden />
               </Button>
             </DialogPrimitive.Close>
@@ -133,7 +136,7 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
         onClick={activate}
         aria-label="Ask Social Hood"
         aria-keyshortcuts={ASK_SHORTCUT_ARIA}
-        className="grid size-10 shrink-0 place-items-center rounded-lg text-brand-fg hover:bg-white/5"
+        className="grid size-10 shrink-0 place-items-center rounded-lg text-brand-fg hover:bg-hover"
       >
         <Sparkles className="size-5" aria-hidden />
       </button>
@@ -147,7 +150,7 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
       aria-label={collapsed ? "Ask Social Hood" : undefined}
       aria-keyshortcuts={ASK_SHORTCUT_ARIA}
       className={cn(
-        "relative flex w-full items-center gap-3 rounded-lg border border-brand-line bg-brand-soft px-3 py-2 text-left text-[15px] font-medium text-fg hover:bg-brand-line",
+        "relative flex w-full items-center gap-3 rounded-lg border border-brand-line bg-brand-soft px-3 py-2 text-left text-md font-medium text-fg hover:bg-brand-soft-hover",
         collapsed && "size-10 justify-center px-0 py-0",
       )}
     >

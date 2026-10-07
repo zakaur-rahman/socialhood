@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { Role } from "@/lib/api/types";
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 import { SETTINGS_NAV, activeSegment, navGroupsFor, type NavGroup, type NavItem } from "./nav";
 import { COLLAPSE_SHORTCUT_ARIA, shortcutHint, useCollapseShortcut, useModifierKey } from "./shortcuts";
@@ -187,7 +188,7 @@ export function AppSidebar({
 
       <div
         className={cn(
-          "relative mt-2 flex w-full items-center gap-2.5 rounded-lg border border-line bg-white/5 p-2",
+          "relative mt-2 flex w-full items-center gap-2.5 rounded-lg border border-line bg-hover p-2",
           collapsed && "justify-center border-0 bg-transparent p-0",
         )}
       >
@@ -216,19 +217,19 @@ function AskCard({ ask, collapsed, hint }: { ask: ReactNode; collapsed: boolean;
       data-testid="ask-card"
       className={cn(
         "relative mt-3 flex w-full items-center gap-2.5 rounded-xl border border-brand-line bg-brand-soft p-2",
-        "hover:border-brand/60 hover:bg-brand/20 motion-safe:transition-[color,background-color,border-color]",
+        "hover:bg-brand-soft-hover motion-safe:transition-[color,background-color]",
         "has-[button:focus-visible]:outline-2 has-[button:focus-visible]:outline-offset-2 has-[button:focus-visible]:outline-brand",
       )}
     >
-      <span aria-hidden className="bg-brand-gradient relative grid size-8 shrink-0 place-items-center rounded-lg text-white">
+      <span aria-hidden className="bg-brand-gradient relative grid size-8 shrink-0 place-items-center rounded-lg text-on-brand">
         <Sparkles className="size-4" />
-        <span className="absolute -right-1.5 -bottom-1 rounded-[4px] bg-panel px-[3px] text-[9px] leading-3 font-bold text-brand-fg ring-1 ring-brand-line">
+        <span className="absolute -right-1.5 -bottom-1 rounded-sm bg-panel px-0.5 text-2xs leading-3 font-semibold text-brand-fg ring-1 ring-brand-line">
           AI
         </span>
       </span>
       <span aria-hidden className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate text-[13px] leading-5 font-semibold text-fg">Ask Social Hood</span>
+          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">Ask Social Hood</span>
           <kbd className={KBD_CLASS}>{hint}</kbd>
         </span>
         <span className="block truncate text-xs leading-4 text-fg-secondary">Your business assistant</span>
@@ -254,7 +255,7 @@ function NavSection({ group, collapsed, children }: { group: NavGroup; collapsed
           </span>
         </>
       ) : (
-        <p id={id} className="mb-1 px-3 text-[11px] leading-4 font-semibold tracking-[0.08em] text-fg-secondary uppercase">
+        <p id={id} className={cn(EYEBROW, "mb-1 px-3")}>
           {group.label}
         </p>
       )}
@@ -304,9 +305,9 @@ function SidebarLink({
             aria-hidden
             data-testid={`${item.key}-badge`}
             className={cn(
-              "bg-brand-gradient grid shrink-0 place-items-center rounded-full font-medium text-white tabular-nums",
+              "bg-brand-gradient grid shrink-0 place-items-center rounded-full font-medium text-on-brand tabular-nums",
               collapsed
-                ? "absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-[10px] leading-none ring-2 ring-panel"
+                ? "absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-2xs leading-none ring-2 ring-panel"
                 : "h-5 min-w-5 px-1.5 text-xs",
             )}
           >
@@ -342,7 +343,7 @@ function ReconnectingNotice({ collapsed }: { collapsed: boolean }) {
     <div
       role="status"
       title="Live updates are paused until the connection is back."
-      className="relative mt-2 flex items-center gap-2 self-start rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-xs font-medium text-warning"
+      className="relative mt-2 flex items-center gap-2 self-start rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning"
     >
       {dot}
       Reconnecting…

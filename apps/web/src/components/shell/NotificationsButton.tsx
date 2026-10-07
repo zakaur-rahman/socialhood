@@ -30,20 +30,18 @@ export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-        className={cn(sidebarRowClass({ collapsed }), "data-[state=open]:bg-white/5 data-[state=open]:text-fg")}
+        className={cn(sidebarRowClass({ collapsed }), "data-[state=open]:bg-pressed data-[state=open]:text-fg")}
       >
         <span className="relative shrink-0">
           <Bell className={sidebarIconClass()} aria-hidden />
+          {/* Dots under 12 px are solid brand, not the gradient (DESIGN_SYSTEM §1.9, UI-ISS-055). */}
           {unread > 0 ? (
-            <span
-              className="bg-brand-gradient absolute -top-0.5 -right-0.5 size-2 rounded-full ring-2 ring-panel"
-              aria-hidden
-            />
+            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand ring-2 ring-panel" aria-hidden />
           ) : null}
         </span>
         {collapsed ? null : <span>Notifications</span>}
       </PopoverTrigger>
-      <PopoverContent side="right" align="end" className="w-[360px] border-line bg-panel p-0 shadow-xl">
+      <PopoverContent side="right" align="end" className="w-90 p-0">
         <NotificationsPanel
           items={notifications.data?.items ?? []}
           unread={unread}
@@ -105,7 +103,7 @@ export function NotificationsPanel({
       {items.length === 0 ? (
         <EmptyState title={emptyStates.notifications.title} body={emptyStates.notifications.body} />
       ) : (
-        <ul className="max-h-[420px] overflow-y-auto py-1">
+        <ul className="max-h-105 overflow-y-auto py-1">
           {items.map((item) => {
             const { icon: Icon, className } = SEVERITY_ICON[item.severity];
             const body = (
@@ -119,11 +117,11 @@ export function NotificationsPanel({
                 </span>
                 <span className="shrink-0 text-xs text-fg-secondary">{relativeTime(item.created_at, now)}</span>
                 {item.read_at ? null : (
-                  <span className="bg-brand-gradient mt-1.5 size-2 shrink-0 rounded-full" aria-label="unread" />
+                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" aria-label="unread" />
                 )}
               </>
             );
-            const rowClass = "flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-white/5";
+            const rowClass = "flex w-full items-start gap-3 px-4 py-2.5 text-left hover:bg-hover";
             return (
               <li key={item.id}>
                 {item.link ? (
