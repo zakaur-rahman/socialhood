@@ -1,8 +1,9 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, ExternalLink, Loader2, Pencil } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, Pencil } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import type { SocialAccount } from "@/lib/api/types";
 import { handleOf } from "@/lib/publishing/rules";
 import type { ScheduledPost, ScheduledPostTarget } from "@/lib/publishing/types";
@@ -90,7 +91,7 @@ export function StatusBanner({
       return (
         <div role="status" data-testid="status-banner" className="mt-4 rounded-xl border border-brand-line bg-brand-soft p-4">
           <p className="flex items-center gap-2 text-sm font-medium">
-            <Loader2 className="size-4 animate-spin text-brand-fg" aria-hidden />
+            <Spinner className="text-brand-fg" />
             Publishing started. The post can&apos;t be changed now.
           </p>
           <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} />
@@ -111,14 +112,14 @@ export function StatusBanner({
     case "failed":
     case "canceled":
       return (
-        <div role="alert" data-testid="status-banner" className="mt-4 rounded-xl border border-danger bg-danger/10 p-4">
+        <div role="alert" data-testid="status-banner" className="mt-4 rounded-xl border border-danger bg-danger-soft p-4">
           <p className="flex items-center gap-2 text-sm font-medium text-danger-fg">
             <AlertTriangle className="size-4" aria-hidden />
             {post.status === "failed" ? "This post didn't publish." : "This post was cancelled."}
           </p>
           <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} />
-          <Button className="mt-3 h-10 md:h-9" variant="secondary" onClick={onEditAndRetry} disabled={retrying}>
-            {retrying ? <Loader2 className="animate-spin" aria-hidden /> : <Pencil aria-hidden />} Edit and retry
+          <Button className="mt-3" variant="secondary" size="lg" onClick={onEditAndRetry} disabled={retrying}>
+            {retrying ? <Spinner /> : <Pencil aria-hidden />} Edit and retry
           </Button>
         </div>
       );

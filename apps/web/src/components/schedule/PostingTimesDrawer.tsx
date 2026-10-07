@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +18,7 @@ import { accountLabel } from "@/lib/automations/accounts";
 import { errorMessage } from "@/lib/copy";
 import { WEEKDAYS_LONG, WEEKDAYS_SHORT, zoneLabel } from "@/lib/schedule/dates";
 import { formatDayTime } from "@/lib/tz";
+import { EYEBROW } from "@/styles/tokens";
 
 import { useSchedule } from "./schedule-context";
 
@@ -75,10 +77,11 @@ export function PostingTimesDrawer({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 border-line bg-panel sm:max-w-md">
+      {/* A side panel: the full screen below 768 px, 420 px beside the page from there. */}
+      <SheetContent side="right" size="panel" className="gap-0">
         <SheetHeader className="border-b border-line">
-          <SheetTitle className="text-base font-semibold">Posting times</SheetTitle>
-          <SheetDescription className="text-fg-secondary">
+          <SheetTitle>Posting times</SheetTitle>
+          <SheetDescription>
             Add to queue takes the next free time. Changing these doesn&apos;t move posts already scheduled.
           </SheetDescription>
         </SheetHeader>
@@ -86,7 +89,7 @@ export function PostingTimesDrawer({
           <Tabs value={current.id} onValueChange={setAccountId} className="min-h-0 flex-1 gap-0">
             <TabsList className="mx-4 mt-3">
               {accounts.map((account) => (
-                <TabsTrigger key={account.id} value={account.id} className="min-h-10 truncate md:min-h-8">
+                <TabsTrigger key={account.id} value={account.id} className="truncate">
                   {accountLabel(account)}
                 </TabsTrigger>
               ))}
@@ -125,7 +128,7 @@ function AccountTimes({
     return (
       <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading posting times">
         {Array.from({ length: 7 }, (_, i) => (
-          <Skeleton key={i} className="h-10 w-full bg-raised" />
+          <Skeleton key={i} className="h-10 w-full" />
         ))}
       </div>
     );
@@ -179,7 +182,7 @@ function AccountTimes({
           ))}
         </ul>
         <div className="mt-4 rounded-lg border border-line bg-field p-3">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">Next free times</p>
+          <p className={EYEBROW}>Next free times</p>
           <p className="mt-1 text-sm tabular-nums" data-testid="next-free-times">
             {slots.data.next_free_at.length > 0
               ? slots.data.next_free_at.map((at) => formatDayTime(at, zone, schedule.now)).join(" · ")
@@ -200,7 +203,7 @@ function AccountTimes({
               Discard changes
             </Button>
           ) : null}
-          <Button className="bg-brand-gradient text-white" onClick={submit} disabled={!dirty || save.isPending}>
+          <Button onClick={submit} disabled={!dirty || save.isPending}>
             {save.isPending ? "Saving…" : "Save posting times"}
           </Button>
         </div>
@@ -247,7 +250,7 @@ function DayRow({
                 <Button
                   variant="ghost"
                   size="icon-xs"
-                  className="size-8 rounded-full md:size-6"
+                  className="rounded-full"
                   aria-label={`Remove ${time} on ${name}`}
                   onClick={() => onChange(times.filter((t) => t !== time))}
                 >
@@ -260,7 +263,8 @@ function DayRow({
             <label htmlFor={inputId} className="sr-only">
               New time on {name}
             </label>
-            <input
+            {/* The time field and its two buttons share the `default` height: 32 px, 40 px on touch. */}
+            <Input
               id={inputId}
               type="time"
               step={60}
@@ -272,9 +276,9 @@ function DayRow({
                   add();
                 }
               }}
-              className="h-10 rounded-lg border border-line bg-field px-2 text-sm tabular-nums focus:bg-raised md:h-8"
+              className="w-auto tabular-nums"
             />
-            <Button variant="secondary" size="sm" className="min-h-10 md:min-h-8" onClick={add} disabled={!adding} aria-label={`Add time on ${name}`}>
+            <Button variant="secondary" onClick={add} disabled={!adding} aria-label={`Add time on ${name}`}>
               <Plus aria-hidden /> Add
             </Button>
             <Popover
@@ -287,15 +291,14 @@ function DayRow({
               <PopoverTrigger asChild>
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="ml-auto min-h-10 text-fg-secondary md:min-h-8"
+                  className="ml-auto text-fg-secondary"
                   disabled={times.length === 0}
                   aria-label={`Copy ${name} to other days`}
                 >
                   <Copy aria-hidden /> Copy to…
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-56 border-line bg-panel shadow-xl">
+              <PopoverContent align="end" className="w-56">
                 <p className="text-sm font-medium">Copy {name}&apos;s times to</p>
                 <div className="grid gap-1">
                   {WEEKDAYS_LONG.map((other, index) =>
@@ -315,7 +318,6 @@ function DayRow({
                 <p className="text-xs text-fg-secondary">Their times are replaced.</p>
                 <Button
                   size="sm"
-                  className="bg-brand-gradient text-white"
                   disabled={copyTo.length === 0}
                   onClick={() => {
                     onCopy(copyTo);

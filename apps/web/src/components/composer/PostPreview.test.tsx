@@ -1,12 +1,19 @@
 import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { account, json, post, renderWithApi, type Call } from "@/test/api";
 import { assetInfo } from "@/test/composer-fixtures";
 
 import { PostPreview } from "./PostPreview";
+
+beforeAll(() => {
+  // jsdom lacks what Radix Select calls on open (the account switcher).
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
 
 const maple = account({ id: "a1", username: "maple.bakery", profile_picture_url: "https://img.test/maple.jpg" });
 const studio = account({ id: "a2", username: "maple.studio" });
@@ -100,7 +107,8 @@ describe("PostPreview (FR-PUB-03, UX-CMP-02)", () => {
       captionFor: (id) => (id === "a2" ? "Studio caption" : "Bakery caption"),
     });
     expect(screen.getByTestId("preview-caption")).toHaveTextContent("maple.bakery Bakery caption");
-    await user.selectOptions(screen.getByRole("combobox", { name: "Account" }), "a2");
+    await user.click(screen.getByRole("combobox", { name: "Account" }));
+    await user.click(await screen.findByRole("option", { name: "@maple.studio" }));
     expect(screen.getByTestId("preview-caption")).toHaveTextContent("maple.studio Studio caption");
   });
 

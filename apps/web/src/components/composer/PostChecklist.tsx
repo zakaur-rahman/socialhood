@@ -51,7 +51,7 @@ export function PostChecklist({
                   event.preventDefault();
                   onFix(item.field);
                 }}
-                className="group flex min-h-10 items-start gap-2 rounded-md px-1 py-1.5 text-sm text-fg hover:bg-white/5 md:min-h-0"
+                className="group flex items-start gap-2 rounded-md px-1 py-1.5 text-sm text-fg hover:bg-hover pointer-coarse:min-h-10"
               >
                 <XCircle className="mt-0.5 size-4 shrink-0 text-danger" aria-hidden />
                 <span className="flex-1">

@@ -12,6 +12,8 @@ import { contactName } from "@/lib/inbox/format";
 import { agendaDayLabel } from "@/lib/schedule/dates";
 import { captionLine } from "@/lib/schedule/format";
 import { dayKey, formatTime } from "@/lib/tz";
+import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 import { postLabel } from "./CalendarPostCard";
 import { PostMenu, PostThumbnail, StatusChip, TargetAvatars } from "./post-parts";
@@ -56,9 +58,7 @@ export function AgendaView({
         title="Nothing planned for these days"
         body="Drafts and scheduled posts appear here with their times."
         action={
-          <Button className="min-h-10 bg-brand-gradient text-white" onClick={() => schedule.actions.newPostAt(null)}>
-            New post
-          </Button>
+          <Button onClick={() => schedule.actions.newPostAt(null)}>New post</Button>
         }
       />
     );
@@ -69,10 +69,10 @@ export function AgendaView({
       {groups.map(([day, rows]) => {
         return (
           <section key={day} aria-labelledby={`agenda-${day}`}>
-            <h2 id={`agenda-${day}`} className="mb-2 text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">
+            <h2 id={`agenda-${day}`} className={cn(EYEBROW, "mb-2")}>
               {agendaDayLabel(day, today)}
             </h2>
-            <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line bg-panel">
+            <ul className="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line bg-panel">
               {rows.map((row) =>
                 row.kind === "post" ? (
                   <li key={row.post.id} className="flex min-h-14 items-center gap-3 px-3 py-2">
@@ -99,7 +99,7 @@ export function AgendaView({
                       href={`/w/${schedule.slug}/inbox/${row.message.conversation_id}` as Route}
                       className="flex min-h-14 items-center gap-3 px-3 py-2"
                     >
-                      <span className="grid size-10 shrink-0 place-items-center rounded-md border border-dotted border-line-strong bg-field">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-md border border-dashed border-line-strong bg-field">
                         <MessageSquare className="size-4 text-fg-secondary" aria-hidden />
                       </span>
                       <span className="min-w-0 flex-1">

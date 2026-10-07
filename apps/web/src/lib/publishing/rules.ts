@@ -246,9 +246,9 @@ export const STATUS_TONE: Record<ScheduledPostStatus, string> = {
   draft: "bg-raised text-fg-secondary",
   scheduled: "bg-brand-soft text-brand-fg",
   publishing: "bg-brand-soft text-brand-fg",
-  published: "bg-success/15 text-success",
-  partially_published: "bg-warning/15 text-warning",
-  failed: "bg-danger/15 text-danger-fg",
+  published: "bg-success-soft text-success",
+  partially_published: "bg-warning-soft text-warning",
+  failed: "bg-danger-soft text-danger-fg",
   canceled: "bg-raised text-fg-secondary",
 };
 
