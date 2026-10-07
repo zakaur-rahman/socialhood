@@ -84,7 +84,7 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
     expect(calls.find((c) => c.path.endsWith("/billing/checkout"))?.body).toEqual({ plan: "pro" });
     // Nothing is granted here: the plan changes when Dodo's webhook arrives.
-    expect(within(dialog).getByRole("button", { name: "Opening checkout…" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Start 7-day trial" })).toBeDisabled();
   });
 
   it("without a trial it offers Upgrade to Pro", async () => {

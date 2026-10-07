@@ -4,6 +4,7 @@ import { ExternalLink, Receipt, RotateCw } from "lucide-react";
 
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { EmptyState } from "@/components/states/EmptyState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CardBleed } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -12,15 +13,14 @@ import { useBillingPayments } from "@/lib/api/queries";
 import type { Payment } from "@/lib/api/types";
 import { billingDate } from "@/lib/billing/plan";
 import { errorMessage, formatPrice } from "@/lib/copy";
-import { cn } from "@/lib/utils";
+import type { Tone } from "@/lib/ui/tone";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
-const STATUS: Record<Payment["status"], { label: string; tone: string }> = {
-  succeeded: { label: "Paid", tone: "bg-success-soft text-success" },
-  failed: { label: "Failed", tone: "bg-danger-soft text-danger-fg" },
-  // Neutral sits on `hover`: fg-secondary is 4.45:1 on white 10% (UI-ISS-007).
-  refunded: { label: "Refunded", tone: "bg-hover text-fg-secondary" },
-  pending: { label: "Pending", tone: "bg-warning-soft text-warning" },
+const STATUS: Record<Payment["status"], { label: string; tone: Tone }> = {
+  succeeded: { label: "Paid", tone: "success" },
+  failed: { label: "Failed", tone: "danger" },
+  refunded: { label: "Refunded", tone: "neutral" },
+  pending: { label: "Pending", tone: "warning" },
 };
 
 /**
@@ -86,9 +86,9 @@ export function PaymentHistory() {
                       {formatPrice(payment)} <span className="text-xs text-fg-secondary">{payment.currency}</span>
                     </TableCell>
                     <TableCell>
-                      <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", status.tone)}>
+                      <Badge tone={status.tone} size="md">
                         {status.label}
-                      </span>
+                      </Badge>
                       {payment.status === "failed" && payment.failure_reason ? (
                         <span className="mt-1 block text-xs text-fg-secondary">{payment.failure_reason}</span>
                       ) : null}
@@ -134,12 +134,8 @@ export function PaymentHistory() {
   }
 
   return (
-    // --card-padding is the settings card's own padding (20 px, 24 px from md), so the table bleeds
-    // to its edges and its edge cells line up with the title; Card sets it once SettingsCard moves
-    // onto Card (UI-037).
     <SettingsCard
       id="payments"
-      className="[--card-padding:--spacing(5)] md:[--card-padding:--spacing(6)]"
       icon={<Receipt />}
       title="Payment history"
       description="Every charge Dodo Payments made for this workspace, newest first."

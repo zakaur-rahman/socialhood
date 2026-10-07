@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { BILLING_HREF } from "@/components/shell/nav";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useUpgradeDialog, type UpgradeRequest } from "@/lib/api/provider";
@@ -91,9 +92,7 @@ export function UpgradeDialog() {
           </div>
         ) : null}
         {checkout.error ? (
-          <p role="alert" className="text-sm text-danger-fg">
-            {checkout.error}
-          </p>
+          <Alert tone="danger">{checkout.error}</Alert>
         ) : null}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
@@ -107,10 +106,11 @@ export function UpgradeDialog() {
                 </Link>
               </Button>
               <Button
-                disabled={checkout.pending || billing.isPending}
+                loading={checkout.pending}
+                disabled={billing.isPending}
                 onClick={() => checkout.start("pro")}
               >
-                {checkout.pending ? "Opening checkout…" : trial ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
+                {trial ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
               </Button>
             </>
           ) : workspace.role !== "agent" ? (

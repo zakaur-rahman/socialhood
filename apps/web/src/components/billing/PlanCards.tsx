@@ -2,7 +2,9 @@
 
 import { Check, RotateCw } from "lucide-react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { BillingState, PlanOffer } from "@/lib/api/types";
 import { TRIAL_DAYS, canCheckout, planHighlights } from "@/lib/billing/plan";
@@ -35,23 +37,23 @@ export function PlanCards({
     return (
       <div className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-label="Loading plans">
         {[0, 1, 2].map((i) => (
-          <div key={i} className="space-y-3 rounded-2xl border border-line bg-panel p-5">
+          <Card key={i} padding="roomy" className="space-y-3">
             <Skeleton className="h-4 w-16" />
             <Skeleton className="h-6 w-24" />
             <Skeleton className="h-3 w-3/4" />
-          </div>
+          </Card>
         ))}
       </div>
     );
   }
   if (plans.isError || !plans.data) {
     return (
-      <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-5 text-sm">
+      <Card role="alert" padding="roomy" className="flex flex-wrap items-center gap-3 text-sm">
         <p className="flex-1 text-fg-secondary">The plans couldn&apos;t load.</p>
         <Button variant="secondary" onClick={() => void plans.refetch()}>
           <RotateCw aria-hidden /> Try again
         </Button>
-      </div>
+      </Card>
     );
   }
 
@@ -64,20 +66,16 @@ export function PlanCards({
         const highlights = planHighlights(offer.entitlements);
         const trialDays = offer.trial_days || TRIAL_DAYS;
         return (
-          <li
+          <Card
+            asChild
             key={offer.plan}
-            aria-current={isCurrent ? "true" : undefined}
-            className={cn(
-              "relative flex flex-col rounded-2xl border bg-panel p-5 md:p-6",
-              // A plan that isn't available yet dims its edge and fill, never its text (UI-ISS-007).
-              // The current plan is marked by its brand edge alone: no ring, no glow (UI-ISS-094).
-              isCurrent
-                ? "border-brand"
-                : offer.available
-                  ? "border-line"
-                  : "border-line-subtle bg-panel/50",
-            )}
+            padding="roomy"
+            tone={isCurrent ? "brand" : "default"}
+            // A plan that isn't available yet dims its edge and fill, never its text (UI-ISS-007).
+            // The current plan is marked by its brand edge alone: no ring, no glow (UI-ISS-094).
+            className={cn("relative flex flex-col", !isCurrent && !offer.available && "border-line-subtle bg-panel/50")}
           >
+          <li aria-current={isCurrent ? "true" : undefined}>
             {isCurrent ? (
               // A 2 px mark: solid, not a gradient (DESIGN_SYSTEM §1.9, marks under 12 px).
               <span aria-hidden className="absolute inset-x-6 -top-px h-0.5 rounded-full bg-brand" />
@@ -85,9 +83,11 @@ export function PlanCards({
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-lg font-semibold">{PLAN_NAME[offer.plan]}</h3>
               {isCurrent ? (
-                <span className="rounded-full bg-brand-soft px-2 py-0.5 text-xs font-medium text-brand-fg">Current plan</span>
+                <Badge tone="brand" size="md">
+                  Current plan
+                </Badge>
               ) : !offer.available ? (
-                <span className="rounded-full bg-hover px-2 py-0.5 text-xs font-medium text-fg-secondary">Coming soon</span>
+                <Badge size="md">Coming soon</Badge>
               ) : null}
             </div>
             <p className="text-xs text-fg-secondary">{TAGLINE[offer.plan]}</p>
@@ -115,17 +115,14 @@ export function PlanCards({
               <Button
                 size="lg"
                 className="mt-5 w-full"
-                disabled={checkout.pending}
+                loading={checkout.pending}
                 onClick={() => checkout.start("pro")}
               >
-                {checkout.pending
-                  ? "Opening checkout…"
-                  : billing.trial_eligible && offer.trial_days > 0
-                    ? billingCopy.trialCta(trialDays)
-                    : billingCopy.upgradeCta}
+                {billing.trial_eligible && offer.trial_days > 0 ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
               </Button>
             ) : null}
           </li>
+          </Card>
         );
       })}
     </ul>

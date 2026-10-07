@@ -2,13 +2,16 @@
 
 import { Cable, Sparkles } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarBadge, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardInset } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { AccountStatus, AiMode, Plan, SocialAccount, SocialAccountPatch } from "@/lib/api/types";
 import { accountStatusLabel } from "@/lib/copy";
+import type { Tone } from "@/lib/ui/tone";
 import { relativeTime } from "@/lib/time";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -17,14 +20,14 @@ import { DeleteAccountDialog, type DeleteMode } from "./DeleteAccountDialog";
 import { DisconnectDialog } from "./DisconnectDialog";
 import { PLATFORM_BG, PlatformGlyph } from "./PlatformGlyph";
 
-const STATUS_TONE: Record<AccountStatus, { pill: string; dot: string }> = {
-  active: { pill: "bg-success-soft text-success", dot: "bg-success" },
-  needs_reconnect: { pill: "bg-warning-soft text-warning", dot: "bg-warning" },
-  error: { pill: "bg-danger-soft text-danger-fg", dot: "bg-danger" },
-  disconnected: { pill: "bg-hover text-fg-secondary", dot: "bg-fg-secondary" },
+const STATUS_TONE: Record<AccountStatus, { tone: Tone; dot: string }> = {
+  active: { tone: "success", dot: "bg-success" },
+  needs_reconnect: { tone: "warning", dot: "bg-warning" },
+  error: { tone: "danger", dot: "bg-danger" },
+  disconnected: { tone: "neutral", dot: "bg-fg-secondary" },
 };
 /** C-067: while its data is being deleted, whatever its status (the dot pulses only with motion). */
-const DELETING_TONE = { pill: "bg-danger-soft text-danger-fg", dot: "bg-danger motion-safe:animate-pulse" };
+const DELETING_TONE: { tone: Tone; dot: string } = { tone: "danger", dot: "bg-danger motion-safe:animate-pulse" };
 
 const AI_MODES: { value: AiMode; label: string; hint: string }[] = [
   { value: "off", label: "Off", hint: "No AI replies" },
@@ -94,46 +97,31 @@ export function AccountCard({
   const onDelete = (mode: DeleteMode) => (confirm: string) => actions.onDelete(confirm, mode);
 
   return (
-    <article
-      aria-label={name}
-      className={cn("flex min-w-0 flex-col gap-4 rounded-2xl border border-line bg-panel p-5", !live && "bg-panel/60")}
-      data-status={deleting ? "deleting" : account.status}
-    >
+    <Card asChild padding="roomy" className={cn("flex flex-col gap-4", !live && "bg-panel/60")}>
+      <article aria-label={name} data-status={deleting ? "deleting" : account.status}>
       <header className="flex items-start gap-3">
-        <div className="relative shrink-0">
-          <Avatar className="size-12">
-            {account.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
-            <AvatarFallback className="bg-brand-soft text-brand-fg">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
-          </Avatar>
-          <span
-            role="img"
-            aria-label={platformName}
-            className={cn(
-              "absolute -right-1 -bottom-1 grid size-5 place-items-center rounded-full text-on-brand ring-2 ring-panel",
-              PLATFORM_BG[account.platform],
-            )}
-          >
-            <PlatformGlyph platform={account.platform} className="size-3" />
-          </span>
-        </div>
+        <Avatar size="lg">
+          {account.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
+          <AvatarFallback className="bg-brand-soft text-brand-fg">{name.slice(0, 1).toUpperCase()}</AvatarFallback>
+          <AvatarBadge role="img" aria-label={platformName} className={PLATFORM_BG[account.platform]}>
+            <PlatformGlyph platform={account.platform} />
+          </AvatarBadge>
+        </Avatar>
         <div className="min-w-0 flex-1">
           <p className="flex min-w-0 items-center gap-2">
             <span className="truncate font-semibold">{name}</span>
             {account.sandbox ? (
-              <span className="shrink-0 rounded bg-brand-soft px-1.5 text-xs font-medium text-brand-fg">Sandbox</span>
+              <Badge tone="brand" shape="tag">
+                Sandbox
+              </Badge>
             ) : null}
           </p>
           <p className="truncate text-sm text-fg-secondary">{subtitle}</p>
         </div>
-        <span
-          className={cn(
-            "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
-            tone.pill,
-          )}
-        >
+        <Badge tone={tone.tone} size="md">
           <span className={cn("size-1.5 rounded-full", tone.dot)} aria-hidden />
           {deleting ? "Deleting…" : accountStatusLabel[account.status]}
-        </span>
+        </Badge>
       </header>
 
       {deleting ? (
@@ -147,7 +135,7 @@ export function AccountCard({
       ) : null}
 
       {live ? (
-        <div className="space-y-4 rounded-lg border border-line p-4">
+        <CardInset className="space-y-4">
           <Setting
             id={`ai-mode-${account.id}`}
             label="AI replies"
@@ -190,7 +178,7 @@ export function AccountCard({
               />
             </Setting>
           )}
-        </div>
+        </CardInset>
       ) : null}
 
       <footer className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-t border-line-subtle pt-4">
@@ -240,7 +228,8 @@ export function AccountCard({
           </div>
         ) : null}
       </footer>
-    </article>
+      </article>
+    </Card>
   );
 }
 

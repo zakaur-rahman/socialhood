@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Bot, Building2, Info, Link2, ListChecks } from "lucide-react";
+import { Bot, Building2, Link2, ListChecks } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Controller, useForm, useWatch } from "react-hook-form";
@@ -13,6 +13,8 @@ import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
+import { CardInset } from "@/components/ui/card";
+import { Field, FieldControl, FieldDescription, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -168,64 +170,48 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
               title="General information"
               description="How this workspace is named, addressed and scheduled."
             >
-              <div className="space-y-6">
-                <Field
-                  id="name"
-                  label="Workspace name"
-                  counter={`${name.length} / ${NAME_MAX}`}
-                  error={errors.name?.message}
-                >
-                  <Input
-                    id="name"
-                    maxLength={NAME_MAX}
-                    disabled={!canEdit}
-                    aria-invalid={!!errors.name}
-                    size="xl"
-                    {...form.register("name")}
-                  />
+              <FieldGroup className="gap-6">
+                <Field id="name" disabled={!canEdit}>
+                  <FieldLabelRow counter={`${name.length} / ${NAME_MAX}`}>Workspace name</FieldLabelRow>
+                  <Input id="name" maxLength={NAME_MAX} size="xl" {...form.register("name")} />
+                  <FieldError>{errors.name?.message}</FieldError>
                 </Field>
 
-                <Field
-                  id="slug"
-                  label="URL"
-                  hint="Changing it changes the address of every page in this workspace."
-                  error={errors.slug?.message}
-                >
+                <Field id="slug" disabled={!canEdit}>
+                  <FieldLabel>URL</FieldLabel>
                   {/* One field in two parts: the wrapper draws the focus outline, ring border and raised fill
                       while its input has focus (DESIGN_SYSTEM §8.3, like ChipInput); the input draws none. */}
-                  <div className="flex min-h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field has-[input:focus-visible]:border-ring has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring has-[input[aria-invalid=true]]:border-danger">
+                  <div className="flex h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field has-[input:focus-visible]:border-ring has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring has-[input[aria-invalid=true]]:border-danger">
                     <span className="flex items-center border-r border-line bg-raised/60 px-3 text-sm text-fg-secondary" aria-hidden>
                       …/w/
                     </span>
                     <Input
                       id="slug"
-                      disabled={!canEdit}
-                      aria-invalid={!!errors.slug}
                       aria-describedby="slug-prefix"
                       size="xl"
-                      className="rounded-none border-0 bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
+                      className="h-full rounded-none border-0 bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
                       {...form.register("slug")}
                     />
                   </div>
                   <span id="slug-prefix" className="sr-only">
                     The address after /w/
                   </span>
+                  <FieldDescription>Changing it changes the address of every page in this workspace.</FieldDescription>
+                  <FieldError>{errors.slug?.message}</FieldError>
                 </Field>
 
-                <Field
-                  id="timezone"
-                  label="Timezone"
-                  hint="Scheduling screens show and accept times in this timezone."
-                  error={errors.timezone?.message}
-                >
+                <Field id="timezone" disabled={!canEdit}>
+                  <FieldLabel>Timezone</FieldLabel>
                   <Controller
                     control={form.control}
                     name="timezone"
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange} disabled={!canEdit}>
-                        <SelectTrigger id="timezone" size="xl" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <FieldControl id="timezone">
+                          <SelectTrigger size="xl" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FieldControl>
                         <SelectContent>
                           {zones.map((zone) => (
                             <SelectItem key={zone} value={zone}>
@@ -247,22 +233,22 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                       Use your browser&apos;s timezone ({suggested.replaceAll("_", " ")})
                     </button>
                   ) : null}
+                  <FieldDescription>Scheduling screens show and accept times in this timezone.</FieldDescription>
+                  <FieldError>{errors.timezone?.message}</FieldError>
                 </Field>
 
-                <Field
-                  id="reply_language"
-                  label="Default reply language"
-                  hint="The language AI replies use. Customer's language answers in whatever they wrote in."
-                  error={errors.reply_language?.message}
-                >
+                <Field id="reply_language" disabled={!canEdit}>
+                  <FieldLabel>Default reply language</FieldLabel>
                   <Controller
                     control={form.control}
                     name="reply_language"
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange} disabled={!canEdit}>
-                        <SelectTrigger id="reply_language" size="xl" className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
+                        <FieldControl id="reply_language">
+                          <SelectTrigger size="xl" className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FieldControl>
                         <SelectContent>
                           {LANGUAGES.map(([code, label]) => (
                             <SelectItem key={code} value={code}>
@@ -273,9 +259,13 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                       </Select>
                     )}
                   />
+                  <FieldDescription>
+                    The language AI replies use. Customer&apos;s language answers in whatever they wrote in.
+                  </FieldDescription>
+                  <FieldError>{errors.reply_language?.message}</FieldError>
                 </Field>
 
-                <div className="space-y-4 rounded-lg border border-line p-4">
+                <CardInset className="space-y-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="disclosure_on" className="flex items-center gap-2">
@@ -308,30 +298,25 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                   </div>
                   {disclosureOn ? (
                     <>
-                      <Field
-                        id="automation_disclosure"
-                        label="Line to add"
-                        counter={`${disclosure.length} / ${DISCLOSURE_MAX}`}
-                        error={errors.automation_disclosure?.message}
-                      >
+                      <Field id="automation_disclosure" disabled={!canEdit}>
+                        <FieldLabelRow counter={`${disclosure.length} / ${DISCLOSURE_MAX}`}>Line to add</FieldLabelRow>
                         <Input
                           id="automation_disclosure"
                           maxLength={DISCLOSURE_MAX}
-                          disabled={!canEdit}
-                          aria-invalid={!!errors.automation_disclosure}
                           size="xl"
                           {...form.register("automation_disclosure")}
                         />
+                        <FieldError>{errors.automation_disclosure?.message}</FieldError>
                       </Field>
                       <DisclosurePreview line={disclosure.trim()} />
                     </>
                   ) : null}
-                </div>
+                </CardInset>
 
                 {canEdit ? null : (
                   <p className="text-sm text-fg-secondary">Only owners and admins can change these settings.</p>
                 )}
-              </div>
+              </FieldGroup>
             </SettingsCard>
           </form>
           <DeleteWorkspace />
@@ -423,42 +408,14 @@ function formValues(workspace: Workspace): Values {
   };
 }
 
-function Field({
-  id,
-  label,
-  hint,
-  counter,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  counter?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
+/** A Field's label with its character counter on the right. */
+function FieldLabelRow({ counter, children }: { counter: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-baseline justify-between gap-3">
-        <Label htmlFor={id}>{label}</Label>
-        {counter ? (
-          <span className="text-xs text-fg-secondary tabular-nums" aria-hidden>
-            {counter}
-          </span>
-        ) : null}
-      </div>
-      {children}
-      {error ? (
-        <p role="alert" className="text-sm text-danger-fg">
-          {error}
-        </p>
-      ) : hint ? (
-        <p className="flex items-start gap-1.5 text-xs text-fg-secondary">
-          <Info className="mt-px size-3.5 shrink-0" aria-hidden />
-          {hint}
-        </p>
-      ) : null}
+    <div className="flex items-baseline justify-between gap-3">
+      <FieldLabel>{children}</FieldLabel>
+      <span className="text-xs text-fg-secondary tabular-nums" aria-hidden>
+        {counter}
+      </span>
     </div>
   );
 }

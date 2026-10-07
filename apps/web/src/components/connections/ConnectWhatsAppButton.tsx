@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { DisabledReason } from "@/components/ui/disabled-reason";
 import { ApiError } from "@/lib/api/errors";
 import { useCompleteWhatsAppSignup } from "@/lib/api/queries";
 import { errorMessage, whatsappConnectError, whatsappConnected } from "@/lib/copy";
@@ -81,15 +82,11 @@ export function useWhatsAppConnect(wid: string) {
 export function ConnectWhatsAppButton({ wid }: { wid: string }) {
   const { connect, busy, configured } = useWhatsAppConnect(wid);
   return (
-    <Button
-      variant="secondary"
-      size="lg"
-      disabled={!configured || busy}
-      title={configured ? undefined : "WhatsApp isn't set up for this app yet"}
-      onClick={connect}
-    >
-      <WhatsAppGlyph className="size-4" />
-      {busy ? "Opening WhatsApp…" : "Connect WhatsApp"}
-    </Button>
+    <DisabledReason reason={configured ? null : "WhatsApp isn't set up for this app yet"}>
+      <Button variant="secondary" size="lg" disabled={!configured} loading={busy} onClick={connect}>
+        <WhatsAppGlyph className="size-4" />
+        Connect WhatsApp
+      </Button>
+    </DisabledReason>
   );
 }
