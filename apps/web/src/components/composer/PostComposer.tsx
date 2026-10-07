@@ -758,15 +758,15 @@ function Composer({
                 {scheduleBlock || publishReason ? (
                   // On a short viewport the reasons share one line; the buttons keep the full text
                   // through aria-describedby, and the checklist above lists every item to fix.
-                  <div className="mt-2 space-y-1 text-xs text-fg-secondary [@media(max-height:500px)]:truncate">
+                  <div className="mt-2 space-y-1 text-xs text-fg-secondary short:truncate">
                     {scheduleBlock ? (
-                      <p id="composer-schedule-reason" className="[@media(max-height:500px)]:inline" data-testid="schedule-reason">
+                      <p id="composer-schedule-reason" className="short:inline" data-testid="schedule-reason">
                         {scheduleLabel}
                         {publishBlock === scheduleBlock ? " and Publish now" : ""}: {scheduleBlock}
                       </p>
                     ) : null}{" "}
                     {publishReason ? (
-                      <p id="composer-publish-reason" className="[@media(max-height:500px)]:inline">
+                      <p id="composer-publish-reason" className="short:inline">
                         Publish now: {publishReason}
                       </p>
                     ) : null}

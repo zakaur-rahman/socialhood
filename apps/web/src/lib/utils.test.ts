@@ -33,6 +33,13 @@ describe("cn knows the design system's utilities (C-070)", () => {
     expect(cn("bg-popover", "bg-overlay")).toBe("bg-overlay");
   });
 
+  it("treats the crop mask as a shadow too, and brand-soft-hover as a colour (C-073)", () => {
+    expect(cn("shadow-crop-mask", "shadow-none")).toBe("shadow-none");
+    expect(cn("shadow-xl", "shadow-crop-mask")).toBe("shadow-crop-mask");
+    expect(cn("bg-brand-soft", "bg-brand-soft-hover")).toBe("bg-brand-soft-hover");
+    expect(cn("hover:bg-brand-soft-hover", "hover:bg-hover")).toBe("hover:bg-hover");
+  });
+
   it("still merges colours and sizes as tailwind-merge does", () => {
     expect(cn("bg-primary", "bg-danger-fill")).toBe("bg-danger-fill");
     expect(cn("hover:bg-hover", "hover:bg-pressed")).toBe("hover:bg-pressed");

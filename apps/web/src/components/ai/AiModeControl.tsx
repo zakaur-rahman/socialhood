@@ -92,13 +92,6 @@ export function useConversationAiMode(conversation: Conversation) {
   };
 }
 
-/**
- * The AI pill's colours on a ghost Button: `brand-soft` with `brand-fg` text and a `brand-line`
- * edge, a stronger tint on hover and while its menu is open. Button has no brand-soft variant yet.
- */
-const AI_TRIGGER =
-  "border-brand-line bg-brand-soft text-brand-fg hover:bg-brand/25 hover:text-brand-fg aria-expanded:bg-brand/25 aria-expanded:text-brand-fg";
-
 function defaultLabel(accountMode: AiMode | null): string {
   return accountMode ? `Account default · ${AI_MODE_LABEL[accountMode]}` : "Account default";
 }
@@ -146,9 +139,9 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
       {/* Menus aren't modal (ui/dropdown-menu), so the Auto confirmation can open from this one. */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          {/* The AI pill (brand-soft, DESIGN_SYSTEM §1.4) on Button: 28 px, 40 px on coarse pointers. */}
+          {/* The AI pill: the soft Button (brand-soft, DESIGN_SYSTEM §1.4), 28 px, 40 px on coarse pointers. */}
           <Button
-            variant="ghost"
+            variant="soft"
             size="sm"
             aria-label={`AI mode: ${label}. Change`}
             title={
@@ -156,7 +149,6 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
                 ? `${defaultLabel(control.accountMode)}. Change it for this conversation`
                 : "Set for this conversation. Change"
             }
-            className={AI_TRIGGER}
           >
             <Sparkles aria-hidden />
             <span className="hidden @xl/header:inline">AI: {label}</span>

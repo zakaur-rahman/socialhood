@@ -374,12 +374,12 @@ export function Composer({
               />
             </>
           ) : null}
-          {/* Empty, it says why it's off (DisabledReason); while it works it is busy, with no reason to give. */}
+          {/* An AI action: the soft Button. Empty, it says why it's off (DisabledReason) and is dimmed like
+              any disabled control; while it works it is busy, with no reason to give. */}
           <DisabledReason reason={draft.trim() === "" ? "Write a reply to polish" : null} className="ml-1">
             <Button
-              variant="ghost"
+              variant="soft"
               size="sm"
-              className="border-brand-line text-brand-fg hover:bg-brand-soft disabled:border-line disabled:text-fg-disabled"
               disabled={draft.trim() === "" || polish.isPending}
               title={draft.trim() === "" ? undefined : "Fix grammar and clarity, in the same language (1 AI credit)"}
               onClick={polishDraft}

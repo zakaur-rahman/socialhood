@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
@@ -147,6 +147,21 @@ describe("ThreadHeader (UX-INB-05)", () => {
   it("the panel toggle shows whether the panel is open", () => {
     renderHeader({}, { detailsOpen: true });
     expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  // Pressed, the toggle is the soft Button (C-073), so hovering it keeps the brand look; closed, a ghost one.
+  it("draws the open panel's toggle as the soft Button and the closed one as ghost", () => {
+    renderHeader({}, { detailsOpen: true });
+    const pressed = screen.getByRole("button", { name: "Details" });
+    expect(pressed).toHaveAttribute("data-variant", "soft");
+    expect(pressed).toHaveClass("bg-brand-soft", "text-brand-fg", "hover:bg-brand-soft-hover");
+    expect(pressed).not.toHaveClass("hover:bg-hover");
+    cleanup();
+    renderHeader({}, { detailsOpen: false });
+    const closed = screen.getByRole("button", { name: "Details" });
+    expect(closed).toHaveAttribute("data-variant", "ghost");
+    expect(closed).toHaveAttribute("aria-pressed", "false");
+    expect(closed).not.toHaveClass("bg-brand-soft");
   });
 
   it("toggles details and schedules", async () => {

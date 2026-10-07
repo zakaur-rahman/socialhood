@@ -36,6 +36,7 @@ export const colorTokens: ColorToken[] = [
   { name: "brand-deep", value: "#20338A", use: "Gradient start", swatch: "bg-brand-deep" },
   { name: "brand-fg", value: "#9DB5FF", use: "Brand-coloured text and icons on dark", swatch: "bg-brand-fg" },
   { name: "brand-soft", value: "rgb(86 127 248 / 0.15)", use: "Soft brand fills; the info tone", swatch: "bg-brand-soft" },
+  { name: "brand-soft-hover", value: "rgb(86 127 248 / 0.25)", use: "Hover and open on brand-soft: the soft button (C-073)", swatch: "bg-brand-soft-hover" },
   { name: "brand-line", value: "rgb(86 127 248 / 0.35)", use: "Brand borders", swatch: "bg-brand-line" },
   { name: "shell-1", value: "#3352CC", use: "Logo tile and upgrade button", swatch: "bg-shell-1" },
   { name: "shell-2", value: "#1C2D70", use: "Logo tile and upgrade button", swatch: "bg-shell-2" },
@@ -196,11 +197,28 @@ export const breakpoints = [
   { name: "wide", value: "90rem", px: 1440, use: "Inbox details open by default; schedule rail inline", custom: true },
 ] as const;
 
+/**
+ * Variants defined in globals.css besides Tailwind's own (`dark` stays for library code, C-002).
+ * `short` names the one viewport-height condition, so no call site writes the media query.
+ */
+export const customVariants = [
+  {
+    name: "short",
+    value: "@media (max-height: 500px)",
+    use: "Short viewports (200% zoom, a landscape phone): sticky bars stay in the flow, their text on one line",
+  },
+] as const;
+
 /** Other utilities defined in globals.css. */
 export const otherUtilities = [
   {
     name: "mask-fade-x",
     value: "mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent)",
     use: "A row that scrolls sideways: its trailing 1rem fades; pair with pe-4",
+  },
+  {
+    name: "shadow-crop-mask",
+    value: "box-shadow: 0 0 0 9999px color-mix(in srgb, var(--color-media-scrim) 60%, transparent)",
+    use: "The crop box: dims the photo outside it (media-scrim 60%); its container clips. Not an elevation",
   },
 ] as const;

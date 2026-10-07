@@ -7,6 +7,7 @@ import {
   EYEBROW,
   breakpoints,
   colorTokens,
+  customVariants,
   easings,
   fontSizes,
   gradientUtilities,
@@ -137,6 +138,26 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
 
   it.each(otherUtilities)("defines the $name utility", ({ name, value }) => {
     expect(css).toContain(`@utility ${name} { ${value}; }`);
+  });
+
+  it("names the crop mask instead of an arbitrary shadow: a token colour, not an elevation (C-073)", () => {
+    const mask = otherUtilities.find((u) => u.name === "shadow-crop-mask")!;
+    expect(mask.value).toContain("var(--color-media-scrim) 60%");
+    expect(mask.value).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
+    // Elevation stays two shadows in @theme; the mask is a utility of its own.
+    expect(css).not.toMatch(/--shadow-crop-mask/);
+    expect(shadowTokens.map((s) => s.name)).not.toContain("shadow-crop-mask");
+  });
+
+  it.each(customVariants)("defines the $name variant as $value", ({ name, value }) => {
+    expect(css).toContain(`@custom-variant ${name} (${value});`);
+  });
+
+  it("adds the brand-soft hover step between brand-soft and brand-line (C-073)", () => {
+    const alpha = (name: string) => Number(declared(name)?.match(/\/ ([\d.]+)\)$/)?.[1]);
+    expect(declared("brand-soft-hover")).toBe("rgb(86 127 248 / 0.25)");
+    expect(alpha("brand-soft")).toBeLessThan(alpha("brand-soft-hover"));
+    expect(alpha("brand-soft-hover")).toBeLessThan(alpha("brand-line"));
   });
 
   it("sets the base-layer rules: bold is 600, the phone top bar's scroll padding, the reduced-motion net", () => {

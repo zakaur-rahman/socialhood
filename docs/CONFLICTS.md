@@ -1369,3 +1369,67 @@ at 375 and 1280 px, and checked against the token values by `identity.test.ts`):
   pair, so one in three contact avatars matches the primary button's colours.
 - **Also:** the Avatar primitive's default fallback fill is `raised` (was shadcn's `muted`, the
   field colour, 1.02:1 on panel), like Skeleton.
+
+## C-073 · Primitive follow-ups: the soft Button, a 40 px segment, date and time focus, `short:` and the crop mask (DSA, feature/ui-primitives-followups)
+Five follow-ups from the Wave-3 sweeps (UI-030, UI-032), decided by the Design System Architect
+and recorded in `docs/ui-audit/DESIGN_SYSTEM.md`. The values are marked "C-073" in
+`apps/web/src/styles/globals.css`, mirrored in `styles/tokens.ts`, checked by `tokens.test.ts` and
+shown on `/dev/tokens`. Measured in Chromium on the e2e stack at 375 and 1280 px (and 320, 360,
+640, 768 and 1024 where widths matter).
+- **Button `variant="soft"` (a change on screen).** The AI trigger, AI Polish and the inbox details
+  toggle each pasted brand-soft classes onto a ghost Button; DESIGN_SYSTEM §8.1 adds a variant for
+  a repeated need instead. `soft` is the AI pill's look (§1.4) and the selected chip's colours
+  (§8.3): `bg-brand-soft text-brand-fg border-brand-line`, `brand-soft-hover` on hover and while
+  its menu is open (`aria-expanded`), the global focus outline, and the primitive's disabled rule
+  (`opacity-50`). It is for AI actions and for a toggle Button while it is pressed.
+  - **Token (an addition):** `brand-soft-hover`, brand at 25%, the value the AI trigger's hover
+    already used (`bg-brand/25`, since P5). It sits between `brand-soft` (15%) and `brand-line`
+    (35%), as `raised-hover` sits above `raised`.
+  - **Contrast:** `brand-fg` text 6.80:1 at rest and 5.86:1 on hover or open over panel (the
+    header); 5.94:1 and 5.17:1 over the focused composer (`raised`).
+  - **AI trigger:** no visible change (same pixels; the hover value is now a token).
+  - **AI Polish:** it was a transparent button with a `brand-line` edge, and its own grey disabled
+    look (`border-line`, `fg-disabled`). Now it has the brand-soft fill at rest, and while the
+    reply is empty it is the dimmed soft button (opacity 50%), like every disabled control.
+  - **Details toggle:** pressed, it also gets the `brand-line` edge, and hovering it keeps the
+    brand look (it turned white 5% with white text).
+- **ToggleGroup and Tabs `size="xl"` (an addition, adopted by UI-036).** C-066's 40 px settings
+  controls, named on the one ladder (Input, Button and Select call 40 px `xl`; their `lg` is 36),
+  not `lg` as first suggested.
+  - **Segment:** 40 px tall with 14 px control text (`min-h-10 py-2.5 text-sm`). The track's
+    4 px inset makes the control 48 px outside, which is what Settings › AI's takeover choice
+    renders today.
+  - **Side padding 8 px, not 10:** segments stretch, so this is only a minimum. Settings › AI's
+    "Off | Suggest | Auto Pro" needs a 214 px inner track at 14 px with 10 px padding. Its
+    narrowest track is 220 px (212 inside) on a 320 px screen, where "Auto Pro" ran 2.1 px past
+    the inset (the "didn't fit at `text-sm`" from UI-030). At 8 px it fits there with 9.9 px to
+    spare; at 360 px and up there is room either way.
+  - **Once UI-036 adopts it:** the per-account modes go from 36 px segments at 12 px to 40 px at
+    14 px (a 44 → 48 px track); the takeover choice looks the same.
+  - **Lining up:** a segmented control in a row beside 40 px fields (the Connections and Agent
+    filters next to their searches) uses `default`, whose track is 40 px outside, so the edges
+    line up.
+- **Native date and time fields show focus at every Tab stop (a change on screen; DESIGN_SYSTEM
+  §8.3, WCAG 2.4.7).**
+  - **The problem:** while the calendar or clock button inside the field has focus, Chromium
+    leaves the field matching neither `:focus` nor `:focus-visible`, only `:focus-within`. So that
+    stop had no outline and a resting field (`line-control` edge, `field` fill).
+  - **The fix:** Input draws the same look from `:focus-within` for `date`, `time`,
+    `datetime-local`, `month` and `week`: the 2 px `ring` outline offset 2 px, the `ring` border
+    and the `raised` fill. The browser still rings the button itself.
+  - **The composer's date and time:** 7 stops (3 date segments and the calendar button, 2 time
+    segments and the clock button). Before, 2 showed no focus; after, none. The outline is 4.54:1
+    on panel. Every native date and time field is on Input already (ScheduleFields,
+    MediaLibraryDialog, RangeControl, SettingsStep, PostingTimesDrawer).
+- **`short:` variant (an addition, no visible change):** `@custom-variant short (@media
+  (max-height: 500px))`. It replaces `[@media(max-height:500px)]:` in `shell/sticky-bar.ts`
+  (`STATIC_WHEN_SHORT`, so the settings save bar, the composer's bar and the phone top bar) and
+  PostComposer's one-line reasons. At 640 × 450 the composer's bar (85 px, 18.9% of the height)
+  and the top bar are static, nothing is reserved, and the reasons are one truncated line. At
+  640 × 800 both stick again (85 px reserved).
+- **`shadow-crop-mask` utility (an addition, the same pixels):** CropDialog's arbitrary
+  `shadow-[0_0_0_9999px_…]` becomes a named `@utility` (DESIGN_SYSTEM §6: box-shadow for another
+  job than elevation, named in `globals.css`). Its colour is `media-scrim` at 60% (it dims a photo,
+  so it stays dark in any theme), not `canvas`, the same black today: computed
+  `color(srgb 0 0 0 / 0.6) 0 0 0 9999px`. It is a utility, not a `--shadow-*` token, so elevation
+  keeps its two shadows. `cn` treats it as a shadow size, like `shadow-floating`.

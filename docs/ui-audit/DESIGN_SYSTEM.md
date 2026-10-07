@@ -99,8 +99,9 @@ theme swaps it with them.
 | `brand-strong` | `#4467E6` | Solid brand fills that carry text or a glyph: a filled segment, the skip link, Clerk's primary, `--primary`; the gradient's end stop | **Add** (an existing value: white on it is 4.85:1) |
 | `brand-deep` | `#20338A` | Gradient start | Keep |
 | `brand-fg` | `#9DB5FF` | Brand text and icons on dark: links, active segment text, AI labels; an identity ring (§1.7) | Keep |
-| `brand-soft` | brand 15% | Chips, the AI pill, selected cards; the **info** tone | Keep |
-| `brand-line` | brand 35% | Brand borders (active filter chip) | Keep |
+| `brand-soft` | brand 15% | Chips, the AI pill, selected cards; the **info** tone; the `soft` Button | Keep |
+| `brand-soft-hover` | brand 25% | Hover and open on a `brand-soft` control: the `soft` Button (as `raised-hover` is to `raised`) | **Add** (the AI trigger's existing hover, C-073) |
+| `brand-line` | brand 35% | Brand borders (active filter chip, the `soft` Button's edge) | Keep |
 | `shell-1`, `shell-2` | `#3352CC`, `#1C2D70` | The logo tile and Upgrade (UX-SH-01; `bg-shell-gradient` stays theirs); one identity pair (§1.7, D-13) | Keep (scoped) |
 
 ### 1.5 Status
@@ -195,6 +196,7 @@ composited on their real surface.
 | `fg` on canvas / panel / field / overlay / raised | 21.0 / 16.5 / 16.9 / 15.1 / 14.4 | Primary text |
 | `fg-secondary` on canvas / panel / field / overlay / raised / raised-hover | 7.66 / 6.01 / 6.15 / 5.52 / 5.23 / 4.61 | Secondary text, placeholders (D-06) |
 | `brand-fg` on panel / overlay / raised / brand-soft over panel | 8.23 / 7.56 / 7.17 / 6.83 | Links, active segments, chips |
+| `brand-fg` on brand-soft-hover over panel; brand-soft / brand-soft-hover over raised | 5.86; 5.94 / 5.17 | The `soft` Button on hover or open; in a focused composer (C-073) |
 | `on-brand` on gradient start / end, `brand-strong`, `danger-fill`, `instagram` | 11.04 / 4.85 / 4.85 / 5.47 / 6.04 | Buttons, bubbles, badges |
 | `danger-fg` on panel / danger-soft over panel | 8.68 / 7.42 | Errors |
 | `warning`, `success` on panel / on their soft fill | 7.28, 7.23 / 5.56, 5.57 | Status text |
@@ -263,6 +265,14 @@ The owner's decisions, applied by UI-018 (C-071):
 
 The 1 px `line` edge first drafted inside the two shadows is drawn beside them, as `ring-1 ring-line`
 (a sheet: its side border), so a call site's leftover `shadow-xl` replaces only the shadow (C-071).
+
+The primitives' follow-ups (C-073), additions with no new pixel except where C-073 says:
+
+```css
+@custom-variant short (@media (max-height: 500px));          /* short viewports: sticky bars stay in the flow */
+@theme { --color-brand-soft-hover: rgb(86 127 248 / 0.25); }  /* the soft Button's hover and open */
+@utility shadow-crop-mask { box-shadow: 0 0 0 9999px color-mix(in srgb, var(--color-media-scrim) 60%, transparent); }
+```
 
 Motion durations, the reduced-motion safety net and the base-layer rules are in §2 and §7.
 
@@ -410,7 +420,9 @@ get one.
   re-render on every animation frame and does nothing behind a 60% scrim or a 95% surface). The
   marketing site header's blur is the one exception (intentional, with a fallback).
 - **Elevation belongs to the primitive.** No call-site `shadow-*` or `bg-panel` on overlay content.
-- **`box-shadow` for other jobs** (the crop mask) only as a named utility in `globals.css`.
+- **`box-shadow` for other jobs** only as a named utility in `globals.css`: the crop box's
+  `shadow-crop-mask` (`media-scrim` at 60%, clipped by its stage; C-073). Not a `--shadow-*` token,
+  so elevation keeps its two shadows.
 
 ---
 
@@ -494,10 +506,10 @@ and one safety net in `globals.css`:
 
 | Family | Canonical | Variants and props | Replaces (source) | Status |
 |---|---|---|---|---|
-| Button | `ui/button` | `variant`: **`default` = primary** (brand gradient, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`) · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16) | Change |
+| Button | `ui/button` | `variant`: **`default` = primary** (brand gradient, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `soft` (`brand-soft`, `brand-fg`, `brand-line` edge; `brand-soft-hover` on hover and open: AI actions such as the AI pill and AI Polish, and a toggle while pressed; C-073), `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`) · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16), brand-soft classes on ghost (C-073) | Change |
 | Disabled reason | `ui/disabled-reason` (focusable wrapper with Tooltip and `sr-only` text) | `reason` | `title` on disabled controls (CMP-010) | Add |
 | Spinner | `ui/spinner` | `size` | 36 `Loader2`/`LoaderCircle` with mixed rules (MOT-006) | Add |
-| Text field | `ui/input` | `size` (`sm`, `default`, `lg`, `xl`); native `type="date"`/`"time"` allowed (D-04) | 17 raw inputs; two looks (CMP-011) | Change |
+| Text field | `ui/input` | `size` (`sm`, `default`, `lg`, `xl`); native `type="date"`/`"time"` allowed (D-04), focused at every stop, the picker button included (§8.3, C-073) | 17 raw inputs; two looks (CMP-011) | Change |
 | Textarea | `ui/textarea` | — | 5 raw textareas (composers may keep a wrapper, focus per §8.3) | Change |
 | Select | `ui/select` | trigger `size` like Input | the native `<select>` in PostPreview | Change |
 | Checkbox | `ui/checkbox` | checked, unchecked, **indeterminate** (minus icon, filled) | (CMP-027) | Change |
@@ -505,8 +517,8 @@ and one safety net in `globals.css`:
 | Field | `ui/field` (shadcn Field: `Field`, `FieldLabel`, `FieldDescription`, `FieldError`) | `density`: `default`, `compact`; generates ids, `aria-describedby`, `aria-invalid` | 3 private `Field`s, hand-wired labels (D10) | Add |
 | Search | `ui/search-input` (on Input) | Escape clears | 6 implementations (D11) | Add |
 | Chip-list input | `ui/chip-input` | validation and counter props | ChipListInput, KeywordInput, PhraseChips (D12) | Add |
-| Segmented control | `ui/toggle-group` | `variant`: `segmented`, `chips` · `type`: `single`, `multiple` · `size`: `sm`, `default` | PlatformStrip, filter chips ×5 (D3, D4) | Change |
-| Tabs (swap panels) | `ui/tabs` | `size` like ToggleGroup | the inbox's hand-rolled tablist | Change |
+| Segmented control | `ui/toggle-group` | `variant`: `segmented`, `chips` · `type`: `single`, `multiple` · `size`: `sm`, `default`, `xl` (settings forms, C-073) | PlatformStrip, filter chips ×5 (D3, D4), settings' `min-h-9`/`min-h-10` segments | Change |
+| Tabs (swap panels) | `ui/tabs` | `size` like ToggleGroup (`sm`, `default`, `xl`) | the inbox's hand-rolled tablist | Change |
 | Dialog | `ui/dialog` | `size`: `sm`, `md`, `lg`, `xl`; title `text-base font-semibold` (`lg` dialogs `text-lg`); scrolls within `100dvh − 2rem` | 4 title styles, per-dialog `max-h` (CMP-024) | Change |
 | Alert dialog | `ui/alert-dialog` | confirm uses Button `destructive` or `default` | popover confirm (ScheduledList) | Change |
 | Sheet | `ui/sheet` | `side`; **`size="panel"`** (full screen below `md`, fixed width above) | AskPanel and run detail on `DialogPrimitive` (D13) | Change |
@@ -530,8 +542,8 @@ and one safety net in `globals.css`:
 |---|---|
 | **Hover** | Neutral controls and rows `bg-hover`; on `raised`, `bg-raised-hover`; primary `brightness-110`; destructive `danger-fill/90`; links underline. Tailwind 4's `hover:` already applies only to devices that hover. |
 | **Pressed / open** | `bg-pressed` for `aria-expanded` and `data-state=open`; primary `active:brightness-95`. |
-| **Focus** | One recipe: the global `:focus-visible` outline (2 px `ring`, offset 2 px). Primitives don't remove it (`outline-none`, `outline-hidden`) and don't add a ring halo. Inside clipping containers (menu items, segmented tracks, scrolling rows) the outline is inset: `focus-visible:-outline-offset-2`. Text fields also turn their border `ring`. A wrapper whose inner element takes focus (the composers) shows the outline with `has-[:focus-visible]:`. A soft halo is allowed only beside the outline, never instead of it. |
-| **Selected** | Rows and nav: `bg-raised` + the selection bar, `aria-current`. Segments: `bg-raised text-brand-fg`, `aria-pressed`/`aria-selected`. Chips: `bg-brand-soft text-brand-fg border-brand-line`. Tiles: 2 px `brand` border. |
+| **Focus** | One recipe: the global `:focus-visible` outline (2 px `ring`, offset 2 px). Primitives don't remove it (`outline-none`, `outline-hidden`) and don't add a ring halo. Inside clipping containers (menu items, segmented tracks, scrolling rows) the outline is inset: `focus-visible:-outline-offset-2`. Text fields also turn their border `ring`. A wrapper whose inner element takes focus (the composers) shows the outline with `has-[:focus-visible]:`. Native date and time fields hold a picker button that takes focus while the field matches only `:focus-within`, so Input draws the same outline, `ring` border and `raised` fill from `focus-within:` for those types (C-073). A soft halo is allowed only beside the outline, never instead of it. |
+| **Selected** | Rows and nav: `bg-raised` + the selection bar, `aria-current`. Segments: `bg-raised text-brand-fg`, `aria-pressed`/`aria-selected`. Chips: `bg-brand-soft text-brand-fg border-brand-line`. A toggle Button while pressed (`aria-pressed`): `variant="soft"`, the chip's colours. Tiles: 2 px `brand` border. |
 | **Disabled** | `opacity-50`. A control disabled for a reason is wrapped in `DisabledReason`. Exception: the composers' Send while empty keeps UX-INB-07's neutral look (`bg-raised text-fg-disabled`), as a Button state, not hand-rolled. |
 | **Loading** | Buttons: `loading` (Spinner, `aria-busy`, disabled, width kept). Lists and cards: skeletons shaped like the content. Pages: PageSkeleton inside the shell. |
 | **Invalid** | `aria-invalid` → `border-danger`; the message `text-xs text-danger-fg` linked by Field through `aria-describedby`. |
@@ -546,8 +558,14 @@ and one safety net in `globals.css`:
 | `sm` | 28 px | 40 px | Card-footer actions, compact toolbars, list-header controls |
 | `default` | 32 px | 40 px | Most buttons, inputs, select triggers, segment items |
 | `lg` | 36 px | 40 px | Primary page actions, larger forms |
-| `xl` | 40 px | 40 px | Settings forms (C-066: "controls are 40 px tall there"), the composer's Send on phones |
+| `xl` | 40 px | 40 px | Settings forms (C-066: "controls are 40 px tall there"), including their segmented controls and tabs; the composer's Send on phones |
 
+- **Segmented controls and tabs:** the ladder sizes the segment, the hit target; the track adds
+  its 4 px inset, so a `default` control is 40 px outside and an `xl` one 48 px. `xl` segments
+  keep the 14 px control text with an 8 px minimum side padding (segments stretch), so Settings ›
+  AI's "Off | Suggest | Auto Pro" fits its narrowest track, 220 px on a 320 px screen. A segmented
+  control in a row beside 40 px fields (a filter next to a search) uses `default`, so the outer
+  edges line up (C-073).
 - **Coarse pointers get 40 px everywhere** (`pointer-coarse:min-h-10`, icon sizes
   `pointer-coarse:size-10`), inside the primitives. Not `md:`: tablets and touch laptops above
   768 px need it too, and a narrow desktop window doesn't.
@@ -586,7 +604,8 @@ and one safety net in `globals.css`:
 - **Full-height frames** are flex children (`flex-1 min-h-0`) of a full-height `<main>`, not
   `calc(100dvh − n)`, so banners don't push content off-screen. `dvh` units for the shell.
 - **Sticky bars:** pages set scroll padding for their sticky bars; bars become static on short
-  viewports (`max-height: 500px`).
+  viewports through the `short:` variant (`max-height: 500px`; `STATIC_WHEN_SHORT` in
+  `shell/sticky-bar.ts`), never a written media query (C-073).
 - **Overlays:** dialogs scroll within `100dvh − 2rem`; sheets and panels are full-screen below `md`;
   toasts are top-centre below `md`, bottom-right above.
 - **Scrolling rows** (chips, tabs) have an edge-fade mask and stay keyboard-reachable; wrap onto two
@@ -654,6 +673,8 @@ Where the audits proposed different values or patterns, one was chosen.
 | Small-button radius | `rounded-lg` everywhere (RAD-005), spec `rounded-md` | `rounded-md` for small sizes | The spec's value and today's rendered 6 px; only the `min()` expression goes |
 | `--radius` | delete or wire (RAD-005) | keep, commented as inert | It is in UX-TOK-01's "exactly as below" file; nothing reads it |
 | Field heights | 32 (today), 36 (CMP-011), 40 (C-066) | the Button ladder, `size` prop | One ladder for every control |
+| Brand-soft buttons (C-073) | brand-soft classes on ghost at three call sites (UI-030), a `soft` variant | `variant="soft"` with a `brand-soft-hover` token | A look repeated at three sites belongs in the primitive (§8.1); the hover is the AI trigger's existing brand 25%, named so a light theme can swap it |
+| Settings segment size (C-073) | `lg` 40 px (the follow-up list), `xl` | `xl`: 40 px segments at 14 px | `lg` is 36 px on Input, Button and Select; one name per height. 12 px text was the other way to fit "Auto Pro", but `xl` controls use the control text |
 
 ---
 

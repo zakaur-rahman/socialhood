@@ -12,8 +12,10 @@ import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
  * - the chosen segment is `bg-raised` with `brand-fg` text (no shadow: it does nothing on dark);
  * - focus is the global outline, drawn inset because the track clips (§8.3);
  * - labels stay on one line ("30 days", "Action needed");
- * - heights follow the control ladder on fine pointers (`sm` 28, `default` 32) and are at least
- *   40 px on coarse pointers, whatever the viewport width;
+ * - heights follow the control ladder on fine pointers (`sm` 28, `default` 32, `xl` 40) and are at
+ *   least 40 px on coarse pointers, whatever the viewport width. The ladder sizes the segment (the
+ *   hit target); the track adds 8 px around it, so a `default` control is 40 px outside and an `xl`
+ *   one 48 px;
  * - a disabled segment takes no pointer events, like Button: hover, click and tap fall through to
  *   a DisabledReason wrapper around it, which says why (a disabled button swallows the click).
  */
@@ -24,6 +26,11 @@ const segmentVariants = cva(
       size: {
         default: "min-h-8 py-1.5 text-sm",
         sm: "min-h-7 py-1 text-xs",
+        // Settings forms (C-066: their controls are 40 px), with the 14 px control text. Segments
+        // stretch (flex-1), so the side padding is only a minimum: at 8 px, Settings › AI's
+        // "Off | Suggest | Auto Pro" fits its narrowest track (220 px, a 320 px screen) with 9.9 px
+        // to spare, where 10 px ran 2.1 px past the track's inset.
+        xl: "min-h-10 px-2 py-2.5 text-sm",
       },
     },
     defaultVariants: { size: "default" },
@@ -54,7 +61,10 @@ type ToggleGroupBaseProps = Omit<
 > & {
   /** `segmented` (default): a track of segments. `chips`: a row of filter chips that wraps. */
   variant?: ToggleGroupVariant
-  /** Segments only: `sm` is 28 px with 12 px text, for dense headers. */
+  /**
+   * Segments only: `sm` is 28 px with 12 px text, for dense headers; `xl` is 40 px with 14 px text,
+   * for settings forms (C-066).
+   */
   size?: SegmentSize
 }
 
@@ -121,4 +131,4 @@ function ToggleGroupItem({ className, ...props }: React.ComponentProps<typeof To
   )
 }
 
-export { ToggleGroup, ToggleGroupItem, segmentTrackClass, segmentVariants }
+export { ToggleGroup, ToggleGroupItem, segmentTrackClass, segmentVariants, type SegmentSize }
