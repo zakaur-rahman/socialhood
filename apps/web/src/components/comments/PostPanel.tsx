@@ -5,6 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import type { PostDetail, SocialAccount } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
 import { analysingText, formatCount, isAnalysing } from "@/lib/comments/format";
@@ -71,14 +72,16 @@ export function PostPanel({
                 {caption}
               </p>
               {long ? (
-                <button
-                  type="button"
+                <Button
+                  variant="link"
+                  size="xs"
+                  // In line with the caption: no side padding.
+                  className="mt-1 px-0"
                   onClick={() => setExpanded((value) => !value)}
-                  className="mt-1 min-h-10 text-xs text-brand-fg hover:underline md:min-h-0"
                   aria-expanded={expanded}
                 >
                   {expanded ? "Less" : "More"}
-                </button>
+                </Button>
               ) : null}
             </div>
           ) : (
@@ -93,7 +96,7 @@ export function PostPanel({
               href={post.permalink}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex min-h-10 items-center gap-1 text-xs text-brand-fg hover:underline md:min-h-0"
+              className="inline-flex items-center gap-1 text-xs text-brand-fg hover:underline pointer-coarse:min-h-10"
             >
               Open in Instagram <ExternalLink className="size-3" aria-hidden />
             </a>

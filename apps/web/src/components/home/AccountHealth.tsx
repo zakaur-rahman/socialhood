@@ -40,7 +40,7 @@ export function AccountHealth({
       {canManage ? (
         <Link
           href={`/w/${slug}/settings/connections` as Route}
-          className="mt-3 inline-flex min-h-10 items-center gap-1 text-sm font-medium text-brand-fg hover:underline md:min-h-8"
+          className="mt-3 inline-flex min-h-8 items-center gap-1 text-sm font-medium text-brand-fg hover:underline pointer-coarse:min-h-10"
         >
           Open Connections <ChevronRight className="size-4" aria-hidden />
         </Link>

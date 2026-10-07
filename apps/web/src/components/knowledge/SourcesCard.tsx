@@ -1,9 +1,10 @@
 "use client";
 
-import { FileText, Globe, HelpCircle, Loader2, Pencil, Plus, StickyNote, Trash2, type LucideIcon } from "lucide-react";
-import { useState } from "react";
+import { FileText, Globe, HelpCircle, Pencil, Plus, StickyNote, Trash2, type LucideIcon } from "lucide-react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { UsageMeter } from "@/components/billing/UsageMeter";
 import { BILLING_HREF } from "@/components/shell/nav";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -24,13 +25,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { isProcessing, useDeleteKnowledgeSource } from "@/lib/api/queries";
 import type { KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
 import { emptyStates, knowledgeLimitReached } from "@/lib/copy";
-import { TONE_CLASS } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
+import { TONE_CLASS } from "@/lib/ui/tone";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -48,19 +50,30 @@ const count = new Intl.NumberFormat("en-US");
 
 /** UX-SCR-06 "Add knowledge": FAQ, Note, Web page or File, each opening its form in a sheet. */
 export function AddKnowledgeMenu({ onChoose, label = "Add knowledge" }: { onChoose: (type: KnowledgeType) => void; label?: string }) {
+  // The sheet opens once the menu has closed and handed focus back to this button, so the sheet
+  // remembers the button and returns focus to it (UX-A11Y-02). Opened from the item itself, it
+  // remembered nothing (the item was gone) and focus fell to <body> on close.
+  const chosen = useRef<KnowledgeType | null>(null);
   return (
-    // Not modal: the sheet opens from it.
-    <DropdownMenu modal={false}>
+    // Not modal (the menu's default), so the sheet can open from it.
+    <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button className="bg-brand-gradient text-white">
+        <Button>
           <Plus aria-hidden /> {label}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44 border-line bg-panel shadow-xl">
+      <DropdownMenuContent
+        align="end"
+        onCloseAutoFocus={() => {
+          const type = chosen.current;
+          chosen.current = null;
+          if (type) onChoose(type);
+        }}
+      >
         {ADD_ORDER.map((type) => {
           const Icon = TYPE_ICON[type];
           return (
-            <DropdownMenuItem key={type} onSelect={() => onChoose(type)}>
+            <DropdownMenuItem key={type} onSelect={() => (chosen.current = type)}>
               <Icon aria-hidden /> {SOURCE_TYPE_LABEL[type]}
             </DropdownMenuItem>
           );
@@ -70,19 +83,21 @@ export function AddKnowledgeMenu({ onChoose, label = "Add knowledge" }: { onChoo
   );
 }
 
+const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium";
+
 /** FR-KB-02: Processing (with a spinner), Ready, or Failed with the reason. */
-export function StatusChip({ source }: { source: KnowledgeSource }) {
+export function StatusChip({ source, className }: { source: KnowledgeSource; className?: string }) {
   if (isProcessing(source)) {
     return (
-      <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.brand)}>
-        <Loader2 className="size-3 animate-spin" aria-hidden /> Processing
+      <span className={cn(CHIP, TONE_CLASS.brand, className)}>
+        <Spinner size="xs" /> Processing
       </span>
     );
   }
   if (source.status === "failed") {
-    return <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.danger)}>Failed</span>;
+    return <span className={cn(CHIP, TONE_CLASS.danger, className)}>Failed</span>;
   }
-  return <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">Ready</span>;
+  return <span className={cn(CHIP, TONE_CLASS.success, className)}>Ready</span>;
 }
 
 function detail(source: KnowledgeSource): string | null {
@@ -106,6 +121,8 @@ export function SourcesCard({
   const workspace = useCurrentWorkspace();
   const remove = useDeleteKnowledgeSource(workspace.id);
   const [deleting, setDeleting] = useState<KnowledgeSource | null>(null);
+  // The confirmation opens from a row's Delete without a Radix trigger: Cancel or Esc returns focus there.
+  const returnFocus = useReturnFocus();
   const { items, usage } = data;
 
   return (
@@ -142,7 +159,7 @@ export function SourcesCard({
           <TableHeader>
             <TableRow>
               <TableHead>Source</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="hidden md:table-cell">Status</TableHead>
               <TableHead className="hidden text-right sm:table-cell">Characters</TableHead>
               <TableHead className="hidden md:table-cell">Updated</TableHead>
               <TableHead className="text-right">
@@ -156,7 +173,9 @@ export function SourcesCard({
               const sub = detail(source);
               return (
                 <TableRow key={source.id} data-status={source.status}>
-                  {/* The name takes the room the other columns leave, and truncates in it. */}
+                  {/* The name takes the room the other columns leave, and truncates in it. Below 768 px the
+                      status sits under the name, so the name keeps the Status column's 75 px (at 320 px it
+                      had about 35 px beside the status and two 40 px buttons). */}
                   <TableCell className="w-full max-w-0">
                     <div className="flex items-start gap-3">
                       <Icon className="mt-0.5 size-4 shrink-0 text-fg-secondary" aria-hidden />
@@ -166,13 +185,14 @@ export function SourcesCard({
                           {source.title}
                         </p>
                         {sub ? <p className="truncate text-xs text-fg-secondary">{sub}</p> : null}
+                        <StatusChip source={source} className="mt-1 md:hidden" />
                         {source.status === "failed" && source.error ? (
                           <p className="text-xs text-danger-fg">{source.error}</p>
                         ) : null}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <StatusChip source={source} />
                   </TableCell>
                   <TableCell className="hidden text-right sm:table-cell">
@@ -194,17 +214,15 @@ export function SourcesCard({
                     <div className="flex justify-end gap-1">
                       <Button
                         variant="ghost"
-                        size="icon-lg"
-                        className="size-10 md:size-8"
+                        size="icon"
                         aria-label={`Edit ${source.title}`}
                         onClick={() => onEdit(source)}
                       >
                         <Pencil aria-hidden />
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="icon-lg"
-                        className="size-10 text-danger-fg hover:text-danger-fg md:size-8"
+                        variant="destructive-ghost"
+                        size="icon"
                         aria-label={`Delete ${source.title}`}
                         disabled={remove.isPending && remove.variables === source.id}
                         onClick={() => setDeleting(source)}
@@ -221,17 +239,17 @@ export function SourcesCard({
       )}
 
       <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => (open ? undefined : setDeleting(null))}>
-        <AlertDialogContent className="border-line bg-panel">
+        <AlertDialogContent {...returnFocus}>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete “{deleting?.title}”?</AlertDialogTitle>
-            <AlertDialogDescription className="text-fg-secondary">
+            <AlertDialogDescription>
               The AI stops using it right away. This can&apos;t be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-danger-fill text-white hover:bg-danger-fill/90"
+              variant="destructive"
               onClick={() => {
                 const source = deleting;
                 if (!source) return;

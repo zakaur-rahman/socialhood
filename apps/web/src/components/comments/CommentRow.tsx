@@ -31,9 +31,12 @@ import { cn } from "@/lib/utils";
 
 import { CommentComposer, type ComposerKind } from "./CommentComposer";
 
-const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium";
-/** Always visible (UX-A11Y-02); 40 px targets on phones (UX-A11Y-05). */
-const ACTION = "min-h-10 px-2.5 text-fg-secondary hover:text-fg md:min-h-7";
+const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium";
+/**
+ * Always visible (UX-A11Y-02); `sm` Buttons, so 28 px with a mouse and 40 px on touch (UX-A11Y-05).
+ * While its composer is open, Reply or DM shows the ghost Button's open state (`aria-expanded`).
+ */
+const ACTION = "text-fg-secondary";
 
 function when(iso: string, now: Date): string {
   const relative = relativeTime(iso, now);
@@ -183,7 +186,7 @@ export function CommentRow({
           <Button
             variant="ghost"
             size="sm"
-            className={cn(ACTION, composer === "reply" && "text-brand-fg")}
+            className={ACTION}
             aria-label={`Reply to ${name}`}
             aria-expanded={composer === "reply"}
             onClick={() => open("reply")}
@@ -200,7 +203,7 @@ export function CommentRow({
             <Button
               variant="ghost"
               size="sm"
-              className={cn(ACTION, composer === "dm" && "text-brand-fg")}
+              className={ACTION}
               aria-label={`DM ${name}`}
               aria-expanded={composer === "dm"}
               onClick={() => open("dm")}
@@ -223,26 +226,25 @@ export function CommentRow({
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="destructive-ghost"
                   size="sm"
-                  className={cn(ACTION, "hover:text-danger-fg")}
                   aria-label={`Delete ${name}'s comment`}
                   disabled={remove.isPending}
                 >
                   <Trash2 aria-hidden /> Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent className="border-line bg-panel">
+              <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
-                  <AlertDialogDescription className="text-fg-secondary">
+                  <AlertDialogDescription>
                     It&apos;s deleted on Instagram for everyone, {handle} included. This can&apos;t be undone. To keep it
                     but stop others seeing it, hide it instead.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={confirmDelete} className="bg-danger-fill text-white hover:bg-danger-fill/90">
+                  <AlertDialogAction variant="destructive" onClick={confirmDelete}>
                     Delete comment
                   </AlertDialogAction>
                 </AlertDialogFooter>

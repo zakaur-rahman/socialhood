@@ -48,15 +48,15 @@ export function TestBox({ wid }: { wid: string }) {
           placeholder="Do you ship to Dubai?"
           autoComplete="off"
         />
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={!question.trim() || test.isPending}>
+        <Button type="submit" disabled={!question.trim() || test.isPending}>
           {test.isPending ? "Asking…" : "Ask"}
         </Button>
       </form>
       <div aria-live="polite" className="mt-3 empty:hidden">
         {test.isPending ? (
           <div className="space-y-2" aria-busy="true">
-            <Skeleton className="h-3 w-full bg-raised" />
-            <Skeleton className="h-3 w-4/5 bg-raised" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-4/5" />
           </div>
         ) : test.isError ? (
           <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-danger-fg">
@@ -74,7 +74,7 @@ export function TestBox({ wid }: { wid: string }) {
               {result.sources.length > 0 ? (
                 <ul aria-label="Sources used" className="flex flex-wrap gap-1">
                   {result.sources.map((source) => (
-                    <li key={source.id} className={cn("rounded-full px-2 py-0.5 text-[11px]", TONE_CLASS.neutral)}>
+                    <li key={source.id} className={cn("rounded-full px-2 py-0.5 text-2xs", TONE_CLASS.neutral)}>
                       From: {source.title}
                     </li>
                   ))}
