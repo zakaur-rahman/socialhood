@@ -68,6 +68,40 @@ describe("Composer (UX-INB-07)", () => {
     expect(textbox().value).toBe("");
   });
 
+  // UI-030: Send is the Button primitive (32 px, 40 px on coarse pointers). Empty, it is a disabled
+  // secondary Button that keeps UX-INB-07's neutral look at full opacity (DESIGN_SYSTEM §8.3); with
+  // something to send, the primary (gradient) Button with the scale-in.
+  it("Send: neutral and disabled while empty, the primary Button once there is text", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toHaveAttribute("data-slot", "button");
+    expect(send).toHaveAttribute("data-size", "default");
+    expect(send).toHaveAttribute("data-variant", "secondary");
+    expect(send).toHaveClass("bg-raised", "disabled:text-fg-disabled", "disabled:opacity-100", "pointer-coarse:min-h-10");
+    expect(send).not.toHaveClass("disabled:opacity-50");
+
+    await user.type(textbox(), "Yes");
+    expect(send).toBeEnabled();
+    expect(send).toHaveAttribute("data-variant", "default");
+    expect(send).toHaveClass("bg-brand-gradient", "text-on-brand", "motion-safe:animate-in", "motion-safe:zoom-in-95");
+    expect(send).not.toHaveClass("disabled:opacity-100");
+  });
+
+  it("the toolbar's icon buttons are the Button's icon size, with no touch patches", () => {
+    renderComposer();
+    for (const name of ["Attach files", "Add emoji", "Send a heart", "Schedule for later"]) {
+      const tool = screen.getByRole("button", { name });
+      expect(tool).toHaveAttribute("data-size", "icon");
+      expect(tool.className).not.toMatch(/md:size-/);
+    }
+  });
+
+  it("the reply box is 16 px on phones, where iOS zooms into smaller text (UI-ISS-017)", () => {
+    renderComposer();
+    expect(textbox()).toHaveClass("text-sm", "max-md:text-base", "focus-visible:outline-none");
+  });
+
   it("grows with the text up to 160 px and resets its height after send", async () => {
     const user = userEvent.setup();
     renderComposer();
@@ -312,6 +346,20 @@ describe("AI Polish (C-063)", () => {
     expect(polish).toBeEnabled();
   });
 
+  // UI-030: a disabled control says why (DisabledReason), to keyboard, touch and screen reader users.
+  it("says why it's off: a focusable reason while the reply is empty, none once there is text", async () => {
+    const user = userEvent.setup();
+    renderWithPolish(() => json({ text: "" }));
+    const polish = screen.getByRole("button", { name: "AI Polish" });
+    const reason = polish.closest('[data-slot="disabled-reason"]') as HTMLElement;
+    expect(reason).toHaveAttribute("tabindex", "0");
+    expect(reason).toHaveAccessibleDescription("Write a reply to polish");
+    await user.type(textbox(), "hi");
+    expect(reason).not.toHaveAttribute("tabindex");
+    expect(reason).not.toHaveAttribute("aria-describedby");
+    expect(polish).toHaveAttribute("title", "Fix grammar and clarity, in the same language (1 AI credit)");
+  });
+
   it("replaces the reply with a spinner while it works, and Undo brings the original back", async () => {
     const user = userEvent.setup();
     let release: (response: Response) => void = () => {};
@@ -321,7 +369,8 @@ describe("AI Polish (C-063)", () => {
     await user.click(screen.getByRole("button", { name: "AI Polish" }));
     const busy = await screen.findByRole("button", { name: "Polishing…" });
     expect(busy).toBeDisabled();
-    expect(busy.querySelector("svg.animate-spin")).not.toBeNull();
+    // The Spinner primitive: it spins only when motion is allowed (UI-030; was a bare animate-spin).
+    expect(busy.querySelector('svg[data-slot="spinner"]')).toHaveClass("motion-safe:animate-spin");
     expect(calls.find((c) => c.path === "/v1/w/w1/conversations/c1/polish")?.body).toEqual({
       text: "haan ji cake ready hai kal tak",
     });

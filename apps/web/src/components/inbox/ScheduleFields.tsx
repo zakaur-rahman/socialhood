@@ -1,5 +1,6 @@
 "use client";
 
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatDayTime, toZonedInputs, zonedToDate } from "@/lib/tz";
 
@@ -75,8 +76,8 @@ export function ScheduleFields({
 }) {
   const minDay = toZonedInputs(limits.min, timeZone).date;
   const maxDay = limits.max ? toZonedInputs(limits.max, timeZone).date : undefined;
-  const inputClass =
-    "w-full rounded-lg border border-line bg-field px-3 py-2 text-sm focus:bg-raised aria-invalid:border-danger";
+  // Native date and time pickers through Input (D-04): its edge, focus, 16 px text on phones and
+  // 40 px on coarse pointers; `lg` (36 px) is the closest to the old 38 px fields.
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
@@ -84,28 +85,28 @@ export function ScheduleFields({
           <Label htmlFor={`${idPrefix}-date`} className="text-xs text-fg-secondary">
             Date
           </Label>
-          <input
+          <Input
             id={`${idPrefix}-date`}
             type="date"
+            size="lg"
             value={value.date}
             min={minDay}
             max={maxDay}
             aria-invalid={Boolean(error)}
             onChange={(event) => onChange({ ...value, date: event.target.value })}
-            className={inputClass}
           />
         </div>
         <div className="space-y-1">
           <Label htmlFor={`${idPrefix}-time`} className="text-xs text-fg-secondary">
             Time
           </Label>
-          <input
+          <Input
             id={`${idPrefix}-time`}
             type="time"
+            size="lg"
             value={value.time}
             aria-invalid={Boolean(error)}
             onChange={(event) => onChange({ ...value, time: event.target.value })}
-            className={inputClass}
           />
         </div>
       </div>

@@ -9,7 +9,7 @@ const SIZE = {
   48: { root: "size-12", text: "text-lg", badge: "size-4", glyph: "size-2.5" },
   40: { root: "size-10", text: "text-base", badge: "size-4", glyph: "size-2.5" },
   32: { root: "size-8", text: "text-sm", badge: "size-3.5", glyph: "size-2" },
-  24: { root: "size-6", text: "text-[11px]", badge: "", glyph: "" },
+  24: { root: "size-6", text: "text-2xs", badge: "", glyph: "" },
 } as const;
 
 /**
@@ -52,7 +52,7 @@ export function ContactAvatar({
       {platform && s.badge ? (
         <span
           className={cn(
-            "absolute -right-0.5 -bottom-0.5 grid place-items-center rounded-full border-2 border-panel text-white",
+            "absolute -right-0.5 -bottom-0.5 grid place-items-center rounded-full border-2 border-panel text-on-brand",
             s.badge,
             PLATFORM_BG[platform],
           )}

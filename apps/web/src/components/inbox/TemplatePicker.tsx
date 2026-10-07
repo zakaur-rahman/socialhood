@@ -6,11 +6,13 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWhatsAppTemplates } from "@/lib/api/queries";
 import type { TemplateSend, WhatsAppTemplate } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 /** The body with {{1}}…{{n}} replaced by the values typed so far. */
 export function fillTemplate(body: string, params: string[]): string {
@@ -57,18 +59,16 @@ export function TemplatePicker({
         onOpenChange(value);
       }}
     >
-      <DialogContent className="border-line bg-panel sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Send a template</DialogTitle>
-          <DialogDescription className="text-fg-secondary">
-            WhatsApp only allows approved templates after the 24-hour window.
-          </DialogDescription>
+          <DialogDescription>WhatsApp only allows approved templates after the 24-hour window.</DialogDescription>
         </DialogHeader>
 
         {templates.isPending ? (
           <div className="space-y-2" aria-busy="true" aria-label="Loading templates">
-            <Skeleton className="h-14 w-full bg-raised" />
-            <Skeleton className="h-14 w-full bg-raised" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
           </div>
         ) : templates.isError ? (
           <ErrorState error={templates.error} onRetry={() => void templates.refetch()} />
@@ -110,15 +110,15 @@ export function TemplatePicker({
                     <Label htmlFor={`template-param-${i}`} className="text-xs text-fg-secondary">
                       {`Variable {{${i + 1}}}`}
                     </Label>
-                    <input
+                    <Input
                       id={`template-param-${i}`}
+                      size="lg"
                       value={value}
                       onChange={(event) => setParams(params.map((p, j) => (j === i ? event.target.value : p)))}
-                      className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm focus:bg-raised"
                     />
                   </div>
                 ))}
-                <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">Preview</p>
+                <p className={EYEBROW}>Preview</p>
                 <p className="rounded-lg bg-field p-3 text-sm whitespace-pre-wrap">{fillTemplate(chosen.body, params)}</p>
               </div>
             ) : null}
@@ -130,7 +130,6 @@ export function TemplatePicker({
             Cancel
           </Button>
           <Button
-            className="bg-brand-gradient text-white"
             disabled={!ready}
             onClick={() => {
               if (!chosen) return;

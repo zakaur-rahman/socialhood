@@ -1,10 +1,11 @@
 "use client";
 
-import { AlertTriangle, CornerDownLeft, Loader2, RefreshCw, SendHorizontal, Sparkles, X } from "lucide-react";
+import { AlertTriangle, CornerDownLeft, RefreshCw, SendHorizontal, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import type { Suggestion } from "@/lib/api/types";
 import { sourceChips } from "@/lib/ai/format";
 import { aiCopy } from "@/lib/copy";
@@ -26,10 +27,10 @@ export type SuggestionActions = {
   onAddToKnowledge?: () => void;
 };
 
+/** The bar rises 8 px over `duration-slow` (DESIGN_SYSTEM §7.2: the suggestion bar). */
 const BAR =
-  "mx-4 mb-2 rounded-lg border px-3 py-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-[180ms]";
-const ACTION = "h-9 rounded-md px-2.5 text-xs font-medium md:h-7";
-const META = "max-w-40 truncate rounded px-1.5 text-[11px] leading-[18px]";
+  "mx-4 mb-2 rounded-lg border px-3 py-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-slow motion-safe:ease-enter";
+const META = "max-w-40 truncate rounded-sm px-1.5 text-2xs";
 
 /**
  * UX-INB-08 as a slim bar right above the composer (C-063): the one AI draft ("AI draft: …")
@@ -65,7 +66,7 @@ export function SuggestionCard({
         <div className="flex items-center gap-2">
           <Sparkles className="size-3.5 shrink-0 text-brand-fg" aria-hidden />
           <span className="shrink-0 text-xs font-medium text-brand-fg">AI draft:</span>
-          <Skeleton className="h-3 flex-1 bg-raised" aria-hidden />
+          <Skeleton className="h-3 flex-1" aria-hidden />
         </div>
         <p role="status" className="mt-1 pl-5.5 text-xs text-fg-secondary">
           {aiCopy.drafting}
@@ -87,16 +88,12 @@ export function SuggestionCard({
           <DismissButton onDismiss={actions.onDismiss} disabled={busy} />
         </div>
         <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
-          <Button variant="ghost" className={ACTION} onClick={actions.onWriteReply}>
+          <Button variant="ghost" size="sm" onClick={actions.onWriteReply}>
             Write reply
           </Button>
           {actions.onAddToKnowledge ? (
-            <Button
-              className={cn(ACTION, "bg-brand-gradient text-white")}
-              disabled={addingToKnowledge}
-              onClick={actions.onAddToKnowledge}
-            >
-              {addingToKnowledge ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            <Button size="sm" disabled={addingToKnowledge} onClick={actions.onAddToKnowledge}>
+              {addingToKnowledge ? <Spinner size="sm" /> : null}
               Add to knowledge
             </Button>
           ) : null}
@@ -163,22 +160,22 @@ function ReadyBar({
           </span>
         ) : null}
         <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-          <span className="text-[11px] text-fg-secondary tabular-nums">
+          <span className="text-2xs text-fg-secondary tabular-nums">
             {left > 0 ? `${left} ${left === 1 ? "draft" : "drafts"} left` : "No drafts left"}
           </span>
           <Button
             variant="ghost"
-            className={ACTION}
+            size="sm"
             disabled={left <= 0 || busy}
             title={left <= 0 ? "No more drafts for this message" : "Write a different draft"}
             onClick={actions.onRegenerate}
           >
-            {busy ? <Loader2 className="animate-spin" aria-hidden /> : <RefreshCw aria-hidden />} Draft again
+            {busy ? <Spinner size="sm" /> : <RefreshCw aria-hidden />} Draft again
           </Button>
-          <Button variant="secondary" className={ACTION} title="Put the draft in the reply box to edit" onClick={actions.onEdit}>
+          <Button variant="secondary" size="sm" title="Put the draft in the reply box to edit" onClick={actions.onEdit}>
             <CornerDownLeft aria-hidden /> Insert
           </Button>
-          <Button className={cn(ACTION, "bg-brand-gradient text-white")} disabled={!canSend || !text} onClick={actions.onSend}>
+          <Button size="sm" disabled={!canSend || !text} onClick={actions.onSend}>
             <SendHorizontal aria-hidden /> Send
           </Button>
         </span>
@@ -189,15 +186,17 @@ function ReadyBar({
 
 function DismissButton({ onDismiss, disabled }: { onDismiss: () => void; disabled: boolean }) {
   return (
-    <button
-      type="button"
+    // 28 px, 40 px on coarse pointers (Button `icon-sm`).
+    <Button
+      variant="ghost"
+      size="icon-sm"
       aria-label="Dismiss suggestion"
       disabled={disabled}
       onClick={onDismiss}
-      className="-my-1 grid size-9 shrink-0 place-items-center rounded-full text-fg-secondary hover:bg-white/5 hover:text-fg disabled:opacity-50 md:size-7"
+      className="-my-1 text-fg-secondary"
     >
-      <X className="size-4" aria-hidden />
-    </button>
+      <X aria-hidden />
+    </Button>
   );
 }
 
@@ -211,7 +210,8 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
           type="button"
           aria-label="Stop editing the suggestion"
           onClick={onStop}
-          className="grid size-5 place-items-center rounded-full hover:bg-white/10"
+          // The chip's ×: 20 px, with a 40 px hit area on coarse pointers (DESIGN_SYSTEM §8.4).
+          className="relative grid size-5 place-items-center rounded-full after:absolute after:-inset-0.5 hover:bg-pressed pointer-coarse:after:-inset-2.5"
         >
           <X className="size-3.5" aria-hidden />
         </button>
@@ -223,7 +223,7 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
 /** Escalated in Auto (F-09): above the bar, "AI didn't reply: {reason}". */
 export function EscalationBanner({ message }: { message: string }) {
   return (
-    <div role="status" className="mx-4 mb-2 flex items-center gap-2 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning">
+    <div role="status" className="mx-4 mb-2 flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
       <AlertTriangle className="size-4 shrink-0" aria-hidden />
       <p>{message}</p>
     </div>

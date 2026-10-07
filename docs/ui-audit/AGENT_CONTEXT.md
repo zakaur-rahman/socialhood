@@ -161,6 +161,10 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
   global outline (never remove it; inset inside clipping containers; fields also `border-ring`);
   selected per DESIGN_SYSTEM §8.3; disabled `opacity-50`, with DisabledReason when there is a
   reason; loading `Button loading`; invalid `aria-invalid` plus Field's error.
+- **The one disabled exception** (DESIGN_SYSTEM §8.3, UX-INB-07): a composer's Send while empty is
+  a disabled `Button variant="secondary"` with `disabled:text-fg-disabled disabled:opacity-100` at
+  the call site (UI-030, inbox Composer), and `variant="default"` once there is something to send.
+  No other call site overrides the disabled look; the Ask composer (UI-040) uses the same pair.
 - **Touch:** every interactive primitive is 40 px on coarse pointers. Don't add `min-h-10 md:…`
   patches; pick the size whose desktop height you need.
 - **Destructive:** the confirming button is `destructive` (solid); a row or card trigger that opens

@@ -122,10 +122,10 @@ export function RowSkeletons({ count = 8 }: { count?: number }) {
     <div aria-busy="true" aria-label="Loading conversations">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="flex h-[68px] items-center gap-3 px-4 py-3">
-          <Skeleton className="size-10 shrink-0 rounded-full bg-raised" />
+          <Skeleton className="size-10 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-1/3 bg-raised" />
-            <Skeleton className="h-3 w-2/3 bg-raised" />
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-3 w-2/3" />
           </div>
         </div>
       ))}

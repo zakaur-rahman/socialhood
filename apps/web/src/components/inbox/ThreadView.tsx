@@ -84,8 +84,8 @@ export function ThreadView({
     return (
       <div className="flex h-full flex-col" aria-busy="true" aria-label="Loading conversation">
         <div className="flex h-14 items-center gap-3 border-b border-line bg-panel px-4">
-          <Skeleton className="size-8 rounded-full bg-raised" />
-          <Skeleton className="h-3 w-40 bg-raised" />
+          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="h-3 w-40" />
         </div>
         <div className="flex-1" />
       </div>
@@ -323,7 +323,7 @@ function ScheduledChip({ conversation, now, onOpen }: { conversation: Conversati
       <button
         type="button"
         onClick={onOpen}
-        className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand-fg"
+        className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand-fg pointer-coarse:min-h-10"
       >
         <CalendarClock className="size-3.5" aria-hidden />
         {count} scheduled{next ? ` · ${formatDayTime(next.send_at, workspace.timezone, now)}` : ""}

@@ -37,10 +37,10 @@ export function AutoConfirmDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="border-line bg-panel sm:max-w-md">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Turn on Auto for {target}?</AlertDialogTitle>
-          <AlertDialogDescription className="text-fg-secondary">
+          <AlertDialogDescription>
             The AI sends replies on its own when it&apos;s confident and the answer is in your knowledge. Otherwise it
             leaves a suggested reply and marks the conversation Needs you.
           </AlertDialogDescription>
@@ -61,7 +61,7 @@ export function AutoConfirmDialog({
         </div>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction className="bg-brand-gradient text-white" onClick={onConfirm}>
+          <AlertDialogAction onClick={onConfirm}>
             Turn on Auto
           </AlertDialogAction>
         </AlertDialogFooter>

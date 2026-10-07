@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ExternalLink, Loader2, PauseCircle } from "lucide-react";
+import { AlertTriangle, ExternalLink, PauseCircle } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { pausedUntil } from "@/components/ai/AiModeControl";
@@ -9,6 +9,7 @@ import { SummarySection } from "@/components/ai/SummarySection";
 import { latestQuestion, useCachedMessages, useTeachAi } from "@/components/ai/TeachAi";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useConversation } from "@/lib/api/queries";
 import type { Conversation } from "@/lib/api/types";
 import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
@@ -16,6 +17,7 @@ import { formatDay, formatDayTime } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { EYEBROW } from "@/styles/tokens";
 
 import { ContactAvatar } from "./ContactAvatar";
 
@@ -35,7 +37,7 @@ function Section({
   return (
     <section aria-labelledby={id} className="space-y-2">
       <div className="flex min-h-6 items-center justify-between gap-2">
-        <h2 id={id} className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">
+        <h2 id={id} className={EYEBROW}>
           {title}
         </h2>
         {aside}
@@ -67,9 +69,9 @@ export function DetailsPanel({
   if (!conversation.data) {
     return (
       <div className="space-y-3 p-4" aria-busy="true" aria-label="Loading details">
-        <Skeleton className="size-12 rounded-full bg-raised" />
-        <Skeleton className="h-3 w-2/3 bg-raised" />
-        <Skeleton className="h-3 w-1/2 bg-raised" />
+        <Skeleton className="size-12 rounded-full" />
+        <Skeleton className="h-3 w-2/3" />
+        <Skeleton className="h-3 w-1/2" />
       </div>
     );
   }
@@ -109,7 +111,7 @@ export function DetailsPanel({
                 <span
                   data-testid="follow-status"
                   className={cn(
-                    "mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    "mt-1 inline-block rounded-full px-2 py-0.5 text-2xs font-medium",
                     c.contact.follows_business ? "bg-brand-soft text-brand-fg" : "bg-raised text-fg-secondary",
                   )}
                 >
@@ -140,7 +142,7 @@ export function DetailsPanel({
           teachAi.canTeach && c.latest_analysis ? (
             <button
               type="button"
-              className="inline-flex items-center gap-1 text-xs font-medium text-brand-fg hover:underline disabled:opacity-60"
+              className="inline-flex items-center gap-1 text-xs font-medium text-brand-fg hover:underline disabled:opacity-50"
               disabled={teachAi.opening}
               title="Add the customer's question to your knowledge, with your answer"
               onClick={() => {
@@ -148,7 +150,7 @@ export function DetailsPanel({
                 void teachAi.teach(text, messageId);
               }}
             >
-              {teachAi.opening ? <Loader2 className="size-3 animate-spin" aria-hidden /> : null}
+              {teachAi.opening ? <Spinner size="xs" /> : null}
               Teach AI
             </button>
           ) : null
@@ -199,13 +201,13 @@ function Attention({ conversation, now, timeZone }: { conversation: Conversation
   return (
     <ul className="space-y-1.5 text-xs" aria-label="Attention">
       {conversation.needs_human ? (
-        <li className="flex items-center gap-2 rounded-lg bg-danger/15 px-3 py-2 text-danger-fg">
+        <li className="flex items-center gap-2 rounded-lg bg-danger-soft px-3 py-2 text-danger-fg">
           <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
           Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
         </li>
       ) : null}
       {paused ? (
-        <li className="flex items-center gap-2 rounded-lg bg-warning/15 px-3 py-2 text-warning">
+        <li className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2 text-warning">
           <PauseCircle className="size-3.5 shrink-0" aria-hidden />
           {far ? "AI paused until you resume it" : `AI paused until ${formatDayTime(paused, timeZone, now)}`}
         </li>
