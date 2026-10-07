@@ -25,7 +25,7 @@ function MediaImage({ src, alt, className }: { src: string; alt: string; classNa
 
 function Unavailable({ label }: { label: string }) {
   return (
-    <span className="flex items-center gap-2 rounded-lg bg-black/20 px-3 py-2 text-xs">
+    <span className="flex items-center gap-2 rounded-lg bg-media-scrim/20 px-3 py-2 text-xs">
       <ImageOff className="size-4 shrink-0" aria-hidden />
       {label}
     </span>
@@ -35,7 +35,7 @@ function Unavailable({ label }: { label: string }) {
 /** UX-INB-06: every attachment type (FR-INB-02). */
 export function AttachmentView({ attachment, kind, outbound }: Props) {
   const [lightbox, setLightbox] = useState(false);
-  const linkClass = outbound ? "text-white underline" : "text-brand-fg";
+  const linkClass = outbound ? "text-on-brand underline" : "text-brand-fg";
 
   switch (attachment.type) {
     case "image":
@@ -51,7 +51,7 @@ export function AttachmentView({ attachment, kind, outbound }: Props) {
             <MediaImage src={attachment.url} alt="Photo" className="max-h-64 w-auto rounded-lg object-cover" />
           </button>
           <Dialog open={lightbox} onOpenChange={setLightbox}>
-            <DialogContent className="border-line bg-panel p-2 sm:max-w-3xl">
+            <DialogContent size="xl" className="p-2">
               <DialogTitle className="sr-only">Photo</DialogTitle>
               <MediaImage src={attachment.url} alt="Photo" className="max-h-[80dvh] w-full rounded-lg object-contain" />
             </DialogContent>
@@ -79,7 +79,7 @@ export function AttachmentView({ attachment, kind, outbound }: Props) {
     case "story": {
       const label = kind === "story_mention" ? "Mentioned you in their story" : kind === "story_reply" ? "Replied to your story" : "Story";
       return (
-        <span className="flex w-48 flex-col gap-1.5 rounded-lg bg-black/20 p-2 text-xs">
+        <span className="flex w-48 flex-col gap-1.5 rounded-lg bg-media-scrim/20 p-2 text-xs">
           <span className="font-medium">{label}</span>
           {attachment.expired ? (
             <Unavailable label="Story expired" />
@@ -100,7 +100,7 @@ export function AttachmentView({ attachment, kind, outbound }: Props) {
     }
     case "share":
       return (
-        <span className="flex w-56 flex-col gap-1.5 rounded-lg bg-black/20 p-2 text-xs">
+        <span className="flex w-56 flex-col gap-1.5 rounded-lg bg-media-scrim/20 p-2 text-xs">
           {attachment.thumbnail_url ? (
             <MediaImage src={attachment.thumbnail_url} alt="Shared post" className="aspect-square w-full rounded-md object-cover" />
           ) : null}
@@ -117,11 +117,14 @@ export function AttachmentView({ attachment, kind, outbound }: Props) {
     case "file":
     default:
       return (
-        <span className="flex items-center gap-3 rounded-lg bg-black/20 px-3 py-2">
+        <span className="flex items-center gap-3 rounded-lg bg-media-scrim/20 px-3 py-2">
           <FileText className="size-5 shrink-0" aria-hidden />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm">{attachment.filename ?? "File"}</span>
-            {attachment.size_bytes ? <span className="block text-xs opacity-75">{formatBytes(attachment.size_bytes)}</span> : null}
+            {/* Secondary by colour, not opacity (DESIGN_SYSTEM §1.11); on a coloured bubble it stays on-brand. */}
+            {attachment.size_bytes ? (
+              <span className={cn("block text-xs", !outbound && "text-fg-secondary")}>{formatBytes(attachment.size_bytes)}</span>
+            ) : null}
           </span>
           {attachment.expired ? null : (
             <a
@@ -130,7 +133,7 @@ export function AttachmentView({ attachment, kind, outbound }: Props) {
               rel="noreferrer"
               download={attachment.filename ?? true}
               aria-label={`Download ${attachment.filename ?? "file"}`}
-              className="grid size-8 shrink-0 place-items-center rounded-md hover:bg-white/10"
+              className="grid size-8 shrink-0 place-items-center rounded-md hover:bg-pressed"
             >
               <Download className="size-4" aria-hidden />
             </a>

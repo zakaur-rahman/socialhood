@@ -97,6 +97,9 @@ describe("Analysis (FR-AI-02, FR-AI-04)", () => {
     const popover = await screen.findByRole("group", { name: "Correct the analysis" });
     const save = within(popover).getByRole("button", { name: "Save" });
     expect(save).toBeDisabled();
+    // UI-030: the intents are the ToggleGroup's chips; sentiment its small segmented control.
+    expect(within(popover).getByRole("radiogroup", { name: "Intent" })).toHaveAttribute("data-variant", "chips");
+    expect(within(popover).getByRole("radiogroup", { name: "Sentiment" })).toHaveAttribute("data-size", "sm");
     await user.click(within(popover).getByRole("radio", { name: "Pricing" }));
     await user.click(within(popover).getByRole("radio", { name: "Negative" }));
     await user.click(save);

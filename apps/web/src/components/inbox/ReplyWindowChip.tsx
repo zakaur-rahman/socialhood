@@ -23,7 +23,7 @@ export function ReplyWindowChip({
   return (
     <span
       className={cn(
-        "shrink-0 rounded-md px-1.5 py-0.5 text-[11px] font-medium whitespace-nowrap tabular-nums",
+        "shrink-0 rounded-md px-1.5 py-0.5 text-2xs font-medium whitespace-nowrap tabular-nums",
         chip.tone === "neutral" ? "border border-line bg-field text-fg-secondary" : TONE_CLASS[chip.tone],
         className,
       )}

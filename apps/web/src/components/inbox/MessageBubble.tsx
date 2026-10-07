@@ -6,7 +6,7 @@ import {
   CheckCheck,
   Clock,
   ExternalLink,
-  Loader2,
+  LoaderCircle,
   Sparkles,
   Zap,
   type LucideIcon,
@@ -29,7 +29,8 @@ import { SystemNote } from "./DateSeparator";
 
 const STATUS: Partial<Record<MessageStatus, { icon: LucideIcon; label: string; className?: string }>> = {
   queued: { icon: Clock, label: "Queued" },
-  sending: { icon: Loader2, label: "Sending", className: "animate-spin" },
+  // The Spinner's icon and rule: it turns only when motion is allowed (DESIGN_SYSTEM §7.4).
+  sending: { icon: LoaderCircle, label: "Sending", className: "motion-safe:animate-spin" },
   sent: { icon: Check, label: "Sent" },
   delivered: { icon: CheckCheck, label: "Delivered" },
   read: { icon: CheckCheck, label: "Read", className: "text-brand-fg" },
@@ -92,13 +93,13 @@ export function MessageBubble({
   const bubbleClass = cn(
     "relative max-w-full rounded-2xl px-3 py-2 text-sm leading-relaxed break-words whitespace-pre-wrap",
     sticker && "px-0 py-0",
-    !outbound && !sticker && "rounded-bl-md border border-line-subtle bg-field text-fg shadow-sm",
+    !outbound && !sticker && "rounded-bl-md border border-line-subtle bg-field text-fg",
     outbound && "rounded-br-md",
-    outbound && !failed && !pending && !nativeApp && !sticker && "bg-brand-gradient text-white",
+    outbound && !failed && !pending && !nativeApp && !sticker && "bg-brand-gradient text-on-brand",
     outbound && nativeApp && !failed && !pending && !sticker && "bg-raised text-fg",
-    pending && !sticker && "bg-brand/60 text-white",
+    pending && !sticker && "bg-brand/60 text-on-brand",
     pending && "opacity-80",
-    failed && "bg-danger-fill text-white",
+    failed && "bg-danger-fill text-on-brand",
   );
   // On a coloured bubble, labels are on-brand at full strength: white/75 was 3.46:1 at the gradient's light end.
   const metaClass = outbound && !nativeApp && !sticker ? "text-on-brand" : "text-fg-secondary";
@@ -138,7 +139,7 @@ export function MessageBubble({
       ) : null}
       <div className={cn("flex max-w-[85%] flex-col md:max-w-[70%]", outbound ? "items-end" : "items-start")}>
         <div className={cn(bubbleClass, reactions.length > 0 && "mb-3")} data-variant={variantName(message)}>
-          {label ? <p className="mb-1 text-[11px] font-medium text-fg-secondary">{label}</p> : null}
+          {label ? <p className="mb-1 text-2xs font-medium text-fg-secondary">{label}</p> : null}
           {message.kind === "template" && message.template ? (
             <p className={cn("mb-1 text-xs font-medium", metaClass)}>Template · {message.template.name}</p>
           ) : null}
@@ -159,7 +160,7 @@ export function MessageBubble({
             <div
               className={cn(
                 "flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-lg border px-3 py-2 text-xs",
-                outbound && !nativeApp ? "border-white/30" : "border-line bg-canvas/40",
+                outbound && !nativeApp ? "border-on-brand/30" : "border-line bg-canvas/40",
               )}
               data-testid="unsupported-card"
             >
@@ -189,7 +190,7 @@ export function MessageBubble({
                   key={`${reply.title}-${index}`}
                   className={cn(
                     "rounded-full border px-2.5 py-0.5 text-xs font-medium",
-                    tinted ? "border-white/60 text-white" : "border-line-strong text-fg",
+                    tinted ? "border-on-brand/60 text-on-brand" : "border-line-strong text-fg",
                   )}
                 >
                   {reply.title}
@@ -214,7 +215,7 @@ export function MessageBubble({
           ) : null}
         </div>
         {/* Under the bubble (C-063): time, delivery ticks, and who wrote an AI or automation message. */}
-        <p className="mt-1 flex items-center gap-1 px-1 text-[11px] text-fg-secondary tabular-nums" data-testid="message-meta">
+        <p className="mt-1 flex items-center gap-1 px-1 text-2xs text-fg-secondary tabular-nums" data-testid="message-meta">
           {message.edited_at && !unsent ? <span>Edited ·</span> : null}
           <time dateTime={message.occurred_at}>{formatTime(message.occurred_at, timeZone)}</time>
           {statusInfo ? (

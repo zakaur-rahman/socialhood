@@ -60,12 +60,15 @@ export function ConversationRow({ item, href, selected, now, aiMode = null, inde
       data-index={index}
       data-conversation-row={item.id}
       className={cn(
-        "relative flex items-start gap-3 px-4 py-3 outline-offset-[-2px] hover:bg-white/5",
+        "relative flex items-start gap-3 px-4 py-3 hover:bg-hover focus-visible:-outline-offset-2",
         badges.length > 0 ? "h-[90px]" : "h-[68px]",
         selected && "bg-raised hover:bg-raised",
       )}
     >
-      {selected ? <span className="absolute inset-y-0 left-0 w-[3px] bg-brand" data-testid="row-accent" aria-hidden /> : null}
+      {/* The selection bar (DESIGN_SYSTEM §5): 2 px brand on the leading edge, inset 8 px, rounded. */}
+      {selected ? (
+        <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-brand" data-testid="row-accent" aria-hidden />
+      ) : null}
       <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} platform={item.platform} size={40} />
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline gap-2">
@@ -105,7 +108,7 @@ export function ConversationRow({ item, href, selected, now, aiMode = null, inde
                 key={badge.key}
                 title={badge.title}
                 data-badge={badge.key}
-                className={cn("shrink-0 rounded px-1.5 text-[11px] leading-[18px] font-medium tabular-nums", TONE_CLASS[badge.tone])}
+                className={cn("shrink-0 rounded-sm px-1.5 text-2xs font-medium tabular-nums", TONE_CLASS[badge.tone])}
               >
                 {badge.label}
               </span>

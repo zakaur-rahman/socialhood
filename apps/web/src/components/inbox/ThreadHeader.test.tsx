@@ -157,6 +157,32 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(handlers.onSchedule).toHaveBeenCalledOnce();
   });
 
+  // UI-030: a disabled control says why (DisabledReason), not only in a title nobody can reach.
+  it("with the reply window closed, Schedule is off and says why", () => {
+    renderHeader({}, { canSchedule: false });
+    const schedule = screen.getByRole("button", { name: "Schedule a message" });
+    expect(schedule).toBeDisabled();
+    expect(schedule).not.toHaveAttribute("title");
+    const reason = schedule.closest('[data-slot="disabled-reason"]') as HTMLElement;
+    expect(reason).toHaveAttribute("tabindex", "0");
+    expect(reason).toHaveAccessibleDescription("Scheduling needs an open reply window");
+    // Hidden below md, as the button was: the composer's clock schedules there.
+    expect(reason).toHaveClass("hidden", "md:inline-flex");
+  });
+
+  it("the header's icon buttons are the Button's icon-lg size, with no touch patches", () => {
+    renderHeader({}, { backHref: "/w/maple/inbox" as Route });
+    for (const control of [
+      screen.getByRole("link", { name: "Back to conversations" }),
+      screen.getByRole("button", { name: "Schedule a message" }),
+      screen.getByRole("button", { name: "Details" }),
+      screen.getByRole("button", { name: "More actions" }),
+    ]) {
+      expect(control).toHaveAttribute("data-size", "icon-lg");
+      expect(control.className).not.toMatch(/md:size-|(^| )size-10/);
+    }
+  });
+
   it("archives and marks unread from the menu", async () => {
     const handlers = renderHeader();
     await userEvent.click(screen.getByRole("button", { name: "More actions" }));

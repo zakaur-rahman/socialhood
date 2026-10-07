@@ -92,6 +92,13 @@ export function useConversationAiMode(conversation: Conversation) {
   };
 }
 
+/**
+ * The AI pill's colours on a ghost Button: `brand-soft` with `brand-fg` text and a `brand-line`
+ * edge, a stronger tint on hover and while its menu is open. Button has no brand-soft variant yet.
+ */
+const AI_TRIGGER =
+  "border-brand-line bg-brand-soft text-brand-fg hover:bg-brand/25 hover:text-brand-fg aria-expanded:bg-brand/25 aria-expanded:text-brand-fg";
+
 function defaultLabel(accountMode: AiMode | null): string {
   return accountMode ? `Account default · ${AI_MODE_LABEL[accountMode]}` : "Account default";
 }
@@ -136,26 +143,28 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
   const label = AI_MODE_LABEL[conversation.ai.effective_mode];
   return (
     <>
-      {/* Not modal: the Auto confirmation opens from it (a modal menu would keep the page inert). */}
-      <DropdownMenu modal={false}>
+      {/* Menus aren't modal (ui/dropdown-menu), so the Auto confirmation can open from this one. */}
+      <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button
-            type="button"
+          {/* The AI pill (brand-soft, DESIGN_SYSTEM §1.4) on Button: 28 px, 40 px on coarse pointers. */}
+          <Button
+            variant="ghost"
+            size="sm"
             aria-label={`AI mode: ${label}. Change`}
             title={
               control.choice === "default"
                 ? `${defaultLabel(control.accountMode)}. Change it for this conversation`
                 : "Set for this conversation. Change"
             }
-            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-brand-line bg-brand-soft px-2 text-xs font-medium text-brand-fg hover:bg-brand/25"
+            className={AI_TRIGGER}
           >
-            <Sparkles className="size-3.5" aria-hidden />
+            <Sparkles aria-hidden />
             <span className="hidden @xl/header:inline">AI: {label}</span>
             <ChevronDown className="hidden size-3 @xl/header:block" aria-hidden />
-          </button>
+          </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-60 border-line bg-panel shadow-xl">
-          <DropdownMenuLabel className="text-xs text-fg-secondary">AI in this conversation</DropdownMenuLabel>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>AI in this conversation</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={control.choice}
             onValueChange={(value) => control.choose(value as AiModeChoice)}
