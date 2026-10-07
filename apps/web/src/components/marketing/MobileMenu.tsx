@@ -5,6 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
 import { minWidth } from "@/lib/breakpoints";
 import { NAV_LINKS } from "@/lib/marketing/site";
 
@@ -43,22 +44,20 @@ export function MobileMenu() {
 
   return (
     <div className="md:hidden">
-      <button
+      <Button
         ref={button}
         type="button"
+        variant="ghost"
+        size="icon-lg"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((value) => !value)}
-        className="grid size-11 place-items-center rounded-lg text-fg transition-colors duration-150 hover:bg-raised"
       >
         {open ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
-      </button>
-      <div
-        id={panelId}
-        hidden={!open}
-        className="absolute inset-x-0 top-full mt-2 rounded-2xl border border-line bg-panel shadow-2xl shadow-black/60"
-      >
+      </Button>
+      {/* It floats over the page, so the floating elevation (DESIGN_SYSTEM §6), on the panel. */}
+      <div id={panelId} hidden={!open} className="absolute inset-x-0 top-full mt-2 rounded-2xl border border-line bg-panel shadow-floating">
         <nav aria-label="Main" className="px-3 pt-2 pb-4">
           <ul className="grid">
             {NAV_LINKS.map((link) => (
@@ -66,7 +65,7 @@ export function MobileMenu() {
                 <Link
                   href={link.href as Route}
                   onClick={close}
-                  className="flex min-h-11 items-center rounded-lg px-2 text-base text-fg hover:bg-raised"
+                  className="flex min-h-11 items-center rounded-lg px-2 text-base text-fg transition-colors duration-normal hover:bg-hover"
                 >
                   {link.label}
                 </Link>

@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 
 import { unsubscribeCopy } from "@/lib/copy";
+import { PAGE_TITLE } from "@/styles/tokens";
 
+import { NotificationSettingsLink } from "./NotificationSettingsLink";
 import { UnsubscribeResult } from "./UnsubscribeResult";
 
 export const metadata: Metadata = { title: "Unsubscribe", robots: { index: false, follow: false } };
@@ -18,13 +20,15 @@ export default async function UnsubscribePage({ searchParams }: { searchParams: 
   const value = typeof token === "string" ? token.trim() : "";
   return (
     // Inside the marketing layout (header and footer): the page only fills the space between them.
+    // `outline-none` on <main> only: the skip link focuses it, and a ring round the page says nothing.
     <main id="main" tabIndex={-1} className="mx-auto flex w-full max-w-xl flex-1 flex-col items-start justify-center gap-3 px-4 py-16 outline-none sm:px-6">
       {TOKEN.test(value) ? (
         <UnsubscribeResult token={value} />
       ) : (
         <div role="alert" className="space-y-3">
-          <h1 className="text-2xl font-semibold tracking-tight">{unsubscribeCopy.missingTitle}</h1>
+          <h1 className={PAGE_TITLE}>{unsubscribeCopy.missingTitle}</h1>
           <p className="text-sm text-fg-secondary">{unsubscribeCopy.missing}</p>
+          <NotificationSettingsLink />
         </div>
       )}
     </main>

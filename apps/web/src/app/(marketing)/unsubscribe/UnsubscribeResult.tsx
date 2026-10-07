@@ -3,11 +3,13 @@
 import createClient from "openapi-fetch";
 import type { paths } from "@socialhood/api-client";
 import { CircleCheck, CircleAlert, LoaderCircle, RotateCw } from "lucide-react";
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { unsubscribeCopy } from "@/lib/copy";
+import { PAGE_TITLE } from "@/styles/tokens";
+
+import { NotificationSettingsLink } from "./NotificationSettingsLink";
 
 type Outcome =
   | { kind: "working" }
@@ -61,11 +63,9 @@ export function UnsubscribeResult({ token, unsubscribe = postUnsubscribe }: { to
     return (
       <div role="status" className="space-y-3">
         <CircleCheck className="size-8 text-success" aria-hidden />
-        <h1 className="text-2xl font-semibold tracking-tight">{unsubscribeCopy.doneTitle}</h1>
+        <h1 className={PAGE_TITLE}>{unsubscribeCopy.doneTitle}</h1>
         <p className="text-sm text-fg-secondary">{unsubscribeCopy.done(outcome.workspace)}</p>
-        <Link href="/app" className="inline-flex min-h-10 items-center text-sm font-medium text-brand-fg underline-offset-4 hover:underline">
-          Open Social Hood
-        </Link>
+        <NotificationSettingsLink />
       </div>
     );
   }
@@ -73,22 +73,20 @@ export function UnsubscribeResult({ token, unsubscribe = postUnsubscribe }: { to
     return (
       <div role="alert" className="space-y-3">
         <CircleAlert className="size-8 text-warning" aria-hidden />
-        <h1 className="text-2xl font-semibold tracking-tight">{unsubscribeCopy.invalidTitle}</h1>
+        <h1 className={PAGE_TITLE}>{unsubscribeCopy.invalidTitle}</h1>
         <p className="text-sm text-fg-secondary">{unsubscribeCopy.invalid}</p>
-        <Link href="/app" className="inline-flex min-h-10 items-center text-sm font-medium text-brand-fg underline-offset-4 hover:underline">
-          Open Social Hood
-        </Link>
+        <NotificationSettingsLink />
       </div>
     );
   }
   return (
     <div role="alert" className="space-y-3">
       <CircleAlert className="size-8 text-danger" aria-hidden />
-      <h1 className="text-2xl font-semibold tracking-tight">{unsubscribeCopy.failedTitle}</h1>
+      <h1 className={PAGE_TITLE}>{unsubscribeCopy.failedTitle}</h1>
       <p className="text-sm text-fg-secondary">Something went wrong on our side. Try again.</p>
       <Button
         variant="secondary"
-        className="min-h-10"
+        size="xl"
         onClick={() => {
           setOutcome({ kind: "working" });
           void run();

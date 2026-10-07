@@ -17,10 +17,10 @@ export function Faq() {
         <div data-reveal className="mx-auto mt-12 max-w-3xl divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel/40">
           {FAQ.map((item) => (
             <details key={item.question} className="group">
-              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-4 px-5 py-3 text-left text-base font-medium transition-colors duration-150 hover:bg-raised/50 focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
+              <summary className="flex min-h-14 cursor-pointer list-none items-center gap-4 px-5 py-3 text-left text-base font-medium transition-colors duration-normal hover:bg-hover focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
                 <h3 className="flex-1 text-base font-medium">{item.question}</h3>
                 <ChevronDown
-                  className="size-5 shrink-0 text-fg-secondary transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                  className="size-5 shrink-0 text-fg-secondary transition-transform duration-normal group-open:rotate-180 motion-reduce:transition-none"
                   aria-hidden
                 />
               </summary>

@@ -26,19 +26,19 @@ export const clerkAppearance = {
   variables: {
     colorPrimary: token("brand-strong"),
     colorPrimaryForeground: token("on-brand"),
-    colorBackground: "#1F1F1F",
-    colorForeground: "#FFFFFF",
-    colorMutedForeground: "#9B9CA0",
-    colorMuted: "#1D1D1D",
-    colorInput: "#1D1D1D",
-    colorInputForeground: "#FFFFFF",
-    colorNeutral: "#FFFFFF",
-    colorBorder: "rgb(255 255 255 / 0.10)",
-    colorRing: "#567FF8",
-    colorDanger: "#EF4444",
-    colorSuccess: "#22C55E",
-    colorWarning: "#FB923C",
-    colorModalBackdrop: "rgb(0 0 0 / 0.6)",
+    colorBackground: token("panel"),
+    colorForeground: token("fg"),
+    colorMutedForeground: token("fg-secondary"),
+    colorMuted: token("field"),
+    colorInput: token("field"),
+    colorInputForeground: token("fg"),
+    colorNeutral: token("fg"),
+    colorBorder: token("line"),
+    colorRing: token("brand"),
+    colorDanger: token("danger"),
+    colorSuccess: token("success"),
+    colorWarning: token("warning"),
+    colorModalBackdrop: token("scrim"),
     borderRadius: "0.5rem",
     fontFamily: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
   },
@@ -61,6 +61,16 @@ export const clerkAppearance = {
     formButtonReset: BRAND_TEXT, // "Cancel" beside a form's primary button
     // The account modal's current page (Account, Security) is drawn in the primary colour too.
     navbarButton: { '&[data-color="primary"]': BRAND_TEXT },
+    // The account modal's "Primary" badge: Clerk derives its text from `colorBorder`, which gave
+    // 1.19:1. Brand-fg text on the brand-soft fill is well over 4.5:1.
+    badge: {
+      color: "var(--color-fg-secondary)", // the neutral badges ("Primary", "Unverified") share the bad derivation
+      '&[data-color="primary"]': {
+        color: "var(--color-brand-fg)",
+        backgroundColor: "var(--color-brand-soft)",
+        borderColor: "var(--color-brand-line)",
+      },
+    },
     // The global :focus-visible outline (globals.css), restated: Clerk's own styles set outline 0.
     userButtonTrigger: {
       "&:focus-visible": {
