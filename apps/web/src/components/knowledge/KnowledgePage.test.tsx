@@ -201,13 +201,32 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
     });
     const table = await screen.findByRole("table", { name: "Knowledge sources" });
     const rows = within(table).getAllByRole("row").slice(1);
-    expect(within(rows[0]).getByText("Processing")).toBeInTheDocument();
-    expect(within(rows[1]).getByText("Ready")).toBeInTheDocument();
+    // Each status is in the row twice: under the name below 768 px and in the Status column from there (CSS
+    // shows one; see "keeps the source name readable on phones").
+    expect(within(rows[0]).getAllByText("Processing")).toHaveLength(2);
+    expect(within(rows[1]).getAllByText("Ready")).toHaveLength(2);
     expect(within(rows[1]).getByText("12,400")).toBeInTheDocument();
     expect(within(rows[1]).getByText("11 chunks")).toBeInTheDocument();
-    expect(within(rows[2]).getByText("Failed")).toBeInTheDocument();
+    expect(within(rows[2]).getAllByText("Failed")).toHaveLength(2);
     expect(within(rows[2]).getByText("The page didn't load (404).")).toBeInTheDocument();
     expect(within(rows[2]).getByText("https://maple.example/faq")).toBeInTheDocument();
+  });
+
+  it("keeps the source name readable on phones: the status goes under it below 768 px (UI-038)", async () => {
+    setup({ sources: [knowledgeSource({ title: "Shipping", status: "ready" })] });
+    const table = await screen.findByRole("table", { name: "Knowledge sources" });
+    expect(within(table).getByRole("columnheader", { name: "Status" })).toHaveClass("hidden", "md:table-cell");
+    const [, row] = within(table).getAllByRole("row");
+    const [source, status] = within(row).getAllByRole("cell");
+    expect(within(source).getByText("Ready")).toHaveClass("md:hidden");
+    expect(status).toHaveClass("hidden", "md:table-cell");
+    expect(within(status).getByText("Ready")).not.toHaveClass("md:hidden");
+    // Edit and Delete: 32 px icon Buttons, 40 px on touch, without a viewport patch.
+    for (const name of ["Edit Shipping", "Delete Shipping"]) {
+      const button = within(row).getByRole("button", { name });
+      expect(button).toHaveClass("size-8", "pointer-coarse:size-10");
+      expect(button.className).not.toMatch(/md:size-/);
+    }
   });
 
   it("empty: Teach the AI your business", async () => {
@@ -231,7 +250,7 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
 
     await waitFor(() => expect(posted()).toEqual([{ type: "faq", question: "Is COD available?", body: "Yes, across India.", gap_id: null }]));
     const row = (await screen.findByText("Is COD available?")).closest("tr") as HTMLElement;
-    expect(within(row).getByText("Processing")).toBeInTheDocument();
+    expect(within(row).getAllByText("Processing")).toHaveLength(2);
     expect(toast.success).toHaveBeenCalledWith("Added to knowledge");
   });
 
@@ -330,12 +349,38 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
   it("deletes after confirming", async () => {
     const user = userEvent.setup();
     const { calls } = setup();
-    await user.click(await screen.findByRole("button", { name: "Delete Do you ship to Dubai?" }));
+    const trigger = await screen.findByRole("button", { name: "Delete Do you ship to Dubai?" });
+    expect(trigger).toHaveAttribute("data-variant", "destructive-ghost");
+    await user.click(trigger);
     const dialog = await screen.findByRole("alertdialog", { name: "Delete “Do you ship to Dubai?”?" });
+    expect(within(dialog).getByRole("button", { name: "Delete" })).toHaveAttribute("data-variant", "destructive");
     expect(calls.some((c) => c.method === "DELETE")).toBe(false);
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
     await waitFor(() => expect(calls.some((c) => c.method === "DELETE" && c.path === "/v1/w/w1/knowledge-sources/ks1")).toBe(true));
     await waitFor(() => expect(screen.queryByText("Do you ship to Dubai?")).not.toBeInTheDocument());
+  });
+
+  it("returns focus to Edit and Delete when the sheet or the confirmation closes (UX-A11Y-02)", async () => {
+    const user = userEvent.setup();
+    setup();
+    const edit = await screen.findByRole("button", { name: "Edit Do you ship to Dubai?" });
+    await user.click(edit);
+    const form = await screen.findByRole("form", { name: "Edit FAQ" });
+    await user.click(within(form).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("form", { name: "Edit FAQ" })).not.toBeInTheDocument());
+    await waitFor(() => expect(edit).toHaveFocus());
+
+    const remove = screen.getByRole("button", { name: "Delete Do you ship to Dubai?" });
+    await user.click(remove);
+    await user.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(remove).toHaveFocus());
+
+    // From the Add knowledge menu: back to the menu's button, not <body> (the item is gone by then).
+    await addFromMenu("Note");
+    const note = await screen.findByRole("form", { name: "Add a note" });
+    await user.click(within(note).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("form", { name: "Add a note" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getAllByRole("button", { name: "Add knowledge" })[0]).toHaveFocus());
   });
 });
 

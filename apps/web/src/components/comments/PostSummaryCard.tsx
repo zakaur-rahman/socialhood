@@ -13,6 +13,7 @@ import type { PostDetail } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { EYEBROW } from "@/styles/tokens";
 
 const NONE = "none";
 
@@ -57,13 +58,13 @@ export function PostSummaryCard({ post, now }: { post: PostDetail; now: Date }) 
 
   return (
     <section aria-labelledby="post-summary-heading" className="space-y-2 rounded-xl border border-line bg-panel p-4">
-      <h2 id="post-summary-heading" className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">
+      <h2 id="post-summary-heading" className={EYEBROW}>
         Summary
       </h2>
       {waiting ? (
         <div className="space-y-2" aria-busy="true">
-          <Skeleton className="h-3 w-full bg-raised" />
-          <Skeleton className="h-3 w-5/6 bg-raised" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
           <p role="status" className="text-xs text-fg-secondary">
             Updating the summary…
           </p>
@@ -84,7 +85,7 @@ export function PostSummaryCard({ post, now }: { post: PostDetail; now: Date }) 
         <Button
           variant="ghost"
           size="sm"
-          className="min-h-10 text-brand-fg md:min-h-7"
+          className="text-brand-fg"
           disabled={waiting || refresh.isPending}
           onClick={ask}
         >

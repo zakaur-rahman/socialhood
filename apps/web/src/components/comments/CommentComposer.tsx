@@ -1,9 +1,11 @@
 "use client";
 
-import { LoaderCircle, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
 import {
   authorName,
   byteLength,
@@ -78,7 +80,7 @@ export function CommentComposer({
           Sent as a DM to {name}. Instagram allows one private reply per comment, within 7 days of it.
         </p>
       ) : null}
-      <textarea
+      <Textarea
         id={id}
         autoFocus
         rows={2}
@@ -88,7 +90,8 @@ export function CommentComposer({
         placeholder={kind === "dm" ? "Write a DM…" : "Reply publicly…"}
         aria-describedby={kind === "dm" ? `${id}-hint ${id}-count` : `${id}-count`}
         aria-invalid={over || undefined}
-        className="block max-h-40 min-h-10 w-full resize-none rounded-md border border-line bg-panel px-3 py-2 text-sm leading-relaxed outline-none focus:bg-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+        // The field recipe (DESIGN_SYSTEM §8.2); two lines tall, as with rows={2}, growing to 160 px.
+        className="max-h-40 min-h-16 resize-none"
       />
       {error ? (
         <p role="alert" className="px-1 text-xs text-danger-fg">
@@ -101,11 +104,11 @@ export function CommentComposer({
           {kind === "dm" ? " bytes" : ""}
         </span>
         <div className="flex gap-2">
-          <Button variant="ghost" size="sm" className="min-h-10 md:min-h-7" onClick={onCancel}>
+          <Button variant="ghost" size="sm" onClick={onCancel}>
             Cancel
           </Button>
-          <Button size="sm" className="bg-brand-gradient min-h-10 text-white md:min-h-7" disabled={!canSend} onClick={send}>
-            {pending ? <LoaderCircle className="animate-spin" aria-hidden /> : <Send aria-hidden />}
+          <Button size="sm" disabled={!canSend} onClick={send}>
+            {pending ? <Spinner size="sm" /> : <Send aria-hidden />}
             {kind === "dm" ? "Send DM" : "Send reply"}
           </Button>
         </div>

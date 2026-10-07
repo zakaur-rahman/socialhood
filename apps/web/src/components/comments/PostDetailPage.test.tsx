@@ -434,9 +434,13 @@ describe("Comment actions (FR-CMT-04)", () => {
     await screen.findByRole("list", { name: "Comments" });
     const deletes = () => calls.filter((c) => c.method === "DELETE");
 
-    await user.click(within(row("@free.followers")).getByRole("button", { name: "Delete @free.followers's comment" }));
+    const trigger = within(row("@free.followers")).getByRole("button", { name: "Delete @free.followers's comment" });
+    // The row's trigger is the quiet destructive look; the confirming button is the solid one (DESIGN_SYSTEM §8.2).
+    expect(trigger).toHaveAttribute("data-variant", "destructive-ghost");
+    await user.click(trigger);
     const dialog = await screen.findByRole("alertdialog", { name: "Delete this comment?" });
     expect(dialog).toHaveTextContent("It's deleted on Instagram for everyone, @free.followers included.");
+    expect(within(dialog).getByRole("button", { name: "Delete comment" })).toHaveAttribute("data-variant", "destructive");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
     expect(deletes()).toHaveLength(0);
 
@@ -538,15 +542,20 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     expect(thumb).toHaveClass("w-24", "lg:w-full");
   });
 
-  it("chips wrap and every action is a 40 px target on phones", async () => {
+  it("chips wrap and every action is a 40 px target on touch", async () => {
     setup();
     await screen.findByRole("list", { name: "Comments" });
     expect(screen.getByTestId("comment-filters")).toHaveClass("flex-wrap");
+    // UI-038: the 40 px comes from the primitives on coarse pointers (DESIGN_SYSTEM §8.4), not from a
+    // `min-h-10 md:min-h-*` patch keyed to the viewport: the segment's 32 px and the `sm` Button's 28 px
+    // stay with a mouse, at any width.
     for (const chip of within(screen.getByTestId("comment-filters")).getAllByRole("radio")) {
-      expect(chip).toHaveClass("min-h-10", "md:min-h-8");
+      expect(chip).toHaveClass("min-h-8", "pointer-coarse:min-h-10");
+      expect(chip.className).not.toMatch(/(^|\s)(min-h-10|md:min-h-8)(\s|$)/);
     }
     for (const button of within(row("@kabir")).getAllByRole("button")) {
-      expect(button).toHaveClass("min-h-10");
+      expect(button).toHaveClass("h-7", "pointer-coarse:min-h-10");
+      expect(button.className).not.toMatch(/(^|\s)(min-h-10|md:min-h-7)(\s|$)/);
     }
   });
 });

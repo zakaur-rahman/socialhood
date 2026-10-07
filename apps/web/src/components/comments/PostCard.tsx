@@ -35,7 +35,7 @@ export function PostCard({
     <li data-testid="post-card" data-post-id={post.id}>
       <Link
         href={postHref(slug, post.id)}
-        className="group block overflow-hidden rounded-xl border border-line bg-panel outline-none hover:border-line-strong focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="group block overflow-hidden rounded-xl border border-line bg-panel hover:border-line-strong"
       >
         <PostThumb post={post} className="border-b border-line" />
         <span className="sr-only">

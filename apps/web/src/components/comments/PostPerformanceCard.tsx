@@ -28,8 +28,7 @@ import { accountLabel } from "@/lib/automations/accounts";
 import { errorMessage } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
-
-const LABEL = "text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase";
+import { EYEBROW } from "@/styles/tokens";
 
 const TONE_TEXT = {
   up: "text-success",
@@ -42,7 +41,7 @@ function InlineError({ error, onRetry }: { error: unknown; onRetry: () => void }
   return (
     <div role="alert" className="space-y-2 text-sm">
       <p className="text-fg-secondary">{errorMessage(error)}</p>
-      <Button variant="secondary" size="sm" className="min-h-10 md:min-h-7" onClick={onRetry}>
+      <Button variant="secondary" size="sm" onClick={onRetry}>
         <RotateCw aria-hidden /> Try again
       </Button>
     </div>
@@ -70,14 +69,14 @@ function Figures({
   return (
     <div className="space-y-3" data-testid="post-figures">
       {!performance.insights_granted ? (
-        <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 text-xs" data-testid="insights-unavailable">
+        <div className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-xs" data-testid="insights-unavailable">
           <p>
             {handle} didn&apos;t give Social Hood permission to read insights, so reach, views, shares and saves
             aren&apos;t available. Reconnect to allow it.
           </p>
           <Link
             href={`/w/${slug}/settings/connections` as Route}
-            className="mt-1 inline-flex min-h-10 items-center font-medium text-brand-fg hover:underline md:min-h-0"
+            className="mt-1 inline-flex items-center font-medium text-brand-fg hover:underline pointer-coarse:min-h-10"
           >
             Reconnect
           </Link>
@@ -200,11 +199,11 @@ export function PostPerformanceCard({
   return (
     <section aria-labelledby="post-performance-heading" className="space-y-4 rounded-xl border border-line bg-panel p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 id="post-performance-heading" className={LABEL}>
+        <h2 id="post-performance-heading" className={EYEBROW}>
           Performance
         </h2>
         <Select value={shown ?? ""} onValueChange={(value) => setAge(value as AgeName)}>
-          <SelectTrigger aria-label="Age after posting" className="h-10 min-w-28 md:h-8">
+          <SelectTrigger aria-label="Age after posting" className="min-w-28">
             <SelectValue placeholder="Latest" />
           </SelectTrigger>
           <SelectContent>
@@ -221,7 +220,7 @@ export function PostPerformanceCard({
         {performance.isPending ? (
           <div className="grid grid-cols-2 gap-2" aria-label="Loading figures">
             {Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="h-14 rounded-lg bg-raised" />
+              <Skeleton key={i} className="h-14 rounded-lg" />
             ))}
           </div>
         ) : performance.isError ? (
@@ -236,9 +235,9 @@ export function PostPerformanceCard({
         <div className={cn(comparison.isPlaceholderData && "opacity-60")} aria-busy={comparison.isFetching || undefined}>
           {comparison.isPending ? (
             <div className="space-y-2" aria-label="Loading the comparison">
-              <Skeleton className="h-3 w-2/3 bg-raised" />
-              <Skeleton className="h-3 w-full bg-raised" />
-              <Skeleton className="h-3 w-5/6 bg-raised" />
+              <Skeleton className="h-3 w-2/3" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-3 w-5/6" />
             </div>
           ) : comparison.isError ? (
             <InlineError error={comparison.error} onRetry={() => void comparison.refetch()} />

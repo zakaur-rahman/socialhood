@@ -21,9 +21,9 @@ import { TestBox } from "./TestBox";
 function CardSkeleton({ label, rows = 2 }: { label: string; rows?: number }) {
   return (
     <div className="space-y-3 rounded-xl border border-line bg-panel p-5" aria-busy="true" aria-label={label}>
-      <Skeleton className="h-4 w-40 bg-raised" />
+      <Skeleton className="h-4 w-40" />
       {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-3 w-full bg-raised" />
+        <Skeleton key={i} className="h-3 w-full" />
       ))}
     </div>
   );

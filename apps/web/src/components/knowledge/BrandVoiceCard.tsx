@@ -174,9 +174,16 @@ function BrandVoiceForm({
             control={form.control}
             name="tone"
             render={({ field }) => (
-              <ToggleGroup value={field.value} onValueChange={field.onChange} aria-labelledby="bv-tone" className="flex-wrap">
+              // `sm`: the 12 px labels these segments had, so the four tones still fit one row at 375 px.
+              <ToggleGroup
+                size="sm"
+                value={field.value}
+                onValueChange={field.onChange}
+                aria-labelledby="bv-tone"
+                className="flex-wrap"
+              >
                 {TONE_OPTIONS.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value} className="text-xs">
+                  <ToggleGroupItem key={option.value} value={option.value}>
                     {option.label}
                   </ToggleGroupItem>
                 ))}
@@ -192,9 +199,9 @@ function BrandVoiceForm({
             control={form.control}
             name="emoji_policy"
             render={({ field }) => (
-              <ToggleGroup value={field.value} onValueChange={field.onChange} aria-labelledby="bv-emoji">
+              <ToggleGroup size="sm" value={field.value} onValueChange={field.onChange} aria-labelledby="bv-emoji">
                 {EMOJI_OPTIONS.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value} className="text-xs">
+                  <ToggleGroupItem key={option.value} value={option.value}>
                     {option.label}
                   </ToggleGroupItem>
                 ))}
@@ -215,7 +222,8 @@ function BrandVoiceForm({
                 label="Always"
                 items={field.value}
                 onChange={field.onChange}
-                placeholder="e.g. Mention free shipping over ₹3,000"
+                // As long as Never's, so it fits the field at 16 px on a 320 px phone ("…over ₹3,000" was cut).
+                placeholder="e.g. Mention free shipping"
               />
             )}
           />
@@ -246,7 +254,7 @@ function BrandVoiceForm({
             Cancel
           </Button>
         ) : null}
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={!isDirty || update.isPending}>
+        <Button type="submit" disabled={!isDirty || update.isPending}>
           {update.isPending ? "Saving…" : "Save"}
         </Button>
       </div>
