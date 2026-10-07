@@ -9,6 +9,7 @@ import { useAutomationStats } from "@/lib/api/queries";
 import type { AutomationStats } from "@/lib/api/types";
 import { formatCount, repliedShare } from "@/lib/automations/format";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -51,10 +52,10 @@ export function StatsPane({
         <div aria-busy="true" aria-label="Loading results" className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {Array.from({ length: 4 }, (_, i) => (
-              <Skeleton key={i} className="h-16 rounded-lg bg-raised" />
+              <Skeleton key={i} className="h-16 rounded-lg" />
             ))}
           </div>
-          <Skeleton className="h-20 rounded-lg bg-raised" />
+          <Skeleton className="h-20 rounded-lg" />
         </div>
       ) : stats.isError ? (
         <ErrorState error={stats.error} onRetry={() => void stats.refetch()} />
@@ -99,7 +100,7 @@ export function StatsView({ stats, tapFirst = false, followNudge = false }: { st
         {formatCount(stats.queued_now)} queued now
       </p>
       <div className="space-y-1">
-        <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">Skipped</p>
+        <p className={EYEBROW}>Skipped</p>
         <ul className="space-y-0.5 text-sm">
           <li className="flex justify-between gap-2">
             <span className="text-fg-secondary">Cooldown</span>
@@ -164,12 +165,12 @@ function DailyChart({ daily }: { daily: AutomationStats["daily"] }) {
             >
               {ok > 0 ? (
                 <span
-                  className={cn("block w-full bg-brand", failures === 0 && "rounded-t-[4px]")}
+                  className={cn("block w-full bg-brand", failures === 0 && "rounded-t-sm")}
                   style={{ height: Math.max(okHeight, 2) }}
                 />
               ) : null}
               {failures > 0 ? (
-                <span className="block w-full rounded-t-[4px] bg-danger" style={{ height: Math.max(failHeight, 2) }} />
+                <span className="block w-full rounded-t-sm bg-danger" style={{ height: Math.max(failHeight, 2) }} />
               ) : null}
             </div>
           );

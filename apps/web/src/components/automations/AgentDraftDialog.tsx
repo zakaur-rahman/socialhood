@@ -1,13 +1,13 @@
 "use client";
 
-import { Loader2, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { draftAccount } from "@/lib/agent/draft";
 import type { AutomationDraftHandoff } from "@/lib/agent/handoff";
 import { useStartAutomationDraft } from "@/lib/api/queries";
@@ -18,6 +18,7 @@ import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { useReturnFocusOr } from "./return-focus";
 import { editorHref } from "./TemplateGallery";
 
 const ACTION_LABEL = { send_message: "Send a message", ai_reply: "Reply with AI" } as const;
@@ -36,24 +37,28 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
  * FR-AGT-03 "Open the automation draft": what Ask Social Hood prepared, to check before it
  * becomes a draft in the editor (like choosing a template, F-11). Nothing runs until the member
  * activates it there. It stays mounted and keeps the last draft while it closes, so its exit plays
- * and focus goes back to what had it when it opened, if that is still on the page (UX-A11Y-02).
+ * and focus goes back to what had it when it opened, if that is still on the page, else to the
+ * fallback (UX-A11Y-02).
  */
 export function AgentDraftDialog({
   open,
   draft,
   accounts,
   onClose,
+  returnFocusFallback,
 }: {
   open: boolean;
   draft: AutomationDraftHandoff | null;
   /** Connected Instagram accounts. */
   accounts: SocialAccount[];
   onClose: () => void;
+  /** Where focus goes on close when what had it is gone (Ask's Open closed with its panel). */
+  returnFocusFallback?: () => HTMLElement | null;
 }) {
-  const returnFocus = useReturnFocus();
+  const returnFocus = useReturnFocusOr(returnFocusFallback);
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-lg" {...returnFocus}>
+      <DialogContent size="lg" {...returnFocus}>
         {draft ? <AgentDraftBody key={draft.nonce} draft={draft} accounts={accounts} onClose={onClose} /> : null}
       </DialogContent>
     </Dialog>
@@ -98,7 +103,7 @@ function AgentDraftBody({
         <DialogTitle className="flex items-center gap-2">
           <Sparkles className="size-4 text-brand-fg" aria-hidden /> Automation from Ask Social Hood
         </DialogTitle>
-        <DialogDescription className="text-fg-secondary">
+        <DialogDescription>
           Check what it prepared. Opening it creates a draft you finish in the editor; nothing runs until you activate
           it.
         </DialogDescription>
@@ -144,15 +149,11 @@ function AgentDraftBody({
         </fieldset>
       ) : null}
       <DialogFooter>
-        <Button variant="ghost" className="min-h-10 md:min-h-8" onClick={onClose}>
+        <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button
-          className="bg-brand-gradient min-h-10 text-white md:min-h-8"
-          disabled={start.isPending || (chooseAccount && !accountId)}
-          onClick={open}
-        >
-          {start.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+        <Button disabled={start.isPending || (chooseAccount && !accountId)} onClick={open}>
+          {start.isPending ? <Spinner /> : null}
           Open in editor
         </Button>
       </DialogFooter>

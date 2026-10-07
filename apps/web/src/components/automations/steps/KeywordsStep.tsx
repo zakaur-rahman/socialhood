@@ -69,7 +69,7 @@ export function KeywordsStep({
               return (
                 <li
                   key={`${overlap.automation_id}-${overlap.keyword}`}
-                  className="flex items-start gap-2 rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning"
+                  className="flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning"
                 >
                   <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
                   <span>

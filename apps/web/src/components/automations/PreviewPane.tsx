@@ -7,6 +7,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition } from "@/lib/api/types";
 import { DEFAULT_OPENING_BUTTON, isCommentTrigger, usesFollowNudge, usesTapFirst } from "@/lib/automations/definition";
 import { renderFields, withDisclosure, type FieldValues } from "@/lib/automations/render";
+import { IDENTITY_FILL, identityAt, type Identity } from "@/lib/ui/identity";
+import { cn } from "@/lib/utils";
 
 export const SAMPLE_CONTACT = { first_name: "Priya", username: "priya.styles" } as const;
 
@@ -66,24 +68,24 @@ export function PreviewPane({
         {comment ? (
           <>
             <div className="flex gap-2">
-              <span aria-hidden className="bg-brand-gradient-decor size-6 shrink-0 rounded-full" />
+              <SampleAvatar identity={THEIRS} />
               <p className="min-w-0 leading-snug">
                 <span className="font-semibold">{SAMPLE_CONTACT.username}</span> {incoming}
-                <span className="block text-[11px] text-fg-secondary">2m · Reply</span>
+                <span className="block text-2xs text-fg-secondary">2m · Reply</span>
               </p>
             </div>
             {reply ? (
               <div className="ml-8 flex gap-2">
-                <span aria-hidden className="bg-shell-gradient size-6 shrink-0 rounded-full" />
+                <SampleAvatar identity={MINE} />
                 <p className="min-w-0 leading-snug break-words">
                   <span className="font-semibold">{me}</span> {reply}
-                  <span className="block text-[11px] text-fg-secondary">
+                  <span className="block text-2xs text-fg-secondary">
                     now{replies.length > 1 ? ` · 1 of ${replies.length} replies, picked at random` : ""}
                   </span>
                 </p>
               </div>
             ) : null}
-            <p className="text-center text-[11px] text-fg-secondary">Direct message</p>
+            <p className="text-center text-2xs text-fg-secondary">Direct message</p>
           </>
         ) : (
           <Theirs>{incoming}</Theirs>
@@ -112,7 +114,7 @@ export function PreviewPane({
 
         <div className="flex justify-end">
           {draft.action === "ai_reply" ? (
-            <p className="bg-brand-gradient flex max-w-[88%] items-start gap-2 rounded-2xl rounded-br-md px-3 py-2 text-white">
+            <p className="bg-brand-gradient flex max-w-[88%] items-start gap-2 rounded-2xl rounded-br-md px-3 py-2 text-on-brand">
               <Sparkles className="mt-0.5 size-4 shrink-0" aria-hidden />
               The AI writes a reply from your knowledge base.
             </p>
@@ -128,7 +130,7 @@ export function PreviewPane({
                 </p>
               ) : null}
               {buttons.map((button, index) => (
-                <span key={index} className="block rounded-lg bg-white/15 py-1.5 text-center text-xs font-medium">
+                <span key={index} className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">
                   {button.title}
                 </span>
               ))}
@@ -140,10 +142,10 @@ export function PreviewPane({
 
         {nudge ? (
           <div className="flex flex-col items-end gap-1">
-            <p className="text-[11px] text-fg-secondary">Only to people who don&apos;t follow you</p>
+            <p className="text-2xs text-fg-secondary">Only to people who don&apos;t follow you</p>
             <Mine testId="preview-nudge">
               <p className="leading-relaxed break-words whitespace-pre-wrap">{nudge}</p>
-              <span className="block rounded-lg bg-white/15 py-1.5 text-center text-xs font-medium">View profile</span>
+              <span className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">View profile</span>
             </Mine>
           </div>
         ) : null}
@@ -157,20 +159,29 @@ function Mine({ children, testId }: { children: ReactNode; testId?: string }) {
   return (
     <div
       data-testid={testId}
-      className="bg-brand-gradient max-w-[88%] space-y-2 rounded-2xl rounded-br-md px-3 py-2 text-white"
+      className="bg-brand-gradient max-w-[88%] space-y-2 rounded-2xl rounded-br-md px-3 py-2 text-on-brand"
     >
       {children}
     </div>
   );
 }
 
-/** A DM from the customer: left, neutral. */
+/** A DM from the customer: left, neutral and flat, like the inbox's. */
 function Theirs({ children, testId }: { children: ReactNode; testId?: string }) {
   return (
     <div className="flex justify-start">
-      <p data-testid={testId} className="max-w-[85%] rounded-2xl rounded-bl-md bg-field px-3 py-2 shadow-sm">
+      <p data-testid={testId} className="max-w-[85%] rounded-2xl rounded-bl-md bg-field px-3 py-2">
         {children}
       </p>
     </div>
   );
+}
+
+// The sample commenter and the business, from the identity palette (D-13): two different pairs.
+const THEIRS = identityAt(0);
+const MINE = identityAt(1);
+
+/** A picture-less avatar in the comment preview: decorative, the name is beside it. */
+function SampleAvatar({ identity }: { identity: Identity }) {
+  return <span aria-hidden className={cn("size-6 shrink-0 rounded-full", IDENTITY_FILL, identity.gradient)} />;
 }

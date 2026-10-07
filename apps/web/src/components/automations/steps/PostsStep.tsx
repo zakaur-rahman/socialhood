@@ -4,6 +4,7 @@ import { Check, ImageOff, Search } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePosts } from "@/lib/api/queries";
@@ -205,14 +206,15 @@ function PostPicker({
           <label htmlFor="automation-post-search" className="sr-only">
             Search posts by caption
           </label>
-          <input
+          <Input
             id="automation-post-search"
             type="search"
+            size="lg"
             value={text}
             onChange={(event) => setText(event.target.value)}
             placeholder="Search captions"
             autoComplete="off"
-            className="h-9 w-full rounded-lg border border-line bg-field pr-3 pl-10 text-sm outline-none focus:bg-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="pl-10"
           />
         </div>
         <p className="text-xs text-fg-secondary tabular-nums" aria-live="polite">
@@ -223,7 +225,7 @@ function PostPicker({
       {posts.isPending ? (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5" aria-busy="true" aria-label="Loading posts">
           {Array.from({ length: 10 }, (_, i) => (
-            <Skeleton key={i} className="aspect-square rounded-lg bg-raised" />
+            <Skeleton key={i} className="aspect-square rounded-lg" />
           ))}
         </div>
       ) : posts.isError ? (
@@ -251,7 +253,7 @@ function PostPicker({
                   onClick={() => toggle(tile)}
                   disabled={tile.scheduled && !selected}
                   className={cn(
-                    "group relative grid aspect-square w-full place-items-center overflow-hidden rounded-lg border-2 bg-raised outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "group relative grid aspect-square w-full place-items-center overflow-hidden rounded-lg border-2 bg-raised",
                     selected ? "border-brand" : "border-transparent opacity-80 hover:opacity-100",
                   )}
                 >
@@ -267,13 +269,13 @@ function PostPicker({
                   </span>
                   <span
                     aria-hidden
-                    className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-canvas/70 px-1.5 py-0.5 text-[10px] text-fg"
+                    className="absolute inset-x-0 bottom-0 flex justify-between gap-1 bg-media-scrim/70 px-1.5 py-0.5 text-2xs text-fg"
                   >
                     <span>{tile.scheduled ? "Scheduled" : tile.type}</span>
                     <span>{tile.date ? shortDate(tile.date, timeZone) : ""}</span>
                   </span>
                   {selected ? (
-                    <span aria-hidden className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-brand text-white">
+                    <span aria-hidden className="absolute top-1 right-1 grid size-5 place-items-center rounded-full bg-brand text-on-brand">
                       <Check className="size-3.5" />
                     </span>
                   ) : null}
