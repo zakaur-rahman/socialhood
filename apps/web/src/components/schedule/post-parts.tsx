@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,7 +32,7 @@ import { usePost } from "@/lib/api/queries";
 import type { ScheduledPostSummary, SocialAccount } from "@/lib/api/types";
 import { formatCount } from "@/lib/automations/format";
 import { initial } from "@/lib/inbox/format";
-import { captionLine, CHIP_CLASS, POST_STATUS } from "@/lib/schedule/format";
+import { captionLine, POST_STATUS } from "@/lib/schedule/format";
 import { IDENTITY_FILL } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
@@ -138,9 +139,9 @@ export function TargetAvatars({ post }: { post: Pick<ScheduledPostSummary, "targ
 export function StatusChip({ post, className }: { post: Pick<ScheduledPostSummary, "status">; className?: string }) {
   const status = POST_STATUS[post.status];
   return (
-    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", CHIP_CLASS[status.tone], className)}>
+    <Badge tone={status.tone} size="md" className={className}>
       {status.label}
-    </span>
+    </Badge>
   );
 }
 

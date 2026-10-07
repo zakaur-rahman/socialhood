@@ -7,7 +7,10 @@ import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { UpgradeAction } from "@/components/billing/UpgradeAction";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,9 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useGenerateCaption, useSuggestHashtags } from "@/lib/api/queries/scheduledPosts";
@@ -80,8 +81,6 @@ export function CaptionField({
   hint?: string;
   rows?: number;
 }) {
-  const countsId = useId();
-  const hintId = useId();
   const counts = countText(value);
   const overChars = counts.chars > maxChars;
   const overHashtags = counts.hashtags > MAX_HASHTAGS;
@@ -119,16 +118,14 @@ export function CaptionField({
   };
 
   return (
-    <div className="space-y-2">
+    <Field id={id} invalid={overChars || overHashtags || overMentions || undefined} className="gap-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Label htmlFor={id} className="text-sm font-medium">
-          {label}
-        </Label>
+        <FieldLabel className="text-sm font-medium">{label}</FieldLabel>
         <div className="flex flex-wrap items-center gap-1">
           {tools.ai ? <WriteWithAi wid={wid} caption={value} onWritten={onChange} /> : null}
           {tools.suggest ? (
-            <Button type="button" variant="ghost" size="sm" onClick={onSuggest} disabled={suggest.isPending}>
-              {suggest.isPending ? <Spinner size="sm" /> : <Hash aria-hidden />}
+            <Button type="button" variant="ghost" size="sm" onClick={onSuggest} loading={suggest.isPending}>
+              <Hash aria-hidden />
               Suggest hashtags
             </Button>
           ) : null}
@@ -143,16 +140,13 @@ export function CaptionField({
         </div>
       </div>
       <Textarea
-        id={id}
         value={value}
         rows={rows}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        aria-invalid={overChars || overHashtags || overMentions ? true : undefined}
-        aria-describedby={hint ? `${countsId} ${hintId}` : countsId}
         className="min-h-28 resize-y"
       />
-      <p id={countsId} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-fg-secondary tabular-nums" data-testid={`${id}-counts`}>
+      <FieldDescription className="flex flex-wrap gap-x-3 gap-y-1 tabular-nums" data-testid={`${id}-counts`}>
         <span className={cn(overChars && "font-medium text-danger-fg")}>
           {formatCount(counts.chars)} / {formatCount(maxChars)} characters
         </span>
@@ -164,53 +158,49 @@ export function CaptionField({
             {counts.mentions} / {MAX_MENTIONS} mentions
           </span>
         ) : null}
-      </p>
-      {hint ? (
-        <p id={hintId} className="text-xs text-fg-secondary">
-          {hint}
-        </p>
-      ) : null}
+      </FieldDescription>
+      {hint ? <FieldDescription>{hint}</FieldDescription> : null}
       {notice ? (
-        <div role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-danger-fg">
-          <p className="flex min-w-0 flex-1 items-start gap-1.5">
-            <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden /> {notice}
-          </p>
-          <UpgradeAction error={noticeError} />
-        </div>
+        <Alert tone="danger" icon={<AlertCircle />} action={<UpgradeAction error={noticeError} />}>
+          {notice}
+        </Alert>
       ) : null}
       {suggested && remaining.length > 0 ? (
-        <div role="group" aria-label="Suggested hashtags" className="rounded-lg border border-line bg-field p-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <p className="text-xs font-medium text-brand-fg">
-              <Sparkles className="mr-1 inline size-3.5" aria-hidden />
-              Suggested hashtags
-            </p>
-            <div className="flex gap-1">
-              <Button type="button" variant="ghost" size="xs" onClick={() => onChange(appendHashtags(value, remaining))}>
-                <Plus aria-hidden /> Add all
-              </Button>
-              <Button type="button" variant="ghost" size="icon-xs" aria-label="Dismiss suggested hashtags" onClick={() => setSuggested(null)}>
-                <X aria-hidden />
-              </Button>
+        <CardInset asChild padding="compact">
+          <div role="group" aria-label="Suggested hashtags">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <p className="text-xs font-medium text-brand-fg">
+                <Sparkles className="mr-1 inline size-3.5" aria-hidden />
+                Suggested hashtags
+              </p>
+              <div className="flex gap-1">
+                <Button type="button" variant="ghost" size="xs" onClick={() => onChange(appendHashtags(value, remaining))}>
+                  <Plus aria-hidden /> Add all
+                </Button>
+                <Button type="button" variant="ghost" size="icon-xs" aria-label="Dismiss suggested hashtags" onClick={() => setSuggested(null)}>
+                  <X aria-hidden />
+                </Button>
+              </div>
             </div>
+            <ul className="flex flex-wrap gap-1.5">
+              {remaining.map((tag) => (
+                <li key={tag}>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="xs"
+                    aria-label={`Add #${tag}`}
+                    onClick={() => onChange(appendHashtags(value, [tag]))}
+                  >
+                    #{tag}
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="flex flex-wrap gap-1.5">
-            {remaining.map((tag) => (
-              <li key={tag}>
-                <button
-                  type="button"
-                  aria-label={`Add #${tag}`}
-                  onClick={() => onChange(appendHashtags(value, [tag]))}
-                  className="min-h-8 rounded-full bg-raised px-2.5 text-xs text-fg transition-[background-color] duration-fast ease-standard hover:bg-raised-hover pointer-coarse:min-h-10"
-                >
-                  #{tag}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        </CardInset>
       ) : null}
-    </div>
+    </Field>
   );
 }
 
@@ -259,12 +249,10 @@ export function CaptionEditor({
       title="Caption"
       aside={
         canPerAccount || perAccount ? (
-          <div className="flex items-center gap-2">
-            <Label htmlFor={switchId} className="text-xs font-normal text-fg-secondary">
-              Different caption per account
-            </Label>
-            <Switch id={switchId} checked={perAccount} onCheckedChange={onPerAccountChange} />
-          </div>
+          <Field id={switchId} orientation="horizontal" density="compact" className="w-auto gap-2">
+            <FieldLabel className="font-normal">Different caption per account</FieldLabel>
+            <Switch checked={perAccount} onCheckedChange={onPerAccountChange} />
+          </Field>
         ) : null
       }
     >
@@ -402,34 +390,38 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
             if (brief.trim()) run("write");
           }}
         >
-          <div className="space-y-1.5">
-            <Label htmlFor={briefId} className="text-sm font-medium">
-              What&apos;s the post about?
-            </Label>
+          <Field id={briefId}>
+            <FieldLabel className="text-sm font-medium">What&apos;s the post about?</FieldLabel>
             <Textarea
-              id={briefId}
               value={brief}
               maxLength={500}
               rows={3}
               placeholder="New linen dresses, 20% off this weekend"
               onChange={(event) => setBrief(event.target.value)}
             />
-            <p className="text-xs text-fg-secondary">Written in your brand voice. Uses AI credits.</p>
-          </div>
+            <FieldDescription>Written in your brand voice. Uses AI credits.</FieldDescription>
+          </Field>
           {error ? (
-            <div role="alert" className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-danger-fg">
-              <p className="min-w-0 flex-1">{error}</p>
-              <UpgradeAction error={failure} />
-            </div>
+            <Alert tone="danger" action={<UpgradeAction error={failure} />}>
+              {error}
+            </Alert>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" disabled={!brief.trim() || generate.isPending}>
-              {generate.isPending && generate.variables?.mode === "write" ? <Spinner /> : null}
+            <Button
+              type="submit"
+              disabled={!brief.trim() || generate.isPending}
+              loading={generate.isPending && generate.variables?.mode === "write"}
+            >
               Write caption
             </Button>
             {caption.trim() ? (
-              <Button type="button" variant="secondary" disabled={generate.isPending} onClick={() => run("improve")}>
-                {generate.isPending && generate.variables?.mode === "improve" ? <Spinner /> : null}
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={generate.isPending}
+                loading={generate.isPending && generate.variables?.mode === "improve"}
+                onClick={() => run("improve")}
+              >
                 Improve my caption
               </Button>
             ) : null}

@@ -2,6 +2,7 @@
 
 import { useMemo, useRef } from "react";
 
+import { Card } from "@/components/ui/card";
 import type { CalendarMessage, ScheduledPostSummary } from "@/lib/api/types";
 import { dayParts, sameMonth, shortDay, WEEKDAYS_SHORT } from "@/lib/schedule/dates";
 import { dayKey } from "@/lib/tz";
@@ -65,7 +66,7 @@ export function MonthView({
   }, [posts, messages, timeZone]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-line bg-panel">
+    <Card className="overflow-hidden p-0">
       <div className="grid grid-cols-7 border-b border-line" aria-hidden>
         {WEEKDAYS_SHORT.map((weekday) => (
           <div key={weekday} className="px-2 py-2 text-center text-xs text-fg-secondary">
@@ -90,7 +91,7 @@ export function MonthView({
           />
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
 

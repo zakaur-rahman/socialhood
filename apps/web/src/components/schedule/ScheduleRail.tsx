@@ -5,7 +5,11 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { EmptyState } from "@/components/states/EmptyState";
+import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
+import { Meter } from "@/components/ui/meter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePostingSlotsFor, type ScheduledPostPages } from "@/lib/api/queries/calendar";
 import type { Calendar, ScheduledPostSummary, SocialAccount } from "@/lib/api/types";
@@ -26,6 +30,8 @@ type DraftsQuery = {
   data?: ScheduledPostPages;
   isPending: boolean;
   isError: boolean;
+  error?: unknown;
+  refetch?: () => unknown;
 };
 
 /**
@@ -68,9 +74,9 @@ export function ScheduleRail({
             <Skeleton className="h-12 w-full" />
           </div>
         ) : drafts.isError ? (
-          <p className="text-xs text-fg-secondary">Drafts didn&apos;t load.</p>
+          <ErrorState size="compact" error={drafts.error} onRetry={drafts.refetch ? () => void drafts.refetch?.() : undefined} />
         ) : items.length === 0 ? (
-          <p className="text-xs text-fg-secondary">No drafts. Posts you start and don&apos;t schedule wait here.</p>
+          <EmptyState size="compact" title="No drafts" body="Posts you start and don't schedule wait here." />
         ) : (
           <>
             <ul className="space-y-1.5" aria-label="Unscheduled drafts">
@@ -97,29 +103,27 @@ export function ScheduleRail({
               const used = figure?.published_24h ?? 0;
               const limit = figure?.publishing_limit ?? 0;
               return (
-                <li key={account.id} className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <AccountAvatar account={account} accountId={account.id} />
-                    <span className="min-w-0 flex-1 truncate">{accountLabel(account)}</span>
-                    <span className="text-xs text-fg-secondary tabular-nums">
-                      {figure ? `${used} of ${limit}` : "–"}
-                    </span>
-                  </div>
+                <li key={account.id} className="flex items-start gap-2">
+                  <AccountAvatar account={account} accountId={account.id} />
                   {figure && limit > 0 ? (
-                    <div
-                      role="meter"
-                      aria-label={`${accountLabel(account)} published in the last 24 hours`}
-                      aria-valuemin={0}
-                      aria-valuemax={limit}
-                      aria-valuenow={used}
-                      className="h-1 overflow-hidden rounded-full bg-field"
-                    >
-                      <div
-                        className={cn("h-full rounded-full", used >= limit ? "bg-danger" : used / limit >= 0.8 ? "bg-warning" : "bg-brand")}
-                        style={{ width: `${Math.min(100, (used / limit) * 100)}%` }}
-                      />
+                    <Meter
+                      className="min-w-0 flex-1"
+                      label={
+                        <>
+                          {accountLabel(account)}{" "}
+                          <span className="sr-only">published in the last 24 hours</span>
+                        </>
+                      }
+                      value={used}
+                      max={limit}
+                      valueText={`${used} of ${limit}`}
+                    />
+                  ) : (
+                    <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3 text-xs">
+                      <span className="min-w-0 truncate text-fg-secondary">{accountLabel(account)}</span>
+                      <span className="text-fg-secondary tabular-nums">–</span>
                     </div>
-                  ) : null}
+                  )}
                 </li>
               );
             })}
@@ -183,12 +187,15 @@ function RailSection({ title, count, children }: { title: string; count?: number
 function NoAccounts() {
   const schedule = useSchedule();
   return (
-    <p className="text-xs text-fg-secondary">
-      <Link href={`/w/${schedule.slug}/settings/connections` as Route} className="text-brand-fg underline-offset-4 hover:underline">
-        Connect an Instagram account
-      </Link>{" "}
-      to publish.
-    </p>
+    <EmptyState
+      size="compact"
+      title="No Instagram account"
+      action={
+        <Link href={`/w/${schedule.slug}/settings/connections` as Route} className="text-brand-fg underline-offset-4 hover:underline">
+          Connect an Instagram account
+        </Link>
+      }
+    />
   );
 }
 
@@ -199,15 +206,16 @@ function DraftCard({ post, dragEnabled }: { post: ScheduledPostSummary; dragEnab
   const dragging = useDragSelector((state) => state?.source.post.id === post.id);
   const draggable = dragEnabled && canMove(post);
   return (
-    <li
+    <CardInset
+      asChild
+      padding="compact"
+      className={cn("p-1.5 select-none", draggable && "cursor-grab active:cursor-grabbing", dragging && "opacity-40")}
+    >
+     <li
       data-draft-id={post.id}
       onPointerDown={draggable ? (event) => pointerDown(event, { post, from: "rail" }) : undefined}
-      className={cn(
-        "flex items-center gap-2 rounded-lg border border-line bg-field p-1.5 select-none",
-        draggable && "cursor-grab active:cursor-grabbing",
-        dragging && "opacity-40",
-      )}
-    >
+      className="flex items-center gap-2"
+     >
       <Link
         href={schedule.composerHref(post)}
         draggable={false}
@@ -227,6 +235,7 @@ function DraftCard({ post, dragEnabled }: { post: ScheduledPostSummary; dragEnab
         </span>
       </Link>
       <PostMenu post={post} size="sm" />
-    </li>
+     </li>
+    </CardInset>
   );
 }

@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,6 +32,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSocialAccounts } from "@/lib/api/queries";
 import {
@@ -277,8 +279,10 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
     say(lockedMessage(post));
   };
 
+  const [creatingQueue, setCreatingQueue] = useState(false);
   const newPost = (at: Date | null, query = "") => {
     if (create.isPending) return;
+    setCreatingQueue(query.includes("when=queue"));
     create.mutate(
       { publishAt: at ? at.toISOString() : null },
       {
@@ -413,10 +417,15 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
               <p className="text-xs text-fg-secondary">Times in {zoneLabel(timeZone)}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => newPost(null, "?when=queue")} disabled={create.isPending}>
+              <Button
+                variant="secondary"
+                onClick={() => newPost(null, "?when=queue")}
+                disabled={create.isPending}
+                loading={create.isPending && creatingQueue}
+              >
                 <ListPlus aria-hidden /> Add to queue
               </Button>
-              <Button onClick={() => newPost(null)} disabled={create.isPending}>
+              <Button onClick={() => newPost(null)} disabled={create.isPending} loading={create.isPending && !creatingQueue}>
                 <Plus aria-hidden /> New post
               </Button>
             </div>
@@ -454,27 +463,30 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
                   const shown = !hidden.has(account.id);
                   return (
                     // A toggle around the account's avatar: 32 px, 40 px on coarse pointers.
-                    <button
-                      key={account.id}
-                      type="button"
-                      aria-pressed={shown}
-                      aria-label={accountLabel(account)}
-                      title={accountLabel(account)}
-                      onClick={() =>
-                        setHidden((current) => {
-                          const next = new Set(current);
-                          if (shown) next.add(account.id);
-                          else next.delete(account.id);
-                          return next;
-                        })
-                      }
-                      className={cn(
-                        "grid size-8 place-items-center rounded-full transition-[opacity,filter,background-color] duration-fast ease-standard hover:bg-hover pointer-coarse:size-10",
-                        !shown && "opacity-40 grayscale",
-                      )}
-                    >
-                      <AccountAvatar account={account} accountId={account.id} />
-                    </button>
+                    <Tooltip key={account.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-pressed={shown}
+                          aria-label={accountLabel(account)}
+                          onClick={() =>
+                            setHidden((current) => {
+                              const next = new Set(current);
+                              if (shown) next.add(account.id);
+                              else next.delete(account.id);
+                              return next;
+                            })
+                          }
+                          className={cn(
+                            "grid size-8 place-items-center rounded-full transition-[opacity,filter,background-color] duration-fast ease-standard hover:bg-hover pointer-coarse:size-10",
+                            !shown && "opacity-40 grayscale",
+                          )}
+                        >
+                          <AccountAvatar account={account} accountId={account.id} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{accountLabel(account)}</TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
@@ -533,13 +545,17 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           </div>
 
           {emptyRange && view !== "list" ? (
-            <EmptyState
-              className="mb-3 rounded-xl border border-line bg-panel py-6"
-              {...emptyStates.schedule}
-              action={
-                <Button onClick={() => newPost(null)}>New post</Button>
-              }
-            />
+            <Card className="mb-3">
+              <EmptyState
+                size="compact"
+                {...emptyStates.schedule}
+                action={
+                  <Button size="sm" onClick={() => newPost(null)}>
+                    New post
+                  </Button>
+                }
+              />
+            </Card>
           ) : null}
 
           <div className="flex gap-4">
@@ -639,11 +655,11 @@ function deleteDescription(post: ScheduledPostSummary): string {
 
 function CalendarSkeleton() {
   return (
-    <div className="space-y-2 rounded-xl border border-line bg-panel p-3" aria-busy="true" aria-label="Loading the calendar">
+    <Card className="space-y-2" aria-busy="true" aria-label="Loading the calendar">
       <Skeleton className="h-6 w-full" />
       {Array.from({ length: 6 }, (_, i) => (
         <Skeleton key={i} className="h-16 w-full" />
       ))}
-    </div>
+    </Card>
   );
 }

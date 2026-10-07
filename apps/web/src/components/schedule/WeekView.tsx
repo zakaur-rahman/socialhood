@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useMemo, useRef } from "react";
 
+import { Card } from "@/components/ui/card";
 import type { CalendarMessage, CalendarSlot, ScheduledPostSummary } from "@/lib/api/types";
 import {
   DAY_MINUTES,
@@ -103,7 +104,7 @@ export function WeekView({
   }, [posts, messages, slots, timeZone]);
 
   return (
-    <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-panel">
+    <Card className="flex min-h-0 flex-col overflow-hidden p-0">
       <div className={cn(GRID_COLUMNS, "overflow-hidden border-b border-line [scrollbar-gutter:stable]")}>
         <div aria-hidden />
         {days.map((day) => {
@@ -158,7 +159,7 @@ export function WeekView({
           ))}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
