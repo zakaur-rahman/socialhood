@@ -1,13 +1,12 @@
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
-import { EYEBROW } from "./styles";
-
-/** A section label inside a card ("ALWAYS BUILT IN"). */
+/** A section label inside a card ("ALWAYS BUILT IN"): the one eyebrow style (DESIGN_SYSTEM §2.1). */
 export function SectionLabel({ children, className, id }: { children: ReactNode; className?: string; id?: string }) {
   return (
-    <p id={id} className={cn(EYEBROW, "text-fg-secondary", className)}>
+    <p id={id} className={cn(EYEBROW, className)}>
       {children}
     </p>
   );
@@ -55,7 +54,7 @@ export function SettingsCard({
               aria-hidden
               className={cn(
                 "grid size-10 shrink-0 place-items-center rounded-xl [&_svg]:size-5",
-                tone === "danger" ? "bg-danger/10 text-danger-fg" : "bg-raised text-brand-fg",
+                tone === "danger" ? "bg-danger-soft text-danger-fg" : "bg-raised text-brand-fg",
               )}
             >
               {icon}

@@ -41,7 +41,7 @@ export function GetAlertsCard({
       always
       className="m-3 mb-1"
       action={
-        <Button asChild variant="secondary" className="min-h-10 md:min-h-8">
+        <Button asChild variant="secondary">
           <Link href={`/w/${slug}/settings/notifications` as Route} onClick={onNavigate}>
             Turn on alerts
           </Link>

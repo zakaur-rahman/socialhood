@@ -30,7 +30,7 @@ const OFF_COPY = "Get alerts on this device when a conversation needs you, a new
 function Notice({ icon, title, children }: { icon: ReactNode; title: string; children?: ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-white/5 text-fg-secondary" aria-hidden>
+      <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-hover text-fg-secondary" aria-hidden>
         {icon}
       </span>
       <div className="min-w-0 flex-1 space-y-1.5">
@@ -54,8 +54,8 @@ function StateView({
     case "checking":
       return (
         <div className="space-y-2" aria-busy="true" aria-label="Checking this device">
-          <Skeleton className="h-4 w-48 bg-raised motion-reduce:animate-none" />
-          <Skeleton className="h-3 w-72 max-w-full bg-raised motion-reduce:animate-none" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-3 w-72 max-w-full" />
         </div>
       );
     case "ios-install":
@@ -102,7 +102,7 @@ function StateView({
               className={
                 on
                   ? "mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-fg"
-                  : "mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-white/5 text-fg-secondary"
+                  : "mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg bg-hover text-fg-secondary"
               }
               aria-hidden
             >

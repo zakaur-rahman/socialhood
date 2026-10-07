@@ -151,7 +151,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
           {accounts.map((account) => (
             <li
               key={account.id}
-              className="flex flex-col gap-3 rounded-xl border border-line-subtle bg-field/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span
@@ -175,6 +175,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
                 onValueChange={(value) => choose(account, value as AiMode)}
                 aria-labelledby={`ai-mode-label-${account.id}`}
                 disabled={!canManage || (update.isPending && update.variables?.id === account.id)}
+                size="xl"
                 className="sm:w-64"
               >
                 {AI_MODES.map((mode) => {
@@ -184,7 +185,6 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
                       key={mode}
                       value={mode}
                       disabled={locked}
-                      className="min-h-9 text-xs"
                       title={locked ? "Auto is part of Pro" : AI_MODE_HINT[mode]}
                     >
                       {AI_MODE_LABEL[mode]}
@@ -272,10 +272,11 @@ function RulesForm({ settings, modes }: { settings: AiSettings; modes: ReactNode
                   value={String(field.value)}
                   onValueChange={(value) => field.onChange(Number(value) as TakeoverMinutes)}
                   aria-labelledby="takeover-title"
+                  size="xl"
                   className="grid grid-cols-2 sm:grid-cols-4"
                 >
                   {TAKEOVER_OPTIONS.map((option) => (
-                    <ToggleGroupItem key={option.value} value={String(option.value)} className="min-h-10">
+                    <ToggleGroupItem key={option.value} value={String(option.value)}>
                       {option.label}
                     </ToggleGroupItem>
                   ))}
@@ -296,7 +297,7 @@ function RulesForm({ settings, modes }: { settings: AiSettings; modes: ReactNode
               <SectionLabel id="built-in-label">Always built in</SectionLabel>
               <ul className="grid gap-2 sm:grid-cols-2" aria-label="Built-in escalation rules">
                 {BUILT_IN_ESCALATIONS.map((rule) => (
-                  <li key={rule} className="flex items-start gap-2 rounded-lg border border-line-subtle bg-field/60 p-3 text-sm">
+                  <li key={rule} className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
                     {rule}
                   </li>

@@ -96,7 +96,7 @@ function Connections() {
       {SANDBOX_TOOLS && workspace.role === "owner" ? (
         <Button
           variant="ghost"
-          className="min-h-10 px-3 md:min-h-9"
+          size="lg"
           disabled={sandbox.isPending}
           onClick={() =>
             sandbox.mutate(undefined, {
@@ -117,7 +117,7 @@ function Connections() {
       ) : null}
       <ConnectWhatsAppButton wid={wid} />
       <Button
-        className="bg-brand-gradient min-h-10 px-4 text-white md:min-h-9"
+        size="lg"
         disabled={connect.isPending || finishing}
         onClick={startConnect}
       >
@@ -149,7 +149,7 @@ function Connections() {
             icon={<InstagramGlyph className="size-8" />}
             action={
               canManage ? (
-                <Button className="bg-brand-gradient min-h-10 text-white" disabled={connect.isPending} onClick={startConnect}>
+                <Button size="xl" disabled={connect.isPending} onClick={startConnect}>
                   Connect Instagram
                 </Button>
               ) : (
@@ -169,17 +169,20 @@ function Connections() {
                 placeholder="Search by name, handle or number"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                className="min-h-10 border-0 bg-field pl-9"
+                size="xl"
+                className="pl-9"
               />
             </div>
+            {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
+                Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
             <ToggleGroup
               value={filter}
               onValueChange={(value) => setFilter(value as AccountFilter)}
               aria-label="Show accounts"
-              className="overflow-x-auto lg:w-auto"
+              className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
             >
               {ACCOUNT_FILTERS.map((option) => (
-                <ToggleGroupItem key={option.value} value={option.value} className="min-h-9 shrink-0 px-3">
+                <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
                   {option.label}
                   <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
                 </ToggleGroupItem>
@@ -194,7 +197,7 @@ function Connections() {
                 action={
                   <Button
                     variant="secondary"
-                    className="min-h-10"
+                    size="xl"
                     onClick={() => {
                       setQuery("");
                       setFilter("all");

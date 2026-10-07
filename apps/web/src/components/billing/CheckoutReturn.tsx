@@ -64,7 +64,7 @@ export function CheckoutReturn({
       aria-live="polite"
       className={cn(
         "mb-6 flex flex-wrap items-start gap-3 rounded-xl border p-4",
-        phase === "confirmed" ? "border-success/40 bg-success/10" : "border-brand-line bg-brand-soft",
+        phase === "confirmed" ? "border-success/40 bg-success-soft" : "border-brand-line bg-brand-soft",
       )}
     >
       <Icon
@@ -80,7 +80,7 @@ export function CheckoutReturn({
         {body ? <p className="text-sm text-fg-secondary">{body}</p> : null}
       </div>
       {phase === "waiting" ? null : (
-        <Button variant="ghost" className="min-h-10 md:min-h-8" onClick={onDone}>
+        <Button variant="ghost" onClick={onDone}>
           Done
         </Button>
       )}

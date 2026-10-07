@@ -26,14 +26,14 @@ export function InstallSteps({ className }: { className?: string }) {
   return (
     <ol className={cn("space-y-2 text-sm", className)} aria-label="Add Social Hood to your Home Screen">
       <li className="flex items-start gap-2.5">
-        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-semibold">1</span>
+        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-pressed text-xs font-semibold">1</span>
         <span className="pt-0.5">
           Tap <Share className="inline size-4 align-[-3px] text-brand-fg" aria-label="Share" /> Share in Safari&apos;s
           toolbar.
         </span>
       </li>
       <li className="flex items-start gap-2.5">
-        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-white/10 text-xs font-semibold">2</span>
+        <span className="grid size-6 shrink-0 place-items-center rounded-full bg-pressed text-xs font-semibold">2</span>
         <span className="pt-0.5">
           Choose <SquarePlus className="inline size-4 align-[-3px] text-brand-fg" aria-hidden /> Add to Home Screen, then
           open Social Hood from your Home Screen.
@@ -82,14 +82,16 @@ export function InstallPrompt({
       aria-label={title}
       className={cn("relative rounded-xl border border-brand-line bg-brand-soft p-4 pr-12", className)}
     >
-      <button
+      <Button
         type="button"
+        variant="ghost"
+        size="icon"
         aria-label="Dismiss"
         onClick={() => setDismissed(true)}
-        className="absolute top-2 right-2 grid size-10 place-items-center rounded-md text-fg-secondary hover:bg-white/10 hover:text-fg md:size-8"
+        className="absolute top-2 right-2"
       >
-        <X className="size-4" aria-hidden />
-      </button>
+        <X aria-hidden />
+      </Button>
       <p className="text-sm font-semibold">{title}</p>
       <p className="mt-1 text-sm text-fg-secondary">{body}</p>
       {ios ? <InstallSteps className="mt-3" /> : null}
@@ -97,7 +99,6 @@ export function InstallPrompt({
         <div className="mt-3 flex flex-wrap gap-2">
           {native ? (
             <Button
-              className="bg-brand-gradient min-h-10 text-white md:min-h-8"
               onClick={() => {
                 void install().then((accepted) => (accepted ? setDismissed(true) : undefined));
               }}

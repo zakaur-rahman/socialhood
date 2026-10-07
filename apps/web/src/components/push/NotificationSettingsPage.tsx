@@ -97,14 +97,14 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
 
   const loading = (
     <div className="space-y-3" aria-busy="true" aria-label="Loading">
-      <Skeleton className="h-4 w-40 bg-raised motion-reduce:animate-none" />
-      <Skeleton className="h-3 w-64 max-w-full bg-raised motion-reduce:animate-none" />
+      <Skeleton className="h-4 w-40" />
+      <Skeleton className="h-3 w-64 max-w-full" />
     </div>
   );
   const failed = (
     <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">
       <p className="flex-1 text-danger-fg">{errorMessage(prefs.error)}</p>
-      <Button variant="secondary" className="min-h-10 md:min-h-8" onClick={() => void prefs.refetch()}>
+      <Button variant="secondary" onClick={() => void prefs.refetch()}>
         <RotateCw aria-hidden /> Try again
       </Button>
     </div>

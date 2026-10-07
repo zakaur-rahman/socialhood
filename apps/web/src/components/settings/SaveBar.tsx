@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle2, CircleAlert, Loader2 } from "lucide-react";
+import { CheckCircle2, CircleAlert } from "lucide-react";
 import { useEffect } from "react";
 
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 
 export const LEAVE_WARNING = "You have unsaved changes. Leave this page without saving them?";
@@ -52,9 +53,9 @@ export function useLeaveWarning(dirty: boolean) {
  * A page whose switches save as they change (Notifications) passes `dirty={false}` and gets the
  * saving and error states only.
  *
- * It floats (DESIGN_SYSTEM §6): opaque `panel` with the spec's shadow, no blur. It reserves its
- * height so a focused control is never under it, and stays in the flow on short viewports
- * (UI-ISS-014, `shell/sticky-bar.ts`).
+ * It floats (DESIGN_SYSTEM §6, level 1; D-12): the opaque `overlay` surface with a `line` ring and
+ * `shadow-floating`, like a menu or a toast, no blur. It reserves its height so a focused control
+ * is never under it, and stays in the flow on short viewports (UI-ISS-014, `shell/sticky-bar.ts`).
  */
 export function SaveBar({
   dirty,
@@ -78,12 +79,12 @@ export function SaveBar({
       aria-label="Save changes"
       className={cn("sticky bottom-0 z-20 pt-2 pb-4", BOTTOM_BAR)}
     >
-      <div className="flex flex-col gap-3 rounded-2xl border border-line bg-panel px-4 py-3 shadow-xl sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-2xl bg-overlay px-4 py-3 ring-1 ring-line shadow-floating sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p role="status" aria-live="polite" className="flex min-h-6 items-center gap-2 text-sm font-medium">
             {saving ? (
               <>
-                <Loader2 className="size-4 shrink-0 text-brand-fg motion-safe:animate-spin" aria-hidden />
+                <Spinner className="text-brand-fg" />
                 Saving…
               </>
             ) : dirty ? (
@@ -114,7 +115,8 @@ export function SaveBar({
             <Button
               type="button"
               variant="secondary"
-              className="min-h-10 flex-1 px-4 sm:flex-none"
+              size="xl"
+              className="flex-1 sm:flex-none"
               disabled={saving || !dirty}
               onClick={onReset}
             >
@@ -122,7 +124,8 @@ export function SaveBar({
             </Button>
             <Button
               type="button"
-              className="bg-brand-gradient min-h-10 flex-1 px-5 text-white sm:flex-none"
+              size="xl"
+              className="flex-1 sm:flex-none"
               disabled={saving || !dirty}
               onClick={onSave}
             >

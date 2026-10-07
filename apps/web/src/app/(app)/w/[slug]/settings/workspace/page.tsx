@@ -180,7 +180,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                     maxLength={NAME_MAX}
                     disabled={!canEdit}
                     aria-invalid={!!errors.name}
-                    className="min-h-10"
+                    size="xl"
                     {...form.register("name")}
                   />
                 </Field>
@@ -191,7 +191,9 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                   hint="Changing it changes the address of every page in this workspace."
                   error={errors.slug?.message}
                 >
-                  <div className="flex min-h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field focus-within:ring-2 focus-within:ring-brand">
+                  {/* One field in two parts: the wrapper draws the focus outline, ring border and raised fill
+                      while its input has focus (DESIGN_SYSTEM §8.3, like ChipInput); the input draws none. */}
+                  <div className="flex min-h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field has-[input:focus-visible]:border-ring has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring has-[input[aria-invalid=true]]:border-danger">
                     <span className="flex items-center border-r border-line bg-raised/60 px-3 text-sm text-fg-secondary" aria-hidden>
                       …/w/
                     </span>
@@ -200,7 +202,8 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                       disabled={!canEdit}
                       aria-invalid={!!errors.slug}
                       aria-describedby="slug-prefix"
-                      className="min-h-10 rounded-none border-0 bg-transparent focus-visible:outline-none"
+                      size="xl"
+                      className="rounded-none border-0 bg-transparent focus-visible:bg-transparent focus-visible:outline-none"
                       {...form.register("slug")}
                     />
                   </div>
@@ -220,10 +223,10 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                     name="timezone"
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange} disabled={!canEdit}>
-                        <SelectTrigger id="timezone" className="min-h-10 w-full">
+                        <SelectTrigger id="timezone" size="xl" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="max-h-72">
+                        <SelectContent>
                           {zones.map((zone) => (
                             <SelectItem key={zone} value={zone}>
                               {zone.replaceAll("_", " ")}
@@ -234,9 +237,11 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                     )}
                   />
                   {canEdit && suggested && suggested !== timezone ? (
+                    // A raw button, not Button variant="link": the zone name can be long, and Button
+                    // keeps its label on one line. The global focus outline; 40 px on touch.
                     <button
                       type="button"
-                      className="mt-2 min-h-10 rounded-md text-left text-sm text-brand-fg underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand md:min-h-0"
+                      className="mt-2 inline-flex items-center rounded-md text-left text-sm text-brand-fg underline-offset-4 hover:underline pointer-coarse:min-h-10"
                       onClick={() => form.setValue("timezone", suggested, { shouldDirty: true })}
                     >
                       Use your browser&apos;s timezone ({suggested.replaceAll("_", " ")})
@@ -255,7 +260,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                     name="reply_language"
                     render={({ field }) => (
                       <Select value={field.value} onValueChange={field.onChange} disabled={!canEdit}>
-                        <SelectTrigger id="reply_language" className="min-h-10 w-full">
+                        <SelectTrigger id="reply_language" size="xl" className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -270,7 +275,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                   />
                 </Field>
 
-                <div className="space-y-4 rounded-xl border border-line-subtle bg-field/60 p-4">
+                <div className="space-y-4 rounded-lg border border-line p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-1">
                       <Label htmlFor="disclosure_on" className="flex items-center gap-2">
@@ -314,7 +319,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                           maxLength={DISCLOSURE_MAX}
                           disabled={!canEdit}
                           aria-invalid={!!errors.automation_disclosure}
-                          className="min-h-10"
+                          size="xl"
                           {...form.register("automation_disclosure")}
                         />
                       </Field>

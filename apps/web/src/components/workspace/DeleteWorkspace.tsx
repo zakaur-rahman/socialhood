@@ -96,18 +96,15 @@ function DangerZone({ id, name }: { id: string; name: string }) {
         <p className="text-xs text-fg-secondary">Only the owner can delete a workspace.</p>
         <AlertDialog open={open} onOpenChange={onOpenChange}>
           <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="min-h-10 border-danger/60 px-4 text-danger-fg hover:bg-danger/10 hover:text-danger-fg"
-            >
+            <Button variant="destructive-ghost" size="xl">
               Delete workspace
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="border-line bg-panel">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
               <AlertDialogDescription asChild>
-                <div className="space-y-3 text-sm text-fg-secondary">
+                <div className="space-y-3">
                   <p>Everyone loses access now. Within 24 hours we permanently erase:</p>
                   <ul className="list-disc space-y-1 pl-5">
                     {DELETED_DATA.map((item) => (
@@ -149,12 +146,7 @@ function DangerZone({ id, name }: { id: string; name: string }) {
             </form>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
-              <Button
-                type="button"
-                disabled={!matches || remove.isPending}
-                onClick={confirm}
-                className="bg-danger-fill text-white hover:bg-danger-fill/90"
-              >
+              <Button type="button" variant="destructive" disabled={!matches || remove.isPending} onClick={confirm}>
                 {remove.isPending ? "Deleting…" : "Delete workspace"}
               </Button>
             </AlertDialogFooter>
