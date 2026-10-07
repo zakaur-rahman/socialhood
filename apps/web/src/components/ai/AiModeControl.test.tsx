@@ -182,8 +182,10 @@ describe("the one AI mode control (C-063)", () => {
   it("says what the default is", async () => {
     setup();
     const trigger = await screen.findByRole("button", { name: "AI mode: Suggest. Change" });
-    await waitFor(() =>
-      expect(trigger).toHaveAttribute("title", "Account default · Suggest. Change it for this conversation"),
+    expect(trigger).not.toHaveAttribute("title");
+    await userEvent.hover(trigger);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Account default · Suggest. Change it for this conversation",
     );
   });
 

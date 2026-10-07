@@ -7,7 +7,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
@@ -359,12 +359,18 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
         ) : null}
       </InboxFrame>
 
-      {/* Below 1280 px the details are a side panel (DESIGN_SYSTEM §8.2): full screen on phones, 420 px beside the thread above. */}
+      {/* Below 1280 px the details are a side panel (DESIGN_SYSTEM §8.2): full screen on phones, 420 px beside the thread above.
+          The title row holds the sheet's close button, so the panel's first row (Open in Instagram) starts under it
+          instead of under the button (UI-031); only the panel below the title row scrolls. */}
       {layout !== "wide" ? (
         <Sheet open={Boolean(selectedId) && detailsOpen} onOpenChange={(value) => (value ? undefined : closeDetails())}>
-          <SheetContent side="right" size="panel" data-pane="details" className="gap-0 overflow-y-auto p-0">
-            <SheetTitle className="sr-only">Details</SheetTitle>
-            {selectedId ? <DetailsPanel conversationId={selectedId} /> : null}
+          <SheetContent side="right" size="panel" data-pane="details" className="gap-0 p-0">
+            <SheetHeader className="shrink-0 border-b border-line">
+              <SheetTitle>Details</SheetTitle>
+            </SheetHeader>
+            <div className="min-h-0 flex-1 overflow-y-auto" data-testid="details-scroll">
+              {selectedId ? <DetailsPanel conversationId={selectedId} /> : null}
+            </div>
           </SheetContent>
         </Sheet>
       ) : null}

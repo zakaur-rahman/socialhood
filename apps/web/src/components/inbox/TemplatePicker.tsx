@@ -4,10 +4,11 @@ import { useState } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWhatsAppTemplates } from "@/lib/api/queries";
 import type { TemplateSend, WhatsAppTemplate } from "@/lib/api/types";
@@ -74,6 +75,7 @@ export function TemplatePicker({
           <ErrorState error={templates.error} onRetry={() => void templates.refetch()} />
         ) : approved.length === 0 ? (
           <EmptyState
+            size="compact"
             title="No approved templates"
             body="Create a message template in WhatsApp Manager. Once Meta approves it, it appears here."
           />
@@ -95,7 +97,7 @@ export function TemplatePicker({
                     >
                       <span className="flex items-center justify-between gap-2 text-sm font-medium">
                         {template.name}
-                        <span className="text-xs text-fg-secondary">{template.language}</span>
+                        <Badge size="sm">{template.language}</Badge>
                       </span>
                       <span className="mt-0.5 line-clamp-2 block text-xs text-fg-secondary">{template.body}</span>
                     </button>
@@ -106,17 +108,14 @@ export function TemplatePicker({
             {chosen ? (
               <div className="space-y-2 border-t border-line pt-3">
                 {params.map((value, i) => (
-                  <div key={i} className="space-y-1">
-                    <Label htmlFor={`template-param-${i}`} className="text-xs text-fg-secondary">
-                      {`Variable {{${i + 1}}}`}
-                    </Label>
+                  <Field key={i} id={`template-param-${i}`} density="compact">
+                    <FieldLabel>{`Variable {{${i + 1}}}`}</FieldLabel>
                     <Input
-                      id={`template-param-${i}`}
                       size="lg"
                       value={value}
                       onChange={(event) => setParams(params.map((p, j) => (j === i ? event.target.value : p)))}
                     />
-                  </div>
+                  </Field>
                 ))}
                 <p className={EYEBROW}>Preview</p>
                 <p className="rounded-lg bg-field p-3 text-sm whitespace-pre-wrap">{fillTemplate(chosen.body, params)}</p>

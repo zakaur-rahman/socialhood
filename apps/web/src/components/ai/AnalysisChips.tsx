@@ -4,6 +4,7 @@ import { Pencil } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -18,13 +19,10 @@ import {
   SENTIMENT_LABEL,
   SENTIMENTS,
 } from "@/lib/ai/format";
-import { TONE_CLASS } from "@/lib/inbox/format";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { EYEBROW } from "@/styles/tokens";
-
-const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium";
 
 /**
  * A 24 px icon button inside a line of chips or meta text (Correct, and DecisionInfo's info): the
@@ -35,20 +33,20 @@ export const INLINE_ICON_BUTTON =
   "relative grid size-6 shrink-0 place-items-center rounded-full text-fg-secondary transition-[color,background-color] duration-fast ease-standard after:absolute after:inset-0 hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg pointer-coarse:after:-inset-2";
 
 export function IntentChip({ intent }: { intent: Intent }) {
-  return <span className={cn(CHIP, TONE_CLASS.brand)}>{INTENT_LABEL[intent]}</span>;
+  return <Badge tone="brand">{INTENT_LABEL[intent]}</Badge>;
 }
 
 export function SentimentChip({ sentiment }: { sentiment: Sentiment }) {
   return (
-    <span className={cn(CHIP, TONE_CLASS.neutral)}>
+    <Badge>
       <span className={cn("size-1.5 rounded-full", SENTIMENT_DOT[sentiment])} aria-hidden />
       {SENTIMENT_LABEL[sentiment]}
-    </span>
+    </Badge>
   );
 }
 
 export function PriorityChip({ priority }: { priority: MessageAnalysis["priority"] }) {
-  return <span className={cn(CHIP, TONE_CLASS[PRIORITY_TONE[priority]])}>{PRIORITY_LABEL[priority]} priority</span>;
+  return <Badge tone={PRIORITY_TONE[priority]}>{PRIORITY_LABEL[priority]} priority</Badge>;
 }
 
 /**
@@ -201,8 +199,8 @@ export function AnalysisDetails({ analysis, conversationId }: { analysis: Messag
       {analysis.topics.length > 0 ? (
         <ul aria-label="Topics" className="flex flex-wrap gap-1">
           {analysis.topics.map((topic) => (
-            <li key={topic} className={cn(CHIP, "border border-line", TONE_CLASS.neutral)}>
-              {topic}
+            <li key={topic}>
+              <Badge>{topic}</Badge>
             </li>
           ))}
         </ul>

@@ -80,7 +80,8 @@ describe("Sent by AI (F-09, FR-SUG-04)", () => {
     const user = userEvent.setup();
     const { calls } = setup();
     const bubble = (await screen.findByText("Yes, we ship to Dubai in 5–7 days.")).closest("[data-message-id]") as HTMLElement;
-    expect(within(bubble).getByText("AI Assisted").closest("[title]")).toHaveAttribute("title", "Sent by AI: an auto reply");
+    await user.hover(within(bubble).getByText("AI Assisted"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Sent by AI: an auto reply");
     // Loaded only when asked for.
     expect(calls.some((c) => c.path.endsWith("/ai-decision"))).toBe(false);
 

@@ -8,20 +8,28 @@ import { AnalysisDetails } from "@/components/ai/AnalysisChips";
 import { SummarySection } from "@/components/ai/SummarySection";
 import { latestQuestion, useCachedMessages, useTeachAi } from "@/components/ai/TeachAi";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
+import { Meter } from "@/components/ui/meter";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useConversation } from "@/lib/api/queries";
 import type { Conversation } from "@/lib/api/types";
 import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
 import { formatDay, formatDayTime } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
-import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { EYEBROW } from "@/styles/tokens";
 
 import { ContactAvatar } from "./ContactAvatar";
 
-const CARD = "rounded-xl border border-line bg-field/60 p-3";
+/**
+ * A section's action beside its eyebrow (Open in Instagram, Teach AI): the link Button, `xs`, so
+ * it is 24 px tall (40 px on coarse pointers), flush with the panel's right edge.
+ */
+const ASIDE_ACTION = "px-0";
 
 function Section({
   id,
@@ -50,7 +58,9 @@ function Section({
 /**
  * The context panel (UX-INB-09, FR-INB-11, C-063): the customer, the latest message's analysis
  * (FR-AI-02, FR-AI-04) with Teach AI, and the summary with its next step (FR-AI-03). The AI mode
- * is set only in the thread header; a takeover pause and an escalation show here as notes.
+ * is set only in the thread header; a takeover pause and an escalation show here as notes. Each
+ * section's group is a CardInset (UI-031): the panel is a pane, not a card, so its groups are inset
+ * panels with a `line` edge and no fill.
  */
 export function DetailsPanel({
   conversationId,
@@ -89,18 +99,15 @@ export function DetailsPanel({
         title="Customer"
         aside={
           profile ? (
-            <a
-              href={platformContactUrl(c.platform, c.contact)}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-brand-fg underline-offset-4 hover:underline"
-            >
-              Open in {platform} <ExternalLink className="size-3" aria-hidden />
-            </a>
+            <Button asChild variant="link" size="xs" className={ASIDE_ACTION}>
+              <a href={platformContactUrl(c.platform, c.contact)} target="_blank" rel="noreferrer">
+                Open in {platform} <ExternalLink aria-hidden />
+              </a>
+            </Button>
           ) : null
         }
       >
-        <div className={cn(CARD, "space-y-3")}>
+        <CardInset padding="compact" className="space-y-3">
           <div className="flex items-center gap-3">
             <ContactAvatar id={c.contact.id} name={name} pictureUrl={c.contact.profile_picture_url} platform={c.platform} />
             <div className="min-w-0">
@@ -108,15 +115,13 @@ export function DetailsPanel({
               {c.contact.username ? <p className="truncate text-sm text-fg-secondary">@{c.contact.username}</p> : null}
               {typeof c.contact.follows_business === "boolean" ? (
                 // FR-AUT-22: as Instagram reported it at the last check; nothing while unknown.
-                <span
+                <Badge
+                  tone={c.contact.follows_business ? "brand" : "neutral"}
+                  className="mt-1"
                   data-testid="follow-status"
-                  className={cn(
-                    "mt-1 inline-block rounded-full px-2 py-0.5 text-2xs font-medium",
-                    c.contact.follows_business ? "bg-brand-soft text-brand-fg" : "bg-raised text-fg-secondary",
-                  )}
                 >
                   {c.contact.follows_business ? "Follows you" : "Doesn't follow you"}
-                </span>
+                </Badge>
               ) : null}
             </div>
           </div>
@@ -131,7 +136,7 @@ export function DetailsPanel({
             </div>
           </dl>
           {c.lead_score !== null && c.lead_score !== undefined ? <LeadScore score={c.lead_score} /> : null}
-        </div>
+        </CardInset>
         <Attention conversation={c} now={now} timeZone={workspace.timezone} />
       </Section>
 
@@ -140,57 +145,50 @@ export function DetailsPanel({
         title="Latest message"
         aside={
           teachAi.canTeach && c.latest_analysis ? (
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 text-xs font-medium text-brand-fg hover:underline disabled:opacity-50"
-              disabled={teachAi.opening}
-              title="Add the customer's question to your knowledge, with your answer"
-              onClick={() => {
-                const { text, messageId } = latestQuestion(c, cachedMessages());
-                void teachAi.teach(text, messageId);
-              }}
-            >
-              {teachAi.opening ? <Spinner size="xs" /> : null}
-              Teach AI
-            </button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="link"
+                  size="xs"
+                  className={ASIDE_ACTION}
+                  loading={teachAi.opening}
+                  onClick={() => {
+                    const { text, messageId } = latestQuestion(c, cachedMessages());
+                    void teachAi.teach(text, messageId);
+                  }}
+                >
+                  Teach AI
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Add the customer&apos;s question to your knowledge, with your answer</TooltipContent>
+            </Tooltip>
           ) : null
         }
       >
-        <div className={CARD}>
+        <CardInset padding="compact">
           <AnalysisDetails analysis={c.latest_analysis} conversationId={c.id} />
-        </div>
+        </CardInset>
       </Section>
 
       <Section id="details-summary" title="Summary">
-        <div className={CARD}>
+        <CardInset padding="compact">
           <SummarySection conversation={c} now={now} />
-        </div>
+        </CardInset>
       </Section>
       {teachAi.sheet}
     </div>
   );
 }
 
+/**
+ * The lead score as a Meter (UI-031): `slot`, so a high score stays brand and never turns to the
+ * consumable warning colours. The value text, on screen and for assistive tech, is "72 of 100".
+ * TODO(UI-031 follow-up): Meter has no kind for scores, and a full slot adds "All used", which a
+ * score of 100 shows too; a `score` kind (no thresholds, no full message) belongs to the primitive.
+ */
 function LeadScore({ score }: { score: number }) {
   const lead = Math.max(0, Math.min(100, score));
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between text-sm">
-        <span className="text-fg-secondary">Lead score</span>
-        <span className="font-medium text-brand-fg tabular-nums">{lead} / 100</span>
-      </div>
-      <span
-        role="meter"
-        aria-label="Lead score"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={lead}
-        className="block h-1.5 overflow-hidden rounded-full bg-raised"
-      >
-        <span className="bg-brand-gradient-decor block h-full rounded-full" style={{ width: `${lead}%` }} />
-      </span>
-    </div>
-  );
+  return <Meter label="Lead score" kind="slot" value={lead} max={100} />;
 }
 
 /** Escalation and takeover, compacted: why a person is needed, and until when Auto is paused. */
@@ -199,19 +197,17 @@ function Attention({ conversation, now, timeZone }: { conversation: Conversation
   if (!conversation.needs_human && !paused) return null;
   const far = paused && paused.getTime() - now.getTime() > 7 * 24 * 3_600_000;
   return (
-    <ul className="space-y-1.5 text-xs" aria-label="Attention">
+    <div className="space-y-1.5" aria-label="Attention" role="group">
       {conversation.needs_human ? (
-        <li className="flex items-center gap-2 rounded-lg bg-danger-soft px-3 py-2 text-danger-fg">
-          <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+        <Alert tone="danger" icon={<AlertTriangle />}>
           Needs you{conversation.needs_human_reason ? `: ${ESCALATION_LABEL[conversation.needs_human_reason]}` : ""}
-        </li>
+        </Alert>
       ) : null}
       {paused ? (
-        <li className="flex items-center gap-2 rounded-lg bg-warning-soft px-3 py-2 text-warning">
-          <PauseCircle className="size-3.5 shrink-0" aria-hidden />
+        <Alert tone="warning" icon={<PauseCircle />}>
           {far ? "AI paused until you resume it" : `AI paused until ${formatDayTime(paused, timeZone, now)}`}
-        </li>
+        </Alert>
       ) : null}
-    </ul>
+    </div>
   );
 }

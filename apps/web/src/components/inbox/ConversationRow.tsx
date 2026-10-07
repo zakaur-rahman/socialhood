@@ -3,8 +3,10 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { Ref } from "react";
 
+import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { AiMode, ConversationListItem, MessageKind } from "@/lib/api/types";
-import { contactName, previewPrefix, previewText, rowBadges, TONE_CLASS } from "@/lib/inbox/format";
+import { contactName, previewPrefix, previewText, rowBadges } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 
@@ -102,17 +104,25 @@ export function ConversationRow({ item, href, selected, now, aiMode = null, inde
           ) : null}
         </span>
         {badges.length > 0 ? (
-          <span className="mt-1.5 flex gap-1 overflow-hidden">
-            {badges.map((badge) => (
-              <span
-                key={badge.key}
-                title={badge.title}
-                data-badge={badge.key}
-                className={cn("shrink-0 rounded-sm px-1.5 text-2xs font-medium tabular-nums", TONE_CLASS[badge.tone])}
-              >
-                {badge.label}
-              </span>
-            ))}
+          // Status Badges (11 px, 20 px tall): 12 + 20 + 2 + 20 + 4 + 20 + 12 = the 90 px row.
+          <span className="mt-1 flex gap-1 overflow-hidden">
+            {badges.map((badge) => {
+              const chip = (
+                <Badge key={badge.key} tone={badge.tone} className="tabular-nums" data-badge={badge.key}>
+                  {badge.label}
+                  {badge.srDetail ? <span className="sr-only">{badge.srDetail}</span> : null}
+                </Badge>
+              );
+              // The hint shows on hover; the row is the link, so the badge itself takes no focus.
+              return badge.hint ? (
+                <Tooltip key={badge.key}>
+                  <TooltipTrigger asChild>{chip}</TooltipTrigger>
+                  <TooltipContent side="bottom">{badge.hint}</TooltipContent>
+                </Tooltip>
+              ) : (
+                chip
+              );
+            })}
           </span>
         ) : null}
       </span>

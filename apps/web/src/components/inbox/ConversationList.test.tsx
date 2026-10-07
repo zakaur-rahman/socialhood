@@ -1,11 +1,16 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { ConversationListItem } from "@/lib/api/types";
 import { listItem } from "@/test/api";
 
 import { ConversationList, VIRTUALIZE_ABOVE } from "./ConversationList";
+
+// The app renders every page inside a TooltipProvider (app/layout.tsx); the badges' hints need one.
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: TooltipProvider });
 
 const now = new Date("2026-09-28T12:00:00Z");
 
