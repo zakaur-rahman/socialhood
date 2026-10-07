@@ -174,6 +174,57 @@ describe("Button loading", () => {
   });
 });
 
+describe("buttonVariants on another element (a link, a toast's action)", () => {
+  const words = (value: string) => value.split(/\s+/).filter(Boolean);
+
+  it("outline keeps its edge: merged, so the base's border-transparent is gone", () => {
+    const list = words(buttonVariants({ variant: "outline" }));
+    expect(list).toContain("border-line-strong");
+    expect(list).not.toContain("border-transparent");
+    // One border colour, so no stylesheet order can pick the transparent one.
+    expect(list.filter((c) => /^border-[a-z]/.test(c))).toEqual(["border-line-strong"]);
+  });
+
+  it("soft keeps its brand-line edge and a small size its text and radius", () => {
+    expect(words(buttonVariants({ variant: "soft" }))).not.toContain("border-transparent");
+    const sm = words(buttonVariants({ variant: "secondary", size: "sm" }));
+    expect(sm).toEqual(expect.arrayContaining(["text-xs", "rounded-md", "h-7"]));
+    expect(sm).not.toContain("text-sm");
+    expect(sm).not.toContain("rounded-lg");
+  });
+
+  it.each(VARIANTS.flatMap((variant) => SIZES.map((size) => [variant, size] as const)))(
+    "%s %s: the same classes as a Button (no conflicting pair left)",
+    (variant, size) => {
+      render(
+        <Button variant={variant} size={size}>
+          Go
+        </Button>,
+      );
+      expect(screen.getByRole("button", { name: "Go" }).getAttribute("class")).toBe(buttonVariants({ variant, size }));
+      // Merging again changes nothing: the result is already merged.
+      expect(cn(buttonVariants({ variant, size }))).toBe(buttonVariants({ variant, size }));
+    },
+  );
+
+  it("a className among the props is merged last and wins", () => {
+    const list = words(buttonVariants({ variant: "outline", className: "w-full border-danger" }));
+    expect(list).toEqual(expect.arrayContaining(["w-full", "border-danger"]));
+    expect(list).not.toContain("border-line-strong");
+  });
+
+  it("a link styled with it shows the outline edge", () => {
+    render(
+      <a href="/x" className={buttonVariants({ variant: "outline" })}>
+        Open inbox
+      </a>,
+    );
+    const link = screen.getByRole("link", { name: "Open inbox" });
+    expect(link).toHaveClass("border", "border-line-strong");
+    expect(link).not.toHaveClass("border-transparent");
+  });
+});
+
 describe("Overrides until the area sweeps migrate them", () => {
   it("a danger fill given after the variant drops the gradient, so today's danger overrides stay red", () => {
     const merged = cn(buttonVariants(), "bg-danger-fill text-white hover:bg-danger-fill/90");

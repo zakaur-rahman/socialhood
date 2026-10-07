@@ -58,7 +58,6 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
         >
           {state.chip.label}
         </span>
-        {/* Button's merge, not bare buttonVariants(): unmerged, `border-transparent` beat the outline's edge. */}
         <Button asChild variant={state.action === "Review & Send" ? "default" : "outline"}>
           <Link href={`/w/${slug}/inbox/${item.id}` as Route} aria-label={`${state.action}: ${name}`}>
             {state.action}

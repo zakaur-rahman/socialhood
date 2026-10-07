@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
  * there is no `outline-none` and no ring here. Heights follow the control ladder on fine pointers
  * (24/28/32/36/40) and are at least 40 px on coarse pointers, whatever the viewport width.
  */
-const buttonVariants = cva(
+const buttonRecipe = cva(
   "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap select-none transition-[color,background-color,border-color,filter] duration-fast ease-standard motion-reduce:transition-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-danger [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
@@ -48,7 +48,18 @@ const buttonVariants = cva(
   }
 )
 
-type ButtonSize = NonNullable<VariantProps<typeof buttonVariants>["size"]>
+/**
+ * The button's classes for an element that isn't a Button (a toast's action, a link), merged as
+ * Button merges them. cva only joins the recipe's parts, so without the merge the base's
+ * `border-transparent` and `outline`'s `border-line-strong`, or `text-sm` and a small size's
+ * `text-xs`, would both stay and the stylesheet's order would pick the winner (the outline edge
+ * lost). A `className` among the props is merged last, so it wins.
+ */
+function buttonVariants(props?: Parameters<typeof buttonRecipe>[0]): string {
+  return cn(buttonRecipe(props))
+}
+
+type ButtonSize = NonNullable<VariantProps<typeof buttonRecipe>["size"]>
 
 /** The spinner matches the icon size of each button size. */
 const SPINNER_SIZE: Record<ButtonSize, "xs" | "sm" | "default"> = {
@@ -73,7 +84,7 @@ function Button({
   children,
   ...props
 }: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
+  VariantProps<typeof buttonRecipe> & {
     asChild?: boolean
     /**
      * A request is in flight: shows a Spinner over the content (which keeps the button's width),
@@ -81,7 +92,8 @@ function Button({
      */
     loading?: boolean
   }) {
-  let classes = cn(buttonVariants({ variant, size }), className)
+  // One merge: the recipe and the call site's className together.
+  let classes = cn(buttonRecipe({ variant, size }), className)
   let content = children
 
   if (asChild) {
