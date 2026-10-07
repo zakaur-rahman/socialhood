@@ -3,6 +3,7 @@
  * 12, 14). Colours are token utilities only.
  */
 import { ApiError } from "@/lib/api/errors";
+import { instagramAccounts } from "@/lib/automations/accounts";
 import type {
   BulkScheduledPostResult,
   PostingSlot,
@@ -93,6 +94,14 @@ export type AccountColor = Identity;
 
 export function accountColors(accounts: Pick<SocialAccount, "id">[]): Map<string, AccountColor> {
   return new Map(accounts.map((account, i) => [account.id, identityAt(i)]));
+}
+
+/**
+ * The identities from the workspace's whole account list: its connected Instagram accounts, in
+ * order. Schedule and the post composer both read this, so an account looks the same in both.
+ */
+export function instagramAccountColors(accounts: SocialAccount[]): Map<string, AccountColor> {
+  return accountColors(instagramAccounts(accounts));
 }
 
 /** An account the page doesn't know (disconnected): a neutral ring, no identity. */

@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { instagramAccountColors } from "@/lib/schedule/format";
+import { IDENTITIES } from "@/lib/ui/identity";
 import { account } from "@/test/api";
 
 import { AccountPicker } from "./AccountPicker";
@@ -37,6 +39,23 @@ describe("AccountPicker (UX-SCR-13 Accounts)", () => {
   it("points to Connections when no Instagram account is connected", () => {
     render(<AccountPicker accounts={[]} loading={false} selected={[]} onToggle={vi.fn()} slug="maple" />);
     expect(screen.getByRole("link", { name: "Connect Instagram" })).toHaveAttribute("href", "/w/maple/settings/connections");
+  });
+
+  it("colours each account as Schedule does: by its order, not its id (UI-032)", () => {
+    const list = [
+      account({ id: "zz-first", username: "maple.bakery", capabilities: ["publish"] }),
+      account({ id: "aa-second", username: "maple.studio", capabilities: ["publish"] }),
+      account({ id: "mm-gone", username: "maple.old", capabilities: ["publish"], status: "disconnected" }),
+    ];
+    render(<AccountPicker accounts={list} loading={false} selected={[]} onToggle={vi.fn()} slug="maple" />);
+    const fallback = (name: string) =>
+      screen.getByRole("button", { name }).querySelector<HTMLElement>("[data-slot=avatar-fallback]") as HTMLElement;
+    const colors = instagramAccountColors(list);
+    expect(fallback("@maple.bakery")).toHaveClass(...IDENTITIES[0].gradient.split(" "));
+    expect(fallback("@maple.studio")).toHaveClass(...IDENTITIES[1].gradient.split(" "));
+    expect(colors.get("zz-first")).toBe(IDENTITIES[0]);
+    // A disconnected account has no identity on Schedule either: the neutral fill.
+    expect(fallback("@maple.old")).not.toHaveClass("bg-linear-135");
   });
 
   it("shows placeholders while accounts load", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Loader2, MessageSquareReply, Plus, Sparkles } from "lucide-react";
+import { ArrowLeft, MessageSquareReply, Plus, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,6 +10,7 @@ import { editorHref, TemplateCard } from "@/components/automations/TemplateGalle
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { useAutomation, useAutomationTemplates } from "@/lib/api/queries";
 import { useAddCommentAutomation } from "@/lib/api/queries/scheduledPosts";
 import type { AutomationTemplate, Plan, SocialAccount } from "@/lib/api/types";
@@ -24,8 +25,8 @@ import { Section } from "./Section";
 
 const STATUS_TONE = {
   draft: "bg-raised text-fg-secondary",
-  active: "bg-success/15 text-success",
-  paused: "bg-warning/15 text-warning",
+  active: "bg-success-soft text-success",
+  paused: "bg-warning-soft text-warning",
 } as const;
 
 /**
@@ -74,7 +75,7 @@ export function AutomationSection({
           <Button
             type="button"
             variant="secondary"
-            className="h-10 md:h-9"
+            size="lg"
             disabled={noAccount}
             aria-describedby={noAccount ? "composer-automation-reason" : undefined}
             onClick={() => setOpen(true)}
@@ -196,7 +197,7 @@ function AddAutomationDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-3xl">
+      <DialogContent size="xl">
         {asking ? (
           <form
             className="space-y-4"
@@ -206,10 +207,8 @@ function AddAutomationDialog({
             }}
           >
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">Which account?</DialogTitle>
-              <DialogDescription className="text-fg-secondary">
-                The automation answers comments on this post from one account.
-              </DialogDescription>
+              <DialogTitle>Which account?</DialogTitle>
+              <DialogDescription>The automation answers comments on this post from one account.</DialogDescription>
             </DialogHeader>
             <fieldset className="space-y-2">
               <legend className="sr-only">Instagram account</legend>
@@ -218,7 +217,7 @@ function AddAutomationDialog({
                   key={account.id}
                   className={cn(
                     "flex min-h-10 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm",
-                    accountId === account.id ? "border-brand bg-brand-soft" : "border-line hover:bg-white/5",
+                    accountId === account.id ? "border-brand bg-brand-soft" : "border-line hover:bg-hover",
                   )}
                 >
                   <input
@@ -237,8 +236,8 @@ function AddAutomationDialog({
               <Button type="button" variant="ghost" onClick={() => setAsking(null)}>
                 <ArrowLeft aria-hidden /> Back
               </Button>
-              <Button type="submit" className="bg-brand-gradient text-white" disabled={!accountId || add.isPending}>
-                {add.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+              <Button type="submit" disabled={!accountId || add.isPending}>
+                {add.isPending ? <Spinner /> : null}
                 {asking.choice ? "Use template" : "Start from blank"}
               </Button>
             </div>
@@ -246,8 +245,8 @@ function AddAutomationDialog({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">Add comment automation</DialogTitle>
-              <DialogDescription className="text-fg-secondary">
+              <DialogTitle>Add comment automation</DialogTitle>
+              <DialogDescription>
                 It answers comments on this post and switches on when the post goes live. Pick a template and change anything.
               </DialogDescription>
             </DialogHeader>
@@ -255,7 +254,7 @@ function AddAutomationDialog({
               {templates.isPending
                 ? Array.from({ length: 3 }, (_, index) => (
                     <li key={index} aria-hidden>
-                      <Skeleton className="h-44 rounded-xl bg-raised" />
+                      <Skeleton className="h-44 rounded-xl" />
                     </li>
                   ))
                 : commentTemplates.map((template) => (
@@ -277,7 +276,7 @@ function AddAutomationDialog({
                   <p className="mt-3 text-sm font-semibold">Start from blank</p>
                   <p className="mt-1 flex-1 text-sm text-fg-secondary">Choose the keywords and the reply yourself.</p>
                   <Button variant="secondary" className="mt-3 self-start" disabled={add.isPending} onClick={() => choose(null)}>
-                    {pendingKey === "blank" ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                    {pendingKey === "blank" ? <Spinner /> : null}
                     Start from blank
                   </Button>
                 </div>

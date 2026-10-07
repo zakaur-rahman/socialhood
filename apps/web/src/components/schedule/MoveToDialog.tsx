@@ -52,7 +52,7 @@ export function MoveToDialog({
   return (
     <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
       <DialogContent
-        className="border-line bg-panel sm:max-w-md"
+        size="md"
         onCloseAutoFocus={(event) => {
           if (request?.returnFocus?.isConnected) {
             event.preventDefault();
@@ -103,7 +103,7 @@ function MoveToForm({
     <form onSubmit={(event) => void submit(event)} className="grid gap-4">
       <DialogHeader>
         <DialogTitle>{draft ? "Schedule for…" : "Move to…"}</DialogTitle>
-        <DialogDescription className="truncate text-fg-secondary">{captionLine(request.post.caption)}</DialogDescription>
+        <DialogDescription className="truncate">{captionLine(request.post.caption)}</DialogDescription>
       </DialogHeader>
       <ScheduleFields
         idPrefix="move-to"
@@ -117,7 +117,7 @@ function MoveToForm({
         <Button type="button" variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {draft ? "Schedule" : "Move"}
         </Button>
       </DialogFooter>

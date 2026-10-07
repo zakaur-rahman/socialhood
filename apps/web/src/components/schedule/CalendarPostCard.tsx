@@ -21,8 +21,10 @@ export function postLabel(post: ScheduledPostSummary, timeZone: string, now: Dat
 
 /**
  * A post on the Week or Month grid (UX-SCR-04): 24 px thumbnail with the account ring, time and
- * first caption words, left border by status; drafts drawn muted, publishing pulses. Drafts and
- * scheduled posts drag; the link opens the composer; the menu holds "Move to…".
+ * first caption words, left border by status (`border-l-2`); drafts drawn muted, publishing
+ * pulses. Drafts and scheduled posts drag; the link opens the composer; the menu holds "Move to…".
+ * On coarse pointers a tap on the card opens the menu (PostMenu's `card` trigger), since a 40 px
+ * button doesn't fit beside the title.
  */
 export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary; variant: "week" | "month" }) {
   const schedule = useSchedule();
@@ -48,8 +50,9 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
       onClick={(event) => {
         if (consumeClick()) event.preventDefault();
       }}
+      // The one focus outline, inset: the grids clip, and cards sit 4 px apart.
       className={cn(
-        "flex min-w-0 flex-1 items-center gap-1.5 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-brand",
+        "flex min-w-0 flex-1 items-center gap-1.5 rounded-[inherit] focus-visible:-outline-offset-2",
         variant === "week" ? "px-1.5 py-1" : "px-1 py-0.5",
       )}
     >
@@ -57,20 +60,20 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
         <>
           <PostThumbnail post={post} size={24} />
           <span className="min-w-0 flex-1 leading-tight">
-            <span className="flex items-center gap-1 text-[11px] font-semibold tabular-nums">
+            <span className="flex items-center gap-1 text-2xs font-semibold tabular-nums">
               {time}
               {badges}
             </span>
-            <span className="block truncate text-[11px] text-fg-secondary">{captionLine(post.caption)}</span>
+            <span className="block truncate text-2xs text-fg-secondary">{captionLine(post.caption)}</span>
           </span>
         </>
       ) : (
         <>
-          <span className="flex shrink-0 items-center gap-1 text-[11px] font-semibold tabular-nums">
+          <span className="flex shrink-0 items-center gap-1 text-2xs font-semibold tabular-nums">
             {time}
             {badges}
           </span>
-          <span className="min-w-0 flex-1 truncate text-[11px] text-fg-secondary">{captionLine(post.caption)}</span>
+          <span className="min-w-0 flex-1 truncate text-2xs text-fg-secondary">{captionLine(post.caption)}</span>
         </>
       )}
     </Link>
@@ -100,7 +103,7 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
       ) : (
         link
       )}
-      <PostMenu post={post} size="xs" className="mr-0.5 size-5" />
+      <PostMenu post={post} size="card" />
     </div>
   );
 }

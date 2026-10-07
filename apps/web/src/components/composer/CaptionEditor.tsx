@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Hash, Loader2, Plus, Sparkles, Tags, X } from "lucide-react";
+import { AlertCircle, Hash, Plus, Sparkles, Tags, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useGenerateCaption, useSuggestHashtags } from "@/lib/api/queries/scheduledPosts";
@@ -126,8 +127,8 @@ export function CaptionField({
         <div className="flex flex-wrap items-center gap-1">
           {tools.ai ? <WriteWithAi wid={wid} caption={value} onWritten={onChange} /> : null}
           {tools.suggest ? (
-            <Button type="button" variant="ghost" size="sm" className="h-10 md:h-7" onClick={onSuggest} disabled={suggest.isPending}>
-              {suggest.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Hash aria-hidden />}
+            <Button type="button" variant="ghost" size="sm" onClick={onSuggest} disabled={suggest.isPending}>
+              {suggest.isPending ? <Spinner size="sm" /> : <Hash aria-hidden />}
               Suggest hashtags
             </Button>
           ) : null}
@@ -149,7 +150,7 @@ export function CaptionField({
         onChange={(event) => onChange(event.target.value)}
         aria-invalid={overChars || overHashtags || overMentions ? true : undefined}
         aria-describedby={hint ? `${countsId} ${hintId}` : countsId}
-        className="min-h-28 resize-y bg-field text-sm focus:bg-raised"
+        className="min-h-28 resize-y"
       />
       <p id={countsId} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-fg-secondary tabular-nums" data-testid={`${id}-counts`}>
         <span className={cn(overChars && "font-medium text-danger-fg")}>
@@ -200,7 +201,7 @@ export function CaptionField({
                   type="button"
                   aria-label={`Add #${tag}`}
                   onClick={() => onChange(appendHashtags(value, [tag]))}
-                  className="min-h-10 rounded-full bg-raised px-2.5 text-xs text-fg hover:bg-raised-hover md:min-h-8"
+                  className="min-h-8 rounded-full bg-raised px-2.5 text-xs text-fg transition-[background-color] duration-fast ease-standard hover:bg-raised-hover pointer-coarse:min-h-10"
                 >
                   #{tag}
                 </button>
@@ -389,11 +390,11 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
       }}
     >
       <PopoverTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="h-10 text-brand-fg md:h-7">
+        <Button type="button" variant="ghost" size="sm" className="text-brand-fg">
           <Sparkles aria-hidden /> Write with AI
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 border-line bg-panel">
+      <PopoverContent align="end" className="w-80">
         <form
           className="space-y-3"
           onSubmit={(event) => {
@@ -412,7 +413,6 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
               rows={3}
               placeholder="New linen dresses, 20% off this weekend"
               onChange={(event) => setBrief(event.target.value)}
-              className="bg-field text-sm"
             />
             <p className="text-xs text-fg-secondary">Written in your brand voice. Uses AI credits.</p>
           </div>
@@ -423,13 +423,13 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
             </div>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button type="submit" className="bg-brand-gradient text-white" disabled={!brief.trim() || generate.isPending}>
-              {generate.isPending && generate.variables?.mode === "write" ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            <Button type="submit" disabled={!brief.trim() || generate.isPending}>
+              {generate.isPending && generate.variables?.mode === "write" ? <Spinner /> : null}
               Write caption
             </Button>
             {caption.trim() ? (
               <Button type="button" variant="secondary" disabled={generate.isPending} onClick={() => run("improve")}>
-                {generate.isPending && generate.variables?.mode === "improve" ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                {generate.isPending && generate.variables?.mode === "improve" ? <Spinner /> : null}
                 Improve my caption
               </Button>
             ) : null}
@@ -455,12 +455,12 @@ function HashtagGroupMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="h-10 md:h-7">
+        <Button type="button" variant="ghost" size="sm">
           <Tags aria-hidden /> Insert hashtag group
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-64 border-line bg-panel shadow-xl">
-        <DropdownMenuLabel className="text-xs text-fg-secondary">Hashtag groups</DropdownMenuLabel>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Hashtag groups</DropdownMenuLabel>
         {loading ? (
           <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
         ) : groups.length === 0 ? (

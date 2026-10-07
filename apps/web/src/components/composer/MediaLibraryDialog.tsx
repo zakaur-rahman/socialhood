@@ -1,12 +1,14 @@
 "use client";
 
-import { Check, FileVideo, Loader2, RotateCw } from "lucide-react";
+import { Check, FileVideo, RotateCw } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useMediaLibrary, type MediaLibraryFilters } from "@/lib/api/queries/scheduledPosts";
 import type { MediaAsset } from "@/lib/api/types";
@@ -58,47 +60,44 @@ export function MediaLibraryDialog({
 
   return (
     <Dialog open={open} onOpenChange={close}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-3xl">
+      <DialogContent size="xl">
         <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Media library</DialogTitle>
-          <DialogDescription className="text-fg-secondary">Photos and videos you&apos;ve uploaded for posts.</DialogDescription>
+          <DialogTitle>Media library</DialogTitle>
+          <DialogDescription>Photos and videos you&apos;ve uploaded for posts.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-wrap items-end gap-3">
           <ToggleGroup value={type} onValueChange={(value) => setType(value as TypeFilter)} aria-label="Type" className="w-auto">
-            <ToggleGroupItem value="all" className="min-h-10 md:min-h-8">
-              All
-            </ToggleGroupItem>
-            <ToggleGroupItem value="image" className="min-h-10 md:min-h-8">
-              Photos
-            </ToggleGroupItem>
-            <ToggleGroupItem value="video" className="min-h-10 md:min-h-8">
-              Videos
-            </ToggleGroupItem>
+            <ToggleGroupItem value="all">All</ToggleGroupItem>
+            <ToggleGroupItem value="image">Photos</ToggleGroupItem>
+            <ToggleGroupItem value="video">Videos</ToggleGroupItem>
           </ToggleGroup>
+          {/* Native date pickers through Input (D-04); `lg`, the old 36 px fields. */}
           <div className="space-y-1">
             <Label htmlFor="library-since" className="text-xs text-fg-secondary">
               Uploaded from
             </Label>
-            <input
+            <Input
               id="library-since"
               type="date"
+              size="lg"
+              className="w-auto"
               value={since}
               max={until || undefined}
               onChange={(event) => setSince(event.target.value)}
-              className="h-10 rounded-lg border border-line bg-field px-3 text-sm focus:bg-raised md:h-9"
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor="library-until" className="text-xs text-fg-secondary">
               To
             </Label>
-            <input
+            <Input
               id="library-until"
               type="date"
+              size="lg"
+              className="w-auto"
               value={until}
               min={since || undefined}
               onChange={(event) => setUntil(event.target.value)}
-              className="h-10 rounded-lg border border-line bg-field px-3 text-sm focus:bg-raised md:h-9"
             />
           </div>
         </div>
@@ -107,7 +106,7 @@ export function MediaLibraryDialog({
           <ul aria-busy="true" aria-label="Loading media" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {Array.from({ length: 10 }, (_, index) => (
               <li key={index}>
-                <Skeleton className="aspect-square rounded-lg bg-raised" />
+                <Skeleton className="aspect-square rounded-lg" />
               </li>
             ))}
           </ul>
@@ -157,17 +156,17 @@ export function MediaLibraryDialog({
                       <img src={asset.secure_url ?? ""} alt="" loading="lazy" className="size-full object-cover" />
                     )}
                     {asset.resource_type === "video" && asset.duration_s ? (
-                      <span className="absolute right-1 bottom-1 rounded-md bg-canvas/80 px-1 text-[11px] tabular-nums">
+                      <span className="absolute right-1 bottom-1 rounded-sm bg-media-scrim/80 px-1 text-2xs tabular-nums">
                         {formatDuration(asset.duration_s)}
                       </span>
                     ) : null}
                     {isPicked ? (
-                      <span className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-brand text-white">
+                      <span className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-brand text-on-brand">
                         <Check className="size-3.5" aria-hidden />
                       </span>
                     ) : null}
                     {already ? (
-                      <span className="absolute inset-x-1 bottom-1 rounded-md bg-canvas/80 px-1 text-[11px]">In post</span>
+                      <span className="absolute inset-x-1 bottom-1 rounded-sm bg-media-scrim/80 px-1 text-2xs">In post</span>
                     ) : null}
                   </button>
                 </li>
@@ -182,7 +181,7 @@ export function MediaLibraryDialog({
             onClick={() => void library.fetchNextPage()}
             disabled={library.isFetchingNextPage}
           >
-            {library.isFetchingNextPage ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            {library.isFetchingNextPage ? <Spinner /> : null}
             Load more
           </Button>
         ) : null}
@@ -195,7 +194,6 @@ export function MediaLibraryDialog({
               Cancel
             </Button>
             <Button
-              className="bg-brand-gradient text-white"
               disabled={picked.length === 0}
               onClick={() => {
                 onAdd(picked);

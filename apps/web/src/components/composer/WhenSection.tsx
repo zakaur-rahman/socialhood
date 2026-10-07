@@ -1,10 +1,11 @@
 "use client";
 
-import { CalendarClock, ListOrdered, Loader2 } from "lucide-react";
+import { CalendarClock, ListOrdered } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
 import { ScheduleFields, type ScheduleValue } from "@/components/inbox/ScheduleFields";
+import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatDayTime } from "@/lib/tz";
 
@@ -69,10 +70,10 @@ export function WhenSection({
       ) : null}
       {allowQueue ? (
         <ToggleGroup value={mode} onValueChange={(next) => onModeChange(next as WhenMode)} aria-label="When to publish" className="mb-3">
-          <ToggleGroupItem value="time" className="min-h-10 md:min-h-8">
+          <ToggleGroupItem value="time">
             <CalendarClock aria-hidden /> Pick a time
           </ToggleGroupItem>
-          <ToggleGroupItem value="queue" className="min-h-10 md:min-h-8">
+          <ToggleGroupItem value="queue">
             <ListOrdered aria-hidden /> Add to queue
           </ToggleGroupItem>
         </ToggleGroup>
@@ -99,7 +100,7 @@ function QueueLine({ queue, timeZone, now, slug }: { queue: QueuePreview; timeZo
     case "loading":
       return (
         <p className="flex items-center gap-2 text-fg-secondary">
-          <Loader2 className="size-4 animate-spin" aria-hidden /> Finding the next free time…
+          <Spinner /> Finding the next free time…
         </p>
       );
     case "no-accounts":

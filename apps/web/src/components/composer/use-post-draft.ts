@@ -48,6 +48,30 @@ export function toRequest(draft: Draft): ScheduledPostDraft {
   };
 }
 
+const instant = (at: string | null) => (at ? new Date(at).getTime() : null);
+
+/**
+ * Whether two drafts would store the same post: what the PUT sends, with times compared as instants
+ * (the API answers "…:00Z" for the "…:00.000Z" the composer sends).
+ */
+export function sameDraft(a: Draft, b: Draft): boolean {
+  const x = toRequest(a);
+  const y = toRequest(b);
+  return (
+    x.caption === y.caption &&
+    x.first_comment === y.first_comment &&
+    instant(x.publish_at ?? null) === instant(y.publish_at ?? null) &&
+    x.asset_ids?.length === y.asset_ids?.length &&
+    (x.asset_ids ?? []).every((id, index) => id === y.asset_ids?.[index]) &&
+    x.targets?.length === y.targets?.length &&
+    (x.targets ?? []).every(
+      (target, index) =>
+        target.social_account_id === y.targets?.[index]?.social_account_id &&
+        (target.caption_override ?? null) === (y.targets?.[index]?.caption_override ?? null),
+    )
+  );
+}
+
 type Patch = Partial<Draft> | ((draft: Draft) => Partial<Draft>);
 
 /**
@@ -69,6 +93,8 @@ export function usePostDraft(
   const [error, setError] = useState<ApiError | null>(null);
 
   const latest = useRef(draft);
+  // The post as the API last stored it: an edit that puts everything back is no longer unsaved.
+  const stored = useRef(draft);
   const edits = useRef(0);
   const savedEdits = useRef(0);
   const timer = useRef<number | null>(null);
@@ -100,6 +126,7 @@ export function usePostDraft(
     const attempt = (async () => {
       try {
         const post = await mutate.current(toRequest(latest.current));
+        stored.current = toDraft(post);
         savedEdits.current = Math.max(savedEdits.current, version);
         setError(null);
         if (edits.current === version) setStatus("saved");
@@ -135,7 +162,13 @@ export function usePostDraft(
       edits.current += 1;
       clearTimer();
       if (!autosaveRef.current) {
-        setStatus("unsaved");
+        // A scheduled post's edits wait for Update schedule; undoing them all (the caption's Undo,
+        // a time set back) leaves nothing unsaved. Nothing is in flight here: these posts don't
+        // autosave, so the stored post can't change under the comparison.
+        if (sameDraft(next, stored.current) && !running.current) {
+          savedEdits.current = edits.current;
+          setStatus("saved");
+        } else setStatus("unsaved");
         return;
       }
       setStatus("saving");
@@ -152,6 +185,7 @@ export function usePostDraft(
     clearTimer();
     const next = toDraft(post);
     latest.current = next;
+    stored.current = next;
     setDraft(next);
     savedEdits.current = edits.current;
     setError(null);
