@@ -2,8 +2,11 @@ import { Hand, Link2, MessageCircle, MessageSquareReply } from "lucide-react";
 import Image from "next/image";
 import type { CSSProperties } from "react";
 
+import { cn } from "@/lib/utils";
+import { MARKETING_HEADING } from "@/styles/tokens";
+
 import { TraceLine } from "./effects/TraceLine";
-import { Container } from "./primitives";
+import { Container, SECTION_EYEBROW } from "./primitives";
 import { SHOTS } from "./shots";
 
 // FR-AUT-21 tap first and FR-AUT-22 the follow nudge, as the product guide describes them.
@@ -40,8 +43,8 @@ export function AutomationShowcase() {
       />
       <Container className="relative grid items-center gap-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:gap-20">
         <div>
-          <p className="text-xs font-semibold tracking-[0.14em] text-brand-fg uppercase">Automations</p>
-          <h2 id="showcase-title" className="mt-3 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">
+          <p className={SECTION_EYEBROW}>Automations</p>
+          <h2 id="showcase-title" className={cn(MARKETING_HEADING, "mt-3 text-balance")}>
             Comment LINK, get the link in a DM
           </h2>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-fg-secondary">

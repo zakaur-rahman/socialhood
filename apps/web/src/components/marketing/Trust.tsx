@@ -55,7 +55,7 @@ export function Trust() {
         <ul className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {POINTS.map(({ icon: Icon, title, body }, index) => (
             <li key={title} data-reveal style={{ "--reveal-delay": `${(index % 3) * 80}ms` } as CSSProperties}>
-              <div className="flex h-full gap-4 rounded-2xl border border-line bg-canvas p-5 transition-colors duration-200 hover:border-line-strong">
+              <div className="flex h-full gap-4 rounded-2xl border border-line bg-canvas p-5 transition-colors duration-slow hover:border-line-strong">
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
                   <Icon className="size-5" aria-hidden />
                 </span>

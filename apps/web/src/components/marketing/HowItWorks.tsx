@@ -44,7 +44,7 @@ export function HowItWorks() {
               content: (
                 <div data-reveal>
                   <p className="max-w-xl text-base leading-relaxed text-fg-secondary">{step.body}</p>
-                  <div className={`mt-6 overflow-hidden rounded-2xl border border-line bg-panel p-1.5 shadow-2xl shadow-black/40 ${step.maxWidth}`}>
+                  <div className={`mt-6 overflow-hidden rounded-2xl border border-line bg-panel p-1.5 shadow-floating ${step.maxWidth}`}>
                     <Image
                       src={step.shot.src}
                       width={step.shot.width}

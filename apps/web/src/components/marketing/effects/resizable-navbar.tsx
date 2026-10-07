@@ -15,8 +15,9 @@ import { cn } from "@/lib/utils";
  *   reduced motion makes the change instant;
  * - a passive scroll listener instead of motion's useScroll: the header is on every public page,
  *   and the legal pages then load no animation library at all;
- * - the panel, line and shadow tokens instead of white/neutral; the blur is the marketing
- *   header's documented exception (DESIGN_SYSTEM §6), over a mostly opaque panel.
+ * - the panel, line and floating-shadow tokens instead of white/neutral, and the motion tokens
+ *   (`duration-slow`, `ease-standard`); the blur is the marketing header's documented exception
+ *   (DESIGN_SYSTEM §6), over a mostly opaque panel.
  */
 export function Navbar({ children, className, threshold = 64 }: { children: ReactNode; className?: string; threshold?: number }) {
   const [floating, setFloating] = useState(false);
@@ -38,9 +39,9 @@ export function NavBody({ children, className }: { children: ReactNode; classNam
     <div
       className={cn(
         "relative mx-auto flex h-16 w-full max-w-6xl items-center gap-4 rounded-none border border-transparent px-3 sm:px-4",
-        "transition-[max-width,translate,border-radius,background-color,border-color,box-shadow] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:transition-none",
+        "transition-[max-width,translate,border-radius,background-color,border-color,box-shadow] duration-slow ease-standard motion-reduce:transition-none",
         "group-data-[floating]/nav:translate-y-3 group-data-[floating]/nav:rounded-2xl group-data-[floating]/nav:border-line",
-        "group-data-[floating]/nav:bg-panel/85 group-data-[floating]/nav:shadow-2xl group-data-[floating]/nav:shadow-black/60 group-data-[floating]/nav:backdrop-blur-md",
+        "group-data-[floating]/nav:bg-panel/85 group-data-[floating]/nav:shadow-floating group-data-[floating]/nav:backdrop-blur-md",
         "lg:group-data-[floating]/nav:max-w-4xl",
         className,
       )}

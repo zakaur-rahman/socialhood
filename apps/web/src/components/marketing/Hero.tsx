@@ -3,6 +3,8 @@ import Image from "next/image";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { cn } from "@/lib/utils";
+import { DISPLAY } from "@/styles/tokens";
 
 import { ContainerScroll } from "./effects/container-scroll-animation";
 import { FlipWords } from "./effects/flip-words";
@@ -29,6 +31,10 @@ export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="relative -mt-16 overflow-hidden pt-16">
       <Spotlight />
+      {/* The hero's own glow (C-068), not `bg-glow-brand`: a soft brand light from the top centre,
+          behind the centred headline and the Spotlight's beams. `bg-glow-brand` rises from a corner
+          (120% × 140% at 0 0), a shape made for a card such as Billing's plan hero; here it would
+          light one side of a centred layout. Both are brand-soft fading out, from the tokens. */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[40rem] bg-[radial-gradient(50%_55%_at_50%_0%,var(--color-brand-soft),transparent_70%)]"
@@ -38,17 +44,17 @@ export function Hero() {
           <p className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-line bg-panel/70 px-3 py-1.5 text-xs text-fg-secondary">
             <span className="flex items-center gap-1">
               <span className="grid size-5 place-items-center rounded-full bg-instagram">
-                <PlatformGlyph platform="instagram" className="size-3 text-white" />
+                <PlatformGlyph platform="instagram" className="size-3 text-on-brand" />
               </span>
               <span className="grid size-5 place-items-center rounded-full bg-whatsapp">
-                <PlatformGlyph platform="whatsapp" className="size-3 text-white" />
+                <PlatformGlyph platform="whatsapp" className="size-3 text-on-brand" />
               </span>
             </span>
             <span>
               Inbox, AI replies and automations<span className="hidden sm:inline"> for Instagram and WhatsApp</span>
             </span>
           </p>
-          <h1 id="hero-title" className="mt-6 text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
+          <h1 id="hero-title" className={cn(DISPLAY, "mt-6 text-balance")}>
             <span className="sr-only">{HERO_TITLE}</span>
             <span aria-hidden>
               <span className="block">

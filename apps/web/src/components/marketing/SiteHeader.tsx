@@ -23,7 +23,7 @@ export function SiteHeader() {
               <li key={link.href}>
                 <Link
                   href={link.href as Route}
-                  className="inline-flex min-h-10 items-center rounded-full px-3 text-sm text-fg-secondary transition-colors duration-150 hover:bg-raised hover:text-fg"
+                  className="inline-flex min-h-10 items-center rounded-full px-3 text-sm text-fg-secondary transition-colors duration-normal hover:bg-hover hover:text-fg"
                 >
                   {link.label}
                 </Link>

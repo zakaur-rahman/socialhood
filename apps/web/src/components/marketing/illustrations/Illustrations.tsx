@@ -70,7 +70,7 @@ function Avatar({ initial, platform }: { initial: string; platform: "instagram" 
           platform === "instagram" ? "bg-instagram" : "bg-whatsapp",
         )}
       >
-        <PlatformGlyph platform={platform} className="size-2 text-white" />
+        <PlatformGlyph platform={platform} className="size-2 text-on-brand" />
       </span>
     </span>
   );
@@ -108,7 +108,7 @@ export function DraftIllustration() {
           <Chip>Delivery FAQ</Chip>
           <span className="ml-auto flex gap-1.5">
             <span className="inline-flex h-7 items-center rounded-md bg-raised px-2.5 text-xs text-fg">Edit</span>
-            <span className="bg-brand-gradient inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium text-white">Send</span>
+            <span className="bg-brand-gradient inline-flex h-7 items-center rounded-md px-2.5 text-xs font-medium text-on-brand">Send</span>
           </span>
         </div>
       </m.div>
@@ -155,7 +155,7 @@ export function AutomationIllustration() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
         <span className="relative grid place-items-center">
           {shown && !reduce ? (
-            <span className="absolute inset-0 rounded-[10px] bg-brand motion-safe:animate-[sh-ping_2s_ease-out_infinite]" />
+            <span className="absolute inset-0 rounded-lg bg-brand motion-safe:animate-[sh-ping_2s_ease-out_infinite]" />
           ) : null}
           <LogoMark className="relative size-12 shadow-lg shadow-brand/30" />
         </span>
@@ -171,7 +171,7 @@ export function AutomationIllustration() {
           <p className="flex items-center gap-1 text-xs text-fg-secondary">
             <MessageCircle className="size-3" /> Direct message
           </p>
-          <p className="bg-brand-gradient mt-1.5 rounded-xl rounded-br-md px-2 py-1.5 text-xs leading-snug text-white">
+          <p className="bg-brand-gradient mt-1.5 rounded-xl rounded-br-md px-2 py-1.5 text-xs leading-snug text-on-brand">
             Tap below and we&apos;ll send you the link.
           </p>
           <p className="mt-1.5 truncate rounded-full border border-brand-line px-2 py-1 text-center text-xs text-brand-fg">Send me the link</p>
@@ -246,7 +246,7 @@ export function GapsIllustration() {
 export function AskIllustration() {
   return (
     <Stage className="flex h-full flex-col justify-center gap-2.5 p-4" stagger={0.22}>
-      <m.p variants={RISE} className="bg-brand-gradient ml-auto max-w-[85%] rounded-2xl rounded-br-md px-3 py-2 text-sm text-white">
+      <m.p variants={RISE} className="bg-brand-gradient ml-auto max-w-[85%] rounded-2xl rounded-br-md px-3 py-2 text-sm text-on-brand">
         How did my latest Reel do?
       </m.p>
       <m.div variants={RISE} className="rounded-xl border border-line bg-panel p-3">

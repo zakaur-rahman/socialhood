@@ -22,9 +22,10 @@ export function FinalCta() {
           <CtaLink href={SIGN_UP_PATH} prefetch={false} className="w-full px-6 sm:w-auto">
             Start free <ArrowRight className="size-4" aria-hidden />
           </CtaLink>
+          {/* A text link, not a button: it may wrap at 320 px. */}
           <a
             href={`mailto:${SUPPORT_EMAIL}`}
-            className="inline-flex min-h-11 items-center rounded-lg px-4 text-sm font-medium text-fg-secondary underline-offset-4 transition-colors duration-150 hover:text-fg hover:underline"
+            className="inline-flex min-h-10 items-center rounded-lg px-4 text-sm font-medium text-fg-secondary underline-offset-4 transition-colors duration-normal hover:text-fg hover:underline"
           >
             Questions? {SUPPORT_EMAIL}
           </a>

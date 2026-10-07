@@ -1,6 +1,7 @@
 import { Check, Coins } from "lucide-react";
 import type { CSSProperties } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/marketing/plans";
 import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
 import { cn } from "@/lib/utils";
@@ -47,7 +48,7 @@ function PlanCardView({ card, index }: { card: PlanCard; index: number }) {
       ) : (
         <div
           className={cn(
-            "flex-1 rounded-2xl border bg-panel transition-colors duration-200",
+            "flex-1 rounded-2xl border bg-panel transition-colors duration-slow",
             card.available ? "border-line hover:border-line-strong" : "border-dashed border-line bg-panel/50",
           )}
         >
@@ -66,12 +67,14 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
           {card.name}
         </h3>
         {featured && card.trialDays > 0 ? (
-          <span className="ml-auto rounded-full bg-brand-soft px-2.5 py-0.5 text-xs font-medium text-brand-fg">
+          <Badge size="md" tone="brand" className="ml-auto">
             {card.trialDays}-day free trial
-          </span>
+          </Badge>
         ) : null}
         {!card.available ? (
-          <span className="ml-auto rounded-full bg-raised px-2.5 py-0.5 text-xs font-medium text-fg-secondary">Coming soon</span>
+          <Badge size="md" className="ml-auto">
+            Coming soon
+          </Badge>
         ) : null}
       </div>
       <p className="mt-1 text-sm text-fg-secondary">{card.tagline}</p>

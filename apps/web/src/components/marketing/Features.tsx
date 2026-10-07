@@ -124,7 +124,7 @@ export function Features() {
         <ul className="mx-auto mt-10 grid max-w-6xl gap-4 md:grid-cols-3" aria-label="Also in Social Hood">
           {MORE.map(({ icon: Icon, title, body }, index) => (
             <li key={title} data-reveal style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}>
-              <div className="flex h-full gap-3 rounded-2xl border border-line bg-panel/60 p-4 transition-colors duration-200 hover:border-line-strong">
+              <div className="flex h-full gap-3 rounded-2xl border border-line bg-panel/60 p-4 transition-colors duration-slow hover:border-line-strong">
                 <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
                   <Icon className="size-4" aria-hidden />
                 </span>
