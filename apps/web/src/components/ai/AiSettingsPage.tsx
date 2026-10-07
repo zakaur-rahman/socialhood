@@ -14,8 +14,10 @@ import { SettingsFrame, SettingsPageHeader } from "@/components/settings/Setting
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import {
   autoAllowed,
@@ -138,9 +140,9 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
       }
       aside={
         accounts.length > 0 ? (
-          <span className="rounded-full bg-raised px-2 py-0.5 text-xs text-fg-secondary tabular-nums">
+          <Badge size="md" className="tabular-nums">
             {accounts.length} connected
-          </span>
+          </Badge>
         ) : null
       }
     >
@@ -181,20 +183,20 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
                 {AI_MODES.map((mode) => {
                   const locked = mode === "auto" && !allowsAuto;
                   return (
-                    <ToggleGroupItem
-                      key={mode}
-                      value={mode}
-                      disabled={locked}
-                      title={locked ? "Auto is part of Pro" : AI_MODE_HINT[mode]}
-                    >
-                      {AI_MODE_LABEL[mode]}
-                      {locked ? (
-                        <>
-                          {" "}
-                          <ProBadge />
-                        </>
-                      ) : null}
-                    </ToggleGroupItem>
+                    <Tooltip key={mode}>
+                      <TooltipTrigger asChild>
+                        <ToggleGroupItem value={mode} disabled={locked}>
+                          {AI_MODE_LABEL[mode]}
+                          {locked ? (
+                            <>
+                              {" "}
+                              <ProBadge />
+                            </>
+                          ) : null}
+                        </ToggleGroupItem>
+                      </TooltipTrigger>
+                      <TooltipContent>{locked ? "Auto is part of Pro" : AI_MODE_HINT[mode]}</TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </ToggleGroup>

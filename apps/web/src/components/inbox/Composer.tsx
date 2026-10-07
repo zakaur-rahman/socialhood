@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Heart, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
+import { AlertTriangle, Clock, Heart, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -8,16 +8,18 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeE
 import { toast } from "sonner";
 
 import { UpgradeAction } from "@/components/billing/UpgradeAction";
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { DisabledReason } from "@/components/ui/disabled-reason";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useApi } from "@/lib/api/provider";
 import { useCreateScheduled, usePolishReply, type ReplyInput } from "@/lib/api/queries";
 import type { Conversation, MediaAsset } from "@/lib/api/types";
 import { composerCopy, errorMessage } from "@/lib/copy";
 import { contactName, firstName, timeLeft } from "@/lib/inbox/format";
+import { clearSearchOnEscape } from "@/lib/inbox/search-escape";
 import { useInboxStore } from "@/lib/inbox/store";
 import { ATTACHMENT_RULES, STICKER_RULE, UploadError, uploadAsset } from "@/lib/media/upload";
 import { relativeTime } from "@/lib/time";
@@ -271,10 +273,24 @@ export function Composer({
   };
 
   if (mode !== "reply") {
+    // Why there is no reply box, as the Alert primitive (UI-031): neutral and polite (`role="status"`),
+    // with its one action as the Alert's secondary `sm` Button (DESIGN_SYSTEM §8.5). `outline`, as a
+    // neutral soft fill over panel would leave the secondary Button's `raised` fill nearly invisible.
     return (
       <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-field px-4 py-3 text-sm" role="status">
-          <p className="min-w-0 flex-1 text-fg-secondary">
+        <Alert
+          variant="outline"
+          action={
+            mode === "blocked" ? (
+              <AlertAction asChild>
+                <Link href={`/w/${slug}/settings/connections` as Route}>Reconnect</Link>
+              </AlertAction>
+            ) : mode === "template_only" ? (
+              <AlertAction onClick={onChooseTemplate}>Choose template</AlertAction>
+            ) : undefined
+          }
+        >
+          <AlertDescription>
             {mode === "blocked"
               ? accountStatus === "disconnected"
                 ? composerCopy.disconnected(accountHandle)
@@ -282,17 +298,8 @@ export function Composer({
               : mode === "closed"
                 ? composerCopy.closed(firstName(name), lastInboundAt ? `${relativeTime(lastInboundAt, now)} ago` : null)
                 : composerCopy.templateOnly}
-          </p>
-          {mode === "blocked" ? (
-            <Button asChild size="sm">
-              <Link href={`/w/${slug}/settings/connections` as Route}>Reconnect</Link>
-            </Button>
-          ) : mode === "template_only" ? (
-            <Button size="sm" onClick={onChooseTemplate}>
-              Choose template
-            </Button>
-          ) : null}
-        </div>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -344,7 +351,8 @@ export function Composer({
                 <Smile aria-hidden />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" side="top" className="w-auto p-2">
+            {/* Esc empties the picker's search first; the next Esc closes the popover (UI-031). */}
+            <PopoverContent align="start" side="top" className="w-auto p-2" onEscapeKeyDown={clearSearchOnEscape}>
               {emojiOpen ? <EmojiPicker onPick={insertEmoji} /> : null}
             </PopoverContent>
           </Popover>
@@ -359,7 +367,7 @@ export function Composer({
                 size="icon"
                 className={TOOL}
                 aria-label="Send a sticker"
-                disabled={sticker.busy}
+                loading={sticker.busy}
                 onClick={() => stickerRef.current?.click()}
               >
                 <Sticker aria-hidden />
@@ -375,18 +383,18 @@ export function Composer({
             </>
           ) : null}
           {/* An AI action: the soft Button. Empty, it says why it's off (DisabledReason) and is dimmed like
-              any disabled control; while it works it is busy, with no reason to give. */}
+              any disabled control; while it works it is the Button's `loading` (a spinner, aria-busy), with
+              no reason to give. Enabled, a Tooltip says what it does and what it costs (UI-031; was a title). */}
           <DisabledReason reason={draft.trim() === "" ? "Write a reply to polish" : null} className="ml-1">
-            <Button
-              variant="soft"
-              size="sm"
-              disabled={draft.trim() === "" || polish.isPending}
-              title={draft.trim() === "" ? undefined : "Fix grammar and clarity, in the same language (1 AI credit)"}
-              onClick={polishDraft}
-            >
-              {polish.isPending ? <Spinner size="sm" /> : <Sparkles aria-hidden />}
-              {polish.isPending ? "Polishing…" : "AI Polish"}
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="soft" size="sm" disabled={draft.trim() === ""} loading={polish.isPending} onClick={polishDraft}>
+                  <Sparkles aria-hidden />
+                  AI Polish
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Fix grammar and clarity, in the same language (1 AI credit)</TooltipContent>
+            </Tooltip>
           </DisabledReason>
           {canUndoPolish ? (
             <Button variant="ghost" size="sm" className="text-fg-secondary" onClick={undoPolish}>
@@ -516,7 +524,9 @@ export function SchedulePanel({
         <p className="text-xs text-fg-secondary">Window closes {formatDayTime(closesAt, timeZone, now)}</p>
       ) : null}
       {windowTooShort ? (
-        <p className="text-sm text-warning">The reply window closes too soon to schedule. Reply now instead.</p>
+        <Alert tone="warning" icon={<AlertTriangle />}>
+          The reply window closes too soon to schedule. Reply now instead.
+        </Alert>
       ) : (
         <>
           <ScheduleFields
@@ -533,12 +543,8 @@ export function SchedulePanel({
           />
           {error ? <UpgradeAction error={limitError} /> : null}
           {hasText ? null : <p className="text-xs text-fg-secondary">Write a message first.</p>}
-          <Button
-            className="w-full"
-            disabled={!hasText || blocked || create.isPending}
-            onClick={schedule}
-          >
-            {create.isPending ? "Scheduling…" : "Schedule"}
+          <Button className="w-full" disabled={!hasText || blocked} loading={create.isPending} onClick={schedule}>
+            Schedule
           </Button>
         </>
       )}

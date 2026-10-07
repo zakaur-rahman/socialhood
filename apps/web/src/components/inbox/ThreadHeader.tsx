@@ -7,6 +7,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DisabledReason } from "@/components/ui/disabled-reason";
 import {
@@ -16,8 +17,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Conversation } from "@/lib/api/types";
-import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, platformContactUrl, TONE_CLASS } from "@/lib/inbox/format";
+import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
 import { cn } from "@/lib/utils";
 
 import { ContactAvatar } from "./ContactAvatar";
@@ -27,8 +29,6 @@ const AI_LABEL = { off: "AI: Off", suggest: "AI: Suggest", auto: "AI: Auto" } as
 
 /** Platform colours are for glyphs and fills, never text (DESIGN_SYSTEM §1.6). */
 const PLATFORM_GLYPH = { instagram: "text-instagram", whatsapp: "text-whatsapp" } as const;
-
-const NEEDS_YOU_CHIP = cn("shrink-0 rounded-full py-0.5 text-xs font-medium", TONE_CLASS.danger);
 
 type Props = {
   conversation: Conversation;
@@ -104,20 +104,22 @@ export function ThreadHeader({
             <h2 className="min-w-20 truncate text-sm font-semibold @xl/header:min-w-0">{name}</h2>
             <ReplyWindowChip window={conversation.reply_window} now={now} className="hidden @xl/header:inline-flex" />
             {conversation.needs_human ? (
-              <span className={cn(NEEDS_YOU_CHIP, "hidden px-2 @2xl/header:inline-flex")}>Needs you{reason}</span>
+              <Badge tone="danger" size="md" className="hidden @2xl/header:inline-flex">
+                Needs you{reason}
+              </Badge>
             ) : null}
           </div>
           <div className="flex min-w-0 items-center gap-1">
             {conversation.needs_human ? (
-              <span className={cn(NEEDS_YOU_CHIP, "px-1.5 @2xl/header:hidden")}>
+              <Badge tone="danger" size="md" className="@2xl/header:hidden">
                 Needs you<span className="sr-only">{reason}</span>
-              </span>
+              </Badge>
             ) : null}
             <ReplyWindowChip
               window={conversation.reply_window}
               now={now}
               compact
-              className="min-w-0 shrink truncate @xl/header:hidden"
+              className="min-w-0 shrink @xl/header:hidden"
             />
             <p className="min-w-0 flex-1 truncate text-xs text-fg-secondary" data-testid="thread-identity">
               {conversation.contact.username ? `@${conversation.contact.username} · ` : ""}
@@ -134,14 +136,9 @@ export function ThreadHeader({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {aiControl ?? (
-            <span
-              className={cn(
-                "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium",
-                paused ? TONE_CLASS.warning : TONE_CLASS.brand,
-              )}
-            >
+            <Badge tone={paused ? "warning" : "brand"} size="md">
               {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}
-            </span>
+            </Badge>
           )}
           {/* Disabled, it says why (DisabledReason): to keyboard, touch and screen reader users too. */}
           <DisabledReason
@@ -149,30 +146,32 @@ export function ThreadHeader({
             side="bottom"
             className="hidden md:inline-flex"
           >
-            <Button
-              variant="ghost"
-              size="icon-lg"
-              aria-label="Schedule a message"
-              title={canSchedule ? "Schedule a message" : undefined}
-              disabled={!canSchedule}
-              onClick={onSchedule}
-            >
-              <Clock aria-hidden />
-            </Button>
+            <IconTooltip label={canSchedule ? "Schedule a message" : null}>
+              <Button
+                variant="ghost"
+                size="icon-lg"
+                aria-label="Schedule a message"
+                disabled={!canSchedule}
+                onClick={onSchedule}
+              >
+                <Clock aria-hidden />
+              </Button>
+            </IconTooltip>
           </DisabledReason>
           {/* A toggle: pressed (the panel is open) it is the soft Button, like a selected chip. */}
-          <Button
-            ref={detailsRef}
-            variant={detailsOpen ? "soft" : "ghost"}
-            size="icon-lg"
-            aria-label="Details"
-            title={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}
-            aria-pressed={detailsOpen}
-            onClick={onToggleDetails}
-            className="hidden @xs/row:inline-flex"
-          >
-            <PanelRight aria-hidden />
-          </Button>
+          <IconTooltip label={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}>
+            <Button
+              ref={detailsRef}
+              variant={detailsOpen ? "soft" : "ghost"}
+              size="icon-lg"
+              aria-label="Details"
+              aria-pressed={detailsOpen}
+              onClick={onToggleDetails}
+              className="hidden @xs/row:inline-flex"
+            >
+              <PanelRight aria-hidden />
+            </Button>
+          </IconTooltip>
           <DropdownMenu
             onOpenChange={(open) => {
               const toggle = detailsRef.current;
@@ -213,5 +212,21 @@ export function ThreadHeader({
         </div>
       </div>
     </header>
+  );
+}
+
+/**
+ * What an icon button does, on hover and on keyboard focus (the Tooltip primitive, UI-ISS-042),
+ * where a native `title` showed only on hover. The button keeps its `aria-label`; while the tooltip
+ * shows, Radix links it as the button's description. No label: the button alone (a disabled one
+ * says why through DisabledReason instead).
+ */
+function IconTooltip({ label, children }: { label: string | null; children: ReactNode }) {
+  if (!label) return children;
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{children}</TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useEffect, useState, type Ref } from "react";
 
 import {
@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
+import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -122,32 +123,22 @@ export function ListHeader({
 
       {tab === "chats" ? (
         <>
+          {/* The SearchInput primitive (UI-031): Esc empties it first. `lg` (36 px) is the closest to the old
+              38 px field; the account filter beside it is `lg` too, so the two line up. */}
           <div className="flex items-center gap-2">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
-              <label htmlFor="inbox-search" className="sr-only">
-                Search conversations
-              </label>
-              <input
-                ref={searchRef}
-                id="inbox-search"
-                type="search"
-                value={text}
-                onChange={(event) => setText(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Escape" && text) {
-                    event.preventDefault();
-                    setText("");
-                  }
-                }}
-                placeholder="Search people and messages"
-                autoComplete="off"
-                className="w-full rounded-lg border border-line bg-field py-2 pr-3 pl-9 text-sm focus:bg-raised"
-              />
-            </div>
+            <SearchInput
+              ref={searchRef}
+              id="inbox-search"
+              label="Search conversations"
+              size="lg"
+              value={text}
+              onChange={(event) => setText(event.target.value)}
+              placeholder="Search people and messages"
+              className="flex-1"
+            />
             {accounts.length > 1 ? (
               <Select value={accountId ?? "all"} onValueChange={(value) => onAccountChange(value === "all" ? null : value)}>
-                <SelectTrigger size="sm" aria-label="Account" className="max-w-32 shrink-0">
+                <SelectTrigger size="lg" aria-label="Account" className="max-w-32 shrink-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

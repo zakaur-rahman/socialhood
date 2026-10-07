@@ -9,6 +9,19 @@ import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Alert } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,16 +31,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { useCancelScheduled, useScheduledMessages, useUpdateScheduled } from "@/lib/api/queries";
 import type { ScheduledMessage } from "@/lib/api/types";
 import { emptyStates, errorMessage } from "@/lib/copy";
-import { contactName, TONE_CLASS, type Tone } from "@/lib/inbox/format";
+import { contactName, type Tone } from "@/lib/inbox/format";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime, toZonedInputs } from "@/lib/tz";
-import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { ContactAvatar } from "./ContactAvatar";
@@ -141,34 +152,43 @@ export function ScheduledCard({
         </span>
       </Link>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-hover px-2 py-0.5 text-xs text-fg tabular-nums">
+        <Badge size="md" className="tabular-nums">
           <time dateTime={item.send_at}>{formatDayTime(item.send_at, timeZone, now)}</time>
-        </span>
-        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS[status.tone])}>{status.label}</span>
+        </Badge>
+        <Badge size="md" tone={status.tone}>
+          {status.label}
+        </Badge>
         {pending ? (
           <span className="ml-auto flex gap-1">
             <Button variant="ghost" size="sm" onClick={onEdit}>
               Edit
             </Button>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="destructive-ghost" size="sm" disabled={canceling}>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive-ghost" size="sm" loading={canceling}>
                   Cancel
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-60">
-                <p className="text-sm">Cancel this scheduled message?</p>
-                <p className="text-xs text-fg-secondary">It won&apos;t be sent.</p>
-                <Button variant="destructive" size="sm" onClick={onCancel}>
-                  Cancel message
-                </Button>
-              </PopoverContent>
-            </Popover>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Cancel this scheduled message?</AlertDialogTitle>
+                  <AlertDialogDescription>It won&apos;t be sent.</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Keep it</AlertDialogCancel>
+                  <AlertDialogAction variant="destructive" onClick={onCancel}>
+                    Cancel message
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </span>
         ) : null}
       </div>
       {item.error && (item.status === "failed" || item.status === "expired") ? (
-        <p className="mt-2 text-xs text-danger-fg">{item.error.message}</p>
+        <Alert tone="danger" className="mt-2">
+          {item.error.message}
+        </Alert>
       ) : null}
     </article>
   );
@@ -246,24 +266,21 @@ function EditScheduledForm({
         <DialogTitle>Edit scheduled message</DialogTitle>
         <DialogDescription>To {contactName(item.contact, item.platform)}</DialogDescription>
       </DialogHeader>
-      <div className="space-y-1">
-        <Label htmlFor="scheduled-text" className="text-xs text-fg-secondary">
-          Message
-        </Label>
+      <Field id="scheduled-text" density="compact">
+        <FieldLabel>Message</FieldLabel>
         <Textarea
-          id="scheduled-text"
           value={text}
           maxLength={2000}
           onChange={(event) => setText(event.target.value)}
           className="max-h-60 resize-none"
         />
-      </div>
+      </Field>
       <ScheduleFields idPrefix="edit-scheduled" value={when} onChange={setWhen} timeZone={timeZone} limits={limits} error={error} />
       <DialogFooter>
         <Button variant="ghost" onClick={onClose}>
           Keep as is
         </Button>
-        <Button disabled={update.isPending} onClick={save}>
+        <Button loading={update.isPending} onClick={save}>
           Save
         </Button>
       </DialogFooter>

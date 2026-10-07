@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConversationListItem, ScheduledMessage, SocialAccount } from "@/lib/api/types";
 import { account, conversation, json, listItem, noContent, renderWithApi, type Call } from "@/test/api";
 
+import { useInboxUi } from "./inbox-context";
 import { InboxShell } from "./InboxShell";
 
 const nav = vi.hoisted(() => ({ params: {} as { id?: string }, push: vi.fn(), search: "" }));
@@ -306,6 +307,56 @@ describe("InboxShell list states (§4.7)", () => {
     await user.click(screen.getByRole("radio", { name: "WhatsApp" }));
     await waitFor(() => expect(platforms).toContain("whatsapp"));
     expect(window.localStorage.getItem("socialhood:inbox-platform:w1")).toBe("whatsapp");
+  });
+
+  // UI-031: the search is the SearchInput primitive; Esc empties it before anything else.
+  it("the search is a SearchInput; Esc clears it and keeps focus", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    const search = screen.getByRole("searchbox", { name: "Search conversations" });
+    expect(search.closest('[data-slot="search-input"]')).not.toBeNull();
+    expect(search).toHaveAttribute("data-size", "lg");
+    await user.type(search, "dubai");
+    await user.keyboard("{Escape}");
+    expect(search).toHaveValue("");
+    expect(search).toHaveFocus();
+  });
+});
+
+// UI-031: below 1280 px the details sheet has a title row holding its close button, so the
+// panel's first row (Open in Instagram) can't sit under the button.
+describe("the details sheet (UX-INB-09)", () => {
+  function OpenDetails() {
+    const ui = useInboxUi();
+    return (
+      <button type="button" onClick={ui.toggleDetails}>
+        Open details
+      </button>
+    );
+  }
+
+  it("titles the sheet and scrolls only the panel under the title row", async () => {
+    const user = userEvent.setup();
+    setWidth(900);
+    nav.params = { id: "c1" };
+    renderWithApi(
+      <InboxShell>
+        <OpenDetails />
+      </InboxShell>,
+      { handlers: handlers() },
+    );
+    await user.click(await screen.findByRole("button", { name: "Open details" }));
+    const sheet = await screen.findByRole("dialog", { name: "Details" });
+    const title = within(sheet).getByRole("heading", { name: "Details" });
+    expect(title).not.toHaveClass("sr-only");
+    const header = title.closest('[data-slot="sheet-header"]') as HTMLElement;
+    const scroll = within(sheet).getByTestId("details-scroll");
+    expect(scroll).toHaveClass("min-h-0", "flex-1", "overflow-y-auto");
+    expect(sheet).not.toHaveClass("overflow-y-auto");
+    const open = await within(scroll).findByRole("link", { name: /Open in Instagram/ });
+    expect(header).not.toContainElement(open);
+    expect(within(sheet).getByRole("button", { name: "Close" })).toBeInTheDocument();
   });
 });
 

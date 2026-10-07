@@ -17,6 +17,7 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Message, MessageStatus, Platform } from "@/lib/api/types";
 import type { SendFailure } from "@/lib/copy";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
@@ -219,20 +220,30 @@ export function MessageBubble({
           {message.edited_at && !unsent ? <span>Edited ·</span> : null}
           <time dateTime={message.occurred_at}>{formatTime(message.occurred_at, timeZone)}</time>
           {statusInfo ? (
-            <span role="img" aria-label={statusInfo.label} title={statusInfo.label} className="inline-flex">
-              <statusInfo.icon className={cn("size-3.5", statusInfo.className)} aria-hidden />
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span role="img" aria-label={statusInfo.label} className="inline-flex">
+                  <statusInfo.icon className={cn("size-3.5", statusInfo.className)} aria-hidden />
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{statusInfo.label}</TooltipContent>
+            </Tooltip>
           ) : null}
           {assisted ? (
-            <span className="ml-1 inline-flex items-center gap-0.5 font-medium text-brand-fg" title={assisted}>
-              {message.source === "automation" ? (
-                <Zap className="size-3" aria-hidden />
-              ) : (
-                <Sparkles className="size-3" aria-hidden />
-              )}
-              <span>AI Assisted</span>
-              <span className="sr-only"> ({assisted})</span>
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="ml-1 inline-flex items-center gap-0.5 font-medium text-brand-fg">
+                  {message.source === "automation" ? (
+                    <Zap className="size-3" aria-hidden />
+                  ) : (
+                    <Sparkles className="size-3" aria-hidden />
+                  )}
+                  <span>AI Assisted</span>
+                  <span className="sr-only"> ({assisted})</span>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>{assisted}</TooltipContent>
+            </Tooltip>
           ) : null}
           {message.source === "ai_auto" && aiInfo ? aiInfo : null}
         </p>

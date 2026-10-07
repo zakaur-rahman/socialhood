@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
@@ -45,13 +45,24 @@ describe("ReplyWindowChip (UX-INB-05, C-063)", () => {
     expect(chip).toHaveAttribute("data-tone", tone);
   });
 
-  it("neutral is outlined, amber under 2 h, red once closed", () => {
+  // UI-031: the Badge primitive in the window's tone (UI-ISS-035). Neutral is Badge's `hover` fill
+  // with secondary text (was outlined on `field`); amber and red stay the tone map's soft pairs, now
+  // through Badge.
+  it("a status Badge: neutral, amber under 2 h, red once closed", () => {
     const { rerender } = render(<ReplyWindowChip window={{ state: "open", closes_at: inHours(23) }} now={now} />);
-    expect(screen.getByText("Window: 23h left")).toHaveClass("border-line", "text-fg-secondary");
+    const neutral = screen.getByText("Window: 23h left");
+    expect(neutral).toHaveAttribute("data-slot", "badge");
+    expect(neutral).toHaveAttribute("data-size", "sm");
+    expect(neutral).toHaveClass("h-5", "text-2xs", "bg-hover", "text-fg-secondary");
+    expect(neutral).not.toHaveClass("border-line", "bg-field");
     rerender(<ReplyWindowChip window={{ state: "open", closes_at: inHours(1) }} now={now} />);
-    expect(screen.getByText("Window: 1h left")).toHaveClass("bg-warning-soft", "text-warning");
+    const amber = screen.getByText("Window: 1h left");
+    expect(amber).toHaveAttribute("data-slot", "badge");
+    expect(amber).toHaveClass("bg-warning-soft", "text-warning");
     rerender(<ReplyWindowChip window={{ state: "closed" }} now={now} />);
-    expect(screen.getByText("Window closed")).toHaveClass("bg-danger-soft", "text-danger-fg");
+    const red = screen.getByText("Window closed");
+    expect(red).toHaveAttribute("data-slot", "badge");
+    expect(red).toHaveClass("bg-danger-soft", "text-danger-fg");
   });
 });
 
@@ -109,8 +120,10 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(within(nameLine).getByText("Window: 23h left")).toBeInTheDocument();
     expect(within(nameLine).getByText("Needs you: refund")).toBeInTheDocument();
     // …on the handle line when it is narrow, without "Window:" and the reason, which stay for screen readers.
+    // (UI-031: the compact chip's visible part is a span of its own inside the Badge, so it can end
+    // in an ellipsis.)
     const handleLine = screen.getByTestId("thread-identity").parentElement as HTMLElement;
-    expect(within(handleLine).getByText("23h left")).toHaveTextContent("Window: 23h left");
+    expect(within(handleLine).getByText("23h left").closest('[data-slot="badge"]')).toHaveTextContent("Window: 23h left");
     expect(within(handleLine).getByText("Needs you")).toHaveTextContent("Needs you: refund");
     // The name keeps 80 px; the other items move first (UI-ISS-019).
     expect(heading).toHaveClass("min-w-20");
@@ -147,6 +160,21 @@ describe("ThreadHeader (UX-INB-05)", () => {
   it("the panel toggle shows whether the panel is open", () => {
     renderHeader({}, { detailsOpen: true });
     expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  // UI-031: Needs you and the read-only AI chip are Badges; the icon buttons say what they do in the
+  // Tooltip primitive, on keyboard focus too, instead of a native title (UI-ISS-042).
+  it("Badges for Needs you and the AI mode; Tooltips instead of titles on the icon buttons", async () => {
+    renderHeader({ needs_human: true, needs_human_reason: "refund" });
+    expect(screen.getByText("Needs you: refund")).toHaveAttribute("data-slot", "badge");
+    expect(screen.getByText("Needs you: refund")).toHaveClass("bg-danger-soft", "text-danger-fg", "text-xs");
+    expect(screen.getByText("AI: Suggest")).toHaveAttribute("data-tone", "brand");
+    const details = screen.getByRole("button", { name: "Details" });
+    const schedule = screen.getByRole("button", { name: "Schedule a message" });
+    expect(details).not.toHaveAttribute("title");
+    expect(schedule).not.toHaveAttribute("title");
+    act(() => details.focus());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Show the customer panel");
   });
 
   // Pressed, the toggle is the soft Button (C-073), so hovering it keeps the brand look; closed, a ghost one.

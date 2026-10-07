@@ -4,13 +4,13 @@ import { Lightbulb, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRefreshSummary } from "@/lib/api/queries";
 import type { Conversation } from "@/lib/api/types";
 import { toastError } from "@/lib/toast-error";
 import { relativeTime } from "@/lib/time";
-import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { EYEBROW } from "@/styles/tokens";
 
@@ -77,12 +77,10 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
           <p className="text-sm leading-relaxed">{summary.text}</p>
           {summary.next_step ? (
             // summary.v2 (C-063): one concrete suggestion from the conversation and knowledge.
-            <div role="note" aria-label="Next step" className="rounded-lg border border-brand-line bg-brand-soft px-3 py-2">
-              <p className={cn(EYEBROW, "flex items-center gap-1 text-brand-fg")}>
-                <Lightbulb className="size-3" aria-hidden /> Next step
-              </p>
-              <p className="mt-0.5 text-sm leading-relaxed">{summary.next_step}</p>
-            </div>
+            <Alert tone="brand" icon={<Lightbulb />}>
+              <AlertTitle className={EYEBROW}>Next step</AlertTitle>
+              <AlertDescription className="leading-relaxed text-fg">{summary.next_step}</AlertDescription>
+            </Alert>
           ) : null}
         </>
       ) : (
@@ -93,7 +91,8 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
         variant="secondary"
         size="sm"
         className="w-full"
-        disabled={waiting || refresh.isPending}
+        loading={refresh.isPending}
+        disabled={waiting}
         onClick={ask}
       >
         <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}

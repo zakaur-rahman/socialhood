@@ -1,7 +1,7 @@
 "use client";
 
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { formatDayTime, toZonedInputs, zonedToDate } from "@/lib/tz";
 
 /** F-10: the earliest time a message can be scheduled, and the margin before the window closes. */
@@ -81,12 +81,9 @@ export function ScheduleFields({
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-date`} className="text-xs text-fg-secondary">
-            Date
-          </Label>
+        <Field id={`${idPrefix}-date`} density="compact">
+          <FieldLabel>Date</FieldLabel>
           <Input
-            id={`${idPrefix}-date`}
             type="date"
             size="lg"
             value={value.date}
@@ -95,27 +92,20 @@ export function ScheduleFields({
             aria-invalid={Boolean(error)}
             onChange={(event) => onChange({ ...value, date: event.target.value })}
           />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-time`} className="text-xs text-fg-secondary">
-            Time
-          </Label>
+        </Field>
+        <Field id={`${idPrefix}-time`} density="compact">
+          <FieldLabel>Time</FieldLabel>
           <Input
-            id={`${idPrefix}-time`}
             type="time"
             size="lg"
             value={value.time}
             aria-invalid={Boolean(error)}
             onChange={(event) => onChange({ ...value, time: event.target.value })}
           />
-        </div>
+        </Field>
       </div>
-      <p className="text-xs text-fg-secondary">Times are in {timeZone.replace(/_/g, " ")}.</p>
-      {error ? (
-        <p role="alert" className="text-xs text-danger-fg">
-          {error}
-        </p>
-      ) : null}
+      <FieldDescription>Times are in {timeZone.replace(/_/g, " ")}.</FieldDescription>
+      <FieldError>{error}</FieldError>
     </div>
   );
 }
