@@ -41,6 +41,19 @@ const inputVariants = cva(
   }
 )
 
+/**
+ * Native date and time fields (D-04) hold their own controls: the date or time segments and the
+ * calendar or clock button. While that button has keyboard focus, Chromium leaves the field
+ * matching neither `:focus` nor `:focus-visible`, only `:focus-within`, so the global outline and the
+ * ring border both disappeared on that Tab stop. These types draw the same focus look from
+ * `:focus-within`: the outline (2 px `ring`, offset 2 px, like the global rule), the `ring` border and
+ * the `raised` fill. The browser still rings the button itself, so the stop inside the field shows.
+ */
+const PICKER_TYPES = new Set(["date", "time", "datetime-local", "month", "week"])
+
+const pickerFocusClass =
+  "focus-within:border-ring focus-within:bg-raised focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"
+
 type InputProps = Omit<React.ComponentProps<"input">, "size"> & VariantProps<typeof inputVariants>
 
 function Input({ className, type, size = "default", ...props }: InputProps) {
@@ -50,7 +63,7 @@ function Input({ className, type, size = "default", ...props }: InputProps) {
       type={type}
       data-slot="input"
       data-size={size}
-      className={cn(inputVariants({ size }), className)}
+      className={cn(inputVariants({ size }), type && PICKER_TYPES.has(type) && pickerFocusClass, className)}
       {...props}
       {...fieldProps}
     />

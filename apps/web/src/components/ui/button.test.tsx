@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { Button, buttonVariants } from "./button";
 
-const VARIANTS = ["default", "secondary", "outline", "ghost", "destructive", "destructive-ghost", "link"] as const;
+const VARIANTS = ["default", "secondary", "outline", "ghost", "soft", "destructive", "destructive-ghost", "link"] as const;
 const SIZES = ["xs", "sm", "default", "lg", "xl", "icon-xs", "icon-sm", "icon", "icon-lg"] as const;
 
 const classes = (el: Element) => el.getAttribute("class")!.split(/\s+/);
@@ -25,12 +25,25 @@ describe("Button variants (DESIGN_SYSTEM §8.2, §8.3)", () => {
     ["secondary", ["bg-raised", "text-fg", "hover:bg-raised-hover"]],
     ["outline", ["border-line-strong", "hover:bg-hover", "aria-expanded:bg-pressed"]],
     ["ghost", ["hover:bg-hover", "aria-expanded:bg-pressed"]],
+    ["soft", ["bg-brand-soft", "text-brand-fg", "border-brand-line", "hover:bg-brand-soft-hover", "aria-expanded:bg-brand-soft-hover"]],
     ["destructive", ["bg-danger-fill", "text-on-brand", "hover:bg-danger-fill/90"]],
     ["destructive-ghost", ["text-danger-fg", "hover:bg-danger-soft"]],
     ["link", ["text-brand-fg", "hover:underline"]],
   ] as const)("%s uses the design-system tokens", (variant, expected) => {
     render(<Button variant={variant}>Go</Button>);
     expect(screen.getByRole("button", { name: "Go" })).toHaveClass(...expected);
+  });
+
+  it("soft keeps its brand-line edge and brand text in every state (no transparent edge, no hover:text-fg)", () => {
+    render(
+      <Button variant="soft" size="sm" aria-expanded>
+        AI: Suggest
+      </Button>,
+    );
+    const list = classes(screen.getByRole("button", { name: "AI: Suggest" }));
+    expect(list).toContain("border-brand-line");
+    expect(list).not.toContain("border-transparent");
+    expect(list.filter((c) => /(^|:)text-fg$|bg-brand\/|bg-hover|bg-pressed/.test(c))).toEqual([]);
   });
 
   it.each(VARIANTS)("%s keeps the global focus outline: no outline removal, no ring halo", (variant) => {

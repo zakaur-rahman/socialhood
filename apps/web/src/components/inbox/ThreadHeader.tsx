@@ -160,15 +160,16 @@ export function ThreadHeader({
               <Clock aria-hidden />
             </Button>
           </DisabledReason>
+          {/* A toggle: pressed (the panel is open) it is the soft Button, like a selected chip. */}
           <Button
             ref={detailsRef}
-            variant="ghost"
+            variant={detailsOpen ? "soft" : "ghost"}
             size="icon-lg"
             aria-label="Details"
             title={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}
             aria-pressed={detailsOpen}
             onClick={onToggleDetails}
-            className={cn("hidden @xs/row:inline-flex", detailsOpen && "bg-brand-soft text-brand-fg")}
+            className="hidden @xs/row:inline-flex"
           >
             <PanelRight aria-hidden />
           </Button>

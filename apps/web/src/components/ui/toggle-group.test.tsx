@@ -15,7 +15,7 @@ function Single({
 }: {
   onValueChange?: (value: string) => void
   variant?: "segmented" | "chips"
-  size?: "default" | "sm"
+  size?: "default" | "sm" | "xl"
   disabled?: string
 }) {
   const [value, setValue] = useState("7d")
@@ -127,6 +127,18 @@ describe("ToggleGroup (segmented)", () => {
     expect(item).not.toHaveClass("min-h-8")
     expect(item).not.toHaveClass("text-sm")
     expect(screen.getByRole("radiogroup")).toHaveAttribute("data-size", "sm")
+  })
+
+  it("has a settings size: 40 px segments with the 14 px control text, 40 px on coarse pointers too (C-066)", () => {
+    render(<Single size="xl" />)
+    const item = screen.getByRole("radio", { name: "30 days" })
+    expect(item).toHaveClass("min-h-10", "px-2", "py-2.5", "text-sm", "font-medium", "pointer-coarse:min-h-10", "whitespace-nowrap")
+    // Its 8 px minimum side padding replaces the 10 px one (the labels fit a 220 px track).
+    expect(classes(item).filter((c) => /^(min-h-(7|8|9)|text-xs|py-1|py-1\.5|px-2\.5)$/.test(c))).toEqual([])
+    // The track keeps its 4 px inset, so the control is 48 px outside.
+    const track = screen.getByRole("radiogroup")
+    expect(track).toHaveAttribute("data-size", "xl")
+    expect(track).toHaveClass("p-1", "gap-1", "bg-field")
   })
 
   it("lets call-site leftovers win until the sweeps remove them", () => {

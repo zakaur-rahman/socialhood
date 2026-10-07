@@ -6,6 +6,11 @@
 /* Addition to §4.2 (C-002): the app is dark-only (D13), so `dark:` follows the class on <html>, not the OS setting. */
 @custom-variant dark (&:is(.dark *));
 
+/* A short viewport, 500 px tall or less: 200% zoom, a landscape phone (RSP-006). Sticky bars stay in
+   the flow there (`short:static`, shell/sticky-bar.ts) so they can't take a quarter of the screen,
+   and their text gets one line (C-073; it replaces `[@media(max-height:500px)]:`). */
+@custom-variant short (@media (max-height: 500px));
+
 /* Additions marked "C-070" are the UI audit's token foundation (docs/ui-audit/DESIGN_SYSTEM.md
    §1.13, §1.9, §2, §7): names for values already in use; the few on-screen changes are listed in
    docs/CONFLICTS.md C-070. Those marked "C-071" apply the owner's decisions D-01 (control edges),
@@ -46,6 +51,7 @@
   --color-brand-deep: #20338A;
   --color-brand-fg: #9DB5FF;      /* brand-coloured text and icons on dark surfaces */
   --color-brand-soft: rgb(86 127 248 / 0.15);
+  --color-brand-soft-hover: rgb(86 127 248 / 0.25);  /* hover and open on brand-soft: the soft button (C-073) */
   --color-brand-line: rgb(86 127 248 / 0.35);
   --color-shell-1: #3352CC;       /* logo tile and upgrade button */
   --color-shell-2: #1C2D70;
@@ -108,6 +114,12 @@
    more to scroll to (RSP-012; the sidebar's bottom fade, turned sideways). Give the row the same
    end padding (pe-4) so its last item can scroll clear of the fade. The mask uses alpha only. */
 @utility mask-fade-x { mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent); }
+
+/* The crop box's mask (DESIGN_SYSTEM §6: box-shadow for another job than elevation, named here): a
+   spread shadow that dims the photo outside the box with media-scrim at 60%, dark in any theme. Its
+   container clips it (overflow-hidden). Not an elevation, so it stays out of the --shadow-* family
+   (C-073). */
+@utility shadow-crop-mask { box-shadow: 0 0 0 9999px color-mix(in srgb, var(--color-media-scrim) 60%, transparent); }
 
 /* UX-SCR-03: the editor's gutter line while an automation is active, a dashed brand gradient moving
    down (2 s per cycle); static under reduced motion. Built from tokens only. */

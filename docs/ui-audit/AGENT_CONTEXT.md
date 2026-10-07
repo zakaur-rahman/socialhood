@@ -67,7 +67,7 @@ Use the utilities (`bg-panel`, `text-fg-secondary`, `border-line` …), never ra
 | `overlay` | `#262626` (floating surfaces, through `--popover`; D-12) | T | `brand-strong` | `#4467E6` (solid fills with text) | A |
 | `hover` | white 5% | A | `brand-deep` | `#20338A` (gradient start) | ✓ |
 | `pressed` | white 10% | A | `brand-fg` | `#9DB5FF` (brand text, links) | ✓ |
-| `scrim` | black 60% | A | `brand-soft` / `brand-line` | brand 15% / 35% | ✓ |
+| `scrim` | black 60% | A | `brand-soft` / `brand-soft-hover` / `brand-line` | brand 15% / 25% (the `soft` Button's hover and open; C-073) / 35% | ✓ |
 | `media-scrim` | `#000` (on media only, with `/N`) | A | `shell-1` / `shell-2` | logo tile and Upgrade; one identity pair (D-13) | ✓ |
 
 | Lines | Value | | Status | Value | |
@@ -134,7 +134,8 @@ primitive** (D-12, C-071): `overlay` with a `ring-1 ring-line` edge plus `shadow
 (popovers, menus, select options, tooltips (D-03), toasts) or `shadow-overlay` (dialogs, alert
 dialogs, sheets);
 modals over `bg-scrim`; the phone drawer stays `panel`. No call-site `bg-panel` or `shadow-*` on
-overlays (they override the primitive). No backdrop blur in the app.
+overlays (they override the primitive). No backdrop blur in the app. A shadow for another job is a
+named utility: the crop box's `shadow-crop-mask` (C-073); no arbitrary `shadow-[…]`.
 
 **Motion:** `duration-fast` 120 (hover, press, menus, popovers, tooltips, all exits), `duration-normal`
 150 (live message, inline reveals), `duration-slow` 200 (dialogs, sheets, panels, suggestion bar);
@@ -146,9 +147,10 @@ loops and skeleton pulse stop, spinners stop (`motion-safe:animate-spin`). App c
 ## 6. Component rules and the adoption checklist
 
 **Use the canonical primitive** (DESIGN_SYSTEM §8.2): Button (`default` is the primary; `secondary`,
-`outline`, `ghost`, `destructive`, `destructive-ghost`, `link`; sizes `xs`–`xl`; `loading`),
+`outline`, `ghost`, `soft`, `destructive`, `destructive-ghost`, `link`; sizes `xs`–`xl`; `loading`),
 DisabledReason, Spinner, Input, Textarea, Select, Checkbox, Switch, Field, SearchInput, ChipInput,
-ToggleGroup (`segmented` or `chips`; single or multiple), Tabs (when the choice swaps panels),
+ToggleGroup (`segmented` or `chips`; single or multiple; sizes `sm`, `default`, `xl`), Tabs (when
+the choice swaps panels; the same sizes),
 Dialog (`size`), AlertDialog, Sheet (`size="panel"` for side panels), Popover, DropdownMenu, Tooltip,
 Toaster, Badge (`tone`, `size`, `shape`), Card / CardHeader / CardInset, Alert, Meter, Progress,
 Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorState (`compact`).
@@ -158,9 +160,17 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
 - No raw `<button>`, `<input>`, `<textarea>` or `<select>` where a primitive fits. A custom row or
   tile that must be a raw button uses the same hover, focus and touch rules.
 - **States:** hover `bg-hover` (on `raised`: `bg-raised-hover`); open `bg-pressed`; focus = the
-  global outline (never remove it; inset inside clipping containers; fields also `border-ring`);
-  selected per DESIGN_SYSTEM §8.3; disabled `opacity-50`, with DisabledReason when there is a
-  reason; loading `Button loading`; invalid `aria-invalid` plus Field's error.
+  global outline (never remove it; inset inside clipping containers; fields also `border-ring`;
+  Input also draws it from `:focus-within` on native date and time fields, whose picker button
+  takes focus); selected per DESIGN_SYSTEM §8.3; disabled `opacity-50`, with DisabledReason when
+  there is a reason; loading `Button loading`; invalid `aria-invalid` plus Field's error.
+- **Brand-soft buttons** (C-073): an AI action (the AI pill, AI Polish) and a toggle Button while
+  pressed (`variant={pressed ? "soft" : "ghost"}`, with `aria-pressed`) use `variant="soft"`:
+  `brand-soft`, `brand-fg`, a `brand-line` edge, `brand-soft-hover` on hover and open. Never paste
+  brand-soft classes onto a ghost Button.
+- **Settings forms** (C-066) use `size="xl"` on Input, Select, Button, ToggleGroup and Tabs: 40 px
+  segments at 14 px in a 48 px track. A segmented filter in a row beside a 40 px search uses
+  `default` (a 40 px track), so the edges line up.
 - **The one disabled exception** (DESIGN_SYSTEM §8.3, UX-INB-07): a composer's Send while empty is
   a disabled `Button variant="secondary"` with `disabled:text-fg-disabled disabled:opacity-100` at
   the call site (UI-030, inbox Composer), and `variant="default"` once there is something to send.
@@ -177,7 +187,10 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
 **Adoption checklist (area sweeps, Wave 3)** — in your directories, none of these may remain:
 
 - [ ] `bg-brand-gradient text-white` on Button or AlertDialogAction; hand-made danger buttons
-- [ ] `min-h-10 md:min-h-*`, `size-10 md:size-*`, `h-10 md:h-*` touch patches
+- [ ] `min-h-10 md:min-h-*`, `size-10 md:size-*`, `h-10 md:h-*` touch patches; segment
+  `min-h-*` and `text-xs` overrides (use `size`)
+- [ ] brand-soft classes on a ghost Button (use `variant="soft"`)
+- [ ] `[@media(max-height:500px)]:` (use `short:`) and arbitrary `shadow-[…]`
 - [ ] `border-line bg-panel`, `shadow-*` or `max-h-*` on overlay content
 - [ ] Skeleton colour overrides
 - [ ] `ring-ring/50`, `ring-3`, `outline-none`/`outline-hidden` without a focus replacement
@@ -213,7 +226,8 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
 - Grids start at `grid-cols-1`; children that truncate get `min-w-0`; in header rows the identifying
   text keeps a minimum width and other items shrink or move first.
 - Full-height frames are flex children of a full-height `<main>`, not `calc(100dvh − n)`.
-- Sticky bars: scroll padding for the focused control; static on short viewports.
+- Sticky bars: scroll padding for the focused control; static on short viewports through `short:`
+  (`max-height: 500px`; `STATIC_WHEN_SHORT`, `BOTTOM_BAR` in `shell/sticky-bar.ts`).
 - Dialogs scroll within the viewport; sheets are full screen below `md`; toasts top-centre below `md`.
 - Scrolling rows get an edge fade (`mask-fade-x`) and stay keyboard-reachable.
 - Touch sizes through `pointer-coarse:`; hover-revealed controls hidden only for `pointer-fine:`.
@@ -269,6 +283,10 @@ per-site overlay patches.
 - Spinners stop under reduced motion (C-065's precedent); the suggestion bar moves to 200 ms
   (logged for confirmation).
 - No `shadow-raised`, RadioGroup, Calendar, Command, info or chart colour tokens for now.
+- **Primitive follow-ups (C-073):** Button `soft` (AI actions, a pressed toggle) with the
+  `brand-soft-hover` token (brand 25%); ToggleGroup and Tabs `xl` (40 px segments at 14 px, 8 px
+  minimum side padding), named `xl` because `lg` is 36 px on every other control; native date and
+  time fields show focus at the picker button too; the `short:` variant; `shadow-crop-mask`.
 
 **Owner decisions.** All 17 were approved on 2026-10-01 with the recommended option (C-069). Each
 applies through the task the plan names; until that task merges, the current look stays, so build

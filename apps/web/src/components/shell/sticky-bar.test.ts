@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { reserveBottomBar } from "./sticky-bar";
+import { BOTTOM_BAR, reserveBottomBar, STATIC_WHEN_SHORT } from "./sticky-bar";
 
 const root = () => document.documentElement.style;
 
@@ -82,6 +82,12 @@ describe("reserveBottomBar (UI-ISS-014: focus never under a sticky bar)", () => 
     field.focus();
     expect(scroll).not.toHaveBeenCalled();
     release?.();
+  });
+
+  it("stays in the flow on short viewports through the named short variant, not a media literal", () => {
+    expect(STATIC_WHEN_SHORT).toBe("short:static");
+    expect(BOTTOM_BAR.split(" ")).toContain("short:static");
+    expect(BOTTOM_BAR).not.toMatch(/\[@media/);
   });
 
   it("does nothing for a detached ref", () => {
