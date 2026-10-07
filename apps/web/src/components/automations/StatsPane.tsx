@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { ErrorState } from "@/components/states/ErrorState";
+import { CardInset } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutomationStats } from "@/lib/api/queries";
@@ -88,10 +89,10 @@ export function StatsView({ stats, tapFirst = false, followNudge = false }: { st
     <div className="space-y-4">
       <dl className="grid grid-cols-2 gap-2">
         {figures.map((figure) => (
-          <div key={figure.label} className="rounded-lg bg-field p-3">
+          <CardInset key={figure.label} padding="compact">
             <dt className="text-xs text-fg-secondary">{figure.label}</dt>
             <dd className="mt-0.5 text-xl font-semibold tabular-nums">{figure.value}</dd>
-          </div>
+          </CardInset>
         ))}
       </dl>
       <DailyChart daily={stats.daily} />

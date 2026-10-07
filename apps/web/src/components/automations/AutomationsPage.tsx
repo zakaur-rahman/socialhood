@@ -1,6 +1,6 @@
 "use client";
 
-import { Pause, Plus, Search, X } from "lucide-react";
+import { Pause, Plus, X } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -10,7 +10,8 @@ import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
@@ -339,22 +340,15 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         <SummaryStrip summary={summary.data} loading={summary.isPending} />
 
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-48 flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
-            <label htmlFor="automations-search" className="sr-only">
-              Search automations
-            </label>
-            <Input
-              id="automations-search"
-              type="search"
-              size="lg"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="Search by name or keyword"
-              autoComplete="off"
-              className="pl-10"
-            />
-          </div>
+          <SearchInput
+            label="Search automations"
+            id="automations-search"
+            size="lg"
+            value={text}
+            onChange={(event) => setText(event.target.value)}
+            placeholder="Search by name or keyword"
+            className="min-w-48 flex-1"
+          />
           {accounts.length > 1 ? (
             <Select value={accountId ?? ALL} onValueChange={(value) => setAccountId(value === ALL ? null : value)}>
               <SelectTrigger aria-label="Account" size="lg" className="max-w-48">
@@ -478,7 +472,7 @@ function SummaryStrip({
   return (
     <section aria-label="Last 7 days" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {figures.map((figure) => (
-        <div key={figure.label} className="rounded-xl border border-line bg-panel p-4">
+        <Card key={figure.label}>
           <p className="text-xs text-fg-secondary">{figure.label}</p>
           {loading ? (
             <Skeleton className="mt-2 h-7 w-16" />
@@ -488,7 +482,7 @@ function SummaryStrip({
             </p>
           )}
           <p className="mt-1 text-xs text-fg-secondary">{figure.hint}</p>
-        </div>
+        </Card>
       ))}
     </section>
   );
@@ -498,14 +492,14 @@ function RowSkeletons() {
   return (
     <div aria-busy="true" aria-label="Loading automations" className="space-y-2">
       {Array.from({ length: 4 }, (_, i) => (
-        <div key={i} className="flex items-center gap-3 rounded-xl border border-line bg-panel p-4">
+        <Card key={i} className="flex items-center gap-3">
           <Skeleton className="h-5 w-8 rounded-full" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3 w-1/3" />
             <Skeleton className="h-3 w-1/2" />
           </div>
           <Skeleton className="h-5 w-24" />
-        </div>
+        </Card>
       ))}
     </div>
   );
@@ -527,7 +521,8 @@ function EmptyAutomations({
   onBrowse: () => void;
 }) {
   return (
-    <section className="rounded-xl border border-line bg-panel p-6">
+    <Card asChild padding="roomy">
+    <section>
       <EmptyState className="py-4" {...emptyStates.automations} />
       <ul aria-label="Templates" className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {loading
@@ -554,5 +549,6 @@ function EmptyAutomations({
         </Button>
       </div>
     </section>
+    </Card>
   );
 }

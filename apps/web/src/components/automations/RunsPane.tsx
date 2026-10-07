@@ -14,21 +14,23 @@ import type { AutomationRun, RunResult } from "@/lib/api/types";
 import { RESULT_LABEL, runMarkers } from "@/lib/automations/format";
 import { emptyStates } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
-import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { CardInset } from "@/components/ui/card";
+import type { Tone } from "@/lib/ui/tone";
 
 const RESULTS = Object.keys(RESULT_LABEL) as RunResult[];
 const ALL = "all";
 
-const RESULT_TONE: Record<RunResult, string> = {
-  sent: "bg-success-soft text-success",
-  queued: "bg-brand-soft text-brand-fg",
-  partial: "bg-warning-soft text-warning",
-  failed: "bg-danger-soft text-danger-fg",
-  skipped_cooldown: "bg-raised text-fg-secondary",
-  skipped_expired: "bg-raised text-fg-secondary",
-  escalated: "bg-warning-soft text-warning",
-  awaiting_reply: "bg-brand-soft text-brand-fg",
-  skipped_read_only: "bg-raised text-fg-secondary",
+const RESULT_TONE: Record<RunResult, Tone> = {
+  sent: "success",
+  queued: "brand",
+  partial: "warning",
+  failed: "danger",
+  skipped_cooldown: "neutral",
+  skipped_expired: "neutral",
+  escalated: "warning",
+  awaiting_reply: "brand",
+  skipped_read_only: "neutral",
 };
 
 function contactLabel(run: AutomationRun): string {
@@ -75,10 +77,10 @@ export function RunsPane({
       {runs.isPending ? (
         <div aria-busy="true" aria-label="Loading runs" className="space-y-2">
           {Array.from({ length: 4 }, (_, i) => (
-            <div key={i} className="space-y-2 rounded-lg bg-field p-3">
+            <CardInset key={i} padding="compact" className="space-y-2">
               <Skeleton className="h-3 w-1/2" />
               <Skeleton className="h-3 w-3/4" />
-            </div>
+            </CardInset>
           ))}
         </div>
       ) : runs.isError ? (
@@ -113,9 +115,7 @@ function RunRow({ run, timeZone, href }: { run: AutomationRun; timeZone: string;
     <>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-sm font-medium">{contactLabel(run)}</span>
-        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium", RESULT_TONE[run.result])}>
-          {RESULT_LABEL[run.result]}
-        </span>
+        <Badge tone={RESULT_TONE[run.result]}>{RESULT_LABEL[run.result]}</Badge>
       </div>
       {run.trigger_text ? <p className="mt-1 line-clamp-2 text-sm text-fg-secondary">{run.trigger_text}</p> : null}
       {run.error ? <p className="mt-1 text-xs text-danger-fg">{run.error.message}</p> : null}
@@ -126,23 +126,19 @@ function RunRow({ run, timeZone, href }: { run: AutomationRun; timeZone: string;
       {markers.length > 0 ? (
         <p data-testid="run-markers" className="mt-1.5 flex flex-wrap gap-1">
           {markers.map((marker) => (
-            <span
-              key={marker}
-              className="rounded-full border border-line px-1.5 py-0.5 text-2xs text-fg-secondary tabular-nums"
-            >
+            <Badge key={marker} className="tabular-nums">
               {marker}
-            </span>
+            </Badge>
           ))}
         </p>
       ) : null}
     </>
   );
-  const className = "block rounded-lg border border-line-subtle bg-field p-3";
   return href ? (
-    <Link href={href} className={cn(className, "hover:bg-raised")}>
-      {body}
-    </Link>
+    <CardInset asChild padding="compact" className="block hover:bg-hover">
+      <Link href={href}>{body}</Link>
+    </CardInset>
   ) : (
-    <div className={className}>{body}</div>
+    <CardInset padding="compact">{body}</CardInset>
   );
 }

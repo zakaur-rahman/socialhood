@@ -1,6 +1,8 @@
 import { AlertCircle } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { Alert } from "@/components/ui/alert";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
 
@@ -36,16 +38,14 @@ export function StepCard({
 }) {
   const labelId = `step-${id}-label`;
   return (
+    <Card asChild padding="roomy">
     <section
       id={`step-${id}`}
       data-step={id}
       data-state={state}
       aria-labelledby={labelId}
       tabIndex={-1}
-      className={cn(
-        "relative scroll-mt-24 rounded-xl border bg-panel p-5",
-        state === "error" ? "border-danger" : "border-line",
-      )}
+      className={cn("relative scroll-mt-24", state === "error" && "border-danger")}
     >
       <span
         aria-hidden
@@ -65,17 +65,17 @@ export function StepCard({
         {action}
       </div>
       {errors.length > 0 ? (
-        <ul className="mb-4 space-y-1 rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger-fg">
-          {errors.map((message) => (
-            <li key={message} className="flex items-start gap-2">
-              <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
-              <span>{message}</span>
-            </li>
-          ))}
-        </ul>
+        <Alert tone="danger" icon={<AlertCircle />} className="mb-4">
+          <ul className="space-y-1">
+            {errors.map((message) => (
+              <li key={message}>{message}</li>
+            ))}
+          </ul>
+        </Alert>
       ) : null}
       {children}
     </section>
+    </Card>
   );
 }
 

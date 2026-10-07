@@ -3,8 +3,10 @@
 import { CheckCircle2, XCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import { Alert, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -66,8 +68,8 @@ export function MatchTester({
           <ToggleGroupItem value="comment">A comment</ToggleGroupItem>
           <ToggleGroupItem value="dm">A DM</ToggleGroupItem>
         </ToggleGroup>
-        <div className="space-y-1.5">
-          <Label htmlFor="automation-test-text">{kind === "dm" ? "Message" : "Comment"}</Label>
+        <Field id="automation-test-text">
+          <FieldLabel>{kind === "dm" ? "Message" : "Comment"}</FieldLabel>
           <Textarea
             id="automation-test-text"
             value={text}
@@ -76,7 +78,7 @@ export function MatchTester({
             onChange={(event) => setText(event.target.value)}
             placeholder={kind === "dm" ? "What's the price?" : "LINK please 😍"}
           />
-        </div>
+        </Field>
         <div className="flex items-center gap-3">
           <Button type="submit" variant="secondary" disabled={!text.trim() || test.isPending}>
             {test.isPending ? <Spinner /> : null}
@@ -88,9 +90,9 @@ export function MatchTester({
 
       <div aria-live="polite">
         {saveFailed ? (
-          <p className="text-sm text-danger-fg">Your latest changes aren&apos;t saved yet. Save them, then test again.</p>
+          <Alert tone="danger">Your latest changes aren&apos;t saved yet. Save them, then test again.</Alert>
         ) : test.isError ? (
-          <p className="text-sm text-danger-fg">{errorMessage(test.error)}</p>
+          <Alert tone="danger">{errorMessage(test.error)}</Alert>
         ) : test.data ? (
           <TestResult result={test.data} automationId={automationId} openingButton={openingButton} />
         ) : null}
@@ -116,25 +118,19 @@ export function TestResult({
       : `${result.winner.name} would run instead.`
     : "No automation would run.";
   return (
-    <div
+    <Alert
       data-result={result.matched ? "match" : "no-match"}
-      className={
-        result.matched
-          ? "space-y-3 rounded-lg border border-success/40 bg-success-soft p-3 text-sm"
-          : "space-y-3 rounded-lg border border-line bg-raised p-3 text-sm"
-      }
+      tone={result.matched ? "success" : "neutral"}
+      variant={result.matched ? "soft" : "outline"}
+      icon={result.matched ? <CheckCircle2 /> : <XCircle />}
     >
-      <p className="flex items-center gap-2 font-semibold">
-        {result.matched ? (
-          <CheckCircle2 className="size-4 text-success" aria-hidden />
-        ) : (
-          <XCircle className="size-4 text-fg-secondary" aria-hidden />
-        )}
+      <div className="space-y-3 text-fg">
+      <AlertTitle>
         {result.matched ? "Match" : "No match"}
         {result.matched && result.matched_keyword ? (
-          <span className="font-normal text-fg-secondary">on &ldquo;{result.matched_keyword}&rdquo;</span>
+          <span className="font-normal text-fg-secondary"> on &ldquo;{result.matched_keyword}&rdquo;</span>
         ) : null}
-      </p>
+      </AlertTitle>
       <p>{winnerText}</p>
       {result.reason ? <p className="text-fg-secondary">{result.reason}</p> : null}
       {result.rendered_public_reply ? (
@@ -147,9 +143,9 @@ export function TestResult({
         <Rendered label="Opening" testId="test-opening">
           <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_opening}</p>
           {openingButton?.trim() ? (
-            <span className="inline-block rounded-full border border-brand-line px-3 py-1 text-xs font-medium text-brand-fg">
+            <Badge tone="brand" size="md">
               {openingButton}
-            </span>
+            </Badge>
           ) : null}
         </Rendered>
       ) : null}
@@ -163,7 +159,8 @@ export function TestResult({
           <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_nudge}</p>
         </Rendered>
       ) : null}
-    </div>
+      </div>
+    </Alert>
   );
 }
 
