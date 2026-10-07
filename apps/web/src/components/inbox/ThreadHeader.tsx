@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Button } from "@/components/ui/button";
+import { DisabledReason } from "@/components/ui/disabled-reason";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -85,13 +86,11 @@ export function ThreadHeader({
     <header className="@container/header shrink-0 border-b border-line bg-panel">
       <div className="@container/row flex h-16 items-center gap-2 px-4 @md/header:gap-3">
         {backHref ? (
-          <Link
-            href={backHref}
-            aria-label="Back to conversations"
-            className="-ml-2 grid size-10 shrink-0 place-items-center rounded-lg text-fg-secondary hover:bg-white/5 hover:text-fg"
-          >
-            <ArrowLeft className="size-5" aria-hidden />
-          </Link>
+          <Button asChild variant="ghost" size="icon-lg" className="-ml-2 text-fg-secondary">
+            <Link href={backHref} aria-label="Back to conversations">
+              <ArrowLeft className="size-5" aria-hidden />
+            </Link>
+          </Button>
         ) : null}
         <ContactAvatar
           id={conversation.contact.id}
@@ -144,17 +143,23 @@ export function ThreadHeader({
               {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}
             </span>
           )}
-          <Button
-            variant="ghost"
-            size="icon-lg"
-            className="hidden size-9 md:inline-flex"
-            aria-label="Schedule a message"
-            title={canSchedule ? "Schedule a message" : "Scheduling needs an open reply window"}
-            disabled={!canSchedule}
-            onClick={onSchedule}
+          {/* Disabled, it says why (DisabledReason): to keyboard, touch and screen reader users too. */}
+          <DisabledReason
+            reason={canSchedule ? null : "Scheduling needs an open reply window"}
+            side="bottom"
+            className="hidden md:inline-flex"
           >
-            <Clock aria-hidden />
-          </Button>
+            <Button
+              variant="ghost"
+              size="icon-lg"
+              aria-label="Schedule a message"
+              title={canSchedule ? "Schedule a message" : undefined}
+              disabled={!canSchedule}
+              onClick={onSchedule}
+            >
+              <Clock aria-hidden />
+            </Button>
+          </DisabledReason>
           <Button
             ref={detailsRef}
             variant="ghost"
@@ -163,7 +168,7 @@ export function ThreadHeader({
             title={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}
             aria-pressed={detailsOpen}
             onClick={onToggleDetails}
-            className={cn("hidden size-10 @xs/row:inline-flex md:size-9", detailsOpen && "bg-brand-soft text-brand-fg")}
+            className={cn("hidden @xs/row:inline-flex", detailsOpen && "bg-brand-soft text-brand-fg")}
           >
             <PanelRight aria-hidden />
           </Button>
@@ -174,11 +179,11 @@ export function ThreadHeader({
             }}
           >
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-lg" className="size-10 md:size-9" aria-label="More actions">
+              <Button variant="ghost" size="icon-lg" aria-label="More actions">
                 <EllipsisVertical aria-hidden />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 border-line bg-panel shadow-xl">
+            <DropdownMenuContent align="end">
               {detailsInMenu ? (
                 <>
                   <DropdownMenuItem onSelect={onToggleDetails}>Customer details</DropdownMenuItem>

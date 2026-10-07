@@ -37,11 +37,19 @@ describe("ConversationRow (UX-INB-04)", () => {
     expect(screen.getByLabelText("unread")).toBeInTheDocument();
   });
 
-  it("selected: marked current with the brand accent bar", () => {
+  // UI-030: the one selection bar (DESIGN_SYSTEM §5, UI-ISS-053): 2 px, inset 8 px, rounded; was a
+  // 3 px full-height bar.
+  it("selected: marked current with the selection bar", () => {
     const row = renderRow({}, true);
     expect(row).toHaveAttribute("aria-current", "page");
     expect(row.className).toContain("bg-raised");
-    expect(screen.getByTestId("row-accent")).toHaveClass("bg-brand");
+    expect(screen.getByTestId("row-accent")).toHaveClass("bg-brand", "w-0.5", "inset-y-2", "left-0", "rounded-full");
+  });
+
+  it("not selected: no selection bar; hover and inset focus from the tokens", () => {
+    const row = renderRow();
+    expect(screen.queryByTestId("row-accent")).not.toBeInTheDocument();
+    expect(row).toHaveClass("hover:bg-hover", "focus-visible:-outline-offset-2");
   });
 
   it("without badges the row is two lines", () => {

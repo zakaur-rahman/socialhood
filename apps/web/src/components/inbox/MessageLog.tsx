@@ -187,7 +187,7 @@ export function MessageLog({ messages, timeZone, now, label, loading, hasOlder, 
 function OlderSkeleton() {
   return (
     <div className="flex justify-center py-2" aria-hidden>
-      <Skeleton className="h-3 w-24 bg-raised" />
+      <Skeleton className="h-3 w-24" />
     </div>
   );
 }
@@ -196,10 +196,10 @@ function OlderSkeleton() {
 function ThreadSkeleton() {
   return (
     <div className="flex flex-col gap-3 pt-6" aria-label="Loading messages">
-      <Skeleton className="h-10 w-1/2 rounded-2xl bg-raised" />
-      <Skeleton className="h-14 w-2/5 self-end rounded-2xl bg-raised" />
-      <Skeleton className="h-10 w-3/5 rounded-2xl bg-raised" />
-      <Skeleton className="h-10 w-1/3 self-end rounded-2xl bg-raised" />
+      <Skeleton className="h-10 w-1/2 rounded-2xl" />
+      <Skeleton className="h-14 w-2/5 self-end rounded-2xl" />
+      <Skeleton className="h-10 w-3/5 rounded-2xl" />
+      <Skeleton className="h-10 w-1/3 self-end rounded-2xl" />
     </div>
   );
 }

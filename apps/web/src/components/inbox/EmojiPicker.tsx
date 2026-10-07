@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 /**
  * A small emoji picker, loaded only when the composer's emoji button is first used
@@ -81,7 +82,7 @@ export default function EmojiPicker({ onPick }: { onPick: (emoji: string) => voi
       onClick={() => onPick(emoji)}
       aria-label={words.split(" ")[0]}
       title={words.split(" ")[0]}
-      className="grid size-8 place-items-center rounded-md text-lg hover:bg-white/10"
+      className="grid size-8 place-items-center rounded-md text-lg hover:bg-pressed focus-visible:-outline-offset-2"
     >
       {emoji}
     </button>
@@ -110,7 +111,7 @@ export default function EmojiPicker({ onPick }: { onPick: (emoji: string) => voi
         ) : (
           GROUPS.map((group) => (
             <section key={group.name} aria-label={group.name} className="mb-2">
-              <h3 className={cn("mb-1 px-1 text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase")}>
+              <h3 className={cn("mb-1 px-1", EYEBROW)}>
                 {group.name}
               </h3>
               <div className="grid grid-cols-8 gap-0.5">{group.emoji.map(button)}</div>

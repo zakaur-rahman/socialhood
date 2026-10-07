@@ -12,6 +12,7 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   useConversations,
   useMarkUnread,
@@ -53,6 +54,9 @@ const LIST_WIDTH: Record<InboxLayout, string> = {
   phone: "w-full",
 };
 
+/** A tab panel fills the list pane under the header; its focus outline is inset, as the pane clips. */
+const PANEL = "flex min-h-0 flex-1 flex-col focus-visible:-outline-offset-2";
+
 /**
  * The inbox (UX-INB-01…03, C-063): list pane, thread pane (the route's page) and the context
  * panel, laid out for the four widths. Filters live here, so switching conversations keeps the
@@ -79,7 +83,7 @@ export function InboxShell({ children }: { children: ReactNode }) {
           title={emptyStates.connections.title}
           body={emptyStates.connections.body}
           action={
-            <Button asChild className="bg-brand-gradient text-white">
+            <Button asChild>
               <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect an account</Link>
             </Button>
           }
@@ -281,59 +285,64 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                 setAccountId(null);
               }}
             />
-            <ListHeader
-              tab={tab}
-              onTabChange={setTab}
-              scheduledCount={scheduledCount}
-              view={view}
-              onViewChange={setView}
-              search={q}
-              onSearchChange={setQ}
-              searchRef={searchRef}
-              accounts={platformAccounts}
-              accountId={effectiveAccountId}
-              onAccountChange={setAccountId}
-            />
-            {tab === "scheduled" ? (
-              <ScheduledList onOpen={(id) => open(id)} now={now} />
-            ) : conversations.isPending ? (
-              <RowSkeletons />
-            ) : conversations.isError ? (
-              <ErrorState error={conversations.error} onRetry={() => void conversations.refetch()} />
-            ) : items.length === 0 ? (
-              filtered ? (
-                <EmptyState
-                  {...inboxFilterEmpty(q.trim() || viewLabel)}
-                  action={
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setView("all");
-                        setQ("");
-                      }}
-                    >
-                      Show all
-                    </Button>
-                  }
-                />
-              ) : (
-                <EmptyState {...emptyStates.inboxNoConversations} />
-              )
-            ) : (
-              <ConversationList
-                // A new filter is a new list: scroll to the top, forget what was announced.
-                key={JSON.stringify(filters)}
-                items={items}
-                slug={slug}
-                selectedId={selectedId}
-                now={now}
-                hasNextPage={conversations.hasNextPage}
-                isFetchingNextPage={conversations.isFetchingNextPage}
-                fetchNextPage={() => void conversations.fetchNextPage()}
-                accountModes={accountModes}
+            {/* Chats | Scheduled swap the list below (UX-INB-03): the tabs are in ListHeader, the panels here. */}
+            <Tabs value={tab} onValueChange={(value) => setTab(value as InboxTab)} className="min-h-0 flex-1 gap-0">
+              <ListHeader
+                tab={tab}
+                scheduledCount={scheduledCount}
+                view={view}
+                onViewChange={setView}
+                search={q}
+                onSearchChange={setQ}
+                searchRef={searchRef}
+                accounts={platformAccounts}
+                accountId={effectiveAccountId}
+                onAccountChange={setAccountId}
               />
-            )}
+              <TabsContent value="chats" className={PANEL}>
+                {conversations.isPending ? (
+                  <RowSkeletons />
+                ) : conversations.isError ? (
+                  <ErrorState error={conversations.error} onRetry={() => void conversations.refetch()} />
+                ) : items.length === 0 ? (
+                  filtered ? (
+                    <EmptyState
+                      {...inboxFilterEmpty(q.trim() || viewLabel)}
+                      action={
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() => {
+                            setView("all");
+                            setQ("");
+                          }}
+                        >
+                          Show all
+                        </Button>
+                      }
+                    />
+                  ) : (
+                    <EmptyState {...emptyStates.inboxNoConversations} />
+                  )
+                ) : (
+                  <ConversationList
+                    // A new filter is a new list: scroll to the top, forget what was announced.
+                    key={JSON.stringify(filters)}
+                    items={items}
+                    slug={slug}
+                    selectedId={selectedId}
+                    now={now}
+                    hasNextPage={conversations.hasNextPage}
+                    isFetchingNextPage={conversations.isFetchingNextPage}
+                    fetchNextPage={() => void conversations.fetchNextPage()}
+                    accountModes={accountModes}
+                  />
+                )}
+              </TabsContent>
+              <TabsContent value="scheduled" className={PANEL}>
+                <ScheduledList onOpen={(id) => open(id)} now={now} />
+              </TabsContent>
+            </Tabs>
           </section>
         ) : null}
 
@@ -350,13 +359,10 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
         ) : null}
       </InboxFrame>
 
+      {/* Below 1280 px the details are a side panel (DESIGN_SYSTEM §8.2): full screen on phones, 420 px beside the thread above. */}
       {layout !== "wide" ? (
         <Sheet open={Boolean(selectedId) && detailsOpen} onOpenChange={(value) => (value ? undefined : closeDetails())}>
-          <SheetContent
-            side="right"
-            data-pane="details"
-            className={cn("gap-0 border-line bg-panel p-0", layout === "phone" ? "w-full sm:max-w-full" : "w-[300px] sm:max-w-[300px]")}
-          >
+          <SheetContent side="right" size="panel" data-pane="details" className="gap-0 overflow-y-auto p-0">
             <SheetTitle className="sr-only">Details</SheetTitle>
             {selectedId ? <DetailsPanel conversationId={selectedId} /> : null}
           </SheetContent>

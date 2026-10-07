@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
 import { useCancelScheduled, useScheduledMessages, useUpdateScheduled } from "@/lib/api/queries";
 import type { ScheduledMessage } from "@/lib/api/types";
 import { emptyStates, errorMessage } from "@/lib/copy";
@@ -140,7 +141,7 @@ export function ScheduledCard({
         </span>
       </Link>
       <div className="mt-2 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-fg tabular-nums">
+        <span className="rounded-full bg-hover px-2 py-0.5 text-xs text-fg tabular-nums">
           <time dateTime={item.send_at}>{formatDayTime(item.send_at, timeZone, now)}</time>
         </span>
         <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS[status.tone])}>{status.label}</span>
@@ -151,14 +152,14 @@ export function ScheduledCard({
             </Button>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="sm" className="text-danger-fg hover:text-danger-fg" disabled={canceling}>
+                <Button variant="destructive-ghost" size="sm" disabled={canceling}>
                   Cancel
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-60 border-line bg-panel shadow-xl">
+              <PopoverContent align="end" className="w-60">
                 <p className="text-sm">Cancel this scheduled message?</p>
                 <p className="text-xs text-fg-secondary">It won&apos;t be sent.</p>
-                <Button size="sm" className="bg-danger-fill text-white hover:bg-danger-fill/90" onClick={onCancel}>
+                <Button variant="destructive" size="sm" onClick={onCancel}>
                   Cancel message
                 </Button>
               </PopoverContent>
@@ -193,7 +194,7 @@ function EditScheduledDialog({
   const returnFocus = useReturnFocus();
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-line bg-panel sm:max-w-md" {...returnFocus}>
+      <DialogContent size="md" {...returnFocus}>
         {item ? (
           <EditScheduledForm key={item.id} item={item} timeZone={timeZone} now={now} onClose={() => onOpenChange(false)} />
         ) : null}
@@ -243,21 +244,18 @@ function EditScheduledForm({
     <>
       <DialogHeader>
         <DialogTitle>Edit scheduled message</DialogTitle>
-        <DialogDescription className="text-fg-secondary">
-          To {contactName(item.contact, item.platform)}
-        </DialogDescription>
+        <DialogDescription>To {contactName(item.contact, item.platform)}</DialogDescription>
       </DialogHeader>
       <div className="space-y-1">
         <Label htmlFor="scheduled-text" className="text-xs text-fg-secondary">
           Message
         </Label>
-        <textarea
+        <Textarea
           id="scheduled-text"
           value={text}
           maxLength={2000}
-          rows={4}
           onChange={(event) => setText(event.target.value)}
-          className="w-full resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm leading-relaxed focus:bg-raised"
+          className="max-h-60 resize-none"
         />
       </div>
       <ScheduleFields idPrefix="edit-scheduled" value={when} onChange={setWhen} timeZone={timeZone} limits={limits} error={error} />
@@ -265,7 +263,7 @@ function EditScheduledForm({
         <Button variant="ghost" onClick={onClose}>
           Keep as is
         </Button>
-        <Button className="bg-brand-gradient text-white" disabled={update.isPending} onClick={save}>
+        <Button disabled={update.isPending} onClick={save}>
           Save
         </Button>
       </DialogFooter>

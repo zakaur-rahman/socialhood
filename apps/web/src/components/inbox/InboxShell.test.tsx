@@ -2,7 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ConversationListItem, SocialAccount } from "@/lib/api/types";
+import type { ConversationListItem, ScheduledMessage, SocialAccount } from "@/lib/api/types";
 import { account, conversation, json, listItem, noContent, renderWithApi, type Call } from "@/test/api";
 
 import { InboxShell } from "./InboxShell";
@@ -46,8 +46,14 @@ const rows = [
 function handlers({
   accounts = [account()],
   list = rows,
+  scheduled = [],
   onList,
-}: { accounts?: SocialAccount[]; list?: ConversationListItem[]; onList?: (call: Call) => void } = {}) {
+}: {
+  accounts?: SocialAccount[];
+  list?: ConversationListItem[];
+  scheduled?: ScheduledMessage[];
+  onList?: (call: Call) => void;
+} = {}) {
   return {
     "GET /v1/w/:wid/social-accounts": () => json({ items: accounts }),
     "GET /v1/w/:wid/conversations": (call: Call) => {
@@ -55,7 +61,7 @@ function handlers({
       const view = call.url.searchParams.get("view");
       return json({ items: view === "all" ? list : [], next_cursor: null });
     },
-    "GET /v1/w/:wid/scheduled-messages": () => json({ items: [], next_cursor: null }),
+    "GET /v1/w/:wid/scheduled-messages": () => json({ items: scheduled, next_cursor: null }),
     "GET /v1/w/:wid/conversations/:id": (_: Call, p: Record<string, string>) => json(conversation({ id: p.id })),
     "PATCH /v1/w/:wid/conversations/:id": (call: Call, p: Record<string, string>) =>
       json(conversation({ id: p.id, ...(call.body as object) })),
@@ -96,8 +102,8 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     expect(pane("thread")).toHaveTextContent("Thread pane");
     expect(pane("details")).toHaveClass("w-[300px]");
     expect(pane("details")?.tagName).toBe("ASIDE");
-    const strip = screen.getByRole("group", { name: "Platform" });
-    expect(within(strip).getByRole("button", { name: "All" })).toHaveTextContent("All");
+    const strip = screen.getByRole("radiogroup", { name: "Platform" });
+    expect(within(strip).getByRole("radio", { name: "All" })).toHaveTextContent("All");
   });
 
   it("1024–1279 px: list 320 and thread; details wait for the sheet", async () => {
@@ -109,8 +115,8 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     expect(pane("thread")).toBeInTheDocument();
     expect(pane("details")).toBeNull();
     // The segmented platform control is labelled at every width (C-063).
-    const strip = screen.getByRole("group", { name: "Platform" });
-    expect(within(strip).getByRole("button", { name: "All" })).toHaveTextContent("All");
+    const strip = screen.getByRole("radiogroup", { name: "Platform" });
+    expect(within(strip).getByRole("radio", { name: "All" })).toHaveTextContent("All");
   });
 
   it("768–1023 px: list 300 and thread", async () => {
@@ -205,7 +211,7 @@ describe("InboxShell list states (§4.7)", () => {
     const views: (string | null)[] = [];
     renderShell({ onList: (call) => views.push(call.url.searchParams.get("view")) });
     await screen.findByText("Kabir Shah");
-    await user.click(screen.getByRole("button", { name: "Unread" }));
+    await user.click(screen.getByRole("radio", { name: "Unread" }));
     expect(await screen.findByText("All caught up")).toBeInTheDocument();
     expect(screen.getByText('Nothing matches "Unread" right now.')).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Show all" }));
@@ -218,9 +224,9 @@ describe("InboxShell list states (§4.7)", () => {
     const views: (string | null)[] = [];
     renderShell({ onList: (call) => views.push(call.url.searchParams.get("view")) });
     await screen.findByText("Kabir Shah");
-    await user.click(screen.getByRole("button", { name: "Needs you" }));
+    await user.click(screen.getByRole("radio", { name: "Needs you" }));
     expect(await screen.findByText('Nothing matches "Needs you" right now.')).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Archived" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: "Archived" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "More views" }));
     await user.click(await screen.findByRole("menuitemradio", { name: "Archived" }));
     expect(await screen.findByText('Nothing matches "Archived" right now.')).toBeInTheDocument();
@@ -234,7 +240,49 @@ describe("InboxShell list states (§4.7)", () => {
     renderShell({ onList: (call) => views.push(call.url.searchParams.get("view")) });
     expect(await screen.findByText('Nothing matches "Needs reply" right now.')).toBeInTheDocument();
     expect(views).toEqual(["needs_reply"]);
-    expect(screen.getByRole("button", { name: "Needs reply" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("radio", { name: "Needs reply" })).toHaveAttribute("aria-checked", "true");
+  });
+
+  // UI-030: Chats | Scheduled is the Tabs primitive (sm), with the count badge of UX-SH-01.
+  it("Chats and Scheduled are tabs that swap the list; the Scheduled tab names its count", async () => {
+    const user = userEvent.setup();
+    const message: ScheduledMessage = {
+      id: "s1",
+      conversation_id: "c1",
+      text: "Following up on the Aria dress",
+      attachment_asset_ids: [],
+      send_at: "2026-09-28T13:00:00Z",
+      status: "scheduled",
+      error: null,
+      contact: { display_name: "Priya Nair", username: "priya.styles", profile_picture_url: null },
+      platform: "instagram",
+    };
+    renderShell({ scheduled: [message, { ...message, id: "s2" }] });
+    await screen.findByText("Kabir Shah");
+    const tabs = screen.getByRole("tablist", { name: "Inbox sections" });
+    expect(tabs).toHaveAttribute("data-size", "sm");
+    expect(within(tabs).getByRole("tab", { name: "Chats" })).toHaveAttribute("aria-selected", "true");
+    const scheduledTab = await within(tabs).findByRole("tab", { name: "Scheduled, 2 to send" });
+    const count = within(scheduledTab).getByTestId("scheduled-count");
+    expect(count).toHaveTextContent("2");
+    expect(count).toHaveAttribute("data-tone", "count");
+    expect(count).toHaveAttribute("data-size", "md");
+    expect(screen.getByRole("tabpanel", { name: "Chats" })).toContainElement(screen.getByRole("list", { name: "Conversations" }));
+
+    await user.click(scheduledTab);
+    expect(scheduledTab).toHaveAttribute("aria-selected", "true");
+    const panel = screen.getByRole("tabpanel", { name: "Scheduled, 2 to send" });
+    expect(await within(panel).findByRole("list", { name: "Scheduled messages" })).toBeInTheDocument();
+    expect(screen.queryByRole("list", { name: "Conversations" })).not.toBeInTheDocument();
+    // The search and view chips belong to Chats.
+    expect(screen.queryByRole("searchbox", { name: "Search conversations" })).not.toBeInTheDocument();
+  });
+
+  it("without scheduled messages the tab has no count", async () => {
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    expect(screen.getByRole("tab", { name: "Scheduled" })).toBeInTheDocument();
+    expect(screen.queryByTestId("scheduled-count")).not.toBeInTheDocument();
   });
 
   it("searches on the server after a pause", async () => {
@@ -255,7 +303,7 @@ describe("InboxShell list states (§4.7)", () => {
       onList: (call) => platforms.push(call.url.searchParams.get("platform")),
     });
     await screen.findByText("Kabir Shah");
-    await user.click(screen.getByRole("button", { name: "WhatsApp" }));
+    await user.click(screen.getByRole("radio", { name: "WhatsApp" }));
     await waitFor(() => expect(platforms).toContain("whatsapp"));
     expect(window.localStorage.getItem("socialhood:inbox-platform:w1")).toBe("whatsapp");
   });

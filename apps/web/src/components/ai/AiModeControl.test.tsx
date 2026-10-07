@@ -160,6 +160,23 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
 });
 
 describe("the one AI mode control (C-063)", () => {
+  // UI-030: the trigger is the Button primitive (28 px, 40 px on coarse pointers) in the AI pill's
+  // colours; the menu is non-modal by default now, so the page isn't made inert behind it.
+  it("is a Button in the AI pill's colours, and its menu leaves the page usable", async () => {
+    const user = userEvent.setup();
+    setup();
+    const trigger = await screen.findByRole("button", { name: "AI mode: Suggest. Change" });
+    // The menu trigger's data-slot replaces the Button's; its variant and size stay.
+    expect(trigger).toHaveAttribute("data-variant", "ghost");
+    expect(trigger).toHaveAttribute("data-size", "sm");
+    expect(trigger).toHaveClass("bg-brand-soft", "text-brand-fg", "border-brand-line", "pointer-coarse:min-h-10");
+    await user.click(trigger);
+    await screen.findByRole("menu");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    // A modal menu would hide the rest of the page from screen readers (aria-hidden on its ancestors).
+    expect(trigger.closest("[aria-hidden]")).toBeNull();
+  });
+
   it("says what the default is", async () => {
     setup();
     const trigger = await screen.findByRole("button", { name: "AI mode: Suggest. Change" });

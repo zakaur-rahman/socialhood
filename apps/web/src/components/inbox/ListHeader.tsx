@@ -10,7 +10,10 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { InboxView, SocialAccount } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -33,17 +36,28 @@ export const VIEWS = [...CHIP_VIEWS, ...MORE_VIEWS];
 
 export const SEARCH_DEBOUNCE_MS = 250;
 
-const CHIP = "shrink-0 rounded-full border px-3 py-1 text-xs font-medium";
-const CHIP_ON = "border-brand-line bg-brand-soft text-brand-fg";
-const CHIP_OFF = "border-line text-fg-secondary hover:bg-white/5 hover:text-fg";
+/**
+ * The "More" chip opens a menu, so it can't be a ToggleGroupItem: it copies the chip's look from
+ * `ui/toggle-group` (height, edge, hover, inset focus, 40 px on coarse pointers), and the chosen
+ * look while one of its views is on.
+ */
+const MORE_CHIP =
+  "inline-flex h-7 shrink-0 items-center justify-center gap-0.5 rounded-full border px-3 text-xs font-medium whitespace-nowrap transition-[color,background-color,border-color] duration-fast ease-standard focus-visible:-outline-offset-2 pointer-coarse:min-h-10";
+const MORE_ON = "border-brand-line bg-brand-soft text-brand-fg";
+const MORE_OFF = "border-line text-fg-secondary hover:bg-hover hover:text-fg";
+
+/** The Scheduled count stops at 99, like the sidebar's. */
+function countText(count: number): string {
+  return count > 99 ? "99+" : String(count);
+}
 
 /**
- * UX-INB-03, re-arranged (C-063): "Inbox" with the Chats | Scheduled segments, a full-width
- * search (debounced, server-side) with the account filter beside it, and the view chips.
+ * UX-INB-03, re-arranged (C-063): "Inbox" with the Chats | Scheduled tabs, a full-width search
+ * (debounced, server-side) with the account filter beside it, and the view chips. The Tabs root
+ * and the two panels are InboxShell's, which renders the lists the tabs swap.
  */
 export function ListHeader({
   tab,
-  onTabChange,
   scheduledCount,
   view,
   onViewChange,
@@ -55,7 +69,6 @@ export function ListHeader({
   onAccountChange,
 }: {
   tab: InboxTab;
-  onTabChange: (tab: InboxTab) => void;
   scheduledCount: number;
   view: InboxView;
   onViewChange: (view: InboxView) => void;
@@ -90,31 +103,21 @@ export function ListHeader({
     <div className="space-y-3 border-b border-line bg-panel px-3 pt-3 pb-2.5">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold">Inbox</h1>
-        <div role="tablist" aria-label="Inbox sections" className="flex gap-0.5 rounded-lg border border-line bg-field p-0.5">
-          {(["chats", "scheduled"] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={tab === value}
-              onClick={() => onTabChange(value)}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1 text-xs font-medium",
-                tab === value ? "bg-raised text-fg shadow-sm" : "text-fg-secondary hover:text-fg",
-              )}
-            >
-              {value === "chats" ? "Chats" : "Scheduled"}
-              {value === "scheduled" && scheduledCount > 0 ? (
-                <span
-                  className="bg-brand-gradient grid h-4 min-w-4 place-items-center rounded-full px-1 text-[10px] text-white tabular-nums"
-                  aria-label={`${scheduledCount} scheduled`}
-                >
-                  {scheduledCount}
-                </span>
-              ) : null}
-            </button>
-          ))}
-        </div>
+        <TabsList size="sm" aria-label="Inbox sections">
+          <TabsTrigger value="chats">Chats</TabsTrigger>
+          {/* The count is part of the tab's name ("Scheduled, 3 to send"); the badge is decoration (UX-SH-01). */}
+          <TabsTrigger
+            value="scheduled"
+            aria-label={scheduledCount > 0 ? `Scheduled, ${countText(scheduledCount)} to send` : undefined}
+          >
+            Scheduled
+            {scheduledCount > 0 ? (
+              <Badge tone="count" size="md" aria-hidden data-testid="scheduled-count">
+                {countText(scheduledCount)}
+              </Badge>
+            ) : null}
+          </TabsTrigger>
+        </TabsList>
       </div>
 
       {tab === "chats" ? (
@@ -158,32 +161,34 @@ export function ListHeader({
               </Select>
             ) : null}
           </div>
-          <div role="group" aria-label="Views" className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none]">
-            {CHIP_VIEWS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                aria-pressed={view === option.value}
-                onClick={() => onViewChange(option.value)}
-                className={cn(CHIP, view === option.value ? CHIP_ON : CHIP_OFF)}
-              >
-                {option.label}
-              </button>
-            ))}
-            {/* Not modal: the list stays usable while it is open. */}
-            <DropdownMenu modal={false}>
+          {/* One row that scrolls sideways (UI-052 wraps it from md, with an edge fade below). */}
+          <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none]">
+            <ToggleGroup
+              variant="chips"
+              aria-label="Views"
+              value={view}
+              onValueChange={(value) => onViewChange(value as InboxView)}
+              className="flex-nowrap"
+            >
+              {CHIP_VIEWS.map((option) => (
+                <ToggleGroupItem key={option.value} value={option.value}>
+                  {option.label}
+                </ToggleGroupItem>
+              ))}
+            </ToggleGroup>
+            <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
                   aria-label={more ? `More views: ${more.label}` : "More views"}
                   data-active={Boolean(more)}
-                  className={cn(CHIP, "inline-flex items-center gap-0.5", more ? CHIP_ON : CHIP_OFF)}
+                  className={cn(MORE_CHIP, more ? MORE_ON : MORE_OFF)}
                 >
                   {more ? more.label : "More"}
                   <ChevronDown className="size-3" aria-hidden />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40 border-line bg-panel shadow-xl">
+              <DropdownMenuContent align="end">
                 <DropdownMenuRadioGroup value={view} onValueChange={(value) => onViewChange(value as InboxView)}>
                   {MORE_VIEWS.map((option) => (
                     <DropdownMenuRadioItem key={option.value} value={option.value}>

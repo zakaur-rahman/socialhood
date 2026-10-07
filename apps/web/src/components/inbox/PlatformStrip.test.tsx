@@ -5,38 +5,55 @@ import { describe, expect, it, vi } from "vitest";
 import { PlatformStrip } from "./PlatformStrip";
 
 describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () => {
+  // UI-030: the strip is the ToggleGroup primitive, so the segments share the track equally
+  // (`flex-1` items) instead of a grid with one column per choice.
   it("All + 1 platform: two segments", () => {
     render(<PlatformStrip platforms={["instagram"]} value="all" onChange={() => {}} />);
-    const group = screen.getByRole("group", { name: "Platform" });
-    expect(group).toHaveClass("grid-cols-2");
-    expect(screen.getAllByRole("button")).toHaveLength(2);
-    expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
+    const group = screen.getByRole("radiogroup", { name: "Platform" });
+    expect(group).toHaveAttribute("data-slot", "toggle-group");
+    expect(group).toHaveAttribute("data-variant", "segmented");
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    expect(screen.getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
   });
 
-  it("All + 2 platforms: three segments", () => {
+  it("All + 2 platforms: three segments, the small size", () => {
     render(<PlatformStrip platforms={["instagram", "whatsapp"]} value="all" onChange={() => {}} />);
-    expect(screen.getByRole("group", { name: "Platform" })).toHaveClass("grid-cols-3");
-    expect(screen.getByRole("button", { name: "WhatsApp" })).toBeInTheDocument();
+    const group = screen.getByRole("radiogroup", { name: "Platform" });
+    expect(group).toHaveAttribute("data-size", "sm");
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    for (const segment of screen.getAllByRole("radio")) expect(segment).toHaveClass("flex-1");
+    expect(screen.getByRole("radio", { name: "WhatsApp" })).toBeInTheDocument();
   });
 
-  // UI-002: the fill is brand-strong with on-brand text (4.85:1), not brand (3.63:1, UI-ISS-005).
-  it("the active segment is filled; the others stay on the track", () => {
+  // D-15 item 1 (C-069): the chosen segment is neutral, raised with brand-fg text, like every other
+  // segmented control; no longer the brand-strong fill UI-002 gave it.
+  it("the chosen segment is the neutral one; the others stay on the track", () => {
     const { rerender } = render(<PlatformStrip platforms={["instagram", "whatsapp"]} value="all" onChange={() => {}} />);
-    expect(screen.getByRole("button", { name: "All" })).toHaveClass("bg-brand-strong", "text-on-brand");
+    const all = screen.getByRole("radio", { name: "All" });
+    expect(all).toHaveAttribute("data-state", "on");
+    expect(all).toHaveClass("data-[state=on]:bg-raised", "data-[state=on]:text-brand-fg");
+    expect(all).not.toHaveClass("bg-brand-strong");
     rerender(<PlatformStrip platforms={["instagram", "whatsapp"]} value="instagram" onChange={() => {}} />);
-    expect(screen.getByRole("group")).toHaveAttribute("data-active", "instagram");
-    expect(screen.getByRole("button", { name: "Instagram" })).toHaveClass("bg-brand-strong", "text-on-brand");
-    expect(screen.getByRole("button", { name: "Instagram" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "WhatsApp" })).not.toHaveClass("bg-brand-strong");
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("data-active", "instagram");
+    expect(screen.getByRole("radio", { name: "Instagram" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("radio", { name: "Instagram" })).toHaveAttribute("data-state", "on");
+    expect(screen.getByRole("radio", { name: "WhatsApp" })).toHaveAttribute("data-state", "off");
   });
 
   it("labels every segment and reports the choice", async () => {
     const onChange = vi.fn();
     render(<PlatformStrip platforms={["instagram"]} value="all" onChange={onChange} />);
-    const button = screen.getByRole("button", { name: "Instagram" });
-    expect(button).toHaveTextContent("Instagram");
-    await userEvent.click(button);
+    const segment = screen.getByRole("radio", { name: "Instagram" });
+    expect(segment).toHaveTextContent("Instagram");
+    await userEvent.click(segment);
     expect(onChange).toHaveBeenCalledWith("instagram");
+  });
+
+  it("choosing the chosen segment again changes nothing", async () => {
+    const onChange = vi.fn();
+    render(<PlatformStrip platforms={["instagram"]} value="all" onChange={onChange} />);
+    await userEvent.click(screen.getByRole("radio", { name: "All" }));
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("shows a skeleton while accounts load", () => {

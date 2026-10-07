@@ -2,17 +2,18 @@ import { Layers } from "lucide-react";
 
 import { PLATFORM_BG } from "@/components/connections/PlatformGlyph";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { Platform } from "@/lib/api/types";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { cn } from "@/lib/utils";
 
 export type PlatformChoice = "all" | Platform;
 
-const COLS: Record<number, string> = { 1: "grid-cols-1", 2: "grid-cols-2", 3: "grid-cols-3" };
-
 /**
- * UX-INB-02, restyled as a segmented control (C-063): All plus each connected platform, labelled
- * at every width; a platform's segment carries its colour as a dot.
+ * UX-INB-02 as the segmented control (C-063, DESIGN_SYSTEM §8.2): All plus each connected platform,
+ * labelled at every width, sharing the track's width equally; a platform's segment carries its
+ * colour as a dot. The chosen segment is the primitive's neutral one, `raised` with `brand-fg`
+ * text, like every other segmented control (D-15 item 1).
  */
 export function PlatformStrip({
   platforms,
@@ -28,43 +29,31 @@ export function PlatformStrip({
   if (loading) {
     return (
       <div className="px-3 pt-3" aria-busy="true" aria-label="Loading platforms">
-        <Skeleton className="h-9 rounded-lg bg-raised" />
+        <Skeleton className="h-9 rounded-lg" />
       </div>
     );
   }
   const choices: PlatformChoice[] = ["all", ...platforms];
   return (
     <div className="px-3 pt-3">
-      <div
-        role="group"
+      <ToggleGroup
         aria-label="Platform"
+        size="sm"
+        value={value}
+        onValueChange={(choice) => onChange(choice as PlatformChoice)}
         data-active={value}
-        className={cn("grid gap-1 rounded-lg border border-line bg-field p-1", COLS[choices.length] ?? "grid-cols-3")}
       >
-        {choices.map((choice) => {
-          const active = choice === value;
-          return (
-            <button
-              key={choice}
-              type="button"
-              aria-pressed={active}
-              onClick={() => onChange(choice)}
-              className={cn(
-                "flex min-w-0 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium",
-                // brand-strong, not brand: white on brand is 3.63:1 (UI-ISS-005); on brand-strong, 4.85:1.
-                active ? "bg-brand-strong text-on-brand shadow-sm" : "text-fg-secondary hover:bg-white/5 hover:text-fg",
-              )}
-            >
-              {choice === "all" ? (
-                <Layers className="size-3.5 shrink-0" aria-hidden />
-              ) : (
-                <span className={cn("size-2 shrink-0 rounded-full", PLATFORM_BG[choice], active && "ring-2 ring-white/40")} aria-hidden />
-              )}
-              <span className="truncate">{choice === "all" ? "All" : PLATFORM_LABEL[choice]}</span>
-            </button>
-          );
-        })}
-      </div>
+        {choices.map((choice) => (
+          <ToggleGroupItem key={choice} value={choice} className="min-w-0">
+            {choice === "all" ? (
+              <Layers className="size-3.5 shrink-0" aria-hidden />
+            ) : (
+              <span className={cn("size-2 shrink-0 rounded-full", PLATFORM_BG[choice])} aria-hidden />
+            )}
+            <span className="truncate">{choice === "all" ? "All" : PLATFORM_LABEL[choice]}</span>
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
     </div>
   );
 }

@@ -156,7 +156,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
               <div className="flex min-w-0 items-center gap-3">
                 <span
                   aria-hidden
-                  className={cn("grid size-10 shrink-0 place-items-center rounded-xl text-white", PLATFORM_BG[account.platform])}
+                  className={cn("grid size-10 shrink-0 place-items-center rounded-xl text-on-brand", PLATFORM_BG[account.platform])}
                 >
                   <PlatformGlyph platform={account.platform} className="size-5" />
                 </span>
@@ -207,12 +207,8 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
           <Lock className="size-4 shrink-0" aria-hidden />
           Auto is part of Pro.
           {canManage ? (
-            <Button
-              type="button"
-              variant="link"
-              className="h-auto min-h-10 px-0 text-brand-fg md:min-h-0"
-              onClick={() => upgrade.open(AUTO_UPGRADE)}
-            >
+            // An inline link in the sentence: the link Button's 32 px (40 px on coarse pointers), no padding.
+            <Button type="button" variant="link" className="px-0" onClick={() => upgrade.open(AUTO_UPGRADE)}>
               Upgrade for Auto
             </Button>
           ) : null}
