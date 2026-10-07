@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 
-import { AutomationsPage } from "@/components/automations/AutomationsPage";
-
 export const metadata: Metadata = { title: "Automations" };
 
-/** UX-SCR-02. */
+/** UX-SCR-02: the list itself is the group's layout, so it stays mounted beside /automations/new. */
 export default function AutomationsRoute() {
-  return <AutomationsPage />;
+  return null;
 }

@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useState, type HTMLAttributes, type Ref } from "react";
+import { useRef, useState, type HTMLAttributes, type Ref } from "react";
 
 import {
   AlertDialog,
@@ -112,6 +112,9 @@ export function AutomationRow({
   rowRef,
 }: Props) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The confirmation opens from a menu item, which is gone by the time it closes, so focus goes
+  // back to the row's ⋯ button (UX-A11Y-02).
+  const menuTrigger = useRef<HTMLButtonElement>(null);
   const active = automation.status === "active";
   const TriggerIcon = automation.trigger ? TRIGGER_ICON[automation.trigger] : MessageCircle;
   const chips = automation.keywords.slice(0, MAX_CHIPS);
@@ -127,7 +130,7 @@ export function AutomationRow({
       ref={rowRef}
       data-automation={automation.id}
       className={cn(
-        "group/row relative rounded-xl border border-line bg-panel transition-opacity",
+        "group/row relative rounded-xl border border-line bg-panel motion-safe:transition-opacity",
         reorder?.dragging && "opacity-60",
         reorder?.dropMarker === "before" &&
           "before:absolute before:inset-x-2 before:-top-[5px] before:h-0.5 before:rounded-full before:bg-brand",
@@ -136,10 +139,12 @@ export function AutomationRow({
       )}
     >
       <div className="flex flex-wrap items-center gap-x-3 gap-y-3 p-4 md:flex-nowrap md:py-3">
+        {/* Revealed on hover only with a mouse: on touch the checkbox and the handle always show (UI-ISS-057). */}
         <div
           className={cn(
             "relative z-10 hidden items-center md:order-1 md:flex",
-            !selecting && "opacity-0 group-hover/row:opacity-100 focus-within:opacity-100",
+            !selecting &&
+              "pointer-fine:opacity-0 pointer-fine:group-hover/row:opacity-100 pointer-fine:focus-within:opacity-100",
           )}
         >
           <Checkbox
@@ -150,15 +155,16 @@ export function AutomationRow({
         </div>
 
         {reorder ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label={`Reorder ${name}`}
             aria-describedby={reorder.hintId}
             {...reorder.handleProps}
-            className="relative z-10 order-first grid size-8 shrink-0 cursor-grab touch-none place-items-center rounded-md text-fg-secondary hover:bg-white/5 hover:text-fg focus-visible:opacity-100 active:cursor-grabbing md:order-2 md:opacity-0 md:group-hover/row:opacity-100"
+            className="relative z-10 order-first cursor-grab touch-none text-fg-secondary focus-visible:opacity-100 active:cursor-grabbing md:order-2 md:pointer-fine:opacity-0 md:pointer-fine:group-hover/row:opacity-100"
           >
-            <GripVertical className="size-4" aria-hidden />
-          </button>
+            <GripVertical aria-hidden />
+          </Button>
         ) : null}
 
         <div className="relative z-10 order-3 flex items-center md:order-3">
@@ -174,18 +180,19 @@ export function AutomationRow({
           <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <Link
               href={href}
-              className="truncate text-sm font-semibold after:absolute after:inset-0 after:rounded-xl hover:underline focus-visible:outline-none focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
+              // The name stretches over the row, so the row draws the focus outline (the global recipe).
+              className="truncate text-sm font-semibold after:absolute after:inset-0 after:rounded-xl hover:underline focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-brand"
             >
               {name}
             </Link>
             {automation.display_status === "draft" ? (
-              <span className="rounded-full bg-raised px-2 py-0.5 text-[11px] font-medium text-fg-secondary">
+              <span className="rounded-full bg-raised px-2 py-0.5 text-2xs font-medium text-fg-secondary">
                 {STATUS_LABEL.draft}
               </span>
             ) : null}
             {status ? <span className="text-xs text-fg-secondary">{status}</span> : null}
             {queue ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-medium text-brand-fg tabular-nums">
+              <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-2xs font-medium text-brand-fg tabular-nums">
                 <Clock className="size-3" aria-hidden />
                 {queue}
               </span>
@@ -238,11 +245,11 @@ export function AutomationRow({
         <div className="relative z-10 order-4 md:order-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon-lg" className="size-10 md:size-9" aria-label={`More actions for ${name}`}>
+              <Button ref={menuTrigger} variant="ghost" size="icon-lg" aria-label={`More actions for ${name}`}>
                 <EllipsisVertical aria-hidden />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 border-line bg-panel shadow-xl">
+            <DropdownMenuContent align="end">
               <DropdownMenuItem onSelect={onDuplicate}>
                 <Copy aria-hidden /> Duplicate
               </DropdownMenuItem>
@@ -261,7 +268,7 @@ export function AutomationRow({
                 </>
               ) : null}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => setConfirmDelete(true)} className="text-danger-fg focus:text-danger-fg">
+              <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
                 <Trash2 aria-hidden /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -270,16 +277,21 @@ export function AutomationRow({
       </div>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent className="border-line bg-panel">
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            menuTrigger.current?.focus();
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
-            <AlertDialogDescription className="text-fg-secondary">
+            <AlertDialogDescription>
               It stops answering at once and can&apos;t be restored. Messages it already sent stay in the inbox.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete} className="bg-danger-fill text-white hover:bg-danger-fill/90">
+            <AlertDialogAction variant="destructive" onClick={onDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

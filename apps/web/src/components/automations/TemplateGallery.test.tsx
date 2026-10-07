@@ -65,8 +65,12 @@ describe("TemplateGallery (UX-SCR-11)", () => {
     const items = within(dialog).getAllByRole("listitem");
     expect(items[items.length - 1]).toHaveTextContent("Start from blank");
 
-    await user.click(within(dialog).getByRole("button", { name: "Sell" }));
-    expect(within(dialog).getByRole("button", { name: "Sell" })).toHaveAttribute("aria-pressed", "true");
+    // The categories are filter chips (ToggleGroup, one choice): a radio group.
+    const categories = within(dialog).getByRole("radiogroup", { name: "Categories" });
+    expect(within(categories).getByRole("radio", { name: "All" })).toBeChecked();
+    await user.click(within(categories).getByRole("radio", { name: "Sell" }));
+    expect(within(categories).getByRole("radio", { name: "Sell" })).toBeChecked();
+    expect(within(categories).getByRole("radio", { name: "All" })).not.toBeChecked();
     expect(cardNames()).toEqual(["Price on request"]);
     expect(within(dialog).getByRole("button", { name: "Start from blank" })).toBeInTheDocument();
   });

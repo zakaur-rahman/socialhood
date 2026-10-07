@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, Loader2, Plus, Sparkles, X } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, ImagePlus, Plus, Sparkles, X } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent, type RefObject } from "react";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -196,12 +197,12 @@ function ReplyVariations({ texts, onChange }: { texts: string[]; onChange: (text
             maxLength={PUBLIC_REPLY_MAX}
             onChange={(event) => onChange(texts.map((t, i) => (i === index ? event.target.value : t)))}
             placeholder="Sent you a DM, {first_name|there}!"
-            className="h-9 flex-1 bg-field"
+            size="lg"
+            className="flex-1"
           />
           <Button
             variant="ghost"
-            size="icon"
-            className="size-9"
+            size="icon-lg"
             aria-label={`Move reply ${index + 1} up`}
             disabled={index === 0}
             onClick={() => move(index, index - 1)}
@@ -210,8 +211,7 @@ function ReplyVariations({ texts, onChange }: { texts: string[]; onChange: (text
           </Button>
           <Button
             variant="ghost"
-            size="icon"
-            className="size-9"
+            size="icon-lg"
             aria-label={`Move reply ${index + 1} down`}
             disabled={index === texts.length - 1}
             onClick={() => move(index, index + 1)}
@@ -220,8 +220,7 @@ function ReplyVariations({ texts, onChange }: { texts: string[]; onChange: (text
           </Button>
           <Button
             variant="ghost"
-            size="icon"
-            className="size-9"
+            size="icon-lg"
             aria-label={`Remove reply ${index + 1}`}
             onClick={() => onChange(texts.filter((_, i) => i !== index))}
           >
@@ -400,11 +399,7 @@ function InsertFieldMenu({
           Insert field <ChevronDown aria-hidden />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="w-56 border-line bg-panel shadow-xl"
-        onCloseAutoFocus={(event) => event.preventDefault()}
-      >
+      <DropdownMenuContent align="end" onCloseAutoFocus={(event) => event.preventDefault()}>
         {INSERTABLE_FIELDS.map((field) => (
           <DropdownMenuItem key={field.token} onSelect={() => insert(field.token)}>
             <span>{field.label}</span>
@@ -448,7 +443,7 @@ function TapFirst({
         <div className="space-y-1.5">
           <Label htmlFor="automation-tap-first">
             Tap first{" "}
-            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-fg">
+            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-2xs font-semibold text-brand-fg">
               Recommended
             </span>
           </Label>
@@ -524,7 +519,8 @@ function TapFirst({
               placeholder={DEFAULT_OPENING_BUTTON}
               aria-invalid={buttonProblem ? true : undefined}
               aria-describedby="automation-opening-button-count"
-              className="h-9 bg-field sm:max-w-xs"
+              size="lg"
+              className="sm:max-w-xs"
             />
             <p
               id="automation-opening-button-count"
@@ -667,7 +663,7 @@ function ImageAttach({
       </p>
       {progress !== null ? (
         <div className="flex items-center gap-3 rounded-lg border border-line bg-field p-3 text-sm">
-          <Loader2 className="size-4 animate-spin text-brand-fg" aria-hidden />
+          <Spinner className="text-brand-fg" />
           <span className="tabular-nums" role="status">
             Uploading {Math.round(progress * 100)}%
           </span>
@@ -750,7 +746,7 @@ function LinkButtons({
                 onChange={(event) => edit(index, { title: event.target.value })}
                 placeholder="Shop now"
                 aria-invalid={titleProblem ? true : undefined}
-                className="h-9 bg-field"
+                size="lg"
               />
               <p className={cn("text-xs tabular-nums", titleProblem ? "text-danger-fg" : "text-fg-secondary")}>
                 {titleProblem ?? `${button.title.length} / ${BUTTON_TITLE_MAX}`}
@@ -770,7 +766,7 @@ function LinkButtons({
                 placeholder="https://"
                 aria-invalid={shownUrlProblem ? true : undefined}
                 aria-describedby={shownUrlProblem ? `automation-button-${index}-url-error` : undefined}
-                className="h-9 bg-field"
+                size="lg"
               />
               {shownUrlProblem ? (
                 <p id={`automation-button-${index}-url-error`} className="text-xs text-danger-fg">
@@ -780,8 +776,8 @@ function LinkButtons({
             </div>
             <Button
               variant="ghost"
-              size="icon"
-              className="size-9 self-start sm:mt-5"
+              size="icon-lg"
+              className="self-start sm:mt-5"
               aria-label={`Remove button ${index + 1}`}
               onClick={() => onChange(buttons.filter((_, i) => i !== index))}
             >
