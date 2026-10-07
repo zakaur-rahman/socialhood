@@ -4,9 +4,10 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { Tabs as TabsPrimitive } from "radix-ui"
 
-import { segmentTrackClass, segmentVariants } from "@/components/ui/toggle-group"
+import { segmentTrackClass, segmentVariants, type SegmentSize } from "@/components/ui/toggle-group"
 
-type TabsSize = "default" | "sm"
+/** The segmented control's sizes: the same segment, so a tab row and a toggle row line up. */
+type TabsSize = SegmentSize
 
 const TabsSizeContext = React.createContext<TabsSize>("default")
 
@@ -21,7 +22,7 @@ function TabsList({
   size = "default",
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> & {
-  /** `sm` is 28 px with 12 px text, for dense headers. */
+  /** `sm` is 28 px with 12 px text, for dense headers; `xl` is 40 px with 14 px text, for settings forms. */
   size?: TabsSize
 }) {
   return (

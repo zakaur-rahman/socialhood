@@ -340,6 +340,10 @@ describe("AI Polish (C-063)", () => {
     renderWithPolish(() => json({ text: "" }));
     const polish = screen.getByRole("button", { name: "AI Polish" });
     expect(polish).toBeDisabled();
+    // An AI action on the soft Button (C-073), dimmed by the primitive's disabled rule, not greyed here.
+    expect(polish).toHaveAttribute("data-variant", "soft");
+    expect(polish).toHaveClass("bg-brand-soft", "text-brand-fg", "disabled:opacity-50");
+    expect(polish.className).not.toMatch(/disabled:(border|text)-/);
     await user.type(textbox(), "   ");
     expect(polish).toBeDisabled();
     await user.type(textbox(), "hi");

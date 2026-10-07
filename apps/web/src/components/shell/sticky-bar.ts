@@ -13,8 +13,8 @@
  *   they can't take a quarter of the screen (RSP-006); a static bar reserves nothing.
  */
 
-/** A sticky bar stays in the flow on a short viewport. */
-export const STATIC_WHEN_SHORT = "[@media(max-height:500px)]:static";
+/** A sticky bar stays in the flow on a short viewport (the `short` variant, globals.css). */
+export const STATIC_WHEN_SHORT = "short:static";
 
 /** A sticky bottom bar's classes, beside `sticky bottom-0`. */
 export const BOTTOM_BAR = `${STATIC_WHEN_SHORT} **:-scroll-mb-(--bottom-bar-height)`;

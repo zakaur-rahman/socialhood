@@ -112,7 +112,7 @@ describe("SaveBar (C-066)", () => {
 
   it("floats opaque, without blur; sticks, but not on short viewports (UI-ISS-014, UI-ISS-031)", () => {
     const { bar } = renderBar();
-    expect(bar()).toHaveClass("sticky", "bottom-0", "[@media(max-height:500px)]:static");
+    expect(bar()).toHaveClass("sticky", "bottom-0", "short:static");
     const surface = bar().firstElementChild;
     expect(surface).toHaveClass("bg-panel", "shadow-xl");
     expect(surface?.className).not.toMatch(/backdrop-blur|bg-panel\/|shadow-2xl/);

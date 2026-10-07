@@ -149,7 +149,7 @@ export function CropDialog({
                 dragStart.current = null;
               }}
               // The stage clips, so the focus outline is drawn inset, over the frame's own edge.
-              className="absolute cursor-move touch-none rounded-sm border-2 border-fg shadow-[0_0_0_9999px_color-mix(in_srgb,var(--color-canvas)_60%,transparent)] focus-visible:-outline-offset-2"
+              className="absolute cursor-move touch-none rounded-sm border-2 border-fg shadow-crop-mask focus-visible:-outline-offset-2"
               style={{
                 left: `${(rect.x / size.width) * 100}%`,
                 top: `${(rect.y / size.height) * 100}%`,

@@ -9,7 +9,8 @@ import { createCn } from "cn/config";
  *   Button shows the colour, not the gradient on top (`cn("bg-brand-gradient", "bg-danger-fill")`);
  * - the motion tokens are durations and easings (`cn("duration-100", "duration-slow")` keeps one);
  * - the elevation shadows are shadow sizes, not colours (`--color-overlay` exists too), so a call
- *   site's `shadow-xl` replaces a primitive's `shadow-floating` instead of stacking on it (C-071).
+ *   site's `shadow-xl` replaces a primitive's `shadow-floating` instead of stacking on it (C-071);
+ *   so is the crop box's `shadow-crop-mask` (C-073).
  * Everything, the primitives in `components/ui` included, imports `cn` from here; eslint refuses a
  * direct import from "cn".
  */
@@ -19,7 +20,7 @@ export const cn = createCn({
       "bg-token-image": [{ bg: ["brand-gradient", "brand-gradient-decor", "shell-gradient", "glow-brand"] }],
       duration: [{ duration: ["fast", "normal", "slow"] }],
       ease: [{ ease: ["standard", "enter", "exit"] }],
-      shadow: [{ shadow: ["floating", "overlay"] }],
+      shadow: [{ shadow: ["floating", "overlay", "crop-mask"] }],
     },
     conflictingClassGroups: {
       "bg-color": ["bg-token-image"],

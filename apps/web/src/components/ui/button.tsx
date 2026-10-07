@@ -21,6 +21,9 @@ const buttonVariants = cva(
         outline:
           "border-line-strong bg-transparent hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
         ghost: "hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
+        // AI actions and a pressed toggle: the AI pill's brand-soft (DESIGN_SYSTEM §1.4, the selected
+        // chip's colours), brand-fg text 6.83:1, a step stronger on hover and while its menu is open.
+        soft: "border-brand-line bg-brand-soft text-brand-fg hover:bg-brand-soft-hover aria-expanded:bg-brand-soft-hover",
         destructive: "bg-danger-fill text-on-brand hover:bg-danger-fill/90",
         "destructive-ghost": "text-danger-fg hover:bg-danger-soft aria-expanded:bg-danger-soft",
         link: "text-brand-fg underline-offset-4 hover:underline",

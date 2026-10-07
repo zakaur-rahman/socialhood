@@ -8,6 +8,7 @@ import {
   PAGE_TITLE,
   breakpoints,
   colorTokens,
+  customVariants,
   easings,
   fontSizes,
   gradientUtilities,
@@ -155,6 +156,18 @@ export default function TokensPage() {
         </ul>
       </Section>
 
+      <Section title="Variants">
+        <ul className={`${CARD} divide-y divide-line-subtle`}>
+          {customVariants.map((v) => (
+            <Row key={v.name} name={`${v.name}:`} value={v.value} use={v.use} />
+          ))}
+        </ul>
+        <p className={META}>
+          This viewport is <span className="short:hidden">taller than 500 px</span>
+          <span className="hidden short:inline">500 px tall or less: short</span>.
+        </p>
+      </Section>
+
       <Section title="Utilities">
         <ul className={`${CARD} divide-y divide-line-subtle`}>
           {otherUtilities.map((u) => (
@@ -172,6 +185,10 @@ export default function TokensPage() {
               {label}
             </span>
           ))}
+        </div>
+        {/* shadow-crop-mask: the box dims everything outside it; the stage clips the spread. */}
+        <div aria-hidden className="bg-brand-gradient-decor relative h-28 overflow-hidden rounded-lg">
+          <span className="absolute inset-y-4 left-1/4 w-1/2 rounded-sm border-2 border-fg shadow-crop-mask" />
         </div>
       </Section>
     </main>

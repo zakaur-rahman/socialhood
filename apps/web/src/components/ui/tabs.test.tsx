@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./tabs"
 
 const classes = (el: Element) => (el.getAttribute("class") ?? "").split(/\s+/).filter(Boolean)
 
-function Panel({ size }: { size?: "default" | "sm" }) {
+function Panel({ size }: { size?: "default" | "sm" | "xl" }) {
   return (
     <Tabs defaultValue="preview">
       <TabsList aria-label="Automation panel" size={size}>
@@ -86,6 +86,17 @@ describe("Tabs", () => {
     for (const tab of screen.getAllByRole("tab")) {
       expect(tab).toHaveClass("min-h-7", "text-xs", "pointer-coarse:min-h-10")
       expect(tab).not.toHaveClass("min-h-8")
+    }
+  })
+
+  it("has the settings size, the segmented control's xl: 40 px tabs with 14 px text", () => {
+    render(<Panel size="xl" />)
+    expect(screen.getByRole("tablist")).toHaveAttribute("data-size", "xl")
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(tab).toHaveClass("min-h-10", "px-2", "py-2.5", "text-sm", "pointer-coarse:min-h-10")
+      expect(tab).not.toHaveClass("min-h-8")
+      expect(tab).not.toHaveClass("px-2.5")
+      expect(tab).not.toHaveClass("text-xs")
     }
   })
 

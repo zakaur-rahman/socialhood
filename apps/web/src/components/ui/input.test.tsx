@@ -58,6 +58,32 @@ describe("Input", () => {
     expect(list).not.toContain("h-8");
   });
 
+  it.each(["date", "time", "datetime-local", "month", "week"])(
+    "a native %s field shows focus while its picker button has it (the field is then only :focus-within)",
+    (type) => {
+      const { container } = render(<Input aria-label="When" type={type} />);
+      const input = container.querySelector("input")!;
+      expect(input).toHaveAttribute("type", type);
+      // The global outline's values and the field's ring border and raised fill, from :focus-within.
+      expect(input).toHaveClass(
+        "focus-within:outline-2",
+        "focus-within:outline-offset-2",
+        "focus-within:outline-ring",
+        "focus-within:border-ring",
+        "focus-within:bg-raised",
+        "focus-visible:border-ring",
+      );
+      expect(classes(input.className).filter((c) => c.includes("outline-none") || c.includes("transition-all"))).toEqual([]);
+    },
+  );
+
+  it.each(["text", "search", "email", "url", undefined])("a %s field keeps the :focus-visible recipe only", (type) => {
+    render(<Input aria-label="Name" type={type} />);
+    const list = classes(screen.getByRole(type === "search" ? "searchbox" : "textbox").className);
+    expect(list.filter((c) => c.startsWith("focus-within:"))).toEqual([]);
+    expect(list).toContain("focus-visible:border-ring");
+  });
+
   it("passes native props and aria-invalid through", () => {
     render(<Input aria-label="Web address" type="url" placeholder="https://" aria-invalid disabled />);
     const input = screen.getByRole("textbox", { name: "Web address" });
