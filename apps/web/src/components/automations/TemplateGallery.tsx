@@ -1,14 +1,15 @@
 "use client";
 
-import { ArrowLeft, Loader2, Plus, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Sparkles } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useCreateAutomation } from "@/lib/api/queries";
 import type { AutomationTemplate, SocialAccount, TemplateCategory } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
@@ -18,6 +19,7 @@ import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { useReturnFocusOr } from "./return-focus";
 import { TemplateIcon } from "./TemplateIcon";
 
 const CATEGORIES: (TemplateCategory | "all")[] = ["all", "grow", "sell", "support"];
@@ -64,6 +66,7 @@ export function TemplateGallery({
   accounts,
   initialChoice,
   plan,
+  returnFocusFallback,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -74,6 +77,8 @@ export function TemplateGallery({
   /** Opened from an empty-state card: go straight to the account question. */
   initialChoice?: Choice;
   plan: "free" | "pro" | "max";
+  /** Where focus goes on close when what opened it isn't on this page (a link from Home). */
+  returnFocusFallback?: () => HTMLElement | null;
 }) {
   const [category, setCategory] = useState<TemplateCategory | "all">("all");
   const [asking, setAsking] = useState<{ choice: Choice } | null>(
@@ -83,7 +88,7 @@ export function TemplateGallery({
   const { start, pending, pendingKey } = useStartAutomation();
   // No Radix trigger opens it (New automation, Browse all templates, a template card), so focus
   // goes back by hand to what had it (UX-A11Y-02).
-  const returnFocus = useReturnFocus();
+  const returnFocus = useReturnFocusOr(returnFocusFallback);
 
   const choose = (choice: Choice) => {
     if (accounts.length > 1) {
@@ -103,7 +108,7 @@ export function TemplateGallery({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-3xl" {...returnFocus}>
+      <DialogContent size="xl" {...returnFocus}>
         {asking ? (
           <AccountQuestion
             choice={asking.choice}
@@ -117,32 +122,26 @@ export function TemplateGallery({
         ) : (
           <>
             <DialogHeader>
-              <DialogTitle className="text-xl font-semibold">New automation</DialogTitle>
-              <DialogDescription className="text-fg-secondary">
-                Start from a template and change anything, or start from blank.
-              </DialogDescription>
+              <DialogTitle>New automation</DialogTitle>
+              <DialogDescription>Start from a template and change anything, or start from blank.</DialogDescription>
             </DialogHeader>
-            <div role="group" aria-label="Categories" className="flex flex-wrap gap-1.5">
+            <ToggleGroup
+              variant="chips"
+              aria-label="Categories"
+              value={category}
+              onValueChange={(value) => setCategory(value as TemplateCategory | "all")}
+            >
               {CATEGORIES.map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-pressed={category === value}
-                  onClick={() => setCategory(value)}
-                  className={cn(
-                    "rounded-full px-3 py-1 text-xs font-medium",
-                    category === value ? "bg-brand-soft text-brand-fg" : "text-fg-secondary hover:bg-white/5 hover:text-fg",
-                  )}
-                >
+                <ToggleGroupItem key={value} value={value}>
                   {value === "all" ? "All" : CATEGORY_LABEL[value]}
-                </button>
+                </ToggleGroupItem>
               ))}
-            </div>
+            </ToggleGroup>
             <ul aria-label="Templates" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {templatesLoading
                 ? Array.from({ length: 5 }, (_, i) => (
                     <li key={i} aria-hidden>
-                      <Skeleton className="h-44 rounded-xl bg-raised" />
+                      <Skeleton className="h-44 rounded-xl" />
                     </li>
                   ))
                 : shown.map((template) => (
@@ -169,7 +168,7 @@ export function TemplateGallery({
                     disabled={pending}
                     onClick={() => choose(null)}
                   >
-                    {pendingKey === "blank" ? <Loader2 className="animate-spin" aria-hidden /> : null}
+                    {pendingKey === "blank" ? <Spinner /> : null}
                     Start from blank
                   </Button>
                 </div>
@@ -199,7 +198,7 @@ export function TemplateCard({
   return (
     <article aria-labelledby={titleId} className="flex h-full min-h-44 flex-col rounded-xl border border-line bg-field p-4">
       <div className="flex items-start justify-between gap-2">
-        <span className="bg-brand-gradient-decor grid size-9 place-items-center rounded-lg text-white">
+        <span className="bg-brand-gradient-decor grid size-9 place-items-center rounded-lg text-on-brand">
           <TemplateIcon name={template.icon} className="size-5" />
         </span>
         {showPro ? <ProBadge /> : null}
@@ -208,20 +207,15 @@ export function TemplateCard({
         {template.name}
       </h3>
       <p className="mt-1 flex-1 text-sm text-fg-secondary">{template.outcome}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5 text-[11px]">
+      <div className="mt-3 flex flex-wrap gap-1.5 text-2xs">
         <span className="rounded-full bg-raised px-2 py-0.5 text-fg-secondary">{TRIGGER_LABEL[template.trigger]}</span>
         <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2 py-0.5 text-fg-secondary">
           {template.action === "ai_reply" ? <Sparkles className="size-3" aria-hidden /> : null}
           {ACTION_TAG[template.action]}
         </span>
       </div>
-      <Button
-        className="bg-brand-gradient mt-3 self-start text-white"
-        disabled={disabled}
-        onClick={onUse}
-        aria-label={`Use template: ${template.name}`}
-      >
-        {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+      <Button className="mt-3 self-start" disabled={disabled} onClick={onUse} aria-label={`Use template: ${template.name}`}>
+        {pending ? <Spinner /> : null}
         Use template
       </Button>
     </article>
@@ -230,7 +224,7 @@ export function TemplateCard({
 
 export function ProBadge() {
   return (
-    <span className="rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-semibold text-brand-fg">Pro</span>
+    <span className="rounded-full bg-brand-soft px-2 py-0.5 text-2xs font-semibold text-brand-fg">Pro</span>
   );
 }
 
@@ -260,8 +254,8 @@ function AccountQuestion({
       className="space-y-4"
     >
       <DialogHeader>
-        <DialogTitle className="text-xl font-semibold">Which account?</DialogTitle>
-        <DialogDescription className="text-fg-secondary">
+        <DialogTitle>Which account?</DialogTitle>
+        <DialogDescription>
           {choice ? `${choice.name} will answer on this Instagram account.` : "The automation answers on this Instagram account."}
         </DialogDescription>
       </DialogHeader>
@@ -272,7 +266,7 @@ function AccountQuestion({
             key={account.id}
             className={cn(
               "flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 text-sm",
-              accountId === account.id ? "border-brand bg-brand-soft" : "border-line hover:bg-white/5",
+              accountId === account.id ? "border-brand bg-brand-soft" : "border-line hover:bg-hover",
             )}
           >
             <input
@@ -294,8 +288,8 @@ function AccountQuestion({
         <Button type="button" variant="ghost" onClick={onBack}>
           <ArrowLeft aria-hidden /> Back
         </Button>
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={!accountId || pending}>
-          {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+        <Button type="submit" disabled={!accountId || pending}>
+          {pending ? <Spinner /> : null}
           {choice ? "Use template" : "Start from blank"}
         </Button>
       </div>

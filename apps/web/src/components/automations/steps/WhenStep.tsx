@@ -51,9 +51,10 @@ export function WhenStep({
           {accounts.length === 0 ? (
             <p className="text-sm text-fg-secondary">
               Connect an Instagram account to use automations.{" "}
+              {/* Underlined at rest: in a line of text, colour alone doesn't mark a link (WCAG 1.4.1). */}
               <Link
                 href={`/w/${slug}/settings/connections` as Route}
-                className="text-brand-fg underline-offset-4 hover:underline"
+                className="text-brand-fg underline underline-offset-4"
               >
                 Connect Instagram
               </Link>
@@ -68,7 +69,8 @@ export function WhenStep({
             >
               <SelectTrigger
                 id="automation-account"
-                className="h-9 min-w-56"
+                size="lg"
+                className="min-w-56"
                 aria-invalid={accountError ? true : undefined}
               >
                 <SelectValue placeholder="Choose an account" />

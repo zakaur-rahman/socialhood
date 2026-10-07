@@ -173,6 +173,21 @@ describe("AutomationEditor activation (FR-AUT-02)", () => {
     expect(screen.getByRole("button", { name: "Pause" })).toBeInTheDocument();
   });
 
+  it("⋯ Delete is a destructive item; cancelling its confirmation puts focus back on ⋯", async () => {
+    const user = userEvent.setup();
+    renderEditor();
+    const more = await screen.findByRole("button", { name: "More actions" });
+    await user.click(more);
+    const remove = await screen.findByRole("menuitem", { name: "Delete" });
+    expect(remove).toHaveAttribute("data-variant", "destructive");
+    await user.click(remove);
+    const dialog = await screen.findByRole("alertdialog", { name: /^Delete / });
+    expect(within(dialog).getByRole("button", { name: "Delete" })).toHaveAttribute("data-variant", "destructive");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(more).toHaveFocus());
+  });
+
   it("saves pending edits before activating", async () => {
     const user = userEvent.setup();
     const { puts } = renderEditor();
