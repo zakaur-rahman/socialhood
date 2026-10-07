@@ -78,10 +78,10 @@ export function UpgradeDialog() {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="border-line bg-panel sm:max-w-md" data-testid="upgrade-dialog" {...returnFocus}>
+      <DialogContent size="md" data-testid="upgrade-dialog" {...returnFocus}>
         <DialogHeader>
           <DialogTitle>{copy.title}</DialogTitle>
-          <DialogDescription className="text-fg-secondary">{copy.body}</DialogDescription>
+          <DialogDescription>{copy.body}</DialogDescription>
         </DialogHeader>
         {offer || pitch || roleNote ? (
           <div className="space-y-1.5 text-sm">
@@ -95,19 +95,18 @@ export function UpgradeDialog() {
             {checkout.error}
           </p>
         ) : null}
-        <DialogFooter className="border-line bg-transparent">
-          <Button variant="ghost" className="min-h-10 md:min-h-8" onClick={() => onOpenChange(false)}>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Not now
           </Button>
           {mayPay ? (
             <>
-              <Button asChild variant="secondary" className="min-h-10 md:min-h-8">
+              <Button asChild variant="secondary">
                 <Link href={BILLING_HREF(workspace.slug)} onClick={() => onOpenChange(false)}>
                   Compare plans
                 </Link>
               </Button>
               <Button
-                className="bg-brand-gradient min-h-10 text-white md:min-h-8"
                 disabled={checkout.pending || billing.isPending}
                 onClick={() => checkout.start("pro")}
               >
@@ -115,7 +114,7 @@ export function UpgradeDialog() {
               </Button>
             </>
           ) : workspace.role !== "agent" ? (
-            <Button asChild className="bg-brand-gradient min-h-10 text-white md:min-h-8">
+            <Button asChild>
               <Link href={BILLING_HREF(workspace.slug)} onClick={() => onOpenChange(false)}>
                 {isOwner ? "View billing" : "See plans"}
               </Link>

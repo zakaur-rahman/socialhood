@@ -29,14 +29,14 @@ export function DisconnectDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" className="min-h-10 px-3 text-danger-fg hover:bg-danger/10 hover:text-danger-fg md:min-h-9">
+        <Button variant="destructive-ghost" size="lg">
           Disconnect
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent className="border-line bg-panel">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Disconnect {handle}?</AlertDialogTitle>
-          <AlertDialogDescription className="text-fg-secondary">
+          <AlertDialogDescription>
             Social Hood deletes this account&apos;s access now and stops receiving its messages and
             comments. Its conversations, comments and posts stay here for reference; to delete them
             too, use Disconnect and delete data. You can connect it again later.
@@ -44,11 +44,7 @@ export function DisconnectDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            disabled={pending}
-            onClick={onConfirm}
-            className="bg-danger-fill text-white hover:bg-danger-fill/90"
-          >
+          <AlertDialogAction variant="destructive" disabled={pending} onClick={onConfirm}>
             Disconnect
           </AlertDialogAction>
         </AlertDialogFooter>

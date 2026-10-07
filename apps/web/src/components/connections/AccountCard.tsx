@@ -18,13 +18,13 @@ import { DisconnectDialog } from "./DisconnectDialog";
 import { PLATFORM_BG, PlatformGlyph } from "./PlatformGlyph";
 
 const STATUS_TONE: Record<AccountStatus, { pill: string; dot: string }> = {
-  active: { pill: "bg-success/15 text-success", dot: "bg-success" },
-  needs_reconnect: { pill: "bg-warning/15 text-warning", dot: "bg-warning" },
-  error: { pill: "bg-danger/15 text-danger-fg", dot: "bg-danger" },
-  disconnected: { pill: "bg-white/5 text-fg-secondary", dot: "bg-fg-secondary" },
+  active: { pill: "bg-success-soft text-success", dot: "bg-success" },
+  needs_reconnect: { pill: "bg-warning-soft text-warning", dot: "bg-warning" },
+  error: { pill: "bg-danger-soft text-danger-fg", dot: "bg-danger" },
+  disconnected: { pill: "bg-hover text-fg-secondary", dot: "bg-fg-secondary" },
 };
-/** C-067: while its data is being deleted, whatever its status. */
-const DELETING_TONE = { pill: "bg-danger/15 text-danger-fg", dot: "animate-pulse bg-danger" };
+/** C-067: while its data is being deleted, whatever its status (the dot pulses only with motion). */
+const DELETING_TONE = { pill: "bg-danger-soft text-danger-fg", dot: "bg-danger motion-safe:animate-pulse" };
 
 const AI_MODES: { value: AiMode; label: string; hint: string }[] = [
   { value: "off", label: "Off", hint: "No AI replies" },
@@ -109,7 +109,7 @@ export function AccountCard({
             role="img"
             aria-label={platformName}
             className={cn(
-              "absolute -right-1 -bottom-1 grid size-5 place-items-center rounded-full text-white ring-2 ring-panel",
+              "absolute -right-1 -bottom-1 grid size-5 place-items-center rounded-full text-on-brand ring-2 ring-panel",
               PLATFORM_BG[account.platform],
             )}
           >
@@ -147,7 +147,7 @@ export function AccountCard({
       ) : null}
 
       {live ? (
-        <div className="space-y-4 rounded-xl border border-line-subtle bg-field/60 p-4">
+        <div className="space-y-4 rounded-lg border border-line p-4">
           <Setting
             id={`ai-mode-${account.id}`}
             label="AI replies"
@@ -158,7 +158,7 @@ export function AccountCard({
               disabled={!canManage || busy.saving}
               onValueChange={(value) => actions.onChange({ ai_mode: value as AiMode })}
             >
-              <SelectTrigger id={`ai-mode-${account.id}`} className="min-h-10 w-36">
+              <SelectTrigger id={`ai-mode-${account.id}`} size="xl" className="w-36">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -207,16 +207,14 @@ export function AccountCard({
         {canManage && !deleting ? (
           <div className="flex flex-wrap items-center gap-2">
             {reconnectable ? (
-              <Button
-                className="bg-brand-gradient min-h-10 px-4 text-white md:min-h-9"
-                disabled={busy.reconnecting}
+              <Button size="lg" disabled={busy.reconnecting}
                 onClick={actions.onReconnect}
               >
                 {busy.reconnecting ? `Opening ${platformName}…` : "Reconnect"}
               </Button>
             ) : null}
             {account.status === "error" ? (
-              <Button variant="secondary" className="min-h-10 px-4 md:min-h-9" disabled={busy.retrying} onClick={actions.onRetrySubscribe}>
+              <Button variant="secondary" size="lg" disabled={busy.retrying} onClick={actions.onRetrySubscribe}>
                 {busy.retrying ? "Retrying…" : "Retry"}
               </Button>
             ) : null}

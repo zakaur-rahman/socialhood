@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 import { currentSection } from "./sections";
-import { EYEBROW } from "./styles";
 
 /**
  * Every settings tab's header (C-066): a breadcrumb naming the tab the page is on (from the
