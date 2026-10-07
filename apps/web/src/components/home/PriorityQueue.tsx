@@ -3,7 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { ContactAvatar } from "@/components/inbox/ContactAvatar";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PriorityConversation } from "@/lib/api/types";
 import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, TONE_CLASS } from "@/lib/inbox/format";
@@ -33,7 +33,7 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
             {handle ? <span className="text-fg-secondary">@{handle}</span> : null}
             <span
               data-testid="queue-platform"
-              className={cn("rounded-full border px-2 text-[11px] leading-4", PLATFORM_TONE[item.platform])}
+              className={cn("rounded-full border px-2 text-2xs", PLATFORM_TONE[item.platform])}
             >
               {PLATFORM_LABEL[item.platform]}
             </span>
@@ -54,21 +54,16 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
       <div className="flex shrink-0 items-center gap-2 pl-11 sm:pl-0">
         <span
           data-testid="queue-state"
-          className={cn("rounded-full px-2 text-[11px] leading-5 font-medium", TONE_CLASS[state.chip.tone])}
+          className={cn("rounded-full px-2 text-2xs leading-5 font-medium", TONE_CLASS[state.chip.tone])}
         >
           {state.chip.label}
         </span>
-        <Link
-          href={`/w/${slug}/inbox/${item.id}` as Route}
-          aria-label={`${state.action}: ${name}`}
-          className={cn(
-            buttonVariants({ variant: state.action === "Review & Send" ? "default" : "outline" }),
-            "min-h-10 md:min-h-8",
-            state.action === "Review & Send" && "bg-brand-gradient text-white",
-          )}
-        >
-          {state.action}
-        </Link>
+        {/* Button's merge, not bare buttonVariants(): unmerged, `border-transparent` beat the outline's edge. */}
+        <Button asChild variant={state.action === "Review & Send" ? "default" : "outline"}>
+          <Link href={`/w/${slug}/inbox/${item.id}` as Route} aria-label={`${state.action}: ${name}`}>
+            {state.action}
+          </Link>
+        </Button>
       </div>
     </li>
   );
@@ -102,7 +97,7 @@ export function PriorityQueue({
         </div>
         <Link
           href={`/w/${slug}/inbox?view=needs_reply` as Route}
-          className="-my-1 inline-flex min-h-10 items-center gap-0.5 rounded-md text-sm font-medium text-brand-fg outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-8"
+          className="-my-1 inline-flex min-h-8 items-center gap-0.5 rounded-md text-sm font-medium text-brand-fg hover:underline pointer-coarse:min-h-10"
         >
           Open Inbox <span className="tabular-nums">({formatCount(needsReply)})</span>
           <ChevronRight className="size-4" aria-hidden />
@@ -126,9 +121,9 @@ export function PriorityQueue({
 export function PriorityQueueSkeleton() {
   return (
     <div aria-hidden className="space-y-3 rounded-xl border border-line bg-panel p-4">
-      <Skeleton className="h-4 w-40 bg-raised" />
+      <Skeleton className="h-4 w-40" />
       {[0, 1, 2].map((i) => (
-        <Skeleton key={i} className="h-12 w-full bg-raised" />
+        <Skeleton key={i} className="h-12 w-full" />
       ))}
     </div>
   );

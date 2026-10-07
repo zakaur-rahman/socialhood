@@ -108,20 +108,31 @@ export function MetricTiles({ overview, slug, connected, now }: Props) {
   );
 }
 
+/**
+ * One column on phones; two once the row is 24 rem wide (`@sm`, a container query: the row's own
+ * width decides, and two tiles need about 186 px each for "Median first response, 7 days" and its
+ * value; with larger text, rem keeps them stacked longer); four from 1024 px, with the shell's
+ * expanded sidebar. `max-lg:` because container variants come after `lg:` in the stylesheet, so a
+ * plain `@sm:` would win over the four columns.
+ */
+const GRID = "grid grid-cols-1 gap-3 @sm:max-lg:grid-cols-2 lg:grid-cols-4";
+
 function Row({ children }: { children: ReactNode }) {
   return (
-    <section aria-label="Key numbers" className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
-      {children}
+    <section aria-label="Key numbers" className="@container">
+      <div className={GRID}>{children}</div>
     </section>
   );
 }
 
 export function MetricTilesSkeleton() {
   return (
-    <div aria-hidden className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
-      {[0, 1, 2, 3].map((i) => (
-        <Skeleton key={i} className="h-[108px] rounded-xl bg-panel" />
-      ))}
+    <div aria-hidden className="@container">
+      <div className={GRID}>
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-27 rounded-xl" />
+        ))}
+      </div>
     </div>
   );
 }

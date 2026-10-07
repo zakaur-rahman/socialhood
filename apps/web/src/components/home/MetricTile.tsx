@@ -3,6 +3,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { TONE_CLASS } from "@/lib/ui/tone";
 import { cn } from "@/lib/utils";
 
 import type { Trend } from "./format";
@@ -35,8 +36,6 @@ type Props = {
 };
 
 /** UX-SCR-01: one metric in bg-panel rounded-xl p-4, the number in text-2xl semibold tabular-nums. */
-const BADGE_TONE = { warning: "bg-warning/15 text-warning", success: "bg-success/15 text-success" } as const;
-
 export function MetricTile({ label, value, badge, hint, trend, href }: Props) {
   const body = (
     <>
@@ -51,7 +50,7 @@ export function MetricTile({ label, value, badge, hint, trend, href }: Props) {
         {badge ? (
           <span
             data-testid="metric-badge"
-            className={cn("rounded-full px-2 text-[11px] leading-5 font-medium", BADGE_TONE[badge.tone])}
+            className={cn("rounded-full px-2 text-2xs leading-5 font-medium", TONE_CLASS[badge.tone])}
           >
             {badge.label}
           </span>
@@ -67,7 +66,9 @@ export function MetricTile({ label, value, badge, hint, trend, href }: Props) {
       <Link
         href={href}
         data-testid="metric-tile"
-        className={cn(frame, "outline-none hover:bg-white/5 focus-visible:ring-3 focus-visible:ring-ring/50")}
+        // An interactive card: the `line-strong` edge on hover (DESIGN_SYSTEM §1.2; a white 5% fill replaced the
+        // panel fill and darkened the tile). Focus is the global outline (§8.3), not a halo.
+        className={cn(frame, "hover:border-line-strong")}
       >
         {body}
       </Link>

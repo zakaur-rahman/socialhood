@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
+import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -118,12 +119,18 @@ export function SourceSheet({
 }) {
   const type = mode ? (mode.kind === "edit" ? mode.source.type : mode.type) : "faq";
   const copy = TITLES[type];
+  // No Radix trigger opens it (a menu item, Edit, Train AI, Add answer), so focus goes back by hand to
+  // what had it (UX-A11Y-02); Radix alone left it on <body>.
+  const returnFocus = useReturnFocus();
   return (
     <Sheet open={Boolean(mode)} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full gap-0 overflow-y-auto border-line bg-panel p-0 sm:max-w-md">
+      {/* The raised overlay surface and its shadow come from SheetContent (D-12). `panel`: the full screen
+          below 768 px and 420 px beside the page from there (the call-site `w-full sm:max-w-md` lost to
+          the default size's three-quarter width, 281 px on a 375 px phone). */}
+      <SheetContent side="right" size="panel" className="gap-0 overflow-y-auto p-0" {...returnFocus}>
         <SheetHeader className="border-b border-line p-4 pr-12">
-          <SheetTitle className="text-base font-semibold">{mode?.kind === "edit" ? copy.edit : copy.create}</SheetTitle>
-          <SheetDescription className="text-fg-secondary">{copy.hint}</SheetDescription>
+          <SheetTitle>{mode?.kind === "edit" ? copy.edit : copy.create}</SheetTitle>
+          <SheetDescription>{copy.hint}</SheetDescription>
         </SheetHeader>
         {mode ? (
           <SourceForm
@@ -361,18 +368,15 @@ function SourceForm({
       ) : null}
 
       {overLimit ? (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning">
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
           <p className="flex-1">
             {knowledgeLimitReached(overLimit.limit ?? limit)} Remove a source or upgrade for more.
           </p>
           {workspace.role === "owner" || workspace.role === "admin" ? (
-            <button
-              type="button"
-              onClick={() => upgrade.open(overLimit)}
-              className="min-h-10 shrink-0 rounded-md bg-white/10 px-3 py-1 font-medium text-fg hover:bg-white/15 md:min-h-7"
-            >
+            // A banner action (DESIGN_SYSTEM §11): `secondary`, small.
+            <Button type="button" variant="secondary" size="sm" onClick={() => upgrade.open(overLimit)}>
               Upgrade
-            </button>
+            </Button>
           ) : null}
         </div>
       ) : null}
@@ -386,7 +390,7 @@ function SourceForm({
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={saving}>
+        <Button type="submit" disabled={saving}>
           {progress !== null ? "Uploading…" : saving ? "Saving…" : editing ? "Save" : "Add"}
         </Button>
       </div>

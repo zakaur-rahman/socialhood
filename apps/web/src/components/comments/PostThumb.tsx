@@ -31,7 +31,7 @@ export function PostThumb({
       )}
       {Icon ? (
         <span
-          className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-canvas/70 text-fg"
+          className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-scrim/70 text-fg"
           title={mediaTypeLabel(post.media_type)}
           aria-hidden
         >
