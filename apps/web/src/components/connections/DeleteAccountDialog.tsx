@@ -116,15 +116,15 @@ export function DeleteAccountDialog({
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogTrigger asChild>
-        <Button variant="ghost" className="min-h-10 px-3 text-danger-fg hover:bg-danger/10 hover:text-danger-fg md:min-h-9">
+        <Button variant="destructive-ghost" size="lg">
           {copy.trigger}
         </Button>
       </AlertDialogTrigger>
-      <AlertDialogContent className="border-line bg-panel">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{copy.title(handle)}</AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="space-y-3 text-sm text-fg-secondary">
+            <div className="space-y-3">
               <p>{copy.lead(handle)}</p>
               <div className="grid gap-3 sm:grid-cols-2">
                 <section aria-label="Deleted" className="rounded-lg border border-danger/30 p-3">
@@ -178,12 +178,7 @@ export function DeleteAccountDialog({
         </form>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
-          <Button
-            type="button"
-            disabled={!matches || pending}
-            onClick={() => void submit()}
-            className="bg-danger-fill text-white hover:bg-danger-fill/90"
-          >
+          <Button type="button" variant="destructive" disabled={!matches || pending} onClick={() => void submit()}>
             {pending ? "Deleting…" : copy.action}
           </Button>
         </AlertDialogFooter>

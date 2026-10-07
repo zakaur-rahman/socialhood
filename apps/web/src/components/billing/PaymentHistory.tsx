@@ -16,10 +16,11 @@ import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const STATUS: Record<Payment["status"], { label: string; tone: string }> = {
-  succeeded: { label: "Paid", tone: "bg-success/15 text-success" },
-  failed: { label: "Failed", tone: "bg-danger/15 text-danger-fg" },
-  refunded: { label: "Refunded", tone: "bg-white/10 text-fg-secondary" },
-  pending: { label: "Pending", tone: "bg-warning/15 text-warning" },
+  succeeded: { label: "Paid", tone: "bg-success-soft text-success" },
+  failed: { label: "Failed", tone: "bg-danger-soft text-danger-fg" },
+  // Neutral sits on `hover`: fg-secondary is 4.45:1 on white 10% (UI-ISS-007).
+  refunded: { label: "Refunded", tone: "bg-hover text-fg-secondary" },
+  pending: { label: "Pending", tone: "bg-warning-soft text-warning" },
 };
 
 /**
@@ -37,7 +38,7 @@ export function PaymentHistory() {
     content = (
       <div className="space-y-3" aria-busy="true" aria-label="Loading payments">
         {[0, 1, 2].map((i) => (
-          <Skeleton key={i} className="h-4 w-full bg-raised motion-reduce:animate-none" />
+          <Skeleton key={i} className="h-4 w-full" />
         ))}
       </div>
     );
@@ -45,7 +46,7 @@ export function PaymentHistory() {
     content = (
       <div role="alert" className="flex flex-wrap items-center gap-3 text-sm">
         <p className="flex-1 text-danger-fg">{errorMessage(payments.error)}</p>
-        <Button variant="secondary" className="min-h-10" onClick={() => void payments.refetch()}>
+        <Button variant="secondary" size="xl" onClick={() => void payments.refetch()}>
           <RotateCw aria-hidden /> Try again
         </Button>
       </div>
@@ -99,7 +100,7 @@ export function PaymentHistory() {
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={`Invoice for ${date} (opens in a new tab)`}
-                          className="inline-flex min-h-10 items-center gap-1 rounded-md text-brand-fg underline-offset-4 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-brand md:min-h-0"
+                          className="inline-flex items-center gap-1 rounded-md text-brand-fg underline-offset-4 hover:underline pointer-coarse:min-h-10"
                         >
                           Invoice <ExternalLink className="size-3.5" aria-hidden />
                         </a>
@@ -120,7 +121,7 @@ export function PaymentHistory() {
           <div className="flex justify-center pt-4">
             <Button
               variant="secondary"
-              className="min-h-10"
+              size="xl"
               disabled={payments.isFetchingNextPage}
               onClick={() => void payments.fetchNextPage()}
             >

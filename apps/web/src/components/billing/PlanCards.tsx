@@ -36,9 +36,9 @@ export function PlanCards({
       <div className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-label="Loading plans">
         {[0, 1, 2].map((i) => (
           <div key={i} className="space-y-3 rounded-2xl border border-line bg-panel p-5">
-            <Skeleton className="h-4 w-16 bg-raised motion-reduce:animate-none" />
-            <Skeleton className="h-6 w-24 bg-raised motion-reduce:animate-none" />
-            <Skeleton className="h-3 w-3/4 bg-raised motion-reduce:animate-none" />
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-3 w-3/4" />
           </div>
         ))}
       </div>
@@ -48,7 +48,7 @@ export function PlanCards({
     return (
       <div role="alert" className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-panel p-5 text-sm">
         <p className="flex-1 text-fg-secondary">The plans couldn&apos;t load.</p>
-        <Button variant="secondary" className="min-h-10 md:min-h-8" onClick={() => void plans.refetch()}>
+        <Button variant="secondary" onClick={() => void plans.refetch()}>
           <RotateCw aria-hidden /> Try again
         </Button>
       </div>
@@ -70,15 +70,17 @@ export function PlanCards({
             className={cn(
               "relative flex flex-col rounded-2xl border bg-panel p-5 md:p-6",
               // A plan that isn't available yet dims its edge and fill, never its text (UI-ISS-007).
+              // The current plan is marked by its brand edge alone: no ring, no glow (UI-ISS-094).
               isCurrent
-                ? "border-brand ring-1 ring-brand-line shadow-lg shadow-brand/10"
+                ? "border-brand"
                 : offer.available
                   ? "border-line"
                   : "border-line-subtle bg-panel/50",
             )}
           >
             {isCurrent ? (
-              <span aria-hidden className="bg-brand-gradient absolute inset-x-6 -top-px h-0.5 rounded-full" />
+              // A 2 px mark: solid, not a gradient (DESIGN_SYSTEM §1.9, marks under 12 px).
+              <span aria-hidden className="absolute inset-x-6 -top-px h-0.5 rounded-full bg-brand" />
             ) : null}
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-lg font-semibold">{PLAN_NAME[offer.plan]}</h3>
@@ -111,7 +113,8 @@ export function PlanCards({
             </ul>
             {mayPay && offer.plan === "pro" && offer.available ? (
               <Button
-                className="bg-brand-gradient mt-5 min-h-10 w-full text-white md:min-h-9"
+                size="lg"
+                className="mt-5 w-full"
                 disabled={checkout.pending}
                 onClick={() => checkout.start("pro")}
               >
