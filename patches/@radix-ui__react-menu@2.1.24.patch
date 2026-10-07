@@ -1,0 +1,26 @@
+diff --git a/dist/index.js b/dist/index.js
+index b3f6113cdcdb157f778848ad88bc816ac5bacbf1..c582b4ecab947673a79a82e347b9ebe7acd59929 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -278,7 +278,7 @@ var MenuContentImpl = /* @__PURE__ */ React.forwardRef(
+       const values = items.map((item) => item.textValue);
+       const nextMatch = getNextMatch(values, search, currentMatch);
+       const newItem = items.find((item) => item.textValue === nextMatch)?.ref.current;
+-      (/* @__PURE__ */ __name((function updateSearch(value) {
++      (/* Social Hood patch: not marked pure; marked, Next's SWC minifier dropped this call and typeahead kept only the last letter */ __name((function updateSearch(value) {
+         searchRef.current = value;
+         window.clearTimeout(timerRef.current);
+         if (value !== "") timerRef.current = window.setTimeout(() => updateSearch(""), 1e3);
+diff --git a/dist/index.mjs b/dist/index.mjs
+index cd4303a0124fd5593f3dbd392d1803e994ce2bfb..91b50a4705b6b6b282b4025da2c4cff57c1a0d75 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -212,7 +212,7 @@ var MenuContentImpl = /* @__PURE__ */ React.forwardRef(
+       const values = items.map((item) => item.textValue);
+       const nextMatch = getNextMatch(values, search, currentMatch);
+       const newItem = items.find((item) => item.textValue === nextMatch)?.ref.current;
+-      (/* @__PURE__ */ __name((function updateSearch(value) {
++      (/* Social Hood patch: not marked pure; marked, Next's SWC minifier dropped this call and typeahead kept only the last letter */ __name((function updateSearch(value) {
+         searchRef.current = value;
+         window.clearTimeout(timerRef.current);
+         if (value !== "") timerRef.current = window.setTimeout(() => updateSearch(""), 1e3);

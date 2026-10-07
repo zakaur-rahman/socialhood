@@ -202,6 +202,50 @@ describe("DropdownMenu (UI-013)", () => {
     expect(trigger).toHaveFocus();
   });
 
+  // Typeahead keeps consecutive letters. In the production build Radix kept only the last one
+  // (Next's minifier dropped the call that stores them; patches/ restores it, see
+  // radix-typeahead-build.test.ts). These run Radix unminified, so they guard the wrapper's handlers.
+  function Conversation({ onSelect }: { onSelect: () => void }) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger>Conversation</DropdownMenuTrigger>
+        <DropdownMenuContent>
+          <DropdownMenuItem onSelect={onSelect}>Archive</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onSelect}>Mark as read</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onSelect}>Mark as spam</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onSelect}>Move</DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  async function openConversation(onSelect = vi.fn()) {
+    const user = userEvent.setup();
+    render(<Conversation onSelect={onSelect} />);
+    screen.getByRole("button", { name: "Conversation" }).focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Archive" })).toHaveFocus());
+    return user;
+  }
+
+  it('typeahead: "Mo" reaches Move past Mark as read', async () => {
+    const user = await openConversation();
+    await user.keyboard("M");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Mark as read" })).toHaveFocus());
+    await user.keyboard("o");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Move" })).toHaveFocus());
+    expect(screen.getByRole("menu")).toHaveAttribute("data-keyboard");
+  });
+
+  it("typeahead: a space while typing is part of the search, not a choice", async () => {
+    const onSelect = vi.fn();
+    const user = await openConversation(onSelect);
+    await user.keyboard("Mark as s");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Mark as spam" })).toHaveFocus());
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+  });
+
   it("marks the menu data-keyboard from a key press until the pointer moves, for the highlight's outline", async () => {
     const user = userEvent.setup();
     const onKeyDownCapture = vi.fn();
