@@ -65,9 +65,9 @@ import {
   type CalendarView,
 } from "@/lib/schedule/dates";
 import {
-  accountColors,
   captionLine,
   firstProblem,
+  instagramAccountColors,
   lockedMessage,
   moveErrorMessage,
   needsComposer,
@@ -181,7 +181,10 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
     setMoveRequest(request);
     setMoveOpen(true);
   };
+  // Like Move to…, the delete confirmation keeps its request while it closes, so its text stays
+  // through the exit and focus can go back to the menu that opened it.
   const [deleteRequest, setDeleteRequest] = useState<MoveRequest | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
 
   // ---- mutations
@@ -315,7 +318,10 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           }),
         onError: (error) => toastError(error),
       }),
-    remove: (post, returnFocus) => setDeleteRequest({ post, returnFocus }),
+    remove: (post, returnFocus) => {
+      setDeleteRequest({ post, returnFocus });
+      setDeleteOpen(true);
+    },
     newPostAt: (at) => newPost(at),
   };
 
@@ -335,7 +341,8 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
     timeZone,
     now,
     accounts: new Map((allAccounts.data ?? []).map((a) => [a.id, a])),
-    colors: accountColors(accounts),
+    // The same identities the post composer gives these accounts.
+    colors: instagramAccountColors(allAccounts.data ?? []),
     actions,
     composerHref,
     busyIds,
@@ -406,28 +413,19 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
               <p className="text-xs text-fg-secondary">Times in {zoneLabel(timeZone)}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                className="min-h-10 md:min-h-8"
-                onClick={() => newPost(null, "?when=queue")}
-                disabled={create.isPending}
-              >
+              <Button variant="secondary" onClick={() => newPost(null, "?when=queue")} disabled={create.isPending}>
                 <ListPlus aria-hidden /> Add to queue
               </Button>
-              <Button
-                className="min-h-10 bg-brand-gradient text-white md:min-h-8"
-                onClick={() => newPost(null)}
-                disabled={create.isPending}
-              >
+              <Button onClick={() => newPost(null)} disabled={create.isPending}>
                 <Plus aria-hidden /> New post
               </Button>
             </div>
           </header>
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
-            <ToggleGroup value={view} onValueChange={(value) => setView(value as CalendarView)} aria-label="View" className="w-auto">
+            <ToggleGroup value={view} onValueChange={(value) => setView(value as CalendarView)} aria-label="View" size="sm" className="w-auto">
               {CALENDAR_VIEWS.map((value) => (
-                <ToggleGroupItem key={value} value={value} className="min-h-10 px-3 md:min-h-7">
+                <ToggleGroupItem key={value} value={value}>
                   {VIEW_LABEL[value]}
                 </ToggleGroupItem>
               ))}
@@ -435,28 +433,16 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
 
             {view !== "list" ? (
               <div className="flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-10 md:size-8"
-                  aria-label={`Previous ${unit}`}
-                  onClick={() => setAnchor(shiftAnchor(view, anchor, -1))}
-                >
+                <Button variant="ghost" size="icon" aria-label={`Previous ${unit}`} onClick={() => setAnchor(shiftAnchor(view, anchor, -1))}>
                   <ChevronLeft aria-hidden />
                 </Button>
                 <span className="min-w-28 text-center text-sm font-medium tabular-nums" aria-live="polite">
                   {rangeLabel(view, anchor, today)}
                 </span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-10 md:size-8"
-                  aria-label={`Next ${unit}`}
-                  onClick={() => setAnchor(shiftAnchor(view, anchor, 1))}
-                >
+                <Button variant="ghost" size="icon" aria-label={`Next ${unit}`} onClick={() => setAnchor(shiftAnchor(view, anchor, 1))}>
                   <ChevronRight aria-hidden />
                 </Button>
-                <Button variant="secondary" size="sm" className="min-h-10 md:min-h-7" onClick={() => setAnchor(today)}>
+                <Button variant="secondary" size="sm" onClick={() => setAnchor(today)}>
                   Today
                 </Button>
               </div>
@@ -467,6 +453,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
                 {accounts.map((account) => {
                   const shown = !hidden.has(account.id);
                   return (
+                    // A toggle around the account's avatar: 32 px, 40 px on coarse pointers.
                     <button
                       key={account.id}
                       type="button"
@@ -482,7 +469,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
                         })
                       }
                       className={cn(
-                        "grid size-10 place-items-center rounded-full transition-opacity md:size-8",
+                        "grid size-8 place-items-center rounded-full transition-[opacity,filter,background-color] duration-fast ease-standard hover:bg-hover pointer-coarse:size-10",
                         !shown && "opacity-40 grayscale",
                       )}
                     >
@@ -495,13 +482,13 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="secondary" size="sm" className="min-h-10 md:min-h-7">
+                <Button variant="secondary" size="sm">
                   <ListFilter aria-hidden />
                   {hiddenCount > 0 ? `Show (${hiddenCount} hidden)` : "Show"}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 border-line bg-panel shadow-xl">
-                <DropdownMenuLabel className="text-xs text-fg-secondary">Posts</DropdownMenuLabel>
+              <DropdownMenuContent align="start">
+                <DropdownMenuLabel>Posts</DropdownMenuLabel>
                 {STATUS_GROUPS.map((group) => (
                   <DropdownMenuCheckboxItem
                     key={group.value}
@@ -520,7 +507,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
                   </DropdownMenuCheckboxItem>
                 ))}
                 <DropdownMenuSeparator />
-                <DropdownMenuLabel className="text-xs text-fg-secondary">Layers</DropdownMenuLabel>
+                <DropdownMenuLabel>Layers</DropdownMenuLabel>
                 <DropdownMenuCheckboxItem
                   checked={showMessages}
                   onSelect={(event) => event.preventDefault()}
@@ -539,7 +526,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
             </DropdownMenu>
 
             {!wide ? (
-              <Button variant="secondary" size="sm" className="ml-auto min-h-10 md:min-h-7" onClick={() => setRailOpen(true)}>
+              <Button variant="secondary" size="sm" className="ml-auto" onClick={() => setRailOpen(true)}>
                 <PanelRight aria-hidden /> Drafts and queue
               </Button>
             ) : null}
@@ -550,9 +537,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
               className="mb-3 rounded-xl border border-line bg-panel py-6"
               {...emptyStates.schedule}
               action={
-                <Button className="min-h-10 bg-brand-gradient text-white md:min-h-8" onClick={() => newPost(null)}>
-                  New post
-                </Button>
+                <Button onClick={() => newPost(null)}>New post</Button>
               }
             />
           ) : null}
@@ -569,14 +554,12 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
 
         {!wide ? (
           <Sheet open={railOpen} onOpenChange={setRailOpen}>
-            <SheetContent side="right" className="w-[300px] overflow-y-auto border-line bg-panel sm:max-w-[300px]">
-              <SheetHeader className="px-0 pt-0">
-                <SheetTitle className="text-base font-semibold">Drafts and queue</SheetTitle>
-                <SheetDescription className="text-fg-secondary">
-                  Schedule a draft from its menu, or add it to the queue.
-                </SheetDescription>
+            <SheetContent side="right" className="gap-0 overflow-y-auto">
+              <SheetHeader>
+                <SheetTitle>Drafts and queue</SheetTitle>
+                <SheetDescription>Schedule a draft from its menu, or add it to the queue.</SheetDescription>
               </SheetHeader>
-              {rail(false)}
+              <div className="px-4 pb-4">{rail(false)}</div>
             </SheetContent>
           </Sheet>
         ) : null}
@@ -598,10 +581,10 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           }}
         />
 
-        <AlertDialog open={Boolean(deleteRequest)} onOpenChange={(open) => (open ? undefined : setDeleteRequest(null))}>
+        <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
           <AlertDialogContent
-            className="border-line bg-panel"
             onCloseAutoFocus={(event) => {
+              // Back to the menu button that asked (UX-A11Y-02); the request outlives the close.
               if (deleteRequest?.returnFocus?.isConnected) {
                 event.preventDefault();
                 deleteRequest.returnFocus.focus();
@@ -610,14 +593,12 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           >
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this post?</AlertDialogTitle>
-              <AlertDialogDescription className="text-fg-secondary">
-                {deleteRequest ? deleteDescription(deleteRequest.post) : null}
-              </AlertDialogDescription>
+              <AlertDialogDescription>{deleteRequest ? deleteDescription(deleteRequest.post) : null}</AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Keep post</AlertDialogCancel>
               <AlertDialogAction
-                className="bg-danger-fill text-white hover:bg-danger-fill/90"
+                variant="destructive"
                 onClick={() => {
                   const post = deleteRequest?.post;
                   if (!post) return;
@@ -659,9 +640,9 @@ function deleteDescription(post: ScheduledPostSummary): string {
 function CalendarSkeleton() {
   return (
     <div className="space-y-2 rounded-xl border border-line bg-panel p-3" aria-busy="true" aria-label="Loading the calendar">
-      <Skeleton className="h-6 w-full bg-raised" />
+      <Skeleton className="h-6 w-full" />
       {Array.from({ length: 6 }, (_, i) => (
-        <Skeleton key={i} className="h-16 w-full bg-raised" />
+        <Skeleton key={i} className="h-16 w-full" />
       ))}
     </div>
   );

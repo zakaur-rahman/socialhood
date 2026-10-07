@@ -2,7 +2,7 @@ import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Link from "next/link";
 import type { ReactElement } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
 import { ApiError } from "@/lib/api/errors";
@@ -141,6 +141,13 @@ function SidebarLink({ onNavigate }: { onNavigate: () => void }) {
 const captionBox = () => screen.getByRole("textbox", { name: "Caption" }) as HTMLTextAreaElement;
 const scheduleButton = (name: RegExp | string = "Schedule") => screen.getByRole("button", { name });
 const checklist = () => screen.getByRole("list", { name: "Checks before scheduling" });
+
+beforeAll(() => {
+  // jsdom lacks what Radix Select calls on open (the preview's account switcher).
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
 
 beforeEach(() => {
   nav.push.mockReset();
@@ -350,6 +357,11 @@ describe("PostComposer media (FR-PUB-13, TR-MED-02)", () => {
     expect(screen.getByRole("progressbar", { name: "Uploading dress.jpg" })).toHaveAttribute("aria-valuenow", "50");
     expect(scheduleButton()).toBeDisabled();
     expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Wait for the uploads to finish.");
+    // Both buttons wait for the same reason: it is said once, and describes both (UI-032).
+    expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Schedule and Publish now: Wait for the uploads to finish.");
+    expect(screen.getByRole("button", { name: "Publish now" })).toHaveAccessibleDescription(
+      "Schedule and Publish now: Wait for the uploads to finish.",
+    );
     act(() => control.progress(1));
     expect(screen.getByText("Processing…")).toBeInTheDocument();
 
@@ -510,7 +522,8 @@ describe("PostComposer captions", () => {
         { social_account_id: "a2", caption_override: "Studio hello" },
       ]),
     );
-    await user.selectOptions(screen.getByRole("combobox", { name: "Account" }), "a2");
+    await user.click(screen.getByRole("combobox", { name: "Account" }));
+    await user.click(await screen.findByRole("option", { name: "@maple.studio" }));
     expect(screen.getByTestId("preview-caption")).toHaveTextContent("maple.studio Studio hello");
   });
 
@@ -701,6 +714,70 @@ describe("PostComposer leaving with unsaved edits (C-044)", () => {
 
     confirm.mockReturnValue(true);
     await user.click(screen.getByRole("link", { name: "Inbox" }));
+    expect(navigated).toHaveBeenCalledOnce();
+  });
+
+  it("Duplicate on a scheduled post with edits asks first, like a link out does (UI-032)", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const duplicates: string[] = [];
+    renderComposer({
+      initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }),
+      handlers: {
+        "POST /v1/w/:wid/scheduled-posts/:id/duplicate": () => {
+          duplicates.push("duplicate");
+          return json(readyPost({ id: "sp2" }), 201);
+        },
+      },
+    });
+    await user.type(await screen.findByRole("textbox", { name: "Caption" }), "!");
+
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Duplicate" }));
+    expect(confirm).toHaveBeenCalledWith(LEAVE_WARNING);
+    expect(duplicates).toEqual([]);
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(captionBox().value).toBe("New linen dresses are here #linen!");
+
+    confirm.mockReturnValue(true);
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Duplicate" }));
+    await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/w/maple/schedule/sp2"));
+    expect(duplicates).toEqual(["duplicate"]);
+  });
+
+  it("undoing a scheduled post's edits leaves nothing unsaved (UI-032)", async () => {
+    const user = userEvent.setup();
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const navigated = vi.fn();
+    renderComposer({
+      initial: readyPost({ status: "scheduled", publish_at: inTwoDays() }),
+      shell: <SidebarLink onNavigate={navigated} />,
+      handlers: { "POST /v1/w/:wid/ai/caption": () => json({ caption: "Linen season is here #linen" }) },
+    });
+    await screen.findByRole("textbox", { name: "Caption" });
+
+    // Write with AI, then the toast's Undo: the caption is the stored one again.
+    await user.click(screen.getByRole("button", { name: "Write with AI" }));
+    await user.type(screen.getByRole("textbox", { name: "What's the post about?" }), "linen dresses");
+    await user.click(screen.getByRole("button", { name: "Write caption" }));
+    await waitFor(() => expect(captionBox().value).toBe("Linen season is here #linen"));
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Unsaved changes");
+    const [, options] = toast.success.mock.calls.at(-1) as [string, { action: { onClick: () => void } }];
+    act(() => options.action.onClick());
+    expect(captionBox().value).toBe("New linen dresses are here #linen");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Saved");
+
+    // Typing and deleting a character does the same.
+    await user.type(captionBox(), "!");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Unsaved changes");
+    expect(scheduleButton("Update schedule")).toBeEnabled();
+    await user.type(captionBox(), "{Backspace}");
+    expect(screen.getByTestId("save-status")).toHaveTextContent("Saved");
+    expect(scheduleButton("Update schedule")).toBeDisabled();
+    expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Change something to update the schedule.");
+    await user.click(screen.getByRole("link", { name: "Inbox" }));
+    expect(confirm).not.toHaveBeenCalled();
     expect(navigated).toHaveBeenCalledOnce();
   });
 

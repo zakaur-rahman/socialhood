@@ -13,6 +13,7 @@ import { accountLabel } from "@/lib/automations/accounts";
 import { canMove, captionLine, postFormatLabel, summarizeSlots } from "@/lib/schedule/format";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 import { useCalendarDnd, useDragSelector } from "./calendar-dnd";
 import { postLabel } from "./CalendarPostCard";
@@ -63,8 +64,8 @@ export function ScheduleRail({
       <RailSection title="Unscheduled drafts" count={drafts.isPending ? undefined : items.length}>
         {drafts.isPending ? (
           <div className="space-y-2" aria-busy="true" aria-label="Loading drafts">
-            <Skeleton className="h-12 w-full bg-raised" />
-            <Skeleton className="h-12 w-full bg-raised" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
           </div>
         ) : drafts.isError ? (
           <p className="text-xs text-fg-secondary">Drafts didn&apos;t load.</p>
@@ -78,7 +79,7 @@ export function ScheduleRail({
               ))}
             </ul>
             {items.length > RAIL_DRAFTS || drafts.data?.pages.at(-1)?.next_cursor ? (
-              <Button variant="link" className="h-auto px-0 text-brand-fg" onClick={onShowAllDrafts}>
+              <Button variant="link" className="h-auto px-0" onClick={onShowAllDrafts}>
                 Show all drafts
               </Button>
             ) : null}
@@ -155,10 +156,10 @@ export function ScheduleRail({
           </ul>
         )}
         <div className="flex flex-col items-start gap-1 pt-1">
-          <Button variant="secondary" size="sm" className="min-h-10 md:min-h-7" onClick={onEditPostingTimes} disabled={accounts.length === 0}>
+          <Button variant="secondary" size="sm" onClick={onEditPostingTimes} disabled={accounts.length === 0}>
             <Clock aria-hidden /> Edit posting times
           </Button>
-          <Button variant="ghost" size="sm" className="min-h-10 text-fg-secondary md:min-h-7" onClick={onHashtagGroups}>
+          <Button variant="ghost" size="sm" className="text-fg-secondary" onClick={onHashtagGroups}>
             <Hash aria-hidden /> Hashtag groups
           </Button>
         </div>
@@ -170,7 +171,7 @@ export function ScheduleRail({
 function RailSection({ title, count, children }: { title: string; count?: number; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h2 className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">
+      <h2 className={cn(EYEBROW, "flex items-center gap-1.5")}>
         {title}
         {count !== undefined ? <span className="tabular-nums">{count}</span> : null}
       </h2>

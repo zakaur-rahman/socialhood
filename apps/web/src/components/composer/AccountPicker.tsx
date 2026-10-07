@@ -3,17 +3,50 @@
 import { Check } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
+import { useMemo } from "react";
 
-import { ContactAvatar } from "@/components/inbox/ContactAvatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SocialAccount } from "@/lib/api/types";
+import { initial } from "@/lib/inbox/format";
 import { cannotPublishReason, handleOf } from "@/lib/publishing/rules";
+import { instagramAccountColors, type AccountColor } from "@/lib/schedule/format";
+import { IDENTITY_FILL } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
 import { Section } from "./Section";
 
 export function accountChipId(accountId: string): string {
   return `composer-account-${accountId}`;
+}
+
+/**
+ * The account's picture, or its initial on its identity's gradient: the identity Schedule gives the
+ * same account (`instagramAccountColors`), not a hash of its id, so an account looks the same on
+ * both screens. An account without an identity (disconnected, or the preview's placeholder) gets
+ * the neutral fill. The initial is decorative: the handle is always beside it.
+ */
+export function AccountPicture({
+  account,
+  identity,
+  size = 32,
+}: {
+  account: SocialAccount | null;
+  identity?: AccountColor;
+  size?: 24 | 32;
+}) {
+  const name = account?.username ?? account?.display_name ?? "?";
+  return (
+    <Avatar className={size === 32 ? "size-8" : "size-6"} data-testid="account-picture">
+      {account?.profile_picture_url ? <AvatarImage src={account.profile_picture_url} alt="" /> : null}
+      <AvatarFallback
+        aria-hidden
+        className={cn("font-semibold", identity?.gradient ? [IDENTITY_FILL, identity.gradient] : "text-fg", size === 32 ? "text-sm" : "text-2xs")}
+      >
+        {initial(name)}
+      </AvatarFallback>
+    </Avatar>
+  );
 }
 
 /**
@@ -37,12 +70,13 @@ export function AccountPicker({
   slug: string;
 }) {
   const connectHref = `/w/${slug}/settings/connections` as Route;
+  const identities = useMemo(() => instagramAccountColors(accounts), [accounts]);
   return (
     <Section id="composer-accounts" title="Accounts" tabIndex={-1}>
       {loading ? (
         <div className="flex gap-2" aria-busy="true" aria-label="Loading accounts">
-          <Skeleton className="h-10 w-36 rounded-full bg-raised" />
-          <Skeleton className="h-10 w-36 rounded-full bg-raised" />
+          <Skeleton className="h-10 w-36 rounded-full" />
+          <Skeleton className="h-10 w-36 rounded-full" />
         </div>
       ) : accounts.length === 0 ? (
         <p className="text-sm text-fg-secondary">
@@ -67,14 +101,12 @@ export function AccountPicker({
                   disabled={Boolean(reason) && !isSelected}
                   onClick={() => onToggle(account.id)}
                   className={cn(
-                    "inline-flex min-h-10 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                    isSelected ? "border-brand bg-brand-soft text-fg" : "border-line text-fg-secondary hover:bg-white/5 hover:text-fg",
+                    "inline-flex min-h-10 items-center gap-2 rounded-full border py-1 pr-3 pl-1 text-sm font-medium transition-[color,background-color,border-color] duration-fast ease-standard disabled:cursor-not-allowed disabled:opacity-50",
+                    isSelected ? "border-brand bg-brand-soft text-fg" : "border-line text-fg-secondary hover:bg-hover hover:text-fg",
                     isSelected && reason && "border-danger",
                   )}
                 >
-                  <span aria-hidden className="inline-flex">
-                    <ContactAvatar id={account.id} name={account.username ?? account.display_name ?? "?"} pictureUrl={account.profile_picture_url} size={32} />
-                  </span>
+                  <AccountPicture account={account} identity={identities.get(account.id)} />
                   {handleOf(account)}
                   {isSelected ? <Check className="size-4 text-brand-fg" aria-hidden /> : null}
                 </button>

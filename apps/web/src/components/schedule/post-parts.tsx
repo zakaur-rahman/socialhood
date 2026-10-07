@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 
 import { accountColor, useSchedule } from "./schedule-context";
 
-const THUMB_SIZE = { 24: "size-6 rounded", 40: "size-10 rounded-md", 48: "size-12 rounded-lg" } as const;
+const THUMB_SIZE = { 24: "size-6 rounded-sm", 40: "size-10 rounded-md", 48: "size-12 rounded-lg" } as const;
 
 /**
  * The post's first image with the account's ring colour (UX-SCR-04), or a calm placeholder by
@@ -105,7 +105,7 @@ export function AccountAvatar({ account, accountId, size = 20 }: { account?: Soc
         className={cn(
           "font-semibold",
           color.gradient ? [IDENTITY_FILL, color.gradient] : "bg-raised text-fg",
-          size === 36 ? "text-sm" : "text-[10px]",
+          size === 36 ? "text-sm" : "text-2xs",
         )}
       >
         {initial(name)}
@@ -154,8 +154,22 @@ function mediaItemOf(post: Pick<ScheduledPostSummary, "targets">): string | null
 }
 
 /**
+ * The calendar card's menu button (UI-032). With a fine pointer it is a 24 px ⋯ at the card's end
+ * (WCAG 2.5.8's minimum; the card's link keeps the rest of the width). With a coarse pointer a
+ * 40 px button doesn't fit beside the title of a 24 px month card (it squeezed the title to
+ * nothing), so the button becomes the card: transparent, over the whole card, its glyph hidden so
+ * the time and title get the full width. A tap anywhere on the card opens the menu, whose Edit or
+ * Open item goes to the composer; the card shows pressed while it is open, and the focus outline
+ * goes round the card. It never reaches past the card, so it covers no neighbour. Hover, focus and
+ * pressed match Button's ghost.
+ */
+const CARD_TRIGGER =
+  "mr-0.5 grid size-6 shrink-0 place-items-center rounded-md text-fg-secondary transition-[color,background-color] duration-fast ease-standard hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:absolute pointer-coarse:inset-0 pointer-coarse:mr-0 pointer-coarse:size-auto pointer-coarse:[&_svg]:hidden";
+
+/**
  * The post's actions (UX-A11Y-02: always visible). "Move to…" is the keyboard and phone
- * alternative to dragging (FR-PUB-08).
+ * alternative to dragging (FR-PUB-08). `card` is the calendar card's trigger (CARD_TRIGGER);
+ * `sm` (the rail) and `lg` (rows) are Button's `icon-sm` and `icon`, 40 px on coarse pointers.
  */
 export function PostMenu({
   post,
@@ -164,10 +178,12 @@ export function PostMenu({
 }: {
   post: ScheduledPostSummary;
   className?: string;
-  size?: "xs" | "sm" | "lg";
+  size?: "card" | "sm" | "lg";
 }) {
   const schedule = useSchedule();
   const trigger = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const touch = useRef(false);
   const { actions } = schedule;
   const busy = schedule.busyIds.has(post.id);
   const status = post.status;
@@ -175,22 +191,42 @@ export function PostMenu({
   const mediaItem = mediaItemOf(post);
   const published = status === "published" || status === "partially_published";
   const label = captionLine(post.caption);
+  const triggerProps = {
+    ref: trigger,
+    "aria-label": `Actions for ${label}`,
+    disabled: busy,
+    onPointerDown: (event: ReactPointerEvent<HTMLButtonElement>) => {
+      // A press on the menu never starts a drag.
+      event.stopPropagation();
+      // Radix opens a menu on pointerdown. For touch that is the start of every swipe, so a
+      // scroll that begins on a card would open its menu: touch opens it on the tap (click).
+      touch.current = event.pointerType !== "mouse";
+      if (touch.current) event.preventDefault();
+    },
+    onClick: () => {
+      if (touch.current) setOpen((value) => !value);
+      touch.current = false;
+    },
+  };
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button
-          ref={trigger}
-          variant="ghost"
-          size={size === "xs" ? "icon-xs" : size === "sm" ? "icon-sm" : "icon"}
-          aria-label={`Actions for ${label}`}
-          disabled={busy}
-          onPointerDown={(event) => event.stopPropagation()}
-          className={cn("shrink-0 text-fg-secondary hover:text-fg", size === "lg" && "size-10 md:size-8", className)}
-        >
-          <EllipsisVertical aria-hidden />
-        </Button>
+        {size === "card" ? (
+          <button type="button" className={cn(CARD_TRIGGER, className)} {...triggerProps}>
+            <EllipsisVertical className="size-3" aria-hidden />
+          </button>
+        ) : (
+          <Button
+            variant="ghost"
+            size={size === "sm" ? "icon-sm" : "icon"}
+            className={cn("shrink-0 text-fg-secondary hover:text-fg", className)}
+            {...triggerProps}
+          >
+            <EllipsisVertical aria-hidden />
+          </Button>
+        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52 border-line bg-panel shadow-xl">
+      <DropdownMenuContent align="end">
         {status === "scheduled" ? (
           <DropdownMenuItem onSelect={() => actions.moveTo(post, trigger.current)}>
             <CalendarClock aria-hidden /> Move to…

@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertCircle, Crop, FileVideo, GripVertical, ImagePlus, Library, Loader2, RotateCw, X } from "lucide-react";
+import { AlertCircle, Crop, FileVideo, GripVertical, ImagePlus, Library, RotateCw, X } from "lucide-react";
 import { useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   assetLabel,
   cropNeeded,
@@ -41,7 +42,7 @@ type Drag = { from: number; pointerId: number; drop: number };
 function ProgressBar({ item, label }: { item: UploadItem; label: string }) {
   const percent = Math.round(item.progress * 100);
   return (
-    <div className="absolute inset-x-0 bottom-0 space-y-1 bg-canvas/80 p-1.5">
+    <div className="absolute inset-x-0 bottom-0 space-y-1 bg-media-scrim/80 p-1.5">
       <div
         role="progressbar"
         aria-label={`Uploading ${label}`}
@@ -49,14 +50,17 @@ function ProgressBar({ item, label }: { item: UploadItem; label: string }) {
         aria-valuemax={100}
         aria-valuenow={percent}
         aria-valuetext={item.status === "processing" ? "Processing" : `${percent}%`}
-        className="h-1.5 overflow-hidden rounded-full bg-white/15"
+        className="h-1.5 overflow-hidden rounded-full bg-raised"
       >
-        <div className="bg-brand-gradient-decor h-full rounded-full transition-[width]" style={{ width: `${percent}%` }} />
+        <div
+          className="bg-brand-gradient-decor h-full rounded-full motion-safe:transition-[width] motion-safe:duration-normal motion-safe:ease-standard"
+          style={{ width: `${percent}%` }}
+        />
       </div>
-      <p className="flex items-center gap-1 text-[11px] text-fg tabular-nums">
+      <p className="flex items-center gap-1 text-2xs text-fg tabular-nums">
         {item.status === "processing" ? (
           <>
-            <Loader2 className="size-3 animate-spin" aria-hidden /> Processing…
+            <Spinner size="xs" /> Processing…
           </>
         ) : (
           `${percent}%`
@@ -203,7 +207,7 @@ export function MediaTray({
                 data-crop={crop ?? undefined}
                 aria-label={label}
                 className={cn(
-                  "relative flex flex-col rounded-lg border bg-field outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "relative flex flex-col rounded-lg border bg-field",
                   crop || tooLong ? "border-danger" : "border-line",
                   dragging && "opacity-60",
                   marker === "before" && "before:absolute before:inset-y-1 before:-left-1.5 before:z-10 before:w-0.5 before:rounded-full before:bg-brand",
@@ -212,11 +216,11 @@ export function MediaTray({
               >
                 <div className="relative aspect-square overflow-hidden rounded-t-lg">
                   <Thumb asset={asset} />
-                  <span className="absolute top-1 left-1 grid min-w-5 place-items-center rounded-md bg-canvas/80 px-1 text-[11px] font-semibold tabular-nums">
+                  <span className="absolute top-1 left-1 grid min-w-5 place-items-center rounded-sm bg-media-scrim/80 px-1 text-2xs font-semibold tabular-nums">
                     {index + 1}
                   </span>
                   {asset.resource_type === "video" && asset.duration_s ? (
-                    <span className="absolute top-1 right-1 rounded-md bg-canvas/80 px-1 text-[11px] tabular-nums">
+                    <span className="absolute top-1 right-1 rounded-sm bg-media-scrim/80 px-1 text-2xs tabular-nums">
                       {formatDuration(asset.duration_s)}
                     </span>
                   ) : null}
@@ -225,13 +229,13 @@ export function MediaTray({
                       type="button"
                       data-focus-target
                       onClick={() => onCrop(asset.id)}
-                      className="absolute inset-x-1 bottom-1 flex min-h-10 items-center justify-center gap-1 rounded-md bg-danger-fill px-1 text-[11px] font-medium text-white sm:min-h-7"
+                      className="absolute inset-x-1 bottom-1 flex min-h-7 items-center justify-center gap-1 rounded-md bg-danger-fill px-1 text-2xs font-medium text-on-brand hover:bg-danger-fill/90 pointer-coarse:min-h-10"
                     >
                       <Crop className="size-3" aria-hidden /> Crop needed
                       <span className="sr-only">: {label}</span>
                     </button>
                   ) : tooLong ? (
-                    <span className="absolute inset-x-1 bottom-1 rounded-md bg-danger-fill px-1 py-0.5 text-center text-[11px] font-medium text-white">
+                    <span className="absolute inset-x-1 bottom-1 rounded-sm bg-danger-fill px-1 py-0.5 text-center text-2xs font-medium text-on-brand">
                       Over 90 s
                     </span>
                   ) : null}
@@ -239,35 +243,30 @@ export function MediaTray({
                     <UploadOverlay item={replacing} label={`the crop of ${label}`} onRetry={onRetryUpload} onRemove={onRemoveUpload} />
                   ) : null}
                 </div>
-                <div className="flex items-center justify-between gap-1 p-1">
-                  <button
+                {/* The tile's tools: Button `icon-sm`, 28 px, 40 px on coarse pointers. Where 40 px
+                    tools don't fit across a narrow tile (five to a row, on touch), Crop and Remove
+                    wrap under the handle instead of spilling out of the tile. */}
+                <div className="flex flex-wrap items-center justify-between gap-0.5 p-1">
+                  <Button
                     type="button"
+                    variant="ghost"
+                    size="icon-sm"
                     aria-label={`Move ${label}`}
                     aria-describedby={hintId}
-                    className="grid size-10 touch-none cursor-grab place-items-center rounded-md text-fg-secondary hover:bg-white/5 hover:text-fg active:cursor-grabbing sm:size-7"
+                    className="touch-none cursor-grab text-fg-secondary active:cursor-grabbing"
                     {...handleProps(index)}
                   >
                     <GripVertical className="size-3.5" aria-hidden />
-                  </button>
-                  <div className="flex gap-1">
+                  </Button>
+                  <div className="ml-auto flex gap-0.5">
                     {asset.resource_type === "image" && !crop ? (
-                      <button
-                        type="button"
-                        aria-label={`Crop ${label}`}
-                        onClick={() => onCrop(asset.id)}
-                        className="grid size-10 place-items-center rounded-md text-fg-secondary hover:bg-white/5 hover:text-fg sm:size-7"
-                      >
+                      <Button type="button" variant="ghost" size="icon-sm" aria-label={`Crop ${label}`} onClick={() => onCrop(asset.id)} className="text-fg-secondary">
                         <Crop className="size-3.5" aria-hidden />
-                      </button>
+                      </Button>
                     ) : null}
-                    <button
-                      type="button"
-                      aria-label={`Remove ${label}`}
-                      onClick={() => onRemove(asset.id)}
-                      className="grid size-10 place-items-center rounded-md text-fg-secondary hover:bg-white/5 hover:text-fg sm:size-7"
-                    >
+                    <Button type="button" variant="ghost" size="icon-sm" aria-label={`Remove ${label}`} onClick={() => onRemove(asset.id)} className="text-fg-secondary">
                       <X className="size-3.5" aria-hidden />
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </li>
@@ -290,7 +289,7 @@ export function MediaTray({
               ) : (
                 <span className="flex size-full flex-col items-center justify-center gap-1 p-2 text-fg-secondary">
                   <FileVideo className="size-6" aria-hidden />
-                  <span className="w-full truncate text-center text-[11px]">{item.file.name}</span>
+                  <span className="w-full truncate text-center text-2xs">{item.file.name}</span>
                 </span>
               )}
               <UploadOverlay item={item} label={item.file.name} onRetry={onRetryUpload} onRemove={onRemoveUpload} />
@@ -317,13 +316,13 @@ export function MediaTray({
           id={MEDIA_ADD_ID}
           type="button"
           variant="secondary"
-          className="h-10 md:h-9"
+          size="lg"
           disabled={full || readOnly}
           onClick={() => input.current?.click()}
         >
           <ImagePlus aria-hidden /> Add from device
         </Button>
-        <Button type="button" variant="ghost" className="h-10 md:h-9" disabled={full || readOnly} onClick={onOpenLibrary}>
+        <Button type="button" variant="ghost" size="lg" disabled={full || readOnly} onClick={onOpenLibrary}>
           <Library aria-hidden /> Media library
         </Button>
         <span className="text-xs text-fg-secondary tabular-nums">
@@ -360,40 +359,32 @@ function UploadOverlay({
 }) {
   if (item.status === "failed") {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-canvas/85 p-2 text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-media-scrim/85 p-2 text-center">
         <AlertCircle className="size-4 text-danger" aria-hidden />
-        <p className="line-clamp-3 text-[11px] text-danger-fg">{item.error ?? "The upload didn't finish."}</p>
+        <p className="line-clamp-3 text-2xs text-danger-fg">{item.error ?? "The upload didn't finish."}</p>
         <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={() => onRetry(item.id)}
-            aria-label={`Retry uploading ${label}`}
-            className="grid size-10 place-items-center rounded-md bg-white/10 text-fg hover:bg-white/20 sm:size-7"
-          >
+          <Button type="button" variant="secondary" size="icon-sm" onClick={() => onRetry(item.id)} aria-label={`Retry uploading ${label}`}>
             <RotateCw className="size-3.5" aria-hidden />
-          </button>
-          <button
-            type="button"
-            onClick={() => onRemove(item.id)}
-            aria-label={`Remove ${label}`}
-            className="grid size-10 place-items-center rounded-md bg-white/10 text-fg hover:bg-white/20 sm:size-7"
-          >
+          </Button>
+          <Button type="button" variant="secondary" size="icon-sm" onClick={() => onRemove(item.id)} aria-label={`Remove ${label}`}>
             <X className="size-3.5" aria-hidden />
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
   return (
     <>
-      <button
+      <Button
         type="button"
+        variant="secondary"
+        size="icon-sm"
         onClick={() => onRemove(item.id)}
         aria-label={`Cancel uploading ${label}`}
-        className="absolute top-1 right-1 z-10 grid size-10 place-items-center rounded-md bg-canvas/80 text-fg hover:bg-canvas sm:size-7"
+        className="absolute top-1 right-1 z-10"
       >
         <X className="size-3.5" aria-hidden />
-      </button>
+      </Button>
       <ProgressBar item={item} label={label} />
     </>
   );
