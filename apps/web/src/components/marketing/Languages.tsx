@@ -1,6 +1,8 @@
 import { Sparkles } from "lucide-react";
 import type { CSSProperties } from "react";
 
+import { EYEBROW } from "@/styles/tokens";
+
 import { Container, SectionHeading } from "./primitives";
 
 type Example = { language: string; lang: string; question: string; reply: string };
@@ -44,17 +46,17 @@ export function Languages() {
             <li key={example.language} data-reveal style={{ "--reveal-delay": `${index * 100}ms` } as CSSProperties}>
               <article
                 aria-labelledby={`language-${example.lang}`}
-                className="group flex h-full flex-col gap-3 rounded-2xl border border-line bg-canvas p-5 transition-[border-color,box-shadow,translate] duration-200 hover:border-brand-line hover:shadow-xl hover:shadow-brand/10 motion-safe:hover:-translate-y-1"
+                className="group flex h-full flex-col gap-3 rounded-2xl border border-line bg-canvas p-5 transition-[border-color,box-shadow,translate] duration-slow hover:border-brand-line hover:shadow-xl hover:shadow-brand/10 motion-safe:hover:-translate-y-1"
               >
-                <h3 id={`language-${example.lang}`} className="text-xs font-semibold tracking-[0.14em] text-fg-secondary uppercase">
+                <h3 id={`language-${example.lang}`} className={EYEBROW}>
                   {example.language}
                 </h3>
                 <p className="max-w-[90%] rounded-2xl rounded-bl-md border border-line-subtle bg-field px-3 py-2 text-sm leading-relaxed">
                   <span className="sr-only">Customer: </span>
                   <span lang={example.lang}>{example.question}</span>
                 </p>
-                <div className="bg-brand-gradient ml-auto max-w-[90%] rounded-2xl rounded-br-md px-3 py-2 text-sm leading-relaxed text-white">
-                  <p className="flex items-center gap-1 text-xs font-medium text-white" aria-hidden>
+                <div className="bg-brand-gradient ml-auto max-w-[90%] rounded-2xl rounded-br-md px-3 py-2 text-sm leading-relaxed text-on-brand">
+                  <p className="flex items-center gap-1 text-xs font-medium" aria-hidden>
                     <Sparkles className="size-3" /> AI reply
                   </p>
                   <p className="mt-1">

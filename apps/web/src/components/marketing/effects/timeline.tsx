@@ -34,7 +34,7 @@ export function Timeline({ items }: { items: { title: string; content: ReactNode
           <li key={item.title} className="relative grid gap-5 pl-14 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)] md:gap-10">
             <span
               aria-hidden
-              className="bg-brand-gradient absolute top-0 left-0 grid size-10 place-items-center rounded-full text-sm font-semibold text-white tabular-nums ring-4 ring-canvas"
+              className="bg-brand-gradient absolute top-0 left-0 grid size-10 place-items-center rounded-full text-sm font-semibold text-on-brand tabular-nums ring-4 ring-canvas"
             >
               {index + 1}
             </span>

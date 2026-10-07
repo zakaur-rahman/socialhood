@@ -2,10 +2,18 @@ import createClient from "openapi-fetch";
 import type { paths } from "@socialhood/api-client";
 import Link from "next/link";
 
+import type { ReactNode } from "react";
+
 import { Container } from "@/components/marketing/primitives";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import type { DataDeletionStatus } from "@/lib/api/types";
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { pageMetadata } from "@/lib/marketing/seo";
+import { cn } from "@/lib/utils";
+import { MARKETING_HEADING, READING } from "@/styles/tokens";
 
 export const metadata = pageMetadata({
   title: "Data deletion",
@@ -45,36 +53,47 @@ async function lookup(code: string): Promise<DataDeletionStatus | null> {
   }
 }
 
+/** One way to delete data: a card in the list, in the Reading role (15/24), its lead-in in `fg`. */
+function Option({ children }: { children: ReactNode }) {
+  return (
+    <li>
+      <Card padding="roomy">
+        <p className={cn(READING, "text-fg-secondary")}>{children}</p>
+      </Card>
+    </li>
+  );
+}
+
 function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
   return (
     <section aria-labelledby="how-to-delete" className="mt-2">
-      <Heading id="how-to-delete" className={Heading === "h1" ? "text-3xl font-semibold tracking-tight sm:text-4xl" : "text-xl font-semibold tracking-tight"}>
+      <Heading id="how-to-delete" className={Heading === "h1" ? MARKETING_HEADING : "text-xl font-semibold tracking-tight"}>
         {Heading === "h1" ? "Delete your data" : "How to delete your data"}
       </Heading>
-      <ol className="mt-5 space-y-4 text-[15px] leading-relaxed text-fg-secondary">
-        <li className="rounded-xl border border-line bg-panel p-5">
+      <ol data-legal-prose="" className="mt-5 space-y-4">
+        <Option>
           <strong className="text-fg">Workspace owners</strong>: delete the workspace in Settings → Workspace. Everything
           stops at once, and the workspace&apos;s data, including uploaded media, is permanently removed within 24 hours.
-        </li>
-        <li className="rounded-xl border border-line bg-panel p-5">
+        </Option>
+        <Option>
           <strong className="text-fg">Owners and admins, for one account</strong>: in Settings → Connections, use
           Disconnect and delete data (or Remove, for an account already disconnected). The account&apos;s
           conversations, messages, comments, contacts, posts and automations are permanently deleted; the
           workspace&apos;s knowledge, settings and billing stay.
-        </li>
-        <li className="rounded-xl border border-line bg-panel p-5">
+        </Option>
+        <Option>
           <strong className="text-fg">Removed Social Hood in Instagram?</strong> If you asked Instagram to delete your
           data, it gives you a confirmation code and a link to this page. Enter the code below to see how your request is
           going.
-        </li>
-        <li className="rounded-xl border border-line bg-panel p-5">
+        </Option>
+        <Option>
           <strong className="text-fg">Anyone else</strong>, including people who messaged or commented on a business that
           uses Social Hood: email{" "}
           <a href={`mailto:${SUPPORT_EMAIL}`} className="font-medium text-brand-fg underline underline-offset-4">
             {SUPPORT_EMAIL}
           </a>
           .
-        </li>
+        </Option>
       </ol>
       <p className="mt-4 text-sm text-fg-secondary">
         What each option deletes, and what we keep, is in our{" "}
@@ -87,31 +106,35 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
   );
 }
 
+/**
+ * A plain GET form, so it works before (and without) JavaScript. The hint is named on the input
+ * in the server HTML too: Field links its descriptions only once it has hydrated.
+ */
 function CheckStatus({ code }: { code?: string }) {
   return (
-    <form action="/data-deletion" method="get" className="mt-10 rounded-xl border border-line bg-panel p-5">
-      <label htmlFor="code" className="text-sm font-semibold">
-        Check a request
-      </label>
-      <p id="code-hint" className="mt-1 text-sm text-fg-secondary">
-        The confirmation code Instagram showed you.
-      </p>
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-        <input
-          id="code"
-          name="code"
-          defaultValue={code}
-          required
-          autoComplete="off"
-          spellCheck={false}
-          aria-describedby="code-hint"
-          className="min-h-11 flex-1 rounded-lg border border-line bg-field px-3 font-mono text-sm text-fg placeholder:text-fg-disabled"
-        />
-        <button type="submit" className="bg-brand-gradient min-h-11 rounded-lg px-4 text-sm font-medium text-white hover:brightness-110">
-          Check status
-        </button>
-      </div>
-    </form>
+    <Card padding="roomy" className="mt-10">
+      <form action="/data-deletion" method="get">
+        <Field id="code">
+          <FieldLabel>Check a request</FieldLabel>
+          <FieldDescription id="code-hint">The confirmation code Instagram showed you.</FieldDescription>
+          <div className="mt-1.5 flex flex-col gap-2 sm:flex-row">
+            <Input
+              name="code"
+              size="xl"
+              defaultValue={code}
+              required
+              autoComplete="off"
+              spellCheck={false}
+              aria-describedby="code-hint"
+              className="flex-1 font-mono"
+            />
+            <Button type="submit" size="xl">
+              Check status
+            </Button>
+          </div>
+        </Field>
+      </form>
+    </Card>
   );
 }
 
@@ -138,7 +161,7 @@ export default async function DataDeletionPage({
           <div className="mb-12 flex flex-col items-start gap-3">
             {copy && request ? (
               <>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">{copy.title}</h1>
+                <h1 className={MARKETING_HEADING}>{copy.title}</h1>
                 <p className="text-sm text-fg-secondary">{copy.body}</p>
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                   <dt className="text-fg-secondary">Confirmation code</dt>
@@ -155,7 +178,7 @@ export default async function DataDeletionPage({
               </>
             ) : (
               <>
-                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">Request not found</h1>
+                <h1 className={MARKETING_HEADING}>Request not found</h1>
                 <p className="text-sm text-fg-secondary">
                   Check the link from Instagram, or email {SUPPORT_EMAIL} with your confirmation code.
                 </p>

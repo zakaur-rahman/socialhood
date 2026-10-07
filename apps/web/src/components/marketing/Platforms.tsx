@@ -2,6 +2,7 @@ import { MessageCircle } from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 import { Container } from "./primitives";
@@ -13,21 +14,21 @@ const PLATFORMS: Platform[] = [
   {
     name: "Instagram",
     status: "available",
-    mark: <PlatformGlyph platform="instagram" className="size-5 text-white" />,
+    mark: <PlatformGlyph platform="instagram" className="size-5 text-on-brand" />,
     tile: "bg-instagram",
     body: "Professional accounts (Business or Creator), with Instagram's own login. DMs, comments, publishing and insights.",
   },
   {
     name: "WhatsApp",
     status: "available",
-    mark: <PlatformGlyph platform="whatsapp" className="size-5 text-white" />,
+    mark: <PlatformGlyph platform="whatsapp" className="size-5 text-on-brand" />,
     tile: "bg-whatsapp",
     body: "WhatsApp Business numbers your business owns, through Meta's Embedded Signup. Meta bills its messaging fees to you directly.",
   },
   {
     name: "Facebook Messenger",
     status: "later",
-    mark: <MessageCircle className="size-5 text-white" aria-hidden />,
+    mark: <MessageCircle className="size-5 text-on-brand" aria-hidden />,
     tile: "bg-facebook",
     body: "Messenger isn't supported yet.",
   },
@@ -51,7 +52,7 @@ export function Platforms() {
             <li key={platform.name} data-reveal style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}>
               <div
                 className={cn(
-                  "flex h-full gap-4 rounded-2xl border p-4 transition-colors duration-200",
+                  "flex h-full gap-4 rounded-2xl border p-4 transition-colors duration-slow",
                   platform.status === "available" ? "border-line bg-panel hover:border-line-strong" : "border-dashed border-line bg-panel/50",
                 )}
               >
@@ -61,14 +62,9 @@ export function Platforms() {
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <h3 className="text-sm font-semibold">{platform.name}</h3>
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
-                        platform.status === "available" ? "bg-success/15 text-success" : "bg-raised text-fg-secondary",
-                      )}
-                    >
+                    <Badge size="md" tone={platform.status === "available" ? "success" : "neutral"}>
                       {platform.status === "available" ? "Official API" : "Coming later"}
-                    </span>
+                    </Badge>
                   </div>
                   <p className="mt-1.5 text-sm leading-relaxed text-fg-secondary">{platform.body}</p>
                 </div>
