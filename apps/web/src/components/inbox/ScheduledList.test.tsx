@@ -61,6 +61,19 @@ describe("Scheduled tab (UX-INB-10, FR-SMS-02)", () => {
     await waitFor(() => expect(screen.queryByText("Scheduled")).not.toBeInTheDocument());
   });
 
+  // UI-031 (UI-ISS-105): the cancel confirmation is an AlertDialog; keeping the message returns focus.
+  it("Cancel asks in an alert dialog, and Keep it returns focus to Cancel", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderList([pending]);
+    const trigger = await screen.findByRole("button", { name: "Cancel" });
+    await user.click(trigger);
+    const dialog = await screen.findByRole("alertdialog", { name: "Cancel this scheduled message?" });
+    await user.click(within(dialog).getByRole("button", { name: "Keep it" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+    expect(calls.some((c) => c.method === "DELETE")).toBe(false);
+  });
+
   it("edits the text and the time", async () => {
     const user = userEvent.setup();
     const { calls } = renderList([pending], {

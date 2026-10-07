@@ -1,13 +1,18 @@
-import { render, screen, within } from "@testing-library/react";
+import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
 import type { Attachment, Message } from "@/lib/api/types";
 import { sendFailure } from "@/lib/copy";
 import { message } from "@/test/api";
 
 import { MessageBubble } from "./MessageBubble";
+
+// The app renders every page inside a TooltipProvider (app/layout.tsx).
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: TooltipProvider });
 
 const contact = { id: "p1", name: "Priya Nair", pictureUrl: null };
 
@@ -73,20 +78,19 @@ describe("MessageBubble variants (UX-INB-06)", () => {
     expect(row.querySelector('[data-variant="sending"]')).toHaveClass("opacity-80");
   });
 
-  it("AI auto reply: AI Assisted under the bubble, the tooltip says the AI sent it (C-063)", () => {
+  it("AI auto reply: AI Assisted under the bubble, the tooltip says the AI sent it (C-063)", async () => {
     const { row } = renderBubble({ ...out, source: "ai_auto" });
     const assisted = within(row).getByText("AI Assisted");
-    expect(assisted.closest("[title]")).toHaveAttribute("title", "Sent by AI: an auto reply");
+    await userEvent.hover(assisted);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Sent by AI: an auto reply");
     expect(within(row).getByTestId("message-meta")).toContainElement(assisted);
     expect(row.querySelector('[data-variant="ai_auto"]')).not.toContainElement(assisted);
   });
 
-  it("automation: AI Assisted, the tooltip names the automation", () => {
+  it("automation: AI Assisted, the tooltip names the automation", async () => {
     const { row } = renderBubble({ ...out, source: "automation", automation: { id: "au1", name: "Price keyword" } });
-    expect(within(row).getByText("AI Assisted").closest("[title]")).toHaveAttribute(
-      "title",
-      "Sent by an automation: Price keyword",
-    );
+    await userEvent.hover(within(row).getByText("AI Assisted"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Sent by an automation: Price keyword");
   });
 
   it("a person's reply and a customer's message are not AI Assisted", () => {

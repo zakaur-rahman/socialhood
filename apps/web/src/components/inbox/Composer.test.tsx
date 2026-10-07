@@ -97,6 +97,23 @@ describe("Composer (UX-INB-07)", () => {
     }
   });
 
+  // UI-031: the emoji search is the SearchInput primitive. In the popover Esc reaches Radix first,
+  // so the popover empties a search with text before it closes.
+  it("emoji search: Esc clears the search first, then closes the picker", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+    await user.click(screen.getByRole("button", { name: "Add emoji" }));
+    const search = await screen.findByRole("searchbox", { name: "Search emoji" });
+    expect(search.closest('[data-slot="search-input"]')).not.toBeNull();
+    await user.type(search, "zzz");
+    expect(screen.getByText('No emoji match "zzz"')).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(search).toHaveValue("");
+    expect(screen.getByRole("searchbox", { name: "Search emoji" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("searchbox", { name: "Search emoji" })).not.toBeInTheDocument());
+  });
+
   it("the reply box is 16 px on phones, where iOS zooms into smaller text (UI-ISS-017)", () => {
     renderComposer();
     expect(textbox()).toHaveClass("text-sm", "max-md:text-base", "focus-visible:outline-none");
@@ -159,11 +176,18 @@ describe("Composer (UX-INB-07)", () => {
 
   it("account needs reconnecting: disabled with Reconnect", () => {
     renderComposer({ social_account: { id: "a1", username: "maple.bakery", display_name: null, status: "needs_reconnect" } });
-    expect(screen.getByRole("status")).toHaveTextContent("@maple.bakery needs reconnecting before you can send from it.");
-    expect(screen.getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveTextContent("@maple.bakery needs reconnecting before you can send from it.");
+    // UI-031: the Alert primitive (outline, neutral) with its one action, the secondary `sm` Button.
+    expect(notice).toHaveAttribute("data-slot", "alert");
+    expect(notice).toHaveAttribute("data-variant", "outline");
+    const reconnect = screen.getByRole("link", { name: "Reconnect" });
+    expect(reconnect).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(reconnect).toHaveAttribute("data-variant", "secondary");
+    expect(reconnect).toHaveAttribute("data-size", "sm");
   });
 
-  it("uploads attachments with a progress ring; Send waits for them", async () => {
+  it("uploads attachments with a progress bar; Send waits for them", async () => {
     const user = userEvent.setup();
     let finish: (asset: MediaAsset) => void = () => {};
     let progress: (fraction: number) => void = () => {};
@@ -180,7 +204,10 @@ describe("Composer (UX-INB-07)", () => {
     await user.upload(screen.getByTestId("composer-file-input"), file);
 
     act(() => progress(0.4));
-    expect(screen.getByRole("progressbar", { name: "Uploading" })).toHaveAttribute("aria-valuenow", "40");
+    // UI-031: the Progress primitive, named after the file (was an unnamed-file "Uploading" ring).
+    const bar = screen.getByRole("progressbar", { name: "Uploading dress.png" });
+    expect(bar).toHaveAttribute("data-slot", "progress");
+    expect(bar).toHaveAttribute("aria-valuenow", "40");
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
 
     const asset = { id: "asset-1", resource_type: "image", secure_url: "https://res.cloudinary.com/x.png", bytes: 1 } as MediaAsset;
@@ -361,7 +388,10 @@ describe("AI Polish (C-063)", () => {
     await user.type(textbox(), "hi");
     expect(reason).not.toHaveAttribute("tabindex");
     expect(reason).not.toHaveAttribute("aria-describedby");
-    expect(polish).toHaveAttribute("title", "Fix grammar and clarity, in the same language (1 AI credit)");
+    // UI-031: what it does and costs is a Tooltip (on keyboard focus too), not a title (UI-ISS-042).
+    expect(polish).not.toHaveAttribute("title");
+    await user.hover(polish);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Fix grammar and clarity, in the same language (1 AI credit)");
   });
 
   it("replaces the reply with a spinner while it works, and Undo brings the original back", async () => {
@@ -371,7 +401,9 @@ describe("AI Polish (C-063)", () => {
     await user.type(textbox(), "haan ji cake ready hai kal tak");
 
     await user.click(screen.getByRole("button", { name: "AI Polish" }));
-    const busy = await screen.findByRole("button", { name: "Polishing…" });
+    // UI-031: Button `loading`: the spinner over the kept label, busy and disabled (was "Polishing…").
+    const busy = screen.getByRole("button", { name: "AI Polish" });
+    await waitFor(() => expect(busy).toHaveAttribute("aria-busy", "true"));
     expect(busy).toBeDisabled();
     // The Spinner primitive: it spins only when motion is allowed (UI-030; was a bare animate-spin).
     expect(busy.querySelector('svg[data-slot="spinner"]')).toHaveClass("motion-safe:animate-spin");

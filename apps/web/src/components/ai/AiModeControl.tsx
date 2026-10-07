@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 
 import { ProBadge } from "@/components/automations/TemplateGallery";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,14 +15,13 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { autoAllowed, useBilling, useSocialAccounts, useUpdateConversation } from "@/lib/api/queries";
 import type { AiMode, Conversation, ConversationPatch } from "@/lib/api/types";
 import { AI_MODE_LABEL, AI_MODES } from "@/lib/ai/format";
-import { TONE_CLASS } from "@/lib/inbox/format";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
-import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AutoConfirmDialog } from "./AiModeDialogs";
@@ -111,19 +111,20 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
   if (paused) {
     return (
       <span className="inline-flex shrink-0 items-center gap-1">
-        <span
-          id={pausedId}
-          className={cn("hidden rounded-full px-2 py-0.5 text-xs font-medium @xl/header:inline", TONE_CLASS.warning)}
-          title={`Paused until ${formatDayTime(paused, workspace.timezone, now)} because you replied`}
-        >
-          AI paused
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge id={pausedId} tone="warning" size="md" className="hidden @xl/header:inline-flex">
+              AI paused
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>{`Paused until ${formatDayTime(paused, workspace.timezone, now)} because you replied`}</TooltipContent>
+        </Tooltip>
         <Button
           variant="ghost"
           size="xs"
           className="text-brand-fg"
           aria-describedby={pausedId}
-          disabled={control.pending}
+          loading={control.pending}
           onClick={control.resume}
         >
           Resume
@@ -138,23 +139,23 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
     <>
       {/* Menus aren't modal (ui/dropdown-menu), so the Auto confirmation can open from this one. */}
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          {/* The AI pill: the soft Button (brand-soft, DESIGN_SYSTEM §1.4), 28 px, 40 px on coarse pointers. */}
-          <Button
-            variant="soft"
-            size="sm"
-            aria-label={`AI mode: ${label}. Change`}
-            title={
-              control.choice === "default"
-                ? `${defaultLabel(control.accountMode)}. Change it for this conversation`
-                : "Set for this conversation. Change"
-            }
-          >
-            <Sparkles aria-hidden />
-            <span className="hidden @xl/header:inline">AI: {label}</span>
-            <ChevronDown className="hidden size-3 @xl/header:block" aria-hidden />
-          </Button>
-        </DropdownMenuTrigger>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {/* The AI pill: the soft Button (brand-soft, DESIGN_SYSTEM §1.4), 28 px, 40 px on coarse pointers. */}
+            <DropdownMenuTrigger asChild>
+              <Button variant="soft" size="sm" aria-label={`AI mode: ${label}. Change`}>
+                <Sparkles aria-hidden />
+                <span className="hidden @xl/header:inline">AI: {label}</span>
+                <ChevronDown className="hidden size-3 @xl/header:block" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            {control.choice === "default"
+              ? `${defaultLabel(control.accountMode)}. Change it for this conversation`
+              : "Set for this conversation. Change"}
+          </TooltipContent>
+        </Tooltip>
         <DropdownMenuContent align="start">
           <DropdownMenuLabel>AI in this conversation</DropdownMenuLabel>
           <DropdownMenuRadioGroup

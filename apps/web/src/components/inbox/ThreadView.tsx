@@ -12,6 +12,7 @@ import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgentHandoff } from "@/lib/agent/handoff";
 import {
@@ -320,14 +321,10 @@ function ScheduledChip({ conversation, now, onOpen }: { conversation: Conversati
     .sort((a, b) => new Date(a.send_at).getTime() - new Date(b.send_at).getTime())[0];
   return (
     <div className="shrink-0 bg-canvas px-4 pb-2">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand-fg pointer-coarse:min-h-10"
-      >
-        <CalendarClock className="size-3.5" aria-hidden />
+      <Button type="button" variant="soft" size="sm" onClick={onOpen}>
+        <CalendarClock aria-hidden />
         {count} scheduled{next ? ` · ${formatDayTime(next.send_at, workspace.timezone, now)}` : ""}
-      </button>
+      </Button>
     </div>
   );
 }
