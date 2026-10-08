@@ -332,7 +332,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
       title="Automations"
       actions={
         <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
-          <Plus aria-hidden /> New automation
+          <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
         </Button>
       }
     >
