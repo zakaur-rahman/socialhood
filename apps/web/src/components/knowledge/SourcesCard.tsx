@@ -141,6 +141,7 @@ export function SourcesCard({
   const returnFocus = useReturnFocus();
   // A confirmed delete removes the row focus was returned to; the heading takes focus then.
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const removedRef = useRef(false);
   const { items, usage } = data;
 
   return (
@@ -267,7 +268,17 @@ export function SourcesCard({
         </CardBleed>
 
         <AlertDialog open={Boolean(deleting)} onOpenChange={(open) => (open ? undefined : setDeleting(null))}>
-          <AlertDialogContent {...returnFocus}>
+          <AlertDialogContent
+            {...returnFocus}
+            onCloseAutoFocus={(event) => {
+              // The deleted row is gone (or about to be): the dialog's focus return would land on it.
+              if (removedRef.current) {
+                removedRef.current = false;
+                event.preventDefault();
+                headingRef.current?.focus();
+              } else returnFocus.onCloseAutoFocus(event);
+            }}
+          >
             <AlertDialogHeader>
               <AlertDialogTitle>Delete “{deleting?.title}”?</AlertDialogTitle>
               <AlertDialogDescription>
@@ -284,8 +295,18 @@ export function SourcesCard({
                   remove.mutate(source.id, {
                     onSuccess: () => {
                       toast.success(`Deleted “${source.title}”`);
+                      // Closing still ahead: the dialog's own focus return must not win.
+                      removedRef.current = document.querySelector("[role=alertdialog]") !== null;
+                      // Focus may still be inside the closing dialog or on the vanished row: take it.
                       const active = document.activeElement;
-                      if (!active || active === document.body || !active.isConnected) headingRef.current?.focus();
+                      if (
+                        !active ||
+                        active === document.body ||
+                        !active.isConnected ||
+                        active.closest("[role=alertdialog]")
+                      ) {
+                        headingRef.current?.focus();
+                      }
                     },
                     onError: (error) => toastError(error),
                   });
