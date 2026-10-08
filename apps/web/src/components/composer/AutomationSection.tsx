@@ -7,10 +7,12 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { editorHref, TemplateCard } from "@/components/automations/TemplateGallery";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
+import { DisabledReason } from "@/components/ui/disabled-reason";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { useAutomation, useAutomationTemplates } from "@/lib/api/queries";
 import { useAddCommentAutomation } from "@/lib/api/queries/scheduledPosts";
 import type { AutomationTemplate, Plan, SocialAccount } from "@/lib/api/types";
@@ -23,11 +25,7 @@ import { cn } from "@/lib/utils";
 
 import { Section } from "./Section";
 
-const STATUS_TONE = {
-  draft: "bg-raised text-fg-secondary",
-  active: "bg-success-soft text-success",
-  paused: "bg-warning-soft text-warning",
-} as const;
+const STATUS_TONE = { draft: "neutral", active: "success", paused: "warning" } as const;
 
 /**
  * UX-SCR-13 Automation (FR-AUT-18): comment automations scoped to this post, with a summary and a
@@ -72,21 +70,11 @@ export function AutomationSection({
       )}
       {readOnly ? null : (
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="lg"
-            disabled={noAccount}
-            aria-describedby={noAccount ? "composer-automation-reason" : undefined}
-            onClick={() => setOpen(true)}
-          >
-            <Plus aria-hidden /> Add comment automation
-          </Button>
-          {noAccount ? (
-            <span id="composer-automation-reason" className="text-xs text-fg-secondary">
-              Choose an account first.
-            </span>
-          ) : null}
+          <DisabledReason reason={noAccount ? "Choose an account first." : null}>
+            <Button type="button" variant="secondary" size="lg" disabled={noAccount} onClick={() => setOpen(true)}>
+              <Plus aria-hidden /> Add comment automation
+            </Button>
+          </DisabledReason>
         </div>
       )}
       {open ? (
@@ -118,7 +106,8 @@ function LinkedRow({ wid, slug, automation }: { wid: string; slug: string; autom
     .filter(Boolean)
     .join(": ");
   return (
-    <li className="flex items-center gap-3 rounded-lg border border-line bg-field px-3 py-2.5">
+    <CardInset asChild padding="compact">
+     <li className="flex items-center gap-3">
       <MessageSquareReply className="size-4 shrink-0 text-fg-secondary" aria-hidden />
       <div className="min-w-0 flex-1">
         <Link href={editorHref(slug, automation.id)} className="block truncate text-sm font-medium hover:underline">
@@ -129,10 +118,11 @@ function LinkedRow({ wid, slug, automation }: { wid: string; slug: string; autom
           {action ? ` → ${action}` : ""}
         </p>
       </div>
-      <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-xs font-medium", STATUS_TONE[automation.status])}>
+      <Badge tone={STATUS_TONE[automation.status]} size="md">
         {STATUS_LABEL[automation.status]}
-      </span>
-    </li>
+      </Badge>
+     </li>
+    </CardInset>
   );
 }
 
@@ -236,8 +226,7 @@ function AddAutomationDialog({
               <Button type="button" variant="ghost" onClick={() => setAsking(null)}>
                 <ArrowLeft aria-hidden /> Back
               </Button>
-              <Button type="submit" disabled={!accountId || add.isPending}>
-                {add.isPending ? <Spinner /> : null}
+              <Button type="submit" disabled={!accountId} loading={add.isPending}>
                 {asking.choice ? "Use template" : "Start from blank"}
               </Button>
             </div>
@@ -275,8 +264,7 @@ function AddAutomationDialog({
                   </span>
                   <p className="mt-3 text-sm font-semibold">Start from blank</p>
                   <p className="mt-1 flex-1 text-sm text-fg-secondary">Choose the keywords and the reply yourself.</p>
-                  <Button variant="secondary" className="mt-3 self-start" disabled={add.isPending} onClick={() => choose(null)}>
-                    {pendingKey === "blank" ? <Spinner /> : null}
+                  <Button variant="secondary" className="mt-3 self-start" disabled={add.isPending} loading={pendingKey === "blank"} onClick={() => choose(null)}>
                     Start from blank
                   </Button>
                 </div>

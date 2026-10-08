@@ -16,7 +16,9 @@ import {
 import { Fragment, useState, type ReactNode } from "react";
 
 import { PostThumb } from "@/components/comments/PostThumb";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldControl, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -129,20 +131,20 @@ export function PostPreview({
   const caption = captionFor(account?.id ?? null);
 
   return (
-    <section aria-labelledby="composer-preview-title" className="rounded-xl border border-line bg-panel p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 id="composer-preview-title" className="text-sm font-semibold">
-          Preview
-        </h2>
+    <Card asChild>
+     <section aria-labelledby="composer-preview-title">
+      <CardHeader className="mb-3">
+        <CardTitle id="composer-preview-title">Preview</CardTitle>
         {captionsDiffer && accounts.length > 1 ? (
-          <div className="flex items-center gap-2">
-            <Label htmlFor="preview-account" className="text-xs font-normal text-fg-secondary">
-              Account
-            </Label>
+          <CardAction>
+           <Field id="preview-account" orientation="horizontal" density="compact" className="w-auto">
+            <FieldLabel>Account</FieldLabel>
             <Select value={account?.id ?? ""} onValueChange={setChosenId}>
-              <SelectTrigger id="preview-account" size="lg">
-                <SelectValue />
-              </SelectTrigger>
+              <FieldControl>
+                <SelectTrigger size="lg">
+                  <SelectValue />
+                </SelectTrigger>
+              </FieldControl>
               <SelectContent>
                 {accounts.map((item) => (
                   <SelectItem key={item.id} value={item.id}>
@@ -151,9 +153,10 @@ export function PostPreview({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+           </Field>
+          </CardAction>
         ) : null}
-      </div>
+      </CardHeader>
       <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
         <TabsList aria-label="Preview">
           <TabsTrigger value="feed">Feed</TabsTrigger>
@@ -176,7 +179,8 @@ export function PostPreview({
           <GridPreview wid={wid} account={account} identity={identity} assets={assets} format={format} />
         </TabsContent>
       </Tabs>
-    </section>
+     </section>
+    </Card>
   );
 }
 
@@ -355,9 +359,9 @@ function GridPreview({
               <Icon className="size-3.5" />
             </span>
           ) : null}
-          <span className="absolute bottom-1.5 left-1.5 rounded-sm bg-brand-deep px-1.5 py-0.5 text-2xs font-semibold text-on-brand">
+          <Badge tone="count" shape="tag" className="absolute bottom-1.5 left-1.5">
             New
-          </span>
+          </Badge>
         </li>
         {account && posts.isPending
           ? Array.from({ length: GRID_RECENT }, (_, index) => (

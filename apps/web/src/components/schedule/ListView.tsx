@@ -19,10 +19,11 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldControl, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -118,31 +119,39 @@ export function ListView({
 
   let content;
   if (list.isPending) content = <ListSkeleton />;
-  else if (list.isError) content = <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
+  else if (list.isError) content = <ErrorState size="compact" error={list.error} onRetry={() => void list.refetch()} />;
   else if (items.length === 0) {
     content = (
-      <EmptyState
-        className="rounded-xl border border-line bg-panel"
-        {...EMPTY[tab]}
-        action={
-          tab === "scheduled" ? <Button onClick={() => schedule.actions.newPostAt(null)}>New post</Button> : undefined
-        }
-      />
+      <Card>
+        <EmptyState
+          size="compact"
+          {...EMPTY[tab]}
+          action={
+            tab === "scheduled" ? (
+              <Button size="sm" onClick={() => schedule.actions.newPostAt(null)}>
+                New post
+              </Button>
+            ) : undefined
+          }
+        />
+      </Card>
     );
   } else {
     const allChosen = chosen.length === items.length;
     content = (
       <div className="space-y-3">
         <div className="flex min-h-10 flex-wrap items-center gap-2 px-1">
-          <label className="flex min-h-8 items-center gap-2 text-sm text-fg-secondary">
+          <Field orientation="horizontal" className="w-auto gap-2">
             <Checkbox
               ref={selectAll}
               checked={allChosen ? true : chosen.length > 0 ? "indeterminate" : false}
               onCheckedChange={(value) => setSelected(value === true ? new Set(items.map((p) => p.id)) : new Set())}
               aria-label="Select all posts"
             />
-            {chosen.length > 0 ? `${chosen.length} selected` : "Select all"}
-          </label>
+            <FieldLabel className="min-h-8 font-normal text-fg-secondary">
+              {chosen.length > 0 ? `${chosen.length} selected` : "Select all"}
+            </FieldLabel>
+          </Field>
           {chosen.length > 0 ? (
             <div role="toolbar" aria-label="Bulk actions" className="ml-auto flex flex-wrap items-center gap-1">
               {tab === "scheduled" ? (
@@ -150,13 +159,25 @@ export function ListView({
                   <Button variant="secondary" size="sm" onClick={() => setShifting(true)} disabled={bulk.isPending}>
                     <Clock aria-hidden /> Shift times
                   </Button>
-                  <Button variant="secondary" size="sm" onClick={() => run({ action: "unschedule" })} disabled={bulk.isPending}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => run({ action: "unschedule" })}
+                    disabled={bulk.isPending}
+                    loading={bulk.isPending && bulk.variables?.action === "unschedule"}
+                  >
                     <Undo2 aria-hidden /> Move to drafts
                   </Button>
                 </>
               ) : null}
               {/* Opens the confirmation, so it is the destructive trigger, not the destructive action. */}
-              <Button variant="destructive-ghost" size="sm" onClick={() => setConfirmDelete(true)} disabled={bulk.isPending}>
+              <Button
+                variant="destructive-ghost"
+                size="sm"
+                onClick={() => setConfirmDelete(true)}
+                disabled={bulk.isPending}
+                loading={bulk.isPending && bulk.variables?.action === "delete"}
+              >
                 <Trash2 aria-hidden /> Delete
               </Button>
               <Button variant="ghost" size="icon-sm" aria-label="Clear selection" onClick={clearSelection}>
@@ -165,15 +186,18 @@ export function ListView({
             </div>
           ) : null}
         </div>
-        <ul aria-label={`${STATUS_GROUPS.find((g) => g.value === tab)?.label} posts`} className="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line bg-panel">
-          {items.map((post) => (
-            <ListRow key={post.id} post={post} selected={selected.has(post.id)} onSelectedChange={(on) => toggle(post.id, on)} />
-          ))}
-        </ul>
+        {/* Rows carry their own padding, so the card has none (p-0) and clips them to its corners. */}
+        <Card asChild className="divide-y divide-line-subtle overflow-hidden p-0">
+          <ul aria-label={`${STATUS_GROUPS.find((g) => g.value === tab)?.label} posts`}>
+            {items.map((post) => (
+              <ListRow key={post.id} post={post} selected={selected.has(post.id)} onSelectedChange={(on) => toggle(post.id, on)} />
+            ))}
+          </ul>
+        </Card>
         {list.hasNextPage ? (
           <div className="flex justify-center">
-            <Button variant="secondary" onClick={() => void list.fetchNextPage()} disabled={list.isFetchingNextPage}>
-              {list.isFetchingNextPage ? "Loading…" : "Show more posts"}
+            <Button variant="secondary" onClick={() => void list.fetchNextPage()} loading={list.isFetchingNextPage}>
+              Show more posts
             </Button>
           </div>
         ) : null}
@@ -265,17 +289,19 @@ function ListRow({
 
 function ListSkeleton() {
   return (
-    <ul aria-busy="true" aria-label="Loading posts" className="divide-y divide-line-subtle rounded-xl border border-line bg-panel">
-      {Array.from({ length: 4 }, (_, i) => (
-        <li key={i} className="flex items-center gap-3 px-3 py-2.5">
-          <Skeleton className="size-12 rounded-lg" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-1/3" />
-            <Skeleton className="h-3 w-1/5" />
-          </div>
-        </li>
-      ))}
-    </ul>
+    <Card asChild className="divide-y divide-line-subtle overflow-hidden p-0">
+      <ul aria-busy="true" aria-label="Loading posts">
+        {Array.from({ length: 4 }, (_, i) => (
+          <li key={i} className="flex items-center gap-3 px-3 py-2.5">
+            <Skeleton className="size-12 rounded-lg" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-3 w-1/3" />
+              <Skeleton className="h-3 w-1/5" />
+            </div>
+          </li>
+        ))}
+      </ul>
+    </Card>
   );
 }
 
@@ -353,28 +379,24 @@ function ShiftForm({
         </DialogDescription>
       </DialogHeader>
       <div className="grid grid-cols-3 gap-2">
-        <div className="space-y-1">
-          <Label htmlFor="shift-amount" className="text-xs text-fg-secondary">
-            Amount
-          </Label>
+        <Field id="shift-amount" density="compact" invalid={Boolean(error)}>
+          <FieldLabel>Amount</FieldLabel>
           <Input
-            id="shift-amount"
             size="lg"
             inputMode="numeric"
             value={amount}
-            aria-invalid={Boolean(error)}
             onChange={(event) => setAmount(event.target.value)}
             className="tabular-nums"
           />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="shift-unit" className="text-xs text-fg-secondary">
-            Unit
-          </Label>
+        </Field>
+        <Field id="shift-unit" density="compact">
+          <FieldLabel>Unit</FieldLabel>
           <Select value={unit} onValueChange={(value) => setUnit(value as typeof unit)}>
-            <SelectTrigger id="shift-unit" size="lg" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
+            <FieldControl id="shift-unit">
+              <SelectTrigger size="lg" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+            </FieldControl>
             <SelectContent>
               {UNITS.map((u) => (
                 <SelectItem key={u.value} value={u.value}>
@@ -383,21 +405,21 @@ function ShiftForm({
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="shift-direction" className="text-xs text-fg-secondary">
-            Direction
-          </Label>
+        </Field>
+        <Field id="shift-direction" density="compact">
+          <FieldLabel>Direction</FieldLabel>
           <Select value={direction} onValueChange={(value) => setDirection(value as typeof direction)}>
-            <SelectTrigger id="shift-direction" size="lg" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
+            <FieldControl id="shift-direction">
+              <SelectTrigger size="lg" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+            </FieldControl>
             <SelectContent>
               <SelectItem value="later">Later</SelectItem>
               <SelectItem value="earlier">Earlier</SelectItem>
             </SelectContent>
           </Select>
-        </div>
+        </Field>
       </div>
       {error ? (
         <p role="alert" className="text-xs text-danger-fg">
@@ -408,7 +430,7 @@ function ShiftForm({
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" loading={pending}>
           Shift {count} {count === 1 ? "post" : "posts"}
         </Button>
       </DialogFooter>

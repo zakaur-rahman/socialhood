@@ -4,8 +4,12 @@ import { Copy, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ErrorState } from "@/components/states/ErrorState";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -135,11 +139,8 @@ function AccountTimes({
   }
   if (slots.isError) {
     return (
-      <div className="space-y-2 p-4">
-        <p className="text-sm text-fg-secondary">{errorMessage(slots.error)}</p>
-        <Button variant="secondary" onClick={() => void slots.refetch()}>
-          Try again
-        </Button>
+      <div className="p-4">
+        <ErrorState size="compact" error={slots.error} onRetry={() => void slots.refetch()} />
       </div>
     );
   }
@@ -181,7 +182,7 @@ function AccountTimes({
             />
           ))}
         </ul>
-        <div className="mt-4 rounded-lg border border-line bg-field p-3">
+        <CardInset padding="compact" className="mt-4">
           <p className={EYEBROW}>Next free times</p>
           <p className="mt-1 text-sm tabular-nums" data-testid="next-free-times">
             {slots.data.next_free_at.length > 0
@@ -189,22 +190,18 @@ function AccountTimes({
               : "No free times yet. Add a posting time."}
           </p>
           {dirty ? <p className="mt-1 text-xs text-fg-secondary">Save to see the times your changes give.</p> : null}
-        </div>
+        </CardInset>
       </div>
       <SheetFooter className="border-t border-line">
-        {error ? (
-          <p role="alert" className="text-xs text-danger-fg">
-            {error}
-          </p>
-        ) : null}
+        {error ? <Alert tone="danger">{error}</Alert> : null}
         <div className="flex justify-end gap-2">
           {dirty ? (
             <Button variant="ghost" onClick={() => update(saved)} disabled={save.isPending}>
               Discard changes
             </Button>
           ) : null}
-          <Button onClick={submit} disabled={!dirty || save.isPending}>
-            {save.isPending ? "Saving…" : "Save posting times"}
+          <Button onClick={submit} disabled={!dirty} loading={save.isPending}>
+            Save posting times
           </Button>
         </div>
       </SheetFooter>
@@ -260,24 +257,23 @@ function DayRow({
             ))}
           </ul>
           <div className="flex items-center gap-1.5">
-            <label htmlFor={inputId} className="sr-only">
-              New time on {name}
-            </label>
             {/* The time field and its two buttons share the `default` height: 32 px, 40 px on touch. */}
-            <Input
-              id={inputId}
-              type="time"
-              step={60}
-              value={adding}
-              onChange={(event) => setAdding(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  add();
-                }
-              }}
-              className="w-auto tabular-nums"
-            />
+            <Field id={inputId} className="w-auto">
+              <FieldLabel className="sr-only">New time on {name}</FieldLabel>
+              <Input
+                type="time"
+                step={60}
+                value={adding}
+                onChange={(event) => setAdding(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    add();
+                  }
+                }}
+                className="w-auto tabular-nums"
+              />
+            </Field>
             <Button variant="secondary" onClick={add} disabled={!adding} aria-label={`Add time on ${name}`}>
               <Plus aria-hidden /> Add
             </Button>
@@ -303,15 +299,15 @@ function DayRow({
                 <div className="grid gap-1">
                   {WEEKDAYS_LONG.map((other, index) =>
                     index === weekday ? null : (
-                      <label key={other} className="flex min-h-9 items-center gap-2 text-sm">
+                      <Field key={other} orientation="horizontal" className="min-h-9 gap-2">
                         <Checkbox
                           checked={copyTo.includes(index)}
                           onCheckedChange={(value) =>
                             setCopyTo((list) => (value === true ? [...list, index] : list.filter((d) => d !== index)))
                           }
                         />
-                        {other}
-                      </label>
+                        <FieldLabel className="font-normal">{other}</FieldLabel>
+                      </Field>
                     ),
                   )}
                 </div>

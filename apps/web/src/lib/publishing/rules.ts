@@ -5,6 +5,7 @@
  * while the user types, and the API's checklist decides once the draft is saved.
  */
 import type { MediaAsset, SocialAccount } from "@/lib/api/types";
+import type { Tone } from "@/lib/ui/tone";
 
 import type { PostAsset, PostFormat, ScheduledPostStatus } from "./types";
 
@@ -242,14 +243,14 @@ export const STATUS_LABEL: Record<ScheduledPostStatus, string> = {
   canceled: "Cancelled",
 };
 
-export const STATUS_TONE: Record<ScheduledPostStatus, string> = {
-  draft: "bg-raised text-fg-secondary",
-  scheduled: "bg-brand-soft text-brand-fg",
-  publishing: "bg-brand-soft text-brand-fg",
-  published: "bg-success-soft text-success",
-  partially_published: "bg-warning-soft text-warning",
-  failed: "bg-danger-soft text-danger-fg",
-  canceled: "bg-raised text-fg-secondary",
+export const STATUS_TONE: Record<ScheduledPostStatus, Tone> = {
+  draft: "neutral",
+  scheduled: "brand",
+  publishing: "brand",
+  published: "success",
+  partially_published: "warning",
+  failed: "danger",
+  canceled: "neutral",
 };
 
 /** Draft and scheduled posts can be edited; once publishing starts the composer is read-only. */

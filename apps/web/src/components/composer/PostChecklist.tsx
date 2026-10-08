@@ -2,6 +2,7 @@
 
 import { CheckCircle2, ChevronRight, XCircle } from "lucide-react";
 
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ChecklistItem } from "@/lib/publishing/types";
 
 /**
@@ -21,19 +22,16 @@ export function PostChecklist({
   onFix: (field: string | null | undefined) => void;
 }) {
   return (
-    <section
-      aria-labelledby="composer-checklist-title"
-      id="composer-checklist"
-      className="rounded-xl border border-line bg-panel p-4 md:p-5"
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h2 id="composer-checklist-title" className="text-sm font-semibold">
-          Checklist
-        </h2>
-        <p className="text-xs text-fg-secondary" data-testid="checklist-summary">
-          {failing === 0 ? "Ready to schedule" : failing === 1 ? "1 thing to fix" : `${failing} things to fix`}
-        </p>
-      </div>
+    <Card asChild>
+     <section aria-labelledby="composer-checklist-title" id="composer-checklist">
+      <CardHeader className="mb-2">
+        <CardTitle id="composer-checklist-title">Checklist</CardTitle>
+        <CardAction>
+          <p className="text-xs text-fg-secondary" data-testid="checklist-summary">
+            {failing === 0 ? "Ready to schedule" : failing === 1 ? "1 thing to fix" : `${failing} things to fix`}
+          </p>
+        </CardAction>
+      </CardHeader>
       <ul className="space-y-1" aria-label="Checks before scheduling">
         {items.map((item, index) =>
           item.ok ? (
@@ -65,6 +63,7 @@ export function PostChecklist({
           ),
         )}
       </ul>
-    </section>
+     </section>
+    </Card>
   );
 }

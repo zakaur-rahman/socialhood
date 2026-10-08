@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { Card, CardAction, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 /** One block of the composer's left column (UX-SCR-13), titled for screen readers and the checklist. */
@@ -21,23 +22,15 @@ export function Section({
   tabIndex?: number;
 }) {
   return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-title`}
-      tabIndex={tabIndex}
-      className={cn(
-        // Focus (a checklist item moves it here) is the global outline.
-        "scroll-mt-6 rounded-xl border border-line bg-panel p-4 md:p-5",
-        className,
-      )}
-    >
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h2 id={`${id}-title`} className="text-sm font-semibold">
-          {title}
-        </h2>
-        {aside}
-      </div>
-      {children}
-    </section>
+    <Card asChild className={cn("scroll-mt-6", className)}>
+      {/* Focus (a checklist item moves it here) is the global outline. */}
+      <section id={id} aria-labelledby={`${id}-title`} tabIndex={tabIndex}>
+        <CardHeader className="mb-3">
+          <CardTitle id={`${id}-title`}>{title}</CardTitle>
+          {aside ? <CardAction>{aside}</CardAction> : null}
+        </CardHeader>
+        {children}
+      </section>
+    </Card>
   );
 }

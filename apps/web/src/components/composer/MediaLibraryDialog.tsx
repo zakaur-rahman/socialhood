@@ -1,18 +1,18 @@
 "use client";
 
-import { Check, FileVideo, RotateCw } from "lucide-react";
+import { Check, FileVideo } from "lucide-react";
 import { useState } from "react";
 
+import { EmptyState } from "@/components/states/EmptyState";
+import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useMediaLibrary, type MediaLibraryFilters } from "@/lib/api/queries/scheduledPosts";
 import type { MediaAsset } from "@/lib/api/types";
-import { errorMessage } from "@/lib/copy";
 import { formatDuration } from "@/lib/publishing/rules";
 import { cn } from "@/lib/utils";
 
@@ -72,12 +72,9 @@ export function MediaLibraryDialog({
             <ToggleGroupItem value="video">Videos</ToggleGroupItem>
           </ToggleGroup>
           {/* Native date pickers through Input (D-04); `lg`, the old 36 px fields. */}
-          <div className="space-y-1">
-            <Label htmlFor="library-since" className="text-xs text-fg-secondary">
-              Uploaded from
-            </Label>
+          <Field id="library-since" density="compact" className="w-auto">
+            <FieldLabel>Uploaded from</FieldLabel>
             <Input
-              id="library-since"
               type="date"
               size="lg"
               className="w-auto"
@@ -85,13 +82,10 @@ export function MediaLibraryDialog({
               max={until || undefined}
               onChange={(event) => setSince(event.target.value)}
             />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="library-until" className="text-xs text-fg-secondary">
-              To
-            </Label>
+          </Field>
+          <Field id="library-until" density="compact" className="w-auto">
+            <FieldLabel>To</FieldLabel>
             <Input
-              id="library-until"
               type="date"
               size="lg"
               className="w-auto"
@@ -99,7 +93,7 @@ export function MediaLibraryDialog({
               min={since || undefined}
               onChange={(event) => setUntil(event.target.value)}
             />
-          </div>
+          </Field>
         </div>
 
         {library.isPending ? (
@@ -111,19 +105,13 @@ export function MediaLibraryDialog({
             ))}
           </ul>
         ) : library.isError ? (
-          <div role="alert" className="flex flex-col items-center gap-2 py-8 text-center text-sm">
-            <p className="text-fg-secondary">{errorMessage(library.error)}</p>
-            <Button variant="secondary" onClick={() => void library.refetch()}>
-              <RotateCw aria-hidden /> Try again
-            </Button>
-          </div>
+          <ErrorState size="compact" error={library.error} onRetry={() => void library.refetch()} />
         ) : items.length === 0 ? (
-          <div className="py-8 text-center">
-            <p className="text-sm font-semibold">{filtered ? "Nothing matches these filters" : "No uploads yet"}</p>
-            <p className="mt-1 text-sm text-fg-secondary">
-              {filtered ? "Try another type or date." : "Photos and videos you upload for posts are kept here."}
-            </p>
-          </div>
+          <EmptyState
+            size="compact"
+            title={filtered ? "Nothing matches these filters" : "No uploads yet"}
+            body={filtered ? "Try another type or date." : "Photos and videos you upload for posts are kept here."}
+          />
         ) : (
           <ul aria-label="Uploads" className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {items.map((asset) => {
@@ -179,9 +167,8 @@ export function MediaLibraryDialog({
             variant="ghost"
             className="justify-self-center"
             onClick={() => void library.fetchNextPage()}
-            disabled={library.isFetchingNextPage}
+            loading={library.isFetchingNextPage}
           >
-            {library.isFetchingNextPage ? <Spinner /> : null}
             Load more
           </Button>
         ) : null}

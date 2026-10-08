@@ -23,7 +23,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DisabledReason } from "@/components/ui/disabled-reason";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -564,7 +567,6 @@ function Composer({
   else if (uploads.busy) publishBlock = "Wait for the uploads to finish.";
   // When both buttons are blocked for the same reason, it is said once, for both of them.
   const publishReason = publishBlock !== scheduleBlock ? publishBlock : null;
-  const publishReasonId = publishReason ? "composer-publish-reason" : publishBlock ? "composer-schedule-reason" : undefined;
   const scheduleLabel = !isDraft ? "Update schedule" : whenMode === "queue" ? "Add to queue" : "Schedule";
 
   const publishAtLabel = server.status === "scheduled" && server.publish_at ? server.publish_at : null;
@@ -584,9 +586,9 @@ function Composer({
           <h1 className="text-2xl font-semibold tracking-tight">Post</h1>
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
-          <span data-testid="status-pill" className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_TONE[server.status])}>
+          <Badge data-testid="status-pill" tone={STATUS_TONE[server.status]} size="md">
             {STATUS_LABEL[server.status]}
-          </span>
+          </Badge>
           {editable ? <SaveState status={saveStatus} autosave={isDraft} onRetry={() => void flush()} /> : null}
         </div>
         <DropdownMenu>
@@ -612,10 +614,9 @@ function Composer({
         </DropdownMenu>
       </header>
       {saveStatus === "error" && saveError && saveError.code !== "validation_error" ? (
-        <p role="alert" className="mt-3 flex items-start gap-2 text-sm text-danger-fg">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <Alert tone="danger" icon={<AlertCircle />} className="mt-3">
           {errorMessage(saveError)}
-        </p>
+        </Alert>
       ) : null}
 
       <StatusBanner
@@ -734,26 +735,28 @@ function Composer({
                       Save draft
                     </Button>
                   ) : null}
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    disabled={Boolean(publishBlock) || acting}
-                    aria-describedby={publishReasonId}
-                    onClick={() => setConfirmPublish(true)}
-                  >
-                    {publishNow.isPending ? <Spinner /> : <Send aria-hidden />}
-                    Publish now
-                  </Button>
-                  <Button
-                    size="lg"
-                    className="ml-auto"
-                    disabled={Boolean(scheduleBlock) || acting}
-                    aria-describedby={scheduleBlock ? "composer-schedule-reason" : undefined}
-                    onClick={() => void onSchedule()}
-                  >
-                    {schedule.isPending || queuePost.isPending || (put.isPending && !isDraft) ? <Spinner /> : null}
-                    {scheduleLabel}
-                  </Button>
+                  <DisabledReason reason={publishBlock}>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      disabled={Boolean(publishBlock) || acting}
+                      loading={publishNow.isPending}
+                      onClick={() => setConfirmPublish(true)}
+                    >
+                      <Send aria-hidden />
+                      Publish now
+                    </Button>
+                  </DisabledReason>
+                  <DisabledReason reason={scheduleBlock} className="ml-auto">
+                    <Button
+                      size="lg"
+                      disabled={Boolean(scheduleBlock) || acting}
+                      loading={schedule.isPending || queuePost.isPending || (put.isPending && !isDraft)}
+                      onClick={() => void onSchedule()}
+                    >
+                      {scheduleLabel}
+                    </Button>
+                  </DisabledReason>
                 </div>
                 {scheduleBlock || publishReason ? (
                   // On a short viewport the reasons share one line; the buttons keep the full text
