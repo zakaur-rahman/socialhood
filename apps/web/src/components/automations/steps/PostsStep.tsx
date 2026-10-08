@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, ImageOff, Search } from "lucide-react";
+import { Check, ImageOff } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePosts } from "@/lib/api/queries";
@@ -201,22 +202,15 @@ function PostPicker({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative min-w-48 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
-          <label htmlFor="automation-post-search" className="sr-only">
-            Search posts by caption
-          </label>
-          <Input
-            id="automation-post-search"
-            type="search"
-            size="lg"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            placeholder="Search captions"
-            autoComplete="off"
-            className="pl-10"
-          />
-        </div>
+        <SearchInput
+          label="Search posts by caption"
+          id="automation-post-search"
+          size="lg"
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          placeholder="Search captions"
+          className="min-w-48 flex-1"
+        />
         <p className="text-xs text-fg-secondary tabular-nums" aria-live="polite">
           {count === 1 ? "1 post chosen" : `${count} posts chosen`}
         </p>
@@ -229,12 +223,7 @@ function PostPicker({
           ))}
         </div>
       ) : posts.isError ? (
-        <p role="alert" className="text-sm text-danger-fg">
-          Posts didn&apos;t load.{" "}
-          <button type="button" className="underline underline-offset-4" onClick={() => void posts.refetch()}>
-            Try again
-          </button>
-        </p>
+        <ErrorState size="compact" error={posts.error} onRetry={() => void posts.refetch()} />
       ) : tiles.length === 0 ? (
         <p className="text-sm text-fg-secondary">
           {q ? `No posts match "${q}".` : "No posts yet. They appear here once the account has published."}
@@ -254,7 +243,8 @@ function PostPicker({
                   disabled={tile.scheduled && !selected}
                   className={cn(
                     "group relative grid aspect-square w-full place-items-center overflow-hidden rounded-lg border-2 bg-raised",
-                    selected ? "border-brand" : "border-transparent opacity-80 hover:opacity-100",
+                    "disabled:opacity-50",
+                    selected ? "border-brand" : "border-line hover:border-line-strong",
                   )}
                 >
                   {tile.thumbnail ? (

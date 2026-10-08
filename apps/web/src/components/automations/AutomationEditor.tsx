@@ -19,7 +19,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,6 +63,7 @@ import { instagramAccounts } from "@/lib/automations/accounts";
 import { queueBanner, shortDateTime, STATUS_LABEL, SURGE_LABEL } from "@/lib/automations/format";
 import { errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
+import type { Tone } from "@/lib/ui/tone";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -73,12 +77,12 @@ import { WhenStep } from "./steps/WhenStep";
 import { editorHref } from "./TemplateGallery";
 import { useAutosave, type SaveStatus } from "./use-autosave";
 
-const STATUS_TONE: Record<DisplayStatus, string> = {
-  draft: "bg-raised text-fg-secondary",
-  scheduled: "bg-brand-soft text-brand-fg",
-  active: "bg-success-soft text-success",
-  paused: "bg-warning-soft text-warning",
-  ended: "bg-raised text-fg-secondary",
+const STATUS_TONE: Record<DisplayStatus, Tone> = {
+  draft: "neutral",
+  scheduled: "brand",
+  active: "success",
+  paused: "warning",
+  ended: "neutral",
 };
 
 /** UX-SCR-03: loads the automation, then the editor keyed by it. */
@@ -259,12 +263,9 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
           />
           {nameError ? <p className="text-xs text-danger-fg">{nameError}</p> : null}
         </div>
-        <span
-          data-testid="status-pill"
-          className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_TONE[server.display_status])}
-        >
+        <Badge data-testid="status-pill" tone={STATUS_TONE[server.display_status]} size="md">
           {STATUS_LABEL[server.display_status]}
-        </span>
+        </Badge>
         <SaveIndicator status={status} onRetry={() => void flush()} />
         {active ? (
           <Button variant="secondary" size="lg" onClick={onPause} disabled={statusBusy}>
@@ -293,17 +294,17 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         </DropdownMenu>
       </header>
       {status === "error" && error ? (
-        <p role="alert" className="mt-3 flex items-start gap-2 text-sm text-danger-fg">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <Alert tone="danger" icon={<AlertCircle />} className="mt-3">
           {error.code === "validation_error" ? "Some changes weren't saved. Fix the fields marked below." : errorMessage(error)}
-        </p>
+        </Alert>
       ) : null}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <aside
-          aria-label="Preview and results"
-          className="rounded-xl border border-line bg-panel p-4 xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1 xl:self-start"
+        <Card
+          asChild
+          className="xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1 xl:self-start"
         >
+        <aside aria-label="Preview and results">
           <SidePanel
             wid={wid}
             slug={slug}
@@ -316,17 +317,20 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             beforeTest={flush}
           />
         </aside>
+        </Card>
 
         <div className="min-w-0 space-y-4 xl:col-start-1 xl:row-start-1 xl:max-w-[720px]">
           {server.queue.waiting > 0 ? (
             <QueueBanner queue={server.queue} order={draft.surge_order} onOrderChange={(order) => change({ surge_order: order })} />
           ) : null}
           {unplaced.length > 0 ? (
-            <ul role="alert" className="space-y-1 rounded-xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger-fg">
-              {unplaced.map(([field, message]) => (
-                <li key={field}>{message}</li>
-              ))}
-            </ul>
+            <Alert tone="danger">
+              <ul className="space-y-1">
+                {unplaced.map(([field, message]) => (
+                  <li key={field}>{message}</li>
+                ))}
+              </ul>
+            </Alert>
           ) : null}
           <div className="relative pl-8">
             <span
@@ -463,13 +467,11 @@ function QueueBanner({
   onOrderChange: (order: SurgeOrder) => void;
 }) {
   return (
-    <div role="status" className="flex flex-wrap items-center gap-3 rounded-xl border border-brand-line bg-brand-soft px-4 py-3 text-sm">
-      <Clock className="size-4 shrink-0 text-brand-fg" aria-hidden />
-      <p className="min-w-0 flex-1">
-        <span className="font-medium tabular-nums">{queueBanner(queue)}</span>
-        <span className="text-fg-secondary"> · {SURGE_LABEL[order]}</span>
-      </p>
-      <DropdownMenu>
+    <Alert
+      tone="brand"
+      icon={<Clock />}
+      action={
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="secondary" size="sm">
             Change order
@@ -486,7 +488,13 @@ function QueueBanner({
           </DropdownMenuRadioGroup>
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+      }
+    >
+      <p>
+        <span className="font-medium tabular-nums">{queueBanner(queue)}</span>
+        <span> · {SURGE_LABEL[order]}</span>
+      </p>
+    </Alert>
   );
 }
 
@@ -499,10 +507,10 @@ function EditorSkeleton() {
       </div>
       <div className="max-w-[720px] space-y-4 pl-8">
         {Array.from({ length: 4 }, (_, i) => (
-          <div key={i} className="space-y-3 rounded-xl border border-line bg-panel p-5">
+          <Card key={i} padding="roomy" className="space-y-3">
             <Skeleton className="h-3 w-20" />
             <Skeleton className="h-9 w-full" />
-          </div>
+          </Card>
         ))}
       </div>
     </div>

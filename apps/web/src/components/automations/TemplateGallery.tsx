@@ -5,7 +5,9 @@ import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
@@ -196,7 +198,8 @@ export function TemplateCard({
 }) {
   const titleId = `template-${template.key}`;
   return (
-    <article aria-labelledby={titleId} className="flex h-full min-h-44 flex-col rounded-xl border border-line bg-field p-4">
+    <Card asChild className="flex h-full min-h-44 flex-col">
+    <article aria-labelledby={titleId}>
       <div className="flex items-start justify-between gap-2">
         <span className="bg-brand-gradient-decor grid size-9 place-items-center rounded-lg text-on-brand">
           <TemplateIcon name={template.icon} className="size-5" />
@@ -207,25 +210,24 @@ export function TemplateCard({
         {template.name}
       </h3>
       <p className="mt-1 flex-1 text-sm text-fg-secondary">{template.outcome}</p>
-      <div className="mt-3 flex flex-wrap gap-1.5 text-2xs">
-        <span className="rounded-full bg-raised px-2 py-0.5 text-fg-secondary">{TRIGGER_LABEL[template.trigger]}</span>
-        <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2 py-0.5 text-fg-secondary">
-          {template.action === "ai_reply" ? <Sparkles className="size-3" aria-hidden /> : null}
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        <Badge>{TRIGGER_LABEL[template.trigger]}</Badge>
+        <Badge>
+          {template.action === "ai_reply" ? <Sparkles aria-hidden /> : null}
           {ACTION_TAG[template.action]}
-        </span>
+        </Badge>
       </div>
       <Button className="mt-3 self-start" disabled={disabled} onClick={onUse} aria-label={`Use template: ${template.name}`}>
         {pending ? <Spinner /> : null}
         Use template
       </Button>
     </article>
+    </Card>
   );
 }
 
 export function ProBadge() {
-  return (
-    <span className="rounded-full bg-brand-soft px-2 py-0.5 text-2xs font-semibold text-brand-fg">Pro</span>
-  );
+  return <Badge tone="brand">Pro</Badge>;
 }
 
 function AccountQuestion({

@@ -29,7 +29,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
@@ -126,11 +128,10 @@ export function AutomationRow({
   const resumeLabel = automation.status === "draft" ? "Activate" : "Resume";
 
   return (
-    <li
-      ref={rowRef}
-      data-automation={automation.id}
+    <Card
+      asChild
       className={cn(
-        "group/row relative rounded-xl border border-line bg-panel motion-safe:transition-opacity",
+        "group/row relative motion-safe:transition-opacity",
         reorder?.dragging && "opacity-60",
         reorder?.dropMarker === "before" &&
           "before:absolute before:inset-x-2 before:-top-[5px] before:h-0.5 before:rounded-full before:bg-brand",
@@ -138,7 +139,8 @@ export function AutomationRow({
           "after:absolute after:inset-x-2 after:-bottom-[5px] after:h-0.5 after:rounded-full after:bg-brand",
       )}
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-3 p-4 md:flex-nowrap md:py-3">
+    <li ref={rowRef} data-automation={automation.id}>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-3 md:flex-nowrap">
         {/* Revealed on hover only with a mouse: on touch the checkbox and the handle always show (UI-ISS-057). */}
         <div
           className={cn(
@@ -186,16 +188,14 @@ export function AutomationRow({
               {name}
             </Link>
             {automation.display_status === "draft" ? (
-              <span className="rounded-full bg-raised px-2 py-0.5 text-2xs font-medium text-fg-secondary">
-                {STATUS_LABEL.draft}
-              </span>
+              <Badge>{STATUS_LABEL.draft}</Badge>
             ) : null}
             {status ? <span className="text-xs text-fg-secondary">{status}</span> : null}
             {queue ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-2 py-0.5 text-2xs font-medium text-brand-fg tabular-nums">
-                <Clock className="size-3" aria-hidden />
+              <Badge tone="brand" className="tabular-nums">
+                <Clock aria-hidden />
                 {queue}
-              </span>
+              </Badge>
             ) : null}
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-fg-secondary">
@@ -207,9 +207,9 @@ export function AutomationRow({
               <span data-testid="keyword-chips" className="flex flex-wrap items-center gap-1">
                 <span className="sr-only">Keywords: {automation.keywords.join(", ")}</span>
                 {chips.map((keyword) => (
-                  <span key={keyword} aria-hidden className="rounded-full bg-field px-2 py-0.5 text-fg">
+                  <Badge key={keyword} aria-hidden size="md" className="bg-field text-fg">
                     {keyword}
-                  </span>
+                  </Badge>
                 ))}
                 {more > 0 ? (
                   <span aria-hidden className="px-1">
@@ -219,10 +219,10 @@ export function AutomationRow({
               </span>
             ) : null}
             {action ? (
-              <span className="inline-flex items-center gap-1 rounded-full border border-line px-2 py-0.5 text-fg">
-                {automation.action === "ai_reply" ? <Sparkles className="size-3 text-brand-fg" aria-hidden /> : null}
+              <Badge size="md" className="text-fg">
+                {automation.action === "ai_reply" ? <Sparkles className="text-brand-fg" aria-hidden /> : null}
                 {action}
-              </span>
+              </Badge>
             ) : null}
           </div>
         </div>
@@ -298,5 +298,6 @@ export function AutomationRow({
         </AlertDialogContent>
       </AlertDialog>
     </li>
+    </Card>
   );
 }
