@@ -101,7 +101,7 @@ export function ActionCardView({
   return (
     <section
       aria-label={kind.title}
-      className="flex items-center gap-3 rounded-xl border border-line-subtle bg-white/5 px-3 py-2.5"
+      className="flex items-center gap-3 rounded-xl border border-line-subtle bg-hover px-3 py-2.5"
       data-testid={`action-${card.kind}`}
     >
       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-fg" aria-hidden>
@@ -119,7 +119,7 @@ export function ActionCardView({
       </div>
       <Button
         variant="secondary"
-        className="min-h-10 shrink-0 px-3 md:min-h-8"
+        className="shrink-0 px-3"
         // The visible "Open" starts the name (WCAG 2.5.3), then what it opens.
         aria-label={/^open\b/i.test(card.label) ? card.label : `Open: ${card.label}`}
         aria-describedby={hintId}

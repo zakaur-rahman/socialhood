@@ -14,6 +14,7 @@ import { useAgentRun } from "@/lib/api/queries";
 import type { AgentRun, AgentRunDetail, Role } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
+import { TONE_CLASS } from "@/lib/ui/tone";
 import { cn } from "@/lib/utils";
 
 import { ActionCardView } from "./ActionCardView";
@@ -53,13 +54,13 @@ export function RunView({ run: listed, context, latest = false }: { run: AgentRu
       <div className="flex items-end justify-end gap-2">
         <time
           dateTime={run.created_at}
-          className="mb-2 shrink-0 text-[11px] text-fg-secondary opacity-0 group-focus-within/run:opacity-100 group-hover/run:opacity-100 motion-safe:transition-opacity"
+          className="mb-2 shrink-0 text-2xs text-fg-secondary opacity-0 group-focus-within/run:opacity-100 group-hover/run:opacity-100 motion-safe:transition-opacity"
         >
           {asked}
         </time>
         <div
           title={asked}
-          className="max-w-[80%] rounded-2xl bg-raised px-4 py-2.5 text-[15px] leading-7 break-words whitespace-pre-wrap text-fg"
+          className="max-w-[80%] rounded-2xl bg-raised px-4 py-2.5 text-md break-words whitespace-pre-wrap text-fg"
         >
           {run.request}
         </div>
@@ -114,8 +115,8 @@ function Finished({
       ) : !outcome ? (
         // Final, but the answer is still on its way (agent.completed is followed by a fetch).
         <div aria-busy="true" aria-label="Getting the answer" className="space-y-2 pt-1">
-          <Skeleton className="h-3 w-5/6 bg-raised" />
-          <Skeleton className="h-3 w-2/3 bg-raised" />
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-2/3" />
         </div>
       ) : null}
       {run.action_cards.length > 0 ? (
@@ -141,7 +142,7 @@ function Finished({
                 type="button"
                 disabled={context.busy}
                 onClick={() => context.onAsk?.(prompt)}
-                className="min-h-10 rounded-full border border-line px-3.5 text-left text-sm text-fg-secondary hover:bg-white/5 hover:text-fg disabled:opacity-50 md:min-h-8"
+                className="min-h-8 rounded-full border border-line px-3.5 text-left text-sm text-fg-secondary hover:bg-hover hover:text-fg disabled:opacity-50 motion-safe:transition-[color,background-color] pointer-coarse:min-h-10"
               >
                 {prompt}
               </button>
@@ -178,7 +179,7 @@ function AnswerActions({ answer, credits, alwaysVisible }: { answer: string; cre
       <Button
         variant="ghost"
         size="sm"
-        className="min-h-10 px-2 text-fg-secondary hover:text-fg md:min-h-7"
+        className="px-2 text-fg-secondary"
         aria-label="Copy answer"
         onClick={() => void copy()}
       >
@@ -190,11 +191,12 @@ function AnswerActions({ answer, credits, alwaysVisible }: { answer: string; cre
 }
 
 const OUTCOME_ICON = { quota: CreditCard, failed: AlertTriangle, cancelled: CircleSlash, expired: Ban } as const;
+/** The tone map's soft fills (lib/ui/tone): the notice's text, its title and body, is the tone's colour. */
 const OUTCOME_TONE = {
-  quota: "bg-warning/10 text-warning",
-  failed: "bg-danger/10 text-danger-fg",
-  cancelled: "bg-white/5 text-fg-secondary",
-  expired: "bg-white/5 text-fg-secondary",
+  quota: TONE_CLASS.warning,
+  failed: TONE_CLASS.danger,
+  cancelled: TONE_CLASS.neutral,
+  expired: TONE_CLASS.neutral,
 } as const;
 
 /** A compact inline notice: what happened, in one or two lines, with Try again or Upgrade. */
@@ -209,17 +211,19 @@ function OutcomeNotice({ outcome, run, context }: { outcome: RunOutcome; run: Ag
     >
       <p className="flex min-w-0 flex-1 basis-56 items-start gap-2">
         <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+        {/* One colour on the soft fill, as an Alert's: secondary text on `warning-soft` over the
+            panel's `overlay` surface is 4.2:1. */}
         <span className="min-w-0">
           <span className="font-medium">{outcome.title}</span>
-          <span className="text-fg-secondary"> · </span>
-          <span className="text-fg-secondary">{outcome.body}</span>
+          <span> · </span>
+          <span>{outcome.body}</span>
         </span>
       </p>
       {canAskAgain ? (
         <Button
           variant="ghost"
           size="sm"
-          className="min-h-10 px-2 text-fg hover:bg-white/10 md:min-h-7"
+          className="px-2 text-fg"
           disabled={context.busy}
           onClick={() => context.onAsk?.(run.request)}
         >
@@ -227,7 +231,7 @@ function OutcomeNotice({ outcome, run, context }: { outcome: RunOutcome; run: Ag
         </Button>
       ) : null}
       {outcome.kind === "quota" && context.role !== "agent" ? (
-        <Button asChild size="sm" className="bg-brand-gradient min-h-10 text-white md:min-h-7">
+        <Button asChild size="sm">
           <Link href={BILLING_HREF(context.slug)} onClick={context.onNavigate}>
             Upgrade
           </Link>
@@ -265,7 +269,7 @@ function StepsDisclosure({
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen(!open)}
-        className="-ml-1 inline-flex min-h-10 items-center gap-1 rounded-md px-1 text-xs text-fg-secondary hover:text-fg md:min-h-6"
+        className="-ml-1 inline-flex min-h-6 items-center gap-1 rounded-md px-1 text-xs text-fg-secondary hover:text-fg pointer-coarse:min-h-10"
         data-testid="steps-toggle"
       >
         {label || "Steps"}
@@ -283,7 +287,7 @@ function StepsDisclosure({
             <p className="text-xs text-danger-fg">{errorMessage(fetched.error)}</p>
           ) : (
             <div aria-busy="true" aria-label="Loading steps">
-              <Skeleton className="h-3 w-1/2 bg-raised" />
+              <Skeleton className="h-3 w-1/2" />
             </div>
           )}
         </div>

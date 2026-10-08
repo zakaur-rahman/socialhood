@@ -86,6 +86,6 @@ describe("Action cards (FR-AGT-03): one light row with Open", () => {
 
   it("is a 40 px target on phones", () => {
     const { section } = show(replyCard());
-    expect(within(section).getByRole("button", { name: /^Open/ })).toHaveClass("min-h-10", "md:min-h-8");
+    expect(within(section).getByRole("button", { name: /^Open/ })).toHaveClass("h-8", "pointer-coarse:min-h-10");
   });
 });

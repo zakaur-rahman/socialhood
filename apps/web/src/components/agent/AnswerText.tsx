@@ -27,9 +27,9 @@ export function citationName(n: number, source: AnswerRef): string {
 
 /**
  * An answer in the markdown subset (FR-AGT-01, FR-AGT-04): paragraphs, bold, lists and small
- * tables of figures, set for reading (15 px, 28 px lines), with [n] citations as small pills that
- * name their record on hover or focus and link to it. Built only from React elements; nothing in
- * the answer is read as HTML.
+ * tables of figures, set for reading (`text-md`: 15 px on 24 px lines), with [n] citations as
+ * small pills that name their record on hover or focus and link to it. Built only from React
+ * elements; nothing in the answer is read as HTML.
  */
 export function AnswerText({ answer, refs, slug, onNavigate, className }: Props) {
   const blocks = useMemo(() => parseAnswer(answer, refs.length), [answer, refs.length]);
@@ -49,7 +49,7 @@ export function AnswerText({ answer, refs, slug, onNavigate, className }: Props)
 
   return (
     <div
-      className={cn("space-y-4 text-[15px] leading-7 break-words text-fg", className)}
+      className={cn("space-y-4 text-md break-words text-fg", className)}
       data-testid="answer"
     >
       {blocks.map((block, index) => (
@@ -77,7 +77,7 @@ function Citation({
           href={workspaceHref(slug, refPath(source))}
           onClick={onNavigate}
           aria-label={citationName(n, source)}
-          className="relative -top-px mx-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-raised px-1 align-middle text-[11px] leading-none font-medium text-fg-secondary tabular-nums no-underline hover:bg-brand-soft hover:text-brand-fg focus-visible:bg-brand-soft focus-visible:text-brand-fg"
+          className="relative -top-px mx-0.5 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-raised px-1 align-middle text-2xs leading-none font-medium text-fg-secondary tabular-nums no-underline hover:bg-brand-soft hover:text-brand-fg focus-visible:bg-brand-soft focus-visible:text-brand-fg"
           data-testid="citation"
         >
           {n}
@@ -160,7 +160,7 @@ export function SourcesList({ refs, slug, onNavigate }: { refs: AnswerRef[]; slu
             href={workspaceHref(slug, refPath(source))}
             onClick={onNavigate}
             title={`${REF_KIND_LABEL[source.kind]}: ${source.label}`}
-            className="inline-flex min-h-10 max-w-full items-center gap-1.5 rounded-full border border-line bg-white/5 px-3 text-xs text-fg-secondary hover:bg-white/10 hover:text-fg md:min-h-7 md:px-2.5"
+            className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-line bg-hover px-2.5 text-xs text-fg-secondary hover:bg-pressed hover:text-fg motion-safe:transition-[color,background-color] pointer-coarse:min-h-10 pointer-coarse:px-3"
           >
             <span className="font-medium text-fg tabular-nums">{index + 1}</span>
             <span aria-hidden>·</span>

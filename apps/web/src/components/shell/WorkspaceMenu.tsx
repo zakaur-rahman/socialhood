@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Plan, Role } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -21,17 +22,18 @@ export type SidebarWorkspace = { name: string; slug: string; plan: Plan; role: R
 
 export const PLAN_LABEL: Record<Plan, string> = { free: "Free", pro: "Pro", max: "Max" };
 
+/**
+ * The plan as a Badge: `sm` (11 px, the type floor), `tag` corners and the `brand` (info) tone for
+ * every plan. It sits inside the workspace menu's trigger and items, whose hover and open fills
+ * stack under its own: the `neutral` tone's white 5% on top of them reaches the `pressed` level,
+ * where secondary text is 4.46:1 (4.1:1 over the menu's `overlay`), so no neutral badge passes
+ * there. `brand-fg` on `brand-soft` stays above 5.4:1 on each of those fills.
+ */
 export function PlanBadge({ plan, className }: { plan: Plan; className?: string }) {
   return (
-    <span
-      className={cn(
-        "shrink-0 rounded px-1.5 text-[10px] leading-4 font-semibold",
-        plan === "free" ? "bg-hover text-fg-secondary" : "bg-brand-soft text-brand-fg",
-        className,
-      )}
-    >
+    <Badge tone="brand" size="sm" shape="tag" className={className}>
       {PLAN_LABEL[plan]}
-    </span>
+    </Badge>
   );
 }
 
@@ -61,7 +63,9 @@ export function WorkspaceMenu({
     <DropdownMenuTrigger
       aria-label={`Workspace menu: ${workspace.name}`}
       className={cn(
-        "relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-white/5 data-[state=open]:bg-white/5 motion-safe:transition-[color,background-color]",
+        // Open keeps the hover fill, not `pressed`: the workspace name is secondary text, which is
+        // 4.45:1 on `pressed` (DESIGN_SYSTEM §1.11).
+        "relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-hover data-[state=open]:bg-hover motion-safe:transition-[color,background-color]",
         collapsed && "size-10 justify-center p-0",
       )}
     >
@@ -93,12 +97,8 @@ export function WorkspaceMenu({
       ) : (
         trigger
       )}
-      <DropdownMenuContent
-        side={collapsed ? "right" : "bottom"}
-        align="start"
-        className="w-60 border-line bg-panel"
-      >
-        <DropdownMenuLabel className="text-xs font-medium text-fg-secondary">Workspaces</DropdownMenuLabel>
+      <DropdownMenuContent side={collapsed ? "right" : "bottom"} align="start" className="w-60">
+        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
         <DropdownMenuItem aria-current="true" className="gap-2 py-1.5">
           <span className="min-w-0 flex-1 truncate">{workspace.name}</span>
           <PlanBadge plan={workspace.plan} />

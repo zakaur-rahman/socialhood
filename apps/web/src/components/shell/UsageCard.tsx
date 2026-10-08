@@ -37,9 +37,9 @@ export function UsageCard({
     if (collapsed) return null;
     return (
       <div className="relative mt-2 w-full rounded-lg border border-line p-3" aria-hidden data-testid="usage-loading">
-        <Skeleton className="h-3 w-20 motion-reduce:animate-none" />
-        <Skeleton className="mt-2.5 h-1.5 w-full motion-reduce:animate-none" />
-        <Skeleton className="mt-2 h-3 w-24 motion-reduce:animate-none" />
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="mt-2.5 h-1.5 w-full" />
+        <Skeleton className="mt-2 h-3 w-24" />
       </div>
     );
   }
@@ -55,7 +55,7 @@ export function UsageCard({
         <TooltipTrigger asChild>
           <div role="img" aria-label={`AI credits: ${text}`} className="relative mt-2 grid size-10 place-items-center">
             <svg viewBox="0 0 28 28" className="size-7 -rotate-90" aria-hidden>
-              <circle cx="14" cy="14" r={radius} fill="none" strokeWidth="3" className="stroke-white/10" />
+              <circle cx="14" cy="14" r={radius} fill="none" strokeWidth="3" className="stroke-pressed" />
               <circle
                 cx="14"
                 cy="14"
@@ -77,7 +77,8 @@ export function UsageCard({
   }
 
   return (
-    <div className="relative mt-2 w-full rounded-lg border border-line bg-white/[0.03] p-3">
+    // An inset panel in the sidebar card: a `line` edge, no fill of its own (DESIGN_SYSTEM §5).
+    <div className="relative mt-2 w-full rounded-lg border border-line p-3">
       <div className="flex items-baseline justify-between gap-2 text-xs">
         <span className="font-medium text-fg">AI credits</span>
         <span className={cn("font-medium tabular-nums", FIGURE[tone])}>{percent}%</span>
@@ -90,7 +91,7 @@ export function UsageCard({
         aria-valuenow={Math.min(used, limit)}
         aria-valuetext={text}
         data-tone={tone}
-        className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10"
+        className="mt-2 h-1.5 overflow-hidden rounded-full bg-pressed"
       >
         <div
           className={cn("h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500", BAR[tone])}
@@ -103,7 +104,7 @@ export function UsageCard({
           <Link
             href={BILLING_HREF(slug)}
             onClick={onNavigate}
-            className="bg-shell-gradient flex h-6 shrink-0 items-center rounded-md px-2.5 text-xs font-medium text-white hover:brightness-110 motion-safe:transition-[filter] pointer-coarse:h-8"
+            className="bg-shell-gradient flex h-6 shrink-0 items-center rounded-md px-2.5 text-xs font-medium text-on-brand hover:brightness-110 motion-safe:transition-[filter] pointer-coarse:h-10"
           >
             Upgrade
           </Link>

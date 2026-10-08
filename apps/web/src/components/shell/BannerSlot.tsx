@@ -4,9 +4,11 @@ import { X } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
+import { Button } from "@/components/ui/button";
 import type { BillingState, Role } from "@/lib/api/types";
 import { billingDate, daysUntil, priceOf } from "@/lib/billing/plan";
 import { paymentFailedBanner, pricePerMonth, trialEndingBanner } from "@/lib/copy";
+import { TONE_CLASS } from "@/lib/ui/tone";
 import { cn } from "@/lib/utils";
 
 export type BannerAction =
@@ -22,13 +24,11 @@ export type Banner = {
   onDismiss?: () => void;
 };
 
-const actionClass =
-  "inline-flex min-h-10 shrink-0 items-center rounded-md bg-white/10 px-3 py-1 font-medium text-fg hover:bg-white/15 disabled:opacity-60 md:min-h-7";
-
 /**
  * UX-SH-04: app-level banners above page content (account needs reconnecting, payment on hold,
- * AI credits exhausted, trial ending). One action each; critical states cannot be dismissed.
- * They sit in `<main>`'s flow and keep their height; a full-height frame below takes the rest.
+ * AI credits exhausted, trial ending). One action each, a `secondary` `sm` Button (DESIGN_SYSTEM
+ * §8.5: banner actions); critical states cannot be dismissed. They sit in `<main>`'s flow and keep
+ * their height; a full-height frame below takes the rest.
  */
 export function BannerSlot({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
@@ -40,34 +40,29 @@ export function BannerSlot({ banners }: { banners: Banner[] }) {
           data-banner={banner.id}
           className={cn(
             "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-4 py-2.5 text-sm",
-            banner.tone === "danger" ? "bg-danger/15 text-danger-fg" : "bg-warning/15 text-warning",
+            TONE_CLASS[banner.tone],
           )}
         >
           <p className="min-w-0 flex-1 basis-60">{banner.message}</p>
           {banner.action?.href ? (
-            <Link href={banner.action.href} className={actionClass}>
-              {banner.action.label}
-            </Link>
+            <Button asChild variant="secondary" size="sm">
+              <Link href={banner.action.href}>{banner.action.label}</Link>
+            </Button>
           ) : banner.action ? (
-            <button
-              type="button"
-              className={actionClass}
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={banner.action.onClick}
               disabled={banner.action.pending}
               aria-busy={banner.action.pending || undefined}
             >
               {banner.action.label}
-            </button>
+            </Button>
           ) : null}
           {banner.onDismiss ? (
-            <button
-              type="button"
-              aria-label="Dismiss"
-              onClick={banner.onDismiss}
-              className="-mr-2 grid size-10 shrink-0 place-items-center rounded-md text-current hover:bg-white/10 md:size-7"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
+            <Button variant="ghost" size="icon-sm" aria-label="Dismiss" onClick={banner.onDismiss} className="-mr-2">
+              <X aria-hidden />
+            </Button>
           ) : null}
         </div>
       ))}
