@@ -1,6 +1,6 @@
 "use client";
 
-import { FlaskConical, Search } from "lucide-react";
+import { FlaskConical } from "lucide-react";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
@@ -21,7 +21,8 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { SearchInput } from "@/components/ui/search-input";
 import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ApiError } from "@/lib/api/errors";
@@ -97,7 +98,7 @@ function Connections() {
         <Button
           variant="ghost"
           size="lg"
-          disabled={sandbox.isPending}
+          loading={sandbox.isPending}
           onClick={() =>
             sandbox.mutate(undefined, {
               onSuccess: () => toast.success("Sandbox account added"),
@@ -116,13 +117,9 @@ function Connections() {
         </Button>
       ) : null}
       <ConnectWhatsAppButton wid={wid} />
-      <Button
-        size="lg"
-        disabled={connect.isPending || finishing}
-        onClick={startConnect}
-      >
+      <Button size="lg" loading={connect.isPending || finishing} onClick={startConnect}>
         <InstagramGlyph className="size-4" />
-        {finishing ? "Connecting Instagram…" : connect.isPending ? "Opening Instagram…" : "Connect Instagram"}
+        Connect Instagram
       </Button>
     </>
   ) : null;
@@ -142,14 +139,14 @@ function Connections() {
       }
     >
       {accounts.data.length === 0 ? (
-        <div className="rounded-2xl border border-line bg-panel">
+        <Card>
           <EmptyState
             title={emptyStates.connections.title}
             body={emptyStates.connections.body}
             icon={<InstagramGlyph className="size-8" />}
             action={
               canManage ? (
-                <Button size="xl" disabled={connect.isPending} onClick={startConnect}>
+                <Button size="xl" loading={connect.isPending} onClick={startConnect}>
                   Connect Instagram
                 </Button>
               ) : (
@@ -157,22 +154,18 @@ function Connections() {
               )
             }
           />
-        </div>
+        </Card>
       ) : (
         <>
-          <div className="flex flex-col gap-2 rounded-2xl border border-line bg-panel p-2 lg:flex-row lg:items-center">
-            <div className="relative min-w-0 flex-1">
-              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
-              <Input
-                type="search"
-                aria-label="Search accounts"
-                placeholder="Search by name, handle or number"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                size="xl"
-                className="pl-9"
-              />
-            </div>
+          <Card className="flex flex-col gap-2 p-2 lg:flex-row lg:items-center">
+            <SearchInput
+              label="Search accounts"
+              placeholder="Search by name, handle or number"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              size="xl"
+              className="flex-1"
+            />
             {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
                 Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
             <ToggleGroup
@@ -188,9 +181,9 @@ function Connections() {
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-          </div>
+          </Card>
           {shown.length === 0 ? (
-            <div className="rounded-2xl border border-line bg-panel">
+            <Card>
               <EmptyState
                 title="No accounts match"
                 body="Try another search or filter."
@@ -207,7 +200,7 @@ function Connections() {
                   </Button>
                 }
               />
-            </div>
+            </Card>
           ) : (
             <div className="grid gap-4 xl:grid-cols-2">
               {shown.map((account) => (

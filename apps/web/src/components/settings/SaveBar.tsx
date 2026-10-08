@@ -79,7 +79,7 @@ export function SaveBar({
       aria-label="Save changes"
       className={cn("sticky bottom-0 z-20 pt-2 pb-4", BOTTOM_BAR)}
     >
-      <div className="flex flex-col gap-3 rounded-2xl bg-overlay px-4 py-3 ring-1 ring-line shadow-floating sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 rounded-xl bg-overlay px-4 py-3 ring-1 ring-line shadow-floating sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-1">
           <p role="status" aria-live="polite" className="flex min-h-6 items-center gap-2 text-sm font-medium">
             {saving ? (

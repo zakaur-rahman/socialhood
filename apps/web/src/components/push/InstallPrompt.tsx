@@ -1,9 +1,9 @@
 "use client";
 
-import { Download, Share, SquarePlus, X } from "lucide-react";
+import { Download, Share, SquarePlus } from "lucide-react";
 import { useMemo, useSyncExternalStore, type ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useInstallPrompt } from "@/lib/push/install";
 import { readEnvironment, type PushEnvironment } from "@/lib/push/support";
 import { useStoredFlag } from "@/lib/use-browser-state";
@@ -78,37 +78,31 @@ export function InstallPrompt({
   if (!native && !ios && !always) return null;
 
   return (
-    <section
+    <Alert
+      tone="brand"
       aria-label={title}
-      className={cn("relative rounded-xl border border-brand-line bg-brand-soft p-4 pr-12", className)}
+      className={className}
+      onDismiss={() => setDismissed(true)}
+      action={
+        native || action ? (
+          <>
+            {native ? (
+              <AlertAction
+                onClick={() => {
+                  void install().then((accepted) => (accepted ? setDismissed(true) : undefined));
+                }}
+              >
+                <Download aria-hidden /> Install app
+              </AlertAction>
+            ) : null}
+            {action}
+          </>
+        ) : undefined
+      }
     >
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Dismiss"
-        onClick={() => setDismissed(true)}
-        className="absolute top-2 right-2"
-      >
-        <X aria-hidden />
-      </Button>
-      <p className="text-sm font-semibold">{title}</p>
-      <p className="mt-1 text-sm text-fg-secondary">{body}</p>
-      {ios ? <InstallSteps className="mt-3" /> : null}
-      {native || action ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          {native ? (
-            <Button
-              onClick={() => {
-                void install().then((accepted) => (accepted ? setDismissed(true) : undefined));
-              }}
-            >
-              <Download aria-hidden /> Install app
-            </Button>
-          ) : null}
-          {action}
-        </div>
-      ) : null}
-    </section>
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>{body}</AlertDescription>
+      {ios ? <InstallSteps className="pt-2" /> : null}
+    </Alert>
   );
 }

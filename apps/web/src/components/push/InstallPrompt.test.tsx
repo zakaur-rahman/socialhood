@@ -50,7 +50,7 @@ afterEach(() => vi.restoreAllMocks());
 describe("InstallPrompt (FR-NOT-03)", () => {
   it("nothing to offer: no card", () => {
     renderPrompt();
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("where the browser can install: Install shows its prompt, and the mini-infobar is held back", async () => {
@@ -60,7 +60,7 @@ describe("InstallPrompt (FR-NOT-03)", () => {
     expect(event.defaultPrevented).toBe(true);
     await user.click(await screen.findByRole("button", { name: "Install app" }));
     expect(event.prompt).toHaveBeenCalledOnce();
-    await waitFor(() => expect(screen.queryByRole("region", { name: "Install Social Hood" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("status", { name: "Install Social Hood" })).not.toBeInTheDocument());
   });
 
   it("dismissed stays dismissed", async () => {
@@ -68,11 +68,11 @@ describe("InstallPrompt (FR-NOT-03)", () => {
     const first = renderPrompt();
     fireInstallPrompt();
     await user.click(await screen.findByRole("button", { name: "Dismiss" }));
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     first.unmount();
     renderPrompt();
     fireInstallPrompt();
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
   it("on iPhone: the Add to Home Screen steps; not once installed", () => {
@@ -93,11 +93,11 @@ describe("InstallPrompt (FR-NOT-03)", () => {
       permission: "default",
     });
     const second = renderPrompt();
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
     second.unmount();
     // With an action (F-19's Turn on alerts) the card still shows, without the steps.
     renderPrompt({ always: true, action: <button type="button">Turn on alerts</button> });
-    expect(screen.getByRole("region", { name: "Install Social Hood" })).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "Install Social Hood" })).toBeInTheDocument();
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 

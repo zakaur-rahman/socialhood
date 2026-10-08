@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
 
@@ -44,20 +45,27 @@ export function SettingsPageHeader({
           </li>
         </ol>
       </nav>
-      <div
-        className={cn(
-          "flex flex-col gap-4 md:flex-row md:items-end md:justify-between",
-          variant === "card" && "rounded-2xl border border-line bg-panel p-5 md:p-6",
-        )}
-      >
+      <HeaderRow variant={variant}>
         <div className="min-w-0 space-y-1.5">
           <p className={cn(EYEBROW, "text-brand-fg")}>{label}</p>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">{title}</h1>
           <p className="max-w-2xl text-sm text-fg-secondary">{description}</p>
         </div>
         {actions ? <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div> : null}
-      </div>
+      </HeaderRow>
     </header>
+  );
+}
+
+/** The title row: bare, or in a roomy Card for the `card` variant. */
+function HeaderRow({ variant, children }: { variant: "plain" | "card"; children: ReactNode }) {
+  const row = "flex flex-col gap-4 md:flex-row md:items-end md:justify-between";
+  return variant === "card" ? (
+    <Card padding="roomy" className={row}>
+      {children}
+    </Card>
+  ) : (
+    <div className={row}>{children}</div>
   );
 }
 

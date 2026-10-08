@@ -326,7 +326,8 @@ describe("plan hero and quotas (C-066)", () => {
     expect(tiles[0]).toHaveTextContent("1%");
     expect(tiles[0]).toHaveTextContent("Resets on 28 Oct");
     expect(tiles[1]).toHaveTextContent("Instagram accounts");
-    expect(tiles[1]).toHaveTextContent("67%");
+    // The percentage rounds down, like the ring (UI-037): 2 of 3 is 66%, it read 67% before.
+    expect(tiles[1]).toHaveTextContent("66%");
     expect(within(tiles[2]).getByRole("meter", { name: "WhatsApp accounts" })).toHaveAttribute(
       "aria-valuetext",
       "1 of 3 connected",

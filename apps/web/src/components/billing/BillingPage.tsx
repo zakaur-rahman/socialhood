@@ -31,7 +31,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardInset } from "@/components/ui/card";
+import { Meter, meterLevel, type MeterKind } from "@/components/ui/meter";
 import { useBilling, useBillingPlans, useCancelPlan, useResumePlan } from "@/lib/api/queries";
 import type { BillingState } from "@/lib/api/types";
 import {
@@ -42,7 +46,6 @@ import {
   planStatus,
   priceOf,
   type MeterView,
-  type StatusTone,
 } from "@/lib/billing/plan";
 import { PLAN_NAME, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
@@ -59,15 +62,7 @@ import {
 } from "./CheckoutReturn";
 import { PaymentHistory } from "./PaymentHistory";
 import { PlanCards } from "./PlanCards";
-import { meterLevel, type MeterLevel } from "./UsageMeter";
 import { useOpenPortal, useStartCheckout } from "./use-billing-actions";
-
-const BADGE: Record<StatusTone, string> = {
-  neutral: "bg-hover text-fg-secondary", // on white/10, fg-secondary was 4.45:1 (UI-ISS-007)
-  brand: "bg-brand-soft text-brand-fg",
-  warning: "bg-warning-soft text-warning",
-  danger: "bg-danger-soft text-danger-fg",
-};
 
 /** The entitlement key each usage metric is limited by, for "Free includes …" at 100 %. */
 const ENTITLEMENT_FOR_METRIC: Record<string, string> = {
@@ -92,13 +87,8 @@ const METER_ICON_BG: Record<string, string> = {
   whatsapp_accounts: `${PLATFORM_BG.whatsapp} text-on-brand`,
 };
 
-const FILL: Record<MeterLevel, string> = {
-  normal: "bg-brand-gradient-decor",
-  warning: "bg-warning",
-  full: "bg-danger",
-};
-
-const count = new Intl.NumberFormat("en-US");
+/** Places, not allowances (VH-007): filling them is normal use, so the meter never warns. */
+const SLOT_METRICS = new Set(["instagram_accounts", "whatsapp_accounts", "active_automations"]);
 
 /** FR-BIL-07, said before the owner cancels: what moving to Free changes. Nothing is deleted. */
 const DOWNGRADE_EFFECTS =
@@ -229,32 +219,28 @@ function CurrentPlan({
   const actions = isOwner ? (
     <div className="flex flex-wrap gap-2 md:justify-end">
       {mayCheckout ? (
-        <Button size="lg" disabled={checkout.pending} onClick={() => checkout.start("pro")}>
-          {checkout.pending
-            ? "Opening checkout…"
-            : billing.trial_eligible
-              ? billingCopy.trialCta(trialDays)
-              : billingCopy.upgradeCta}
+        <Button size="lg" loading={checkout.pending} onClick={() => checkout.start("pro")}>
+          {billing.trial_eligible ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
         </Button>
       ) : null}
       {billing.status !== "free" ? (
         <Button
           variant={billing.status === "on_hold" ? "default" : "secondary"}
           size="lg"
-          disabled={portal.pending}
+          loading={portal.pending}
           onClick={portal.open}
         >
           <ExternalLink aria-hidden /> {billing.status === "on_hold" ? "Update payment method" : "Manage billing"}
         </Button>
       ) : null}
       {status.resumable ? (
-        <Button variant="secondary" size="lg" disabled={resume.isPending} onClick={() => setConfirm("resume")}>
-          {resume.isPending ? "Resuming…" : `Resume ${name}`}
+        <Button variant="secondary" size="lg" loading={resume.isPending} onClick={() => setConfirm("resume")}>
+          Resume {name}
         </Button>
       ) : null}
       {status.cancellable ? (
-        <Button variant="ghost" size="lg" className="text-fg-secondary" disabled={cancel.isPending} onClick={() => setConfirm("cancel")}>
-          {cancel.isPending ? "Cancelling…" : trial ? "Cancel trial" : "Cancel plan"}
+        <Button variant="ghost" size="lg" className="text-fg-secondary" loading={cancel.isPending} onClick={() => setConfirm("cancel")}>
+          {trial ? "Cancel trial" : "Cancel plan"}
         </Button>
       ) : null}
     </div>
@@ -263,10 +249,8 @@ function CurrentPlan({
   );
 
   return (
-    <section
-      aria-labelledby="plan-title"
-      className="space-y-4 rounded-2xl border border-brand-line bg-panel bg-glow-brand p-5 md:p-6"
-    >
+    <Card asChild padding="roomy" tone="brand" className="space-y-4 bg-glow-brand">
+    <section aria-labelledby="plan-title">
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-start gap-4">
           {/* A decorative icon tile: the decor gradient (DESIGN_SYSTEM §1.9); the shell gradient is the logo's and Upgrade's. */}
@@ -279,9 +263,9 @@ function CurrentPlan({
               <h2 id="plan-title" className="text-2xl font-semibold tracking-tight">
                 {status.plan}
               </h2>
-              <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", BADGE[status.badge.tone])}>
+              <Badge tone={status.badge.tone} size="md">
                 {status.badge.label}
-              </span>
+              </Badge>
             </div>
             <p className={cn("text-sm", status.badge.tone === "danger" ? "text-danger-fg" : "text-fg-secondary")}>
               {status.line}
@@ -291,9 +275,7 @@ function CurrentPlan({
         {actions}
       </div>
       {checkout.error ? (
-        <p role="alert" className="text-sm text-danger-fg">
-          {checkout.error}
-        </p>
+        <Alert tone="danger">{checkout.error}</Alert>
       ) : null}
 
       <AlertDialog open={confirm !== null} onOpenChange={(open) => (open ? undefined : setConfirm(null))}>
@@ -335,6 +317,7 @@ function CurrentPlan({
         </AlertDialogContent>
       </AlertDialog>
     </section>
+    </Card>
   );
 }
 
@@ -389,22 +372,26 @@ function Usage({ billing }: { billing: BillingState }) {
   );
 }
 
+/** The share used, rounded down so it reads 100% only when full (the ring's rule); "<1%" for a little. */
 function percentText(used: number, limit: number): string {
   const share = (used / limit) * 100;
   if (used > 0 && share < 1) return "<1%";
-  return `${Math.min(999, Math.round(share))}%`;
+  return `${Math.min(999, Math.floor(share))}%`;
 }
 
-/** One quota: label, percentage, "{used} / {limit} {unit}", a bar, and when it resets. */
+/**
+ * One quota (VH-007): its icon beside a Meter, which draws the label, "{used} of {limit} {unit}",
+ * the bar and, at 100%, the full message. Accounts and automations are slots: full is normal use,
+ * so they say a neutral "All used" and never turn red. The reset date sits underneath.
+ */
 function QuotaTile({ meter, fullMessage }: { meter: MeterView; fullMessage?: string }) {
-  const limit = meter.limit ?? 0;
-  const level = meterLevel(meter.used, limit);
-  const width = limit ? Math.min(100, Math.round((meter.used / limit) * 100)) : 0;
-  const valueText = `${count.format(meter.used)} of ${count.format(limit)} ${meter.unit}`.trim();
+  const kind: MeterKind = SLOT_METRICS.has(meter.metric) ? "slot" : "consumable";
+  const level = meterLevel(meter.used, meter.limit, kind);
+  const tone = level === "full" && kind === "consumable" ? "danger" : level === "warning" ? "warning" : "neutral";
   return (
-    <li data-level={level} className="flex min-w-0 flex-col gap-3 rounded-lg border border-line p-4">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2.5">
+    <CardInset asChild className="flex flex-col gap-3">
+      <li>
+        <div className="flex items-start gap-3">
           <span
             aria-hidden
             className={cn(
@@ -414,38 +401,21 @@ function QuotaTile({ meter, fullMessage }: { meter: MeterView; fullMessage?: str
           >
             {METER_ICON[meter.metric] ?? <Gauge />}
           </span>
-          <p className="text-sm font-medium">{meter.label}</p>
+          <Meter
+            className="flex-1"
+            label={meter.label}
+            kind={kind}
+            value={meter.used}
+            max={meter.limit}
+            unit={meter.unit}
+            fullMessage={fullMessage}
+          />
+          <Badge tone={tone} size="md" className="tabular-nums">
+            {percentText(meter.used, meter.limit ?? 1)}
+          </Badge>
         </div>
-        <span
-          className={cn(
-            "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
-            level === "full" ? "bg-danger-soft text-danger-fg" : level === "warning" ? "bg-warning-soft text-warning" : "bg-raised text-fg-secondary",
-          )}
-        >
-          {percentText(meter.used, limit)}
-        </span>
-      </div>
-      <p className="text-sm text-fg-secondary tabular-nums">
-        <span className="text-lg font-semibold text-fg">{count.format(meter.used)}</span> / {count.format(limit)}{" "}
-        {meter.unit}
-      </p>
-      <div
-        role="meter"
-        aria-label={meter.label}
-        aria-valuemin={0}
-        aria-valuemax={limit}
-        aria-valuenow={Math.min(meter.used, limit)}
-        aria-valuetext={valueText}
-        className="h-1.5 overflow-hidden rounded-full bg-raised"
-      >
-        <span className={cn("block h-full rounded-full", FILL[level])} style={{ width: `${width}%` }} />
-      </div>
-      {meter.note ? <p className="text-xs text-fg-secondary">{meter.note}</p> : null}
-      {level === "full" && fullMessage ? (
-        <p className="text-xs text-danger-fg" role="status">
-          {fullMessage}
-        </p>
-      ) : null}
-    </li>
+        {meter.note ? <p className="text-xs text-fg-secondary">{meter.note}</p> : null}
+      </li>
+    </CardInset>
   );
 }
