@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { SUMMARY_WAIT_MS, updatedLabel } from "@/components/ai/SummarySection";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/errors";
 import { useRefreshPostSummary } from "@/lib/api/queries";
@@ -51,47 +52,47 @@ export function PostSummaryCard({ post, now }: { post: PostDetail; now: Date }) 
       onError: (error) => {
         setRequested(null);
         // Out of credits (402): the upgrade dialog says so.
-        toastError(error, error instanceof ApiError && error.code === "conflict" ? NOTHING_TO_SUMMARIZE : errorMessage(error));
+        toastError(
+          error,
+          error instanceof ApiError && error.code === "conflict" ? NOTHING_TO_SUMMARIZE : errorMessage(error),
+        );
       },
     });
   };
 
   return (
-    <section aria-labelledby="post-summary-heading" className="space-y-2 rounded-xl border border-line bg-panel p-4">
-      <h2 id="post-summary-heading" className={EYEBROW}>
-        Summary
-      </h2>
-      {waiting ? (
-        <div className="space-y-2" aria-busy="true">
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-5/6" />
-          <p role="status" className="text-xs text-fg-secondary">
-            Updating the summary…
+    <Card asChild className="space-y-2">
+      <section aria-labelledby="post-summary-heading">
+        <h2 id="post-summary-heading" className={EYEBROW}>
+          Summary
+        </h2>
+        {waiting ? (
+          <div className="space-y-2" aria-busy="true">
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-5/6" />
+            <p role="status" className="text-xs text-fg-secondary">
+              Updating the summary…
+            </p>
+          </div>
+        ) : summary ? (
+          <p className="text-sm leading-relaxed">{summary}</p>
+        ) : (
+          <p className="text-sm text-fg-secondary">
+            {post.stats.analysed > 0
+              ? "No summary yet. It appears as comments come in, or ask for one now."
+              : "No summary yet. It appears once comments are analysed."}
           </p>
+        )}
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-xs text-fg-secondary">
+            {summary && post.summary_updated_at && !waiting ? updatedLabel(post.summary_updated_at, now) : ""}
+          </span>
+          {/* An AI action: the brand-soft Button (C-073). */}
+          <Button variant="soft" size="sm" disabled={waiting} loading={refresh.isPending} onClick={ask}>
+            <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}
+          </Button>
         </div>
-      ) : summary ? (
-        <p className="text-sm leading-relaxed">{summary}</p>
-      ) : (
-        <p className="text-sm text-fg-secondary">
-          {post.stats.analysed > 0
-            ? "No summary yet. It appears as comments come in, or ask for one now."
-            : "No summary yet. It appears once comments are analysed."}
-        </p>
-      )}
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-fg-secondary">
-          {summary && post.summary_updated_at && !waiting ? updatedLabel(post.summary_updated_at, now) : ""}
-        </span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-brand-fg"
-          disabled={waiting || refresh.isPending}
-          onClick={ask}
-        >
-          <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}
-        </Button>
-      </div>
-    </section>
+      </section>
+    </Card>
   );
 }

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { PageFrame } from "@/components/shell/PageFrame";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAiSettings, useDismissKnowledgeGap, useKnowledgeGaps, useKnowledgeSources } from "@/lib/api/queries";
 import type { KnowledgeGap } from "@/lib/api/types";
@@ -20,12 +21,12 @@ import { TestBox } from "./TestBox";
 
 function CardSkeleton({ label, rows = 2 }: { label: string; rows?: number }) {
   return (
-    <div className="space-y-3 rounded-xl border border-line bg-panel p-5" aria-busy="true" aria-label={label}>
+    <Card padding="roomy" className="space-y-3" aria-busy="true" aria-label={label}>
       <Skeleton className="h-4 w-40" />
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-3 w-full" />
       ))}
-    </div>
+    </Card>
   );
 }
 

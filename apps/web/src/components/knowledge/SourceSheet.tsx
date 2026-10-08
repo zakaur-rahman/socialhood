@@ -2,17 +2,20 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { AlertTriangle, FileText } from "lucide-react";
 import { useRef, useState, type ChangeEvent } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 import { useReturnFocus } from "@/components/agent/use-return-focus";
+import { Alert, AlertAction } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CardInset } from "@/components/ui/card";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError, isPlanLimitError } from "@/lib/api/errors";
@@ -270,51 +273,58 @@ function SourceForm({
     <form onSubmit={submit} noValidate className="flex flex-col gap-5 p-4" aria-label={editing ? TITLES[type].edit : TITLES[type].create}>
       {type === "faq" ? (
         <>
-          <Field id="source-question" label="Question" error={errors.question?.message}>
-            <Input id="source-question" maxLength={500} aria-invalid={!!errors.question} {...form.register("question")} />
+          <Field id="source-question" invalid={!!errors.question}>
+            <FieldLabel>Question</FieldLabel>
+            <Input maxLength={500} {...form.register("question")} />
+            <FieldError>{errors.question?.message}</FieldError>
           </Field>
-          <Field id="source-body" label="Answer" error={errors.body?.message}>
-            <Textarea id="source-body" rows={6} aria-invalid={!!errors.body} {...form.register("body")} />
+          <Field id="source-body" invalid={!!errors.body}>
+            <FieldLabel>Answer</FieldLabel>
+            <Textarea rows={6} {...form.register("body")} />
+            <FieldError>{errors.body?.message}</FieldError>
           </Field>
         </>
       ) : null}
       {type === "text" ? (
         <>
-          <Field id="source-title" label="Title" hint="For example: Shipping policy" error={errors.title?.message}>
-            <Input id="source-title" maxLength={120} aria-invalid={!!errors.title} {...form.register("title")} />
+          <Field id="source-title" invalid={!!errors.title}>
+            <FieldLabel>Title</FieldLabel>
+            <Input maxLength={120} {...form.register("title")} />
+            <FieldDescription>For example: Shipping policy</FieldDescription>
+            <FieldError>{errors.title?.message}</FieldError>
           </Field>
-          <Field id="source-body" label="Text" error={errors.body?.message}>
-            <Textarea id="source-body" rows={10} aria-invalid={!!errors.body} {...form.register("body")} />
+          <Field id="source-body" invalid={!!errors.body}>
+            <FieldLabel>Text</FieldLabel>
+            <Textarea rows={10} {...form.register("body")} />
+            <FieldError>{errors.body?.message}</FieldError>
           </Field>
         </>
       ) : null}
       {type === "url" ? (
         <>
-          <Field id="source-url" label="Web address" error={errors.url?.message}>
-            <Input
-              id="source-url"
-              type="url"
-              inputMode="url"
-              placeholder="https://"
-              aria-invalid={!!errors.url}
-              {...form.register("url")}
-            />
+          <Field id="source-url" invalid={!!errors.url}>
+            <FieldLabel>Web address</FieldLabel>
+            <Input type="url" inputMode="url" placeholder="https://" {...form.register("url")} />
+            <FieldError>{errors.url?.message}</FieldError>
           </Field>
-          <Field id="source-title" label="Title (optional)" hint="The page title is used when this is empty." error={errors.title?.message}>
-            <Input id="source-title" maxLength={120} {...form.register("title")} />
+          <Field id="source-title" invalid={!!errors.title}>
+            <FieldLabel>Title (optional)</FieldLabel>
+            <Input maxLength={120} {...form.register("title")} />
+            <FieldDescription>The page title is used when this is empty.</FieldDescription>
+            <FieldError>{errors.title?.message}</FieldError>
           </Field>
         </>
       ) : null}
       {type === "file" ? (
         <>
           {editing ? (
-            <p className="flex items-center gap-2 rounded-lg border border-line bg-field px-3 py-2 text-sm">
+            <CardInset padding="compact" className="flex items-center gap-2 text-sm">
               <FileText className="size-4 shrink-0 text-fg-secondary" aria-hidden />
               <span className="truncate">{mode.kind === "edit" ? (mode.source.file_name ?? mode.source.title) : ""}</span>
-            </p>
+            </CardInset>
           ) : (
-            <div className="space-y-1.5">
-              <Label htmlFor="source-file">File</Label>
+            <Field id="source-file" invalid={!!fileError}>
+              <FieldLabel>File</FieldLabel>
               <div className="flex items-center gap-3 rounded-lg border border-dashed border-line-strong bg-field px-3 py-3">
                 <Button type="button" variant="secondary" size="sm" onClick={() => fileRef.current?.click()} disabled={saving}>
                   Choose file
@@ -333,52 +343,45 @@ function SourceForm({
                 />
               </div>
               {progress !== null ? (
-                <div
-                  role="progressbar"
-                  aria-label="Uploading"
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={Math.round(progress * 100)}
-                  className="h-1.5 overflow-hidden rounded-full bg-raised"
-                >
-                  <span className="bg-brand-gradient-decor block h-full" style={{ width: `${Math.round(progress * 100)}%` }} />
-                </div>
+                <Progress aria-label="Uploading" value={Math.round(progress * 100)} />
               ) : null}
               {fileError ? (
-                <p role="alert" className="text-sm text-danger-fg">
-                  {fileError}
-                </p>
+                <FieldError>{fileError}</FieldError>
               ) : (
-                <p className="text-xs text-fg-secondary">PDF, DOCX, TXT or MD, up to 10 MB.</p>
+                <FieldDescription>PDF, DOCX, TXT or MD, up to 10 MB.</FieldDescription>
               )}
-            </div>
+            </Field>
           )}
-          <Field id="source-title" label="Title (optional)" hint="The file name is used when this is empty." error={errors.title?.message}>
-            <Input id="source-title" maxLength={120} {...form.register("title")} />
+          <Field id="source-title" invalid={!!errors.title}>
+            <FieldLabel>Title (optional)</FieldLabel>
+            <Input maxLength={120} {...form.register("title")} />
+            <FieldDescription>The file name is used when this is empty.</FieldDescription>
+            <FieldError>{errors.title?.message}</FieldError>
           </Field>
         </>
       ) : null}
       {editing && (type === "url" || type === "file") ? (
-        <div className="flex items-center gap-3">
-          <Checkbox id="source-reingest" checked={reingest} onCheckedChange={(value) => setReingest(value === true)} />
-          <Label htmlFor="source-reingest" className="font-normal">
-            {type === "url" ? "Fetch the page again" : "Read the file again"}
-          </Label>
-        </div>
+        <Field id="source-reingest" orientation="horizontal">
+          <Checkbox checked={reingest} onCheckedChange={(value) => setReingest(value === true)} />
+          <FieldLabel className="font-normal">{type === "url" ? "Fetch the page again" : "Read the file again"}</FieldLabel>
+        </Field>
       ) : null}
 
       {overLimit ? (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
-          <p className="flex-1">
-            {knowledgeLimitReached(overLimit.limit ?? limit)} Remove a source or upgrade for more.
-          </p>
-          {workspace.role === "owner" || workspace.role === "admin" ? (
-            // A banner action (DESIGN_SYSTEM §11): `secondary`, small.
-            <Button type="button" variant="secondary" size="sm" onClick={() => upgrade.open(overLimit)}>
-              Upgrade
-            </Button>
-          ) : null}
-        </div>
+        <Alert
+          tone="warning"
+          urgent
+          icon={<AlertTriangle />}
+          action={
+            workspace.role === "owner" || workspace.role === "admin" ? (
+              <AlertAction type="button" onClick={() => upgrade.open(overLimit)}>
+                Upgrade
+              </AlertAction>
+            ) : undefined
+          }
+        >
+          {knowledgeLimitReached(overLimit.limit ?? limit)} Remove a source or upgrade for more.
+        </Alert>
       ) : null}
       {formError ? (
         <p role="alert" className="text-sm text-danger-fg">
@@ -390,38 +393,10 @@ function SourceForm({
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={saving}>
-          {progress !== null ? "Uploading…" : saving ? "Saving…" : editing ? "Save" : "Add"}
+        <Button type="submit" loading={saving}>
+          {editing ? "Save" : "Add"}
         </Button>
       </div>
     </form>
-  );
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error ? (
-        <p role="alert" className="text-sm text-danger-fg">
-          {error}
-        </p>
-      ) : hint ? (
-        <p className="text-xs text-fg-secondary">{hint}</p>
-      ) : null}
-    </div>
   );
 }

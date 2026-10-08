@@ -3,6 +3,7 @@
 import { Clapperboard, GalleryHorizontal, ImageOff, Play } from "lucide-react";
 import { useState } from "react";
 
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PostSummary } from "@/lib/api/types";
 import { mediaTypeLabel } from "@/lib/comments/format";
 import { cn } from "@/lib/utils";
@@ -30,13 +31,17 @@ export function PostThumb({
         <ImageOff className="size-5 text-fg-secondary" aria-hidden />
       )}
       {Icon ? (
-        <span
-          className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-scrim/70 text-fg"
-          title={mediaTypeLabel(post.media_type)}
-          aria-hidden
-        >
-          <Icon className="size-3.5" />
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-scrim/70 text-fg"
+              aria-hidden
+            >
+              <Icon className="size-3.5" />
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>{mediaTypeLabel(post.media_type)}</TooltipContent>
+        </Tooltip>
       ) : null}
     </div>
   );

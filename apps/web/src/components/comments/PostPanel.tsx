@@ -6,6 +6,8 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Card, CardInset } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { PostDetail, SocialAccount } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
 import { analysingText, formatCount, isAnalysing } from "@/lib/comments/format";
@@ -23,17 +25,7 @@ export function AnalysisProgress({ analysed, total }: { analysed: number; total:
       <p role="status" className="text-xs text-brand-fg">
         {analysingText({ analysed, total })}
       </p>
-      <div
-        role="progressbar"
-        aria-label="Comments analysed"
-        aria-valuemin={0}
-        aria-valuemax={total}
-        aria-valuenow={analysed}
-        className="flex h-1 w-full overflow-hidden rounded-full bg-raised"
-      >
-        <span className="bg-brand-gradient-decor h-full" style={{ flexGrow: analysed, flexBasis: 0 }} />
-        <span className="h-full" style={{ flexGrow: total - analysed, flexBasis: 0 }} />
-      </div>
+      <Progress aria-label="Comments analysed" value={analysed} max={total} />
     </div>
   );
 }
@@ -62,74 +54,87 @@ export function PostPanel({
   const analysisOff = account?.ai_analysis_enabled === false;
 
   return (
-    <section aria-label="Post" className="rounded-xl border border-line bg-panel p-4">
-      <div className="flex gap-3 lg:flex-col">
-        <PostThumb post={post} className="w-24 shrink-0 rounded-lg lg:w-full" />
-        <div className="min-w-0 flex-1 space-y-2">
-          {caption ? (
-            <div>
-              <p className={long && !expanded ? "line-clamp-4 text-sm whitespace-pre-line" : "text-sm whitespace-pre-line"}>
-                {caption}
-              </p>
-              {long ? (
-                <Button
-                  variant="link"
-                  size="xs"
-                  // In line with the caption: no side padding.
-                  className="mt-1 px-0"
-                  onClick={() => setExpanded((value) => !value)}
-                  aria-expanded={expanded}
+    <Card asChild>
+      <section aria-label="Post">
+        <div className="flex gap-3 lg:flex-col">
+          <PostThumb post={post} className="w-24 shrink-0 rounded-lg lg:w-full" />
+          <div className="min-w-0 flex-1 space-y-2">
+            {caption ? (
+              <div>
+                <p
+                  className={
+                    long && !expanded ? "line-clamp-4 text-sm whitespace-pre-line" : "text-sm whitespace-pre-line"
+                  }
                 >
-                  {expanded ? "Less" : "More"}
-                </Button>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-sm text-fg-secondary">No caption</p>
-          )}
-          <p className="text-xs text-fg-secondary">
-            {account ? `${accountLabel(account)} · ` : ""}
-            <time dateTime={post.posted_at}>{formatDayTime(post.posted_at, timeZone, now)}</time>
-          </p>
-          {post.permalink ? (
-            <a
-              href={post.permalink}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-brand-fg hover:underline pointer-coarse:min-h-10"
-            >
-              Open in Instagram <ExternalLink className="size-3" aria-hidden />
-            </a>
+                  {caption}
+                </p>
+                {long ? (
+                  <Button
+                    variant="link"
+                    size="xs"
+                    // In line with the caption: no side padding.
+                    className="mt-1 px-0"
+                    onClick={() => setExpanded((value) => !value)}
+                    aria-expanded={expanded}
+                  >
+                    {expanded ? "Less" : "More"}
+                  </Button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-fg-secondary">No caption</p>
+            )}
+            <p className="text-xs text-fg-secondary">
+              {account ? `${accountLabel(account)} · ` : ""}
+              <time dateTime={post.posted_at}>{formatDayTime(post.posted_at, timeZone, now)}</time>
+            </p>
+            {post.permalink ? (
+              <a
+                href={post.permalink}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-brand-fg hover:underline pointer-coarse:min-h-10"
+              >
+                Open in Instagram <ExternalLink className="size-3" aria-hidden />
+              </a>
+            ) : null}
+          </div>
+        </div>
+
+        <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
+          <CardInset padding="compact">
+            <dt className="text-xs text-fg-secondary">Likes</dt>
+            <dd className="font-semibold tabular-nums">
+              {post.like_count == null ? "—" : formatCount(post.like_count)}
+            </dd>
+          </CardInset>
+          <CardInset padding="compact">
+            <dt className="text-xs text-fg-secondary">Comments</dt>
+            <dd className="font-semibold tabular-nums">{formatCount(stats.total)}</dd>
+          </CardInset>
+        </dl>
+
+        <div className="mt-4 space-y-2" aria-label="Comment sentiment" role="group">
+          {analysisOff ? (
+            <p className="text-xs text-fg-secondary">
+              AI analysis is off for {account ? accountLabel(account) : "this account"}, so new comments aren&apos;t
+              analysed.{" "}
+              <Link href={`/w/${slug}/settings/connections` as Route} className="text-brand-fg hover:underline">
+                Turn it on
+              </Link>
+            </p>
+          ) : isAnalysing(stats) ? (
+            <AnalysisProgress analysed={stats.analysed} total={stats.total} />
           ) : null}
+          <SentimentBar positive={stats.positive} neutral={stats.neutral} negative={stats.negative} />
+          <SentimentLegend
+            positive={stats.positive}
+            neutral={stats.neutral}
+            negative={stats.negative}
+            spam={stats.spam}
+          />
         </div>
-      </div>
-
-      <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-lg bg-field px-3 py-2">
-          <dt className="text-xs text-fg-secondary">Likes</dt>
-          <dd className="font-semibold tabular-nums">{post.like_count == null ? "—" : formatCount(post.like_count)}</dd>
-        </div>
-        <div className="rounded-lg bg-field px-3 py-2">
-          <dt className="text-xs text-fg-secondary">Comments</dt>
-          <dd className="font-semibold tabular-nums">{formatCount(stats.total)}</dd>
-        </div>
-      </dl>
-
-      <div className="mt-4 space-y-2" aria-label="Comment sentiment" role="group">
-        {analysisOff ? (
-          <p className="text-xs text-fg-secondary">
-            AI analysis is off for {account ? accountLabel(account) : "this account"}, so new comments aren&apos;t
-            analysed.{" "}
-            <Link href={`/w/${slug}/settings/connections` as Route} className="text-brand-fg hover:underline">
-              Turn it on
-            </Link>
-          </p>
-        ) : isAnalysing(stats) ? (
-          <AnalysisProgress analysed={stats.analysed} total={stats.total} />
-        ) : null}
-        <SentimentBar positive={stats.positive} neutral={stats.neutral} negative={stats.negative} />
-        <SentimentLegend positive={stats.positive} neutral={stats.neutral} negative={stats.negative} spam={stats.spam} />
-      </div>
-    </section>
+      </section>
+    </Card>
   );
 }

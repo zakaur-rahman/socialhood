@@ -8,6 +8,7 @@ import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePostGrid, useSocialAccounts } from "@/lib/api/queries";
@@ -28,14 +29,16 @@ function GridSkeleton() {
   return (
     <ul className={GRID_CLASS} aria-busy="true" aria-label="Loading posts">
       {Array.from({ length: 8 }, (_, i) => (
-        <li key={i} className="overflow-hidden rounded-xl border border-line bg-panel">
-          <Skeleton className="aspect-square w-full rounded-none" />
-          <div className="space-y-2 p-3">
-            <Skeleton className="h-3 w-2/3" />
-            <Skeleton className="h-1.5 w-full" />
-            <Skeleton className="h-3 w-1/3" />
-          </div>
-        </li>
+        <Card asChild key={i} className="overflow-hidden p-0">
+          <li>
+            <Skeleton className="aspect-square w-full rounded-none" />
+            <div className="space-y-2 p-3">
+              <Skeleton className="h-3 w-2/3" />
+              <Skeleton className="h-1.5 w-full" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </li>
+        </Card>
       ))}
     </ul>
   );
@@ -62,31 +65,37 @@ export function CommentsPage() {
   else if (items.length === 0) {
     if (chosen) {
       content = (
-        <EmptyState
-          className="rounded-xl border border-line bg-panel"
-          title="No posts yet"
-          body={`Posts from ${accountLabel(chosen)} and their comments appear here once they sync.`}
-        />
+        <Card>
+          <EmptyState
+            size="compact"
+            title="No posts yet"
+            body={`Posts from ${accountLabel(chosen)} and their comments appear here once they sync.`}
+          />
+        </Card>
       );
     } else if (allAccounts.isSuccess && accounts.length === 0) {
       content = (
-        <EmptyState
-          className="rounded-xl border border-line bg-panel"
-          {...emptyStates.comments}
-          action={
-            <Button asChild>
-              <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect Instagram</Link>
-            </Button>
-          }
-        />
+        <Card>
+          <EmptyState
+            size="compact"
+            {...emptyStates.comments}
+            action={
+              <Button asChild size="sm">
+                <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect Instagram</Link>
+              </Button>
+            }
+          />
+        </Card>
       );
     } else {
       content = (
-        <EmptyState
-          className="rounded-xl border border-line bg-panel"
-          title={emptyStates.comments.title}
-          body="Your Instagram posts and their comments appear here once they sync."
-        />
+        <Card>
+          <EmptyState
+            size="compact"
+            title={emptyStates.comments.title}
+            body="Your Instagram posts and their comments appear here once they sync."
+          />
+        </Card>
       );
     }
   } else {

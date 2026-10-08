@@ -6,6 +6,7 @@ import Link from "next/link";
 import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ApiError } from "@/lib/api/errors";
 import { usePost, useSocialAccounts } from "@/lib/api/queries";
@@ -32,7 +33,7 @@ function DetailSkeleton() {
           <Skeleton className="aspect-square w-full rounded-xl" />
           <Skeleton className="h-28 w-full rounded-xl" />
         </div>
-        <div className="space-y-3 rounded-xl border border-line bg-panel p-4">
+        <Card className="space-y-3">
           {Array.from({ length: 5 }, (_, i) => (
             <div key={i} className="flex gap-3">
               <Skeleton className="size-8 rounded-full" />
@@ -42,7 +43,7 @@ function DetailSkeleton() {
               </div>
             </div>
           ))}
-        </div>
+        </Card>
       </div>
     </div>
   );
