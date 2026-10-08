@@ -181,7 +181,7 @@ describe("workspace menu", () => {
 
 describe("usage card (FR-AI-05)", () => {
   function meter() {
-    return screen.queryByRole("progressbar", { name: "AI credits used" });
+    return screen.queryByRole("meter", { name: "AI credits" });
   }
   function upgrade() {
     return screen.queryByRole("link", { name: "Upgrade" });
@@ -190,8 +190,10 @@ describe("usage card (FR-AI-05)", () => {
   it("Free: the meter and Upgrade for owners and admins", () => {
     const { rerender } = renderSidebar({ credits: { used: 50, limit: 200, plan: "free" } });
     expect(meter()).toHaveAttribute("aria-valuetext", "50 of 200 used");
-    expect(meter()).toHaveAttribute("data-tone", "normal");
-    expect(screen.getByText("25%")).toBeInTheDocument();
+    expect(meter()).toHaveAttribute("aria-valuenow", "50");
+    expect(meter()).toHaveAttribute("aria-valuemax", "200");
+    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "normal");
+    expect(screen.getByText("50 of 200 used")).toBeInTheDocument();
     expect(upgrade()).toHaveAttribute("href", "/w/aria/settings/billing");
     rerender({ workspace: { ...owner, role: "admin" } });
     expect(upgrade()).toBeInTheDocument();
@@ -200,22 +202,22 @@ describe("usage card (FR-AI-05)", () => {
   it("paying and under 80 %: the quiet meter, no Upgrade", () => {
     renderSidebar({ workspace: { ...owner, plan: "pro" }, credits: { used: 3999, limit: 5000, plan: "pro" } });
     expect(screen.getByText("3,999 of 5,000 used")).toBeInTheDocument();
-    expect(meter()).toHaveAttribute("data-tone", "normal");
+    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "normal");
     expect(upgrade()).not.toBeInTheDocument();
   });
 
   it("from 80 %: warning-toned with Upgrade; used up: danger-toned", () => {
     const { rerender } = renderSidebar({ credits: { used: 4000, limit: 5000, plan: "pro" } });
-    expect(meter()).toHaveAttribute("data-tone", "warning");
+    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "warning");
     expect(upgrade()).toBeInTheDocument();
     rerender({ credits: { used: 5000, limit: 5000, plan: "pro" } });
-    expect(meter()).toHaveAttribute("data-tone", "danger");
-    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "full");
+    expect(screen.getByText("5,000 of 5,000 used")).toBeInTheDocument();
   });
 
   it("never offers Upgrade on Max, the top plan", () => {
     renderSidebar({ credits: { used: 24_000, limit: 25_000, plan: "max" } });
-    expect(meter()).toHaveAttribute("data-tone", "warning");
+    expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "warning");
     expect(upgrade()).not.toBeInTheDocument();
   });
 
@@ -236,7 +238,9 @@ describe("usage card (FR-AI-05)", () => {
 
   it("collapsed: a ring named by the figures, without Upgrade", () => {
     renderSidebar({ collapsed: true, credits: { used: 412, limit: 500, plan: "free" } });
-    expect(screen.getByRole("img", { name: "AI credits: 412 of 500 used" })).toBeInTheDocument();
+    const ring = screen.getByRole("meter", { name: "AI credits" });
+    expect(ring).toHaveAttribute("aria-valuetext", "412 of 500 used");
+    expect(ring).toHaveAttribute("aria-valuemax", "500");
     expect(upgrade()).not.toBeInTheDocument();
   });
 });

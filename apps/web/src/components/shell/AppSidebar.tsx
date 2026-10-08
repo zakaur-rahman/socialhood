@@ -340,14 +340,18 @@ function ReconnectingNotice({ collapsed }: { collapsed: boolean }) {
     );
   }
   return (
-    <div
-      role="status"
-      title="Live updates are paused until the connection is back."
-      className="relative mt-2 flex items-center gap-2 self-start rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning"
-    >
-      {dot}
-      Reconnecting…
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          role="status"
+          className="relative mt-2 flex items-center gap-2 self-start rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning"
+        >
+          {dot}
+          Reconnecting…
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="right">Live updates are paused until the connection is back.</TooltipContent>
+    </Tooltip>
   );
 }
 

@@ -41,12 +41,13 @@ export function MobileNav({ title, ask, ...sidebar }: Props) {
           <Menu className="size-5" aria-hidden />
         </SheetTrigger>
         {/* The expanded sidebar's layout at its 232 px width; rows are 40 px for touch. The drawer
-            is panel, like the sidebar, not the overlay surface (DESIGN_SYSTEM §1.1, D-12): the one
-            sheet that sets its surface. Its edge is the sheet's own `line` border. */}
+            is `canvas`, so the sidebar card (`panel`, with its `line` edge) reads as it does on
+            desktop, floating on the page background; on `panel` it read only by its border. The
+            sheet's own `line` border is its edge. */}
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="w-64 gap-0 bg-panel p-3 data-[side=left]:w-64 sm:max-w-64 data-[side=left]:sm:max-w-64"
+          className="w-64 gap-0 bg-canvas p-3 data-[side=left]:w-64 sm:max-w-64 data-[side=left]:sm:max-w-64"
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <AppSidebar {...sidebar} collapsed={false} onNavigate={() => setOpen(false)} className="w-full" />

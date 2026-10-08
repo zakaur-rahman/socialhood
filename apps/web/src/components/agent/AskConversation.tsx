@@ -4,6 +4,7 @@ import { ArrowDown, BarChart3, Inbox, MessageSquare, Sparkles, Zap, type LucideI
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ErrorState } from "@/components/states/ErrorState";
+import { Alert, AlertAction } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { FLOATING_SURFACE } from "@/components/ui/floating";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -167,8 +168,8 @@ export function AskConversation({
   } else if (runs.isError) {
     body = (
       <div className="space-y-2">
-        <ErrorState error={runs.error} onRetry={() => void runs.refetch()} />
-        <div className="flex justify-center">
+        <ErrorState size="compact" error={runs.error} onRetry={() => void runs.refetch()} />
+        <div>
           <Button variant="ghost" size="sm" onClick={() => setThread(wid, null)}>
             Start a new thread
           </Button>
@@ -180,8 +181,8 @@ export function AskConversation({
       <div className="space-y-8">
         {runs.hasNextPage ? (
           <div className="flex justify-center">
-            <Button variant="ghost" size="sm" disabled={runs.isFetchingNextPage} onClick={() => void runs.fetchNextPage()}>
-              {runs.isFetchingNextPage ? "Loading…" : "Show earlier questions"}
+            <Button variant="ghost" size="sm" loading={runs.isFetchingNextPage} onClick={() => void runs.fetchNextPage()}>
+              Show earlier questions
             </Button>
           </div>
         ) : null}
@@ -240,20 +241,26 @@ export function AskConversation({
         )}
       >
         {error ? (
-          <div role="alert" className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg px-1 text-sm">
-            <p className={cn("min-w-0 flex-1", outOfCredits ? "text-warning" : "text-danger-fg")}>
-              {askError(error, credits, now)}
-            </p>
-            {outOfCredits && workspace.role !== "agent" ? (
-              // The ask opts out of the automatic dialog (INLINE_PLAN_LIMITS): this message is the one.
-              <Button
-                size="sm"
-                onClick={() => (error instanceof ApiError ? upgrade.open(upgradeRequestFrom(error)) : undefined)}
-              >
-                Upgrade
-              </Button>
-            ) : null}
-          </div>
+          // A warning when the credits are out (with Upgrade), a danger Alert otherwise; both are
+          // announced at once, like the answer they replace.
+          <Alert
+            tone={outOfCredits ? "warning" : "danger"}
+            urgent
+            className="mb-2"
+            data-testid="ask-error"
+            action={
+              outOfCredits && workspace.role !== "agent" ? (
+                // The ask opts out of the automatic dialog (INLINE_PLAN_LIMITS): this message is the one.
+                <AlertAction
+                  onClick={() => (error instanceof ApiError ? upgrade.open(upgradeRequestFrom(error)) : undefined)}
+                >
+                  Upgrade
+                </AlertAction>
+              ) : undefined
+            }
+          >
+            {askError(error, credits, now)}
+          </Alert>
         ) : null}
         <AskComposer
           id={composerId}

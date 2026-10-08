@@ -156,19 +156,25 @@ export function SourcesList({ refs, slug, onNavigate }: { refs: AnswerRef[]; slu
     <ol className="flex flex-wrap gap-1.5" aria-label="Sources">
       {refs.map((source, index) => (
         <li key={`${source.kind}:${source.id}:${index}`} className="min-w-0 max-w-full">
-          <Link
-            href={workspaceHref(slug, refPath(source))}
-            onClick={onNavigate}
-            title={`${REF_KIND_LABEL[source.kind]}: ${source.label}`}
-            className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-line bg-hover px-2.5 text-xs text-fg-secondary hover:bg-pressed hover:text-fg motion-safe:transition-[color,background-color] pointer-coarse:min-h-10 pointer-coarse:px-3"
-          >
-            <span className="font-medium text-fg tabular-nums">{index + 1}</span>
-            <span aria-hidden>·</span>
-            <span className="min-w-0 truncate">
-              <span className="sr-only">{REF_KIND_LABEL[source.kind]}: </span>
-              {source.label}
-            </span>
-          </Link>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link
+                href={workspaceHref(slug, refPath(source))}
+                onClick={onNavigate}
+                className="inline-flex min-h-7 max-w-full items-center gap-1.5 rounded-full border border-line bg-hover px-2.5 text-xs text-fg-secondary hover:bg-pressed hover:text-fg motion-safe:transition-[color,background-color] pointer-coarse:min-h-10 pointer-coarse:px-3"
+              >
+                <span className="font-medium text-fg tabular-nums">{index + 1}</span>
+                <span aria-hidden>·</span>
+                <span className="min-w-0 truncate">
+                  <span className="sr-only">{REF_KIND_LABEL[source.kind]}: </span>
+                  {source.label}
+                </span>
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              {REF_KIND_LABEL[source.kind]}: {source.label}
+            </TooltipContent>
+          </Tooltip>
         </li>
       ))}
     </ol>

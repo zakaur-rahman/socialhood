@@ -10,7 +10,6 @@ import {
   Lock,
   MessageSquareText,
   Reply,
-  Search,
   ShieldCheck,
   Trash2,
   Workflow,
@@ -23,7 +22,7 @@ import { SettingsFrame, SettingsPageHeader } from "@/components/settings/Setting
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -304,10 +303,11 @@ export function RunHistory() {
             <Button
               variant="secondary"
               aria-label="Next page"
-              disabled={!hasNext || history.isFetchingNextPage}
+              disabled={!hasNext}
+              loading={history.isFetchingNextPage}
               onClick={() => void next()}
             >
-              {history.isFetchingNextPage ? "Loading…" : "Next"} <ChevronRight aria-hidden />
+              Next <ChevronRight aria-hidden />
             </Button>
           </div>
         </nav>
@@ -323,18 +323,14 @@ export function RunHistory() {
       description="Every question asked in this workspace: its steps, tools, results and credits."
     >
       <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
-          <Input
-            type="search"
-            aria-label="Search runs"
-            placeholder="Search questions"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            size="xl"
-            className="pl-9"
-          />
-        </div>
+        <SearchInput
+          label="Search runs"
+          placeholder="Search questions"
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          size="xl"
+          className="flex-1"
+        />
         {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
             Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
         <ToggleGroup

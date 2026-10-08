@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { ApiError } from "@/lib/api/errors";
 import { useDeleteWorkspace } from "@/lib/api/queries/workspaceDeletion";
 import { toastError } from "@/lib/toast-error";
@@ -117,37 +117,37 @@ function DangerZone({ id, name }: { id: string; name: string }) {
             </AlertDialogHeader>
             <form
               noValidate
-              className="space-y-1.5"
               onSubmit={(event) => {
                 event.preventDefault();
                 confirm();
               }}
             >
-              <Label htmlFor="confirm-name">
-                Type <span className="font-semibold text-fg">{name}</span> to confirm
-              </Label>
-              <Input
-                id="confirm-name"
-                autoComplete="off"
-                spellCheck={false}
-                value={typed}
-                aria-invalid={!!fieldError}
-                aria-describedby={fieldError ? "confirm-name-error" : undefined}
-                onChange={(event) => {
-                  setTyped(event.target.value);
-                  setFieldError(null);
-                }}
-              />
-              {fieldError ? (
-                <p id="confirm-name-error" role="alert" className="text-sm text-danger-fg">
-                  {fieldError}
-                </p>
-              ) : null}
+              <Field>
+                <FieldLabel>
+                  Type <span className="font-semibold text-fg">{name}</span> to confirm
+                </FieldLabel>
+                <Input
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={typed}
+                  onChange={(event) => {
+                    setTyped(event.target.value);
+                    setFieldError(null);
+                  }}
+                />
+                <FieldError>{fieldError}</FieldError>
+              </Field>
             </form>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
-              <Button type="button" variant="destructive" disabled={!matches || remove.isPending} onClick={confirm}>
-                {remove.isPending ? "Deleting…" : "Delete workspace"}
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={!matches}
+                loading={remove.isPending}
+                onClick={confirm}
+              >
+                Delete workspace
               </Button>
             </AlertDialogFooter>
           </AlertDialogContent>
