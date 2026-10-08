@@ -85,7 +85,7 @@ test.describe("F-15 upgrade after hitting a limit", () => {
     // usage.updated (or the 3 s poll): Pro is on, and the limits follow.
     await expect(notice).toContainText("Your Pro trial has started");
     await expect(page.getByRole("region", { name: "Pro" }).getByRole("heading", { name: "Pro", level: 2 })).toBeVisible();
-    await expect(page.getByRole("region", { name: "Usage" })).toContainText("3 / 50 automations");
+    await expect(page.getByRole("region", { name: "Usage" })).toContainText("3 of 50 automations");
 
     // The automation that hit the limit now goes live.
     await page.goto(editorUrl);
