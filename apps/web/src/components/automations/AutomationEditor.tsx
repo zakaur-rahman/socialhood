@@ -1,10 +1,10 @@
 "use client";
 
-import { AlertCircle, Check, Clock, Copy, EllipsisVertical, Loader2, Pause, Play, RotateCw, Trash2 } from "lucide-react";
+import { AlertCircle, Check, Clock, Copy, EllipsisVertical, Pause, Play, RotateCw, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/states/EmptyState";
@@ -31,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { ApiError, toApiError } from "@/lib/api/errors";
 import {
   useActivateAutomation,
@@ -75,8 +76,8 @@ import { useAutosave, type SaveStatus } from "./use-autosave";
 const STATUS_TONE: Record<DisplayStatus, string> = {
   draft: "bg-raised text-fg-secondary",
   scheduled: "bg-brand-soft text-brand-fg",
-  active: "bg-success/15 text-success",
-  paused: "bg-warning/15 text-warning",
+  active: "bg-success-soft text-success",
+  paused: "bg-warning-soft text-warning",
   ended: "bg-raised text-fg-secondary",
 };
 
@@ -127,6 +128,8 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const [activationErrors, setActivationErrors] = useState<FieldErrors>({});
   const [mediaUrl, setMediaUrl] = useState<string | null>(initial.message_media_url ?? null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  // The confirmation opens from a menu item, which is gone when it closes: focus goes back to ⋯.
+  const menuTrigger = useRef<HTMLButtonElement>(null);
 
   const activate = useActivateAutomation(wid);
   const pause = usePauseAutomation(wid);
@@ -200,7 +203,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const onPause = () =>
     pause.mutate(server.id, {
       onSuccess: () => toast.success("Paused. It won't answer until you activate it again."),
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
 
   const onDuplicate = async () => {
@@ -210,7 +213,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         toast.success(`Duplicated. You're editing ${copy.name}.`);
         router.push(editorHref(slug, copy.id));
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
   };
 
@@ -222,7 +225,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         toast.success(`Deleted ${draft.name}`);
         router.push(`/w/${slug}/automations` as Route);
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
   };
 
@@ -250,7 +253,9 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
               if (!draft.name.trim()) change({ name: DEFAULT_NAME });
             }}
             aria-invalid={nameError ? true : undefined}
-            className="-mx-1 w-full rounded-md bg-transparent px-1 text-xl font-semibold outline-none hover:bg-white/5 focus:bg-field focus-visible:ring-3 focus-visible:ring-ring/50"
+            // The page title, edited in place: no field look until hovered or focused, then the
+            // global focus outline; 40 px on touch like every control (DESIGN_SYSTEM §8.4).
+            className="-mx-1 w-full rounded-md bg-transparent px-1 text-xl font-semibold hover:bg-hover focus:bg-field pointer-coarse:min-h-10"
           />
           {nameError ? <p className="text-xs text-danger-fg">{nameError}</p> : null}
         </div>
@@ -262,26 +267,26 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         </span>
         <SaveIndicator status={status} onRetry={() => void flush()} />
         {active ? (
-          <Button variant="secondary" className="h-9" onClick={onPause} disabled={statusBusy}>
-            {pause.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Pause aria-hidden />} Pause
+          <Button variant="secondary" size="lg" onClick={onPause} disabled={statusBusy}>
+            {pause.isPending ? <Spinner /> : <Pause aria-hidden />} Pause
           </Button>
         ) : (
-          <Button className="bg-brand-gradient h-9 text-white" onClick={() => void onActivate()} disabled={statusBusy}>
-            {activate.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Play aria-hidden />} Activate
+          <Button size="lg" onClick={() => void onActivate()} disabled={statusBusy}>
+            {activate.isPending ? <Spinner /> : <Play aria-hidden />} Activate
           </Button>
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-lg" className="size-10 md:size-9" aria-label="More actions">
+            <Button ref={menuTrigger} variant="ghost" size="icon-lg" aria-label="More actions">
               <EllipsisVertical aria-hidden />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 border-line bg-panel shadow-xl">
+          <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => void onDuplicate()} disabled={duplicate.isPending}>
               <Copy aria-hidden /> Duplicate
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => setConfirmDelete(true)} className="text-danger-fg focus:text-danger-fg">
+            <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)}>
               <Trash2 aria-hidden /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -317,7 +322,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             <QueueBanner queue={server.queue} order={draft.surge_order} onOrderChange={(order) => change({ surge_order: order })} />
           ) : null}
           {unplaced.length > 0 ? (
-            <ul role="alert" className="space-y-1 rounded-xl border border-danger bg-danger/10 px-4 py-3 text-sm text-danger-fg">
+            <ul role="alert" className="space-y-1 rounded-xl border border-danger bg-danger-soft px-4 py-3 text-sm text-danger-fg">
               {unplaced.map(([field, message]) => (
                 <li key={field}>{message}</li>
               ))}
@@ -395,16 +400,21 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
       </div>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent className="border-line bg-panel">
+        <AlertDialogContent
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            menuTrigger.current?.focus();
+          }}
+        >
           <AlertDialogHeader>
             <AlertDialogTitle>Delete {draft.name}?</AlertDialogTitle>
-            <AlertDialogDescription className="text-fg-secondary">
+            <AlertDialogDescription>
               It stops answering at once and can&apos;t be restored. Messages it already sent stay in the inbox.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void onDelete()} className="bg-danger-fill text-white hover:bg-danger-fill/90">
+            <AlertDialogAction variant="destructive" onClick={() => void onDelete()}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -425,7 +435,7 @@ export function SaveIndicator({ status, onRetry }: { status: SaveStatus; onRetry
           </>
         ) : status === "saving" ? (
           <>
-            <Loader2 className="size-3.5 animate-spin" aria-hidden /> Saving…
+            <Spinner size="sm" /> Saving…
           </>
         ) : (
           <span className="flex items-center gap-1 text-danger-fg">
@@ -465,8 +475,8 @@ function QueueBanner({
             Change order
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56 border-line bg-panel shadow-xl">
-          <DropdownMenuLabel className="text-xs text-fg-secondary">When busy</DropdownMenuLabel>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>When busy</DropdownMenuLabel>
           <DropdownMenuRadioGroup value={order} onValueChange={(value) => onOrderChange(value as SurgeOrder)}>
             {(Object.keys(SURGE_LABEL) as SurgeOrder[]).map((value) => (
               <DropdownMenuRadioItem key={value} value={value}>
@@ -484,14 +494,14 @@ function EditorSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading automation" className="mx-auto w-full max-w-[1200px] space-y-6 p-4 md:p-6">
       <div className="space-y-2 border-b border-line pb-4">
-        <Skeleton className="h-3 w-24 bg-raised" />
-        <Skeleton className="h-7 w-64 bg-raised" />
+        <Skeleton className="h-3 w-24" />
+        <Skeleton className="h-7 w-64" />
       </div>
       <div className="max-w-[720px] space-y-4 pl-8">
         {Array.from({ length: 4 }, (_, i) => (
           <div key={i} className="space-y-3 rounded-xl border border-line bg-panel p-5">
-            <Skeleton className="h-3 w-20 bg-raised" />
-            <Skeleton className="h-9 w-full bg-raised" />
+            <Skeleton className="h-3 w-20" />
+            <Skeleton className="h-9 w-full" />
           </div>
         ))}
       </div>

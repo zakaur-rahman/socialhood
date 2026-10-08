@@ -4,13 +4,16 @@ import { useState } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWhatsAppTemplates } from "@/lib/api/queries";
 import type { TemplateSend, WhatsAppTemplate } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 /** The body with {{1}}…{{n}} replaced by the values typed so far. */
 export function fillTemplate(body: string, params: string[]): string {
@@ -57,23 +60,22 @@ export function TemplatePicker({
         onOpenChange(value);
       }}
     >
-      <DialogContent className="border-line bg-panel sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle>Send a template</DialogTitle>
-          <DialogDescription className="text-fg-secondary">
-            WhatsApp only allows approved templates after the 24-hour window.
-          </DialogDescription>
+          <DialogDescription>WhatsApp only allows approved templates after the 24-hour window.</DialogDescription>
         </DialogHeader>
 
         {templates.isPending ? (
           <div className="space-y-2" aria-busy="true" aria-label="Loading templates">
-            <Skeleton className="h-14 w-full bg-raised" />
-            <Skeleton className="h-14 w-full bg-raised" />
+            <Skeleton className="h-14 w-full" />
+            <Skeleton className="h-14 w-full" />
           </div>
         ) : templates.isError ? (
           <ErrorState error={templates.error} onRetry={() => void templates.refetch()} />
         ) : approved.length === 0 ? (
           <EmptyState
+            size="compact"
             title="No approved templates"
             body="Create a message template in WhatsApp Manager. Once Meta approves it, it appears here."
           />
@@ -95,7 +97,7 @@ export function TemplatePicker({
                     >
                       <span className="flex items-center justify-between gap-2 text-sm font-medium">
                         {template.name}
-                        <span className="text-xs text-fg-secondary">{template.language}</span>
+                        <Badge size="sm">{template.language}</Badge>
                       </span>
                       <span className="mt-0.5 line-clamp-2 block text-xs text-fg-secondary">{template.body}</span>
                     </button>
@@ -106,19 +108,16 @@ export function TemplatePicker({
             {chosen ? (
               <div className="space-y-2 border-t border-line pt-3">
                 {params.map((value, i) => (
-                  <div key={i} className="space-y-1">
-                    <Label htmlFor={`template-param-${i}`} className="text-xs text-fg-secondary">
-                      {`Variable {{${i + 1}}}`}
-                    </Label>
-                    <input
-                      id={`template-param-${i}`}
+                  <Field key={i} id={`template-param-${i}`} density="compact">
+                    <FieldLabel>{`Variable {{${i + 1}}}`}</FieldLabel>
+                    <Input
+                      size="lg"
                       value={value}
                       onChange={(event) => setParams(params.map((p, j) => (j === i ? event.target.value : p)))}
-                      className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm outline-none focus:bg-raised"
                     />
-                  </div>
+                  </Field>
                 ))}
-                <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">Preview</p>
+                <p className={EYEBROW}>Preview</p>
                 <p className="rounded-lg bg-field p-3 text-sm whitespace-pre-wrap">{fillTemplate(chosen.body, params)}</p>
               </div>
             ) : null}
@@ -130,7 +129,6 @@ export function TemplatePicker({
             Cancel
           </Button>
           <Button
-            className="bg-brand-gradient text-white"
             disabled={!ready}
             onClick={() => {
               if (!chosen) return;

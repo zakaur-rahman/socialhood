@@ -7,7 +7,7 @@ import { LEGAL_LINKS, NAV_LINKS, SIGN_IN_PATH, SIGN_UP_PATH } from "@/lib/market
 
 import { Container, Logo } from "./primitives";
 
-const LINK = "inline-flex min-h-10 items-center rounded text-sm text-fg-secondary transition-colors hover:text-fg sm:min-h-8";
+const LINK = "inline-flex min-h-10 min-w-10 items-center rounded text-sm text-fg-secondary transition-colors hover:text-fg sm:min-h-8 sm:min-w-0";
 
 /** Product and legal links, the support address, and the copyright line. */
 export function SiteFooter({ year = new Date().getFullYear() }: { year?: number }) {

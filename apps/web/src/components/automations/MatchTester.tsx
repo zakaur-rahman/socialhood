@@ -1,15 +1,17 @@
 "use client";
 
-import { CheckCircle2, Loader2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTestAutomation } from "@/lib/api/queries";
 import type { AutomationTestResult, TriggerName } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
+import { EYEBROW } from "@/styles/tokens";
 
 import { SAMPLE_CONTACT } from "./PreviewPane";
 
@@ -77,7 +79,7 @@ export function MatchTester({
         </div>
         <div className="flex items-center gap-3">
           <Button type="submit" variant="secondary" disabled={!text.trim() || test.isPending}>
-            {test.isPending ? <Loader2 className="animate-spin" aria-hidden /> : null}
+            {test.isPending ? <Spinner /> : null}
             Test
           </Button>
           <p className="text-xs text-fg-secondary">Nothing is sent.</p>
@@ -118,7 +120,7 @@ export function TestResult({
       data-result={result.matched ? "match" : "no-match"}
       className={
         result.matched
-          ? "space-y-3 rounded-lg border border-success/40 bg-success/10 p-3 text-sm"
+          ? "space-y-3 rounded-lg border border-success/40 bg-success-soft p-3 text-sm"
           : "space-y-3 rounded-lg border border-line bg-raised p-3 text-sm"
       }
     >
@@ -137,7 +139,7 @@ export function TestResult({
       {result.reason ? <p className="text-fg-secondary">{result.reason}</p> : null}
       {result.rendered_public_reply ? (
         <div className="space-y-1">
-          <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">Public reply</p>
+          <p className={EYEBROW}>Public reply</p>
           <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_public_reply}</p>
         </div>
       ) : null}
@@ -168,7 +170,7 @@ export function TestResult({
 function Rendered({ label, testId, children }: { label: string; testId: string; children: ReactNode }) {
   return (
     <div data-testid={testId} className="space-y-1">
-      <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">{label}</p>
+      <p className={EYEBROW}>{label}</p>
       {children}
     </div>
   );

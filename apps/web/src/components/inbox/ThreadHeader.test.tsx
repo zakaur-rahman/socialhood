@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
@@ -45,13 +45,24 @@ describe("ReplyWindowChip (UX-INB-05, C-063)", () => {
     expect(chip).toHaveAttribute("data-tone", tone);
   });
 
-  it("neutral is outlined, amber under 2 h, red once closed", () => {
+  // UI-031: the Badge primitive in the window's tone (UI-ISS-035). Neutral is Badge's `hover` fill
+  // with secondary text (was outlined on `field`); amber and red stay the tone map's soft pairs, now
+  // through Badge.
+  it("a status Badge: neutral, amber under 2 h, red once closed", () => {
     const { rerender } = render(<ReplyWindowChip window={{ state: "open", closes_at: inHours(23) }} now={now} />);
-    expect(screen.getByText("Window: 23h left")).toHaveClass("border-line", "text-fg-secondary");
+    const neutral = screen.getByText("Window: 23h left");
+    expect(neutral).toHaveAttribute("data-slot", "badge");
+    expect(neutral).toHaveAttribute("data-size", "sm");
+    expect(neutral).toHaveClass("h-5", "text-2xs", "bg-hover", "text-fg-secondary");
+    expect(neutral).not.toHaveClass("border-line", "bg-field");
     rerender(<ReplyWindowChip window={{ state: "open", closes_at: inHours(1) }} now={now} />);
-    expect(screen.getByText("Window: 1h left")).toHaveClass("bg-warning/15", "text-warning");
+    const amber = screen.getByText("Window: 1h left");
+    expect(amber).toHaveAttribute("data-slot", "badge");
+    expect(amber).toHaveClass("bg-warning-soft", "text-warning");
     rerender(<ReplyWindowChip window={{ state: "closed" }} now={now} />);
-    expect(screen.getByText("Window closed")).toHaveClass("bg-danger/15", "text-danger-fg");
+    const red = screen.getByText("Window closed");
+    expect(red).toHaveAttribute("data-slot", "badge");
+    expect(red).toHaveClass("bg-danger-soft", "text-danger-fg");
   });
 });
 
@@ -101,6 +112,46 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(screen.queryByText("AI: Suggest")).not.toBeInTheDocument();
   });
 
+  it("narrow headers: Needs you and the window chip join the handle line, compact; screen readers hear them whole (UI-004)", () => {
+    renderHeader({ needs_human: true, needs_human_reason: "refund" });
+    const heading = screen.getByRole("heading", { name: "Priya Nair" });
+    // The container query shows one of each pair: beside the name when the header is wide…
+    const nameLine = heading.parentElement as HTMLElement;
+    expect(within(nameLine).getByText("Window: 23h left")).toBeInTheDocument();
+    expect(within(nameLine).getByText("Needs you: refund")).toBeInTheDocument();
+    // …on the handle line when it is narrow, without "Window:" and the reason, which stay for screen readers.
+    // (UI-031: the compact chip's visible part is a span of its own inside the Badge, so it can end
+    // in an ellipsis.)
+    const handleLine = screen.getByTestId("thread-identity").parentElement as HTMLElement;
+    expect(within(handleLine).getByText("23h left").closest('[data-slot="badge"]')).toHaveTextContent("Window: 23h left");
+    expect(within(handleLine).getByText("Needs you")).toHaveTextContent("Needs you: refund");
+    // The name keeps 80 px; the other items move first (UI-ISS-019).
+    expect(heading).toHaveClass("min-w-20");
+  });
+
+  it("the platform name is secondary text beside its glyph, which carries the colour (UI-ISS-006)", () => {
+    renderHeader();
+    const platform = within(screen.getByTestId("thread-identity")).getByText("Instagram");
+    expect(platform).not.toHaveClass("text-instagram");
+    expect(platform.querySelector("svg")).toHaveClass("text-instagram");
+  });
+
+  it("on the narrowest phones the panel toggle is in More", async () => {
+    const handlers = renderHeader();
+    // CSS hides the toggle below 352 px (a container query jsdom doesn't run), so hide it here.
+    screen.getByRole("button", { name: "Details" }).style.display = "none";
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Customer details" }));
+    expect(handlers.onToggleDetails).toHaveBeenCalledOnce();
+  });
+
+  it("with the toggle showing, More doesn't repeat it", async () => {
+    renderHeader();
+    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
+    expect(await screen.findByRole("menuitem", { name: "Archive" })).toBeInTheDocument();
+    expect(screen.queryByRole("menuitem", { name: "Customer details" })).not.toBeInTheDocument();
+  });
+
   it("offers Back on phones", () => {
     renderHeader({}, { backHref: "/w/maple/inbox" as Route });
     expect(screen.getByRole("link", { name: "Back to conversations" })).toHaveAttribute("href", "/w/maple/inbox");
@@ -111,12 +162,68 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  // UI-031: Needs you and the read-only AI chip are Badges; the icon buttons say what they do in the
+  // Tooltip primitive, on keyboard focus too, instead of a native title (UI-ISS-042).
+  it("Badges for Needs you and the AI mode; Tooltips instead of titles on the icon buttons", async () => {
+    renderHeader({ needs_human: true, needs_human_reason: "refund" });
+    expect(screen.getByText("Needs you: refund")).toHaveAttribute("data-slot", "badge");
+    expect(screen.getByText("Needs you: refund")).toHaveClass("bg-danger-soft", "text-danger-fg", "text-xs");
+    expect(screen.getByText("AI: Suggest")).toHaveAttribute("data-tone", "brand");
+    const details = screen.getByRole("button", { name: "Details" });
+    const schedule = screen.getByRole("button", { name: "Schedule a message" });
+    expect(details).not.toHaveAttribute("title");
+    expect(schedule).not.toHaveAttribute("title");
+    act(() => details.focus());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Show the customer panel");
+  });
+
+  // Pressed, the toggle is the soft Button (C-073), so hovering it keeps the brand look; closed, a ghost one.
+  it("draws the open panel's toggle as the soft Button and the closed one as ghost", () => {
+    renderHeader({}, { detailsOpen: true });
+    const pressed = screen.getByRole("button", { name: "Details" });
+    expect(pressed).toHaveAttribute("data-variant", "soft");
+    expect(pressed).toHaveClass("bg-brand-soft", "text-brand-fg", "hover:bg-brand-soft-hover");
+    expect(pressed).not.toHaveClass("hover:bg-hover");
+    cleanup();
+    renderHeader({}, { detailsOpen: false });
+    const closed = screen.getByRole("button", { name: "Details" });
+    expect(closed).toHaveAttribute("data-variant", "ghost");
+    expect(closed).toHaveAttribute("aria-pressed", "false");
+    expect(closed).not.toHaveClass("bg-brand-soft");
+  });
+
   it("toggles details and schedules", async () => {
     const handlers = renderHeader();
     await userEvent.click(screen.getByRole("button", { name: "Details" }));
     await userEvent.click(screen.getByRole("button", { name: "Schedule a message" }));
     expect(handlers.onToggleDetails).toHaveBeenCalledOnce();
     expect(handlers.onSchedule).toHaveBeenCalledOnce();
+  });
+
+  // UI-030: a disabled control says why (DisabledReason), not only in a title nobody can reach.
+  it("with the reply window closed, Schedule is off and says why", () => {
+    renderHeader({}, { canSchedule: false });
+    const schedule = screen.getByRole("button", { name: "Schedule a message" });
+    expect(schedule).toBeDisabled();
+    expect(schedule).not.toHaveAttribute("title");
+    const reason = schedule.closest('[data-slot="disabled-reason"]') as HTMLElement;
+    expect(reason).toHaveAttribute("tabindex", "0");
+    expect(reason).toHaveAccessibleDescription("Scheduling needs an open reply window");
+    // Hidden below md, as the button was: the composer's clock schedules there.
+    expect(reason).toHaveClass("hidden", "md:inline-flex");
+  });
+
+  it("the header's icon buttons are the Button's icon-lg size, with no touch patches", () => {
+    renderHeader({}, { backHref: "/w/maple/inbox" as Route });
+    for (const control of [
+      screen.getByRole("link", { name: "Back to conversations" }),
+      screen.getByRole("button", { name: "Schedule a message" }),
+      screen.getByRole("button", { name: "Details" }),
+      screen.getByRole("button", { name: "More actions" }),
+    ]) {
+      expect(control).toHaveAttribute("data-size", "icon-lg");
+      expect(control.className).not.toMatch(/md:size-|(^| )size-10/);
+    }
   });
 
   it("archives and marks unread from the menu", async () => {

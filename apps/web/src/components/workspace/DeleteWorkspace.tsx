@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApiError } from "@/lib/api/errors";
 import { useDeleteWorkspace } from "@/lib/api/queries/workspaceDeletion";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 /** What deleting removes (FR-ACC-05, F-16), in the order an owner would look for it. */
@@ -73,7 +73,7 @@ function DangerZone({ id, name }: { id: string; name: string }) {
       onError: (error) => {
         const field = error instanceof ApiError ? error.errors.find((e) => e.field === "confirm_name") : undefined;
         if (field) setFieldError(field.message);
-        else toast.error(errorMessage(error));
+        else toastError(error);
       },
     });
   };
@@ -96,18 +96,15 @@ function DangerZone({ id, name }: { id: string; name: string }) {
         <p className="text-xs text-fg-secondary">Only the owner can delete a workspace.</p>
         <AlertDialog open={open} onOpenChange={onOpenChange}>
           <AlertDialogTrigger asChild>
-            <Button
-              variant="outline"
-              className="min-h-10 border-danger/60 px-4 text-danger-fg hover:bg-danger/10 hover:text-danger-fg"
-            >
+            <Button variant="destructive-ghost" size="xl">
               Delete workspace
             </Button>
           </AlertDialogTrigger>
-          <AlertDialogContent className="border-line bg-panel">
+          <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Delete {name}?</AlertDialogTitle>
               <AlertDialogDescription asChild>
-                <div className="space-y-3 text-sm text-fg-secondary">
+                <div className="space-y-3">
                   <p>Everyone loses access now. Within 24 hours we permanently erase:</p>
                   <ul className="list-disc space-y-1 pl-5">
                     {DELETED_DATA.map((item) => (
@@ -149,12 +146,7 @@ function DangerZone({ id, name }: { id: string; name: string }) {
             </form>
             <AlertDialogFooter>
               <AlertDialogCancel disabled={remove.isPending}>Cancel</AlertDialogCancel>
-              <Button
-                type="button"
-                disabled={!matches || remove.isPending}
-                onClick={confirm}
-                className="bg-danger-fill text-white hover:bg-danger-fill/90"
-              >
+              <Button type="button" variant="destructive" disabled={!matches || remove.isPending} onClick={confirm}>
                 {remove.isPending ? "Deleting…" : "Delete workspace"}
               </Button>
             </AlertDialogFooter>

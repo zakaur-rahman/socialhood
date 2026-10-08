@@ -393,6 +393,55 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     expect(within(day("Friday 2 October")).getByRole("link", { name: /^Linen styles/ })).toBeInTheDocument();
   });
 
+  it('Esc in "Move to…" puts focus back on the post\'s menu button (UX-A11Y-02)', async () => {
+    const user = userEvent.setup();
+    setup();
+    await card("p-linen");
+    const trigger = within(day("Tuesday 29 September")).getByRole("button", { name: "Actions for Linen styles" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Move to…" })).toHaveFocus());
+    await user.keyboard("{Enter}");
+    await screen.findByRole("dialog", { name: "Move to…" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it("the card's menu is 24 px with a fine pointer, and on touch the whole card opens it (UI-032)", async () => {
+    setup();
+    const linenCard = await card("p-linen");
+    const trigger = within(linenCard).getByRole("button", { name: "Actions for Linen styles" });
+    // 24 px (WCAG 2.5.8); on coarse pointers it covers the card, glyph hidden, instead of a 40 px
+    // button beside the title.
+    expect(trigger).toHaveClass("size-6", "pointer-coarse:absolute", "pointer-coarse:inset-0", "pointer-coarse:[&_svg]:hidden");
+    expect(trigger).not.toHaveClass("size-5");
+    expect(trigger).not.toHaveClass("pointer-coarse:size-10");
+
+    // A touch that starts a scroll doesn't open the menu; the tap does.
+    fireEvent.pointerDown(trigger, { pointerId: 2, pointerType: "touch", button: 0 });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    fireEvent.click(trigger);
+    expect(await screen.findByRole("menuitem", { name: "Edit" })).toHaveAttribute("href", "/w/maple/schedule/p-linen");
+  });
+
+  it("Keep post in the delete confirmation puts focus back on the post's menu button (UX-A11Y-02)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup();
+    await card("p-linen");
+    const trigger = within(day("Tuesday 29 September")).getByRole("button", { name: "Actions for Linen styles" });
+    trigger.focus();
+    await user.keyboard("{Enter}");
+    const remove = await screen.findByRole("menuitem", { name: "Delete" });
+    await user.click(remove);
+    const confirm = await screen.findByRole("alertdialog", { name: "Delete this post?" });
+    expect(confirm).toHaveTextContent(`"Linen styles" won't be published.`);
+    await user.click(within(confirm).getByRole("button", { name: "Keep post" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+    expect(callsTo(calls, "DELETE", /p-linen$/)).toHaveLength(0);
+  });
+
   it('"Move to…" refuses a time less than 5 minutes away and says so', async () => {
     const user = userEvent.setup();
     const { calls } = setup();
@@ -574,6 +623,39 @@ describe("Schedule page: List (UX-SCR-04, FR-PUB-14)", () => {
     await waitFor(() => expect(callsTo(calls, "POST", /bulk$/)).toHaveLength(1));
     expect(callsTo(calls, "POST", /bulk$/)[0].body).toEqual({ ids: ["p-linen", "p-lookbook"], action: "shift", shift_minutes: 120 });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("2 posts moved."));
+    // The shift cleared the selection and its toolbar: focus falls back to Select all (UI-032).
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select all posts" })).toHaveFocus());
+  });
+
+  it("Move to drafts and Clear selection keep focus on the list: it falls back to Select all", async () => {
+    const user = userEvent.setup();
+    setup({ bulk: () => json({ updated: [linen], deleted_ids: [], skipped: [] }) });
+    await card("p-linen");
+    await user.click(screen.getByRole("radio", { name: "List" }));
+    await user.click(await screen.findByRole("checkbox", { name: "Select Linen styles" }));
+    await user.click(screen.getByRole("button", { name: "Clear selection" }));
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select all posts" })).toHaveFocus());
+
+    await user.click(screen.getByRole("checkbox", { name: "Select Linen styles" }));
+    await user.click(screen.getByRole("button", { name: "Move to drafts" }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith("1 post moved to drafts."));
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Select all posts" })).toHaveFocus());
+  });
+
+  it("Esc in Shift times puts focus back on its button (UX-A11Y-02)", async () => {
+    const user = userEvent.setup();
+    setup();
+    await card("p-linen");
+    await user.click(screen.getByRole("radio", { name: "List" }));
+    await user.click(await screen.findByRole("checkbox", { name: "Select Linen styles" }));
+    const shift = screen.getByRole("button", { name: "Shift times" });
+    shift.focus();
+    await user.keyboard("{Enter}");
+    await screen.findByRole("dialog", { name: "Shift times" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(shift).toHaveFocus());
   });
 
   it("deletes the selected posts after confirming, and reports skipped ones", async () => {
@@ -656,7 +738,11 @@ describe("Schedule page on phones (UX-SCR-04)", () => {
 
     // Moving uses "Move to…" (FR-PUB-08).
     const actions = within(today).getByRole("button", { name: "Actions for Linen styles" });
-    expect(actions).toHaveClass("size-10");
+    // 40 px on touch from Button's own sizing (`icon`: 32 px, `pointer-coarse:size-10`), not the
+    // old `size-10 md:size-8` patch (UI-032).
+    expect(actions).toHaveAttribute("data-size", "icon");
+    expect(actions).toHaveClass("pointer-coarse:size-10");
+    expect(actions).not.toHaveClass("size-10");
     await user.click(actions);
     await user.click(await screen.findByRole("menuitem", { name: "Move to…" }));
     const dialog = await screen.findByRole("dialog", { name: "Move to…" });

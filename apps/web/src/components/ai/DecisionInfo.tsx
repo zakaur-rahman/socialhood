@@ -4,6 +4,7 @@ import { Check, Info, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { INLINE_ICON_BUTTON } from "@/components/ai/AnalysisChips";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ import { useAiDecision, useAiDecisionFeedback } from "@/lib/api/queries";
 import type { AiDecision } from "@/lib/api/types";
 import { checkLabel, checkValue } from "@/lib/ai/format";
 import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -32,20 +34,17 @@ export function DecisionInfo({ messageId }: { messageId: string }) {
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Why the AI sent this"
-          className="-my-1 ml-0.5 grid size-6 place-items-center rounded-full text-fg-secondary hover:bg-white/10 hover:text-fg"
-        >
+        {/* 24 px in the message's meta line; a 40 px hit area on coarse pointers (INLINE_ICON_BUTTON). */}
+        <button type="button" aria-label="Why the AI sent this" className={cn(INLINE_ICON_BUTTON, "-my-1 ml-0.5")}>
           <Info className="size-3.5" aria-hidden />
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-80 border-line bg-panel p-3 text-fg shadow-xl">
+      <PopoverContent align="end" className="w-80 p-3">
         {decision.isPending ? (
           <div className="space-y-2" aria-busy="true" aria-label="Loading the decision">
-            <Skeleton className="h-3 w-1/2 bg-raised" />
-            <Skeleton className="h-3 w-full bg-raised" />
-            <Skeleton className="h-3 w-5/6 bg-raised" />
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-3 w-full" />
+            <Skeleton className="h-3 w-5/6" />
           </div>
         ) : decision.isError ? (
           <p role="alert" className="text-sm text-danger-fg">
@@ -70,7 +69,7 @@ export function DecisionDetails({ decision, messageId }: { decision: AiDecision;
       { decisionId: decision.id, feedback: value },
       {
         onSuccess: () => (value ? toast.success("Thanks. Auto learns from this.") : undefined),
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       },
     );
 

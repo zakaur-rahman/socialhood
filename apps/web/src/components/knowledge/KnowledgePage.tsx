@@ -8,7 +8,7 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAiSettings, useDismissKnowledgeGap, useKnowledgeGaps, useKnowledgeSources } from "@/lib/api/queries";
 import type { KnowledgeGap } from "@/lib/api/types";
-import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -21,9 +21,9 @@ import { TestBox } from "./TestBox";
 function CardSkeleton({ label, rows = 2 }: { label: string; rows?: number }) {
   return (
     <div className="space-y-3 rounded-xl border border-line bg-panel p-5" aria-busy="true" aria-label={label}>
-      <Skeleton className="h-4 w-40 bg-raised" />
+      <Skeleton className="h-4 w-40" />
       {Array.from({ length: rows }, (_, i) => (
-        <Skeleton key={i} className="h-3 w-full bg-raised" />
+        <Skeleton key={i} className="h-3 w-full" />
       ))}
     </div>
   );
@@ -53,7 +53,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
   const dismiss = (gap: KnowledgeGap) =>
     dismissGap.mutate(gap.id, {
       onSuccess: () => toast.success("Dismissed. It comes back if a customer asks again."),
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
 
   const gapsCard = (

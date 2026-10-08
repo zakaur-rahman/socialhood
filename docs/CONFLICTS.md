@@ -1138,3 +1138,298 @@ removed only the token and Meta's raw events, and backup exports had no retentio
 - Backups: exports are kept 30 days, then deleted. No script in the repo makes or keeps exports,
   so docs/ops/backup.md makes it a required setting (one bucket, a 30-day lifecycle rule, a
   monthly check). The privacy policy states it, and that deletion covers the account's data.
+
+## C-068 · Expressive motion and effects on the marketing site (owner decision, feature/landing-redesign)
+The owner allowed the public marketing site expressive motion and decorative effects, for the
+landing page's redesign with Aceternity UI's free components. DESIGN_SYSTEM §7.3 ("no motion for
+decoration") and AGENT_CONTEXT's rejected patterns (gradients without a job, blur for
+decoration) still hold in the app. The scope is the marketing pages only:
+`apps/web/src/app/(marketing)` and `apps/web/src/components/marketing`.
+- Allowed there: entrances on scroll (once), hover lifts on cards and calls to action, one
+  background effect per view (the hero's Spotlight), decorative glows and gradients built from the
+  brand tokens (Spotlight, Lamp, Pro's moving border, the illustrations' backdrops),
+  scroll-linked movement (the product screenshot's tilt, the timeline's rail) and small loops (the
+  headline's flip words, the automation beam's pulse, the moving border).
+- Still required:
+  - Tokens only: every colour from `globals.css` (canvas, panel, raised, line, brand, brand-fg,
+    brand-deep, brand-soft, brand-line, the status and platform colours). The Aceternity components
+    were adapted from their neutral, slate and cyan values.
+  - Contrast: text stays on canvas or panel at AA; effects sit behind headings or beside text,
+    never under body copy.
+  - Reduced motion: `MotionConfig reducedMotion="user"` wraps the landing page. Every loop stops
+    (flip words, beam pulse, moving border, spotlight drift, caret), scroll-linked transforms are
+    overridden flat, entrances are instant and scroll reveals never hide anything. CSS animations
+    are `motion-safe:` only.
+  - Accessibility: decorative layers are `aria-hidden` with no pointer events; the flip-word
+    headline gives screen readers its whole sentence; one h1, headings in order, a skip link,
+    focus visible (inset where a container clips), 40 px touch targets.
+  - Performance: the hero's text is server-rendered and still (it is the largest paint); motion's
+    animation code loads after hydration (LazyMotion with domAnimation, `m` components); the
+    feature illustrations load when near the screen; loops run only while on screen; only
+    transforms and opacity animate (the header uses CSS transitions; no layout animations); lazy
+    boxes have fixed sizes (no layout shift). No canvas, WebGL, external scripts, fonts or images:
+    the CSP is unchanged.
+  - Motion values: the UI audit's tokens for hover and press (120, 150 and 200 ms; enter, exit and
+    standard easings), plus two marketing-only ones, `reveal` 600 ms and `expressive` 450 ms with
+    an expressive ease (`components/marketing/effects/motion.ts`).
+  - Honesty: illustrations and screenshots are labelled as example data. The screenshots are the
+    real app on the e2e stack with sandbox data and made-up names
+    (`apps/web/scripts/marketing-shots`); no testimonials, ratings, counts or logos.
+- Components and dependency: installed with the shadcn CLI from Aceternity's registry
+  (`@aceternity` in `components.json`), then moved from `components/ui` to
+  `components/marketing/effects` and adapted (Tabler icons swapped for lucide). The one new
+  dependency is `framer-motion`, the library `motion` wraps: `motion/react` re-exports it through
+  a namespace import that Turbopack can't tree-shake, which bundled drag and layout projection
+  (about 20 KB more, gzipped).
+- The marketing header's blur stays DESIGN_SYSTEM §6's documented exception; the header now floats
+  as a rounded bar after 64 px of scroll.
+
+## C-069 · UI audit owner decisions D-01 to D-17 (owner decision, feature/ui-audit)
+The owner approved the architect's recommendation for all 17 decisions in
+`docs/ui-audit/UI_AUDIT.md` §D on 2026-10-01. Each one is applied by the task the implementation
+plan names; until that task merges, the current look stays.
+- **D-01:** `line-control` (white 40%) on checkbox, radio and switch edges **and** on text inputs,
+  selects and textareas (`--input` → `line-control`). Amends UX-A11Y-01's scope note.
+- **D-02:** `rounded-xl` for every app card (amends C-066's `rounded-2xl`); inset panels
+  `rounded-lg`; `2xl` stays for message bubbles and marketing.
+- **D-03:** a dark tooltip: the `overlay` surface, `fg` text, a `line` edge and the floating shadow.
+- **D-04:** native date and time inputs for R1, styled like Input. A deviation from UX-CMP-01's
+  Calendar; Calendar comes when a range picker or R2 needs it (no UI-029).
+- **D-05:** page H1 24 px everywhere (amends C-066's 30 px settings title); pane H1 18 px for
+  Inbox, Ask and the phone top bar; the spec's pane title becomes `text-lg`.
+- **D-06:** placeholders `fg-secondary`; `fg-disabled` for disabled controls only. Amends spec
+  §4.2.
+- **D-07:** `ai_auto` → "Sent by AI" with the info button; `automation` → "Automation · {name}"
+  with a zap icon ("AI" only when the step was an AI reply); list prefix "Automation:"; the row
+  badge "Auto replies", neutral, at most two badges per row. Amends C-063, follows UX-INB-06.
+- **D-08:** no settings breadcrumb or eyebrow; tab labels match the page titles ("Ask Social
+  Hood", "Billing and usage", "AI rules and takeover"); the save bar shows only when dirty, saving
+  or failed, with an inline "Saved" status on autosave pages; the Agent tab's six tiles become one
+  sentence. Amends C-066.
+- **D-09:** Disconnect stays visible as a neutral ghost button; one "Delete account and data" item
+  for both modes in a ⋯ menu, opening the same typed-confirm dialog. Amends C-067's labels and
+  placement; the API is unchanged.
+- **D-10:** at most one gradient primary per view region (page header, dialog footer, composer);
+  row and card actions are secondary.
+- **D-11:** per post now: `needs_reply_count` on PostSummary and a `needs_reply` filter on a
+  post's comments, with the API, the generated client and the UI in one task (UI-055). A cross-post
+  list later if usage shows the need.
+- **D-12:** an `overlay` surface (`#262626`) and two dark elevation shadows (floating, overlay)
+  replacing `shadow-md`/`xl` and the 10% ring on floating and modal surfaces.
+- **D-13:** up to four identity gradient pairs built only from existing brand, shell and
+  platform-blue values, every stop 4.5:1 or more with white, no status colour; shared by avatar
+  fallbacks and schedule account rings.
+- **D-14:** a per-device "Single-key shortcuts" switch, on by default, in a Keyboard shortcuts
+  dialog opened from the inbox list header and with "?".
+- **D-15:** the active platform segment neutral (`raised` with `brand-fg`); the heart moves into
+  the emoji popover ("Send a heart"); scheduling only from the composer, named "Schedule message";
+  Archived as a plain chip. Amends C-063.
+- **D-16:** PageFrame's "‹ Parent" back link on the automation editor, post composer and post
+  detail (amends UX-SCR-03; e2e F-11 and F-13 change in UI-065); below 1280 px the editor's side
+  panel comes after the steps; icon-only buttons `rounded-lg` (amends spec §4.2's `rounded-full`,
+  which stays for circles); composer shells `rounded-xl` (amends UX-INB-07's pill).
+- **D-17:** the system fallback for Devanagari in R1; `latin-ext` is added regardless (UI-010).
+
+## C-070 · `globals.css` token foundation (open: confirm, feature/ui-tokens)
+UX-TOK-01 says the tokens file is used "exactly as below"; C-002 added two lines. UI-001 adds the
+**Add** items of `docs/ui-audit/DESIGN_SYSTEM.md` (§1.13, §1.9, §2, §7), each marked "C-070" in
+`apps/web/src/styles/globals.css` and mirrored in `styles/tokens.ts`, which `/dev/tokens` renders
+and `tokens.test.ts` checks against the CSS. They name values the app already draws. No owner
+decision is applied here: `line-control` (D-01), the placeholder colour (D-06) and the overlay
+surface and shadows (D-12) come with UI-018.
+- **Colours:** `hover` (white 5%), `pressed` (white 10%), `scrim` (black 60%), `media-scrim`
+  (black, on media only, with an opacity), `on-brand` (white), `brand-strong` (`#4467E6`, the
+  brand gradient's existing end stop), `success-soft`, `warning-soft`, `danger-soft` (15% of the
+  base colour). They replace `bg-white/5`, `bg-white/10`, `bg-black/60`, `text-white` and the
+  `/10`–`/30` status fills as the area sweeps reach them.
+- **Type:** `text-2xs` (11/16) and `text-md` (15/24), for `text-[11px]` and `text-[15px]`. The type
+  roles are importable constants in `styles/tokens.ts` (`EYEBROW`, `CHIP`, `CARD_TITLE` …), with
+  one eyebrow tracking (0.08em).
+- **Motion:** `--motion-fast` 120 ms, `--motion-normal` 150 ms and `--motion-slow` 200 ms, with
+  `duration-fast|normal|slow` (they set `--tw-duration`, which tw-animate-css reads), and the
+  easings `ease-standard`, `ease-enter`, `ease-exit`. The primitives adopt them in their own tasks.
+- **Breakpoint:** `wide` (1440 px), for today's `min-[1440px]:`.
+- **Gradients:** the three gradient utilities take their stops from tokens (the same pixels; the
+  brand gradient ends at `brand-strong`). `bg-glow-brand` is the plan hero's radial glow
+  (`brand-soft` from the top-left corner), one per view at most; the marketing hero keeps its own
+  centred glow unless UI-042 moves it onto the utility. `mask-fade-x` fades the trailing 1rem of a
+  row that scrolls sideways (the sidebar's bottom fade, turned sideways); the row gets `pe-4` so its
+  last item can scroll clear of the fade.
+- **shadcn aliases:** `--primary` → `brand-strong` (was `brand`), `--primary-foreground` →
+  `on-brand` (was a literal `#FFFFFF`), `--accent` → `hover` (was `raised`: the same pixel on
+  `panel`, where every menu and select sits). `card-`, `popover-`, `secondary-` and
+  `accent-foreground` get their `--color-*` mappings, so their utilities generate CSS; every
+  `:root` alias is now mapped. `--radius` stays, commented as inert.
+- **Base layer:** `strong, b { font-weight: 600 }` (weights stop at 600); a reduced-motion safety
+  net that removes animations and transitions from `[data-slot$="-overlay"]`,
+  `[data-slot$="-content"]` and `[data-slot="skeleton"]` (spec §4.2 "Motion": instant under
+  reduced motion); `scroll-padding-top: 4rem` below `md`, so a control scrolled into view isn't
+  hidden under the phone's sticky top bar (WCAG 2.4.11).
+- **What changes on screen:**
+  - The switch's checked track and the checkbox's checked fill go from `#567FF8` to `#4467E6`
+    (3.4:1 on `panel`, above the 3:1 for state indicators). Every Button `default` call site paints
+    its own gradient and both `link` call sites set `brand-fg`, so neither changes.
+  - Bare `<strong>` on the legal pages is 600 instead of 700.
+  - The now-working foreground utilities: in a highlighted menu or select item, icons and secondary
+    text turn `fg` (the primitives' `focus:**:text-accent-foreground` rule applies; UI-013 redraws
+    the highlight), and a `secondary` Button no longer inherits a coloured parent's text colour.
+  - Under reduced motion, dialogs, alert dialogs, sheets (the phone drawer), popovers, menus,
+    selects, tooltips and skeletons no longer animate.
+- The spec's §4.2 text (UX-TOK-01's list, the type table, the motion line) follows in UI-071.
+
+## C-071 · Token decisions D-01, D-06 and D-12 applied (UI-018, feature/ui-token-decisions)
+UI-018 applies three of the decisions the owner approved in C-069. The values are marked "C-071"
+in `apps/web/src/styles/globals.css`, mirrored in `styles/tokens.ts`, checked by `tokens.test.ts`
+and shown on `/dev/tokens`. Ratios were measured in Chromium on the e2e stack at 375 and 1280 px
+(before: the old values restored in the page).
+- **D-01, control edges:** `line-control` (white 40%), with `--input` → `line-control`. Input,
+  Textarea, SelectTrigger, SearchInput, ChipInput, the checkbox and the switch's off edge follow it.
+  - A field draws its edge over its own fill, so the edge is `#777777` wherever the field sits:
+    3.70:1 on panel, 3.79:1 against the field inside, 3.40:1 on overlay and 3.22:1 on raised. Before,
+    it was 1.32:1 on panel.
+  - An unchecked checkbox is 3.77:1 on panel and 3.66:1 on canvas (before: 1.35:1 and 1.20:1).
+    Across the surfaces it ranges from 3.41:1 to 3.79:1. The switch's off edge is 4.53:1 (before:
+    1.85:1).
+  - **Checked checkbox: a `brand` fill (the DSA's choice).** It matches the switch's on track and
+    replaces `--primary` (`brand-strong`). A checked box's edge is its fill:
+    - `brand-strong` was 2.96:1 on a selected (`raised`) row and 2.60:1 on `raised-hover`;
+    - `brand` is 3.96:1 and 3.48:1 there, and 4.54:1 on panel, 4.17:1 on overlay and 5.79:1 on
+      canvas;
+    - the tick and the indeterminate minus are graphics, `on-brand` at 3.63:1 on `brand`, where 3:1
+      is needed.
+
+    The alternative was a `line-control` edge kept on checked boxes. It measures about 3.58:1 on
+    raised, but leaves the fill at 2.96:1 and puts a grey ring round a blue box. This amends C-070's
+    note that the checkbox fill became `#4467E6`, and DESIGN_SYSTEM §1.4.
+  - Settings › Workspace's URL field is a hand-built wrapper. Its edge moves from `border-line` to
+    `border-line-control`, so every field on that page passes. The other raw fields (about 27) keep
+    their own edges until the area sweeps move them onto Input.
+- **D-06, placeholders:** the base `::placeholder` is `fg-secondary` (it was `fg-disabled`).
+  - The primitives already used `fg-secondary`, so only raw fields change. The inbox composer and
+    list search go from 3.49:1 to 6.15:1 on field, and from 2.97:1 to 5.23:1 when focused (on raised).
+  - `fg-secondary` is 6.01:1 on panel, 6.15:1 on field, 5.52:1 on overlay and 5.23:1 on raised.
+  - `fg-disabled` is for disabled controls only.
+- **D-12, overlay surface and elevation:**
+  - **Values:**
+    - `overlay` is `#262626`: 1.09:1 against panel and 1.39:1 against canvas. `--popover` →
+      `overlay`.
+    - `shadow-floating`: `0 8px 24px -6px rgb(0 0 0 / 0.7)`.
+    - `shadow-overlay`: `0 24px 64px -12px rgb(0 0 0 / 0.8)`.
+  - **Where they apply:** the floating recipe (`ui/floating`, used by Popover, DropdownMenu and
+    Select) and the toast use `shadow-floating`. Dialog, AlertDialog and Sheet use
+    `shadow-overlay`. Together they replace `shadow-xl` and `ring-foreground/10`.
+  - **A deviation from DESIGN_SYSTEM §1.13:** the 1 px `line` edge sits outside the shadow tokens.
+    - Floating content and dialogs draw it as `ring-1 ring-line`, the same pixels as
+      `ring-foreground/10`. A sheet keeps its side border, and the toast its `line-strong` border.
+    - The reason: 21 menus and popovers still pass `shadow-xl` at the call site. With the edge
+      inside the token, `cn` would replace edge and shadow together, and those menus would lose
+      their outline on panel.
+  - **Supporting changes:**
+    - `cn` learns `shadow-floating` and `shadow-overlay` as shadow sizes. tailwind-merge read them
+      as colours, because `--color-overlay` exists.
+    - The phone drawer is `panel`, like the sidebar it holds (it was `canvas`). It keeps the sheet's
+      overlay shadow.
+  - **Text on overlay:**
+    - `fg` 15.1:1, `fg-secondary` 5.52:1, `brand-fg` 7.56:1, `danger-fg` 7.97:1;
+    - a highlighted menu item (`hover` over overlay, `#313131`): `fg-secondary` 4.75:1, the
+      keyboard outline 3.59:1.
+  - **What changes on screen now:**
+    - the 14 selects' options, the toast and the one dialog without a call-site surface (the
+      composer's "Unschedule this post?") move to `overlay`;
+    - every dialog, alert dialog and sheet gets the overlay shadow.
+  - **What waits for the area sweeps:** 54 overlay call sites still pass `border-line bg-panel`, and
+    21 of them also pass `shadow-xl`. They stay on `panel` until the Wave-3 sweeps remove those
+    patches (AGENT_CONTEXT §6). After that they float on `overlay` with no further token change.
+
+## C-072 · Identity palette D-13 applied (UI-027, feature/ui-identity-palette)
+UI-027 applies D-13 (C-069) in one module, `apps/web/src/lib/ui/identity.ts`, with no new token.
+It replaces UX-INB-04's "six pairs" and UX-SCR-04's ring colours, which borrowed warning,
+success, danger-fill, instagram and whatsapp. Ratios (WCAG, measured in Chromium on the e2e stack
+at 375 and 1280 px, and checked against the token values by `identity.test.ts`):
+- **Three identities, each a gradient pair for the avatar fallback and a ring and dot colour for
+  accounts:** `brand-deep → brand-strong` with `brand`; `shell-1 → shell-2` with `brand-fg`;
+  `linkedin → facebook` with `facebook`.
+  - White on every stop: 11.04 and 4.85; 6.52 and 12.66; 8.72 and 5.17. On the oklab midpoints
+    (Tailwind's `bg-linear-135` interpolates in oklab): 7.37, 9.19 and 6.72. Before, three of six
+    pairs failed (2.26–3.84:1).
+  - Rings on panel, their offset colour: 4.54, 8.23, 3.19 (on canvas 5.79, 10.49, 4.06). Rings
+    against each other: 1.42:1 or more (oklab ΔE 8.9 or more). Before, the instagram ring was
+    2.73:1 and brand next to brand-fg was the same hue.
+- **Three, not four (the DSA's choice within "up to four"):** the only values in these families
+  at 3:1 or more on panel are `brand-fg`, `brand`, `brand-strong` and `facebook`, and
+  `brand-strong` and `facebook` are 1.07:1 apart (ΔE 3.0), so a fourth account ring would look like
+  the third.
+- **The schedule's AccountAvatar** fills its fallback with its account's identity gradient, so the
+  ring and the avatar agree (it was `raised`). An unknown account keeps the `line-strong` ring.
+- **The initial is `aria-hidden`** on every avatar fallback: the name is beside it, or on the
+  button or group that holds it, so a conversation row's name no longer starts with the initial
+  ("linen.lover 4m …").
+- **Scope notes:** `shell-1` and `shell-2` keep the shell gradient to the logo and Upgrade; their
+  values also form one identity pair. The pair `brand-deep → brand-strong` is the brand gradient's
+  pair, so one in three contact avatars matches the primary button's colours.
+- **Also:** the Avatar primitive's default fallback fill is `raised` (was shadcn's `muted`, the
+  field colour, 1.02:1 on panel), like Skeleton.
+
+## C-073 · Primitive follow-ups: the soft Button, a 40 px segment, date and time focus, `short:` and the crop mask (DSA, feature/ui-primitives-followups)
+Five follow-ups from the Wave-3 sweeps (UI-030, UI-032), decided by the Design System Architect
+and recorded in `docs/ui-audit/DESIGN_SYSTEM.md`. The values are marked "C-073" in
+`apps/web/src/styles/globals.css`, mirrored in `styles/tokens.ts`, checked by `tokens.test.ts` and
+shown on `/dev/tokens`. Measured in Chromium on the e2e stack at 375 and 1280 px (and 320, 360,
+640, 768 and 1024 where widths matter).
+- **Button `variant="soft"` (a change on screen).** The AI trigger, AI Polish and the inbox details
+  toggle each pasted brand-soft classes onto a ghost Button; DESIGN_SYSTEM §8.1 adds a variant for
+  a repeated need instead. `soft` is the AI pill's look (§1.4) and the selected chip's colours
+  (§8.3): `bg-brand-soft text-brand-fg border-brand-line`, `brand-soft-hover` on hover and while
+  its menu is open (`aria-expanded`), the global focus outline, and the primitive's disabled rule
+  (`opacity-50`). It is for AI actions and for a toggle Button while it is pressed.
+  - **Token (an addition):** `brand-soft-hover`, brand at 25%, the value the AI trigger's hover
+    already used (`bg-brand/25`, since P5). It sits between `brand-soft` (15%) and `brand-line`
+    (35%), as `raised-hover` sits above `raised`.
+  - **Contrast:** `brand-fg` text 6.80:1 at rest and 5.86:1 on hover or open over panel (the
+    header); 5.94:1 and 5.17:1 over the focused composer (`raised`).
+  - **AI trigger:** no visible change (same pixels; the hover value is now a token).
+  - **AI Polish:** it was a transparent button with a `brand-line` edge, and its own grey disabled
+    look (`border-line`, `fg-disabled`). Now it has the brand-soft fill at rest, and while the
+    reply is empty it is the dimmed soft button (opacity 50%), like every disabled control.
+  - **Details toggle:** pressed, it also gets the `brand-line` edge, and hovering it keeps the
+    brand look (it turned white 5% with white text).
+- **ToggleGroup and Tabs `size="xl"` (an addition, adopted by UI-036).** C-066's 40 px settings
+  controls, named on the one ladder (Input, Button and Select call 40 px `xl`; their `lg` is 36),
+  not `lg` as first suggested.
+  - **Segment:** 40 px tall with 14 px control text (`min-h-10 py-2.5 text-sm`). The track's
+    4 px inset makes the control 48 px outside, which is what Settings › AI's takeover choice
+    renders today.
+  - **Side padding 8 px, not 10:** segments stretch, so this is only a minimum. Settings › AI's
+    "Off | Suggest | Auto Pro" needs a 214 px inner track at 14 px with 10 px padding. Its
+    narrowest track is 220 px (212 inside) on a 320 px screen, where "Auto Pro" ran 2.1 px past
+    the inset (the "didn't fit at `text-sm`" from UI-030). At 8 px it fits there with 9.9 px to
+    spare; at 360 px and up there is room either way.
+  - **Once UI-036 adopts it:** the per-account modes go from 36 px segments at 12 px to 40 px at
+    14 px (a 44 → 48 px track); the takeover choice looks the same.
+  - **Lining up:** a segmented control in a row beside 40 px fields (the Connections and Agent
+    filters next to their searches) uses `default`, whose track is 40 px outside, so the edges
+    line up.
+- **Native date and time fields show focus at every Tab stop (a change on screen; DESIGN_SYSTEM
+  §8.3, WCAG 2.4.7).**
+  - **The problem:** while the calendar or clock button inside the field has focus, Chromium
+    leaves the field matching neither `:focus` nor `:focus-visible`, only `:focus-within`. So that
+    stop had no outline and a resting field (`line-control` edge, `field` fill).
+  - **The fix:** Input draws the same look from `:focus-within` for `date`, `time`,
+    `datetime-local`, `month` and `week`: the 2 px `ring` outline offset 2 px, the `ring` border
+    and the `raised` fill. The browser still rings the button itself.
+  - **The composer's date and time:** 7 stops (3 date segments and the calendar button, 2 time
+    segments and the clock button). Before, 2 showed no focus; after, none. The outline is 4.54:1
+    on panel. Every native date and time field is on Input already (ScheduleFields,
+    MediaLibraryDialog, RangeControl, SettingsStep, PostingTimesDrawer).
+- **`short:` variant (an addition, no visible change):** `@custom-variant short (@media
+  (max-height: 500px))`. It replaces `[@media(max-height:500px)]:` in `shell/sticky-bar.ts`
+  (`STATIC_WHEN_SHORT`, so the settings save bar, the composer's bar and the phone top bar) and
+  PostComposer's one-line reasons. At 640 × 450 the composer's bar (85 px, 18.9% of the height)
+  and the top bar are static, nothing is reserved, and the reasons are one truncated line. At
+  640 × 800 both stick again (85 px reserved).
+- **`shadow-crop-mask` utility (an addition, the same pixels):** CropDialog's arbitrary
+  `shadow-[0_0_0_9999px_…]` becomes a named `@utility` (DESIGN_SYSTEM §6: box-shadow for another
+  job than elevation, named in `globals.css`). Its colour is `media-scrim` at 60% (it dims a photo,
+  so it stays dark in any theme), not `canvas`, the same black today: computed
+  `color(srgb 0 0 0 / 0.6) 0 0 0 9999px`. It is a utility, not a `--shadow-*` token, so elevation
+  keeps its two shadows. `cn` treats it as a shadow size, like `shadow-floating`.

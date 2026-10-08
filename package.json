@@ -14,5 +14,14 @@
     "gen:api": "node scripts/gen-api.mjs",
     "tunnel": "node scripts/tunnel.mjs",
     "e2e": "node scripts/e2e-stack.mjs"
+  },
+  "pnpm": {
+    "overrides": {
+      "source-map-js": "^1.2.2"
+    },
+    "patchedDependencies": {
+      "@radix-ui/react-select@2.3.7": "patches/@radix-ui__react-select@2.3.7.patch",
+      "@radix-ui/react-menu@2.1.24": "patches/@radix-ui__react-menu@2.1.24.patch"
+    }
   }
 }

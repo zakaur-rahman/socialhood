@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, Heart, Loader2, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
+import { AlertTriangle, Clock, Heart, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -8,14 +8,18 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeE
 import { toast } from "sonner";
 
 import { UpgradeAction } from "@/components/billing/UpgradeAction";
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { DisabledReason } from "@/components/ui/disabled-reason";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useApi } from "@/lib/api/provider";
 import { useCreateScheduled, usePolishReply, type ReplyInput } from "@/lib/api/queries";
 import type { Conversation, MediaAsset } from "@/lib/api/types";
 import { composerCopy, errorMessage } from "@/lib/copy";
 import { contactName, firstName, timeLeft } from "@/lib/inbox/format";
+import { clearSearchOnEscape } from "@/lib/inbox/search-escape";
 import { useInboxStore } from "@/lib/inbox/store";
 import { ATTACHMENT_RULES, STICKER_RULE, UploadError, uploadAsset } from "@/lib/media/upload";
 import { relativeTime } from "@/lib/time";
@@ -37,14 +41,23 @@ import {
 // TR-FE-08: the emoji picker loads on demand.
 const EmojiPicker = dynamic(() => import("./EmojiPicker"), {
   ssr: false,
-  loading: () => <Skeleton className="h-64 w-72 bg-raised" />,
+  loading: () => <Skeleton className="h-64 w-72" />,
 });
 
 const MIN_HEIGHT = 40;
 const MAX_HEIGHT = 160;
 const MAX_ATTACHMENTS = 10;
-/** The composer's toolbar icon buttons. */
-const TOOL = "size-10 rounded-md text-fg-secondary md:size-8";
+/** The composer's toolbar icon buttons (Button `icon`: 32 px, 40 px on coarse pointers) are quiet. */
+const TOOL = "text-fg-secondary";
+
+/**
+ * Send (UX-INB-07, DESIGN_SYSTEM §8.3): the primary Button once there is something to send, with
+ * the spec's scale-in. While empty it is a disabled `secondary` Button that keeps the spec's
+ * neutral look (`raised` with `fg-disabled`, at full opacity) instead of the usual `opacity-50`:
+ * the one call-site disabled override the design system allows (AGENT_CONTEXT §6).
+ */
+const SEND_READY = "motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:ease-enter";
+const SEND_EMPTY = "disabled:text-fg-disabled disabled:opacity-100";
 
 export type Uploader = (
   file: File,
@@ -260,10 +273,24 @@ export function Composer({
   };
 
   if (mode !== "reply") {
+    // Why there is no reply box, as the Alert primitive (UI-031): neutral and polite (`role="status"`),
+    // with its one action as the Alert's secondary `sm` Button (DESIGN_SYSTEM §8.5). `outline`, as a
+    // neutral soft fill over panel would leave the secondary Button's `raised` fill nearly invisible.
     return (
       <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
-        <div className="flex flex-wrap items-center gap-3 rounded-lg bg-field px-4 py-3 text-sm" role="status">
-          <p className="min-w-0 flex-1 text-fg-secondary">
+        <Alert
+          variant="outline"
+          action={
+            mode === "blocked" ? (
+              <AlertAction asChild>
+                <Link href={`/w/${slug}/settings/connections` as Route}>Reconnect</Link>
+              </AlertAction>
+            ) : mode === "template_only" ? (
+              <AlertAction onClick={onChooseTemplate}>Choose template</AlertAction>
+            ) : undefined
+          }
+        >
+          <AlertDescription>
             {mode === "blocked"
               ? accountStatus === "disconnected"
                 ? composerCopy.disconnected(accountHandle)
@@ -271,17 +298,8 @@ export function Composer({
               : mode === "closed"
                 ? composerCopy.closed(firstName(name), lastInboundAt ? `${relativeTime(lastInboundAt, now)} ago` : null)
                 : composerCopy.templateOnly}
-          </p>
-          {mode === "blocked" ? (
-            <Button asChild size="sm" className="bg-brand-gradient text-white">
-              <Link href={`/w/${slug}/settings/connections` as Route}>Reconnect</Link>
-            </Button>
-          ) : mode === "template_only" ? (
-            <Button size="sm" className="bg-brand-gradient text-white" onClick={onChooseTemplate}>
-              Choose template
-            </Button>
-          ) : null}
-        </div>
+          </AlertDescription>
+        </Alert>
       </div>
     );
   }
@@ -289,7 +307,8 @@ export function Composer({
   return (
     <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
       <AttachmentTray items={tray.items} onRemove={tray.remove} onRetry={tray.retry} />
-      <div className="rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised">
+      {/* The textarea draws no outline of its own; this wrapper shows the focus outline (DESIGN_SYSTEM §8.3). */}
+      <div className="rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
         <label htmlFor={`composer-${conversationId}`} className="sr-only">
           Reply to {name}
         </label>
@@ -306,12 +325,13 @@ export function Composer({
           placeholder={`Reply to ${firstName(name)}…`}
           maxLength={4096}
           aria-busy={polish.isPending}
-          className="block max-h-40 min-h-10 w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed outline-none"
+          // 16 px below md, where iOS zooms into smaller fields (UI-ISS-017); the wrapper draws the focus outline.
+          className="block max-h-40 min-h-10 w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed focus-visible:outline-none max-md:text-base"
         />
         <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
           {canAttach ? (
             <>
-              <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Attach files" onClick={() => fileRef.current?.click()}>
+              <Button variant="ghost" size="icon" className={TOOL} aria-label="Attach files" onClick={() => fileRef.current?.click()}>
                 <Paperclip aria-hidden />
               </Button>
               <input
@@ -327,26 +347,27 @@ export function Composer({
           ) : null}
           <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Add emoji">
+              <Button variant="ghost" size="icon" className={TOOL} aria-label="Add emoji">
                 <Smile aria-hidden />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="start" side="top" className="w-auto border-line bg-panel p-2 shadow-xl">
+            {/* Esc empties the picker's search first; the next Esc closes the popover (UI-031). */}
+            <PopoverContent align="start" side="top" className="w-auto p-2" onEscapeKeyDown={clearSearchOnEscape}>
               {emojiOpen ? <EmojiPicker onPick={insertEmoji} /> : null}
             </PopoverContent>
           </Popover>
           {conversation.platform === "instagram" ? (
-            <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Send a heart" onClick={sendHeart}>
+            <Button variant="ghost" size="icon" className={TOOL} aria-label="Send a heart" onClick={sendHeart}>
               <Heart aria-hidden />
             </Button>
           ) : canAttach ? (
             <>
               <Button
                 variant="ghost"
-                size="icon-lg"
+                size="icon"
                 className={TOOL}
                 aria-label="Send a sticker"
-                disabled={sticker.busy}
+                loading={sticker.busy}
                 onClick={() => stickerRef.current?.click()}
               >
                 <Sticker aria-hidden />
@@ -361,29 +382,32 @@ export function Composer({
               />
             </>
           ) : null}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="ml-1 h-8 gap-1 rounded-md border border-brand-line px-2 text-xs font-medium text-brand-fg hover:bg-brand-soft disabled:border-line disabled:text-fg-disabled"
-            disabled={draft.trim() === "" || polish.isPending}
-            title={draft.trim() === "" ? "Write a reply to polish" : "Fix grammar and clarity, in the same language (1 AI credit)"}
-            onClick={polishDraft}
-          >
-            {polish.isPending ? <Loader2 className="size-3.5 animate-spin" aria-hidden /> : <Sparkles className="size-3.5" aria-hidden />}
-            {polish.isPending ? "Polishing…" : "AI Polish"}
-          </Button>
+          {/* An AI action: the soft Button. Empty, it says why it's off (DisabledReason) and is dimmed like
+              any disabled control; while it works it is the Button's `loading` (a spinner, aria-busy), with
+              no reason to give. Enabled, a Tooltip says what it does and what it costs (UI-031; was a title). */}
+          <DisabledReason reason={draft.trim() === "" ? "Write a reply to polish" : null} className="ml-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="soft" size="sm" disabled={draft.trim() === ""} loading={polish.isPending} onClick={polishDraft}>
+                  <Sparkles aria-hidden />
+                  AI Polish
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Fix grammar and clarity, in the same language (1 AI credit)</TooltipContent>
+            </Tooltip>
+          </DisabledReason>
           {canUndoPolish ? (
-            <Button variant="ghost" size="sm" className="h-8 gap-1 px-2 text-xs text-fg-secondary" onClick={undoPolish}>
-              <Undo2 className="size-3.5" aria-hidden /> Undo
+            <Button variant="ghost" size="sm" className="text-fg-secondary" onClick={undoPolish}>
+              <Undo2 aria-hidden /> Undo
             </Button>
           ) : null}
           <Popover open={scheduleOpen} onOpenChange={onScheduleOpenChange}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon-lg" className={TOOL} aria-label="Schedule for later">
+              <Button variant="ghost" size="icon" className={TOOL} aria-label="Schedule for later">
                 <Clock aria-hidden />
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" side="top" className="w-80 border-line bg-panel p-3 shadow-xl">
+            <PopoverContent align="end" side="top" className="w-80 p-3">
               {scheduleOpen ? (
                 <SchedulePanel
                   key={scheduleAt ?? "default"}
@@ -403,23 +427,20 @@ export function Composer({
               ) : null}
             </PopoverContent>
           </Popover>
-          <button
-            type="button"
+          {/* 32 px, 40 px on coarse pointers; at least as wide as tall when only the icon shows (phones). */}
+          <Button
+            variant={canSend ? "default" : "secondary"}
             onClick={send}
             disabled={!canSend}
             aria-label="Send"
-            className={cn(
-              "ml-auto inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium md:h-8",
-              canSend
-                ? "bg-brand-gradient text-white motion-safe:animate-in motion-safe:zoom-in-95 motion-safe:duration-[120ms]"
-                : "bg-raised text-fg-disabled",
-            )}
+            data-ready={canSend}
+            className={cn("ml-auto pointer-coarse:min-w-10", canSend ? SEND_READY : SEND_EMPTY)}
           >
             <span className="hidden sm:inline" aria-hidden>
               Send
             </span>
-            <SendHorizontal className="size-4" aria-hidden />
-          </button>
+            <SendHorizontal aria-hidden />
+          </Button>
         </div>
       </div>
       {replyWindow.state === "human_agent" && replyWindow.closes_at ? (
@@ -503,7 +524,9 @@ export function SchedulePanel({
         <p className="text-xs text-fg-secondary">Window closes {formatDayTime(closesAt, timeZone, now)}</p>
       ) : null}
       {windowTooShort ? (
-        <p className="text-sm text-warning">The reply window closes too soon to schedule. Reply now instead.</p>
+        <Alert tone="warning" icon={<AlertTriangle />}>
+          The reply window closes too soon to schedule. Reply now instead.
+        </Alert>
       ) : (
         <>
           <ScheduleFields
@@ -520,12 +543,8 @@ export function SchedulePanel({
           />
           {error ? <UpgradeAction error={limitError} /> : null}
           {hasText ? null : <p className="text-xs text-fg-secondary">Write a message first.</p>}
-          <Button
-            className="w-full bg-brand-gradient text-white"
-            disabled={!hasText || blocked || create.isPending}
-            onClick={schedule}
-          >
-            {create.isPending ? "Scheduling…" : "Schedule"}
+          <Button className="w-full" disabled={!hasText || blocked} loading={create.isPending} onClick={schedule}>
+            Schedule
           </Button>
         </>
       )}
@@ -630,7 +649,7 @@ function useStickerUpload(wid: string, injected?: Uploader) {
       try {
         return await (injected ? injected(file, options) : uploadAsset(api, wid, file, options));
       } catch (error) {
-        toast.error(error instanceof UploadError ? error.message : errorMessage(error));
+        toastError(error, error instanceof UploadError ? error.message : undefined);
         return null;
       } finally {
         setBusy(false);

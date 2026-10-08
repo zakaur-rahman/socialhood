@@ -2,7 +2,10 @@
 
 import { useMemo, useState } from "react";
 
+import { EmptyState } from "@/components/states/EmptyState";
+import { SearchInput } from "@/components/ui/search-input";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 /**
  * A small emoji picker, loaded only when the composer's emoji button is first used
@@ -74,43 +77,43 @@ export default function EmojiPicker({ onPick }: { onPick: (emoji: string) => voi
     return GROUPS.flatMap((group) => group.emoji).filter(([, words]) => words.includes(q));
   }, [query]);
 
+  // The emoji's name is its aria-label; the picture says the rest, so no title tooltip on each.
   const button = ([emoji, words]: [string, string]) => (
     <button
       key={emoji}
       type="button"
       onClick={() => onPick(emoji)}
       aria-label={words.split(" ")[0]}
-      title={words.split(" ")[0]}
-      className="grid size-8 place-items-center rounded-md text-lg hover:bg-white/10"
+      className="grid size-8 place-items-center rounded-md text-lg hover:bg-pressed focus-visible:-outline-offset-2"
     >
       {emoji}
     </button>
   );
 
+  // The SearchInput primitive (UI-031). Inside the composer's popover, Esc reaches the popover first,
+  // so the popover's onEscapeKeyDown (lib/inbox/search-escape) empties a search with text before it
+  // closes.
   return (
     <div className="flex w-72 flex-col gap-2">
-      <label htmlFor="emoji-search" className="sr-only">
-        Search emoji
-      </label>
-      <input
+      <SearchInput
         id="emoji-search"
+        label="Search emoji"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Search emoji"
         autoFocus
-        className="w-full rounded-lg border border-line bg-field px-3 py-1.5 text-sm outline-none focus:bg-raised"
       />
       <div className="max-h-64 overflow-y-auto">
         {results ? (
           results.length ? (
             <div className="grid grid-cols-8 gap-0.5">{results.map(button)}</div>
           ) : (
-            <p className="px-1 py-4 text-center text-xs text-fg-secondary">No emoji match &quot;{query}&quot;.</p>
+            <EmptyState size="compact" title={`No emoji match "${query.trim()}"`} className="px-1 py-4" />
           )
         ) : (
           GROUPS.map((group) => (
             <section key={group.name} aria-label={group.name} className="mb-2">
-              <h3 className={cn("mb-1 px-1 text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase")}>
+              <h3 className={cn("mb-1 px-1", EYEBROW)}>
                 {group.name}
               </h3>
               <div className="grid grid-cols-8 gap-0.5">{group.emoji.map(button)}</div>

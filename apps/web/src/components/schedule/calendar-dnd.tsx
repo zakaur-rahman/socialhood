@@ -235,9 +235,10 @@ function DragLabel({
     <div
       aria-hidden
       data-testid="drag-label"
+      // A drag preview floats (DESIGN_SYSTEM §6, level 1): the overlay surface and the floating shadow.
       className={cn(
-        "pointer-events-none fixed z-50 max-w-64 rounded-lg border px-2.5 py-1.5 text-xs font-medium tabular-nums shadow-xl",
-        ok ? "border-brand-line bg-panel text-fg" : "border-danger bg-panel text-danger-fg",
+        "pointer-events-none fixed z-50 max-w-64 rounded-lg border bg-overlay px-2.5 py-1.5 text-xs font-medium tabular-nums shadow-floating",
+        ok ? "border-brand-line text-fg" : "border-danger text-danger-fg",
       )}
       style={{ left: state.x + 14, top: state.y + 14 }}
     >

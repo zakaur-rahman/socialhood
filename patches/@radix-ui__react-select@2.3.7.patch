@@ -1,0 +1,26 @@
+diff --git a/dist/index.js b/dist/index.js
+index 06d9d5060b10358369b63a2843764be45be9abe9..c435c00f14dcb75a18d4c27607c450aa573b5b67 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1219,7 +1219,7 @@ function useTypeaheadSearch(onSearchChange) {
+     (key) => {
+       const search = searchRef.current + key;
+       handleSearchChange(search);
+-      (/* @__PURE__ */ __name((function updateSearch(value) {
++      (/* Social Hood patch: not marked pure; marked, Next's SWC minifier dropped this call and typeahead kept only the last letter */ __name((function updateSearch(value) {
+         searchRef.current = value;
+         window.clearTimeout(timerRef.current);
+         if (value !== "") timerRef.current = window.setTimeout(() => updateSearch(""), 1e3);
+diff --git a/dist/index.mjs b/dist/index.mjs
+index d3c861eeb58b610e8fed2eadf48a39a4de7efdac..02c534ab7e27bfed4ef995cc9c98a0d1dd002172 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1149,7 +1149,7 @@ function useTypeaheadSearch(onSearchChange) {
+     (key) => {
+       const search = searchRef.current + key;
+       handleSearchChange(search);
+-      (/* @__PURE__ */ __name((function updateSearch(value) {
++      (/* Social Hood patch: not marked pure; marked, Next's SWC minifier dropped this call and typeahead kept only the last letter */ __name((function updateSearch(value) {
+         searchRef.current = value;
+         window.clearTimeout(timerRef.current);
+         if (value !== "") timerRef.current = window.setTimeout(() => updateSearch(""), 1e3);

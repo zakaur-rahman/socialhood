@@ -31,9 +31,45 @@ function initialValue(request: MoveRequest, timeZone: string, now: Date): Schedu
 /**
  * "Move to…" (FR-PUB-08): the keyboard and phone alternative to dragging. For a scheduled post it
  * reschedules; for a draft it schedules ("Schedule for…"), with the same checks as Schedule.
- * `onMove` answers an error to show, or null when done.
+ * `onMove` answers an error to show, or null when done. It stays mounted and keeps the last request
+ * while it closes, so its exit plays.
  */
 export function MoveToDialog({
+  open,
+  request,
+  timeZone,
+  now,
+  onMove,
+  onClose,
+}: {
+  open: boolean;
+  request: MoveRequest | null;
+  timeZone: string;
+  now: Date;
+  onMove: (at: Date) => Promise<string | null>;
+  onClose: () => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={(next) => (next ? undefined : onClose())}>
+      <DialogContent
+        size="md"
+        onCloseAutoFocus={(event) => {
+          if (request?.returnFocus?.isConnected) {
+            event.preventDefault();
+            request.returnFocus.focus();
+          }
+        }}
+      >
+        {request ? (
+          <MoveToForm key={request.post.id} request={request} timeZone={timeZone} now={now} onMove={onMove} onClose={onClose} />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Inside the dialog's content, so each opening starts from the post's own time. */
+function MoveToForm({
   request,
   timeZone,
   now,
@@ -64,39 +100,27 @@ export function MoveToDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
-      <DialogContent
-        className="border-line bg-panel sm:max-w-md"
-        onCloseAutoFocus={(event) => {
-          if (request.returnFocus?.isConnected) {
-            event.preventDefault();
-            request.returnFocus.focus();
-          }
-        }}
-      >
-        <form onSubmit={(event) => void submit(event)} className="grid gap-4">
-          <DialogHeader>
-            <DialogTitle>{draft ? "Schedule for…" : "Move to…"}</DialogTitle>
-            <DialogDescription className="truncate text-fg-secondary">{captionLine(request.post.caption)}</DialogDescription>
-          </DialogHeader>
-          <ScheduleFields
-            idPrefix="move-to"
-            value={value}
-            onChange={setValue}
-            timeZone={timeZone}
-            limits={{ min: new Date(now.getTime() + MIN_LEAD_MS), max: null }}
-            error={error}
-          />
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" className="bg-brand-gradient text-white" disabled={pending}>
-              {draft ? "Schedule" : "Move"}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <form onSubmit={(event) => void submit(event)} className="grid gap-4">
+      <DialogHeader>
+        <DialogTitle>{draft ? "Schedule for…" : "Move to…"}</DialogTitle>
+        <DialogDescription className="truncate">{captionLine(request.post.caption)}</DialogDescription>
+      </DialogHeader>
+      <ScheduleFields
+        idPrefix="move-to"
+        value={value}
+        onChange={setValue}
+        timeZone={timeZone}
+        limits={{ min: new Date(now.getTime() + MIN_LEAD_MS), max: null }}
+        error={error}
+      />
+      <DialogFooter>
+        <Button type="button" variant="ghost" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={pending}>
+          {draft ? "Schedule" : "Move"}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 }

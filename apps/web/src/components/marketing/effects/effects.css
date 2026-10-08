@@ -1,0 +1,46 @@
+/*
+ * The landing page's effects (C-068): keyframes and the scroll-reveal states. Imported by the
+ * landing page only. Colours come from the tokens in styles/globals.css. Every animation here
+ * runs only under prefers-reduced-motion: no-preference; otherwise everything is static.
+ */
+
+/* ---- Scroll reveal (ScrollReveal.tsx): hidden only once JavaScript has armed it. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal-armed] [data-reveal] {
+    transition:
+      opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms),
+      translate 0.6s cubic-bezier(0.16, 1, 0.3, 1) var(--reveal-delay, 0ms);
+  }
+  [data-reveal-armed] [data-reveal]:not([data-revealed]) {
+    opacity: 0;
+    translate: 0 1.5rem;
+  }
+}
+
+/* ---- Spotlight (spotlight-new.tsx): a slow drift. */
+@keyframes sh-drift-right {
+  from { translate: 0 0; }
+  to { translate: 6.25rem 0; }
+}
+@keyframes sh-drift-left {
+  from { translate: 0 0; }
+  to { translate: -6.25rem 0; }
+}
+
+/* ---- The comment-to-DM beam (Beam.tsx): a pulse running along the path. */
+@keyframes sh-beam {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -100; }
+}
+
+/* ---- Small pulses for "live" dots in the illustrations. */
+@keyframes sh-ping {
+  0% { transform: scale(1); opacity: 0.7; }
+  80%, 100% { transform: scale(2.2); opacity: 0; }
+}
+
+/* ---- The caret after typed text (text-generate-effect.tsx). */
+@keyframes sh-caret {
+  0%, 45% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}

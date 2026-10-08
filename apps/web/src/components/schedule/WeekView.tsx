@@ -136,7 +136,7 @@ export function WeekView({
               hour === 0 ? null : (
                 <span
                   key={hour}
-                  className="absolute right-2 -translate-y-1/2 text-[11px] text-fg-secondary tabular-nums"
+                  className="absolute right-2 -translate-y-1/2 text-2xs text-fg-secondary tabular-nums"
                   style={{ top: hour * 2 * ROW_PX }}
                 >
                   {formatMinutes(hour * 60)}
@@ -202,7 +202,7 @@ function DayColumn({
             className={cn(
               "border-t",
               row % 2 === 0 ? "border-line-subtle" : "border-transparent",
-              open ? "cursor-pointer hover:bg-white/[0.03]" : "bg-canvas/20",
+              open ? "cursor-pointer hover:bg-hover" : "bg-canvas/20",
             )}
             style={{ height: ROW_PX }}
           />
@@ -254,7 +254,7 @@ function CellItems({ row, cell }: { row: number; cell: Cell }) {
       {posts.length === 0 && slotTime ? (
         <div
           data-testid="queue-slot"
-          className="flex min-w-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong px-1 text-[11px] text-fg-secondary"
+          className="flex min-w-0 flex-1 items-center justify-center rounded-md border border-dashed border-line-strong px-1 text-2xs text-fg-secondary"
         >
           <span className="truncate">Queue · {slotTime}</span>
         </div>
@@ -277,8 +277,8 @@ function DropMarker({ day, minutes }: { day: string; minutes: number }) {
       aria-hidden
       data-testid="drop-marker"
       className={cn(
-        "pointer-events-none absolute inset-x-0.5 z-20 rounded-md border-2 px-1 text-[11px] font-semibold tabular-nums",
-        ok ? "border-brand bg-brand-soft text-brand-fg" : "border-danger bg-danger/15 text-danger-fg",
+        "pointer-events-none absolute inset-x-0.5 z-20 rounded-md border-2 px-1 text-2xs font-semibold tabular-nums",
+        ok ? "border-brand bg-brand-soft text-brand-fg" : "border-danger bg-danger-soft text-danger-fg",
       )}
       style={{ top: (minutes / ROW_MINUTES) * ROW_PX, height: ROW_PX }}
     >

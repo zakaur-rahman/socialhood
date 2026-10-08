@@ -144,6 +144,8 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
       ai: { effective_mode: "auto", override: null, paused_until: "2026-09-28T13:40:00Z" },
     });
     expect(screen.getByText("AI paused")).toBeInTheDocument();
+    // In a narrow thread header only Resume shows; it still says what is paused.
+    expect(screen.getByRole("button", { name: "Resume" })).toHaveAccessibleDescription("AI paused");
     await user.click(screen.getByRole("button", { name: "Resume" }));
     await waitFor(() => expect(patches()).toHaveLength(1));
     expect(patches()[0]).toMatchObject({ resume_ai: true });
@@ -158,11 +160,32 @@ describe("AI mode in the thread header (FR-SUG-01, UX-INB-05)", () => {
 });
 
 describe("the one AI mode control (C-063)", () => {
+  // UI-030: the trigger is the Button primitive (28 px, 40 px on coarse pointers) in the AI pill's
+  // colours, now the soft variant (C-073); the menu is non-modal by default, so the page isn't made
+  // inert behind it.
+  it("is a Button in the AI pill's colours, and its menu leaves the page usable", async () => {
+    const user = userEvent.setup();
+    setup();
+    const trigger = await screen.findByRole("button", { name: "AI mode: Suggest. Change" });
+    // The menu trigger's data-slot replaces the Button's; its variant and size stay.
+    expect(trigger).toHaveAttribute("data-variant", "soft");
+    expect(trigger).toHaveAttribute("data-size", "sm");
+    expect(trigger).toHaveClass("bg-brand-soft", "text-brand-fg", "border-brand-line", "pointer-coarse:min-h-10");
+    expect(trigger).toHaveClass("hover:bg-brand-soft-hover", "aria-expanded:bg-brand-soft-hover");
+    await user.click(trigger);
+    await screen.findByRole("menu");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    // A modal menu would hide the rest of the page from screen readers (aria-hidden on its ancestors).
+    expect(trigger.closest("[aria-hidden]")).toBeNull();
+  });
+
   it("says what the default is", async () => {
     setup();
     const trigger = await screen.findByRole("button", { name: "AI mode: Suggest. Change" });
-    await waitFor(() =>
-      expect(trigger).toHaveAttribute("title", "Account default · Suggest. Change it for this conversation"),
+    expect(trigger).not.toHaveAttribute("title");
+    await userEvent.hover(trigger);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      "Account default · Suggest. Change it for this conversation",
     );
   });
 

@@ -1,5 +1,5 @@
 import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { buildPricing } from "@/lib/marketing/plans";
 import { plansFixture } from "@/test/plans";
@@ -10,7 +10,20 @@ function card(name: string) {
   return screen.getByRole("heading", { level: 3, name }).closest("li") as HTMLElement;
 }
 
+/** jsdom has no IntersectionObserver; nothing is on screen, so Pro's moving glow stays idle. */
+class IdleObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  takeRecords() {
+    return [];
+  }
+}
+
 describe("the pricing section", () => {
+  beforeEach(() => vi.stubGlobal("IntersectionObserver", IdleObserver));
+  afterEach(() => vi.unstubAllGlobals());
+
   it("shows the API's price in its currency, the trial and the entitlements", () => {
     render(<Pricing pricing={buildPricing(plansFixture().items)} />);
     const pro = within(card("Pro"));
@@ -45,6 +58,20 @@ describe("the pricing section", () => {
     expect(within(card("Free")).getByText("3 active automations")).toBeInTheDocument();
     expect(screen.getByText(/Prices couldn't be loaded just now/)).toBeInTheDocument();
     expect(container.textContent).not.toMatch(/[$₹€£]\s?\d/);
+  });
+
+  it("only Pro, when it can be bought, gets the moving border (C-068)", () => {
+    render(<Pricing pricing={buildPricing(plansFixture().items)} />);
+    expect(card("Pro").querySelector("[data-frame=moving-border]")).not.toBeNull();
+    expect(card("Free").querySelector("[data-frame=moving-border]")).toBeNull();
+    expect(card("Max").querySelector("[data-frame=moving-border]")).toBeNull();
+  });
+
+  it("the fallback keeps the same cards: Pro framed, Max coming soon, no price", () => {
+    render(<Pricing pricing={buildPricing(null)} />);
+    expect(card("Pro").querySelector("[data-frame=moving-border]")).not.toBeNull();
+    expect(within(card("Max")).getAllByText("Coming soon").length).toBeGreaterThan(0);
+    expect(within(card("Max")).queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("when Dodo gave no price, Pro says so instead of showing one", () => {

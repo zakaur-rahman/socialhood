@@ -76,7 +76,7 @@ export function Checklist({ steps, slug, onDismiss, dismissing = false }: Props)
               key={step.key}
               data-step={step.key}
               data-done={step.done}
-              className={cn("flex gap-3 rounded-lg px-2 py-2", open && "bg-white/5")}
+              className={cn("flex gap-3 rounded-lg px-2 py-2", open && "bg-hover")}
             >
               {step.done ? (
                 <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-success" aria-label="Done" />
@@ -90,7 +90,7 @@ export function Checklist({ steps, slug, onDismiss, dismissing = false }: Props)
                 {open ? (
                   <>
                     <p className="mt-0.5 text-sm text-fg-secondary">{copy.why}</p>
-                    <Button asChild size="sm" className="bg-brand-gradient mt-2 text-white">
+                    <Button asChild size="sm" className="mt-2">
                       <Link href={copy.href(slug)}>{copy.action}</Link>
                     </Button>
                   </>

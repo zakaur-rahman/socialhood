@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useLeaveWarning } from "@/components/settings/SaveBar";
 import { toApiError, type ApiError } from "@/lib/api/errors";
 import { useSaveComposerPost } from "@/lib/api/queries/scheduledPosts";
 import type { ScheduledPost, ScheduledPostDraft } from "@/lib/publishing/types";
@@ -47,6 +48,30 @@ export function toRequest(draft: Draft): ScheduledPostDraft {
   };
 }
 
+const instant = (at: string | null) => (at ? new Date(at).getTime() : null);
+
+/**
+ * Whether two drafts would store the same post: what the PUT sends, with times compared as instants
+ * (the API answers "…:00Z" for the "…:00.000Z" the composer sends).
+ */
+export function sameDraft(a: Draft, b: Draft): boolean {
+  const x = toRequest(a);
+  const y = toRequest(b);
+  return (
+    x.caption === y.caption &&
+    x.first_comment === y.first_comment &&
+    instant(x.publish_at ?? null) === instant(y.publish_at ?? null) &&
+    x.asset_ids?.length === y.asset_ids?.length &&
+    (x.asset_ids ?? []).every((id, index) => id === y.asset_ids?.[index]) &&
+    x.targets?.length === y.targets?.length &&
+    (x.targets ?? []).every(
+      (target, index) =>
+        target.social_account_id === y.targets?.[index]?.social_account_id &&
+        (target.caption_override ?? null) === (y.targets?.[index]?.caption_override ?? null),
+    )
+  );
+}
+
 type Patch = Partial<Draft> | ((draft: Draft) => Partial<Draft>);
 
 /**
@@ -54,7 +79,8 @@ type Patch = Partial<Draft> | ((draft: Draft) => Partial<Draft>);
  * post is PUT; saves never overlap, and an edit made during a save is sent after it. A scheduled
  * post doesn't autosave: its edits wait for Update schedule, because a PUT changes what will be
  * published. Pending autosaves are sent when the composer unmounts; closing the tab with unsaved
- * edits asks first.
+ * edits asks first, and so does leaving a scheduled post's unsaved edits through an in-app link
+ * (the sidebar, the breadcrumb, a notification).
  */
 export function usePostDraft(
   wid: string,
@@ -67,6 +93,8 @@ export function usePostDraft(
   const [error, setError] = useState<ApiError | null>(null);
 
   const latest = useRef(draft);
+  // The post as the API last stored it: an edit that puts everything back is no longer unsaved.
+  const stored = useRef(draft);
   const edits = useRef(0);
   const savedEdits = useRef(0);
   const timer = useRef<number | null>(null);
@@ -98,6 +126,7 @@ export function usePostDraft(
     const attempt = (async () => {
       try {
         const post = await mutate.current(toRequest(latest.current));
+        stored.current = toDraft(post);
         savedEdits.current = Math.max(savedEdits.current, version);
         setError(null);
         if (edits.current === version) setStatus("saved");
@@ -133,7 +162,13 @@ export function usePostDraft(
       edits.current += 1;
       clearTimer();
       if (!autosaveRef.current) {
-        setStatus("unsaved");
+        // A scheduled post's edits wait for Update schedule; undoing them all (the caption's Undo,
+        // a time set back) leaves nothing unsaved. Nothing is in flight here: these posts don't
+        // autosave, so the stored post can't change under the comparison.
+        if (sameDraft(next, stored.current) && !running.current) {
+          savedEdits.current = edits.current;
+          setStatus("saved");
+        } else setStatus("unsaved");
         return;
       }
       setStatus("saving");
@@ -150,6 +185,7 @@ export function usePostDraft(
     clearTimer();
     const next = toDraft(post);
     latest.current = next;
+    stored.current = next;
     setDraft(next);
     savedEdits.current = edits.current;
     setError(null);
@@ -194,5 +230,8 @@ export function usePostDraft(
   }, [flush]);
 
   const dirty = status !== "saved";
+  // A draft's edits are saved on the way out (above); a scheduled post's would be lost, so leaving
+  // through an in-app link asks first (UI-ISS-022).
+  useLeaveWarning(dirty && !autosave);
   return { draft, update, flush, settle, reset, discard, status, error, dirty };
 }

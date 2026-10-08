@@ -1,5 +1,6 @@
 import type { PostTopic } from "@/lib/api/types";
 import { formatCount } from "@/lib/comments/format";
+import { EYEBROW } from "@/styles/tokens";
 
 import { SentimentBar } from "./SentimentBar";
 
@@ -10,7 +11,7 @@ import { SentimentBar } from "./SentimentBar";
 export function TopicsCard({ topics, analysed }: { topics: PostTopic[]; analysed: number }) {
   return (
     <section aria-labelledby="post-topics-heading" className="space-y-3 rounded-xl border border-line bg-panel p-4">
-      <h2 id="post-topics-heading" className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">
+      <h2 id="post-topics-heading" className={EYEBROW}>
         Topics
       </h2>
       {topics.length === 0 ? (

@@ -3,6 +3,7 @@
  * 12, 14). Colours are token utilities only.
  */
 import { ApiError } from "@/lib/api/errors";
+import { instagramAccounts } from "@/lib/automations/accounts";
 import type {
   BulkScheduledPostResult,
   PostingSlot,
@@ -13,6 +14,7 @@ import type {
 } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import type { Tone } from "@/lib/inbox/format";
+import { type Identity, identityAt } from "@/lib/ui/identity";
 
 import { formatMinutes, TOO_SOON_MESSAGE, WEEKDAYS_SHORT } from "./dates";
 
@@ -35,13 +37,8 @@ export const POST_STATUS: Record<ScheduledPostStatus, StatusMeta> = {
   canceled: { label: "Canceled", tone: "neutral", border: "border-l-danger", group: "failed" },
 };
 
-export const CHIP_CLASS: Record<StatusMeta["tone"], string> = {
-  neutral: "bg-white/5 text-fg-secondary",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-danger/15 text-danger-fg",
-  brand: "bg-brand-soft text-brand-fg",
-  success: "bg-success/15 text-success",
-};
+/** The post status chip's fill and text: the one tone map (lib/ui/tone), under its old name. */
+export { TONE_CLASS as CHIP_CLASS } from "@/lib/ui/tone";
 
 /** The List view's tabs and the status filter, in order (UX-SCR-04). */
 export const STATUS_GROUPS: { value: ScheduledPostView; label: string }[] = [
@@ -88,17 +85,27 @@ export function postFormatLabel(post: Pick<ScheduledPostSummary, "format" | "ass
   }
 }
 
-/** Each account keeps one ring colour on the page (UX-SCR-04), from the tokens. */
-const RINGS = ["ring-brand", "ring-instagram", "ring-warning", "ring-whatsapp", "ring-brand-fg", "ring-fg-secondary"] as const;
-const DOTS = ["bg-brand", "bg-instagram", "bg-warning", "bg-whatsapp", "bg-brand-fg", "bg-fg-secondary"] as const;
-
-export type AccountColor = { ring: string; dot: string };
+/**
+ * Each account keeps one identity on the page (UX-SCR-04): its ring and dot, and its avatar's
+ * gradient when it has no picture, all from the identity palette (lib/ui/identity, D-13), never a
+ * status or platform colour. Accounts take the identities in order, so the first three differ.
+ */
+export type AccountColor = Identity;
 
 export function accountColors(accounts: Pick<SocialAccount, "id">[]): Map<string, AccountColor> {
-  return new Map(accounts.map((account, i) => [account.id, { ring: RINGS[i % RINGS.length], dot: DOTS[i % DOTS.length] }]));
+  return new Map(accounts.map((account, i) => [account.id, identityAt(i)]));
 }
 
-export const UNKNOWN_ACCOUNT_COLOR: AccountColor = { ring: "ring-line-strong", dot: "bg-line-strong" };
+/**
+ * The identities from the workspace's whole account list: its connected Instagram accounts, in
+ * order. Schedule and the post composer both read this, so an account looks the same in both.
+ */
+export function instagramAccountColors(accounts: SocialAccount[]): Map<string, AccountColor> {
+  return accountColors(instagramAccounts(accounts));
+}
+
+/** An account the page doesn't know (disconnected): a neutral ring, no identity. */
+export const UNKNOWN_ACCOUNT_COLOR: AccountColor = { gradient: "", ring: "ring-line-strong", dot: "bg-line-strong" };
 
 /** "Mon, Wed, Fri 18:00 · Sat 10:00": weekly posting times grouped by time. */
 export function summarizeSlots(slots: PostingSlot[]): string {

@@ -1,9 +1,19 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { type VariantProps } from "class-variance-authority"
+import { cn } from "@/lib/utils"
 import { Select as SelectPrimitive } from "radix-ui"
 import { ChevronDownIcon, CheckIcon, ChevronUpIcon } from "lucide-react"
+
+import {
+  FLOATING_GROUP,
+  FLOATING_ITEM,
+  FLOATING_MOTION,
+  FLOATING_SURFACE,
+  keyboardHighlight,
+} from "@/components/ui/floating"
+import { inputVariants } from "@/components/ui/input"
 
 function Select({
   ...props
@@ -30,22 +40,28 @@ function SelectValue({
   return <SelectPrimitive.Value data-slot="select-value" {...props} />
 }
 
+/**
+ * The trigger is built on Input (DESIGN_SYSTEM §8.2), so a select beside an Input on one card looks
+ * the same: ui/input's `inputVariants` gives the `field` surface, the `--input` edge, focus as the
+ * global outline plus a `ring` border, `aria-invalid` in `danger`, Input's text sizes and the
+ * control ladder's heights (40 px on coarse pointers at every size). On top: as wide as its value,
+ * room for the chevron, and the placeholder colour. A call site's height or width class still
+ * replaces the size's.
+ */
+const SELECT_TRIGGER =
+  "flex w-fit items-center justify-between gap-1.5 pr-2 whitespace-nowrap select-none data-placeholder:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+
 function SelectTrigger({
   className,
   size = "default",
   children,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
-  size?: "sm" | "default"
-}) {
+}: React.ComponentProps<typeof SelectPrimitive.Trigger> & VariantProps<typeof inputVariants>) {
   return (
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       data-size={size}
-      className={cn(
-        "flex w-fit items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-placeholder:text-muted-foreground data-[size=default]:h-8 data-[size=sm]:h-7 data-[size=sm]:rounded-[min(var(--radius-md),10px)] *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 dark:bg-input/30 dark:hover:bg-input/50 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(inputVariants({ size }), SELECT_TRIGGER, className)}
       {...props}
     >
       {children}
@@ -56,6 +72,10 @@ function SelectTrigger({
   )
 }
 
+/**
+ * The options, on the floating surface and motion shared with menus and popovers (ui/floating). As
+ * wide as the trigger at least. Placed over the trigger (the default), it appears without motion.
+ */
 function SelectContent({
   className,
   children,
@@ -68,10 +88,20 @@ function SelectContent({
       <SelectPrimitive.Content
         data-slot="select-content"
         data-align-trigger={position === "item-aligned"}
-        className={cn("relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[align-trigger=true]:animate-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", position ==="popper"&&"data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1", className )}
+        className={cn(
+          "relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto",
+          FLOATING_GROUP,
+          FLOATING_SURFACE,
+          FLOATING_MOTION,
+          "data-[align-trigger=true]:animate-none",
+          position === "popper" &&
+            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
+          className
+        )}
         position={position}
         align={align}
         {...props}
+        {...keyboardHighlight(props)}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
@@ -96,12 +126,13 @@ function SelectLabel({
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn("px-1.5 py-1 text-xs text-muted-foreground", className)}
+      className={cn("px-1.5 py-1 text-xs text-fg-secondary", className)}
       {...props}
     />
   )
 }
 
+/** An option: the menu item's highlight (ui/floating), with the tick for the chosen one. */
 function SelectItem({
   className,
   children,
@@ -111,7 +142,8 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        FLOATING_ITEM,
+        "w-full pr-8 pl-1.5 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       {...props}

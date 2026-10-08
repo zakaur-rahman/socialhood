@@ -1,10 +1,11 @@
 "use client";
 
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CROP_RATIOS, CropError, cropRect, focusOf, moveFocus, suggestedRatio, type Cropper, type CropRatio, type CropSource } from "@/lib/publishing/crop";
 import type { AssetInfo } from "@/lib/publishing/rules";
@@ -99,16 +100,16 @@ export function CropDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !busy && onOpenChange(next)}>
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Crop {label}</DialogTitle>
-          <DialogDescription className="text-fg-secondary">
+          <DialogTitle>Crop {label}</DialogTitle>
+          <DialogDescription>
             Instagram shows photos from 4:5 to 1.91:1. Choose a shape, then drag the frame or use the arrow keys.
           </DialogDescription>
         </DialogHeader>
         <ToggleGroup value={ratio.key} onValueChange={changeRatio} aria-label="Shape">
           {CROP_RATIOS.map((option) => (
-            <ToggleGroupItem key={option.key} value={option.key} className="min-h-10 md:min-h-8">
+            <ToggleGroupItem key={option.key} value={option.key}>
               {option.label}
             </ToggleGroupItem>
           ))}
@@ -147,7 +148,8 @@ export function CropDialog({
               onPointerCancel={() => {
                 dragStart.current = null;
               }}
-              className="absolute cursor-move touch-none rounded-sm border-2 border-fg shadow-[0_0_0_9999px_color-mix(in_srgb,var(--color-canvas)_60%,transparent)] outline-none focus-visible:border-brand"
+              // The stage clips, so the focus outline is drawn inset, over the frame's own edge.
+              className="absolute cursor-move touch-none rounded-sm border-2 border-fg shadow-crop-mask focus-visible:-outline-offset-2"
               style={{
                 left: `${(rect.x / size.width) * 100}%`,
                 top: `${(rect.y / size.height) * 100}%`,
@@ -166,8 +168,8 @@ export function CropDialog({
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
-          <Button type="button" className="bg-brand-gradient text-white" onClick={() => void apply()} disabled={!rect || busy}>
-            {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
+          <Button type="button" onClick={() => void apply()} disabled={!rect || busy}>
+            {busy ? <Spinner /> : null}
             Crop and upload
           </Button>
         </DialogFooter>

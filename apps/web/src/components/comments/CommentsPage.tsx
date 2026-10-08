@@ -29,11 +29,11 @@ function GridSkeleton() {
     <ul className={GRID_CLASS} aria-busy="true" aria-label="Loading posts">
       {Array.from({ length: 8 }, (_, i) => (
         <li key={i} className="overflow-hidden rounded-xl border border-line bg-panel">
-          <Skeleton className="aspect-square w-full rounded-none bg-raised" />
+          <Skeleton className="aspect-square w-full rounded-none" />
           <div className="space-y-2 p-3">
-            <Skeleton className="h-3 w-2/3 bg-raised" />
-            <Skeleton className="h-1.5 w-full bg-raised" />
-            <Skeleton className="h-3 w-1/3 bg-raised" />
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-1.5 w-full" />
+            <Skeleton className="h-3 w-1/3" />
           </div>
         </li>
       ))}
@@ -74,7 +74,7 @@ export function CommentsPage() {
           className="rounded-xl border border-line bg-panel"
           {...emptyStates.comments}
           action={
-            <Button asChild className="bg-brand-gradient text-white">
+            <Button asChild>
               <Link href={`/w/${workspace.slug}/settings/connections` as Route}>Connect Instagram</Link>
             </Button>
           }
@@ -101,7 +101,6 @@ export function CommentsPage() {
           <div className="flex justify-center">
             <Button
               variant="secondary"
-              className="min-h-10 md:min-h-8"
               onClick={() => void posts.fetchNextPage()}
               disabled={posts.isFetchingNextPage}
             >
@@ -119,7 +118,7 @@ export function CommentsPage() {
       actions={
         accounts.length > 1 ? (
           <Select value={accountId ?? ALL} onValueChange={(value) => setAccountId(value === ALL ? null : value)}>
-            <SelectTrigger aria-label="Account" className="h-10 max-w-48 md:h-9">
+            <SelectTrigger aria-label="Account" size="lg" className="max-w-48">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

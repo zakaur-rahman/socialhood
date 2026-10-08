@@ -9,6 +9,7 @@ import type { CalendarMessage, ScheduledMessage, ScheduledPostSummary } from "@/
 import { contactName } from "@/lib/inbox/format";
 import { formatDayTime, formatTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
+import { EYEBROW } from "@/styles/tokens";
 
 import { CalendarPostCard } from "./CalendarPostCard";
 import { useSchedule } from "./schedule-context";
@@ -30,7 +31,7 @@ export function dmLabel(messages: CalendarMessage[]): string {
 /**
  * The Messages layer (FR-PUB-08, FR-SMS-02): scheduled DMs in a chip that opens the list, each
  * linking to its conversation. No violet token exists (§4.2), so the chip is told apart by its
- * icon, label and dotted border rather than colour alone.
+ * icon, label and dashed border rather than colour alone.
  */
 export function DmChip({
   messages,
@@ -51,8 +52,8 @@ export function DmChip({
           data-testid="dm-chip"
           aria-label={`${label}, ${formatTime(messages[0].send_at, schedule.timeZone)}`}
           className={cn(
-            "flex w-full min-w-0 items-center gap-1 rounded-md border border-dotted border-line-strong bg-field px-1.5 text-[11px] text-fg",
-            "hover:bg-raised",
+            "flex w-full min-w-0 items-center gap-1 rounded-md border border-dashed border-line-strong bg-field px-1.5 text-2xs text-fg",
+            "hover:bg-raised focus-visible:-outline-offset-2",
             className,
           )}
         >
@@ -66,8 +67,8 @@ export function DmChip({
           )}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 border-line bg-panel shadow-xl">
-        <p className="text-[11px] font-semibold tracking-[0.08em] text-fg-secondary uppercase">Scheduled DMs</p>
+      <PopoverContent align="start">
+        <p className={EYEBROW}>Scheduled DMs</p>
         <ul className="space-y-1">
           {messages.map((message) => {
             const status = DM_STATUS[message.status];
@@ -75,7 +76,7 @@ export function DmChip({
               <li key={message.id}>
                 <Link
                   href={`/w/${schedule.slug}/inbox/${message.conversation_id}` as Route}
-                  className="block rounded-md px-2 py-1.5 hover:bg-raised"
+                  className="block rounded-md px-2 py-1.5 hover:bg-hover"
                 >
                   <span className="flex items-center justify-between gap-2 text-sm font-medium">
                     <span className="truncate">{contactName(message.contact, message.platform)}</span>
@@ -114,14 +115,14 @@ export function MorePostsButton({
           type="button"
           aria-label={ariaLabel}
           className={cn(
-            "rounded-md px-1.5 text-[11px] font-medium text-fg-secondary hover:bg-raised hover:text-fg",
+            "rounded-md px-1.5 text-2xs font-medium text-fg-secondary hover:bg-hover hover:text-fg focus-visible:-outline-offset-2",
             className,
           )}
         >
           {label}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-64 border-line bg-panel shadow-xl">
+      <PopoverContent align="start" className="w-64">
         <ul className="space-y-1">
           {posts.map((post) => (
             <li key={post.id}>

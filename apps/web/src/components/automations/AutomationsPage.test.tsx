@@ -1,11 +1,13 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { Toaster } from "@/components/ui/sonner";
 import { handOff, resetAgentHandoff } from "@/lib/agent/handoff";
 import type { Automation, AutomationTemplate, SocialAccount } from "@/lib/api/types";
 import { draftCard } from "@/test/agent";
-import { account, automation, json, noContent, problem, renderWithApi, template, type Call } from "@/test/api";
+import { account, automation, billingState, json, noContent, planList, problem, renderWithApi, template, type Call } from "@/test/api";
 
 import { AutomationsPage } from "./AutomationsPage";
 
@@ -200,6 +202,21 @@ describe("AutomationsPage (UX-SCR-02)", () => {
     expect(bodies[1]).toEqual({ social_account_id: "a1", ordered_ids: ["au3", "au1", "au2"] });
   });
 
+  it("reveals the checkbox and the handle on hover only for a mouse; on touch they always show (UI-ISS-057)", async () => {
+    renderWithApi(<AutomationsPage />, { handlers: handlers() });
+    await screen.findByRole("link", { name: "Answer FAQs" });
+
+    const handle = screen.getByRole("button", { name: "Reorder Answer FAQs" });
+    expect(handle).toHaveClass("md:pointer-fine:opacity-0", "md:pointer-fine:group-hover/row:opacity-100", "focus-visible:opacity-100");
+    expect(handle).not.toHaveClass("md:opacity-0");
+    // A Button: 32 px, 40 px on coarse pointers.
+    expect(handle).toHaveAttribute("data-size", "icon");
+
+    const box = screen.getByRole("checkbox", { name: "Select Answer FAQs" }).parentElement as HTMLElement;
+    expect(box).toHaveClass("pointer-fine:opacity-0", "pointer-fine:group-hover/row:opacity-100", "pointer-fine:focus-within:opacity-100");
+    expect(box).not.toHaveClass("opacity-0");
+  });
+
   it("hides reordering while a filter narrows the list", async () => {
     const user = userEvent.setup();
     renderWithApi(<AutomationsPage />, { handlers: handlers() });
@@ -235,14 +252,28 @@ describe("AutomationsPage (UX-SCR-02)", () => {
     renderWithApi(<AutomationsPage />, { handlers: handlers({ calls: (call) => calls.push(`${call.method} ${call.path}`) }) });
     await screen.findByRole("link", { name: "Book a call" });
 
-    await user.click(screen.getByRole("button", { name: "More actions for Book a call" }));
+    const more = screen.getByRole("button", { name: "More actions for Book a call" });
+    await user.click(more);
+    const remove = await screen.findByRole("menuitem", { name: "Delete" });
+    expect(remove).toHaveAttribute("data-variant", "destructive");
+    await user.click(remove);
+    let dialog = await screen.findByRole("alertdialog", { name: "Delete Book a call?" });
+    expect(within(dialog).getByRole("button", { name: "Delete" })).toHaveAttribute("data-variant", "destructive");
+    // Cancel: focus goes back to the row's ⋯ (the menu item that opened it is gone).
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(more).toHaveFocus());
+
+    await user.click(more);
     await user.click(await screen.findByRole("menuitem", { name: "Delete" }));
-    const dialog = await screen.findByRole("alertdialog", { name: "Delete Book a call?" });
+    dialog = await screen.findByRole("alertdialog", { name: "Delete Book a call?" });
     expect(calls).not.toContain("DELETE /v1/w/w1/automations/au4");
     await user.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => expect(calls).toContain("DELETE /v1/w/w1/automations/au4"));
     await waitFor(() => expect(screen.queryByRole("link", { name: "Book a call" })).not.toBeInTheDocument());
+    // The ⋯ went with the row: New automation takes focus rather than <body>.
+    await waitFor(() => expect(screen.getByRole("button", { name: "New automation" })).toHaveFocus());
   });
 
   it("empty: three template cards and Browse all templates", async () => {
@@ -262,9 +293,72 @@ describe("AutomationsPage (UX-SCR-02)", () => {
       "Giveaway replies",
       "Price on request",
     ]);
-    await user.click(screen.getByRole("button", { name: "Browse all templates" }));
+    const browse = screen.getByRole("button", { name: "Browse all templates" });
+    browse.focus();
+    await user.keyboard("{Enter}");
     const dialog = await screen.findByRole("dialog", { name: "New automation" });
     expect(within(dialog).getByRole("article", { name: "Catalogue by DM" })).toBeInTheDocument();
+    // Esc puts focus back on what opened it (UX-A11Y-02).
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(browse).toHaveFocus());
+  });
+
+  it("New automation opens the gallery; Esc puts focus back on it, and the next opening starts fresh", async () => {
+    const user = userEvent.setup();
+    const templates = [template({ key: "t1", name: "Send a link to commenters" }), template({ key: "t4", name: "Catalogue by DM", category: "sell" })];
+    renderWithApi(<AutomationsPage />, { handlers: handlers({ templates }) });
+    await screen.findByRole("link", { name: "Comment LINK, DM the link" });
+
+    const newAutomation = screen.getByRole("button", { name: "New automation" });
+    newAutomation.focus();
+    await user.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog", { name: "New automation" });
+    const categories = within(dialog).getByRole("radiogroup", { name: "Categories" });
+    await user.click(within(categories).getAllByRole("radio").find((chip) => chip.textContent !== "All")!);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(newAutomation).toHaveFocus());
+    expect(nav.replace).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "New automation" }));
+    const again = await screen.findByRole("dialog", { name: "New automation" });
+    expect(within(again).getByRole("radio", { name: "All" })).toBeChecked();
+  });
+
+  it("opened by a link to /automations/new: closing goes back to /automations and focus to New automation", async () => {
+    const user = userEvent.setup();
+    const templates = [template({ key: "t1", name: "Send a link to commenters" })];
+    // The route group's layout renders one list for both routes and only flips openGallery.
+    const view = renderWithApi(<AutomationsPage openGallery />, { handlers: handlers({ templates }) });
+    await screen.findByRole("dialog", { name: "New automation" });
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/w/maple/automations"));
+    view.rerender(<AutomationsPage />);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // Nothing on this page opened it (Home's checklist did): New automation takes focus, not <body>.
+    await waitFor(() => expect(screen.getByRole("button", { name: "New automation" })).toHaveFocus());
+  });
+
+  it("arriving at /automations/new with the list on screen opens the gallery over the same page", async () => {
+    const user = userEvent.setup();
+    const templates = [template({ key: "t1", name: "Send a link to commenters" })];
+    const view = renderWithApi(<AutomationsPage />, { handlers: handlers({ templates }) });
+    await screen.findByRole("link", { name: "Answer FAQs" });
+    const search = screen.getByRole("searchbox", { name: "Search automations" });
+    await user.type(search, "faq");
+
+    view.rerender(<AutomationsPage openGallery />);
+    await screen.findByRole("dialog", { name: "New automation" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(nav.replace).toHaveBeenCalledWith("/w/maple/automations"));
+    view.rerender(<AutomationsPage />);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    // No remount: the search keeps its text and gets focus back.
+    expect(screen.getByRole("searchbox", { name: "Search automations" })).toBe(search);
+    expect(search).toHaveValue("faq");
+    await waitFor(() => expect(search).toHaveFocus());
   });
 
   it("shows skeleton rows while loading", () => {
@@ -272,6 +366,50 @@ describe("AutomationsPage (UX-SCR-02)", () => {
       handlers: { ...handlers(), "GET /v1/w/:wid/automations": () => new Promise<Response>(() => {}) },
     });
     expect(screen.getByLabelText("Loading automations")).toHaveAttribute("aria-busy", "true");
+  });
+});
+
+describe("A failed action says so once (UI-024, C-051)", () => {
+  /** The page with the app's Toaster and upgrade dialog, and Duplicate answering `duplicate`. */
+  async function duplicateBookACall(duplicate: () => Response) {
+    const user = userEvent.setup();
+    toast.dismiss(); // the earlier tests' toasts, which sonner would replay to this Toaster
+    renderWithApi(
+      <>
+        <AutomationsPage />
+        <Toaster />
+      </>,
+      {
+        upgradeDialog: true,
+        handlers: {
+          ...handlers(),
+          "POST /v1/w/:wid/automations/:id/duplicate": duplicate,
+          "GET /v1/w/:wid/billing": () => json(billingState({ plan: "free", status: "free" })),
+          "GET /v1/billing/plans": () => json(planList()),
+        },
+      },
+    );
+    await screen.findByRole("link", { name: "Book a call" });
+    await user.click(screen.getByRole("button", { name: "More actions for Book a call" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Duplicate" }));
+  }
+  const toasts = () => document.querySelectorAll("[data-sonner-toast]");
+
+  it("a plan limit (402) is the upgrade dialog's alone: no toast", async () => {
+    await duplicateBookACall(() =>
+      problem(402, "quota_exceeded", "Your plan includes 3 active automations.", { entitlement: "active_automations", limit: 3 }),
+    );
+    expect(await screen.findByRole("dialog", { name: "Automation limit reached" })).toBeInTheDocument();
+    // Sonner adds a toast on a timer after the call: give it the time it would take.
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(toasts()).toHaveLength(0);
+  });
+
+  it("any other failure is an error toast", async () => {
+    await duplicateBookACall(() => problem(500, "internal"));
+    await waitFor(() => expect(toasts()).toHaveLength(1));
+    expect(toasts()[0]).toHaveAttribute("data-type", "error");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
 
@@ -352,5 +490,7 @@ describe("An automation draft from Ask Social Hood (FR-AGT-03)", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(seen).toHaveLength(0);
     expect(nav.replace).toHaveBeenCalledWith("/w/maple/automations");
+    // Ask's Open closed with its panel: New automation takes focus rather than <body>.
+    await waitFor(() => expect(screen.getByRole("button", { name: "New automation" })).toHaveFocus());
   });
 });

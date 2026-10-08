@@ -11,8 +11,6 @@ import type { OverviewQuery } from "@/lib/api/queries";
 
 import { addDays, checkCustom, choiceOf, MAX_CUSTOM_DAYS, type CustomErrors } from "./range";
 
-const ITEM = "min-h-10 px-3 md:min-h-8";
-
 /**
  * 7 days / 30 days / Custom. Custom opens two date inputs (local days in the workspace's time
  * zone, up to today, at most 90 days) and applies them together; clicking Custom again edits them.
@@ -42,18 +40,9 @@ export function RangeControl({
             }}
             className="w-auto"
           >
-            <ToggleGroupItem value="7d" className={ITEM}>
-              7 days
-            </ToggleGroupItem>
-            <ToggleGroupItem value="30d" className={ITEM}>
-              30 days
-            </ToggleGroupItem>
-            <ToggleGroupItem
-              ref={customRef}
-              value="custom"
-              className={ITEM}
-              onClick={() => setOpen(true)}
-            >
+            <ToggleGroupItem value="7d">7 days</ToggleGroupItem>
+            <ToggleGroupItem value="30d">30 days</ToggleGroupItem>
+            <ToggleGroupItem ref={customRef} value="custom" onClick={() => setOpen(true)}>
               Custom
             </ToggleGroupItem>
           </ToggleGroup>
@@ -61,7 +50,7 @@ export function RangeControl({
       </PopoverAnchor>
       <PopoverContent
         align="end"
-        className="w-[min(20rem,calc(100vw-2rem))] border border-line bg-panel p-4"
+        className="w-[min(20rem,calc(100vw-2rem))] p-4"
         aria-label="Custom period"
         onCloseAutoFocus={(event) => {
           event.preventDefault();
@@ -119,7 +108,6 @@ function CustomRangeForm({
             aria-invalid={Boolean(errors?.from)}
             aria-describedby={errors?.from ? "home-range-from-error" : undefined}
             onChange={(event) => setFrom(event.target.value)}
-            className="min-h-10 md:min-h-8"
           />
         </div>
         <div className="space-y-1.5">
@@ -133,7 +121,6 @@ function CustomRangeForm({
             aria-invalid={Boolean(errors?.to)}
             aria-describedby={errors?.to ? "home-range-to-error" : undefined}
             onChange={(event) => setTo(event.target.value)}
-            className="min-h-10 md:min-h-8"
           />
         </div>
       </div>
@@ -148,12 +135,10 @@ function CustomRangeForm({
         </p>
       ) : null}
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="ghost" className="min-h-10 md:min-h-8" onClick={onCancel}>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" className="min-h-10 bg-brand-gradient text-white md:min-h-8">
-          Apply
-        </Button>
+        <Button type="submit">Apply</Button>
       </div>
     </form>
   );

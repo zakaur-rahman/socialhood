@@ -1,5 +1,6 @@
 import { BadgeCheck, KeyRound, Layers, LockKeyhole, Trash2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import { Container, SectionHeading } from "./primitives";
 
@@ -35,7 +36,7 @@ const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
 
 export function Trust() {
   return (
-    <section aria-labelledby="trust-title" className="border-t border-line-subtle bg-panel/40 py-20 sm:py-24">
+    <section aria-labelledby="trust-title" className="border-t border-line-subtle bg-panel/30 py-20 sm:py-24">
       <Container>
         <SectionHeading
           id="trust-title"
@@ -52,14 +53,16 @@ export function Trust() {
           }
         />
         <ul className="mx-auto mt-14 grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {POINTS.map(({ icon: Icon, title, body }) => (
-            <li key={title} className="flex gap-4 rounded-2xl border border-line bg-canvas p-5">
-              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
-                <Icon className="size-5" aria-hidden />
-              </span>
-              <div>
-                <h3 className="text-sm font-semibold">{title}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-fg-secondary">{body}</p>
+          {POINTS.map(({ icon: Icon, title, body }, index) => (
+            <li key={title} data-reveal style={{ "--reveal-delay": `${(index % 3) * 80}ms` } as CSSProperties}>
+              <div className="flex h-full gap-4 rounded-2xl border border-line bg-canvas p-5 transition-colors duration-slow hover:border-line-strong">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
+                  <Icon className="size-5" aria-hidden />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-fg-secondary">{body}</p>
+                </div>
               </div>
             </li>
           ))}

@@ -88,15 +88,22 @@ describe("Analysis (FR-AI-02, FR-AI-04)", () => {
     expect(within(section).getByText("Shipping")).toBeInTheDocument();
     // Topics come from the analysis as they are.
     expect(within(within(section).getByRole("list", { name: "Topics" })).getByText("shipping to uae")).toBeInTheDocument();
-    // The lead score is on the customer card.
+    // The lead score is on the customer card: the Meter primitive (UI-031), whose value text is on
+    // screen and is the meter's aria-valuetext ("72 of 100"; was "72 / 100" with no value text).
     const customer = screen.getByRole("region", { name: "Customer" });
-    expect(within(customer).getByRole("meter", { name: "Lead score" })).toHaveAttribute("aria-valuenow", "72");
-    expect(within(customer).getByText("72 / 100")).toBeInTheDocument();
+    const lead = within(customer).getByRole("meter", { name: "Lead score" });
+    expect(lead).toHaveAttribute("aria-valuenow", "72");
+    expect(lead).toHaveAttribute("aria-valuemax", "100");
+    expect(lead).toHaveAttribute("aria-valuetext", "72 of 100");
+    expect(within(customer).getByText("72 of 100")).toBeInTheDocument();
 
     await user.click(within(section).getByRole("button", { name: "Correct the AI" }));
     const popover = await screen.findByRole("group", { name: "Correct the analysis" });
     const save = within(popover).getByRole("button", { name: "Save" });
     expect(save).toBeDisabled();
+    // UI-030: the intents are the ToggleGroup's chips; sentiment its small segmented control.
+    expect(within(popover).getByRole("radiogroup", { name: "Intent" })).toHaveAttribute("data-variant", "chips");
+    expect(within(popover).getByRole("radiogroup", { name: "Sentiment" })).toHaveAttribute("data-size", "sm");
     await user.click(within(popover).getByRole("radio", { name: "Pricing" }));
     await user.click(within(popover).getByRole("radio", { name: "Negative" }));
     await user.click(save);
@@ -137,7 +144,7 @@ describe("Summary (FR-AI-03)", () => {
     const section = await screen.findByRole("region", { name: "Summary" });
     expect(within(section).getByText("Asked about the Aria dress in size S and got a yes.")).toBeInTheDocument();
     // The next step is a callout of its own (summary.v2, C-063).
-    expect(within(section).getByRole("note", { name: "Next step" })).toHaveTextContent(
+    expect(within(section).getByRole("status")).toHaveTextContent(
       "Next stepConfirm shipping and share the product link.",
     );
 
@@ -188,7 +195,7 @@ describe("Summary next step (C-063)", () => {
     renderWithApi(<DetailsPanel conversationId="c1" />, { handlers: handlers(state) });
     const section = await screen.findByRole("region", { name: "Summary" });
     expect(within(section).getByText("Asked about sizes.")).toBeInTheDocument();
-    expect(within(section).queryByRole("note", { name: "Next step" })).not.toBeInTheDocument();
+    expect(within(section).queryByText("Next step")).not.toBeInTheDocument();
   });
 });
 
@@ -209,7 +216,7 @@ describe("The context panel's customer card (C-063)", () => {
       "href",
       "https://www.instagram.com/priya.styles/",
     );
-    const notes = within(customer).getByRole("list", { name: "Attention" });
+    const notes = within(customer).getByRole("group", { name: "Attention" });
     expect(notes).toHaveTextContent("Needs you: refund");
     expect(notes).toHaveTextContent("AI paused until you resume it");
   });

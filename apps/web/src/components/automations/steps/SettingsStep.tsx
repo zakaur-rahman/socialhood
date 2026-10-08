@@ -132,10 +132,8 @@ export function SettingsStep({
               {disclosure
                 ? `Automated messages end with “${disclosure}”.`
                 : "Automated messages don't add a disclosure line."}{" "}
-              <Link
-                href={`/w/${slug}/settings/workspace` as Route}
-                className="text-brand-fg underline-offset-4 hover:underline"
-              >
+              {/* Underlined at rest: in a line of text, colour alone doesn't mark a link (WCAG 1.4.1). */}
+              <Link href={`/w/${slug}/settings/workspace` as Route} className="text-brand-fg underline underline-offset-4">
                 Change it in Settings → Workspace
               </Link>
             </p>
@@ -178,7 +176,8 @@ function Cooldown({ value, onChange }: { value: number; onChange: (hours: number
           }}
           aria-invalid={invalid ? true : undefined}
           aria-describedby="automation-cooldown-hint"
-          className="h-9 w-24 bg-field"
+          size="lg"
+          className="w-24"
         />
         <span className="text-sm text-fg-secondary">hours</span>
       </div>
@@ -225,7 +224,7 @@ function WindowEdge({
           type="date"
           value={inputs.date}
           onChange={(event) => set(event.target.value, inputs.time)}
-          className="h-9 bg-field"
+          size="lg"
         />
         <label htmlFor={`${id}-time`} className="sr-only">
           {label} time
@@ -236,10 +235,11 @@ function WindowEdge({
           value={inputs.time}
           disabled={!inputs.date}
           onChange={(event) => set(inputs.date, event.target.value)}
-          className="h-9 w-28 bg-field"
+          size="lg"
+          className="w-28"
         />
         {value ? (
-          <Button variant="ghost" size="icon" className="size-9" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange(null)}>
+          <Button variant="ghost" size="icon-lg" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange(null)}>
             <X aria-hidden />
           </Button>
         ) : null}

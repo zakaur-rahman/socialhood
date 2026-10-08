@@ -26,19 +26,19 @@ export const DETAIL_GRID_CLASS = "grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)] 
 function DetailSkeleton() {
   return (
     <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6" aria-busy="true" aria-label="Loading the post">
-      <Skeleton className="mb-6 h-8 w-56 bg-raised" />
+      <Skeleton className="mb-6 h-8 w-56" />
       <div className={DETAIL_GRID_CLASS}>
         <div className="space-y-4">
-          <Skeleton className="aspect-square w-full rounded-xl bg-panel" />
-          <Skeleton className="h-28 w-full rounded-xl bg-panel" />
+          <Skeleton className="aspect-square w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-xl" />
         </div>
         <div className="space-y-3 rounded-xl border border-line bg-panel p-4">
           {Array.from({ length: 5 }, (_, i) => (
             <div key={i} className="flex gap-3">
-              <Skeleton className="size-8 rounded-full bg-raised" />
+              <Skeleton className="size-8 rounded-full" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-3 w-1/3 bg-raised" />
-                <Skeleton className="h-3 w-2/3 bg-raised" />
+                <Skeleton className="h-3 w-1/3" />
+                <Skeleton className="h-3 w-2/3" />
               </div>
             </div>
           ))}

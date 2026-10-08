@@ -1,6 +1,7 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { formatDayTime, toZonedInputs, zonedToDate } from "@/lib/tz";
 
 /** F-10: the earliest time a message can be scheduled, and the margin before the window closes. */
@@ -75,46 +76,36 @@ export function ScheduleFields({
 }) {
   const minDay = toZonedInputs(limits.min, timeZone).date;
   const maxDay = limits.max ? toZonedInputs(limits.max, timeZone).date : undefined;
-  const inputClass =
-    "w-full rounded-lg border border-line bg-field px-3 py-2 text-sm outline-none focus:bg-raised aria-invalid:border-danger";
+  // Native date and time pickers through Input (D-04): its edge, focus, 16 px text on phones and
+  // 40 px on coarse pointers; `lg` (36 px) is the closest to the old 38 px fields.
   return (
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-date`} className="text-xs text-fg-secondary">
-            Date
-          </Label>
-          <input
-            id={`${idPrefix}-date`}
+        <Field id={`${idPrefix}-date`} density="compact">
+          <FieldLabel>Date</FieldLabel>
+          <Input
             type="date"
+            size="lg"
             value={value.date}
             min={minDay}
             max={maxDay}
             aria-invalid={Boolean(error)}
             onChange={(event) => onChange({ ...value, date: event.target.value })}
-            className={inputClass}
           />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor={`${idPrefix}-time`} className="text-xs text-fg-secondary">
-            Time
-          </Label>
-          <input
-            id={`${idPrefix}-time`}
+        </Field>
+        <Field id={`${idPrefix}-time`} density="compact">
+          <FieldLabel>Time</FieldLabel>
+          <Input
             type="time"
+            size="lg"
             value={value.time}
             aria-invalid={Boolean(error)}
             onChange={(event) => onChange({ ...value, time: event.target.value })}
-            className={inputClass}
           />
-        </div>
+        </Field>
       </div>
-      <p className="text-xs text-fg-secondary">Times are in {timeZone.replace(/_/g, " ")}.</p>
-      {error ? (
-        <p role="alert" className="text-xs text-danger-fg">
-          {error}
-        </p>
-      ) : null}
+      <FieldDescription>Times are in {timeZone.replace(/_/g, " ")}.</FieldDescription>
+      <FieldError>{error}</FieldError>
     </div>
   );
 }

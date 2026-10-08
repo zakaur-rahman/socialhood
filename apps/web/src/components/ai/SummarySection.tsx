@@ -4,6 +4,7 @@ import { Lightbulb, RefreshCw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRefreshSummary } from "@/lib/api/queries";
@@ -11,6 +12,7 @@ import type { Conversation } from "@/lib/api/types";
 import { toastError } from "@/lib/toast-error";
 import { relativeTime } from "@/lib/time";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { EYEBROW } from "@/styles/tokens";
 
 /** How long a requested summary is awaited before the panel says it didn't come. */
 export const SUMMARY_WAIT_MS = 30_000;
@@ -64,8 +66,8 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
     <div className="space-y-2">
       {waiting ? (
         <div className="space-y-2" aria-busy="true">
-          <Skeleton className="h-3 w-full bg-raised" />
-          <Skeleton className="h-3 w-5/6 bg-raised" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
           <p role="status" className="text-xs text-fg-secondary">
             Updating the summary…
           </p>
@@ -75,12 +77,10 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
           <p className="text-sm leading-relaxed">{summary.text}</p>
           {summary.next_step ? (
             // summary.v2 (C-063): one concrete suggestion from the conversation and knowledge.
-            <div role="note" aria-label="Next step" className="rounded-lg border border-brand-line bg-brand-soft px-3 py-2">
-              <p className="flex items-center gap-1 text-[11px] font-semibold tracking-[0.08em] text-brand-fg uppercase">
-                <Lightbulb className="size-3" aria-hidden /> Next step
-              </p>
-              <p className="mt-0.5 text-sm leading-relaxed">{summary.next_step}</p>
-            </div>
+            <Alert tone="brand" icon={<Lightbulb />}>
+              <AlertTitle className={EYEBROW}>Next step</AlertTitle>
+              <AlertDescription className="leading-relaxed text-fg">{summary.next_step}</AlertDescription>
+            </Alert>
           ) : null}
         </>
       ) : (
@@ -91,7 +91,8 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
         variant="secondary"
         size="sm"
         className="w-full"
-        disabled={waiting || refresh.isPending}
+        loading={refresh.isPending}
+        disabled={waiting}
         onClick={ask}
       >
         <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}

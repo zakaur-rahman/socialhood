@@ -26,7 +26,9 @@ export default function AppResolverPage() {
 function Resolver() {
   const me = useMe();
   const router = useRouter();
-  const connectError = useSearchParams().get("error");
+  const params = useSearchParams();
+  const connectError = params.get("error");
+  const next = params.get("next"); // a page outside the app asked for (lib/resolve.ts)
 
   const target = me.data
     ? (me.data.workspaces.find((w) => w.id === me.data.last_workspace_id) ?? me.data.workspaces[0])
@@ -34,7 +36,7 @@ function Resolver() {
   const accounts = useSocialAccounts(target?.id ?? "", Boolean(target) && connectError !== "state_invalid");
   // Accounts failing to load should not strand the user: Home works without them.
   const destination = target
-    ? resolveDestination(target.slug, accounts.isError ? [] : accounts.data, connectError)
+    ? resolveDestination(target.slug, accounts.isError ? [] : accounts.data, connectError, next)
     : null;
 
   useEffect(() => {

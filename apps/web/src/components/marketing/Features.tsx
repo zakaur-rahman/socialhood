@@ -10,88 +10,90 @@ import {
   Zap,
   type LucideIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { CSSProperties } from "react";
 
 import { SECTION_IDS } from "@/lib/marketing/site";
 
+import { BentoGrid, BentoGridItem } from "./effects/bento-grid";
+import { LazyIllustration, type IllustrationName } from "./illustrations/LazyIllustration";
 import { Container, SectionHeading } from "./primitives";
 
-type Feature = { icon: LucideIcon; title: string; body: ReactNode; points?: string[]; note?: string };
+type Feature = {
+  icon: LucideIcon;
+  title: string;
+  body: string;
+  illustration: IllustrationName;
+  /** Bento layout: two of the three columns on wide screens. */
+  wide?: boolean;
+  note?: string;
+};
 
-// Every line here is in the product guide (knowledge/social-hood-product.md) and built.
+// Every line is in the product guide (knowledge/social-hood-product.md) and built.
 const FEATURES: Feature[] = [
   {
-    icon: Inbox,
-    title: "One inbox for Instagram and WhatsApp",
-    body: "Instagram DMs and WhatsApp chats arrive in one inbox in real time. Every new message is analysed for intent, sentiment and a lead score, so hot leads stand out.",
-    points: ["Needs reply and Needs you views", "Sent, delivered and read status", "Shows when Instagram's 24-hour reply window closes"],
-  },
-  {
     icon: Sparkles,
-    title: "AI replies, your way",
-    body: "Choose an AI mode for each account. The AI understands and replies in English, Hindi and Hinglish.",
-    points: [
-      "Off: no AI replies",
-      "Suggest: the AI drafts, you send, edit or dismiss",
-      "Auto: the AI replies by itself when it's confident",
-      "Unsure, upset or asking for a person? It goes to Needs you",
-    ],
+    title: "AI replies from your own knowledge",
+    body: "Choose Off, Suggest or Auto for each account. The AI drafts or sends replies using only what's in your knowledge base, in English, Hindi and Hinglish.",
+    illustration: "draft",
+    wide: true,
     note: "Auto is part of Pro.",
   },
   {
+    icon: Inbox,
+    title: "One inbox, with a hand-off",
+    body: "Instagram DMs and WhatsApp chats arrive in real time, tagged with intent, sentiment and a lead score. Unsure, upset or asking for a person? It goes to Needs you.",
+    illustration: "inbox",
+  },
+  {
     icon: BookOpen,
-    title: "Knowledge base and gaps",
-    body: "Add prices, products, delivery, returns, timings and FAQs as text, a web page link, or a PDF, Word, TXT or Markdown file. Test a question to see how the AI would answer.",
-    points: ["The AI only states facts from your knowledge", "Questions it couldn't answer show up as knowledge gaps"],
+    title: "Knowledge gaps",
+    body: "When the answer isn't in your knowledge, the AI doesn't guess. It hands the conversation to you and records the question, so you know what to add.",
+    illustration: "gaps",
   },
   {
     icon: Zap,
     title: "Comment and DM automations",
-    body: "Someone comments a keyword like LINK on a post or Reel, and they get the link in a private DM, with an optional public reply.",
-    points: [
-      "Tap first: a button before the link, which feels less spammy",
-      "Follow nudge: a polite invite to follow, never a condition for getting the link",
-      "DM keywords, with a preview before you turn it on",
-    ],
-  },
-  {
-    icon: MessageSquareText,
-    title: "Comment management",
-    body: "See what people say across your posts and Reels: sentiment, topics and a summary per post.",
-    points: ["Reply publicly or send a private DM", "Flag spam and hide it automatically if you choose", "Hide, unhide or delete comments"],
-  },
-  {
-    icon: CalendarClock,
-    title: "Scheduling and publishing",
-    body: "Schedule image posts, carousels and Reels on a calendar, or publish now. Drag posts to reschedule.",
-    points: ["AI captions and hashtag suggestions", "A first comment posted right after", "A checklist that catches problems before publishing"],
+    body: "Someone comments a keyword like LINK on a post or Reel and gets the link in a private DM, with an optional public reply. DM keywords work too, with a preview before you turn them on.",
+    illustration: "automation",
+    wide: true,
   },
   {
     icon: BarChart3,
     title: "Analytics and the weekly digest",
-    body: "Messages received, reply rate, first-response time, how many conversations the AI handled, sentiment and what customers asked about.",
-    points: ["Post insights compared with your other posts", "A summary email every Monday at 9:00 AM your time"],
+    body: "Messages received, reply rate, first-response time, the conversations the AI handled and what customers asked about, plus a summary email every Monday at 9:00 AM your time.",
+    illustration: "analytics",
+    wide: true,
   },
   {
     icon: MessagesSquare,
     title: "Ask Social Hood",
-    body: "Ask questions about your own business data in plain words. Answers show the numbers and time range they used, with links to the posts and conversations behind them.",
-    points: [
-      "Prepares a reply, a scheduled message or an automation draft for you to review",
-      "Never sends, changes or deletes anything by itself",
-    ],
+    body: "Ask about your own business data in plain words. Answers show the numbers and time range they used, with links to their sources. It prepares replies and drafts for you to review.",
+    illustration: "ask",
+    note: "Never sends, changes or deletes anything by itself",
+  },
+];
+
+const MORE: { icon: LucideIcon; title: string; body: string }[] = [
+  {
+    icon: MessageSquareText,
+    title: "Comment management",
+    body: "Sentiment, topics and a summary per post. Reply publicly or by DM, and hide spam automatically if you choose.",
+  },
+  {
+    icon: CalendarClock,
+    title: "Scheduling and publishing",
+    body: "Posts, carousels and Reels on a calendar, with AI captions, hashtag ideas and a first comment.",
   },
   {
     icon: Bell,
     title: "Notifications, on your phone too",
-    body: "Alerts in the app, by email and as phone push notifications. Install Social Hood from your browser to hear when a conversation needs you or a new lead arrives.",
-    points: ["You choose which alerts you get"],
+    body: "In the app, by email and as phone push notifications when a conversation needs you or a lead arrives.",
   },
 ];
 
 export function Features() {
   return (
-    <section id={SECTION_IDS.features} aria-labelledby="features-title" className="scroll-mt-20 border-t border-line-subtle py-20 sm:py-24">
+    <section id={SECTION_IDS.features} aria-labelledby="features-title" className="scroll-mt-24 py-20 sm:py-24">
       <Container>
         <SectionHeading
           id="features-title"
@@ -99,25 +101,38 @@ export function Features() {
           title="Everything your customer conversations need"
           intro="From the first comment to the reply that closes the sale, in one place."
         />
-        <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, body, points, note }) => (
-            <li key={title} className="flex flex-col rounded-2xl border border-line bg-panel p-6">
-              <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand-fg">
-                <Icon className="size-5" aria-hidden />
-              </span>
-              <h3 className="mt-4 text-base font-semibold">{title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-fg-secondary">{body}</p>
-              {points ? (
-                <ul className="mt-4 space-y-2 text-sm">
-                  {points.map((point) => (
-                    <li key={point} className="flex gap-2">
-                      <span aria-hidden className="mt-2 size-1.5 shrink-0 rounded-full bg-brand" />
-                      <span>{point}</span>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {note ? <p className="mt-4 text-xs text-brand-fg">{note}</p> : null}
+        <BentoGrid className="mt-14" label="Features">
+          {FEATURES.map((feature, index) => (
+            <BentoGridItem
+              key={feature.title}
+              index={index}
+              className={feature.wide ? "md:col-span-2" : undefined}
+              title={feature.title}
+              description={feature.body}
+              note={feature.note}
+              icon={
+                <span className="grid size-7 place-items-center rounded-lg bg-brand-soft text-brand-fg">
+                  <feature.icon className="size-4" aria-hidden />
+                </span>
+              }
+              header={<LazyIllustration name={feature.illustration} className="h-auto min-h-56 flex-1" />}
+            />
+          ))}
+        </BentoGrid>
+        <p className="mt-4 text-center text-xs text-fg-secondary">Illustrations with example data.</p>
+
+        <ul className="mx-auto mt-10 grid max-w-6xl gap-4 md:grid-cols-3" aria-label="Also in Social Hood">
+          {MORE.map(({ icon: Icon, title, body }, index) => (
+            <li key={title} data-reveal style={{ "--reveal-delay": `${index * 80}ms` } as CSSProperties}>
+              <div className="flex h-full gap-3 rounded-2xl border border-line bg-panel/60 p-4 transition-colors duration-slow hover:border-line-strong">
+                <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand-fg">
+                  <Icon className="size-4" aria-hidden />
+                </span>
+                <div>
+                  <h3 className="text-sm font-semibold">{title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-fg-secondary">{body}</p>
+                </div>
+              </div>
             </li>
           ))}
         </ul>

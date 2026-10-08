@@ -333,12 +333,20 @@ export function RunHistory() {
             placeholder="Search questions"
             value={text}
             onChange={(event) => setText(event.target.value)}
-            className="min-h-10 pl-9"
+            size="xl"
+            className="pl-9"
           />
         </div>
-        <ToggleGroup value={filter} onValueChange={setFilter} aria-label="Filter runs" className="overflow-x-auto lg:w-auto">
+        {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
+            Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
+        <ToggleGroup
+          value={filter}
+          onValueChange={setFilter}
+          aria-label="Filter runs"
+          className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
+        >
           {RUN_FILTERS.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value} className="min-h-9 shrink-0 px-3">
+            <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
               {option.label}
             </ToggleGroupItem>
           ))}

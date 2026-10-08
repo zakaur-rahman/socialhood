@@ -26,7 +26,8 @@ export function Section({
       aria-labelledby={`${id}-title`}
       tabIndex={tabIndex}
       className={cn(
-        "scroll-mt-6 rounded-xl border border-line bg-panel p-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 md:p-5",
+        // Focus (a checklist item moves it here) is the global outline.
+        "scroll-mt-6 rounded-xl border border-line bg-panel p-4 md:p-5",
         className,
       )}
     >

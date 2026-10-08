@@ -68,6 +68,57 @@ describe("Composer (UX-INB-07)", () => {
     expect(textbox().value).toBe("");
   });
 
+  // UI-030: Send is the Button primitive (32 px, 40 px on coarse pointers). Empty, it is a disabled
+  // secondary Button that keeps UX-INB-07's neutral look at full opacity (DESIGN_SYSTEM §8.3); with
+  // something to send, the primary (gradient) Button with the scale-in.
+  it("Send: neutral and disabled while empty, the primary Button once there is text", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+    const send = screen.getByRole("button", { name: "Send" });
+    expect(send).toHaveAttribute("data-slot", "button");
+    expect(send).toHaveAttribute("data-size", "default");
+    expect(send).toHaveAttribute("data-variant", "secondary");
+    expect(send).toHaveClass("bg-raised", "disabled:text-fg-disabled", "disabled:opacity-100", "pointer-coarse:min-h-10");
+    expect(send).not.toHaveClass("disabled:opacity-50");
+
+    await user.type(textbox(), "Yes");
+    expect(send).toBeEnabled();
+    expect(send).toHaveAttribute("data-variant", "default");
+    expect(send).toHaveClass("bg-brand-gradient", "text-on-brand", "motion-safe:animate-in", "motion-safe:zoom-in-95");
+    expect(send).not.toHaveClass("disabled:opacity-100");
+  });
+
+  it("the toolbar's icon buttons are the Button's icon size, with no touch patches", () => {
+    renderComposer();
+    for (const name of ["Attach files", "Add emoji", "Send a heart", "Schedule for later"]) {
+      const tool = screen.getByRole("button", { name });
+      expect(tool).toHaveAttribute("data-size", "icon");
+      expect(tool.className).not.toMatch(/md:size-/);
+    }
+  });
+
+  // UI-031: the emoji search is the SearchInput primitive. In the popover Esc reaches Radix first,
+  // so the popover empties a search with text before it closes.
+  it("emoji search: Esc clears the search first, then closes the picker", async () => {
+    const user = userEvent.setup();
+    renderComposer();
+    await user.click(screen.getByRole("button", { name: "Add emoji" }));
+    const search = await screen.findByRole("searchbox", { name: "Search emoji" });
+    expect(search.closest('[data-slot="search-input"]')).not.toBeNull();
+    await user.type(search, "zzz");
+    expect(screen.getByText('No emoji match "zzz"')).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(search).toHaveValue("");
+    expect(screen.getByRole("searchbox", { name: "Search emoji" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("searchbox", { name: "Search emoji" })).not.toBeInTheDocument());
+  });
+
+  it("the reply box is 16 px on phones, where iOS zooms into smaller text (UI-ISS-017)", () => {
+    renderComposer();
+    expect(textbox()).toHaveClass("text-sm", "max-md:text-base", "focus-visible:outline-none");
+  });
+
   it("grows with the text up to 160 px and resets its height after send", async () => {
     const user = userEvent.setup();
     renderComposer();
@@ -125,11 +176,18 @@ describe("Composer (UX-INB-07)", () => {
 
   it("account needs reconnecting: disabled with Reconnect", () => {
     renderComposer({ social_account: { id: "a1", username: "maple.bakery", display_name: null, status: "needs_reconnect" } });
-    expect(screen.getByRole("status")).toHaveTextContent("@maple.bakery needs reconnecting before you can send from it.");
-    expect(screen.getByRole("link", { name: "Reconnect" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveTextContent("@maple.bakery needs reconnecting before you can send from it.");
+    // UI-031: the Alert primitive (outline, neutral) with its one action, the secondary `sm` Button.
+    expect(notice).toHaveAttribute("data-slot", "alert");
+    expect(notice).toHaveAttribute("data-variant", "outline");
+    const reconnect = screen.getByRole("link", { name: "Reconnect" });
+    expect(reconnect).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(reconnect).toHaveAttribute("data-variant", "secondary");
+    expect(reconnect).toHaveAttribute("data-size", "sm");
   });
 
-  it("uploads attachments with a progress ring; Send waits for them", async () => {
+  it("uploads attachments with a progress bar; Send waits for them", async () => {
     const user = userEvent.setup();
     let finish: (asset: MediaAsset) => void = () => {};
     let progress: (fraction: number) => void = () => {};
@@ -146,7 +204,10 @@ describe("Composer (UX-INB-07)", () => {
     await user.upload(screen.getByTestId("composer-file-input"), file);
 
     act(() => progress(0.4));
-    expect(screen.getByRole("progressbar", { name: "Uploading" })).toHaveAttribute("aria-valuenow", "40");
+    // UI-031: the Progress primitive, named after the file (was an unnamed-file "Uploading" ring).
+    const bar = screen.getByRole("progressbar", { name: "Uploading dress.png" });
+    expect(bar).toHaveAttribute("data-slot", "progress");
+    expect(bar).toHaveAttribute("aria-valuenow", "40");
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
 
     const asset = { id: "asset-1", resource_type: "image", secure_url: "https://res.cloudinary.com/x.png", bytes: 1 } as MediaAsset;
@@ -306,10 +367,31 @@ describe("AI Polish (C-063)", () => {
     renderWithPolish(() => json({ text: "" }));
     const polish = screen.getByRole("button", { name: "AI Polish" });
     expect(polish).toBeDisabled();
+    // An AI action on the soft Button (C-073), dimmed by the primitive's disabled rule, not greyed here.
+    expect(polish).toHaveAttribute("data-variant", "soft");
+    expect(polish).toHaveClass("bg-brand-soft", "text-brand-fg", "disabled:opacity-50");
+    expect(polish.className).not.toMatch(/disabled:(border|text)-/);
     await user.type(textbox(), "   ");
     expect(polish).toBeDisabled();
     await user.type(textbox(), "hi");
     expect(polish).toBeEnabled();
+  });
+
+  // UI-030: a disabled control says why (DisabledReason), to keyboard, touch and screen reader users.
+  it("says why it's off: a focusable reason while the reply is empty, none once there is text", async () => {
+    const user = userEvent.setup();
+    renderWithPolish(() => json({ text: "" }));
+    const polish = screen.getByRole("button", { name: "AI Polish" });
+    const reason = polish.closest('[data-slot="disabled-reason"]') as HTMLElement;
+    expect(reason).toHaveAttribute("tabindex", "0");
+    expect(reason).toHaveAccessibleDescription("Write a reply to polish");
+    await user.type(textbox(), "hi");
+    expect(reason).not.toHaveAttribute("tabindex");
+    expect(reason).not.toHaveAttribute("aria-describedby");
+    // UI-031: what it does and costs is a Tooltip (on keyboard focus too), not a title (UI-ISS-042).
+    expect(polish).not.toHaveAttribute("title");
+    await user.hover(polish);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Fix grammar and clarity, in the same language (1 AI credit)");
   });
 
   it("replaces the reply with a spinner while it works, and Undo brings the original back", async () => {
@@ -319,9 +401,12 @@ describe("AI Polish (C-063)", () => {
     await user.type(textbox(), "haan ji cake ready hai kal tak");
 
     await user.click(screen.getByRole("button", { name: "AI Polish" }));
-    const busy = await screen.findByRole("button", { name: "Polishing…" });
+    // UI-031: Button `loading`: the spinner over the kept label, busy and disabled (was "Polishing…").
+    const busy = screen.getByRole("button", { name: "AI Polish" });
+    await waitFor(() => expect(busy).toHaveAttribute("aria-busy", "true"));
     expect(busy).toBeDisabled();
-    expect(busy.querySelector("svg.animate-spin")).not.toBeNull();
+    // The Spinner primitive: it spins only when motion is allowed (UI-030; was a bare animate-spin).
+    expect(busy.querySelector('svg[data-slot="spinner"]')).toHaveClass("motion-safe:animate-spin");
     expect(calls.find((c) => c.path === "/v1/w/w1/conversations/c1/polish")?.body).toEqual({
       text: "haan ji cake ready hai kal tak",
     });

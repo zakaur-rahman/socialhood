@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { ChipListInput } from "@/components/ai/ChipListInput";
+import { useLeaveWarning } from "@/components/settings/SaveBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,8 @@ import { ApiError } from "@/lib/api/errors";
 import { toSettingsUpdate, useUpdateAiSettings } from "@/lib/api/queries";
 import type { AiSettings, BrandTone, EmojiPolicy } from "@/lib/api/types";
 import { EMOJI_OPTIONS, TONE_OPTIONS } from "@/lib/ai/format";
-import { aiCopy, errorMessage } from "@/lib/copy";
+import { aiCopy } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 
 const schema = z.object({
   business_name: z.string().trim().max(80, "Use 80 characters or fewer."),
@@ -108,6 +110,8 @@ function BrandVoiceForm({
   const update = useUpdateAiSettings(wid);
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: formValues(settings) });
   const { errors, isDirty } = form.formState;
+  // Brand voice saves with Save only: leaving with changes asks first (UI-ISS-022).
+  useLeaveWarning(isDirty);
 
   const onSubmit = form.handleSubmit((values) => {
     update.mutate(
@@ -136,7 +140,7 @@ function BrandVoiceForm({
             }
             return;
           }
-          toast.error(errorMessage(error));
+          toastError(error);
         },
       },
     );
@@ -170,9 +174,16 @@ function BrandVoiceForm({
             control={form.control}
             name="tone"
             render={({ field }) => (
-              <ToggleGroup value={field.value} onValueChange={field.onChange} aria-labelledby="bv-tone" className="flex-wrap">
+              // `sm`: the 12 px labels these segments had, so the four tones still fit one row at 375 px.
+              <ToggleGroup
+                size="sm"
+                value={field.value}
+                onValueChange={field.onChange}
+                aria-labelledby="bv-tone"
+                className="flex-wrap"
+              >
                 {TONE_OPTIONS.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value} className="text-xs">
+                  <ToggleGroupItem key={option.value} value={option.value}>
                     {option.label}
                   </ToggleGroupItem>
                 ))}
@@ -188,9 +199,9 @@ function BrandVoiceForm({
             control={form.control}
             name="emoji_policy"
             render={({ field }) => (
-              <ToggleGroup value={field.value} onValueChange={field.onChange} aria-labelledby="bv-emoji">
+              <ToggleGroup size="sm" value={field.value} onValueChange={field.onChange} aria-labelledby="bv-emoji">
                 {EMOJI_OPTIONS.map((option) => (
-                  <ToggleGroupItem key={option.value} value={option.value} className="text-xs">
+                  <ToggleGroupItem key={option.value} value={option.value}>
                     {option.label}
                   </ToggleGroupItem>
                 ))}
@@ -211,7 +222,8 @@ function BrandVoiceForm({
                 label="Always"
                 items={field.value}
                 onChange={field.onChange}
-                placeholder="e.g. Mention free shipping over ₹3,000"
+                // As long as Never's, so it fits the field at 16 px on a 320 px phone ("…over ₹3,000" was cut).
+                placeholder="e.g. Mention free shipping"
               />
             )}
           />
@@ -242,7 +254,7 @@ function BrandVoiceForm({
             Cancel
           </Button>
         ) : null}
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={!isDirty || update.isPending}>
+        <Button type="submit" disabled={!isDirty || update.isPending}>
           {update.isPending ? "Saving…" : "Save"}
         </Button>
       </div>

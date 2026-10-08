@@ -1,10 +1,15 @@
-import { render, screen, within } from "@testing-library/react";
+import { render as rtlRender, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { suggestion } from "@/test/api";
 
 import { EditingSuggestionChip, EscalationBanner, SuggestionCard, type SuggestionActions } from "./SuggestionCard";
+
+// The app renders every page inside a TooltipProvider (app/layout.tsx).
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: TooltipProvider });
 
 function actions(): SuggestionActions & Record<string, ReturnType<typeof vi.fn>> {
   return {

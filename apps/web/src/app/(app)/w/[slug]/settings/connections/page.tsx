@@ -22,8 +22,9 @@ import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { ApiError, isPlanLimitError } from "@/lib/api/errors";
+import { ApiError } from "@/lib/api/errors";
 import {
   useCompleteInstagramConnect,
   useCreateSandboxAccount,
@@ -40,7 +41,6 @@ import {
   completeConnectResult,
   connectResult,
   emptyStates,
-  errorMessage,
   instagramConnected,
   type ConnectResult,
 } from "@/lib/copy";
@@ -96,16 +96,17 @@ function Connections() {
       {SANDBOX_TOOLS && workspace.role === "owner" ? (
         <Button
           variant="ghost"
-          className="min-h-10 px-3 md:min-h-9"
+          size="lg"
           disabled={sandbox.isPending}
           onClick={() =>
             sandbox.mutate(undefined, {
               onSuccess: () => toast.success("Sandbox account added"),
               onError: (error) =>
-                toast.error(
+                toastError(
+                  error,
                   error instanceof ApiError && error.status === 404
                     ? "The sandbox is off. Set SANDBOX_PLATFORM_ENABLED=true for the API."
-                    : errorMessage(error),
+                    : undefined,
                 ),
             })
           }
@@ -116,7 +117,7 @@ function Connections() {
       ) : null}
       <ConnectWhatsAppButton wid={wid} />
       <Button
-        className="bg-brand-gradient min-h-10 px-4 text-white md:min-h-9"
+        size="lg"
         disabled={connect.isPending || finishing}
         onClick={startConnect}
       >
@@ -148,7 +149,7 @@ function Connections() {
             icon={<InstagramGlyph className="size-8" />}
             action={
               canManage ? (
-                <Button className="bg-brand-gradient min-h-10 text-white" disabled={connect.isPending} onClick={startConnect}>
+                <Button size="xl" disabled={connect.isPending} onClick={startConnect}>
                   Connect Instagram
                 </Button>
               ) : (
@@ -168,17 +169,20 @@ function Connections() {
                 placeholder="Search by name, handle or number"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
-                className="min-h-10 border-0 bg-field pl-9"
+                size="xl"
+                className="pl-9"
               />
             </div>
+            {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
+                Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
             <ToggleGroup
               value={filter}
               onValueChange={(value) => setFilter(value as AccountFilter)}
               aria-label="Show accounts"
-              className="overflow-x-auto lg:w-auto"
+              className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
             >
               {ACCOUNT_FILTERS.map((option) => (
-                <ToggleGroupItem key={option.value} value={option.value} className="min-h-9 shrink-0 px-3">
+                <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
                   {option.label}
                   <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
                 </ToggleGroupItem>
@@ -193,7 +197,7 @@ function Connections() {
                 action={
                   <Button
                     variant="secondary"
-                    className="min-h-10"
+                    size="xl"
                     onClick={() => {
                       setQuery("");
                       setFilter("all");
@@ -228,7 +232,7 @@ function Connections() {
                             { id: account.id, patch },
                             {
                               // A 402 opens the upgrade dialog by itself (lib/api/provider.tsx).
-                              onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+                              onError: (error) => toastError(error),
                             },
                           ),
                     onReconnect: account.platform === "whatsapp" ? whatsapp.connect : startConnect,
@@ -238,14 +242,14 @@ function Connections() {
                           saved?.status === "active"
                             ? toast.success("Subscribed to messages")
                             : toast.error(saved?.last_error ?? "Couldn't subscribe to messages. Try again."),
-                        onError: (error) => toast.error(errorMessage(error)),
+                        onError: (error) => toastError(error),
                       }),
                     onDisconnect: () =>
                       disconnect.mutate(
                         { id: account.id },
                         {
                           onSuccess: () => toast.success(`${handleOf(account)} disconnected`),
-                          onError: (error) => toast.error(errorMessage(error)),
+                          onError: (error) => toastError(error),
                         },
                       ),
                     // C-067: the dialog stays open on a refusal; a typed-handle mismatch shows
@@ -254,7 +258,7 @@ function Connections() {
                       try {
                         await deleteData.mutateAsync({ id: account.id, confirm, mode });
                       } catch (error) {
-                        if (!isConfirmError(error)) toast.error(errorMessage(error));
+                        if (!isConfirmError(error)) toastError(error);
                         throw error;
                       }
                       toast.success(`Deleting ${handleOf(account)} and its data`);
@@ -275,7 +279,7 @@ function Connections() {
             update.mutate(
               { id: confirmAuto.id, patch: { ai_mode: "auto" } },
               {
-                onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+                onError: (error) => toastError(error),
               },
             );
           }
@@ -297,7 +301,10 @@ function isConfirmError(error: unknown): boolean {
 function showConnectResult(result: ConnectResult | null, retry: () => void) {
   if (result?.kind === "success") toast.success(result.message);
   else if (result) {
-    toast.error(result.message, result.retry ? { action: { label: "Try again", onClick: retry } } : undefined);
+    toast.error(
+      result.message,
+      result.retry ? { action: { label: "Try again", onClick: retry }, duration: TOAST_ACTION_DURATION } : undefined,
+    );
   }
 }
 

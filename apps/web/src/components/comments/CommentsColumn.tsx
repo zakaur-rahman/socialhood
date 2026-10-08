@@ -21,10 +21,10 @@ function RowSkeletons() {
     <ul aria-busy="true" aria-label="Loading comments">
       {Array.from({ length: 5 }, (_, i) => (
         <li key={i} className="flex gap-3 border-b border-line-subtle px-4 py-3 last:border-b-0">
-          <Skeleton className="size-8 rounded-full bg-raised" />
+          <Skeleton className="size-8 rounded-full" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-1/3 bg-raised" />
-            <Skeleton className="h-3 w-2/3 bg-raised" />
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-3 w-2/3" />
           </div>
         </li>
       ))}
@@ -82,7 +82,7 @@ export function CommentsColumn({
         {...filterEmpty(filter, isAnalysing(post.stats))}
         action={
           filter === "all" ? undefined : (
-            <Button variant="secondary" className="min-h-10 md:min-h-8" onClick={() => setFilter("all")}>
+            <Button variant="secondary" onClick={() => setFilter("all")}>
               Show all
             </Button>
           )
@@ -114,7 +114,6 @@ export function CommentsColumn({
           <div className="flex justify-center border-t border-line-subtle p-3">
             <Button
               variant="secondary"
-              className="min-h-10 md:min-h-8"
               onClick={() => void comments.fetchNextPage()}
               disabled={comments.isFetchingNextPage}
             >
@@ -143,7 +142,8 @@ export function CommentsColumn({
             <ToggleGroupItem
               key={option.value}
               value={option.value}
-              className="min-h-10 flex-none rounded-full border border-line bg-field px-3 py-1 text-xs data-[state=on]:border-brand-line data-[state=on]:bg-brand-soft md:min-h-8"
+              // The segment's own sizes (32 px, 40 px on touch); the chip look moves to `variant="chips"` in UI-039.
+              className="flex-none rounded-full border border-line bg-field px-3 py-1 text-xs data-[state=on]:border-brand-line data-[state=on]:bg-brand-soft"
             >
               {option.label}
             </ToggleGroupItem>
@@ -151,7 +151,7 @@ export function CommentsColumn({
         </ToggleGroup>
       </div>
       {missing && prepared ? (
-        <div role="status" className="space-y-1 border-b border-line bg-warning/15 px-4 py-3 text-sm" data-testid="prepared-missing">
+        <div role="status" className="space-y-1 border-b border-line bg-warning-soft px-4 py-3 text-sm" data-testid="prepared-missing">
           <p className="text-warning">
             The comment Ask Social Hood prepared a reply for isn&apos;t among this post&apos;s latest comments. It may
             have been deleted.

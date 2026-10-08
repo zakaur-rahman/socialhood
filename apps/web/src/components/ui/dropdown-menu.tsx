@@ -1,14 +1,30 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui"
 import { CheckIcon, ChevronRightIcon } from "lucide-react"
 
+import {
+  FLOATING_GROUP,
+  FLOATING_ITEM,
+  FLOATING_MOTION,
+  FLOATING_SURFACE,
+  keyboardHighlight,
+} from "@/components/ui/floating"
+
+/**
+ * A menu button (WAI-ARIA's pattern), not modal unless a call site asks: a modal menu hides the rest
+ * of the page with `aria-hidden` while its controls stay focusable (axe `aria-hidden-focus`), blocks
+ * the page's pointer events and, when an item opens a dialog, can leave the page inert. The keyboard
+ * works the same either way: focus moves into the menu, Tab stays there, typeahead jumps, and Esc or
+ * choosing an item puts focus back on the trigger. An outside click closes it.
+ */
 function DropdownMenu({
+  modal = false,
   ...props
 }: React.ComponentProps<typeof DropdownMenuPrimitive.Root>) {
-  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" {...props} />
+  return <DropdownMenuPrimitive.Root data-slot="dropdown-menu" modal={modal} {...props} />
 }
 
 function DropdownMenuPortal({
@@ -30,6 +46,11 @@ function DropdownMenuTrigger({
   )
 }
 
+/**
+ * The menu: at least 192 px and as wide as its longest item (not the trigger's width, which is wrong
+ * for icon triggers), never wider or taller than the space beside the trigger. The floating surface
+ * and motion come from ui/floating.
+ */
 function DropdownMenuContent({
   className,
   align = "start",
@@ -42,8 +63,15 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         align={align}
-        className={cn("z-50 max-h-(--radix-dropdown-menu-content-available-height) w-(--radix-dropdown-menu-trigger-width) min-w-32 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:overflow-hidden data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+        className={cn(
+          "z-50 max-h-(--radix-dropdown-menu-content-available-height) w-auto max-w-(--radix-dropdown-menu-content-available-width) min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto p-1 data-[state=closed]:overflow-hidden",
+          FLOATING_GROUP,
+          FLOATING_SURFACE,
+          FLOATING_MOTION,
+          className
+        )}
         {...props}
+        {...keyboardHighlight(props)}
       />
     </DropdownMenuPrimitive.Portal>
   )
@@ -57,6 +85,10 @@ function DropdownMenuGroup({
   )
 }
 
+/**
+ * An item. `variant="destructive"` is for an item that deletes or removes: `danger-fg` text and icon
+ * (8.7:1 on the menu) on a `danger-soft` highlight (7.4:1).
+ */
 function DropdownMenuItem({
   className,
   inset,
@@ -72,7 +104,8 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "group/dropdown-menu-item relative flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 data-[variant=destructive]:focus:text-destructive dark:data-[variant=destructive]:focus:bg-destructive/20 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 data-[variant=destructive]:*:[svg]:text-destructive",
+        FLOATING_ITEM,
+        "group/dropdown-menu-item px-1.5 data-inset:pl-7 data-[variant=destructive]:text-danger-fg data-[variant=destructive]:focus:bg-danger-soft data-[variant=destructive]:focus:text-danger-fg data-[variant=destructive]:*:[svg]:text-danger-fg",
         className
       )}
       {...props}
@@ -93,10 +126,7 @@ function DropdownMenuCheckboxItem({
     <DropdownMenuPrimitive.CheckboxItem
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
-      className={cn(
-        "relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(FLOATING_ITEM, "pr-8 pl-1.5 data-inset:pl-7", className)}
       checked={checked}
       {...props}
     >
@@ -137,10 +167,7 @@ function DropdownMenuRadioItem({
     <DropdownMenuPrimitive.RadioItem
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
-      className={cn(
-        "relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(FLOATING_ITEM, "pr-8 pl-1.5 data-inset:pl-7", className)}
       {...props}
     >
       <span
@@ -157,6 +184,7 @@ function DropdownMenuRadioItem({
   )
 }
 
+/** A group label: `text-xs` secondary text, so call sites don't restyle it. */
 function DropdownMenuLabel({
   className,
   inset,
@@ -169,7 +197,7 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
+        "px-1.5 py-1 text-xs font-medium text-fg-secondary data-inset:pl-7",
         className
       )}
       {...props}
@@ -197,10 +225,7 @@ function DropdownMenuShortcut({
   return (
     <span
       data-slot="dropdown-menu-shortcut"
-      className={cn(
-        "ml-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground",
-        className
-      )}
+      className={cn("ml-auto text-xs text-fg-secondary", className)}
       {...props}
     />
   )
@@ -224,10 +249,7 @@ function DropdownMenuSubTrigger({
     <DropdownMenuPrimitive.SubTrigger
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
-      className={cn(
-        "flex cursor-default items-center gap-1.5 rounded-md px-1.5 py-1 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground not-data-[variant=destructive]:focus:**:text-accent-foreground data-inset:pl-7 data-open:bg-accent data-open:text-accent-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        className
-      )}
+      className={cn(FLOATING_ITEM, "px-1.5 data-inset:pl-7 data-open:bg-pressed", className)}
       {...props}
     >
       {children}
@@ -243,8 +265,15 @@ function DropdownMenuSubContent({
   return (
     <DropdownMenuPrimitive.SubContent
       data-slot="dropdown-menu-sub-content"
-      className={cn("z-50 min-w-[96px] origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden rounded-lg bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95", className )}
+      className={cn(
+        "z-50 w-auto max-w-(--radix-dropdown-menu-content-available-width) min-w-48 origin-(--radix-dropdown-menu-content-transform-origin) overflow-hidden p-1",
+        FLOATING_GROUP,
+        FLOATING_SURFACE,
+        FLOATING_MOTION,
+        className
+      )}
       {...props}
+      {...keyboardHighlight(props)}
     />
   )
 }

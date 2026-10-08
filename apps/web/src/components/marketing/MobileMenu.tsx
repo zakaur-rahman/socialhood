@@ -5,13 +5,15 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@/components/ui/button";
+import { minWidth } from "@/lib/breakpoints";
 import { NAV_LINKS } from "@/lib/marketing/site";
 
 import { HeaderAuth } from "./HeaderAuth";
 
 /**
- * The phone menu (below md): a disclosure under the header with the section links and the account
- * actions. Escape or following a link closes it; Escape returns focus to the button.
+ * The phone menu (below md): a disclosure under the header bar with the section links and the
+ * account actions. Escape or following a link closes it; Escape returns focus to the button.
  */
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
@@ -26,7 +28,7 @@ export function MobileMenu() {
       button.current?.focus();
     };
     // Grown past the phone layout, the menu has nothing to show.
-    const wide = window.matchMedia("(min-width: 48rem)");
+    const wide = window.matchMedia(minWidth("md"));
     const onWide = () => {
       if (wide.matches) setOpen(false);
     };
@@ -42,30 +44,28 @@ export function MobileMenu() {
 
   return (
     <div className="md:hidden">
-      <button
+      <Button
         ref={button}
         type="button"
+        variant="ghost"
+        size="icon-lg"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={open ? "Close menu" : "Open menu"}
         onClick={() => setOpen((value) => !value)}
-        className="grid size-11 place-items-center rounded-lg text-fg hover:bg-raised"
       >
         {open ? <X className="size-5" aria-hidden /> : <Menu className="size-5" aria-hidden />}
-      </button>
-      <div
-        id={panelId}
-        hidden={!open}
-        className="absolute inset-x-0 top-full border-b border-line bg-panel shadow-2xl shadow-black/60"
-      >
-        <nav aria-label="Main" className="mx-auto max-w-6xl px-4 pt-2 pb-4">
+      </Button>
+      {/* It floats over the page, so the floating elevation (DESIGN_SYSTEM §6), on the panel. */}
+      <div id={panelId} hidden={!open} className="absolute inset-x-0 top-full mt-2 rounded-2xl border border-line bg-panel shadow-floating">
+        <nav aria-label="Main" className="px-3 pt-2 pb-4">
           <ul className="grid">
             {NAV_LINKS.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href as Route}
                   onClick={close}
-                  className="flex min-h-11 items-center rounded-lg px-2 text-base text-fg hover:bg-raised"
+                  className="flex min-h-11 items-center rounded-lg px-2 text-base text-fg transition-colors duration-normal hover:bg-hover"
                 >
                   {link.label}
                 </Link>

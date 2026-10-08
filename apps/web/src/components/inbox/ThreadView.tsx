@@ -12,6 +12,7 @@ import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgentHandoff } from "@/lib/agent/handoff";
 import {
@@ -84,8 +85,8 @@ export function ThreadView({
     return (
       <div className="flex h-full flex-col" aria-busy="true" aria-label="Loading conversation">
         <div className="flex h-14 items-center gap-3 border-b border-line bg-panel px-4">
-          <Skeleton className="size-8 rounded-full bg-raised" />
-          <Skeleton className="h-3 w-40 bg-raised" />
+          <Skeleton className="size-8 rounded-full" />
+          <Skeleton className="h-3 w-40" />
         </div>
         <div className="flex-1" />
       </div>
@@ -320,14 +321,10 @@ function ScheduledChip({ conversation, now, onOpen }: { conversation: Conversati
     .sort((a, b) => new Date(a.send_at).getTime() - new Date(b.send_at).getTime())[0];
   return (
     <div className="shrink-0 bg-canvas px-4 pb-2">
-      <button
-        type="button"
-        onClick={onOpen}
-        className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft px-3 py-1 text-xs font-medium text-brand-fg"
-      >
-        <CalendarClock className="size-3.5" aria-hidden />
+      <Button type="button" variant="soft" size="sm" onClick={onOpen}>
+        <CalendarClock aria-hidden />
         {count} scheduled{next ? ` · ${formatDayTime(next.send_at, workspace.timezone, now)}` : ""}
-      </button>
+      </Button>
     </div>
   );
 }

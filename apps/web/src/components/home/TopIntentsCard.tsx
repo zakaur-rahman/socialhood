@@ -17,7 +17,7 @@ export function TopIntentsCard({
   const most = Math.max(1, ...intents.map((item) => item.count));
   const total = intents.reduce((sum, item) => sum + item.count, 0);
   return (
-    <section aria-labelledby="home-intents" className="flex flex-col rounded-xl border border-line bg-panel p-4">
+    <section aria-labelledby="home-intents" className="flex min-w-0 flex-col rounded-xl border border-line bg-panel p-4">
       <h2 id="home-intents" className="mb-3 text-base font-semibold">
         What customers asked about, {period}
       </h2>

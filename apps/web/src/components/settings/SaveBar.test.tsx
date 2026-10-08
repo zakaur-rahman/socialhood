@@ -110,6 +110,15 @@ describe("SaveBar (C-066)", () => {
     expect(navigated).toHaveBeenCalledTimes(2);
   });
 
+  it("floats opaque, without blur; sticks, but not on short viewports (UI-ISS-014, UI-ISS-031)", () => {
+    const { bar } = renderBar();
+    expect(bar()).toHaveClass("sticky", "bottom-0", "short:static");
+    const surface = bar().firstElementChild;
+    // DESIGN_SYSTEM §6 level 1 (D-12): the floating surface, edge and shadow (UI-036), opaque.
+    expect(surface).toHaveClass("bg-overlay", "ring-1", "ring-line", "shadow-floating");
+    expect(surface?.className).not.toMatch(/backdrop-blur|bg-overlay\/|bg-panel|shadow-xl|shadow-2xl/);
+  });
+
   it("status only (switches that save as they change): saving, saved, or the error", () => {
     const { bar, rerender } = renderBar({ onReset: undefined, onSave: undefined, saving: true });
     expect(within(bar()).getByRole("status")).toHaveTextContent("Saving…");

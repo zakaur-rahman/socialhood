@@ -1,14 +1,17 @@
 "use client";
 
-import { AlertTriangle, CornerDownLeft, Loader2, RefreshCw, SendHorizontal, Sparkles, X } from "lucide-react";
+import { AlertTriangle, CornerDownLeft, RefreshCw, SendHorizontal, Sparkles, X } from "lucide-react";
 import { useState } from "react";
 
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DisabledReason } from "@/components/ui/disabled-reason";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Suggestion } from "@/lib/api/types";
 import { sourceChips } from "@/lib/ai/format";
 import { aiCopy } from "@/lib/copy";
-import { TONE_CLASS } from "@/lib/inbox/format";
 import { cn } from "@/lib/utils";
 
 /** Longer drafts start clamped to two lines with "More" (UX-INB-08). */
@@ -26,10 +29,11 @@ export type SuggestionActions = {
   onAddToKnowledge?: () => void;
 };
 
+/** The bar rises 8 px over `duration-slow` (DESIGN_SYSTEM §7.2: the suggestion bar). */
 const BAR =
-  "mx-4 mb-2 rounded-lg border px-3 py-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-[180ms]";
-const ACTION = "h-9 rounded-md px-2.5 text-xs font-medium md:h-7";
-const META = "max-w-40 truncate rounded px-1.5 text-[11px] leading-[18px]";
+  "mx-4 mb-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-slow motion-safe:ease-enter";
+/** The source and confidence chips are Badges; a long source title truncates inside the chip. */
+const META = "max-w-40";
 
 /**
  * UX-INB-08 as a slim bar right above the composer (C-063): the one AI draft ("AI draft: …")
@@ -61,11 +65,11 @@ export function SuggestionCard({
 }) {
   if (generating || !suggestion) {
     return (
-      <section aria-label="Suggested reply" className={cn(BAR, "border-brand-line bg-panel")} data-state="generating">
+      <section aria-label="Suggested reply" className={cn(BAR, "rounded-lg border border-brand-line bg-panel px-3 py-2")} data-state="generating">
         <div className="flex items-center gap-2">
           <Sparkles className="size-3.5 shrink-0 text-brand-fg" aria-hidden />
           <span className="shrink-0 text-xs font-medium text-brand-fg">AI draft:</span>
-          <Skeleton className="h-3 flex-1 bg-raised" aria-hidden />
+          <Skeleton className="h-3 flex-1" aria-hidden />
         </div>
         <p role="status" className="mt-1 pl-5.5 text-xs text-fg-secondary">
           {aiCopy.drafting}
@@ -75,32 +79,33 @@ export function SuggestionCard({
   }
   if (!suggestion.can_answer) {
     return (
-      <section aria-label={aiCopy.notInKnowledge} className={cn(BAR, "border-warning/40 bg-panel")} data-state="not_in_knowledge">
-        <div className="flex items-start gap-2">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warning" aria-hidden />
-          <p className="min-w-0 flex-1 text-sm">
+      <section aria-label={aiCopy.notInKnowledge} className={BAR} data-state="not_in_knowledge">
+        <Alert
+          tone="warning"
+          variant="outline"
+          icon={<AlertTriangle />}
+          onDismiss={actions.onDismiss}
+          dismissLabel="Dismiss suggestion"
+          action={
+            <>
+              <Button variant="ghost" size="sm" onClick={actions.onWriteReply}>
+                Write reply
+              </Button>
+              {actions.onAddToKnowledge ? (
+                <Button size="sm" loading={addingToKnowledge} onClick={actions.onAddToKnowledge}>
+                  Add to knowledge
+                </Button>
+              ) : null}
+            </>
+          }
+        >
+          <p>
             <span className="font-medium text-warning">{aiCopy.notInKnowledge}: </span>
             <span>
               {customerName} asked about {suggestion.missing_info?.trim() || "something your knowledge doesn't cover"}.
             </span>
           </p>
-          <DismissButton onDismiss={actions.onDismiss} disabled={busy} />
-        </div>
-        <div className="mt-1.5 flex flex-wrap justify-end gap-1.5">
-          <Button variant="ghost" className={ACTION} onClick={actions.onWriteReply}>
-            Write reply
-          </Button>
-          {actions.onAddToKnowledge ? (
-            <Button
-              className={cn(ACTION, "bg-brand-gradient text-white")}
-              disabled={addingToKnowledge}
-              onClick={actions.onAddToKnowledge}
-            >
-              {addingToKnowledge ? <Loader2 className="animate-spin" aria-hidden /> : null}
-              Add to knowledge
-            </Button>
-          ) : null}
-        </div>
+        </Alert>
       </section>
     );
   }
@@ -125,7 +130,7 @@ function ReadyBar({
   const left = suggestion.regenerations_left;
 
   return (
-    <section aria-label="Suggested reply" className={cn(BAR, "border-brand-line bg-panel")} data-state="ready">
+    <section aria-label="Suggested reply" className={cn(BAR, "rounded-lg border border-brand-line bg-panel px-3 py-2")} data-state="ready">
       <div className="flex items-start gap-2">
         <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-fg" aria-hidden />
         <div className="min-w-0 flex-1">
@@ -148,37 +153,48 @@ function ReadyBar({
       </div>
       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-5.5">
         {shown.map((source) => (
-          <span key={source.id} className={cn(META, TONE_CLASS.neutral)}>
-            From: {source.title}
-          </span>
+          <Badge key={source.id} className={META}>
+            <span className="truncate">From: {source.title}</span>
+          </Badge>
         ))}
         {more > 0 ? (
-          <span className={cn(META, TONE_CLASS.neutral)} title={suggestion.sources.slice(2).map((s) => s.title).join(", ")}>
-            +{more}
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge className={META} tabIndex={0}>
+                +{more}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>{suggestion.sources.slice(2).map((s) => s.title).join(", ")}</TooltipContent>
+          </Tooltip>
         ) : null}
         {suggestion.low_confidence ? (
-          <span className={cn(META, "font-medium", TONE_CLASS.warning)} title="The AI isn't sure about this one">
-            Check this
-          </span>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge tone="warning" className={META} tabIndex={0}>
+                Check this
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent>The AI isn&apos;t sure about this one</TooltipContent>
+          </Tooltip>
         ) : null}
         <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
-          <span className="text-[11px] text-fg-secondary tabular-nums">
+          <span className="text-2xs text-fg-secondary tabular-nums">
             {left > 0 ? `${left} ${left === 1 ? "draft" : "drafts"} left` : "No drafts left"}
           </span>
-          <Button
-            variant="ghost"
-            className={ACTION}
-            disabled={left <= 0 || busy}
-            title={left <= 0 ? "No more drafts for this message" : "Write a different draft"}
-            onClick={actions.onRegenerate}
-          >
-            {busy ? <Loader2 className="animate-spin" aria-hidden /> : <RefreshCw aria-hidden />} Draft again
-          </Button>
-          <Button variant="secondary" className={ACTION} title="Put the draft in the reply box to edit" onClick={actions.onEdit}>
-            <CornerDownLeft aria-hidden /> Insert
-          </Button>
-          <Button className={cn(ACTION, "bg-brand-gradient text-white")} disabled={!canSend || !text} onClick={actions.onSend}>
+          <DisabledReason reason={left <= 0 ? "No more drafts for this message" : null}>
+            <Button variant="ghost" size="sm" disabled={left <= 0} loading={busy} onClick={actions.onRegenerate}>
+              <RefreshCw aria-hidden /> Draft again
+            </Button>
+          </DisabledReason>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="secondary" size="sm" onClick={actions.onEdit}>
+                <CornerDownLeft aria-hidden /> Insert
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Put the draft in the reply box to edit</TooltipContent>
+          </Tooltip>
+          <Button size="sm" disabled={!canSend || !text} onClick={actions.onSend}>
             <SendHorizontal aria-hidden /> Send
           </Button>
         </span>
@@ -189,15 +205,17 @@ function ReadyBar({
 
 function DismissButton({ onDismiss, disabled }: { onDismiss: () => void; disabled: boolean }) {
   return (
-    <button
-      type="button"
+    // 28 px, 40 px on coarse pointers (Button `icon-sm`).
+    <Button
+      variant="ghost"
+      size="icon-sm"
       aria-label="Dismiss suggestion"
       disabled={disabled}
       onClick={onDismiss}
-      className="-my-1 grid size-9 shrink-0 place-items-center rounded-full text-fg-secondary hover:bg-white/5 hover:text-fg disabled:opacity-50 md:size-7"
+      className="-my-1 text-fg-secondary"
     >
-      <X className="size-4" aria-hidden />
-    </button>
+      <X aria-hidden />
+    </Button>
   );
 }
 
@@ -205,17 +223,18 @@ function DismissButton({ onDismiss, disabled }: { onDismiss: () => void; disable
 export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
   return (
     <div className="mx-4 mb-2 flex items-center gap-2">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-soft py-1 pr-1 pl-3 text-xs font-medium text-brand-fg">
-        <Sparkles className="size-3.5" aria-hidden /> Editing suggestion
+      <Badge tone="brand" size="md" className="pr-1">
+        <Sparkles aria-hidden /> Editing suggestion
         <button
           type="button"
           aria-label="Stop editing the suggestion"
           onClick={onStop}
-          className="grid size-5 place-items-center rounded-full hover:bg-white/10"
+          // The chip's ×: 16 px, with a 40 px hit area on coarse pointers (DESIGN_SYSTEM §8.4).
+          className="relative grid size-4 place-items-center rounded-full after:absolute after:-inset-1 hover:bg-pressed pointer-coarse:after:-inset-3"
         >
-          <X className="size-3.5" aria-hidden />
+          <X aria-hidden />
         </button>
-      </span>
+      </Badge>
     </div>
   );
 }
@@ -223,9 +242,8 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
 /** Escalated in Auto (F-09): above the bar, "AI didn't reply: {reason}". */
 export function EscalationBanner({ message }: { message: string }) {
   return (
-    <div role="status" className="mx-4 mb-2 flex items-center gap-2 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning">
-      <AlertTriangle className="size-4 shrink-0" aria-hidden />
+    <Alert tone="warning" icon={<AlertTriangle />} className="mx-4 mb-2 w-auto">
       <p>{message}</p>
-    </div>
+    </Alert>
   );
 }

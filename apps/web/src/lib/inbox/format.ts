@@ -9,6 +9,8 @@ import type {
   ReplyWindow,
   Signal,
 } from "@/lib/api/types";
+import { IDENTITIES, identityFor } from "@/lib/ui/identity";
+import type { Tone } from "@/lib/ui/tone";
 
 export const PLATFORM_LABEL: Record<Platform, string> = { instagram: "Instagram", whatsapp: "WhatsApp" };
 
@@ -65,20 +67,18 @@ export function timeLeft(closesAt: string, now: Date): string {
   return `${Math.floor(hours / 24)}d`;
 }
 
-export type Tone = "neutral" | "warning" | "danger" | "brand" | "success";
-
-export const TONE_CLASS: Record<Tone, string> = {
-  neutral: "bg-white/5 text-fg-secondary",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-danger/15 text-danger-fg",
-  brand: "bg-brand-soft text-brand-fg",
-  success: "bg-success/15 text-success",
-};
+/** The status tones live in lib/ui/tone (Badge's source); re-exported until the sweeps import it. */
+export type { Tone };
+export { TONE_CLASS } from "@/lib/ui/tone";
 
 /** FR-INB-01 "Leads" and the Lead badge: the API's inbox_views.LEAD_SCORE. */
 export const LEAD_SCORE = 60;
 
-export type RowBadge = { key: string; label: string; tone: Tone; title?: string };
+/**
+ * `hint`: more about the badge, in a Tooltip on hover (UI-ISS-042). `srDetail`: what screen readers
+ * hear after the label, when the hint says something the label doesn't ("Needs you: refund").
+ */
+export type RowBadge = { key: string; label: string; tone: Tone; hint?: string; srDetail?: string };
 
 /** The AI mode that applies to a conversation: its own, else its account's (FR-SUG-01). */
 export function effectiveAiMode(
@@ -104,17 +104,22 @@ export function rowBadges(
   const badges: RowBadge[] = [];
   if (item.needs_human) {
     const reason = item.needs_human_reason ? ESCALATION_LABEL[item.needs_human_reason] : null;
-    badges.push({ key: "needs_you", label: "Needs you", tone: "danger", title: reason ? `The AI handed this over: ${reason}` : undefined });
+    badges.push({
+      key: "needs_you",
+      label: "Needs you",
+      tone: "danger",
+      ...(reason ? { hint: `The AI handed this over: ${reason}`, srDetail: `: ${reason}` } : {}),
+    });
   }
   if (item.signal === "complaint" || item.signal === "closing_soon" || item.signal === "negative") {
     const chip = signalChip(item, now);
     if (chip) badges.push({ key: item.signal, ...chip });
   }
   if (item.lead_score !== null && item.lead_score !== undefined && item.lead_score >= LEAD_SCORE) {
-    badges.push({ key: "lead", label: `Lead ${item.lead_score}/100`, tone: "brand", title: "Lead score" });
+    badges.push({ key: "lead", label: `Lead ${item.lead_score}/100`, tone: "brand" });
   }
   if (aiMode === "auto") {
-    badges.push({ key: "ai", label: "AI Auto", tone: "success", title: "The AI replies on its own in this conversation" });
+    badges.push({ key: "ai", label: "AI Auto", tone: "success", hint: "The AI replies on its own in this conversation" });
   }
   return badges;
 }
@@ -181,20 +186,14 @@ export const ESCALATION_LABEL: Record<EscalationReason, string> = {
   output_blocked: "reply blocked",
 };
 
-/** Six gradient pairs from the tokens; the contact id picks one (UX-INB-04). */
-export const AVATAR_GRADIENTS = [
-  "from-brand-deep to-brand",
-  "from-instagram to-warning",
-  "from-whatsapp to-success",
-  "from-shell-1 to-shell-2",
-  "from-danger-fill to-warning",
-  "from-linkedin to-facebook",
-] as const;
+/**
+ * The avatar fallback's gradient pairs: the identity palette's (lib/ui/identity, D-13), not status
+ * or platform colours; the contact id picks one (UX-INB-04).
+ */
+export const AVATAR_GRADIENTS: readonly string[] = IDENTITIES.map((identity) => identity.gradient);
 
 export function avatarGradient(id: string): string {
-  let hash = 0;
-  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
-  return AVATAR_GRADIENTS[Math.abs(hash) % AVATAR_GRADIENTS.length];
+  return identityFor(id).gradient;
 }
 
 export function initial(name: string): string {

@@ -35,14 +35,14 @@ export function TopPostsCard({
   slug: string;
 }) {
   return (
-    <section aria-labelledby="home-top-posts" className="flex flex-col rounded-xl border border-line bg-panel p-4">
+    <section aria-labelledby="home-top-posts" className="flex min-w-0 flex-col rounded-xl border border-line bg-panel p-4">
       <div className="mb-3 flex items-baseline justify-between gap-3">
         <h2 id="home-top-posts" className="text-base font-semibold">
           Most commented, {period}
         </h2>
         <Link
           href={`/w/${slug}/comments` as Route}
-          className="-my-2 inline-flex min-h-10 shrink-0 items-center gap-0.5 rounded-md text-sm font-medium text-brand-fg outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50 md:min-h-8"
+          className="-my-2 inline-flex min-h-8 shrink-0 items-center gap-0.5 rounded-md text-sm font-medium text-brand-fg hover:underline pointer-coarse:min-h-10"
         >
           View all <ChevronRight className="size-4" aria-hidden />
         </Link>
@@ -56,7 +56,7 @@ export function TopPostsCard({
               <Link
                 href={`/w/${slug}/comments/${post.id}` as Route}
                 data-testid="top-post"
-                className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-2 outline-none hover:bg-white/5 focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-hover"
               >
                 <PostThumb post={post} className="size-12 shrink-0 rounded-md" />
                 <span className="min-w-0 flex-1 space-y-1.5">

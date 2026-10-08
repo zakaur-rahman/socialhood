@@ -16,15 +16,18 @@ import {
 import { Fragment, useState, type ReactNode } from "react";
 
 import { PostThumb } from "@/components/comments/PostThumb";
-import { ContactAvatar } from "@/components/inbox/ContactAvatar";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePosts } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
 import { MAX_RATIO, MIN_RATIO, ratioOf, type AssetInfo } from "@/lib/publishing/rules";
 import type { PostFormat } from "@/lib/publishing/types";
+import type { AccountColor } from "@/lib/schedule/format";
 import { cn } from "@/lib/utils";
+
+import { AccountPicture } from "./AccountPicker";
 
 const CAPTION_PREVIEW_CHARS = 125;
 const GRID_RECENT = 8;
@@ -80,11 +83,11 @@ function NoMedia({ children = "Add a photo or video to see the preview." }: { ch
   );
 }
 
-function AccountHeader({ account, subtitle }: { account: SocialAccount | null; subtitle?: string }) {
+function AccountHeader({ account, identity, subtitle }: { account: SocialAccount | null; identity?: AccountColor; subtitle?: string }) {
   const name = account?.username ?? account?.display_name ?? "your.account";
   return (
     <div className="flex items-center gap-2.5 px-3 py-2.5">
-      <ContactAvatar id={account?.id ?? "preview"} name={name} pictureUrl={account?.profile_picture_url} size={32} />
+      <AccountPicture account={account} identity={identity} />
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold">{name}</p>
         {subtitle ? <p className="truncate text-xs text-fg-secondary">{subtitle}</p> : null}
@@ -101,6 +104,7 @@ function AccountHeader({ account, subtitle }: { account: SocialAccount | null; s
 export function PostPreview({
   wid,
   accounts,
+  identities,
   captionFor,
   captionsDiffer,
   assets,
@@ -110,6 +114,8 @@ export function PostPreview({
   wid: string;
   /** The post's accounts, in order; the first leads the preview. */
   accounts: SocialAccount[];
+  /** Each account's identity colour, as Schedule shows it. */
+  identities?: Map<string, AccountColor>;
   captionFor: (accountId: string | null) => string;
   captionsDiffer: boolean;
   assets: AssetInfo[];
@@ -119,6 +125,7 @@ export function PostPreview({
   const [tab, setTab] = useState<Tab>(format === "reel" ? "reel" : "feed");
   const [chosenId, setChosenId] = useState<string | null>(null);
   const account = accounts.find((item) => item.id === chosenId) ?? accounts[0] ?? null;
+  const identity = account ? identities?.get(account.id) : undefined;
   const caption = captionFor(account?.id ?? null);
 
   return (
@@ -132,18 +139,18 @@ export function PostPreview({
             <Label htmlFor="preview-account" className="text-xs font-normal text-fg-secondary">
               Account
             </Label>
-            <select
-              id="preview-account"
-              value={account?.id ?? ""}
-              onChange={(event) => setChosenId(event.target.value)}
-              className="h-10 rounded-lg border border-line bg-field px-2 text-sm outline-none focus:bg-raised md:h-9"
-            >
-              {accounts.map((item) => (
-                <option key={item.id} value={item.id}>
-                  @{item.username ?? item.display_name ?? "account"}
-                </option>
-              ))}
-            </select>
+            <Select value={account?.id ?? ""} onValueChange={setChosenId}>
+              <SelectTrigger id="preview-account" size="lg">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {accounts.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    @{item.username ?? item.display_name ?? "account"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         ) : null}
       </div>
@@ -154,11 +161,11 @@ export function PostPreview({
           <TabsTrigger value="grid">Grid</TabsTrigger>
         </TabsList>
         <TabsContent value="feed">
-          <FeedPreview account={account} caption={caption} assets={assets} firstComment={firstComment} />
+          <FeedPreview account={account} identity={identity} caption={caption} assets={assets} firstComment={firstComment} />
         </TabsContent>
         <TabsContent value="reel">
           {format === "reel" ? (
-            <ReelPreview account={account} caption={caption} asset={assets[0]} />
+            <ReelPreview account={account} identity={identity} caption={caption} asset={assets[0]} />
           ) : (
             <div className="aspect-[9/16] max-h-[420px] w-full rounded-xl border border-line bg-canvas">
               <NoMedia>A Reel preview shows when the post is a single video.</NoMedia>
@@ -166,7 +173,7 @@ export function PostPreview({
           )}
         </TabsContent>
         <TabsContent value="grid">
-          <GridPreview wid={wid} account={account} assets={assets} format={format} />
+          <GridPreview wid={wid} account={account} identity={identity} assets={assets} format={format} />
         </TabsContent>
       </Tabs>
     </section>
@@ -175,11 +182,13 @@ export function PostPreview({
 
 function FeedPreview({
   account,
+  identity,
   caption,
   assets,
   firstComment,
 }: {
   account: SocialAccount | null;
+  identity?: AccountColor;
   caption: string;
   assets: AssetInfo[];
   firstComment: string | null;
@@ -198,20 +207,21 @@ function FeedPreview({
 
   return (
     <article aria-label="Feed preview" className="overflow-hidden rounded-xl border border-line bg-canvas">
-      <AccountHeader account={account} />
+      <AccountHeader account={account} identity={identity} />
       <div className="relative w-full bg-field" style={{ aspectRatio: `${ratio}` }}>
         {current ? <Media asset={current} /> : <NoMedia />}
         {assets.length > 1 ? (
           <>
-            <span className="absolute top-2 right-2 rounded-full bg-canvas/70 px-2 py-0.5 text-xs tabular-nums" data-testid="carousel-counter">
+            <span className="absolute top-2 right-2 rounded-full bg-media-scrim/70 px-2 py-0.5 text-xs tabular-nums" data-testid="carousel-counter">
               {index + 1}/{assets.length}
             </span>
+            {/* Instagram's white arrows on the photo: 32 px, 40 px on coarse pointers. */}
             {index > 0 ? (
               <button
                 type="button"
                 aria-label="Previous item"
                 onClick={() => setSlide(index - 1)}
-                className="absolute top-1/2 left-2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-fg/80 text-canvas md:size-8"
+                className="absolute top-1/2 left-2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
               >
                 <ChevronLeft className="size-4" aria-hidden />
               </button>
@@ -221,7 +231,7 @@ function FeedPreview({
                 type="button"
                 aria-label="Next item"
                 onClick={() => setSlide(index + 1)}
-                className="absolute top-1/2 right-2 grid size-10 -translate-y-1/2 place-items-center rounded-full bg-fg/80 text-canvas md:size-8"
+                className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
               >
                 <ChevronRight className="size-4" aria-hidden />
               </button>
@@ -267,14 +277,24 @@ function FeedPreview({
   );
 }
 
-function ReelPreview({ account, caption, asset }: { account: SocialAccount | null; caption: string; asset: AssetInfo | undefined }) {
+function ReelPreview({
+  account,
+  identity,
+  caption,
+  asset,
+}: {
+  account: SocialAccount | null;
+  identity?: AccountColor;
+  caption: string;
+  asset: AssetInfo | undefined;
+}) {
   const name = account?.username ?? account?.display_name ?? "your.account";
   return (
     <article aria-label="Reel preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
       {asset ? <Media asset={asset} /> : <NoMedia />}
       <div className="absolute inset-x-0 bottom-0 space-y-2 bg-linear-to-t from-canvas/90 to-transparent p-3 pr-12">
         <div className="flex items-center gap-2">
-          <ContactAvatar id={account?.id ?? "preview"} name={name} pictureUrl={account?.profile_picture_url} size={24} />
+          <AccountPicture account={account} identity={identity} size={24} />
           <span className="truncate text-sm font-semibold">{name}</span>
         </div>
         {caption.trim() ? (
@@ -301,11 +321,13 @@ const FORMAT_ICON = { carousel: GalleryHorizontal, reel: Clapperboard } as const
 function GridPreview({
   wid,
   account,
+  identity,
   assets,
   format,
 }: {
   wid: string;
   account: SocialAccount | null;
+  identity?: AccountColor;
   assets: AssetInfo[];
   format: PostFormat | null;
 }) {
@@ -315,7 +337,7 @@ function GridPreview({
   const Icon = format === "carousel" || format === "reel" ? FORMAT_ICON[format] : null;
   return (
     <article aria-label="Grid preview" className="overflow-hidden rounded-xl border border-line bg-canvas">
-      <AccountHeader account={account} subtitle="Profile grid" />
+      <AccountHeader account={account} identity={identity} subtitle="Profile grid" />
       <ul className="grid grid-cols-3 gap-0.5" aria-label="Profile grid">
         <li className="relative aspect-square bg-field ring-2 ring-brand ring-inset" aria-label="This post">
           {first ? (
@@ -329,18 +351,18 @@ function GridPreview({
             <span className="grid size-full place-items-center text-xs text-fg-secondary">New post</span>
           )}
           {Icon ? (
-            <span className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-canvas/70" aria-hidden>
+            <span className="absolute top-1.5 right-1.5 grid size-6 place-items-center rounded-md bg-media-scrim/70" aria-hidden>
               <Icon className="size-3.5" />
             </span>
           ) : null}
-          <span className="absolute bottom-1.5 left-1.5 rounded-md bg-brand-deep px-1.5 py-0.5 text-[11px] font-semibold text-white">
+          <span className="absolute bottom-1.5 left-1.5 rounded-sm bg-brand-deep px-1.5 py-0.5 text-2xs font-semibold text-on-brand">
             New
           </span>
         </li>
         {account && posts.isPending
           ? Array.from({ length: GRID_RECENT }, (_, index) => (
               <li key={index} aria-hidden>
-                <Skeleton className="aspect-square rounded-none bg-raised" />
+                <Skeleton className="aspect-square rounded-none" />
               </li>
             ))
           : recent.map((post) => (

@@ -14,9 +14,10 @@ import { SettingsFrame, SettingsPageHeader } from "@/components/settings/Setting
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { isPlanLimitError } from "@/lib/api/errors";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import {
   autoAllowed,
@@ -30,6 +31,7 @@ import {
 import type { AccountStatus, AiMode, AiSettings, SocialAccount, TakeoverMinutes } from "@/lib/api/types";
 import { AI_MODE_HINT, AI_MODE_LABEL, AI_MODES, BUILT_IN_ESCALATIONS, TAKEOVER_OPTIONS } from "@/lib/ai/format";
 import { errorMessage } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -114,7 +116,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
       {
         onSuccess: () => toast.success(`${handleOf(account)}: AI ${AI_MODE_LABEL[mode]}`),
         // A 402 opens the upgrade dialog by itself (lib/api/provider.tsx).
-        onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+        onError: (error) => toastError(error),
       },
     );
 
@@ -138,9 +140,9 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
       }
       aside={
         accounts.length > 0 ? (
-          <span className="rounded-full bg-raised px-2 py-0.5 text-xs text-fg-secondary tabular-nums">
+          <Badge size="md" className="tabular-nums">
             {accounts.length} connected
-          </span>
+          </Badge>
         ) : null
       }
     >
@@ -151,12 +153,12 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
           {accounts.map((account) => (
             <li
               key={account.id}
-              className="flex flex-col gap-3 rounded-xl border border-line-subtle bg-field/60 p-3 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span
                   aria-hidden
-                  className={cn("grid size-10 shrink-0 place-items-center rounded-xl text-white", PLATFORM_BG[account.platform])}
+                  className={cn("grid size-10 shrink-0 place-items-center rounded-xl text-on-brand", PLATFORM_BG[account.platform])}
                 >
                   <PlatformGlyph platform={account.platform} className="size-5" />
                 </span>
@@ -175,26 +177,26 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
                 onValueChange={(value) => choose(account, value as AiMode)}
                 aria-labelledby={`ai-mode-label-${account.id}`}
                 disabled={!canManage || (update.isPending && update.variables?.id === account.id)}
+                size="xl"
                 className="sm:w-64"
               >
                 {AI_MODES.map((mode) => {
                   const locked = mode === "auto" && !allowsAuto;
                   return (
-                    <ToggleGroupItem
-                      key={mode}
-                      value={mode}
-                      disabled={locked}
-                      className="min-h-9 text-xs"
-                      title={locked ? "Auto is part of Pro" : AI_MODE_HINT[mode]}
-                    >
-                      {AI_MODE_LABEL[mode]}
-                      {locked ? (
-                        <>
-                          {" "}
-                          <ProBadge />
-                        </>
-                      ) : null}
-                    </ToggleGroupItem>
+                    <Tooltip key={mode}>
+                      <TooltipTrigger asChild>
+                        <ToggleGroupItem value={mode} disabled={locked}>
+                          {AI_MODE_LABEL[mode]}
+                          {locked ? (
+                            <>
+                              {" "}
+                              <ProBadge />
+                            </>
+                          ) : null}
+                        </ToggleGroupItem>
+                      </TooltipTrigger>
+                      <TooltipContent>{locked ? "Auto is part of Pro" : AI_MODE_HINT[mode]}</TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </ToggleGroup>
@@ -207,12 +209,8 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
           <Lock className="size-4 shrink-0" aria-hidden />
           Auto is part of Pro.
           {canManage ? (
-            <Button
-              type="button"
-              variant="link"
-              className="h-auto min-h-10 px-0 text-brand-fg md:min-h-0"
-              onClick={() => upgrade.open(AUTO_UPGRADE)}
-            >
+            // An inline link in the sentence: the link Button's 32 px (40 px on coarse pointers), no padding.
+            <Button type="button" variant="link" className="px-0" onClick={() => upgrade.open(AUTO_UPGRADE)}>
               Upgrade for Auto
             </Button>
           ) : null}
@@ -276,10 +274,11 @@ function RulesForm({ settings, modes }: { settings: AiSettings; modes: ReactNode
                   value={String(field.value)}
                   onValueChange={(value) => field.onChange(Number(value) as TakeoverMinutes)}
                   aria-labelledby="takeover-title"
+                  size="xl"
                   className="grid grid-cols-2 sm:grid-cols-4"
                 >
                   {TAKEOVER_OPTIONS.map((option) => (
-                    <ToggleGroupItem key={option.value} value={String(option.value)} className="min-h-10">
+                    <ToggleGroupItem key={option.value} value={String(option.value)}>
                       {option.label}
                     </ToggleGroupItem>
                   ))}
@@ -300,7 +299,7 @@ function RulesForm({ settings, modes }: { settings: AiSettings; modes: ReactNode
               <SectionLabel id="built-in-label">Always built in</SectionLabel>
               <ul className="grid gap-2 sm:grid-cols-2" aria-label="Built-in escalation rules">
                 {BUILT_IN_ESCALATIONS.map((rule) => (
-                  <li key={rule} className="flex items-start gap-2 rounded-lg border border-line-subtle bg-field/60 p-3 text-sm">
+                  <li key={rule} className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
                     {rule}
                   </li>

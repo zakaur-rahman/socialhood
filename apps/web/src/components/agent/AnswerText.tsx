@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Fragment, useMemo, type ReactNode } from "react";
 
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { parseAnswer, type Block, type Inline } from "@/lib/agent/answer";
 import { REF_KIND_LABEL } from "@/lib/agent/format";
@@ -119,34 +120,31 @@ function AnswerBlock({ block, inlines }: { block: Block; inlines: (items: Inline
   const alignClass = (column: number) =>
     block.align[column] === "right" ? "text-right" : block.align[column] === "center" ? "text-center" : "text-left";
   return (
-    // Wide tables scroll inside the answer, never the page (375 px).
-    <div className="max-w-full overflow-x-auto rounded-lg border border-line" role="region" aria-label="Table" tabIndex={0}>
-      <table className="w-full border-collapse text-[13px] leading-5">
-        <thead className="bg-white/5">
-          <tr>
+    // A frame sets the table off from the text around it. Wide tables scroll inside the answer,
+    // never the page (375 px), and the scroller can be reached by keyboard.
+    <div className="rounded-lg border border-line">
+      <Table scrollLabel="Table">
+        <TableHeader>
+          <TableRow>
             {block.header.map((cell, column) => (
-              <th
-                key={column}
-                scope="col"
-                className={cn("px-3 py-2 font-medium whitespace-nowrap text-fg-secondary", alignClass(column))}
-              >
+              <TableHead key={column} className={alignClass(column)}>
                 {inlines(cell)}
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {block.rows.map((row, rowIndex) => (
-            <tr key={rowIndex} className="border-t border-line-subtle">
+            <TableRow key={rowIndex}>
               {row.map((cell, column) => (
-                <td key={column} className={cn("px-3 py-2 tabular-nums", alignClass(column))}>
+                <TableCell key={column} className={alignClass(column)}>
                   {inlines(cell)}
-                </td>
+                </TableCell>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 }

@@ -8,8 +8,10 @@ import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/errors";
 import {
   useCreateHashtagGroup,
@@ -20,6 +22,7 @@ import {
 import type { HashtagGroup } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import { HASHTAG_GROUP_NAME_MAX, MAX_HASHTAGS, parseHashtags } from "@/lib/schedule/format";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -39,14 +42,10 @@ export function HashtagGroupsDialog({ open, onOpenChange }: { open: boolean; onO
         if (!value) setEditing(null);
       }}
     >
-      <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto border-line bg-panel sm:max-w-lg">
+      <DialogContent size="lg">
         <DialogHeader>
-          <DialogTitle className="text-base font-semibold">
-            {editing === "new" ? "New hashtag group" : editing ? `Edit ${editing.name}` : "Hashtag groups"}
-          </DialogTitle>
-          <DialogDescription className="text-fg-secondary">
-            Save sets of hashtags to add to a caption or first comment in one click.
-          </DialogDescription>
+          <DialogTitle>{editing === "new" ? "New hashtag group" : editing ? `Edit ${editing.name}` : "Hashtag groups"}</DialogTitle>
+          <DialogDescription>Save sets of hashtags to add to a caption or first comment in one click.</DialogDescription>
         </DialogHeader>
         {open ? (
           editing ? (
@@ -73,8 +72,8 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
   if (groups.isPending) {
     return (
       <div className="space-y-2" aria-busy="true" aria-label="Loading hashtag groups">
-        <Skeleton className="h-14 w-full bg-raised" />
-        <Skeleton className="h-14 w-full bg-raised" />
+        <Skeleton className="h-14 w-full" />
+        <Skeleton className="h-14 w-full" />
       </div>
     );
   }
@@ -89,7 +88,7 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
           body="Group the hashtags you use often, like #handmade #linen #summerstyle."
         />
       ) : (
-        <ul className="divide-y divide-line rounded-xl border border-line bg-field" aria-label="Hashtag groups">
+        <ul className="divide-y divide-line-subtle rounded-xl border border-line bg-field" aria-label="Hashtag groups">
           {groups.data.map((group) => (
             <li key={group.id} className="flex items-center gap-2 px-3 py-2.5">
               {confirming === group.id ? (
@@ -101,8 +100,8 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
                     Keep
                   </Button>
                   <Button
+                    variant="destructive"
                     size="sm"
-                    className="bg-danger-fill text-white hover:bg-danger-fill/90"
                     disabled={remove.isPending}
                     onClick={() =>
                       remove.mutate(group, {
@@ -110,7 +109,7 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
                           setConfirming(null);
                           toast.success(`${group.name} deleted`);
                         },
-                        onError: (error) => toast.error(errorMessage(error)),
+                        onError: (error) => toastError(error),
                       })
                     }
                   >
@@ -134,19 +133,12 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
                       {group.hashtags.length > PREVIEW ? " …" : ""}
                     </p>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    className="size-10 md:size-7"
-                    aria-label={`Edit ${group.name}`}
-                    onClick={() => onEdit(group)}
-                  >
+                  <Button variant="ghost" size="icon-sm" aria-label={`Edit ${group.name}`} onClick={() => onEdit(group)}>
                     <Pencil aria-hidden />
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="destructive-ghost"
                     size="icon-sm"
-                    className="size-10 text-danger-fg hover:text-danger-fg md:size-7"
                     aria-label={`Delete ${group.name}`}
                     onClick={() => setConfirming(group.id)}
                   >
@@ -158,7 +150,7 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
           ))}
         </ul>
       )}
-      <Button className="bg-brand-gradient text-white" onClick={onNew}>
+      <Button onClick={onNew}>
         <Plus aria-hidden /> New group
       </Button>
     </div>
@@ -209,14 +201,14 @@ function GroupEditor({ group, onDone }: { group: HashtagGroup | null; onDone: ()
         <Label htmlFor="hashtag-group-name" className="text-xs text-fg-secondary">
           Name
         </Label>
-        <input
+        <Input
           id="hashtag-group-name"
+          size="lg"
           value={name}
           maxLength={HASHTAG_GROUP_NAME_MAX}
           aria-invalid={Boolean(errors.name)}
           aria-describedby={errors.name ? "hashtag-group-name-error" : undefined}
           onChange={(event) => setName(event.target.value)}
-          className="w-full rounded-lg border border-line bg-field px-3 py-2 text-sm outline-none focus:bg-raised aria-invalid:border-danger"
         />
         {errors.name ? (
           <p id="hashtag-group-name-error" className="text-xs text-danger-fg">
@@ -237,14 +229,14 @@ function GroupEditor({ group, onDone }: { group: HashtagGroup | null; onDone: ()
             {tags.length} of {MAX_HASHTAGS} hashtags
           </span>
         </div>
-        <textarea
+        <Textarea
           id="hashtag-group-tags"
           value={text}
           rows={5}
           aria-invalid={Boolean(errors.hashtags) || over}
           aria-describedby="hashtag-group-tags-help"
           onChange={(event) => setText(event.target.value)}
-          className="w-full resize-none rounded-lg border border-line bg-field px-3 py-2 text-sm leading-relaxed outline-none focus:bg-raised aria-invalid:border-danger"
+          className="max-h-60 min-h-32 resize-none"
         />
         <p id="hashtag-group-tags-help" className="text-xs text-fg-secondary">
           Separate them with spaces, commas or new lines. The # is optional.
@@ -260,7 +252,7 @@ function GroupEditor({ group, onDone }: { group: HashtagGroup | null; onDone: ()
         <Button type="button" variant="ghost" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" className="bg-brand-gradient text-white" disabled={pending}>
+        <Button type="submit" disabled={pending}>
           {group ? "Save group" : "Create group"}
         </Button>
       </div>

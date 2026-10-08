@@ -44,9 +44,11 @@ import {
   type MeterView,
   type StatusTone,
 } from "@/lib/billing/plan";
-import { PLAN_NAME, billingCopy, errorMessage, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
+import { PLAN_NAME, billingCopy, limitText, planIncludes, pricePerMonth } from "@/lib/copy";
+import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { EYEBROW } from "@/styles/tokens";
 
 import {
   CONFIRM_POLL_MS,
@@ -61,10 +63,10 @@ import { meterLevel, type MeterLevel } from "./UsageMeter";
 import { useOpenPortal, useStartCheckout } from "./use-billing-actions";
 
 const BADGE: Record<StatusTone, string> = {
-  neutral: "bg-white/10 text-fg-secondary",
+  neutral: "bg-hover text-fg-secondary", // on white/10, fg-secondary was 4.45:1 (UI-ISS-007)
   brand: "bg-brand-soft text-brand-fg",
-  warning: "bg-warning/15 text-warning",
-  danger: "bg-danger/15 text-danger-fg",
+  warning: "bg-warning-soft text-warning",
+  danger: "bg-danger-soft text-danger-fg",
 };
 
 /** The entitlement key each usage metric is limited by, for "Free includes …" at 100 %. */
@@ -86,8 +88,8 @@ const METER_ICON: Record<string, ReactNode> = {
 };
 
 const METER_ICON_BG: Record<string, string> = {
-  instagram_accounts: `${PLATFORM_BG.instagram} text-white`,
-  whatsapp_accounts: `${PLATFORM_BG.whatsapp} text-white`,
+  instagram_accounts: `${PLATFORM_BG.instagram} text-on-brand`,
+  whatsapp_accounts: `${PLATFORM_BG.whatsapp} text-on-brand`,
 };
 
 const FILL: Record<MeterLevel, string> = {
@@ -216,22 +218,18 @@ function CurrentPlan({
         const date = next.current_period_end ?? next.trial_ends_at;
         toast.success(date ? billingCopy.cancelled(name, billingDate(date, workspace.timezone)) : "Cancelled");
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
   const runResume = () =>
     resume.mutate(undefined, {
       onSuccess: () => toast.success(billingCopy.resumed(name)),
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
 
   const actions = isOwner ? (
     <div className="flex flex-wrap gap-2 md:justify-end">
       {mayCheckout ? (
-        <Button
-          className="bg-brand-gradient min-h-10 text-white md:min-h-9"
-          disabled={checkout.pending}
-          onClick={() => checkout.start("pro")}
-        >
+        <Button size="lg" disabled={checkout.pending} onClick={() => checkout.start("pro")}>
           {checkout.pending
             ? "Opening checkout…"
             : billing.trial_eligible
@@ -242,7 +240,7 @@ function CurrentPlan({
       {billing.status !== "free" ? (
         <Button
           variant={billing.status === "on_hold" ? "default" : "secondary"}
-          className={cn("min-h-10 md:min-h-9", billing.status === "on_hold" && "bg-brand-gradient text-white")}
+          size="lg"
           disabled={portal.pending}
           onClick={portal.open}
         >
@@ -250,12 +248,12 @@ function CurrentPlan({
         </Button>
       ) : null}
       {status.resumable ? (
-        <Button variant="secondary" className="min-h-10 md:min-h-9" disabled={resume.isPending} onClick={() => setConfirm("resume")}>
+        <Button variant="secondary" size="lg" disabled={resume.isPending} onClick={() => setConfirm("resume")}>
           {resume.isPending ? "Resuming…" : `Resume ${name}`}
         </Button>
       ) : null}
       {status.cancellable ? (
-        <Button variant="ghost" className="min-h-10 text-fg-secondary md:min-h-9" disabled={cancel.isPending} onClick={() => setConfirm("cancel")}>
+        <Button variant="ghost" size="lg" className="text-fg-secondary" disabled={cancel.isPending} onClick={() => setConfirm("cancel")}>
           {cancel.isPending ? "Cancelling…" : trial ? "Cancel trial" : "Cancel plan"}
         </Button>
       ) : null}
@@ -267,15 +265,16 @@ function CurrentPlan({
   return (
     <section
       aria-labelledby="plan-title"
-      className="space-y-4 rounded-2xl border border-brand-line bg-panel bg-[radial-gradient(120%_140%_at_0%_0%,var(--color-brand-soft),transparent_60%)] p-5 md:p-6"
+      className="space-y-4 rounded-2xl border border-brand-line bg-panel bg-glow-brand p-5 md:p-6"
     >
       <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
         <div className="flex min-w-0 items-start gap-4">
-          <span aria-hidden className="bg-shell-gradient grid size-12 shrink-0 place-items-center rounded-xl text-white">
+          {/* A decorative icon tile: the decor gradient (DESIGN_SYSTEM §1.9); the shell gradient is the logo's and Upgrade's. */}
+          <span aria-hidden className="grid size-12 shrink-0 place-items-center rounded-xl bg-brand-gradient-decor text-on-brand">
             <CreditCard className="size-6" />
           </span>
           <div className="min-w-0 space-y-1">
-            <p className="text-[11px] font-semibold tracking-[0.12em] text-fg-secondary uppercase">Current plan</p>
+            <p className={EYEBROW}>Current plan</p>
             <div className="flex flex-wrap items-center gap-2">
               <h2 id="plan-title" className="text-2xl font-semibold tracking-tight">
                 {status.plan}
@@ -298,21 +297,21 @@ function CurrentPlan({
       ) : null}
 
       <AlertDialog open={confirm !== null} onOpenChange={(open) => (open ? undefined : setConfirm(null))}>
-        <AlertDialogContent className="border-line bg-panel sm:max-w-md">
+        <AlertDialogContent>
           {confirm === "cancel" ? (
             <>
               <AlertDialogHeader>
                 <AlertDialogTitle>{trial ? "Cancel the trial?" : `Cancel ${name}?`}</AlertDialogTitle>
-                <AlertDialogDescription className="text-fg-secondary">
+                <AlertDialogDescription>
                   {trial
                     ? `${name} stays until the trial ends${endsOn ? ` on ${endsOn}` : ""}, and your card isn't charged. `
                     : `${name} stays until ${endsOn ?? "the end of this billing period"}. `}
                   Then the workspace moves to Free. {DOWNGRADE_EFFECTS}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter className="border-line bg-transparent">
-                <AlertDialogCancel className="min-h-10 md:min-h-8">Keep {name}</AlertDialogCancel>
-                <AlertDialogAction variant="destructive" className="min-h-10 md:min-h-8" onClick={runCancel}>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep {name}</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={runCancel}>
                   {trial ? "Cancel trial" : "Cancel plan"}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -321,13 +320,13 @@ function CurrentPlan({
             <>
               <AlertDialogHeader>
                 <AlertDialogTitle>Resume {name}?</AlertDialogTitle>
-                <AlertDialogDescription className="text-fg-secondary">
+                <AlertDialogDescription>
                   {`${name} renews${endsOn ? ` on ${endsOn}` : ""}${price ? ` at ${pricePerMonth(price)}` : ""}, and the workspace keeps its limits.`}
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter className="border-line bg-transparent">
-                <AlertDialogCancel className="min-h-10 md:min-h-8">Not now</AlertDialogCancel>
-                <AlertDialogAction className="bg-brand-gradient min-h-10 text-white md:min-h-8" onClick={runResume}>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Not now</AlertDialogCancel>
+                <AlertDialogAction onClick={runResume}>
                   Resume {name}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -403,7 +402,7 @@ function QuotaTile({ meter, fullMessage }: { meter: MeterView; fullMessage?: str
   const width = limit ? Math.min(100, Math.round((meter.used / limit) * 100)) : 0;
   const valueText = `${count.format(meter.used)} of ${count.format(limit)} ${meter.unit}`.trim();
   return (
-    <li data-level={level} className="flex min-w-0 flex-col gap-3 rounded-xl border border-line-subtle bg-field/60 p-4">
+    <li data-level={level} className="flex min-w-0 flex-col gap-3 rounded-lg border border-line p-4">
       <div className="flex items-start justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2.5">
           <span
@@ -420,7 +419,7 @@ function QuotaTile({ meter, fullMessage }: { meter: MeterView; fullMessage?: str
         <span
           className={cn(
             "shrink-0 rounded-full px-2 py-0.5 text-xs font-medium tabular-nums",
-            level === "full" ? "bg-danger/15 text-danger-fg" : level === "warning" ? "bg-warning/15 text-warning" : "bg-raised text-fg-secondary",
+            level === "full" ? "bg-danger-soft text-danger-fg" : level === "warning" ? "bg-warning-soft text-warning" : "bg-raised text-fg-secondary",
           )}
         >
           {percentText(meter.used, limit)}

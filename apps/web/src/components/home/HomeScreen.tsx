@@ -2,7 +2,6 @@
 
 import { RefreshCw } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { SourceSheet, type SourceSheetMode } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -12,6 +11,7 @@ import { useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/li
 import type { Overview } from "@/lib/api/types";
 import { errorMessage, greeting } from "@/lib/copy";
 import { gapPrefill } from "@/lib/knowledge/prefill";
+import { toastError } from "@/lib/toast-error";
 import { dayKey } from "@/lib/tz";
 import { useNow, useStoredString } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -55,7 +55,7 @@ export function HomeScreen() {
   const data = overview.data;
 
   const dismiss = () =>
-    update.mutate({ checklist_dismissed: true }, { onError: (error) => toast.error(errorMessage(error)) });
+    update.mutate({ checklist_dismissed: true }, { onError: (error) => toastError(error) });
 
   const refresh = () => {
     setRefreshing(true);
@@ -75,14 +75,14 @@ export function HomeScreen() {
             </span>
           </p>
         ) : (
-          <Skeleton className="mt-2 h-4 w-72 max-w-full bg-panel" />
+          <Skeleton className="mt-2 h-4 w-72 max-w-full" />
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {data ? (
           <span
             data-testid="channels-pill"
-            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-line px-3 text-xs font-medium md:min-h-8"
+            className="inline-flex min-h-8 items-center gap-2 rounded-full border border-line px-3 text-xs font-medium pointer-coarse:min-h-10"
           >
             <span
               className={cn("size-2 rounded-full", data.accounts_connected > 0 ? "bg-success" : "bg-fg-secondary")}
@@ -95,7 +95,6 @@ export function HomeScreen() {
         <Button
           variant="outline"
           size="icon"
-          className="size-10 md:size-8"
           aria-label="Refresh"
           aria-busy={refreshing}
           disabled={refreshing || overview.isPending}
@@ -113,9 +112,9 @@ export function HomeScreen() {
       {overview.isPending ? (
         <div className="space-y-6" aria-busy="true" aria-label="Loading Home">
           <MetricTilesSkeleton />
-          <div className="grid gap-3 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-56 rounded-xl bg-panel" />
+              <Skeleton key={i} className="h-56 rounded-xl" />
             ))}
           </div>
           <PriorityQueueSkeleton />
@@ -171,9 +170,9 @@ function Body({
   return (
     <div className="space-y-6">
       {staleError ? (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning/15 px-3 py-2 text-sm text-warning">
+        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
           <p className="flex-1">Couldn&apos;t refresh: {errorMessage(staleError)} These are the last numbers that loaded.</p>
-          <Button variant="ghost" className="min-h-10 md:min-h-8" onClick={onRetry}>
+          <Button variant="ghost" onClick={onRetry}>
             Try again
           </Button>
         </div>
@@ -190,7 +189,7 @@ function Body({
       >
         <MetricTiles overview={data} slug={slug} connected={connected} now={now} />
 
-        <div className="grid gap-3 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
           <SentimentCard messages={data.message_sentiment} comments={data.comment_sentiment} period={period} within={within} />
           <TopPostsCard posts={data.top_posts} engagement={data.top_posts_engagement} period={period} within={within} slug={slug} />
           <TopIntentsCard intents={data.top_intents} period={period} within={within} />

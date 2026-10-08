@@ -1,10 +1,11 @@
 "use client";
 
 import { ChevronDown, Sparkles } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { toast } from "sonner";
 
 import { ProBadge } from "@/components/automations/TemplateGallery";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -14,15 +15,13 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { isPlanLimitError } from "@/lib/api/errors";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { autoAllowed, useBilling, useSocialAccounts, useUpdateConversation } from "@/lib/api/queries";
 import type { AiMode, Conversation, ConversationPatch } from "@/lib/api/types";
 import { AI_MODE_LABEL, AI_MODES } from "@/lib/ai/format";
-import { errorMessage } from "@/lib/copy";
-import { TONE_CLASS } from "@/lib/inbox/format";
+import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
-import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AutoConfirmDialog } from "./AiModeDialogs";
@@ -62,7 +61,7 @@ export function useConversationAiMode(conversation: Conversation) {
       { id: conversation.id, patch },
       {
         onSuccess: () => (done ? toast.success(done) : undefined),
-        onError: (error) => (isPlanLimitError(error) ? undefined : toast.error(errorMessage(error))),
+        onError: (error) => toastError(error),
       },
     );
 
@@ -99,27 +98,33 @@ function defaultLabel(accountMode: AiMode | null): string {
 
 /**
  * UX-INB-05: the one AI mode control (C-063), a compact menu in the thread header: the account
- * default and each mode; "AI paused" with Resume during a takeover.
+ * default and each mode; "AI paused" with Resume during a takeover. In a thread header narrower
+ * than 576 px (its `header` container, UI-ISS-019) the menu shows as its icon and a pause as
+ * Resume alone; the button's name, and Resume's description, still say the mode or the pause.
  */
 export function AiModeMenu({ conversation, now }: { conversation: Conversation; now: Date }) {
   const control = useConversationAiMode(conversation);
   const paused = pausedUntil(conversation, now);
   const workspace = useCurrentWorkspace();
+  const pausedId = useId();
 
   if (paused) {
     return (
       <span className="inline-flex shrink-0 items-center gap-1">
-        <span
-          className={cn("rounded-full px-2 py-0.5 text-xs font-medium", TONE_CLASS.warning)}
-          title={`Paused until ${formatDayTime(paused, workspace.timezone, now)} because you replied`}
-        >
-          AI paused
-        </span>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge id={pausedId} tone="warning" size="md" className="hidden @xl/header:inline-flex">
+              AI paused
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>{`Paused until ${formatDayTime(paused, workspace.timezone, now)} because you replied`}</TooltipContent>
+        </Tooltip>
         <Button
           variant="ghost"
           size="xs"
           className="text-brand-fg"
-          disabled={control.pending}
+          aria-describedby={pausedId}
+          loading={control.pending}
           onClick={control.resume}
         >
           Resume
@@ -132,26 +137,27 @@ export function AiModeMenu({ conversation, now }: { conversation: Conversation; 
   const label = AI_MODE_LABEL[conversation.ai.effective_mode];
   return (
     <>
-      {/* Not modal: the Auto confirmation opens from it (a modal menu would keep the page inert). */}
-      <DropdownMenu modal={false}>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={`AI mode: ${label}. Change`}
-            title={
-              control.choice === "default"
-                ? `${defaultLabel(control.accountMode)}. Change it for this conversation`
-                : "Set for this conversation. Change"
-            }
-            className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-brand-line bg-brand-soft px-2 text-xs font-medium text-brand-fg hover:bg-brand/25"
-          >
-            <Sparkles className="size-3.5" aria-hidden />
-            AI: {label}
-            <ChevronDown className="size-3" aria-hidden />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-60 border-line bg-panel shadow-xl">
-          <DropdownMenuLabel className="text-xs text-fg-secondary">AI in this conversation</DropdownMenuLabel>
+      {/* Menus aren't modal (ui/dropdown-menu), so the Auto confirmation can open from this one. */}
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {/* The AI pill: the soft Button (brand-soft, DESIGN_SYSTEM §1.4), 28 px, 40 px on coarse pointers. */}
+            <DropdownMenuTrigger asChild>
+              <Button variant="soft" size="sm" aria-label={`AI mode: ${label}. Change`}>
+                <Sparkles aria-hidden />
+                <span className="hidden @xl/header:inline">AI: {label}</span>
+                <ChevronDown className="hidden size-3 @xl/header:block" aria-hidden />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            {control.choice === "default"
+              ? `${defaultLabel(control.accountMode)}. Change it for this conversation`
+              : "Set for this conversation. Change"}
+          </TooltipContent>
+        </Tooltip>
+        <DropdownMenuContent align="start">
+          <DropdownMenuLabel>AI in this conversation</DropdownMenuLabel>
           <DropdownMenuRadioGroup
             value={control.choice}
             onValueChange={(value) => control.choose(value as AiModeChoice)}

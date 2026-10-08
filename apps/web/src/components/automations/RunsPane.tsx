@@ -20,13 +20,13 @@ const RESULTS = Object.keys(RESULT_LABEL) as RunResult[];
 const ALL = "all";
 
 const RESULT_TONE: Record<RunResult, string> = {
-  sent: "bg-success/15 text-success",
+  sent: "bg-success-soft text-success",
   queued: "bg-brand-soft text-brand-fg",
-  partial: "bg-warning/15 text-warning",
-  failed: "bg-danger/15 text-danger-fg",
+  partial: "bg-warning-soft text-warning",
+  failed: "bg-danger-soft text-danger-fg",
   skipped_cooldown: "bg-raised text-fg-secondary",
   skipped_expired: "bg-raised text-fg-secondary",
-  escalated: "bg-warning/15 text-warning",
+  escalated: "bg-warning-soft text-warning",
   awaiting_reply: "bg-brand-soft text-brand-fg",
   skipped_read_only: "bg-raised text-fg-secondary",
 };
@@ -59,7 +59,7 @@ export function RunsPane({
   return (
     <div className="space-y-3">
       <Select value={result ?? ALL} onValueChange={(value) => setResult(value === ALL ? null : (value as RunResult))}>
-        <SelectTrigger aria-label="Result" className="h-9 w-full">
+        <SelectTrigger aria-label="Result" size="lg" className="w-full">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
@@ -76,8 +76,8 @@ export function RunsPane({
         <div aria-busy="true" aria-label="Loading runs" className="space-y-2">
           {Array.from({ length: 4 }, (_, i) => (
             <div key={i} className="space-y-2 rounded-lg bg-field p-3">
-              <Skeleton className="h-3 w-1/2 bg-raised" />
-              <Skeleton className="h-3 w-3/4 bg-raised" />
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-3 w-3/4" />
             </div>
           ))}
         </div>
@@ -113,7 +113,7 @@ function RunRow({ run, timeZone, href }: { run: AutomationRun; timeZone: string;
     <>
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-sm font-medium">{contactLabel(run)}</span>
-        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium", RESULT_TONE[run.result])}>
+        <span className={cn("shrink-0 rounded-full px-2 py-0.5 text-2xs font-medium", RESULT_TONE[run.result])}>
           {RESULT_LABEL[run.result]}
         </span>
       </div>
@@ -128,7 +128,7 @@ function RunRow({ run, timeZone, href }: { run: AutomationRun; timeZone: string;
           {markers.map((marker) => (
             <span
               key={marker}
-              className="rounded-full border border-line px-1.5 py-0.5 text-[11px] text-fg-secondary tabular-nums"
+              className="rounded-full border border-line px-1.5 py-0.5 text-2xs text-fg-secondary tabular-nums"
             >
               {marker}
             </span>

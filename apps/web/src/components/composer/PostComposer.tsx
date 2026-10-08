@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { AlertCircle, Check, Copy, EllipsisVertical, Loader2, RotateCw, Send, Trash2 } from "lucide-react";
+import { AlertCircle, Check, Copy, EllipsisVertical, RotateCw, Send, Trash2, Undo2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,6 +9,8 @@ import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
+import { LEAVE_WARNING } from "@/components/settings/SaveBar";
+import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
@@ -30,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { ApiError, isPlanLimitError, toApiError } from "@/lib/api/errors";
 import { useSocialAccounts } from "@/lib/api/queries";
 import {
@@ -65,6 +68,8 @@ import {
   type AssetInfo,
 } from "@/lib/publishing/rules";
 import type { ChecklistItem, ScheduledPost } from "@/lib/publishing/types";
+import { instagramAccountColors } from "@/lib/schedule/format";
+import { toastError } from "@/lib/toast-error";
 import { formatDayTime, toZonedInputs, zonedToDate } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -139,14 +144,14 @@ export function PostComposer({
 function ComposerSkeleton() {
   return (
     <div aria-busy="true" aria-label="Loading" className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
-      <Skeleton className="h-8 w-40 bg-raised" />
+      <Skeleton className="h-8 w-40" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4 lg:max-w-[640px]">
           {[20, 36, 44, 24].map((height, index) => (
-            <Skeleton key={index} className="w-full rounded-xl bg-panel" style={{ height: `${height * 4}px` }} />
+            <Skeleton key={index} className="w-full rounded-xl" style={{ height: `${height * 4}px` }} />
           ))}
         </div>
-        <Skeleton className="h-[520px] rounded-xl bg-panel" />
+        <Skeleton className="h-[520px] rounded-xl" />
       </div>
     </div>
   );
@@ -182,6 +187,8 @@ function Composer({
   const accountsQuery = useSocialAccounts(wid);
   const allAccounts = useMemo(() => accountsQuery.data ?? [], [accountsQuery.data]);
   const igAccounts = useMemo(() => publishingAccounts(allAccounts), [allAccounts]);
+  // Each account's identity colour, as Schedule gives it (one rule, in lib/schedule/format).
+  const identities = useMemo(() => instagramAccountColors(allAccounts), [allAccounts]);
   const groupsQuery = useComposerHashtagGroups(wid);
   const groups = groupsQuery.data ?? [];
 
@@ -414,6 +421,7 @@ function Composer({
   const duplicate = useComposerDuplicate(wid);
   const remove = useComposerDelete(wid);
   const [confirmPublish, setConfirmPublish] = useState(false);
+  const [confirmUnschedule, setConfirmUnschedule] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const acting = schedule.isPending || queuePost.isPending || publishNow.isPending || unschedule.isPending || put.isPending;
 
@@ -428,7 +436,7 @@ function Composer({
       );
       return;
     }
-    toast.error(errorMessage(apiError));
+    toastError(apiError);
     // Publishing started elsewhere, or the post changed: show what is stored now.
     if (apiError.status === 409) void queryClient.invalidateQueries({ queryKey: composerKeys.post(wid, postId) });
   };
@@ -449,11 +457,12 @@ function Composer({
   };
 
   const onSaveDraft = async () => {
-    if (isDraft) {
-      if (await saveFirst()) toast.success("Draft saved.");
-      return;
-    }
-    // A scheduled post goes back to the drafts, with its edits.
+    if (await saveFirst()) toast.success("Draft saved.");
+  };
+
+  /** ⋯ Unschedule, once confirmed: the post goes back to the drafts, with its edits. */
+  const onUnschedule = async () => {
+    setConfirmUnschedule(false);
     try {
       await unschedule.mutateAsync();
       const post = await put.mutateAsync(toRequest(draft));
@@ -520,12 +529,15 @@ function Composer({
 
   const onDuplicate = async () => {
     if (isDraft) await settle();
+    // The copy opens in its own composer. A scheduled post's edits aren't saved until Update
+    // schedule, so leaving for the copy asks first, as a link out of the page does (useLeaveWarning).
+    else if (dirty && !window.confirm(LEAVE_WARNING)) return;
     duplicate.mutate(postId, {
       onSuccess: (copy) => {
         toast.success("Duplicated. You're editing the copy.");
         router.push(composerHref(slug, copy.id));
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
   };
 
@@ -536,7 +548,7 @@ function Composer({
         toast.success("Post deleted.");
         router.push(scheduleHref(slug));
       },
-      onError: (caught) => toast.error(errorMessage(caught)),
+      onError: (caught) => toastError(caught),
     });
 
   // ---- what the buttons can do now, and why not (UX-SCR-13: disabled buttons say why)
@@ -550,14 +562,19 @@ function Composer({
   let publishBlock: string | null = null;
   if (failingExceptTime > 0) publishBlock = `Fix the checklist to publish now.`;
   else if (uploads.busy) publishBlock = "Wait for the uploads to finish.";
+  // When both buttons are blocked for the same reason, it is said once, for both of them.
+  const publishReason = publishBlock !== scheduleBlock ? publishBlock : null;
+  const publishReasonId = publishReason ? "composer-publish-reason" : publishBlock ? "composer-schedule-reason" : undefined;
   const scheduleLabel = !isDraft ? "Update schedule" : whenMode === "queue" ? "Add to queue" : "Schedule";
 
   const publishAtLabel = server.status === "scheduled" && server.publish_at ? server.publish_at : null;
 
   return (
     <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-4">
-        <div className="min-w-0 flex-1 basis-48">
+      {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
+          state wrap inside their own group instead of pushing More onto a line of its own. */}
+      <header className="flex items-center gap-3 border-b border-line pb-4">
+        <div className="min-w-max flex-1">
           <nav aria-label="Breadcrumb" className="text-xs text-fg-secondary">
             <Link href={scheduleHref(slug)} className="hover:text-fg hover:underline">
               Schedule
@@ -566,26 +583,29 @@ function Composer({
           </nav>
           <h1 className="text-2xl font-semibold tracking-tight">Post</h1>
         </div>
-        <span data-testid="status-pill" className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_TONE[server.status])}>
-          {STATUS_LABEL[server.status]}
-        </span>
-        {editable ? <SaveState status={saveStatus} autosave={isDraft} onRetry={() => void flush()} /> : null}
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
+          <span data-testid="status-pill" className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_TONE[server.status])}>
+            {STATUS_LABEL[server.status]}
+          </span>
+          {editable ? <SaveState status={saveStatus} autosave={isDraft} onRetry={() => void flush()} /> : null}
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon-lg" className="size-10 md:size-9" aria-label="More actions">
+            <Button variant="ghost" size="icon-lg" aria-label="More actions">
               <EllipsisVertical aria-hidden />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44 border-line bg-panel shadow-xl">
+          <DropdownMenuContent align="end">
             <DropdownMenuItem onSelect={() => void onDuplicate()} disabled={duplicate.isPending}>
               <Copy aria-hidden /> Duplicate
             </DropdownMenuItem>
+            {server.status === "scheduled" ? (
+              <DropdownMenuItem onSelect={() => setConfirmUnschedule(true)} disabled={acting}>
+                <Undo2 aria-hidden /> Unschedule
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => setConfirmDelete(true)}
-              disabled={server.status === "publishing"}
-              className="text-danger-fg focus:text-danger-fg"
-            >
+            <DropdownMenuItem variant="destructive" onSelect={() => setConfirmDelete(true)} disabled={server.status === "publishing"}>
               <Trash2 aria-hidden /> Delete
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -697,46 +717,60 @@ function Composer({
                 hrefFor={(field) => `#${fieldTarget(field)}`}
                 onFix={focusField}
               />
+              {/* Sticky, but never over the focused control, and in the flow on short viewports (UI-ISS-014). */}
               <div
+                ref={reserveBottomBar}
                 role="region"
                 aria-label="Post actions"
-                className="sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel"
+                className={cn(
+                  "sticky bottom-0 z-10 -mx-4 border-t border-line bg-canvas px-4 py-3 md:mx-0 md:rounded-xl md:border md:bg-panel",
+                  BOTTOM_BAR,
+                )}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="ghost" className="h-10 md:h-9" onClick={() => void onSaveDraft()} disabled={acting}>
-                    {isDraft ? "Save draft" : "Save as draft"}
-                  </Button>
+                  {/* A scheduled post saves with Update schedule; unscheduling is in ⋯ and asks first. */}
+                  {isDraft ? (
+                    <Button variant="ghost" size="lg" onClick={() => void onSaveDraft()} disabled={acting}>
+                      Save draft
+                    </Button>
+                  ) : null}
                   <Button
                     variant="secondary"
-                    className="h-10 md:h-9"
+                    size="lg"
                     disabled={Boolean(publishBlock) || acting}
-                    aria-describedby={publishBlock ? "composer-publish-reason" : undefined}
+                    aria-describedby={publishReasonId}
                     onClick={() => setConfirmPublish(true)}
                   >
-                    {publishNow.isPending ? <Loader2 className="animate-spin" aria-hidden /> : <Send aria-hidden />}
+                    {publishNow.isPending ? <Spinner /> : <Send aria-hidden />}
                     Publish now
                   </Button>
                   <Button
-                    className="bg-brand-gradient ml-auto h-10 text-white md:h-9"
+                    size="lg"
+                    className="ml-auto"
                     disabled={Boolean(scheduleBlock) || acting}
                     aria-describedby={scheduleBlock ? "composer-schedule-reason" : undefined}
                     onClick={() => void onSchedule()}
                   >
-                    {schedule.isPending || queuePost.isPending || (put.isPending && !isDraft) ? (
-                      <Loader2 className="animate-spin" aria-hidden />
-                    ) : null}
+                    {schedule.isPending || queuePost.isPending || (put.isPending && !isDraft) ? <Spinner /> : null}
                     {scheduleLabel}
                   </Button>
                 </div>
-                {scheduleBlock ? (
-                  <p id="composer-schedule-reason" className="mt-2 text-xs text-fg-secondary" data-testid="schedule-reason">
-                    {scheduleLabel}: {scheduleBlock}
-                  </p>
-                ) : null}
-                {publishBlock && publishBlock !== scheduleBlock ? (
-                  <p id="composer-publish-reason" className="mt-1 text-xs text-fg-secondary">
-                    Publish now: {publishBlock}
-                  </p>
+                {scheduleBlock || publishReason ? (
+                  // On a short viewport the reasons share one line; the buttons keep the full text
+                  // through aria-describedby, and the checklist above lists every item to fix.
+                  <div className="mt-2 space-y-1 text-xs text-fg-secondary short:truncate">
+                    {scheduleBlock ? (
+                      <p id="composer-schedule-reason" className="short:inline" data-testid="schedule-reason">
+                        {scheduleLabel}
+                        {publishBlock === scheduleBlock ? " and Publish now" : ""}: {scheduleBlock}
+                      </p>
+                    ) : null}{" "}
+                    {publishReason ? (
+                      <p id="composer-publish-reason" className="short:inline">
+                        Publish now: {publishReason}
+                      </p>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
             </>
@@ -747,6 +781,7 @@ function Composer({
           <PostPreview
             wid={wid}
             accounts={selectedAccounts}
+            identities={identities}
             captionFor={captionFor}
             captionsDiffer={captionsDiffer}
             assets={postAssets.filter((asset) => asset.url)}
@@ -780,28 +815,39 @@ function Composer({
       ) : null}
 
       <AlertDialog open={confirmPublish} onOpenChange={setConfirmPublish}>
-        <AlertDialogContent className="border-line bg-panel">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Publish now?</AlertDialogTitle>
-            <AlertDialogDescription className="text-fg-secondary">
+            <AlertDialogDescription>
               It goes live on {selectedAccounts.map((account) => handleOf(account)).join(", ") || "the selected accounts"} straight away.
               You can&apos;t change it once publishing starts.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void onPublishNow()} className="bg-brand-gradient text-white">
-              Publish now
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => void onPublishNow()}>Publish now</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={confirmUnschedule} onOpenChange={setConfirmUnschedule}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unschedule this post?</AlertDialogTitle>
+            <AlertDialogDescription>It won&apos;t publish until you schedule it again.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void onUnschedule()}>Unschedule</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
-        <AlertDialogContent className="border-line bg-panel">
+        <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Delete this post?</AlertDialogTitle>
-            <AlertDialogDescription className="text-fg-secondary">
+            <AlertDialogDescription>
               {server.status === "published" || server.status === "partially_published"
                 ? "It stays on Instagram and in Comments; only the Schedule copy is removed."
                 : "It won't be published, and it can't be restored."}
@@ -809,7 +855,7 @@ function Composer({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={onDelete} className="bg-danger-fill text-white hover:bg-danger-fill/90">
+            <AlertDialogAction variant="destructive" onClick={onDelete}>
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -830,7 +876,7 @@ function SaveState({ status, autosave, onRetry }: { status: PostSaveStatus; auto
           </>
         ) : status === "saving" ? (
           <>
-            <Loader2 className="size-3.5 animate-spin" aria-hidden /> Saving…
+            <Spinner size="sm" /> Saving…
           </>
         ) : status === "unsaved" ? (
           "Unsaved changes"

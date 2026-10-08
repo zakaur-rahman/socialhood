@@ -14,14 +14,22 @@ describe("/unsubscribe (FR-NOT-04, C-049)", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Unsubscribing…");
     expect(await screen.findByRole("heading", { name: "You're unsubscribed" })).toBeInTheDocument();
     expect(screen.getByText(/weekly digest for Maple Bakery/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open Social Hood" })).toHaveAttribute("href", "/app");
+    // The way back (UI-ISS-110): straight to Settings › Notifications, through /app.
+    expect(screen.getByRole("link", { name: "Open notification settings" })).toHaveAttribute(
+      "href",
+      "/app?next=settings/notifications",
+    );
     expect(unsubscribe).toHaveBeenCalledOnce();
     expect(unsubscribe).toHaveBeenCalledWith(TOKEN);
   });
 
-  it("a token that doesn't verify (404) says the link doesn't work", async () => {
+  it("a token that doesn't verify (404) says the link doesn't work, and links to the settings", async () => {
     render(<UnsubscribeResult token={TOKEN} unsubscribe={async () => ({ status: 404 })} />);
     expect(await screen.findByRole("heading", { name: "This link doesn't work" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open notification settings" })).toHaveAttribute(
+      "href",
+      "/app?next=settings/notifications",
+    );
   });
 
   it("a failure offers Try again", async () => {
@@ -40,5 +48,6 @@ describe("/unsubscribe (FR-NOT-04, C-049)", () => {
     render(await UnsubscribePage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole("heading", { name: "This link is incomplete" })).toBeInTheDocument();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open notification settings" })).toBeInTheDocument();
   });
 });

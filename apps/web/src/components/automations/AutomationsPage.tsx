@@ -3,15 +3,17 @@
 import { Pause, Plus, Search, X } from "lucide-react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { useAgentHandoff, type AutomationDraftHandoff } from "@/lib/agent/handoff";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -128,28 +130,44 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
 
   // ---- gallery (UX-SCR-11)
-  const [gallery, setGallery] = useState<{ open: boolean; choice?: Choice }>({ open: openGallery });
+  // The gallery stays mounted, so closing it plays its exit. Its state is its own; a new key on
+  // each opening starts it fresh (and at the account question when a template card opened it).
+  const [gallery, setGallery] = useState<{ open: boolean; choice?: Choice; key: number }>({ open: openGallery, key: 0 });
+  const showGallery = (choice?: Choice) => setGallery((current) => ({ open: true, choice, key: current.key + 1 }));
+  // /automations and /automations/new share this one list (the route group's layout), so arriving
+  // at /new while the list is on screen opens the gallery, and leaving it doesn't remount the page.
+  const [atNew, setAtNew] = useState(openGallery);
+  if (openGallery !== atNew) {
+    setAtNew(openGallery);
+    if (openGallery) showGallery();
+  }
   const { start, pending: starting } = useStartAutomation();
   const closeGallery = () => {
-    setGallery({ open: false });
+    setGallery((current) => ({ ...current, open: false }));
     if (openGallery) router.replace(`/w/${workspace.slug}/automations` as Route);
   };
+  // A dialog opened by a link from another page (Home's checklist, Ask's hand-off) has no opener
+  // here to give focus back to: New automation takes it (UX-A11Y-02).
+  const newAutomation = useRef<HTMLButtonElement>(null);
+  const focusNewAutomation = () => newAutomation.current;
   // FR-AGT-03: an automation draft handed over by Ask Social Hood shows first (instead of the
   // gallery on /automations/new); it is taken once from the hand-off store.
   const draftHandoff = useAgentHandoff((state) => state.automationDraft);
   const takeAutomationDraft = useAgentHandoff((state) => state.takeAutomationDraft);
   const [agentDraft, setAgentDraft] = useState<AutomationDraftHandoff | null>(null);
+  const [draftOpen, setDraftOpen] = useState(false);
   const [draftTaken, setDraftTaken] = useState<string | null>(null);
   if (draftHandoff && draftHandoff.nonce !== draftTaken) {
     setDraftTaken(draftHandoff.nonce);
     setAgentDraft(draftHandoff);
+    setDraftOpen(true);
   }
   useEffect(() => {
     if (draftHandoff) takeAutomationDraft(draftHandoff.nonce);
   }, [draftHandoff, takeAutomationDraft]);
 
   const quickStart = (choice: Choice) => {
-    if (accounts.length > 1) setGallery({ open: true, choice });
+    if (accounts.length > 1) showGallery(choice);
     else start(choice, accounts[0]?.id ?? null);
   };
 
@@ -164,6 +182,9 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const items = useMemo(() => list.data?.items ?? [], [list.data]);
   const selectedIds = items.filter((item) => selected.has(item.id)).map((item) => item.id);
   const pendingStatusId = activate.isPending ? activate.variables : pause.isPending ? pause.variables : null;
+  // A delete's confirmation hands focus back to the row's ⋯ button, which goes with the row once
+  // the delete lands: New automation takes it then, rather than the page losing it to <body>.
+  const deleted = useRef<string | null>(null);
 
   const actions: GroupActions = {
     href: (automation) => editorHref(workspace.slug, automation.id),
@@ -180,7 +201,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
       if (!active) {
         pause.mutate(automation.id, {
           onSuccess: () => toast.success(`Paused ${automation.name}`),
-          onError: (error) => toast.error(errorMessage(error)),
+          onError: (error) => toastError(error),
         });
         return;
       }
@@ -192,6 +213,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           if (fields.length > 0) {
             toast.error(`${automation.name} isn't ready: ${fields[0].message}`, {
               action: { label: "Finish setup", onClick: () => router.push(editorHref(workspace.slug, automation.id)) },
+              duration: TOAST_ACTION_DURATION,
             });
           } else toastError(error); // a plan limit (402) is the upgrade dialog's to say
         },
@@ -202,10 +224,12 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         onSuccess: (copy) =>
           toast.success(`Duplicated as ${copy.name}`, {
             action: { label: "Open", onClick: () => router.push(editorHref(workspace.slug, copy.id)) },
+            duration: TOAST_ACTION_DURATION,
           }),
-        onError: (error) => toast.error(errorMessage(error)),
+        onError: (error) => toastError(error),
       }),
-    onDelete: (automation) =>
+    onDelete: (automation) => {
+      deleted.current = automation.id;
       remove.mutate(automation.id, {
         onSuccess: () => {
           toast.success(`Deleted ${automation.name}`);
@@ -215,9 +239,20 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             return next;
           });
         },
-        onError: (error) => toast.error(errorMessage(error)),
-      }),
+        onError: (error) => {
+          deleted.current = null;
+          toastError(error);
+        },
+      });
+    },
   };
+
+  useEffect(() => {
+    const id = deleted.current;
+    if (!id || items.some((item) => item.id === id)) return;
+    deleted.current = null;
+    if (!document.activeElement || document.activeElement === document.body) newAutomation.current?.focus();
+  }, [items]);
 
   const pauseSelected = () =>
     bulkPause.mutate(selectedIds, {
@@ -225,7 +260,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         toast.success(selectedIds.length === 1 ? "Paused 1 automation" : `Paused ${selectedIds.length} automations`);
         setSelected(new Set());
       },
-      onError: (error) => toast.error(errorMessage(error)),
+      onError: (error) => toastError(error),
     });
 
   // Reordering needs every automation of the account on screen, in the order they run.
@@ -233,7 +268,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const reorder = (groupAccountId: string) => (orderedIds: string[]) =>
     priorities.mutate(
       { accountId: groupAccountId, orderedIds },
-      { onError: (error) => toast.error(`The order didn't save. ${errorMessage(error)}`) },
+      { onError: (error) => toastError(error, `The order didn't save. ${errorMessage(error)}`) },
     );
 
   const groups = useMemo(() => groupByAccount(items, accounts, sort), [items, accounts, sort]);
@@ -256,7 +291,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         plan={workspace.plan}
         starting={starting}
         onUse={quickStart}
-        onBrowse={() => setGallery({ open: true })}
+        onBrowse={() => showGallery()}
       />
     );
   } else if (items.length === 0) {
@@ -295,7 +330,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
     <PageFrame
       title="Automations"
       actions={
-        <Button className="bg-brand-gradient h-9 text-white" onClick={() => setGallery({ open: true })}>
+        <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
           <Plus aria-hidden /> New automation
         </Button>
       }
@@ -309,19 +344,20 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             <label htmlFor="automations-search" className="sr-only">
               Search automations
             </label>
-            <input
+            <Input
               id="automations-search"
               type="search"
+              size="lg"
               value={text}
               onChange={(event) => setText(event.target.value)}
               placeholder="Search by name or keyword"
               autoComplete="off"
-              className="h-9 w-full rounded-lg border border-line bg-field pr-3 pl-10 text-sm outline-none focus:bg-raised focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="pl-10"
             />
           </div>
           {accounts.length > 1 ? (
             <Select value={accountId ?? ALL} onValueChange={(value) => setAccountId(value === ALL ? null : value)}>
-              <SelectTrigger aria-label="Account" className="h-9 max-w-48">
+              <SelectTrigger aria-label="Account" size="lg" className="max-w-48">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -338,7 +374,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             value={status ?? ALL}
             onValueChange={(value) => setStatus(value === ALL ? null : (value as AutomationStatus))}
           >
-            <SelectTrigger aria-label="Status" className="h-9">
+            <SelectTrigger aria-label="Status" size="lg">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -351,7 +387,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             </SelectContent>
           </Select>
           <Select value={trigger ?? ALL} onValueChange={(value) => setTrigger(value === ALL ? null : (value as TriggerName))}>
-            <SelectTrigger aria-label="Trigger" className="h-9">
+            <SelectTrigger aria-label="Trigger" size="lg">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -364,7 +400,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             </SelectContent>
           </Select>
           <Select value={sort} onValueChange={(value) => setSort(value as ListSort)}>
-            <SelectTrigger aria-label="Sort" className="h-9">
+            <SelectTrigger aria-label="Sort" size="lg">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -396,28 +432,27 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         {content}
       </div>
 
-      {gallery.open && !agentDraft ? (
-        <TemplateGallery
-          open
-          onOpenChange={(open) => (open ? undefined : closeGallery())}
-          templates={templates.data ?? []}
-          templatesLoading={templates.isPending}
-          accounts={accounts}
-          initialChoice={gallery.choice}
-          plan={workspace.plan}
-        />
-      ) : null}
-      {agentDraft ? (
-        <AgentDraftDialog
-          key={agentDraft.nonce}
-          draft={agentDraft}
-          accounts={accounts}
-          onClose={() => {
-            setAgentDraft(null);
-            closeGallery();
-          }}
-        />
-      ) : null}
+      <TemplateGallery
+        key={gallery.key}
+        open={gallery.open && !draftOpen}
+        onOpenChange={(open) => (open ? undefined : closeGallery())}
+        templates={templates.data ?? []}
+        templatesLoading={templates.isPending}
+        accounts={accounts}
+        initialChoice={gallery.choice}
+        plan={workspace.plan}
+        returnFocusFallback={focusNewAutomation}
+      />
+      <AgentDraftDialog
+        open={draftOpen}
+        draft={agentDraft}
+        accounts={accounts}
+        returnFocusFallback={focusNewAutomation}
+        onClose={() => {
+          setDraftOpen(false);
+          closeGallery();
+        }}
+      />
     </PageFrame>
   );
 }
@@ -446,7 +481,7 @@ function SummaryStrip({
         <div key={figure.label} className="rounded-xl border border-line bg-panel p-4">
           <p className="text-xs text-fg-secondary">{figure.label}</p>
           {loading ? (
-            <Skeleton className="mt-2 h-7 w-16 bg-raised" />
+            <Skeleton className="mt-2 h-7 w-16" />
           ) : (
             <p className="mt-1 text-2xl font-semibold tabular-nums">
               {figure.value === undefined ? "—" : formatCount(figure.value)}
@@ -464,12 +499,12 @@ function RowSkeletons() {
     <div aria-busy="true" aria-label="Loading automations" className="space-y-2">
       {Array.from({ length: 4 }, (_, i) => (
         <div key={i} className="flex items-center gap-3 rounded-xl border border-line bg-panel p-4">
-          <Skeleton className="h-5 w-8 rounded-full bg-raised" />
+          <Skeleton className="h-5 w-8 rounded-full" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-1/3 bg-raised" />
-            <Skeleton className="h-3 w-1/2 bg-raised" />
+            <Skeleton className="h-3 w-1/3" />
+            <Skeleton className="h-3 w-1/2" />
           </div>
-          <Skeleton className="h-5 w-24 bg-raised" />
+          <Skeleton className="h-5 w-24" />
         </div>
       ))}
     </div>
@@ -498,7 +533,7 @@ function EmptyAutomations({
         {loading
           ? Array.from({ length: 3 }, (_, i) => (
               <li key={i} aria-hidden>
-                <Skeleton className="h-44 rounded-xl bg-raised" />
+                <Skeleton className="h-44 rounded-xl" />
               </li>
             ))
           : templates.slice(0, 3).map((template) => (
