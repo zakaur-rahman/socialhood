@@ -1,26 +1,20 @@
 "use client";
 
-import { ChevronDown } from "lucide-react";
 import { useEffect, useState, type Ref } from "react";
 
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { InboxView, SocialAccount } from "@/lib/api/types";
-import { cn } from "@/lib/utils";
+import type { InboxCounts, InboxView, SocialAccount } from "@/lib/api/types";
 
 export type InboxTab = "chats" | "scheduled";
 
-/** The chips, in order (FR-INB-01); "Needs you" is the escalated view (C-063). */
+/**
+ * The chips, in order (FR-INB-01); "Needs you" is the escalated view (C-063). Archived is a plain
+ * chip last, not a menu of one (D-15 item 4).
+ */
 export const CHIP_VIEWS: { value: InboxView; label: string }[] = [
   { value: "all", label: "All" },
   { value: "unread", label: "Unread" },
@@ -28,24 +22,15 @@ export const CHIP_VIEWS: { value: InboxView; label: string }[] = [
   { value: "needs_you", label: "Needs you" },
   { value: "leads", label: "Leads" },
   { value: "ai_handled", label: "AI handled" },
+  { value: "archived", label: "Archived" },
 ];
 
-/** Views behind the "More" chip. */
-export const MORE_VIEWS: { value: InboxView; label: string }[] = [{ value: "archived", label: "Archived" }];
-
-export const VIEWS = [...CHIP_VIEWS, ...MORE_VIEWS];
+export const VIEWS = CHIP_VIEWS;
 
 export const SEARCH_DEBOUNCE_MS = 250;
 
-/**
- * The "More" chip opens a menu, so it can't be a ToggleGroupItem: it copies the chip's look from
- * `ui/toggle-group` (height, edge, hover, inset focus, 40 px on coarse pointers), and the chosen
- * look while one of its views is on.
- */
-const MORE_CHIP =
-  "inline-flex h-7 shrink-0 items-center justify-center gap-0.5 rounded-full border px-3 text-xs font-medium whitespace-nowrap transition-[color,background-color,border-color] duration-fast ease-standard focus-visible:-outline-offset-2 pointer-coarse:min-h-10";
-const MORE_ON = "border-brand-line bg-brand-soft text-brand-fg";
-const MORE_OFF = "border-line text-fg-secondary hover:bg-hover hover:text-fg";
+/** The two chips that carry a count (the counts query is workspace-wide). */
+const COUNTED: Partial<Record<InboxView, "needs_reply" | "needs_you">> = { needs_reply: "needs_reply", needs_you: "needs_you" };
 
 /** The Scheduled count stops at 99, like the sidebar's. */
 function countText(count: number): string {
@@ -62,6 +47,7 @@ export function ListHeader({
   scheduledCount,
   view,
   onViewChange,
+  counts,
   search,
   onSearchChange,
   searchRef,
@@ -73,6 +59,8 @@ export function ListHeader({
   scheduledCount: number;
   view: InboxView;
   onViewChange: (view: InboxView) => void;
+  /** Open conversations waiting on a reply or on the owner; the two chips show them when above zero. */
+  counts?: Pick<InboxCounts, "needs_reply" | "needs_you">;
   search: string;
   onSearchChange: (q: string) => void;
   searchRef?: Ref<HTMLInputElement>;
@@ -97,8 +85,6 @@ export function ListHeader({
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [text, search, onSearchChange]);
-
-  const more = MORE_VIEWS.find((option) => option.value === view) ?? null;
 
   return (
     <div className="space-y-3 border-b border-line bg-panel px-3 pt-3 pb-2.5">
@@ -152,43 +138,35 @@ export function ListHeader({
               </Select>
             ) : null}
           </div>
-          {/* One row that scrolls sideways (UI-052 wraps it from md, with an edge fade below). */}
-          <div className="-mx-3 flex gap-1.5 overflow-x-auto px-3 pb-0.5 [scrollbar-width:none]">
+          {/* From md the chips wrap onto as many rows as they need; below it they stay one row that scrolls
+              sideways, with the right edge fading out so a cut-off chip reads as "more" (UI-052). */}
+          <div className="mask-fade-x -mx-3 overflow-x-auto pe-7 ps-3 scroll-pe-7 [scrollbar-width:none] md:mask-none md:overflow-visible md:pe-3">
             <ToggleGroup
               variant="chips"
               aria-label="Views"
               value={view}
               onValueChange={(value) => onViewChange(value as InboxView)}
-              className="flex-nowrap"
+              className="w-max flex-nowrap md:w-auto md:flex-wrap"
             >
-              {CHIP_VIEWS.map((option) => (
-                <ToggleGroupItem key={option.value} value={option.value}>
-                  {option.label}
-                </ToggleGroupItem>
-              ))}
+              {CHIP_VIEWS.map((option) => {
+                const count = counts && COUNTED[option.value] ? counts[COUNTED[option.value]!] : 0;
+                return (
+                  <ToggleGroupItem
+                    key={option.value}
+                    value={option.value}
+                    // The count is part of the chip's name; the badge is decoration (as the Scheduled tab's).
+                    aria-label={count > 0 ? `${option.label}, ${countText(count)}` : undefined}
+                  >
+                    {option.label}
+                    {count > 0 ? (
+                      <Badge tone="count" size="sm" aria-hidden data-testid={`count-${option.value}`}>
+                        {countText(count)}
+                      </Badge>
+                    ) : null}
+                  </ToggleGroupItem>
+                );
+              })}
             </ToggleGroup>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={more ? `More views: ${more.label}` : "More views"}
-                  data-active={Boolean(more)}
-                  className={cn(MORE_CHIP, more ? MORE_ON : MORE_OFF)}
-                >
-                  {more ? more.label : "More"}
-                  <ChevronDown className="size-3" aria-hidden />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuRadioGroup value={view} onValueChange={(value) => onViewChange(value as InboxView)}>
-                  {MORE_VIEWS.map((option) => (
-                    <DropdownMenuRadioItem key={option.value} value={option.value}>
-                      {option.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
         </>
       ) : null}

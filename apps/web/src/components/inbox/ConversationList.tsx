@@ -24,6 +24,8 @@ type Props = {
   fetchNextPage: () => void;
   /** Each account's AI mode, by account id: a row without its own mode shows its account's. */
   accountModes?: Record<string, AiMode>;
+  /** The list's filters in the address (`?view=...`), carried to the conversation so Back keeps them. */
+  query?: string;
 };
 
 /** The conversation rows with cursor pagination; arrow keys move between rows (UX-A11Y-02). */
@@ -36,6 +38,7 @@ export function ConversationList({
   isFetchingNextPage,
   fetchNextPage,
   accountModes = {},
+  query = "",
 }: Props) {
   const aiModeOf = (item: ConversationListItem) => effectiveAiMode(item, accountModes[item.social_account_id]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -74,7 +77,7 @@ export function ConversationList({
     <ConversationRow
       item={item}
       index={index}
-      href={`/w/${slug}/inbox/${item.id}` as Route}
+      href={`/w/${slug}/inbox/${item.id}${query}` as Route}
       selected={item.id === selectedId}
       now={now}
       aiMode={aiModeOf(item)}
