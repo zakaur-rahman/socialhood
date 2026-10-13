@@ -55,7 +55,7 @@ const SANDBOX_TOOLS = process.env.NODE_ENV !== "production";
 /**
  * UX-SCR-07 Connections, F-03 (connect Instagram), F-04 (connect WhatsApp), F-05 (reconnect),
  * FR-CON-06 (disconnect). C-066: search and a segmented filter with counts over the list, and
- * two columns of account cards on wide screens. C-067: Disconnect and delete data, and Remove.
+ * two columns of account cards on wide screens. C-067 (amended by D-09): Delete account and data in each card's menu.
  */
 export default function ConnectionsPage() {
   return (
