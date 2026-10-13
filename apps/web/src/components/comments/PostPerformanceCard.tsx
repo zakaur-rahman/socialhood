@@ -1,11 +1,12 @@
 "use client";
 
-import { RotateCw } from "lucide-react";
+import { AlertTriangle, RotateCw } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
+import { Card, CardInset } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePostComparison, usePostPerformance } from "@/lib/api/queries";
@@ -39,12 +40,17 @@ const TONE_TEXT = {
 
 function InlineError({ error, onRetry }: { error: unknown; onRetry: () => void }) {
   return (
-    <div role="alert" className="space-y-2 text-sm">
-      <p className="text-fg-secondary">{errorMessage(error)}</p>
-      <Button variant="secondary" size="sm" onClick={onRetry}>
-        <RotateCw aria-hidden /> Try again
-      </Button>
-    </div>
+    <Alert
+      tone="danger"
+      icon={<AlertTriangle />}
+      action={
+        <AlertAction onClick={onRetry}>
+          <RotateCw aria-hidden /> Try again
+        </AlertAction>
+      }
+    >
+      {errorMessage(error)}
+    </Alert>
   );
 }
 
@@ -69,37 +75,41 @@ function Figures({
   return (
     <div className="space-y-3" data-testid="post-figures">
       {!performance.insights_granted ? (
-        <div className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-xs" data-testid="insights-unavailable">
-          <p>
+        <Alert
+          tone="warning"
+          icon={<AlertTriangle />}
+          data-testid="insights-unavailable"
+          action={
+            <AlertAction asChild>
+              <Link href={`/w/${slug}/settings/connections` as Route}>Reconnect</Link>
+            </AlertAction>
+          }
+        >
+          <AlertDescription className="text-xs">
             {handle} didn&apos;t give Social Hood permission to read insights, so reach, views, shares and saves
             aren&apos;t available. Reconnect to allow it.
-          </p>
-          <Link
-            href={`/w/${slug}/settings/connections` as Route}
-            className="mt-1 inline-flex items-center font-medium text-brand-fg hover:underline pointer-coarse:min-h-10"
-          >
-            Reconnect
-          </Link>
-        </div>
+          </AlertDescription>
+        </Alert>
       ) : null}
 
       {performance.captured_at ? (
         <>
           <p className="text-xs text-fg-secondary" data-testid="figures-age">
-            {performance.age === "lifetime" ? "Lifetime figures" : `Figures ${atAge(performance.age)} after posting`} · Read{" "}
-            <time dateTime={performance.captured_at}>{formatDayTime(performance.captured_at, timeZone, now)}</time>
+            {performance.age === "lifetime" ? "Lifetime figures" : `Figures ${atAge(performance.age)} after posting`} ·
+            Read <time dateTime={performance.captured_at}>{formatDayTime(performance.captured_at, timeZone, now)}</time>
           </p>
           {younger ? <p className="text-xs text-brand-fg">{younger}</p> : null}
           <dl className="grid grid-cols-2 gap-2">
             {METRICS.map((metric) => (
-              <div
+              <CardInset
                 key={metric}
-                className={cn("rounded-lg bg-field px-3 py-2", metric === "engagement_rate" && "col-span-2")}
+                padding="compact"
+                className={cn(metric === "engagement_rate" && "col-span-2")}
                 data-metric={metric}
               >
                 <dt className="text-xs text-fg-secondary">{METRIC_LABEL[metric]}</dt>
                 <dd className="text-lg font-semibold tabular-nums">{formatMetric(metric, metrics[metric])}</dd>
-              </div>
+              </CardInset>
             ))}
           </dl>
           {performance.insights_granted && !performance.insights_final && metrics.reach != null ? (
@@ -197,55 +207,63 @@ export function PostPerformanceCard({
   const shown = age ?? performance.data?.age ?? null;
 
   return (
-    <section aria-labelledby="post-performance-heading" className="space-y-4 rounded-xl border border-line bg-panel p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 id="post-performance-heading" className={EYEBROW}>
-          Performance
-        </h2>
-        <Select value={shown ?? ""} onValueChange={(value) => setAge(value as AgeName)}>
-          <SelectTrigger aria-label="Age after posting" className="min-w-28">
-            <SelectValue placeholder="Latest" />
-          </SelectTrigger>
-          <SelectContent>
-            {AGES.map((value) => (
-              <SelectItem key={value} value={value}>
-                {value === "lifetime" ? AGE_LABEL[value] : `At ${AGE_LABEL[value]}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+    <Card asChild className="space-y-4">
+      <section aria-labelledby="post-performance-heading">
+        <div className="flex items-center justify-between gap-2">
+          <h2 id="post-performance-heading" className={EYEBROW}>
+            Performance
+          </h2>
+          <Select value={shown ?? ""} onValueChange={(value) => setAge(value as AgeName)}>
+            <SelectTrigger aria-label="Age after posting" className="min-w-28">
+              <SelectValue placeholder="Latest" />
+            </SelectTrigger>
+            <SelectContent>
+              {AGES.map((value) => (
+                <SelectItem key={value} value={value}>
+                  {value === "lifetime" ? AGE_LABEL[value] : `At ${AGE_LABEL[value]}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-      <div aria-busy={performance.isFetching || undefined} className={cn(performance.isPlaceholderData && "opacity-60")}>
-        {performance.isPending ? (
-          <div className="grid grid-cols-2 gap-2" aria-label="Loading figures">
-            {Array.from({ length: 6 }, (_, i) => (
-              <Skeleton key={i} className="h-14 rounded-lg" />
-            ))}
-          </div>
-        ) : performance.isError ? (
-          <InlineError error={performance.error} onRetry={() => void performance.refetch()} />
-        ) : (
-          <Figures performance={performance.data} account={account} slug={slug} timeZone={timeZone} now={now} />
-        )}
-      </div>
-
-      <div className="space-y-2 border-t border-line pt-4">
-        <h3 className="text-sm font-semibold">Compared with earlier posts</h3>
-        <div className={cn(comparison.isPlaceholderData && "opacity-60")} aria-busy={comparison.isFetching || undefined}>
-          {comparison.isPending ? (
-            <div className="space-y-2" aria-label="Loading the comparison">
-              <Skeleton className="h-3 w-2/3" />
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-5/6" />
+        <div
+          aria-busy={performance.isFetching || undefined}
+          className={cn(performance.isPlaceholderData && "text-fg-secondary")}
+        >
+          {performance.isPending ? (
+            <div className="grid grid-cols-2 gap-2" aria-label="Loading figures">
+              {Array.from({ length: 6 }, (_, i) => (
+                <Skeleton key={i} className="h-14 rounded-lg" />
+              ))}
             </div>
-          ) : comparison.isError ? (
-            <InlineError error={comparison.error} onRetry={() => void comparison.refetch()} />
+          ) : performance.isError ? (
+            <InlineError error={performance.error} onRetry={() => void performance.refetch()} />
           ) : (
-            <Comparison comparison={comparison.data} />
+            <Figures performance={performance.data} account={account} slug={slug} timeZone={timeZone} now={now} />
           )}
         </div>
-      </div>
-    </section>
+
+        <div className="space-y-2 border-t border-line pt-4">
+          <h3 className="text-sm font-semibold">Compared with earlier posts</h3>
+          <div
+            className={cn(comparison.isPlaceholderData && "text-fg-secondary")}
+            aria-busy={comparison.isFetching || undefined}
+          >
+            {comparison.isPending ? (
+              <div className="space-y-2" aria-label="Loading the comparison">
+                <Skeleton className="h-3 w-2/3" />
+                <Skeleton className="h-3 w-full" />
+                <Skeleton className="h-3 w-5/6" />
+              </div>
+            ) : comparison.isError ? (
+              <InlineError error={comparison.error} onRetry={() => void comparison.refetch()} />
+            ) : (
+              <Comparison comparison={comparison.data} />
+            )}
+          </div>
+        </div>
+      </section>
+    </Card>
   );
 }

@@ -3,7 +3,7 @@
 import { Eye, EyeOff, MessageCircle, Reply, Send, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { IntentChip } from "@/components/ai/AnalysisChips";
@@ -19,19 +19,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteComment, usePrivateReply, useReplyToComment, useSetCommentHidden } from "@/lib/api/queries";
 import type { PostComment } from "@/lib/api/types";
 import { SENTIMENT_DOT, SENTIMENT_LABEL } from "@/lib/ai/format";
 import { authorHandle, authorName, commentActionError } from "@/lib/comments/format";
-import { TONE_CLASS } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
 import { CommentComposer, type ComposerKind } from "./CommentComposer";
 
-const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium";
 /**
  * Always visible (UX-A11Y-02); `sm` Buttons, so 28 px with a mouse and 40 px on touch (UX-A11Y-05).
  * While its composer is open, Reply or DM shows the ghost Button's open state (`aria-expanded`).
@@ -58,6 +58,7 @@ export function CommentRow({
   canDelete,
   accountUsername,
   prepared,
+  onRemoved,
 }: {
   comment: PostComment;
   wid: string;
@@ -72,7 +73,13 @@ export function CommentRow({
    * column remounts the row (by key) for each new one. A DM opens only if none was sent yet.
    */
   prepared?: { kind: ComposerKind; text: string };
+  /**
+   * Called when a confirmed delete went through, while focus is still lost or on this row: the
+   * row is about to vanish, so the list moves focus somewhere that stays (its heading).
+   */
+  onRemoved?: () => void;
 }) {
+  const rowRef = useRef<HTMLLIElement>(null);
   const [initial] = useState(() =>
     prepared && !(prepared.kind === "dm" && comment.private_reply) ? prepared : null,
   );
@@ -121,12 +128,17 @@ export function CommentRow({
 
   const confirmDelete = () =>
     remove.mutate(comment, {
-      onSuccess: () => toast.success("Comment deleted"),
+      onSuccess: () => {
+        toast.success("Comment deleted");
+        const active = document.activeElement;
+        if (!active || active === document.body || rowRef.current?.contains(active)) onRemoved?.();
+      },
       onError: (error) => toast.error(commentActionError(error, "delete", accountUsername)),
     });
 
   return (
     <li
+      ref={rowRef}
       className="flex gap-3 border-b border-line-subtle px-4 py-3 last:border-b-0"
       data-testid="comment-row"
       data-comment-id={comment.id}
@@ -141,13 +153,14 @@ export function CommentRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-sm font-medium">{name}</span>
-          <time
-            dateTime={comment.commented_at}
-            title={formatDayTime(comment.commented_at, timeZone, now)}
-            className="text-xs text-fg-secondary"
-          >
-            {when(comment.commented_at, now)}
-          </time>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <time dateTime={comment.commented_at} className="text-xs text-fg-secondary">
+                {when(comment.commented_at, now)}
+              </time>
+            </TooltipTrigger>
+            <TooltipContent>{formatDayTime(comment.commented_at, timeZone, now)}</TooltipContent>
+          </Tooltip>
           {analysis && !analysis.is_spam ? (
             <>
               <span
@@ -159,11 +172,11 @@ export function CommentRow({
               <IntentChip intent={analysis.intent} />
             </>
           ) : null}
-          {analysis?.is_spam ? <span className={cn(CHIP, TONE_CLASS.warning)}>Spam</span> : null}
+          {analysis?.is_spam ? <Badge tone="warning">Spam</Badge> : null}
           {comment.hidden ? (
-            <span className={cn(CHIP, TONE_CLASS.neutral)}>
-              <EyeOff className="size-3" aria-hidden /> Hidden
-            </span>
+            <Badge>
+              <EyeOff aria-hidden /> Hidden
+            </Badge>
           ) : null}
         </div>
         {comment.parent_platform_comment_id ? (

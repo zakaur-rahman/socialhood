@@ -3,8 +3,8 @@
 import { useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { OverviewQuery } from "@/lib/api/queries";
@@ -50,6 +50,8 @@ export function RangeControl({
       </PopoverAnchor>
       <PopoverContent
         align="end"
+        // Keep 16 px from the viewport edge (the popover sat 3 px from it at 375).
+        collisionPadding={16}
         className="w-[min(20rem,calc(100vw-2rem))] p-4"
         aria-label="Custom period"
         onCloseAutoFocus={(event) => {
@@ -97,43 +99,29 @@ function CustomRangeForm({
     <form onSubmit={submit} noValidate className="space-y-3" aria-label="Custom period">
       <p className="text-xs text-fg-secondary">Up to {MAX_CUSTOM_DAYS} days, ending today at the latest.</p>
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="home-range-from">From</Label>
+        <Field id="home-range-from">
+          <FieldLabel>From</FieldLabel>
           <Input
-            id="home-range-from"
             type="date"
             value={from}
             max={to || today}
             min={to ? addDays(to, -(MAX_CUSTOM_DAYS - 1)) : undefined}
-            aria-invalid={Boolean(errors?.from)}
-            aria-describedby={errors?.from ? "home-range-from-error" : undefined}
             onChange={(event) => setFrom(event.target.value)}
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="home-range-to">To</Label>
+          <FieldError>{errors?.from}</FieldError>
+        </Field>
+        <Field id="home-range-to">
+          <FieldLabel>To</FieldLabel>
           <Input
-            id="home-range-to"
             type="date"
             value={to}
             min={from || undefined}
             max={today}
-            aria-invalid={Boolean(errors?.to)}
-            aria-describedby={errors?.to ? "home-range-to-error" : undefined}
             onChange={(event) => setTo(event.target.value)}
           />
-        </div>
+          <FieldError>{errors?.to}</FieldError>
+        </Field>
       </div>
-      {errors?.from ? (
-        <p id="home-range-from-error" role="alert" className="text-sm text-danger-fg">
-          {errors.from}
-        </p>
-      ) : null}
-      {errors?.to ? (
-        <p id="home-range-to-error" role="alert" className="text-sm text-danger-fg">
-          {errors.to}
-        </p>
-      ) : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel

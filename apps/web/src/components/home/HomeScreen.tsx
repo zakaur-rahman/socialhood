@@ -1,10 +1,12 @@
 "use client";
 
-import { RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useState } from "react";
 
 import { SourceSheet, type SourceSheetMode } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Alert, AlertAction } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMe, useOverview, useUpdateWorkspace, type OverviewQuery } from "@/lib/api/queries";
@@ -54,8 +56,7 @@ export function HomeScreen() {
   const canManage = workspace.role !== "agent";
   const data = overview.data;
 
-  const dismiss = () =>
-    update.mutate({ checklist_dismissed: true }, { onError: (error) => toastError(error) });
+  const dismiss = () => update.mutate({ checklist_dismissed: true }, { onError: (error) => toastError(error) });
 
   const refresh = () => {
     setRefreshing(true);
@@ -80,16 +81,13 @@ export function HomeScreen() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         {data ? (
-          <span
-            data-testid="channels-pill"
-            className="inline-flex min-h-8 items-center gap-2 rounded-full border border-line px-3 text-xs font-medium pointer-coarse:min-h-10"
-          >
+          <Badge data-testid="channels-pill" size="md" className="gap-2">
             <span
               className={cn("size-2 rounded-full", data.accounts_connected > 0 ? "bg-success" : "bg-fg-secondary")}
               aria-hidden
             />
             {channelsConnected(data.accounts_connected)}
-          </span>
+          </Badge>
         ) : null}
         <RangeControl value={query} today={today} onChange={(next: OverviewQuery) => setStored(storedRange(next))} />
         <Button
@@ -127,7 +125,8 @@ export function HomeScreen() {
           slug={workspace.slug}
           canManage={canManage}
           now={now}
-          // While another range loads, the previous one stays on screen, dimmed.
+          // While another range loads, the previous one stays on screen: busy, its numbers in the
+          // secondary colour (no opacity on text).
           switching={overview.isPlaceholderData}
           staleError={overview.isError ? overview.error : null}
           onRetry={refresh}
@@ -170,28 +169,42 @@ function Body({
   return (
     <div className="space-y-6">
       {staleError ? (
-        <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning">
-          <p className="flex-1">Couldn&apos;t refresh: {errorMessage(staleError)} These are the last numbers that loaded.</p>
-          <Button variant="ghost" onClick={onRetry}>
-            Try again
-          </Button>
-        </div>
+        <Alert
+          tone="warning"
+          icon={<AlertTriangle />}
+          action={<AlertAction onClick={onRetry}>Try again</AlertAction>}
+          data-testid="stale-numbers"
+        >
+          Couldn&apos;t refresh: {errorMessage(staleError)} These are the last numbers that loaded.
+        </Alert>
       ) : null}
       {data.checklist.dismissed ? null : (
         <Checklist steps={data.checklist.steps} slug={slug} onDismiss={onDismissChecklist} dismissing={dismissing} />
       )}
       <AccountHealth accounts={data.accounts_needing_attention} slug={slug} canManage={canManage} />
 
-      <div
-        aria-busy={switching}
-        className={cn("space-y-6 motion-safe:transition-opacity", switching && "opacity-60")}
-        data-testid="overview"
-      >
+      <div aria-busy={switching} className="group/overview space-y-6" data-testid="overview">
+        {switching ? (
+          <p role="status" className="sr-only">
+            Loading the new period
+          </p>
+        ) : null}
         <MetricTiles overview={data} slug={slug} connected={connected} now={now} />
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <SentimentCard messages={data.message_sentiment} comments={data.comment_sentiment} period={period} within={within} />
-          <TopPostsCard posts={data.top_posts} engagement={data.top_posts_engagement} period={period} within={within} slug={slug} />
+          <SentimentCard
+            messages={data.message_sentiment}
+            comments={data.comment_sentiment}
+            period={period}
+            within={within}
+          />
+          <TopPostsCard
+            posts={data.top_posts}
+            engagement={data.top_posts_engagement}
+            period={period}
+            within={within}
+            slug={slug}
+          />
           <TopIntentsCard intents={data.top_intents} period={period} within={within} />
         </div>
 

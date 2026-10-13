@@ -546,11 +546,12 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     setup();
     await screen.findByRole("list", { name: "Comments" });
     expect(screen.getByTestId("comment-filters")).toHaveClass("flex-wrap");
-    // UI-038: the 40 px comes from the primitives on coarse pointers (DESIGN_SYSTEM §8.4), not from a
-    // `min-h-10 md:min-h-*` patch keyed to the viewport: the segment's 32 px and the `sm` Button's 28 px
-    // stay with a mouse, at any width.
+    // UI-039: the filters are `ToggleGroup variant="chips"`. The 40 px comes from the primitives on coarse
+    // pointers (DESIGN_SYSTEM §8.4), not from a `min-h-10 md:min-h-*` patch keyed to the viewport: the chip's
+    // 28 px and the `sm` Button's 28 px stay with a mouse, at any width.
+    expect(screen.getByTestId("comment-filters")).toHaveAttribute("data-variant", "chips");
     for (const chip of within(screen.getByTestId("comment-filters")).getAllByRole("radio")) {
-      expect(chip).toHaveClass("min-h-8", "pointer-coarse:min-h-10");
+      expect(chip).toHaveClass("h-7", "rounded-full", "pointer-coarse:min-h-10");
       expect(chip.className).not.toMatch(/(^|\s)(min-h-10|md:min-h-8)(\s|$)/);
     }
     for (const button of within(row("@kabir")).getAllByRole("button")) {

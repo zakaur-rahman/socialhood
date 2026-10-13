@@ -2,7 +2,7 @@ import { HelpCircle, Sparkles } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { OverviewGap } from "@/lib/api/types";
 
 /**
@@ -10,6 +10,7 @@ import type { OverviewGap } from "@/lib/api/types";
  * the most asked ones, and the one asked most recently. View thread opens the conversation it came
  * from; Train AI (admins, who manage knowledge) opens Add to knowledge with the customer's
  * question, and saving answers the gap (components/home/HomeScreen, lib/knowledge/prefill).
+ * An Alert with the warning edge; its actions are the Alert's secondary buttons.
  */
 export function KnowledgeGapBanner({
   count,
@@ -28,47 +29,48 @@ export function KnowledgeGapBanner({
 }) {
   if (count <= 0) return null;
   return (
-    <section
+    <Alert
+      tone="warning"
+      variant="outline"
       aria-labelledby="home-gaps"
       data-testid="gap-banner"
-      className="flex flex-col gap-4 rounded-xl border border-warning/40 bg-panel p-4 sm:flex-row sm:items-center"
+      icon={<HelpCircle />}
+      action={
+        <div className="flex flex-wrap gap-2">
+          {latest?.conversation_id ? (
+            <AlertAction asChild>
+              <Link href={`/w/${slug}/inbox/${latest.conversation_id}` as Route}>View thread</Link>
+            </AlertAction>
+          ) : null}
+          {canManage && latest ? (
+            <AlertAction onClick={() => onTrain(latest)}>
+              <Sparkles aria-hidden /> Train AI
+            </AlertAction>
+          ) : null}
+          {canManage && !latest ? (
+            <AlertAction asChild>
+              <Link href={`/w/${slug}/knowledge` as Route}>Open Knowledge</Link>
+            </AlertAction>
+          ) : null}
+        </div>
+      }
     >
-      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-warning-soft" aria-hidden>
-        <HelpCircle className="size-5 text-warning" />
-      </span>
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <h2 id="home-gaps" className="text-sm font-semibold">
+      <AlertTitle>
+        <h2 id="home-gaps">
           <span className="tabular-nums">{count}</span>{" "}
           {count === 1 ? "question the AI couldn't answer" : "questions the AI couldn't answer"}
         </h2>
-        {topics.length > 0 ? (
-          <p className="truncate text-xs text-fg-secondary" data-testid="gap-topics">
-            Most asked: <span className="text-fg">{topics.join(" · ")}</span>
-          </p>
-        ) : null}
-        {latest ? (
-          <p className="truncate text-xs text-fg-secondary" data-testid="gap-latest">
-            Latest: “{latest.question}”
-          </p>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {latest?.conversation_id ? (
-          <Button asChild variant="outline">
-            <Link href={`/w/${slug}/inbox/${latest.conversation_id}` as Route}>View thread</Link>
-          </Button>
-        ) : null}
-        {canManage && latest ? (
-          <Button onClick={() => onTrain(latest)}>
-            <Sparkles aria-hidden /> Train AI
-          </Button>
-        ) : null}
-        {canManage && !latest ? (
-          <Button asChild variant="outline">
-            <Link href={`/w/${slug}/knowledge` as Route}>Open Knowledge</Link>
-          </Button>
-        ) : null}
-      </div>
-    </section>
+      </AlertTitle>
+      {topics.length > 0 ? (
+        <AlertDescription className="truncate text-xs" data-testid="gap-topics">
+          Most asked: <span className="text-fg">{topics.join(" · ")}</span>
+        </AlertDescription>
+      ) : null}
+      {latest ? (
+        <AlertDescription className="truncate text-xs" data-testid="gap-latest">
+          Latest: “{latest.question}”
+        </AlertDescription>
+      ) : null}
+    </Alert>
   );
 }
