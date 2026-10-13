@@ -181,8 +181,10 @@ function Meter({
       className={cn("flex min-w-0 flex-col gap-1.5", className)}
       {...props}
     >
-      <div className="flex items-baseline justify-between gap-3 text-xs">
-        <span id={labelId} className="min-w-0 text-fg-secondary">
+      {/* The row wraps: in a narrow tile the figure drops under the label instead of squeezing it to
+          nothing, and a label longer than the row wraps in its own line. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5 text-xs">
+        <span id={labelId} className="min-w-0 break-words text-fg-secondary">
           {label}
         </span>
         <span data-slot="meter-value" className={cn("shrink-0 tabular-nums", FIGURE[tone])}>

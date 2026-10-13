@@ -58,8 +58,8 @@ describe("Tabs", () => {
     expect(tab).toHaveClass(
       "rounded-md",
       "text-fg-secondary",
-      "data-[state=active]:bg-raised",
-      "data-[state=active]:text-brand-fg",
+      "aria-selected:bg-raised",
+      "aria-selected:text-brand-fg",
       "whitespace-nowrap",
       "min-h-8",
       "text-sm",
