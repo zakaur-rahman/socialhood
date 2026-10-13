@@ -530,3 +530,88 @@ describe("keyboard shortcuts (FR-INB-12)", () => {
     expect(window.localStorage.getItem("socialhood:inbox-details")).toBe("0");
   });
 });
+
+// UI-053 (D-14, WCAG 2.1.4): the single-key shortcuts can be turned off, per device, from the Keyboard
+// shortcuts dialog. The setting is read first from localStorage, so each test sets it explicitly (a value
+// written in one test also stays in memory).
+describe("single-key shortcuts switch (D-14)", () => {
+  beforeEach(() => {
+    setWidth(1440);
+    window.localStorage.setItem("socialhood:inbox-shortcuts", "1");
+    window.localStorage.setItem("socialhood:inbox-details", "1");
+  });
+
+  it("? opens the Keyboard shortcuts dialog, which lists the keys and holds the switch (on by default)", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.keyboard("?");
+    const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    const keys = dialog.querySelectorAll("kbd");
+    expect(Array.from(keys).map((key) => key.textContent)).toEqual(["j", "k", "/", "e", "u", "?", "Esc"]);
+    expect(within(dialog).getByRole("switch", { name: "Single-key shortcuts" })).toBeChecked();
+  });
+
+  it("the list header's keyboard button opens it, and Esc returns focus to the button", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    const trigger = screen.getByRole("button", { name: "Keyboard shortcuts" });
+    await user.click(trigger);
+    await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("off: j, k, e, u, / and ? do nothing; the choice is saved on the device", async () => {
+    const user = userEvent.setup();
+    nav.params = { id: "c1" };
+    const { calls } = renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+    await user.click(await screen.findByRole("switch", { name: "Single-key shortcuts" }));
+    expect(window.localStorage.getItem("socialhood:inbox-shortcuts")).toBe("0");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    await user.keyboard("jkeu/?");
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(calls.some((c) => c.method === "PATCH" || c.path.endsWith("/unread"))).toBe(false);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox")).not.toHaveFocus();
+
+    // Esc is not a character key: it still closes the details panel.
+    expect(pane("details")).not.toBeNull();
+    await user.keyboard("{Escape}");
+    expect(pane("details")).toBeNull();
+  });
+
+  it("a stored off keeps them off on load; turning it back on restores them", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("socialhood:inbox-shortcuts", "0");
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.keyboard("j");
+    expect(nav.push).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+    const toggle = await screen.findByRole("switch", { name: "Single-key shortcuts" });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+    expect(window.localStorage.getItem("socialhood:inbox-shortcuts")).toBe("1");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await user.keyboard("j");
+    expect(nav.push).toHaveBeenLastCalledWith("/w/maple/inbox/c1");
+  });
+
+  it("shortcuts with a modifier are left alone", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.keyboard("{Control>}j{/Control}");
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});

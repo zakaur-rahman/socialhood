@@ -1,8 +1,10 @@
 "use client";
 
+import { Keyboard } from "lucide-react";
 import { useEffect, useState, type Ref } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -48,6 +50,7 @@ export function ListHeader({
   view,
   onViewChange,
   counts,
+  onShortcuts,
   search,
   onSearchChange,
   searchRef,
@@ -61,6 +64,8 @@ export function ListHeader({
   onViewChange: (view: InboxView) => void;
   /** Open conversations waiting on a reply or on the owner; the two chips show them when above zero. */
   counts?: Pick<InboxCounts, "needs_reply" | "needs_you">;
+  /** Opens the Keyboard shortcuts dialog (D-14). */
+  onShortcuts?: () => void;
   search: string;
   onSearchChange: (q: string) => void;
   searchRef?: Ref<HTMLInputElement>;
@@ -90,21 +95,35 @@ export function ListHeader({
     <div className="space-y-3 border-b border-line bg-panel px-3 pt-3 pb-2.5">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-lg font-semibold">Inbox</h1>
-        <TabsList size="sm" aria-label="Inbox sections">
-          <TabsTrigger value="chats">Chats</TabsTrigger>
-          {/* The count is part of the tab's name ("Scheduled, 3 to send"); the badge is decoration (UX-SH-01). */}
-          <TabsTrigger
-            value="scheduled"
-            aria-label={scheduledCount > 0 ? `Scheduled, ${countText(scheduledCount)} to send` : undefined}
-          >
-            Scheduled
-            {scheduledCount > 0 ? (
-              <Badge tone="count" size="md" aria-hidden data-testid="scheduled-count">
-                {countText(scheduledCount)}
-              </Badge>
-            ) : null}
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center gap-1">
+          {onShortcuts ? (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Keyboard shortcuts"
+              aria-haspopup="dialog"
+              aria-keyshortcuts="?"
+              onClick={onShortcuts}
+            >
+              <Keyboard aria-hidden />
+            </Button>
+          ) : null}
+          <TabsList size="sm" aria-label="Inbox sections">
+            <TabsTrigger value="chats">Chats</TabsTrigger>
+            {/* The count is part of the tab's name ("Scheduled, 3 to send"); the badge is decoration (UX-SH-01). */}
+            <TabsTrigger
+              value="scheduled"
+              aria-label={scheduledCount > 0 ? `Scheduled, ${countText(scheduledCount)} to send` : undefined}
+            >
+              Scheduled
+              {scheduledCount > 0 ? (
+                <Badge tone="count" size="md" aria-hidden data-testid="scheduled-count">
+                  {countText(scheduledCount)}
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+          </TabsList>
+        </div>
       </div>
 
       {tab === "chats" ? (
