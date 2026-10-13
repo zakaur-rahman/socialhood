@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -50,12 +50,14 @@ const TONE_LABEL = Object.fromEntries(TONE_OPTIONS.map((o) => [o.value, o.label]
 const EMOJI_LABEL = Object.fromEntries(EMOJI_OPTIONS.map((o) => [o.value, o.label])) as Record<EmojiPolicy, string>;
 
 /**
- * FR-KB-04 / F-14: how replies sound. Opens as a form while the business description is empty
- * (the first visit); afterwards it shows a summary with Edit. Saves the whole settings object.
+ * FR-KB-04 / F-14: how replies sound. Always collapsed to a summary (UI-ISS-089): "Set up" while
+ * the business description is empty (the first visit), "Edit" afterwards; either opens the form
+ * in place. Saves the whole settings object.
  */
 export function BrandVoiceCard({ wid, settings, workspaceName }: { wid: string; settings: AiSettings; workspaceName: string }) {
   const [editing, setEditing] = useState(false);
-  const open = editing || !settings.business_description?.trim();
+  const open = editing;
+  const described = Boolean(settings.business_description?.trim());
 
   return (
     <Card asChild padding="roomy">
@@ -65,8 +67,8 @@ export function BrandVoiceCard({ wid, settings, workspaceName }: { wid: string; 
           <CardDescription>How suggested and automatic replies sound.</CardDescription>
           {!open ? (
             <CardAction>
-              <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-                <Pencil aria-hidden /> Edit
+              <Button variant={described ? "ghost" : "secondary"} size="sm" onClick={() => setEditing(true)}>
+                <Pencil aria-hidden /> {described ? "Edit" : "Set up"}
               </Button>
             </CardAction>
           ) : null}
@@ -77,8 +79,12 @@ export function BrandVoiceCard({ wid, settings, workspaceName }: { wid: string; 
             settings={settings}
             workspaceName={workspaceName}
             onDone={() => setEditing(false)}
-            onCancel={editing ? () => setEditing(false) : undefined}
+            onCancel={() => setEditing(false)}
           />
+        ) : !described ? (
+          <p className="mt-4 text-sm text-fg-secondary" data-testid="brand-voice-empty">
+            Not set up yet. Describe your business so replies sound like you.
+          </p>
         ) : (
           <div className="mt-4 space-y-2 text-sm">
             <p className="font-medium">{settings.business_name?.trim() || workspaceName}</p>
@@ -112,6 +118,9 @@ function BrandVoiceForm({
   const update = useUpdateAiSettings(wid);
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: formValues(settings) });
   const { errors, isDirty } = form.formState;
+  // The form opens from "Set up" or "Edit": the cursor goes to its first field.
+  const { setFocus } = form;
+  useEffect(() => setFocus("business_name"), [setFocus]);
   // Brand voice saves with Save only: leaving with changes asks first (UI-ISS-022).
   useLeaveWarning(isDirty);
 
