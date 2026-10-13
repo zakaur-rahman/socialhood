@@ -220,7 +220,7 @@ describe("search and filters (C-066)", () => {
 });
 
 describe("deleting an account's data (C-067)", () => {
-  it("Disconnect and delete data sends the typed handle, then the list shows Deleting…", async () => {
+  it("Delete account and data sends the typed handle, then the list shows Deleting…", async () => {
     const user = userEvent.setup();
     let deleting = false;
     const { calls } = renderWithApi(<ConnectionsPage />, {
@@ -234,7 +234,8 @@ describe("deleting an account's data (C-067)", () => {
       },
     });
     const card = await screen.findByRole("article", { name: "Maple Bakery" });
-    await user.click(within(card).getByRole("button", { name: "Disconnect and delete data" }));
+    await user.click(within(card).getByRole("button", { name: /More actions/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete account and data" }));
     const dialog = await screen.findByRole("alertdialog");
     await user.type(within(dialog).getByLabelText(/to confirm/), "@maple.bakery");
     await user.click(within(dialog).getByRole("button", { name: "Disconnect and delete" }));
@@ -259,7 +260,8 @@ describe("deleting an account's data (C-067)", () => {
       },
     });
     const card = await screen.findByRole("article", { name: "Maple Bakery" });
-    await user.click(within(card).getByRole("button", { name: "Remove" }));
+    await user.click(within(card).getByRole("button", { name: /More actions/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete account and data" }));
     const dialog = await screen.findByRole("alertdialog");
     await user.type(within(dialog).getByLabelText(/to confirm/), "maple.bakery");
     await user.click(within(dialog).getByRole("button", { name: "Remove account" }));

@@ -1,11 +1,17 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ApiError } from "@/lib/api/errors";
 import type { SocialAccount } from "@/lib/api/types";
 
 import { AccountCard, type AccountActions } from "./AccountCard";
+
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
 
 const base: SocialAccount = {
   id: "a1",
@@ -121,22 +127,37 @@ describe("AccountCard (UX-SCR-07)", () => {
     expect(within(card).queryByRole("switch", { name: /Hide spam comments/ })).toBeNull();
   });
 
-  it("a disconnected card offers Reconnect and Remove (C-067)", () => {
+  it("a disconnected card offers Reconnect and the menu; nothing on it says delete (D-09)", () => {
     const { card } = renderCard({ status: "disconnected" });
-    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual(["Reconnect", "Remove"]);
-  });
-
-  it("a connected card offers Disconnect and Disconnect and delete data; a sandbox, Remove", () => {
-    const { card } = renderCard();
-    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual([
-      "Disconnect",
-      "Disconnect and delete data",
+    expect(within(card).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"))).toEqual([
+      "Reconnect",
+      "More actions for Maple Bakery",
     ]);
   });
 
-  it("a connected sandbox can be removed straight away", () => {
+  it("a connected card shows Disconnect as a neutral ghost button and the menu, no red (D-09)", () => {
+    const { card } = renderCard();
+    expect(within(card).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"))).toEqual([
+      "Disconnect",
+      "More actions for Maple Bakery",
+    ]);
+    expect(within(card).getByRole("button", { name: "Disconnect" })).toHaveAttribute("data-variant", "ghost");
+    expect(card.innerHTML).not.toMatch(/[\s"](?:text|bg)-danger/);
+  });
+
+  it("a connected sandbox gets the same menu", () => {
     const { card } = renderCard({ sandbox: true });
-    expect(within(card).getAllByRole("button").map((b) => b.textContent)).toEqual(["Disconnect", "Remove"]);
+    expect(within(card).getAllByRole("button").map((b) => b.textContent || b.getAttribute("aria-label"))).toEqual([
+      "Disconnect",
+      "More actions for Maple Bakery",
+    ]);
+  });
+
+  it("choosing Auto on Free reaches the handler (the page opens the upgrade dialog)", async () => {
+    const { card, handlers } = renderCard({}, { plan: "free" });
+    await userEvent.click(within(card).getByRole("combobox", { name: /AI replies/ }));
+    await userEvent.click(await screen.findByRole("option", { name: /Auto/ }));
+    expect(handlers.onChange).toHaveBeenCalledWith({ ai_mode: "auto" });
   });
 
   it("asks before disconnecting, and keeps the data (FR-CON-06)", async () => {
@@ -153,16 +174,17 @@ describe("AccountCard (UX-SCR-07)", () => {
 });
 
 describe("deleting an account's data (C-067)", () => {
-  async function open(card: HTMLElement, trigger: string) {
+  async function open(card: HTMLElement) {
     const user = userEvent.setup();
-    await user.click(within(card).getByRole("button", { name: trigger }));
+    await user.click(within(card).getByRole("button", { name: /More actions/ }));
+    await user.click(await screen.findByRole("menuitem", { name: "Delete account and data" }));
     const dialog = await screen.findByRole("alertdialog");
     return { user, dialog, input: within(dialog).getByLabelText(/to confirm/) };
   }
 
-  it("Disconnect and delete data says what goes and what stays, and needs the handle typed", async () => {
+  it("Delete account and data on a connected account says what goes and what stays, and needs the handle typed", async () => {
     const { card, handlers } = renderCard();
-    const { user, dialog, input } = await open(card, "Disconnect and delete data");
+    const { user, dialog, input } = await open(card);
     expect(within(dialog).getByText("Disconnect @maple.bakery and delete its data?")).toBeInTheDocument();
     const deleted = within(dialog).getByRole("region", { name: "Deleted" });
     expect(within(deleted).getByText("Its conversations, messages and contacts")).toBeInTheDocument();
@@ -182,14 +204,14 @@ describe("deleting an account's data (C-067)", () => {
     await vi.waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   });
 
-  it("Remove uses the same dialog; a WhatsApp number can be typed with any spacing", async () => {
+  it("a disconnected account uses the same dialog, in its Remove wording; a WhatsApp number can be typed with any spacing", async () => {
     const { card, handlers } = renderCard({
       status: "disconnected",
       platform: "whatsapp",
       username: null,
       phone_number: "+91 98765 43210",
     });
-    const { user, dialog, input } = await open(card, "Remove");
+    const { user, dialog, input } = await open(card);
     expect(within(dialog).getByText("Remove Maple Bakery?")).toBeInTheDocument();
     expect(within(dialog).getByText("+91 98765 43210")).toBeInTheDocument();
     await user.type(input, "919876543210");
@@ -208,7 +230,7 @@ describe("deleting an account's data (C-067)", () => {
         errors: [{ field: "confirm", message: "Type @maple.bakery exactly as shown to confirm." }],
       }),
     );
-    const { user, dialog, input } = await open(card, "Disconnect and delete data");
+    const { user, dialog, input } = await open(card);
     await user.type(input, "@maple.bakery");
     await user.click(within(dialog).getByRole("button", { name: "Disconnect and delete" }));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Type @maple.bakery exactly as shown to confirm.");

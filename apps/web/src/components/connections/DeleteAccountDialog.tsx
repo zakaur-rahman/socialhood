@@ -10,7 +10,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,16 +50,17 @@ export function confirms(account: SocialAccount, typed: string): boolean {
   return given.toLowerCase() === confirmationTarget(account).toLowerCase();
 }
 
-const COPY: Record<DeleteMode, { trigger: string; action: string; title: (handle: string) => string; lead: (handle: string) => string }> = {
+/** D-09: the one menu item that opens this dialog, for both modes. */
+export const DELETE_ACCOUNT_LABEL = "Delete account and data";
+
+const COPY: Record<DeleteMode, { action: string; title: (handle: string) => string; lead: (handle: string) => string }> = {
   disconnect: {
-    trigger: "Disconnect and delete data",
     action: "Disconnect and delete",
     title: (handle) => `Disconnect ${handle} and delete its data?`,
     lead: (handle) =>
       `Social Hood disconnects ${handle} now, then permanently deletes everything stored for it. This can't be undone.`,
   },
   remove: {
-    trigger: "Remove",
     action: "Remove account",
     title: (handle) => `Remove ${handle}?`,
     lead: (handle) => `Social Hood permanently deletes ${handle} and everything stored for it. This can't be undone.`,
@@ -68,24 +68,31 @@ const COPY: Record<DeleteMode, { trigger: string; action: string; title: (handle
 };
 
 /**
- * C-067: Disconnect and delete data (a connected account) and Remove (a disconnected or sandbox
- * one) share this dialog: what goes and what stays, then the account's handle or number typed to
- * confirm. `onConfirm` resolves once the API accepted it; a 422 on `confirm` shows under the field.
+ * C-067: deleting a connected account's data (Disconnect and delete) and removing a disconnected or
+ * sandbox one share this dialog: what goes and what stays, then the account's handle or number typed
+ * to confirm. `onConfirm` resolves once the API accepted it; a 422 on `confirm` shows under the field.
+ * D-09: the card's menu opens it ("Delete account and data"), so the caller owns `open`.
  */
 export function DeleteAccountDialog({
   account,
   handle,
   mode,
   pending,
+  open,
+  onOpenChange: setOpen,
+  onCloseAutoFocus,
   onConfirm,
 }: {
   account: SocialAccount;
   handle: string;
   mode: DeleteMode;
   pending: boolean;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Where focus goes when the dialog closes: the menu button that opened it (it has no trigger). */
+  onCloseAutoFocus?: (event: Event) => void;
   onConfirm: (confirm: string) => Promise<void>;
 }) {
-  const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const copy = COPY[mode];
@@ -96,11 +103,17 @@ export function DeleteAccountDialog({
   const onOpenChange = (next: boolean) => {
     if (pending) return;
     setOpen(next);
-    if (next) {
+  };
+
+  // Each opening starts with an empty field and no error.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
       setTyped("");
       setFieldError(null);
     }
-  };
+  }
 
   const submit = async () => {
     if (!matches || pending) return;
@@ -115,12 +128,7 @@ export function DeleteAccountDialog({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogTrigger asChild>
-        <Button variant="destructive-ghost" size="lg">
-          {copy.trigger}
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
+      <AlertDialogContent onCloseAutoFocus={onCloseAutoFocus}>
         <AlertDialogHeader>
           <AlertDialogTitle>{copy.title(handle)}</AlertDialogTitle>
           <AlertDialogDescription asChild>
