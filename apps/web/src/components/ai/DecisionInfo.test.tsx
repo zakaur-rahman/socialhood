@@ -76,11 +76,11 @@ beforeEach(() => {
 });
 
 describe("Sent by AI (F-09, FR-SUG-04)", () => {
-  it("the bubble says AI Assisted; its info button shows the decision's checks", async () => {
+  it("the bubble says Sent by AI; its info button shows the decision's checks", async () => {
     const user = userEvent.setup();
     const { calls } = setup();
     const bubble = (await screen.findByText("Yes, we ship to Dubai in 5–7 days.")).closest("[data-message-id]") as HTMLElement;
-    await user.hover(within(bubble).getByText("AI Assisted"));
+    await user.hover(within(bubble).getByText("Sent by AI"));
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Sent by AI: an auto reply");
     // Loaded only when asked for.
     expect(calls.some((c) => c.path.endsWith("/ai-decision"))).toBe(false);
