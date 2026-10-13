@@ -16,11 +16,12 @@ import { useCreateAutomation } from "@/lib/api/queries";
 import type { AutomationTemplate, SocialAccount, TemplateCategory } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
 import { DEFAULT_NAME } from "@/lib/automations/definition";
-import { CATEGORY_LABEL, TRIGGER_LABEL } from "@/lib/automations/format";
+import { CATEGORY_LABEL, TRIGGER_LABEL_IG } from "@/lib/automations/format";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { InstagramOnlyNotice } from "./InstagramOnlyNotice";
 import { useReturnFocusOr } from "./return-focus";
 import { TemplateIcon } from "./TemplateIcon";
 
@@ -82,6 +83,7 @@ export function TemplateGallery({
   /** Where focus goes on close when what opened it isn't on this page (a link from Home). */
   returnFocusFallback?: () => HTMLElement | null;
 }) {
+  const workspace = useCurrentWorkspace();
   const [category, setCategory] = useState<TemplateCategory | "all">("all");
   const [asking, setAsking] = useState<{ choice: Choice } | null>(
     initialChoice !== undefined ? { choice: initialChoice } : null,
@@ -127,6 +129,9 @@ export function TemplateGallery({
               <DialogTitle>New automation</DialogTitle>
               <DialogDescription>Start from a template and change anything, or start from blank.</DialogDescription>
             </DialogHeader>
+            {accounts.length === 0 ? (
+              <InstagramOnlyNotice slug={workspace.slug} variant="inline" canConnect={workspace.role !== "agent"} />
+            ) : null}
             <ToggleGroup
               variant="chips"
               aria-label="Categories"
@@ -211,7 +216,7 @@ export function TemplateCard({
       </h3>
       <p className="mt-1 flex-1 text-sm text-fg-secondary">{template.outcome}</p>
       <div className="mt-3 flex flex-wrap gap-1.5">
-        <Badge>{TRIGGER_LABEL[template.trigger]}</Badge>
+        <Badge>{TRIGGER_LABEL_IG[template.trigger]}</Badge>
         <Badge>
           {template.action === "ai_reply" ? <Sparkles aria-hidden /> : null}
           {ACTION_TAG[template.action]}

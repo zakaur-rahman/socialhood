@@ -24,6 +24,13 @@ export const TRIGGER_LABEL: Record<TriggerName, string> = {
   dm_keyword: "DM keyword",
 };
 
+/** Where the trigger is named: the editor, the gallery and the list's filter say which network (UI-064). */
+export const TRIGGER_LABEL_IG: Record<TriggerName, string> = {
+  comment_keyword: "Instagram comment keyword",
+  comment_any: "Any Instagram comment",
+  dm_keyword: "Instagram DM keyword",
+};
+
 export const MATCH_LABEL: Record<MatchMode, string> = {
   word: "Whole word",
   exact: "Exact message",

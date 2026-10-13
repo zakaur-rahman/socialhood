@@ -21,7 +21,7 @@ test.describe("F-11 create a keyword automation", () => {
     await expect(page.getByTestId("save-status")).toHaveText("Saved");
 
     const when = page.getByRole("region", { name: /^When/ });
-    await expect(when.getByRole("radio", { name: "DM keyword" })).toBeChecked();
+    await expect(when.getByRole("radio", { name: "Instagram DM keyword" })).toBeChecked();
     const keywords = page.getByRole("region", { name: /^Keywords/ }).getByRole("list", { name: "Keywords" });
     await expect(keywords).toContainText("catalogue");
     await expect(keywords).toContainText("catalog");

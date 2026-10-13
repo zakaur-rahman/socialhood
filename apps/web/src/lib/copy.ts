@@ -66,6 +66,14 @@ export const emptyStates = {
   },
 } as const;
 
+/** UI-064: automations answer comments and DMs on Instagram only; said first when there is no account. */
+export const instagramOnly = {
+  title: "Automations work on Instagram",
+  body: "They reply to Instagram comments and DMs, and WhatsApp isn't supported yet. Connect an Instagram account to create one.",
+  action: "Connect Instagram",
+  ask: "Ask an owner or admin to connect Instagram.",
+} as const;
+
 /** "All caught up" when a view or search has no results (§4.7). */
 export function inboxFilterEmpty(what: string): { title: string; body: string } {
   return { title: "All caught up", body: `Nothing matches "${what}" right now.` };

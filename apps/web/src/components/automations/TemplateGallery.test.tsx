@@ -78,7 +78,7 @@ describe("TemplateGallery (UX-SCR-11)", () => {
   it("shows the card's trigger and action, and Pro on Free for paid templates", () => {
     renderGallery([account()], "free");
     const card = screen.getByRole("article", { name: "Price on request" });
-    expect(card).toHaveTextContent("Comment keyword");
+    expect(card).toHaveTextContent("Instagram comment keyword");
     expect(card).toHaveTextContent("AI reply");
     expect(within(card).getByText("Pro")).toBeInTheDocument();
     expect(within(screen.getByRole("article", { name: "Send a link to commenters" })).queryByText("Pro")).toBeNull();
