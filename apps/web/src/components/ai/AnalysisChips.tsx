@@ -30,7 +30,7 @@ import { EYEBROW } from "@/styles/tokens";
  * hit area from a pseudo-element instead of a 40 px box (DESIGN_SYSTEM §8.4, the chip-remove rule).
  */
 export const INLINE_ICON_BUTTON =
-  "relative grid size-6 shrink-0 place-items-center rounded-full text-fg-secondary transition-[color,background-color] duration-fast ease-standard after:absolute after:inset-0 hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg pointer-coarse:after:-inset-2";
+  "relative grid size-6 shrink-0 place-items-center rounded-lg text-fg-secondary transition-[color,background-color] duration-fast ease-standard after:absolute after:inset-0 hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg pointer-coarse:after:-inset-2";
 
 export function IntentChip({ intent }: { intent: Intent }) {
   return <Badge tone="brand">{INTENT_LABEL[intent]}</Badge>;

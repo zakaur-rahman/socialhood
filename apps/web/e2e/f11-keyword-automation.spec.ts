@@ -51,7 +51,7 @@ test.describe("F-11 create a keyword automation", () => {
     await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
 
     // The list shows it active, with its keywords and no runs yet.
-    await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Automations" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Automations", exact: true }).click();
     const row = page.getByRole("listitem").filter({ has: page.getByRole("switch", { name: "Active: Catalogue by DM" }) });
     await expect(row.getByRole("switch", { name: "Active: Catalogue by DM" })).toBeChecked();
     await expect(row).toContainText("catalogue");

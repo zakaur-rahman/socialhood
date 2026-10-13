@@ -20,9 +20,9 @@ const count = new Intl.NumberFormat("en-US");
  * Ask (UX-INB-07, DESIGN_SYSTEM §8.3; AGENT_CONTEXT §6) takes the inbox Send's recipe: the primary
  * Button once there is a question to send; while empty, a disabled `secondary` Button that keeps
  * the neutral look (`raised` with `fg-disabled`, at full opacity) instead of the usual `opacity-50`.
- * 32 px, 40 px on coarse pointers. Round until the composer radius decision lands (D-16, UI-065).
+ * 32 px, 40 px on coarse pointers. Rounded like every icon-only button (D-16).
  */
-const SEND = "rounded-full";
+const SEND = "rounded-lg";
 const SEND_EMPTY = "disabled:text-fg-disabled disabled:opacity-100";
 
 /**
@@ -95,7 +95,7 @@ export function AskComposer({
     <form onSubmit={submit} className={cn("shrink-0", className)}>
       {/* The textarea draws no outline of its own; the field shows the focus outline, as the inbox
           composer's does (DESIGN_SYSTEM §8.3). Its radius waits for D-16. */}
-      <div className="flex items-end gap-2 rounded-2xl border border-line bg-field py-1.5 pr-1.5 pl-4 focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
+      <div className="flex items-end gap-2 rounded-xl border border-line bg-field py-1.5 pr-1.5 pl-4 focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
         <label htmlFor={id} className="sr-only">
           Ask Social Hood a question
         </label>
@@ -122,7 +122,7 @@ export function AskComposer({
                 onClick={onStop}
                 disabled={stopping || !onStop}
                 aria-label="Stop"
-                className="grid size-8 shrink-0 place-items-center rounded-full bg-fg text-canvas hover:bg-fg/90 disabled:opacity-50 motion-safe:transition-[background-color] pointer-coarse:size-10"
+                className="grid size-8 shrink-0 place-items-center rounded-lg bg-fg text-canvas hover:bg-fg/90 disabled:opacity-50 motion-safe:transition-[background-color] pointer-coarse:size-10"
               >
                 <Square className="size-3 fill-current" aria-hidden />
               </button>

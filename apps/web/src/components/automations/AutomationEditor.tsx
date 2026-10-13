@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { BackLink } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
@@ -242,12 +243,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
     <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-4">
         <div className="min-w-0 flex-1 basis-64">
-          <nav aria-label="Breadcrumb" className="text-xs text-fg-secondary">
-            <Link href={`/w/${slug}/automations` as Route} className="hover:text-fg hover:underline">
-              Automations
-            </Link>{" "}
-            <span aria-hidden>/</span>
-          </nav>
+          <BackLink href={`/w/${slug}/automations` as Route} label="Automations" />
           <input
             aria-label="Automation name"
             value={draft.name}
@@ -259,7 +255,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             aria-invalid={nameError ? true : undefined}
             // The page title, edited in place: no field look until hovered or focused, then the
             // global focus outline; 40 px on touch like every control (DESIGN_SYSTEM §8.4).
-            className="-mx-1 w-full rounded-md bg-transparent px-1 text-xl font-semibold hover:bg-hover focus:bg-field pointer-coarse:min-h-10"
+            className="-mx-1 w-full rounded-md bg-transparent px-1 text-2xl font-semibold tracking-tight hover:bg-hover focus:bg-field pointer-coarse:min-h-10"
           />
           {nameError ? <p className="text-xs text-danger-fg">{nameError}</p> : null}
         </div>
@@ -300,25 +296,6 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
       ) : null}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <Card
-          asChild
-          className="xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1 xl:self-start"
-        >
-        <aside aria-label="Preview and results">
-          <SidePanel
-            wid={wid}
-            slug={slug}
-            automationId={server.id}
-            draft={draft}
-            accountUsername={account?.username ?? null}
-            disclosure={disclosure}
-            mediaUrl={mediaUrl}
-            timeZone={timeZone}
-            beforeTest={flush}
-          />
-        </aside>
-        </Card>
-
         <div className="min-w-0 space-y-4 xl:col-start-1 xl:row-start-1 xl:max-w-[720px]">
           {server.queue.waiting > 0 ? (
             <QueueBanner queue={server.queue} order={draft.surge_order} onOrderChange={(order) => change({ surge_order: order })} />
@@ -401,6 +378,25 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             </div>
           </div>
         </div>
+        <Card
+          asChild
+          className="xl:sticky xl:top-6 xl:col-start-2 xl:row-start-1 xl:self-start"
+        >
+        <aside aria-label="Preview and results">
+          <SidePanel
+            wid={wid}
+            slug={slug}
+            automationId={server.id}
+            draft={draft}
+            accountUsername={account?.username ?? null}
+            disclosure={disclosure}
+            mediaUrl={mediaUrl}
+            timeZone={timeZone}
+            beforeTest={flush}
+          />
+        </aside>
+        </Card>
+
       </div>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>

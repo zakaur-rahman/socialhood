@@ -669,7 +669,7 @@ describe("The question box", () => {
     const { panel } = await openPanel();
     const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
     const field = box.parentElement!;
-    expect(field).toHaveClass("rounded-2xl", "border", "bg-field", "has-[textarea:focus-visible]:outline-brand");
+    expect(field).toHaveClass("rounded-xl", "border", "bg-field", "has-[textarea:focus-visible]:outline-brand");
     expect(field.className).not.toMatch(/ring-3/);
     expect(field).toContainElement(within(panel).getByRole("button", { name: "Ask" }));
     expect(box).toHaveClass("overflow-y-hidden", "resize-none");

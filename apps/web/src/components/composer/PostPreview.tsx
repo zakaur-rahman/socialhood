@@ -225,7 +225,7 @@ function FeedPreview({
                 type="button"
                 aria-label="Previous item"
                 onClick={() => setSlide(index - 1)}
-                className="absolute top-1/2 left-2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
+                className="absolute top-1/2 left-2 grid size-8 -translate-y-1/2 place-items-center rounded-lg bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
               >
                 <ChevronLeft className="size-4" aria-hidden />
               </button>
@@ -235,7 +235,7 @@ function FeedPreview({
                 type="button"
                 aria-label="Next item"
                 onClick={() => setSlide(index + 1)}
-                className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 place-items-center rounded-full bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
+                className="absolute top-1/2 right-2 grid size-8 -translate-y-1/2 place-items-center rounded-lg bg-fg/80 text-canvas hover:bg-fg pointer-coarse:size-10"
               >
                 <ChevronRight className="size-4" aria-hidden />
               </button>
