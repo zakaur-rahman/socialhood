@@ -37,7 +37,8 @@ import { InboxUiProvider, useInboxLayout, type InboxLayout, type InboxUi } from 
 import { ListHeader, VIEWS, type InboxTab } from "./ListHeader";
 import { PlatformStrip, type PlatformChoice } from "./PlatformStrip";
 import { ScheduledList } from "./ScheduledList";
-import { useInboxShortcuts } from "./use-inbox-shortcuts";
+import { ShortcutsDialog } from "./ShortcutsDialog";
+import { useInboxShortcuts, useSingleKeyShortcuts } from "./use-inbox-shortcuts";
 
 const PLATFORM_ORDER: Platform[] = ["instagram", "whatsapp"];
 
@@ -269,6 +270,10 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   );
 
   const searchRef = useRef<HTMLInputElement>(null);
+  // D-14: the per-device switch for the single-key shortcuts lives in the Keyboard shortcuts dialog, which the
+  // list header's keyboard button and "?" open.
+  const [singleKeys] = useSingleKeyShortcuts();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useInboxShortcuts({
     move: (step) => {
       const index = selectedId ? items.findIndex((item) => item.id === selectedId) : -1;
@@ -292,11 +297,12 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
     markUnread: () => {
       if (selectedId) markUnread(selectedId);
     },
+    help: () => setShortcutsOpen(true),
     escape: () => {
       if (detailsOpen) closeDetails();
       else if (layout === "phone" && selectedId) open(null);
     },
-  });
+  }, singleKeys);
 
   const ui: InboxUi = {
     layout,
@@ -318,6 +324,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
 
   return (
     <InboxUiProvider value={ui}>
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <InboxFrame>
         {showList ? (
           <section
@@ -338,6 +345,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                 view={view}
                 onViewChange={changeView}
                 counts={counts}
+                onShortcuts={() => setShortcutsOpen(true)}
                 search={q}
                 onSearchChange={setQ}
                 searchRef={searchRef}
