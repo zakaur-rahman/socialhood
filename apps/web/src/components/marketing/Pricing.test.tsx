@@ -31,7 +31,7 @@ describe("the pricing section", () => {
     expect(pro.getByText("7-day free trial")).toBeInTheDocument();
     expect(pro.getByText(/A card is required to start the trial/)).toBeInTheDocument();
     expect(pro.getByText("AI replies: Off, Suggest and Auto")).toBeInTheDocument();
-    expect(pro.getByRole("link", { name: "Start free, then try Pro" })).toHaveAttribute("href", "/sign-up");
+    expect(pro.getByRole("link", { name: "Start free, then try Pro" })).toHaveAttribute("href", "/sign-up?redirect_url=%2Fapp%3Fplan%3Dpro");
 
     const free = within(card("Free"));
     expect(free.getByText("No card needed")).toBeInTheDocument();

@@ -1,12 +1,11 @@
 "use client";
 
 import { FileText, Globe, HelpCircle, Pencil, Plus, StickyNote, Trash2, type LucideIcon } from "lucide-react";
-import Link from "next/link";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useReturnFocus } from "@/components/agent/use-return-focus";
-import { BILLING_HREF } from "@/components/shell/nav";
+import { knowledgeUpgrade } from "@/components/billing/upgrade-requests";
 import { EmptyState } from "@/components/states/EmptyState";
 import {
   AlertDialog,
@@ -30,6 +29,7 @@ import {
 import { Meter } from "@/components/ui/meter";
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useUpgradeDialog } from "@/lib/api/provider";
 import { isProcessing, useDeleteKnowledgeSource } from "@/lib/api/queries";
 import type { KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
 import { emptyStates, knowledgeLimitReached } from "@/lib/copy";
@@ -139,6 +139,7 @@ export function SourcesCard({
 }) {
   const workspace = useCurrentWorkspace();
   const remove = useDeleteKnowledgeSource(workspace.id);
+  const upgradeDialog = useUpgradeDialog();
   const [deleting, setDeleting] = useState<KnowledgeSource | null>(null);
   // The confirmation opens from a row's Delete without a Radix trigger: Cancel or Esc returns focus there.
   const returnFocus = useReturnFocus();
@@ -166,8 +167,8 @@ export function SourcesCard({
               fullMessage={knowledgeLimitReached(usage.characters_limit)}
               action={
                 workspace.role === "agent" ? undefined : (
-                  <Button asChild variant="link" size="xs">
-                    <Link href={BILLING_HREF(workspace.slug)}>Upgrade</Link>
+                  <Button type="button" variant="link" size="xs" onClick={() => upgradeDialog.open(knowledgeUpgrade(usage.characters_limit))}>
+                    Upgrade
                   </Button>
                 )
               }

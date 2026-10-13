@@ -11,6 +11,12 @@ import { MobileNav } from "./MobileNav";
 let pathname = "/w/aria/home";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 
+const openUpgrade = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/api/provider", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/api/provider")>()),
+  useUpgradeDialog: () => ({ request: null, open: openUpgrade, close: vi.fn() }),
+}));
+
 const owner: SidebarWorkspace = { name: "Aria Label", slug: "aria", plan: "free", role: "owner" };
 
 function renderWithProviders(node: ReactNode) {
@@ -202,7 +208,7 @@ describe("usage card (FR-AI-05)", () => {
     return screen.queryByRole("meter", { name: "AI credits" });
   }
   function upgrade() {
-    return screen.queryByRole("link", { name: "Upgrade" });
+    return screen.queryByRole("button", { name: "Upgrade" });
   }
 
   it("Free: the meter and Upgrade for owners and admins", () => {
@@ -212,9 +218,20 @@ describe("usage card (FR-AI-05)", () => {
     expect(meter()).toHaveAttribute("aria-valuemax", "200");
     expect(meter()?.closest("[data-slot=meter]")).toHaveAttribute("data-level", "normal");
     expect(screen.getByText("50 of 200 used")).toBeInTheDocument();
-    expect(upgrade()).toHaveAttribute("href", "/w/aria/settings/billing");
+    expect(upgrade()).toBeInTheDocument();
     rerender({ workspace: { ...owner, role: "admin" } });
     expect(upgrade()).toBeInTheDocument();
+  });
+
+  it("Upgrade opens the upgrade dialog (UI-063): a plain upgrade, or the credit limit once they are used up", async () => {
+    openUpgrade.mockClear();
+    const user = userEvent.setup();
+    const { rerender } = renderSidebar({ credits: { used: 50, limit: 200, plan: "free" } });
+    await user.click(upgrade()!);
+    expect(openUpgrade).toHaveBeenLastCalledWith({ code: "entitlement_required", entitlement: "pro" });
+    rerender({ credits: { used: 200, limit: 200, plan: "free" } });
+    await user.click(upgrade()!);
+    expect(openUpgrade).toHaveBeenLastCalledWith({ code: "quota_exceeded", entitlement: "ai_credits_monthly", limit: 200 });
   });
 
   it("paying and under 80 %: the quiet meter, no Upgrade", () => {

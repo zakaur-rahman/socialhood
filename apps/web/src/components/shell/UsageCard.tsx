@@ -1,13 +1,12 @@
 "use client";
 
-import Link from "next/link";
-
+import { creditsUpgrade } from "@/components/billing/upgrade-requests";
 import { CardInset } from "@/components/ui/card";
 import { Meter } from "@/components/ui/meter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useUpgradeDialog } from "@/lib/api/provider";
 
-import { BILLING_HREF } from "./nav";
 import { creditsUsedText, type UsageView } from "./usage";
 
 /**
@@ -18,14 +17,11 @@ import { creditsUsedText, type UsageView } from "./usage";
 export function UsageCard({
   view,
   collapsed,
-  slug,
-  onNavigate,
 }: {
   view: UsageView;
   collapsed: boolean;
-  slug: string;
-  onNavigate?: () => void;
 }) {
+  const upgradeDialog = useUpgradeDialog();
   if (view.kind === "hidden") return null;
   if (view.kind === "loading") {
     if (collapsed) return null;
@@ -57,13 +53,15 @@ export function UsageCard({
       <Meter label="AI credits" value={used} max={limit} valueText={text} />
       {upgrade ? (
         <div className="mt-2 flex justify-end">
-          <Link
-            href={BILLING_HREF(slug)}
-            onClick={onNavigate}
+          {/* Opens the upgrade dialog like every Upgrade (UI-063); the drawer stays under it, so
+              closing the dialog returns focus here. */}
+          <button
+            type="button"
+            onClick={() => upgradeDialog.open(creditsUpgrade(used, limit))}
             className="bg-shell-gradient flex h-6 shrink-0 items-center rounded-md px-2.5 text-xs font-medium text-on-brand hover:brightness-110 motion-safe:transition-[filter] pointer-coarse:h-10"
           >
             Upgrade
-          </Link>
+          </button>
         </div>
       ) : null}
     </CardInset>

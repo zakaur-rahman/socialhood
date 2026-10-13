@@ -17,6 +17,7 @@ import type { AutomationTemplate, SocialAccount, TemplateCategory } from "@/lib/
 import { accountLabel } from "@/lib/automations/accounts";
 import { DEFAULT_NAME } from "@/lib/automations/definition";
 import { CATEGORY_LABEL, TRIGGER_LABEL_IG } from "@/lib/automations/format";
+import { billingCopy } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -215,6 +216,7 @@ export function TemplateCard({
         {template.name}
       </h3>
       <p className="mt-1 flex-1 text-sm text-fg-secondary">{template.outcome}</p>
+      {showPro ? <p className="mt-2 text-xs text-fg-secondary">{billingCopy.proTemplateNote}</p> : null}
       <div className="mt-3 flex flex-wrap gap-1.5">
         <Badge>{TRIGGER_LABEL_IG[template.trigger]}</Badge>
         <Badge>

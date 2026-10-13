@@ -9,6 +9,8 @@ import type { BillingState } from "@/lib/api/types";
 import { browser } from "@/lib/billing/browser";
 import { billingState, json, planList, problem, renderWithApi, workspace } from "@/test/api";
 
+import { PLAN_UPGRADE } from "./upgrade-requests";
+
 const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
 
@@ -141,7 +143,9 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     const dialog = await screen.findByRole("dialog", { name: "Automation limit reached" });
     expect(dialog).toHaveTextContent("Ask an owner of this workspace to upgrade.");
     expect(within(dialog).queryByRole("link")).not.toBeInTheDocument();
-    await user.click(within(dialog).getByRole("button", { name: "Not now" }));
+    // Nothing else to choose, so "OK" and not "Not now" (UI-ISS-106).
+    expect(within(dialog).queryByRole("button", { name: "Not now" })).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole("button", { name: "OK" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
@@ -175,6 +179,27 @@ describe("UpgradeDialog: every 402 opens it (F-15, T8.4)", () => {
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(activate).toHaveFocus();
+  });
+
+  it("a plain Upgrade button (UI-063) says what Pro adds and Esc returns focus to it", async () => {
+    function UpgradeButton() {
+      const { open } = useUpgradeDialog();
+      return (
+        <button type="button" onClick={() => open(PLAN_UPGRADE)}>
+          Upgrade
+        </button>
+      );
+    }
+    const user = userEvent.setup();
+    setup({ ui: <UpgradeButton /> });
+    const button = screen.getByRole("button", { name: "Upgrade" });
+    await user.click(button);
+    const dialog = await screen.findByRole("dialog", { name: "Upgrade to Pro" });
+    expect(dialog).toHaveTextContent("Pro adds Auto replies");
+    expect(await within(dialog).findByRole("button", { name: "Start 7-day trial" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(button).toHaveFocus();
   });
 
   it("other errors don't open it, and a mutation can opt out", async () => {

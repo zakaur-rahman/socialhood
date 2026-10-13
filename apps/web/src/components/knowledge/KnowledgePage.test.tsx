@@ -334,6 +334,10 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
     expect(meter).toHaveAttribute("aria-valuetext", "200,000 of 200,000 characters");
     expect(meter.closest("[data-level]")).toHaveAttribute("data-level", "full");
     expect(screen.getByText("Your plan includes 200,000 characters of knowledge.")).toBeInTheDocument();
+    // UI-063: its Upgrade opens the upgrade dialog (it used to navigate to Billing).
+    expect(screen.queryByRole("link", { name: "Upgrade" })).not.toBeInTheDocument();
+    await userEvent.setup().click(within(meter.closest("[data-slot=meter]") as HTMLElement).getByRole("button", { name: "Upgrade" }));
+    expect(await screen.findByRole("dialog", { name: "Knowledge limit reached" })).toBeInTheDocument();
   });
 
   it("edits an FAQ, sending only what changed", async () => {

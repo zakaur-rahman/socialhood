@@ -2,8 +2,9 @@
 
 import { PAGE_TITLE } from "@/styles/tokens";
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 
+import { ProTrialOffer } from "@/components/billing/ProTrialOffer";
 import { SourceSheet, type SourceSheetMode } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Alert, AlertAction } from "@/components/ui/alert";
@@ -108,6 +109,10 @@ export function HomeScreen() {
 
   return (
     <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+      {/* `?plan=pro` from the pricing page opens the upgrade dialog once (UI-063). */}
+      <Suspense fallback={null}>
+        <ProTrialOffer />
+      </Suspense>
       {header}
       {overview.isPending ? (
         <div className="space-y-6" aria-busy="true" aria-label="Loading Home">

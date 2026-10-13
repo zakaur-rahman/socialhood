@@ -463,6 +463,13 @@ export function upgradeCopy(
 ): { title: string; body: string } {
   const key = input.entitlement ?? "";
   if (input.code === "entitlement_required") {
+    // A plain Upgrade (the sidebar's, a banner's): no feature was blocked.
+    if (key === "pro") {
+      return {
+        title: "Upgrade to Pro",
+        body: "Pro adds Auto replies, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
+      };
+    }
     const feature = FEATURE_COPY[key];
     if (feature) return { title: `${feature.feature} is part of Pro`, body: feature.body };
     const named = input.detail?.match(/^(.+?) is part of Pro\.?$/);
@@ -533,6 +540,8 @@ export function pricePerMonth(price: { amount_minor: number; currency: string })
 
 export const billingCopy = {
   upgradeCta: "Upgrade to Pro",
+  /** A Pro template on a Free workspace (UI-ISS-072): it can be set up, it runs on Pro. */
+  proTemplateNote: "Set it up on Free. It runs on Pro.",
   trialCta: (days: number) => `Start ${days}-day trial`,
   trialOffer: (days: number, price: string | null) =>
     price ? `Try Pro free for ${days} days, then ${price}. Cancel anytime.` : `Try Pro free for ${days} days. Cancel anytime.`,

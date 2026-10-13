@@ -478,11 +478,14 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
       },
     });
     useAskStore.getState().setThread("w1", "r1");
-    const { panel } = await openPanel();
+    const { user, panel } = await openPanel();
     const notice = await within(panel).findByRole("alert");
     expect(notice).toHaveTextContent("Out of AI credits");
     expect(notice).toHaveTextContent("You've used all 5,000 AI credits for this month.");
-    expect(within(notice).getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    // UI-063: Upgrade opens the upgrade dialog (it used to navigate to Billing).
+    expect(within(notice).queryByRole("link", { name: "Upgrade" })).toBeNull();
+    await user.click(within(notice).getByRole("button", { name: "Upgrade" }));
+    expect(await screen.findByRole("dialog", { name: "AI credits used up" })).toBeInTheDocument();
     // What was done is still shown.
     expect(within(panel).getByTestId("answer")).toHaveTextContent("Your latest reel reached 4,120 people");
   });

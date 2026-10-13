@@ -1,16 +1,16 @@
 "use client";
 
 import { AlertTriangle, Ban, ChevronRight, CircleSlash, Copy, CreditCard, RotateCw, Sparkles } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { BILLING_HREF } from "@/components/shell/nav";
+import { CREDITS_EXHAUSTED } from "@/components/billing/upgrade-requests";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { answerToPlainText } from "@/lib/agent/answer";
 import { creditsText, followUpsFor, isActive, runOutcome, workedFor, type RunOutcome } from "@/lib/agent/format";
+import { useUpgradeDialog } from "@/lib/api/provider";
 import { useAgentRun } from "@/lib/api/queries";
 import type { AgentRun, AgentRunDetail, Role } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
@@ -200,6 +200,7 @@ function OutcomeNotice({ outcome, run, context }: { outcome: RunOutcome; run: Ag
   const Icon = OUTCOME_ICON[outcome.kind];
   const canAskAgain = outcome.kind !== "quota" && context.onAsk;
   const upgrade = outcome.kind === "quota" && context.role !== "agent";
+  const { open: openUpgrade } = useUpgradeDialog();
   return (
     <Alert
       tone={OUTCOME_TONE[outcome.kind]}
@@ -212,11 +213,7 @@ function OutcomeNotice({ outcome, run, context }: { outcome: RunOutcome; run: Ag
             <RotateCw aria-hidden /> {outcome.kind === "failed" ? "Try again" : "Ask again"}
           </AlertAction>
         ) : upgrade ? (
-          <AlertAction asChild>
-            <Link href={BILLING_HREF(context.slug)} onClick={context.onNavigate}>
-              Upgrade
-            </Link>
-          </AlertAction>
+          <AlertAction onClick={() => openUpgrade(CREDITS_EXHAUSTED)}>Upgrade</AlertAction>
         ) : undefined
       }
     >
