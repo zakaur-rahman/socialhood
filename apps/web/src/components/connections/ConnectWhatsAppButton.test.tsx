@@ -37,10 +37,10 @@ vi.mock("@/lib/whatsapp/embedded-signup", async (importOriginal) => {
   };
 });
 
-async function renderButton(handler: (call: Call) => Response) {
+async function renderButton(handler: (call: Call) => Response, onFailure?: (message: string) => void) {
   vi.stubEnv("NEXT_PUBLIC_META_APP_ID", "123");
   vi.stubEnv("NEXT_PUBLIC_WHATSAPP_CONFIG_ID", "cfg-1");
-  return renderWithApi(<ConnectWhatsAppButton wid="w1" />, {
+  return renderWithApi(<ConnectWhatsAppButton wid="w1" onFailure={onFailure} />, {
     handlers: { "POST /v1/w/:wid/social-accounts/whatsapp/embedded-signup": handler },
   });
 }
@@ -118,5 +118,17 @@ describe("Connect WhatsApp (F-04)", () => {
         "This account is connected to another Social Hood workspace. Disconnect it there first.",
       ),
     );
+  });
+
+  it("hands a failure to the screen instead of a toast when it shows errors inline (UI-061)", async () => {
+    const onFailure = vi.fn();
+    await renderButton(() => problem(409, "account_in_use", "In use"), onFailure);
+    await userEvent.click(screen.getByRole("button", { name: "Connect WhatsApp" }));
+    await waitFor(() =>
+      expect(onFailure).toHaveBeenCalledWith(
+        "This account is connected to another Social Hood workspace. Disconnect it there first.",
+      ),
+    );
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });

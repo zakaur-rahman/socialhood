@@ -1,11 +1,12 @@
 "use client";
 
-import { FlaskConical } from "lucide-react";
+import { AlertTriangle, FlaskConical } from "lucide-react";
 import type { Route } from "next";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { AUTO_UPGRADE } from "@/components/ai/AiModeControl";
 import { AutoConfirmDialog } from "@/components/ai/AiModeDialogs";
 import { AccountCard } from "@/components/connections/AccountCard";
 import { ConnectWhatsAppButton, useWhatsAppConnect } from "@/components/connections/ConnectWhatsAppButton";
@@ -20,10 +21,10 @@ import { SettingsFrame, SettingsPageHeader } from "@/components/settings/Setting
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { PageSkeleton } from "@/components/states/PageSkeleton";
+import { Alert, AlertAction, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
-import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ApiError } from "@/lib/api/errors";
 import {
@@ -37,6 +38,7 @@ import {
   useUpdateAccount,
 } from "@/lib/api/queries";
 import type { SocialAccount } from "@/lib/api/types";
+import { useUpgradeDialog } from "@/lib/api/provider";
 import { browser } from "@/lib/billing/browser";
 import {
   completeConnectResult,
@@ -74,12 +76,15 @@ function Connections() {
   const disconnect = useDisconnectAccount(wid);
   const deleteData = useDeleteAccountData(wid);
   const sandbox = useCreateSandboxAccount(wid);
-  const whatsapp = useWhatsAppConnect(wid);
+  const [connectError, setConnectError] = useState<ConnectFailure | null>(null);
+  const whatsapp = useWhatsAppConnect(wid, (message) => setConnectError({ message, retry: "whatsapp" }));
+  const upgrade = useUpgradeDialog();
   const [confirmAuto, setConfirmAuto] = useState<SocialAccount | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<AccountFilter>("all");
 
   const startConnect = useCallback(() => {
+    setConnectError(null);
     connect.mutate(undefined, {
       onSuccess: (url) => browser.assign(url),
       // Over accounts_per_platform (402): the upgrade dialog says so.
@@ -87,11 +92,31 @@ function Connections() {
     });
   }, [connect]);
 
-  const finishing = useConnectResultToast(wid, accounts.data, accounts.isError, startConnect);
+  const finishing = useConnectResult(wid, accounts.data, accounts.isError, setConnectError);
 
   if (accounts.isPending) return <PageSkeleton rows={2} />;
   if (accounts.isError) return <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />;
 
+  const empty = accounts.data.length === 0;
+  const failWhatsApp = (message: string) => setConnectError({ message, retry: "whatsapp" });
+  const retryConnect = () => {
+    const platform = connectError?.retry;
+    setConnectError(null);
+    if (platform === "whatsapp") whatsapp.connect();
+    else startConnect();
+  };
+  const connectAlert = connectError ? (
+    <Alert
+      tone="warning"
+      icon={<AlertTriangle />}
+      onDismiss={() => setConnectError(null)}
+      action={connectError.retry && canManage ? <AlertAction onClick={retryConnect}>Try again</AlertAction> : undefined}
+    >
+      <AlertDescription>{connectError.message}</AlertDescription>
+    </Alert>
+  ) : null;
+
+  // The empty state carries both Connect buttons, so the header keeps only the sandbox one then.
   const connectButtons = canManage ? (
     <>
       {SANDBOX_TOOLS && workspace.role === "owner" ? (
@@ -116,11 +141,15 @@ function Connections() {
           Add sandbox account
         </Button>
       ) : null}
-      <ConnectWhatsAppButton wid={wid} />
-      <Button size="lg" loading={connect.isPending || finishing} onClick={startConnect}>
-        <InstagramGlyph className="size-4" />
-        Connect Instagram
-      </Button>
+      {empty ? null : (
+        <>
+          <ConnectWhatsAppButton wid={wid} onFailure={failWhatsApp} />
+          <Button size="lg" loading={connect.isPending || finishing} onClick={startConnect}>
+            <InstagramGlyph className="size-4" />
+            Connect Instagram
+          </Button>
+        </>
+      )}
     </>
   ) : null;
 
@@ -138,7 +167,8 @@ function Connections() {
         />
       }
     >
-      {accounts.data.length === 0 ? (
+      {connectAlert}
+      {empty ? (
         <Card>
           <EmptyState
             title={emptyStates.connections.title}
@@ -146,9 +176,13 @@ function Connections() {
             icon={<InstagramGlyph className="size-8" />}
             action={
               canManage ? (
-                <Button size="xl" loading={connect.isPending} onClick={startConnect}>
-                  Connect Instagram
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button size="xl" loading={connect.isPending || finishing} onClick={startConnect}>
+                    <InstagramGlyph className="size-4" />
+                    Connect Instagram
+                  </Button>
+                  <ConnectWhatsAppButton wid={wid} size="xl" onFailure={failWhatsApp} />
+                </div>
               ) : (
                 <p className="text-sm text-fg-secondary">Ask an owner or admin to connect an account.</p>
               )
@@ -218,9 +252,12 @@ function Connections() {
                   }}
                   actions={{
                     onChange: (patch) =>
-                      // F-09: Auto is confirmed first, with the escalation rules.
+                      // F-09: Auto is confirmed first, with the escalation rules; on Free it
+                      // opens the upgrade dialog instead (UI-061).
                       patch.ai_mode === "auto"
-                        ? setConfirmAuto(account)
+                        ? workspace.plan === "free"
+                          ? upgrade.open(AUTO_UPGRADE)
+                          : setConfirmAuto(account)
                         : update.mutate(
                             { id: account.id, patch },
                             {
@@ -291,14 +328,12 @@ function isConfirmError(error: unknown): boolean {
   return error instanceof ApiError && error.errors.some((e) => e.field === "confirm");
 }
 
-function showConnectResult(result: ConnectResult | null, retry: () => void) {
+/** UI-061: the last connect error, shown inline until dismissed; `retry` is the platform to try again. */
+type ConnectFailure = { message: string; retry: "instagram" | "whatsapp" | null };
+
+function showConnectResult(result: ConnectResult | null, fail: (failure: ConnectFailure) => void) {
   if (result?.kind === "success") toast.success(result.message);
-  else if (result) {
-    toast.error(
-      result.message,
-      result.retry ? { action: { label: "Try again", onClick: retry }, duration: TOAST_ACTION_DURATION } : undefined,
-    );
-  }
+  else if (result) fail({ message: result.message, retry: result.retry ? "instagram" : null });
 }
 
 /**
@@ -307,11 +342,11 @@ function showConnectResult(result: ConnectResult | null, retry: () => void) {
  * and drop the parameters straight away so a refresh repeats neither. ?connected=instagram is
  * still understood (a link from before X-1); that toast waits for the list to name the account.
  */
-function useConnectResultToast(
+function useConnectResult(
   wid: string,
   accounts: SocialAccount[] | undefined,
   failed: boolean,
-  retry: () => void,
+  fail: (failure: ConnectFailure) => void,
 ) {
   const params = useSearchParams();
   const router = useRouter();
@@ -328,16 +363,16 @@ function useConnectResultToast(
     router.replace(pathname as Route, { scroll: false });
     if (nonce) {
       finish(nonce, {
-        onSuccess: (account) => showConnectResult(instagramConnected(account.username), retry),
-        onError: (error) => showConnectResult(completeConnectResult(error), retry),
+        onSuccess: (account) => showConnectResult(instagramConnected(account.username), fail),
+        onError: (error) => showConnectResult(completeConnectResult(error), fail),
       });
       return;
     }
     const newest = [...(accounts ?? [])]
       .filter((a) => a.connected_at)
       .sort((a, b) => (b.connected_at ?? "").localeCompare(a.connected_at ?? ""))[0];
-    showConnectResult(connectResult(new URLSearchParams(params.toString()), newest?.username), retry);
-  }, [params, accounts, failed, retry, router, pathname, finish]);
+    showConnectResult(connectResult(new URLSearchParams(params.toString()), newest?.username), fail);
+  }, [params, accounts, failed, fail, router, pathname, finish]);
 
   return complete.isPending;
 }
