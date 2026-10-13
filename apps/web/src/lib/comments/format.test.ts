@@ -12,6 +12,7 @@ import {
   formatPlural,
   isAnalysing,
   matchesFilter,
+  needsReply,
   mediaTypeLabel,
   SECOND_PRIVATE_REPLY,
   sentimentLabel,
@@ -22,9 +23,10 @@ function problem(status: number, code: string, detail?: string) {
 }
 
 describe("filter chips (UX-SCR-05; CommentFilter in schemas/posts.py)", () => {
-  it("lists the eight chips in the spec's order", () => {
+  it("lists the nine chips in the spec's order", () => {
     expect(COMMENT_FILTERS.map((f) => f.label)).toEqual([
       "All",
+      "Needs reply",
       "Positive",
       "Neutral",
       "Negative",
@@ -33,6 +35,32 @@ describe("filter chips (UX-SCR-05; CommentFilter in schemas/posts.py)", () => {
       "Spam",
       "Hidden",
     ]);
+  });
+
+  it("needs a reply by the nav badge's rule: unreplied, not spam, not hidden, not deleted, last 7 days", () => {
+    const now = new Date("2026-10-14T12:00:00Z").getTime();
+    const fresh = { commented_at: "2026-10-13T12:00:00Z" };
+    const replied = {
+      public_reply: { text: "Thanks!", platform_id: null, replied_at: "2026-10-13T13:00:00Z" },
+    };
+    expect(needsReply(comment({ ...fresh, public_reply: null, private_reply: null }), now)).toBe(true);
+    expect(needsReply(comment({ ...fresh, ...replied }), now)).toBe(false);
+    expect(
+      needsReply(comment({ ...fresh, private_reply: { message_id: "m1", conversation_id: "c1" } }), now),
+    ).toBe(false);
+    expect(needsReply(comment({ ...fresh, hidden: true }), now)).toBe(false);
+    expect(needsReply(comment({ ...fresh, deleted_at: "2026-10-13T14:00:00Z" }), now)).toBe(false);
+    expect(needsReply(comment({ commented_at: "2026-10-06T11:00:00Z" }), now)).toBe(false);
+    const spam = comment({
+      ...fresh,
+      analysis: { sentiment: "neutral", sentiment_score: 0, intent: "other", is_spam: true, topic: null },
+    });
+    expect(needsReply(spam, now)).toBe(false);
+    // not analysed yet still counts, as in the API
+    expect(
+      needsReply(comment({ ...fresh, analysis: null, analysis_status: "pending", public_reply: null }), now),
+    ).toBe(true);
+    expect(matchesFilter(comment({ ...fresh, public_reply: null, private_reply: null }), "needs_reply", now)).toBe(true);
   });
 
   it("matches as the API filters", () => {

@@ -2,6 +2,7 @@ import { MessageSquare } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PostSummary } from "@/lib/api/types";
@@ -11,8 +12,8 @@ import { formatDay } from "@/lib/tz";
 import { PostThumb } from "./PostThumb";
 import { SentimentBar } from "./SentimentBar";
 
-export function postHref(slug: string, postId: string): Route {
-  return `/w/${slug}/comments/${postId}` as Route;
+export function postHref(slug: string, postId: string, filter?: "needs_reply"): Route {
+  return `/w/${slug}/comments/${postId}${filter ? `?filter=${filter}` : ""}` as Route;
 }
 
 /**
@@ -31,12 +32,13 @@ export function PostCard({
   now: Date;
 }) {
   const { stats } = post;
+  const waiting = post.needs_reply_count ?? 0;
   const caption = post.caption?.trim();
   const date = formatDay(post.posted_at, timeZone, now);
   return (
     <li data-testid="post-card" data-post-id={post.id}>
       <Card asChild className="block overflow-hidden p-0 hover:border-line-strong">
-        <Link href={postHref(slug, post.id)}>
+        <Link href={postHref(slug, post.id, waiting > 0 ? "needs_reply" : undefined)}>
           <PostThumb post={post} className="border-b border-line" />
           <span className="sr-only">
             {caption ? caption.slice(0, 100) : "Post without a caption"}, {mediaTypeLabel(post.media_type)},{" "}
@@ -52,6 +54,11 @@ export function PostCard({
                 <span className="sr-only">{stats.total === 1 ? " comment" : " comments"}</span>
               </span>
             </div>
+            {waiting > 0 ? (
+              <Badge tone="warning" size="md" data-testid="needs-reply-count">
+                {formatCount(waiting)} {waiting === 1 ? "needs" : "need"} a reply
+              </Badge>
+            ) : null}
             <SentimentBar positive={stats.positive} neutral={stats.neutral} negative={stats.negative} />
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 text-xs text-fg-secondary">
               <span data-testid="spam-count">{stats.spam > 0 ? plural(stats.spam, "spam", "spam") : "No spam"}</span>

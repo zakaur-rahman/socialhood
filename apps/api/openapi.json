@@ -7942,6 +7942,17 @@
             ],
             "title": "Media Url"
           },
+          "needs_reply_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Reply Count"
+          },
           "permalink": {
             "anyOf": [
               {
@@ -8352,6 +8363,17 @@
               }
             ],
             "title": "Media Url"
+          },
+          "needs_reply_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Needs Reply Count"
           },
           "permalink": {
             "anyOf": [
@@ -18167,7 +18189,7 @@
     },
     "/v1/w/{wid}/posts": {
       "get": {
-        "description": "Newest first; ``q`` searches captions. Stories are left out (they take no comments).\nEach post carries its comment counts and sentiment split (``stats``, FR-CMT-03).",
+        "description": "Newest first; ``q`` searches captions. Stories are left out (they take no comments).\nEach post carries its comment counts and sentiment split (``stats``, FR-CMT-03) and its\n``needs_reply_count`` (D-11). ``sort=needs_reply`` puts the posts with the most comments\nwaiting for a reply first (newest first among equals); its cursor is opaque like the other.",
         "operationId": "list_posts",
         "parameters": [
           {
@@ -18241,6 +18263,20 @@
               "minimum": 1,
               "title": "Limit",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "schema": {
+              "default": "recent",
+              "enum": [
+                "recent",
+                "needs_reply"
+              ],
+              "title": "Sort",
+              "type": "string"
             }
           }
         ],
@@ -18348,7 +18384,7 @@
     },
     "/v1/w/{wid}/posts/{post_id}/comments": {
       "get": {
-        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py). Deleted comments are left out.",
+        "description": "The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are\ndefined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,\nD-11). Deleted comments are left out.",
         "operationId": "list_post_comments",
         "parameters": [
           {
@@ -18385,7 +18421,8 @@
                 "questions",
                 "buying",
                 "spam",
-                "hidden"
+                "hidden",
+                "needs_reply"
               ],
               "title": "Filter",
               "type": "string"

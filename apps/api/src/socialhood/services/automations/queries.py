@@ -20,13 +20,15 @@ from sqlalchemy import (
     ColumnExpressionArgument,
     DateTime,
     Uuid,
+    func,
     literal,
     select,
     tuple_,
 )
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.errors import ApiError
+from socialhood.errors import ApiError, FieldError
+from socialhood.models.analytics import CommentAnalysis
 from socialhood.models.automations import Automation, AutomationRun, Comment
 from socialhood.models.inbox import Contact, Message
 from socialhood.models.media import MediaItem, MediaType
@@ -51,9 +53,10 @@ from socialhood.schemas.automations import (
 )
 from socialhood.schemas.automations import Automation as AutomationOut
 from socialhood.schemas.automations import AutomationRun as AutomationRunOut
-from socialhood.schemas.posts import CommentStats, PostList, PostSummary
+from socialhood.schemas.posts import CommentStats, PostList, PostSort, PostSummary
 from socialhood.services.automations import matching, stats, validation, windows
 from socialhood.services.automations.definitions import definition_of
+from socialhood.services.comments.queries import needs_reply_conditions, needs_reply_counts
 from socialhood.services.conversations import decode_cursor, encode_cursor
 
 SortName = Literal["recent_runs", "name", "created"]
@@ -357,6 +360,22 @@ async def list_runs(
 # ---------------------------------------------------------------- posts for the picker
 
 
+def _offset_cursor(cursor: str | None) -> int:
+    """The needs_reply sort pages by offset ("o:<n>"): its order is by a count, not a timestamp."""
+    if not cursor:
+        return 0
+    try:
+        prefix, number = cursor.split(":", 1)
+        offset = int(number)
+        if prefix != "o" or offset < 0:
+            raise ValueError(cursor)
+    except ValueError as error:
+        raise ApiError(
+            "validation_error", errors=[FieldError("cursor", "That page link is not valid.")]
+        ) from error
+    return offset
+
+
 async def list_posts(
     session: AsyncSession,
     *,
@@ -364,20 +383,52 @@ async def list_posts(
     q: str | None,
     cursor: str | None,
     limit: int,
+    sort: PostSort = "recent",
+    now: datetime,
 ) -> PostList:
     """The account's posts (not stories, which take no comments), newest first; ``q`` searches
-    captions."""
+    captions. ``sort="needs_reply"`` orders by the comments waiting for a reply, most first, then
+    newest. Each post carries its ``needs_reply_count`` (the nav badge's rule)."""
     statement = select(MediaItem).where(MediaItem.media_type != MediaType.STORY)
     if account_id is not None:
         statement = statement.where(MediaItem.social_account_id == account_id)
     query = (q or "").strip()
     if query:
         statement = statement.where(MediaItem.caption.ilike(f"%{escape_like(query)}%", escape="\\"))
-    if cursor:
-        statement = statement.where(_after_cursor(MediaItem.posted_at, MediaItem.id, cursor))
-    statement = statement.order_by(MediaItem.posted_at.desc(), MediaItem.id.desc())
+    offset = 0
+    if sort == "needs_reply":
+        waiting = (
+            select(Comment.media_item_id.label("post_id"), func.count().label("n"))
+            .select_from(Comment)
+            .outerjoin(CommentAnalysis, CommentAnalysis.comment_id == Comment.id)
+            .where(*needs_reply_conditions(now))
+            .group_by(Comment.media_item_id)
+            .subquery()
+        )
+        offset = _offset_cursor(cursor)
+        statement = (
+            statement.outerjoin(waiting, waiting.c.post_id == MediaItem.id)
+            .order_by(
+                func.coalesce(waiting.c.n, 0).desc(),
+                MediaItem.posted_at.desc(),
+                MediaItem.id.desc(),
+            )
+            .offset(offset)
+        )
+    else:
+        if cursor:
+            statement = statement.where(_after_cursor(MediaItem.posted_at, MediaItem.id, cursor))
+        statement = statement.order_by(MediaItem.posted_at.desc(), MediaItem.id.desc())
     items = list((await session.scalars(statement.limit(limit + 1))).all())
     page = items[:limit]
+    waiting_counts = await needs_reply_counts(session, [item.id for item in page], now=now)
+    more = len(items) > limit
+    if not more or not page:
+        next_cursor = None
+    elif sort == "needs_reply":
+        next_cursor = f"o:{offset + limit}"
+    else:
+        next_cursor = encode_cursor(page[-1].posted_at, page[-1].id)
     return PostList(
         items=[
             PostSummary(
@@ -393,10 +444,9 @@ async def list_posts(
                 like_count=item.like_count,
                 comments_count=item.comments_count,
                 stats=CommentStats.from_stored(item.comment_stats),
+                needs_reply_count=waiting_counts.get(item.id, 0),
             )
             for item in page
         ],
-        next_cursor=(
-            encode_cursor(page[-1].posted_at, page[-1].id) if len(items) > limit else None
-        ),
+        next_cursor=next_cursor,
     )

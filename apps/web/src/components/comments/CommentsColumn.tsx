@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
@@ -14,7 +15,7 @@ import { useAgentHandoff, type CommentReplyHandoff } from "@/lib/agent/handoff";
 import { usePostComments } from "@/lib/api/queries";
 import type { CommentFilter, PostDetail } from "@/lib/api/types";
 import { flattenComments } from "@/lib/comments/cache";
-import { COMMENT_FILTERS, filterEmpty, isAnalysing } from "@/lib/comments/format";
+import { COMMENT_FILTERS, filterEmpty, formatCount, isAnalysing } from "@/lib/comments/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { CommentRow } from "./CommentRow";
@@ -36,7 +37,7 @@ function RowSkeletons() {
 }
 
 /**
- * UX-SCR-05 main column: the filter chips (All, Positive, Neutral, Negative, Questions, Buying
+ * UX-SCR-05 main column: the filter chips (All, Needs reply, Positive, Neutral, Negative, Questions, Buying
  * signals, Spam, Hidden) and the comment rows, newest first. comment.created and comment.updated
  * patch the loaded lists (F-12).
  */
@@ -50,7 +51,9 @@ export function CommentsColumn({
   accountUsername?: string | null;
 }) {
   const workspace = useCurrentWorkspace();
-  const [filter, setFilter] = useState<CommentFilter>("all");
+  // The card's "n need a reply" opens the post with this chip chosen (?filter=needs_reply).
+  const requested = useSearchParams()?.get("filter");
+  const [filter, setFilter] = useState<CommentFilter>(requested === "needs_reply" ? "needs_reply" : "all");
   const comments = usePostComments(workspace.id, post.id, filter);
   const items = flattenComments(comments.data);
   // Where focus goes when a confirmed delete removes the row it was on.
@@ -150,6 +153,11 @@ export function CommentsColumn({
           {COMMENT_FILTERS.map((option) => (
             <ToggleGroupItem key={option.value} value={option.value}>
               {option.label}
+              {option.value === "needs_reply" && (post.needs_reply_count ?? 0) > 0 ? (
+                <span className="ml-1 tabular-nums" data-testid="needs-reply-chip-count">
+                  {formatCount(post.needs_reply_count ?? 0)}
+                </span>
+              ) : null}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>

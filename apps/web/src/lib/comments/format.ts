@@ -6,6 +6,7 @@ import { sendFailure } from "@/lib/copy";
 /** The filter chips in the order UX-SCR-05 lists them. */
 export const COMMENT_FILTERS: { value: CommentFilter; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "needs_reply", label: "Needs reply" },
   { value: "positive", label: "Positive" },
   { value: "neutral", label: "Neutral" },
   { value: "negative", label: "Negative" },
@@ -21,12 +22,31 @@ export const FILTER_INTENTS: Record<"questions" | "buying", readonly Intent[]> =
   buying: ["purchase", "pricing"],
 };
 
+/** Instagram's private-reply window, which the API's needs-reply rule also uses. */
+export const NEEDS_REPLY_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * The API's rule for a comment that needs a reply (services/comments/queries.py
+ * ``needs_reply_conditions``, the nav badge's rule): no public or private reply from the account,
+ * not spam, not hidden, not deleted, and from the last 7 days.
+ */
+export function needsReply(comment: PostComment, now: number): boolean {
+  return (
+    !comment.deleted_at &&
+    !comment.hidden &&
+    !comment.public_reply &&
+    !comment.private_reply &&
+    !comment.analysis?.is_spam &&
+    new Date(comment.commented_at).getTime() >= now - NEEDS_REPLY_WINDOW_MS
+  );
+}
+
 /**
  * Whether a comment belongs in a list with this filter, as the API decides (CommentFilter in
  * schemas/posts.py): every filter leaves out deleted comments; sentiment and intent filters take
  * analysed comments that are not spam; "all" keeps hidden ones.
  */
-export function matchesFilter(comment: PostComment, filter: CommentFilter): boolean {
+export function matchesFilter(comment: PostComment, filter: CommentFilter, now: number = Date.now()): boolean {
   if (comment.deleted_at) return false;
   const analysis = comment.analysis;
   switch (filter) {
@@ -34,6 +54,8 @@ export function matchesFilter(comment: PostComment, filter: CommentFilter): bool
       return true;
     case "hidden":
       return comment.hidden;
+    case "needs_reply":
+      return needsReply(comment, now);
     case "spam":
       return Boolean(analysis?.is_spam);
     case "positive":
@@ -69,6 +91,7 @@ export function filterEmpty(filter: CommentFilter, analysing: boolean): { title:
     buying: "No buying signals",
     spam: "No spam",
     hidden: "No hidden comments",
+    needs_reply: "Nothing needs a reply",
   };
   const waiting = analysing && filter !== "hidden";
   return {
