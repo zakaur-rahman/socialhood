@@ -98,14 +98,15 @@ export function MessageBubble({
     outbound && "rounded-br-md",
     outbound && !failed && !pending && !nativeApp && !sticker && "bg-brand-gradient text-on-brand",
     outbound && nativeApp && !failed && !pending && !sticker && "bg-raised text-fg",
-    pending && !sticker && "bg-brand/60 text-on-brand",
-    pending && "opacity-80",
+    // Sending: the solid brand fill, no dimming (DESIGN_SYSTEM: no opacity on a container); the
+    // spinner in the meta row says it hasn't gone yet.
+    pending && !sticker && "bg-brand-strong text-on-brand",
     failed && "bg-danger-fill text-on-brand",
   );
   // On a coloured bubble, labels are on-brand at full strength: white/75 was 3.46:1 at the gradient's light end.
   const metaClass = outbound && !nativeApp && !sticker ? "text-on-brand" : "text-fg-secondary";
 
-  // Written by the AI (an auto reply) or an automation: "AI Assisted" under the bubble (C-063).
+  // Written by the AI (an auto reply) or an automation, named under the bubble (C-063, D-07).
   const assisted =
     outbound && message.source === "ai_auto"
       ? "Sent by AI: an auto reply"
@@ -114,6 +115,14 @@ export function MessageBubble({
           ? `Sent by an automation: ${message.automation.name}`
           : "Sent by an automation"
         : null;
+  // D-07: "Sent by AI" for an auto reply; "Automation · {name}" for an automation. The API doesn't say
+  // whether an automation step was an AI reply, so "AI" never appears on those.
+  const assistedLabel =
+    message.source === "ai_auto"
+      ? "Sent by AI"
+      : message.automation
+        ? `Automation · ${message.automation.name}`
+        : "Automation";
   const label = nativeApp ? `Sent from ${platformName}` : null;
 
   const statusInfo = outbound && status ? STATUS[status] : undefined;
@@ -127,7 +136,7 @@ export function MessageBubble({
       className={cn(
         "flex items-end gap-2",
         outbound ? "justify-end" : "justify-start",
-        live && "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150",
+        live && "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-normal",
       )}
       data-direction={message.direction}
       data-status={status ?? undefined}
@@ -232,14 +241,13 @@ export function MessageBubble({
           {assisted ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="ml-1 inline-flex items-center gap-0.5 font-medium text-brand-fg">
+                <span className="ml-1 inline-flex min-w-0 items-center gap-0.5 font-medium text-brand-fg">
                   {message.source === "automation" ? (
                     <Zap className="size-3" aria-hidden />
                   ) : (
                     <Sparkles className="size-3" aria-hidden />
                   )}
-                  <span>AI Assisted</span>
-                  <span className="sr-only"> ({assisted})</span>
+                  <span className="truncate">{assistedLabel}</span>
                 </span>
               </TooltipTrigger>
               <TooltipContent>{assisted}</TooltipContent>

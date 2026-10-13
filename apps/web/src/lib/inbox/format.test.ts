@@ -12,7 +12,7 @@ describe("row previews (UX-INB-04)", () => {
     ["human", "You: "],
     ["native_app", "You: "],
     ["ai_auto", "AI: "],
-    ["automation", "Auto: "],
+    ["automation", "Automation: "],
   ] as const)("outbound from %s starts %j", (source, prefix) => {
     expect(previewPrefix({ last_message_direction: "outbound", last_message_source: source })).toBe(prefix);
   });

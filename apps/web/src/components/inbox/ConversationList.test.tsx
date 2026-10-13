@@ -60,7 +60,7 @@ describe("ConversationList (UX-INB-04, TR-FE-08)", () => {
     expect(screen.queryAllByRole("link").length).toBeLessThan(VIRTUALIZE_ABOVE);
   });
 
-  it("AI Auto follows the conversation's own mode, else its account's (C-063)", () => {
+  it("Auto replies follows the conversation's own mode, else its account's (C-063)", () => {
     const [first, second, third] = items(3);
     render(
       <ConversationList

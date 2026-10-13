@@ -22,14 +22,14 @@ export function firstName(name: string): string {
   return name.replace(/^@/, "").split(/\s+/)[0] || name;
 }
 
-/** "You: ", "AI: ", "Auto: " before outbound previews (UX-INB-04). */
+/** "You: ", "AI: ", "Automation: " before outbound previews (UX-INB-04). */
 export function previewPrefix(item: Pick<ConversationListItem, "last_message_direction" | "last_message_source">): string {
   if (item.last_message_direction !== "outbound") return "";
   switch (item.last_message_source) {
     case "ai_auto":
       return "AI: ";
     case "automation":
-      return "Auto: ";
+      return "Automation: ";
     case "human":
     case "native_app":
       return "You: ";
@@ -88,9 +88,11 @@ export function effectiveAiMode(
   return item.ai_mode_override ?? accountMode ?? null;
 }
 
+export const MAX_ROW_BADGES = 2;
+
 /**
  * The row's small badges (UX-INB-04, C-063): "Needs you" when escalated, the other signals
- * (complaint, closing soon, negative), "Lead 72/100" at the lead threshold, and "AI Auto" when
+ * (complaint, closing soon, negative), "Lead 72/100" at the lead threshold, and "Auto replies" when
  * the AI replies on its own.
  */
 export function rowBadges(
@@ -119,9 +121,10 @@ export function rowBadges(
     badges.push({ key: "lead", label: `Lead ${item.lead_score}/100`, tone: "brand" });
   }
   if (aiMode === "auto") {
-    badges.push({ key: "ai", label: "AI Auto", tone: "success", hint: "The AI replies on its own in this conversation" });
+    badges.push({ key: "ai", label: "Auto replies", tone: "neutral", hint: "The AI replies on its own in this conversation" });
   }
-  return badges;
+  // D-07: two at most, in priority order (what needs you first); a third would not fit the row.
+  return badges.slice(0, MAX_ROW_BADGES);
 }
 
 /** The one signal chip of a row (UX-INB-04), or null. */

@@ -73,30 +73,41 @@ describe("MessageBubble variants (UX-INB-06)", () => {
     expect(screen.getByRole("img", { name: label })).toBeInTheDocument();
   });
 
-  it("sending: the dimmed variant", () => {
+  it("sending: the solid brand fill, not dimmed, with the spinner in the meta row", () => {
     const { row } = renderBubble({ ...out, status: "sending" });
-    expect(row.querySelector('[data-variant="sending"]')).toHaveClass("opacity-80");
+    const bubble = row.querySelector('[data-variant="sending"]');
+    expect(bubble).toHaveClass("bg-brand-strong");
+    expect(bubble).not.toHaveClass("opacity-80");
   });
 
-  it("AI auto reply: AI Assisted under the bubble, the tooltip says the AI sent it (C-063)", async () => {
+  it("AI auto reply: Sent by AI under the bubble, the tooltip says the AI sent it (D-07)", async () => {
     const { row } = renderBubble({ ...out, source: "ai_auto" });
-    const assisted = within(row).getByText("AI Assisted");
+    const assisted = within(row).getByText("Sent by AI");
     await userEvent.hover(assisted);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Sent by AI: an auto reply");
     expect(within(row).getByTestId("message-meta")).toContainElement(assisted);
     expect(row.querySelector('[data-variant="ai_auto"]')).not.toContainElement(assisted);
   });
 
-  it("automation: AI Assisted, the tooltip names the automation", async () => {
+  it("automation: Automation · {name} with a zap, never AI (D-07)", async () => {
     const { row } = renderBubble({ ...out, source: "automation", automation: { id: "au1", name: "Price keyword" } });
-    await userEvent.hover(within(row).getByText("AI Assisted"));
+    const label = within(row).getByText("Automation · Price keyword");
+    expect(label.parentElement?.querySelector("svg.lucide-zap")).not.toBeNull();
+    expect(within(row).queryByText(/\bAI\b/)).not.toBeInTheDocument();
+    await userEvent.hover(label);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Sent by an automation: Price keyword");
   });
 
-  it("a person's reply and a customer's message are not AI Assisted", () => {
+  it("an automation without a known name is just Automation", () => {
+    const { row } = renderBubble({ ...out, source: "automation", automation: null });
+    expect(within(row).getByText("Automation")).toBeInTheDocument();
+  });
+
+  it("a person's reply and a customer's message carry no attribution label", () => {
     renderBubble(out);
     renderBubble();
-    expect(screen.queryByText("AI Assisted")).not.toBeInTheDocument();
+    expect(screen.queryByText("Sent by AI")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Automation/)).not.toBeInTheDocument();
   });
 
   it("tap first's opening: its quick reply shows as a chip under the text, not a button (FR-AUT-21)", () => {

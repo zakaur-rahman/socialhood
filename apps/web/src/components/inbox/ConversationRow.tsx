@@ -32,7 +32,7 @@ type Props = {
   href: Route;
   selected: boolean;
   now: Date;
-  /** The AI mode that applies (the conversation's own, else its account's): "AI Auto" badge. */
+  /** The AI mode that applies (the conversation's own, else its account's): "Auto replies" badge. */
   aiMode?: AiMode | null;
   index?: number;
   onNavigate?: () => void;
