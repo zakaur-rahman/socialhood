@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { handOff, resetAgentHandoff, useAgentHandoff } from "@/lib/agent/handoff";
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
 import type { Conversation, Message, SendMessage } from "@/lib/api/types";
-import { resetInboxStore } from "@/lib/inbox/store";
+import { resetInboxStore, useInboxStore } from "@/lib/inbox/store";
 import { toZonedInputs } from "@/lib/tz";
 import { scheduleCard } from "@/test/agent";
 import { account, conversation, json, listItem, message, noContent, problem, renderWithApi, type Call } from "@/test/api";
@@ -233,9 +233,32 @@ describe("ThreadView: follow-up reminder link (F-18)", () => {
     expect(useAgentHandoff.getState().schedule.c1).toBeUndefined();
   });
 
+  // UI-051: Open never overwrites a reply the member typed without asking.
+  it("an Ask Social Hood card keeps a typed reply until the member says to replace it", async () => {
+    const user = userEvent.setup();
+    const hour = 60 * 60_000;
+    const closesAt = new Date(Date.now() + 10 * hour).toISOString();
+    const open = conversation({ id: "c1", reply_window: { state: "open", closes_at: closesAt } });
+    useInboxStore.getState().setDraft("c1", "My own words");
+    handOff(
+      scheduleCard({
+        prefill: { conversation_id: "c1", text: "Your order ships Monday.", send_at: null, window_closes_at: closesAt },
+      }),
+    );
+    renderWithApi(<ThreadView key="c1" conversationId="c1" />, {
+      handlers: handlers(() => noContent(), { c1: open, c2: kabir }),
+    });
+    const ask = await screen.findByRole("alertdialog", { name: "Replace your reply?" });
+    expect(within(ask).getByTestId("replace-ask-text")).toHaveTextContent("Your order ships Monday.");
+    expect(screen.getByRole("textbox", { name: /Reply to/, hidden: true })).toHaveValue("My own words");
+    await user.click(within(ask).getByRole("button", { name: "Keep my reply" }));
+    expect(screen.getByRole("textbox", { name: /Reply to/ })).toHaveValue("My own words");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
   it("keeps the scheduler closed without it", async () => {
     renderWithApi(<ThreadView key="c1" conversationId="c1" />, { handlers: handlers(() => noContent()) });
-    expect(await screen.findByRole("button", { name: "Schedule for later" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Schedule message" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(nav.replace).not.toHaveBeenCalled();
   });

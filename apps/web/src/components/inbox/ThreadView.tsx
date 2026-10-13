@@ -12,6 +12,16 @@ import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAgentHandoff } from "@/lib/agent/handoff";
@@ -134,10 +144,17 @@ function Thread({
   const takeSchedule = useAgentHandoff((state) => state.takeSchedule);
   const [handoffTaken, setHandoffTaken] = useState<string | null>(null);
   const [scheduleAt, setScheduleAt] = useState<string | null>(null);
+  // A typed reply is kept: the member is asked before Ask Social Hood's message takes its place.
+  const [replaceAsk, setReplaceAsk] = useState<{ text: string; sendAt: string | null } | null>(null);
+  const setDraft = useInboxStore((state) => state.setDraft);
   if (scheduleHandoff && scheduleHandoff.nonce !== handoffTaken) {
     setHandoffTaken(scheduleHandoff.nonce);
-    setScheduleAt(scheduleHandoff.sendAt);
-    setScheduleOpen(true);
+    if (scheduleHandoff.replaces) {
+      setReplaceAsk({ text: scheduleHandoff.text, sendAt: scheduleHandoff.sendAt });
+    } else {
+      setScheduleAt(scheduleHandoff.sendAt);
+      setScheduleOpen(true);
+    }
   }
   useEffect(() => {
     if (scheduleHandoff) takeSchedule(conversationId);
@@ -217,8 +234,6 @@ function Thread({
         backHref={ui?.layout === "phone" ? (`/w/${workspace.slug}/inbox` as Route) : undefined}
         detailsOpen={ui?.detailsOpen ?? false}
         onToggleDetails={() => ui?.toggleDetails()}
-        canSchedule={canSchedule}
-        onSchedule={() => setScheduleOpen(true)}
         onArchive={(archived) => ui?.archive(conversationId, archived)}
         onMarkUnread={() => ui?.markUnread(conversationId)}
         aiControl={<AiModeMenu conversation={conversation} now={now} />}
@@ -277,6 +292,36 @@ function Thread({
         canAttach={canAttach}
         upload={upload}
       />
+      <AlertDialog open={replaceAsk !== null} onOpenChange={(open) => (open ? undefined : setReplaceAsk(null))}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace your reply?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have a reply typed here. Ask Social Hood prepared a different message. Replace yours with it, or keep
+              yours?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {replaceAsk ? (
+            <p className="rounded-lg bg-raised px-3 py-2 text-sm break-words whitespace-pre-wrap" data-testid="replace-ask-text">
+              {replaceAsk.text}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep my reply</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (!replaceAsk) return;
+                setDraft(conversationId, replaceAsk.text);
+                setScheduleAt(replaceAsk.sendAt);
+                setScheduleOpen(true);
+                setReplaceAsk(null);
+              }}
+            >
+              Replace with this
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       {conversation.platform === "whatsapp" ? (
         <TemplatePicker
           wid={wid}

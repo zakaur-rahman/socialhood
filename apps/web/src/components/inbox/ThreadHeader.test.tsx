@@ -14,14 +14,13 @@ const now = new Date("2026-09-28T12:00:00Z");
 const inHours = (h: number) => new Date(now.getTime() + h * 3_600_000).toISOString();
 
 function renderHeader(overrides: Partial<Conversation> = {}, props: Partial<Parameters<typeof ThreadHeader>[0]> = {}) {
-  const handlers = { onToggleDetails: vi.fn(), onSchedule: vi.fn(), onArchive: vi.fn(), onMarkUnread: vi.fn() };
+  const handlers = { onToggleDetails: vi.fn(), onArchive: vi.fn(), onMarkUnread: vi.fn() };
   render(
     <TooltipProvider>
       <ThreadHeader
         conversation={conversation(overrides)}
         now={now}
         detailsOpen={false}
-        canSchedule
         {...handlers}
         {...props}
       />
@@ -83,9 +82,7 @@ describe("ThreadHeader (UX-INB-05)", () => {
           conversation={conversation({ ai: { effective_mode: "auto", override: null, paused_until: null } })}
           now={now}
           detailsOpen={false}
-          canSchedule
           onToggleDetails={() => {}}
-          onSchedule={() => {}}
           onArchive={() => {}}
           onMarkUnread={() => {}}
         />
@@ -170,9 +167,7 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(screen.getByText("Needs you: refund")).toHaveClass("bg-danger-soft", "text-danger-fg", "text-xs");
     expect(screen.getByText("AI: Suggest")).toHaveAttribute("data-tone", "brand");
     const details = screen.getByRole("button", { name: "Details" });
-    const schedule = screen.getByRole("button", { name: "Schedule a message" });
     expect(details).not.toHaveAttribute("title");
-    expect(schedule).not.toHaveAttribute("title");
     act(() => details.focus());
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Show the customer panel");
   });
@@ -192,32 +187,22 @@ describe("ThreadHeader (UX-INB-05)", () => {
     expect(closed).not.toHaveClass("bg-brand-soft");
   });
 
-  it("toggles details and schedules", async () => {
+  it("toggles details", async () => {
     const handlers = renderHeader();
     await userEvent.click(screen.getByRole("button", { name: "Details" }));
-    await userEvent.click(screen.getByRole("button", { name: "Schedule a message" }));
     expect(handlers.onToggleDetails).toHaveBeenCalledOnce();
-    expect(handlers.onSchedule).toHaveBeenCalledOnce();
   });
 
-  // UI-030: a disabled control says why (DisabledReason), not only in a title nobody can reach.
-  it("with the reply window closed, Schedule is off and says why", () => {
-    renderHeader({}, { canSchedule: false });
-    const schedule = screen.getByRole("button", { name: "Schedule a message" });
-    expect(schedule).toBeDisabled();
-    expect(schedule).not.toHaveAttribute("title");
-    const reason = schedule.closest('[data-slot="disabled-reason"]') as HTMLElement;
-    expect(reason).toHaveAttribute("tabindex", "0");
-    expect(reason).toHaveAccessibleDescription("Scheduling needs an open reply window");
-    // Hidden below md, as the button was: the composer's clock schedules there.
-    expect(reason).toHaveClass("hidden", "md:inline-flex");
+  // D-15: scheduling is only in the composer ("Schedule message"); the header has no clock.
+  it("has no Schedule button: scheduling lives in the composer", () => {
+    renderHeader();
+    expect(screen.queryByRole("button", { name: /^Schedule/ })).not.toBeInTheDocument();
   });
 
   it("the header's icon buttons are the Button's icon-lg size, with no touch patches", () => {
     renderHeader({}, { backHref: "/w/maple/inbox" as Route });
     for (const control of [
       screen.getByRole("link", { name: "Back to conversations" }),
-      screen.getByRole("button", { name: "Schedule a message" }),
       screen.getByRole("button", { name: "Details" }),
       screen.getByRole("button", { name: "More actions" }),
     ]) {
