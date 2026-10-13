@@ -10,7 +10,7 @@ import { useAutomationStats } from "@/lib/api/queries";
 import type { AutomationStats } from "@/lib/api/types";
 import { formatCount, repliedShare } from "@/lib/automations/format";
 import { cn } from "@/lib/utils";
-import { EYEBROW } from "@/styles/tokens";
+import { EYEBROW, KPI } from "@/styles/tokens";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -91,7 +91,7 @@ export function StatsView({ stats, tapFirst = false, followNudge = false }: { st
         {figures.map((figure) => (
           <CardInset key={figure.label} padding="compact">
             <dt className="text-xs text-fg-secondary">{figure.label}</dt>
-            <dd className="mt-0.5 text-xl font-semibold tabular-nums">{figure.value}</dd>
+            <dd className={cn("mt-0.5", KPI)}>{figure.value}</dd>
           </CardInset>
         ))}
       </dl>

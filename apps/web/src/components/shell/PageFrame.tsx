@@ -1,3 +1,5 @@
+import { cn } from "@/lib/utils";
+import { PAGE_TITLE } from "@/styles/tokens";
 import { ChevronLeft } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -30,7 +32,7 @@ export function PageFrame({
         </Link>
       ) : null}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words">{title}</h1>
+        <h1 className={cn("min-w-0 break-words", PAGE_TITLE)}>{title}</h1>
         {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
       </div>
       {children}

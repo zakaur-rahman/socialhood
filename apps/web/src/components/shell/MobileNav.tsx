@@ -1,5 +1,6 @@
 "use client";
 
+import { PANE_TITLE } from "@/styles/tokens";
 import { Menu } from "lucide-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 
@@ -31,7 +32,7 @@ export function MobileNav({ title, ask, ...sidebar }: Props) {
       )}
     >
       <span className="bg-shell-gradient size-8 shrink-0 rounded-lg" aria-hidden />
-      <p className="min-w-0 flex-1 truncate text-base font-semibold">{title}</p>
+      <p className={cn("min-w-0 flex-1 truncate", PANE_TITLE)}>{title}</p>
       {ask}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger

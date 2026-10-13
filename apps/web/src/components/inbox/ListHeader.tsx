@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { InboxCounts, InboxView, SocialAccount } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
+import { PANE_TITLE } from "@/styles/tokens";
 
 export type InboxTab = "chats" | "scheduled";
 
@@ -94,8 +96,8 @@ export function ListHeader({
   return (
     <div className="space-y-3 border-b border-line bg-panel px-3 pt-3 pb-2.5">
       <div className="flex items-center justify-between gap-2">
-        <h1 className="text-lg font-semibold">Inbox</h1>
-        <div className="flex items-center gap-1">
+        <h1 className={cn(PANE_TITLE, "sr-only md:not-sr-only")}>Inbox</h1>
+        <div className="ml-auto flex items-center gap-1">
           {onShortcuts ? (
             <Button
               variant="ghost"
