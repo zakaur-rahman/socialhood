@@ -75,6 +75,7 @@ export function KnowledgeGapsCard({
                       <div className="flex shrink-0 gap-2">
                         <Button
                           size="sm"
+                          variant="secondary"
                           aria-label={`Add answer: ${gap.topic}`}
                           disabled={busyId === gap.id}
                           onClick={() => onAddAnswer(gap)}

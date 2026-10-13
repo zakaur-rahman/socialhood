@@ -113,7 +113,9 @@ export function PlanCards({
               ))}
             </ul>
             {mayPay && offer.plan === "pro" && offer.available ? (
+              // D-10: the page header's card holds the one primary; a card here is secondary.
               <Button
+                variant="secondary"
                 size="lg"
                 className="mt-5 w-full"
                 loading={checkout.pending}

@@ -81,6 +81,8 @@ describe("TemplateGallery (UX-SCR-11)", () => {
     expect(card).toHaveTextContent("Instagram comment keyword");
     expect(card).toHaveTextContent("AI reply");
     expect(within(card).getByText("Pro")).toBeInTheDocument();
+    // D-10: a card's action is secondary.
+    expect(within(card).getByRole("button", { name: "Use template: Price on request" })).toHaveAttribute("data-variant", "secondary");
     expect(within(screen.getByRole("article", { name: "Send a link to commenters" })).queryByText("Pro")).toBeNull();
   });
 

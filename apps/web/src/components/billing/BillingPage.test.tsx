@@ -103,6 +103,10 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(cards[1]).toHaveTextContent("50 active automations");
     expect(cards[2]).toHaveTextContent("Coming soon");
 
+    // D-10: the header card holds the one primary; the Pro plan card offers the same action as a secondary.
+    expect(within(current).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "default");
+    expect(within(cards[1]).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "secondary");
+
     await user.click(within(current).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
     expect(posts("/billing/checkout")[0].body).toEqual({ plan: "pro" });

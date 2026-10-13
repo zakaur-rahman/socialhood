@@ -54,11 +54,14 @@ export function AddKnowledgeMenu({
   onChoose,
   label = "Add knowledge",
   size,
+  variant,
 }: {
   onChoose: (type: KnowledgeType) => void;
   label?: string;
   /** `sm` in a compact empty state. */
   size?: "sm";
+  /** `secondary` when the page header already holds the one primary (D-10). */
+  variant?: "secondary";
 }) {
   // The sheet opens once the menu has closed and handed focus back to this button, so the sheet
   // remembers the button and returns focus to it (UX-A11Y-02). Opened from the item itself, it
@@ -68,7 +71,7 @@ export function AddKnowledgeMenu({
     // Not modal (the menu's default), so the sheet can open from it.
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size={size}>
+        <Button size={size} variant={variant}>
           <Plus aria-hidden /> {label}
         </Button>
       </DropdownMenuTrigger>
@@ -180,7 +183,7 @@ export function SourcesCard({
                 size="compact"
                 title={emptyStates.knowledge.title}
                 body={emptyStates.knowledge.body}
-                action={<AddKnowledgeMenu onChoose={onAdd} size="sm" />}
+                action={<AddKnowledgeMenu onChoose={onAdd} size="sm" variant="secondary" />}
               />
             </div>
           ) : (
