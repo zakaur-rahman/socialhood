@@ -54,6 +54,8 @@ export function CalendarPostCard({ post, variant }: { post: ScheduledPostSummary
       className={cn(
         "flex min-w-0 flex-1 items-center gap-1.5 rounded-[inherit] focus-visible:-outline-offset-2",
         variant === "week" ? "px-1.5 py-1" : "px-1 py-0.5",
+        // Room for the ⋯ glyph the touch trigger draws over the card's right edge.
+        "pointer-coarse:pr-6",
       )}
     >
       {variant === "week" ? (

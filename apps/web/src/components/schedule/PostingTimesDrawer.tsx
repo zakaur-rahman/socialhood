@@ -24,7 +24,9 @@ import { WEEKDAYS_LONG, WEEKDAYS_SHORT, zoneLabel } from "@/lib/schedule/dates";
 import { formatDayTime } from "@/lib/tz";
 import { EYEBROW } from "@/styles/tokens";
 
-import { useSchedule } from "./schedule-context";
+import { useOptionalSchedule } from "./schedule-context";
+
+export type TimesBasics = { wid: string; timeZone: string; now: Date };
 
 /** Times per weekday, "HH:MM", sorted: 0 = Monday … 6 = Sunday. */
 export type WeekTimes = string[][];
@@ -55,17 +57,27 @@ export function PostingTimesDrawer({
   open,
   onOpenChange,
   accounts,
+  basics,
+  onCloseAutoFocus,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   accounts: SocialAccount[];
+  /** Outside the Schedule page (the composer opens this drawer in place), the workspace and clock. */
+  basics?: TimesBasics;
+  /** Where focus goes when it closes (Radix returns it to the trigger by default). */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
+  const fromPage = useOptionalSchedule();
+  const context = basics ?? fromPage;
+  if (!context) throw new Error("PostingTimesDrawer needs the Schedule page or `basics`");
   const [accountId, setAccountId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, WeekTimes>>({});
   const current = accounts.find((a) => a.id === accountId) ?? accounts[0];
   const times = (account: SocialAccount) => (
     <AccountTimes
       key={account.id}
+      basics={context}
       account={account}
       draft={drafts[account.id]}
       onDraftChange={(week) => setDrafts((all) => ({ ...all, [account.id]: week }))}
@@ -82,7 +94,7 @@ export function PostingTimesDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {/* A side panel: the full screen below 768 px, 420 px beside the page from there. */}
-      <SheetContent side="right" size="panel" className="gap-0">
+      <SheetContent side="right" size="panel" className="gap-0" onCloseAutoFocus={onCloseAutoFocus}>
         <SheetHeader className="border-b border-line">
           <SheetTitle>Posting times</SheetTitle>
           <SheetDescription>
@@ -113,17 +125,18 @@ export function PostingTimesDrawer({
 }
 
 function AccountTimes({
+  basics: schedule,
   account,
   draft,
   onDraftChange,
   onSaved,
 }: {
+  basics: TimesBasics;
   account: SocialAccount;
   draft?: WeekTimes;
   onDraftChange: (week: WeekTimes) => void;
   onSaved: () => void;
 }) {
-  const schedule = useSchedule();
   const slots = usePostingSlots(schedule.wid, account.id);
   const save = useReplacePostingSlots(schedule.wid);
   const [error, setError] = useState<string | null>(null);

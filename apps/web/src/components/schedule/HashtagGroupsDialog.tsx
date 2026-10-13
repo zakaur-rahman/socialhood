@@ -34,7 +34,16 @@ const PREVIEW = 4;
  * UX-SCR-14 hashtag groups (FR-PUB-12): the list (name, count, first hashtags) with create, edit
  * and delete. The editor counts hashtags against the limit of 30. The composer inserts groups.
  */
-export function HashtagGroupsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function HashtagGroupsDialog({
+  open,
+  onOpenChange,
+  onCloseAutoFocus,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Where focus goes when it closes (Radix returns it to the trigger by default). */
+  onCloseAutoFocus?: (event: Event) => void;
+}) {
   const [editing, setEditing] = useState<HashtagGroup | "new" | null>(null);
   return (
     <Dialog
@@ -44,7 +53,7 @@ export function HashtagGroupsDialog({ open, onOpenChange }: { open: boolean; onO
         if (!value) setEditing(null);
       }}
     >
-      <DialogContent size="lg">
+      <DialogContent size="lg" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{editing === "new" ? "New hashtag group" : editing ? `Edit ${editing.name}` : "Hashtag groups"}</DialogTitle>
           <DialogDescription>Save sets of hashtags to add to a caption or first comment in one click.</DialogDescription>

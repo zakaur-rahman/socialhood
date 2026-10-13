@@ -594,6 +594,41 @@ describe("PostComposer When (FR-PUB-04, FR-PUB-09)", () => {
   });
 });
 
+describe("PostComposer tools in place (UI-054)", () => {
+  const slots = () => json({ social_account_id: "a1", timezone: TZ, slots: [], next_free_at: [] });
+
+  it("Posting times opens over the composer in one click, and Esc gives focus back", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost(), handlers: { "GET /v1/w/:wid/social-accounts/:id/posting-slots": slots } });
+    const open = await screen.findByRole("button", { name: "Posting times" });
+    await user.click(open);
+    expect(await screen.findByRole("dialog", { name: "Posting times" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(open).toHaveFocus());
+  });
+
+  it("Set posting times in the queue preview opens the same sheet", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost(), handlers: { "GET /v1/w/:wid/social-accounts/:id/posting-slots": slots } });
+    await user.click(await screen.findByRole("radio", { name: "Add to queue" }));
+    await user.click(await screen.findByRole("button", { name: "Set posting times" }));
+    expect(await screen.findByRole("dialog", { name: "Posting times" })).toBeInTheDocument();
+  });
+
+  it("Manage hashtag groups opens the groups dialog in place, and Esc gives focus back", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost() });
+    const menu = (await screen.findAllByRole("button", { name: "Insert hashtag group" }))[0];
+    await user.click(menu);
+    await user.click(await screen.findByRole("menuitem", { name: "Manage hashtag groups" }));
+    expect(await screen.findByRole("dialog", { name: "Hashtag groups" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(menu).toHaveFocus());
+  });
+});
+
 describe("PostComposer scheduled posts (FR-PUB-04)", () => {
   it("doesn't autosave; Update schedule waits for a change, then saves it", async () => {
     const user = userEvent.setup();

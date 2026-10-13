@@ -126,13 +126,6 @@ export function ListView({
         <EmptyState
           size="compact"
           {...EMPTY[tab]}
-          action={
-            tab === "scheduled" ? (
-              <Button size="sm" onClick={() => schedule.actions.newPostAt(null)}>
-                New post
-              </Button>
-            ) : undefined
-          }
         />
       </Card>
     );

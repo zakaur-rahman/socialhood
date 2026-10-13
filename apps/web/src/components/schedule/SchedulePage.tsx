@@ -1,10 +1,10 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ListFilter, ListPlus, PanelRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, ListFilter, PanelRight, Plus } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/states/EmptyState";
@@ -188,6 +188,8 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   const [deleteRequest, setDeleteRequest] = useState<MoveRequest | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const heading = useRef<HTMLHeadingElement>(null);
+  const deleted = useRef(false);
 
   // ---- mutations
   const create = useCreateScheduledPost(wid);
@@ -279,14 +281,12 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
     say(lockedMessage(post));
   };
 
-  const [creatingQueue, setCreatingQueue] = useState(false);
-  const newPost = (at: Date | null, query = "") => {
+  const newPost = (at: Date | null) => {
     if (create.isPending) return;
-    setCreatingQueue(query.includes("when=queue"));
     create.mutate(
       { publishAt: at ? at.toISOString() : null },
       {
-        onSuccess: (post) => openComposer(post, query),
+        onSuccess: (post) => openComposer(post),
         onError: (error) => toastError(error),
       },
     );
@@ -389,7 +389,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   } else if (calendar.isError && !calendar.data) {
     main = <ErrorState error={calendar.error} onRetry={() => void calendar.refetch()} />;
   } else if (phone) {
-    main = <AgendaView days={range.days} posts={posts} messages={messages} />;
+    main = <AgendaView days={range.days} posts={posts} messages={messages} quietWhenEmpty={emptyRange} />;
   } else if (view === "month") {
     main = (
       <MonthView
@@ -413,22 +413,16 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
         <div className="w-full p-4 md:p-6">
           <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Schedule</h1>
+              <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">
+                Schedule
+              </h1>
               <p className="text-xs text-fg-secondary">Times in {zoneLabel(timeZone)}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => newPost(null, "?when=queue")}
-                disabled={create.isPending}
-                loading={create.isPending && creatingQueue}
-              >
-                <ListPlus aria-hidden /> Add to queue
-              </Button>
-              <Button onClick={() => newPost(null)} disabled={create.isPending} loading={create.isPending && !creatingQueue}>
-                <Plus aria-hidden /> New post
-              </Button>
-            </div>
+            {/* The only primary on the page: the empty states below point at it. The queue is a choice in
+                the composer's When section (UI-054: the header's "Add to queue" was removed). */}
+            <Button onClick={() => newPost(null)} loading={create.isPending}>
+              <Plus aria-hidden /> New post
+            </Button>
           </header>
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -549,11 +543,6 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
               <EmptyState
                 size="compact"
                 {...emptyStates.schedule}
-                action={
-                  <Button size="sm" onClick={() => newPost(null)}>
-                    New post
-                  </Button>
-                }
               />
             </Card>
           ) : null}
@@ -604,7 +593,12 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
               if (deleteRequest?.returnFocus?.isConnected) {
                 event.preventDefault();
                 deleteRequest.returnFocus.focus();
+              } else if (deleted.current) {
+                // The post, and the menu button that asked, are gone: land on the page heading.
+                event.preventDefault();
+                heading.current?.focus();
               }
+              deleted.current = false;
             }}
           >
             <AlertDialogHeader>
@@ -619,7 +613,10 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
                   const post = deleteRequest?.post;
                   if (!post) return;
                   remove.mutate(post, {
-                    onSuccess: () => toast.success("Post deleted"),
+                    onSuccess: () => {
+                      deleted.current = true;
+                      toast.success("Post deleted");
+                    },
                     onError: (error) => toast.error(moveErrorMessage(error)),
                   });
                 }}
