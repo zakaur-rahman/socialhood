@@ -101,7 +101,12 @@ export function NotificationsPanel({
       </div>
       {offer}
       {items.length === 0 ? (
-        <EmptyState title={emptyStates.notifications.title} body={emptyStates.notifications.body} />
+        <EmptyState
+          size="compact"
+          title={emptyStates.notifications.title}
+          body={emptyStates.notifications.body}
+          className="px-4 py-4"
+        />
       ) : (
         <ul className="max-h-105 overflow-y-auto py-1">
           {items.map((item) => {

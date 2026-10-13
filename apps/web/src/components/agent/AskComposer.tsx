@@ -4,6 +4,7 @@ import { ArrowUp, Square } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { REQUEST_MAX_CHARS } from "@/lib/agent/format";
 import { cn } from "@/lib/utils";
 
@@ -114,16 +115,20 @@ export function AskComposer({
         {working ? (
           // Stop is the one inverted control (an `fg` fill), so it stays hand-built: 32 px, 40 px on
           // coarse pointers, and the global focus outline.
-          <button
-            type="button"
-            onClick={onStop}
-            disabled={stopping || !onStop}
-            aria-label="Stop"
-            title="Stop this answer"
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-fg text-canvas hover:bg-fg/90 disabled:opacity-50 motion-safe:transition-[background-color] pointer-coarse:size-10"
-          >
-            <Square className="size-3 fill-current" aria-hidden />
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onStop}
+                disabled={stopping || !onStop}
+                aria-label="Stop"
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-fg text-canvas hover:bg-fg/90 disabled:opacity-50 motion-safe:transition-[background-color] pointer-coarse:size-10"
+              >
+                <Square className="size-3 fill-current" aria-hidden />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Stop this answer</TooltipContent>
+          </Tooltip>
         ) : (
           <Button
             type="submit"

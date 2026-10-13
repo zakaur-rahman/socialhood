@@ -1,15 +1,13 @@
 "use client";
 
-import { X } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
-import { Button } from "@/components/ui/button";
+import { Alert, AlertAction } from "@/components/ui/alert";
 import type { BillingState, Role } from "@/lib/api/types";
 import { billingDate, daysUntil, priceOf } from "@/lib/billing/plan";
 import { paymentFailedBanner, pricePerMonth, trialEndingBanner } from "@/lib/copy";
-import { TONE_CLASS } from "@/lib/ui/tone";
-import { cn } from "@/lib/utils";
 
 export type BannerAction =
   | { label: string; href: Route; onClick?: never; pending?: never }
@@ -26,45 +24,36 @@ export type Banner = {
 
 /**
  * UX-SH-04: app-level banners above page content (account needs reconnecting, payment on hold,
- * AI credits exhausted, trial ending). One action each, a `secondary` `sm` Button (DESIGN_SYSTEM
- * §8.5: banner actions); critical states cannot be dismissed. They sit in `<main>`'s flow and keep
+ * AI credits exhausted, trial ending), drawn with Alert (DESIGN_SYSTEM §8.2): one action each, danger
+ * banners announced at once, critical states cannot be dismissed. They sit in `<main>`'s flow and keep
  * their height; a full-height frame below takes the rest.
  */
 export function BannerSlot({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
   return (
-    <div className="shrink-0 space-y-2 px-4 pt-4 md:px-6" role="status">
+    <div className="shrink-0 space-y-2 px-4 pt-4 md:px-6">
       {banners.map((banner) => (
-        <div
+        // The Alert is the live region: `alert` for danger (payment on hold), `status` otherwise.
+        <Alert
           key={banner.id}
           data-banner={banner.id}
-          className={cn(
-            "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-4 py-2.5 text-sm",
-            TONE_CLASS[banner.tone],
-          )}
+          tone={banner.tone}
+          icon={<TriangleAlert />}
+          onDismiss={banner.onDismiss}
+          action={
+            banner.action?.href ? (
+              <AlertAction asChild>
+                <Link href={banner.action.href}>{banner.action.label}</Link>
+              </AlertAction>
+            ) : banner.action ? (
+              <AlertAction onClick={banner.action.onClick} loading={banner.action.pending}>
+                {banner.action.label}
+              </AlertAction>
+            ) : undefined
+          }
         >
-          <p className="min-w-0 flex-1 basis-60">{banner.message}</p>
-          {banner.action?.href ? (
-            <Button asChild variant="secondary" size="sm">
-              <Link href={banner.action.href}>{banner.action.label}</Link>
-            </Button>
-          ) : banner.action ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={banner.action.onClick}
-              disabled={banner.action.pending}
-              aria-busy={banner.action.pending || undefined}
-            >
-              {banner.action.label}
-            </Button>
-          ) : null}
-          {banner.onDismiss ? (
-            <Button variant="ghost" size="icon-sm" aria-label="Dismiss" onClick={banner.onDismiss} className="-mr-2">
-              <X aria-hidden />
-            </Button>
-          ) : null}
-        </div>
+          {banner.message}
+        </Alert>
       ))}
     </div>
   );

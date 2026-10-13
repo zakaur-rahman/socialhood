@@ -19,9 +19,10 @@ describe("payment problem banner (FR-BIL-06, F-15, UX-SH-04)", () => {
       onManageBilling,
     });
     render(<BannerSlot banners={banners} />);
-    expect(screen.getByRole("status")).toHaveTextContent(
-      "Payment failed. Update your payment method by 3 Oct to keep Pro",
-    );
+    // Payment on hold is a danger Alert: announced at once, and it cannot be dismissed.
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Payment failed. Update your payment method by 3 Oct to keep Pro");
+    expect(alert).toHaveAttribute("data-tone", "danger");
     await userEvent.click(screen.getByRole("button", { name: "Manage billing" }));
     expect(onManageBilling).toHaveBeenCalledOnce();
     expect(screen.queryByRole("button", { name: "Dismiss" })).not.toBeInTheDocument();

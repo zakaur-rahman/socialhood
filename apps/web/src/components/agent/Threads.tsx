@@ -4,6 +4,7 @@ import { History, LoaderCircle, SquarePen } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
 import { SELECTED_ROW } from "@/components/shell/sidebar-styles";
+import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +16,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { groupThreads, isActive } from "@/lib/agent/format";
 import { useAskStore } from "@/lib/agent/store";
 import { useAgentThreads } from "@/lib/api/queries";
@@ -115,9 +117,9 @@ export function ThreadMenu({ wid, now, onPick }: { wid: string; now: Date; onPic
             <Skeleton className="h-3 w-1/2" />
           </div>
         ) : threads.isError ? (
-          <p className="p-2 text-xs text-danger-fg">Threads didn&apos;t load. Try again in a moment.</p>
+          <ErrorState size="compact" error={threads.error} onRetry={() => void threads.refetch()} className="p-2" />
         ) : items.length === 0 ? (
-          <p className="p-2 text-xs text-fg-secondary">No threads yet. Your questions start one.</p>
+          <EmptyState size="compact" title="No threads yet" body="Your questions start one." className="p-2" />
         ) : (
           groups.map(({ group, items: groupItems }, index) => (
             <Fragment key={group}>
@@ -162,9 +164,11 @@ export function ThreadList({ wid, now }: { wid: string; now: Date }) {
       </div>
     );
   }
-  if (threads.isError) return <ErrorState error={threads.error} onRetry={() => void threads.refetch()} />;
+  if (threads.isError) {
+    return <ErrorState size="compact" error={threads.error} onRetry={() => void threads.refetch()} className="px-4 py-3" />;
+  }
   if (items.length === 0) {
-    return <p className="px-4 py-3 text-sm text-fg-secondary">No threads yet. Your first question starts one.</p>;
+    return <EmptyState size="compact" title="No threads yet" body="Your first question starts one." className="px-4 py-3" />;
   }
   return (
     <nav aria-label="Threads" className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
@@ -178,18 +182,22 @@ export function ThreadList({ wid, now }: { wid: string; now: Date }) {
               const selected = thread.id === current;
               return (
                 <li key={thread.id}>
-                  <button
-                    type="button"
-                    onClick={() => setThread(wid, thread.id)}
-                    aria-current={selected ? "true" : undefined}
-                    title={thread.title}
-                    className={cn(
-                      "relative flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sm text-fg-secondary hover:bg-hover hover:text-fg pointer-coarse:min-h-10",
-                      selected && SELECTED_ROW,
-                    )}
-                  >
-                    <ThreadLine thread={thread} now={now} />
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setThread(wid, thread.id)}
+                        aria-current={selected ? "true" : undefined}
+                        className={cn(
+                          "relative flex min-h-9 w-full items-center gap-2 rounded-lg px-2.5 text-left text-sm text-fg-secondary hover:bg-hover hover:text-fg pointer-coarse:min-h-10",
+                          selected && SELECTED_ROW,
+                        )}
+                      >
+                        <ThreadLine thread={thread} now={now} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">{thread.title}</TooltipContent>
+                  </Tooltip>
                 </li>
               );
             })}
@@ -202,10 +210,10 @@ export function ThreadList({ wid, now }: { wid: string; now: Date }) {
             variant="ghost"
             size="sm"
             className="w-full"
-            disabled={threads.isFetchingNextPage}
+            loading={threads.isFetchingNextPage}
             onClick={() => void threads.fetchNextPage()}
           >
-            {threads.isFetchingNextPage ? "Loading…" : "Show older threads"}
+            Show older threads
           </Button>
         </div>
       ) : null}

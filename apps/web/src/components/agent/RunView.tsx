@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { BILLING_HREF } from "@/components/shell/nav";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { answerToPlainText } from "@/lib/agent/answer";
@@ -14,7 +15,6 @@ import { useAgentRun } from "@/lib/api/queries";
 import type { AgentRun, AgentRunDetail, Role } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
-import { TONE_CLASS } from "@/lib/ui/tone";
 import { cn } from "@/lib/utils";
 
 import { ActionCardView } from "./ActionCardView";
@@ -59,7 +59,6 @@ export function RunView({ run: listed, context, latest = false }: { run: AgentRu
           {asked}
         </time>
         <div
-          title={asked}
           className="max-w-[80%] rounded-2xl bg-raised px-4 py-2.5 text-md break-words whitespace-pre-wrap text-fg"
         >
           {run.request}
@@ -191,53 +190,39 @@ function AnswerActions({ answer, credits, alwaysVisible }: { answer: string; cre
 }
 
 const OUTCOME_ICON = { quota: CreditCard, failed: AlertTriangle, cancelled: CircleSlash, expired: Ban } as const;
-/** The tone map's soft fills (lib/ui/tone): the notice's text, its title and body, is the tone's colour. */
-const OUTCOME_TONE = {
-  quota: TONE_CLASS.warning,
-  failed: TONE_CLASS.danger,
-  cancelled: TONE_CLASS.neutral,
-  expired: TONE_CLASS.neutral,
-} as const;
+const OUTCOME_TONE = { quota: "warning", failed: "danger", cancelled: "neutral", expired: "neutral" } as const;
 
-/** A compact inline notice: what happened, in one or two lines, with Try again or Upgrade. */
+/**
+ * An inline notice, drawn with Alert: what happened, with Try again or Upgrade. Out of credits and
+ * failures are announced at once (`alert`); a cancelled or expired run is a polite `status`.
+ */
 function OutcomeNotice({ outcome, run, context }: { outcome: RunOutcome; run: AgentRun; context: RunContext }) {
   const Icon = OUTCOME_ICON[outcome.kind];
   const canAskAgain = outcome.kind !== "quota" && context.onAsk;
+  const upgrade = outcome.kind === "quota" && context.role !== "agent";
   return (
-    <div
-      role={outcome.kind === "cancelled" ? "status" : "alert"}
-      className={cn("flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg px-3 py-2 text-sm", OUTCOME_TONE[outcome.kind])}
+    <Alert
+      tone={OUTCOME_TONE[outcome.kind]}
+      urgent={outcome.kind === "quota"}
+      icon={<Icon />}
       data-outcome={outcome.kind}
+      action={
+        canAskAgain ? (
+          <AlertAction disabled={context.busy} onClick={() => context.onAsk?.(run.request)}>
+            <RotateCw aria-hidden /> {outcome.kind === "failed" ? "Try again" : "Ask again"}
+          </AlertAction>
+        ) : upgrade ? (
+          <AlertAction asChild>
+            <Link href={BILLING_HREF(context.slug)} onClick={context.onNavigate}>
+              Upgrade
+            </Link>
+          </AlertAction>
+        ) : undefined
+      }
     >
-      <p className="flex min-w-0 flex-1 basis-56 items-start gap-2">
-        <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
-        {/* One colour on the soft fill, as an Alert's: secondary text on `warning-soft` over the
-            panel's `overlay` surface is 4.2:1. */}
-        <span className="min-w-0">
-          <span className="font-medium">{outcome.title}</span>
-          <span> · </span>
-          <span>{outcome.body}</span>
-        </span>
-      </p>
-      {canAskAgain ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="px-2 text-fg"
-          disabled={context.busy}
-          onClick={() => context.onAsk?.(run.request)}
-        >
-          <RotateCw aria-hidden /> {outcome.kind === "failed" ? "Try again" : "Ask again"}
-        </Button>
-      ) : null}
-      {outcome.kind === "quota" && context.role !== "agent" ? (
-        <Button asChild size="sm">
-          <Link href={BILLING_HREF(context.slug)} onClick={context.onNavigate}>
-            Upgrade
-          </Link>
-        </Button>
-      ) : null}
-    </div>
+      <AlertTitle>{outcome.title}</AlertTitle>
+      <AlertDescription>{outcome.body}</AlertDescription>
+    </Alert>
   );
 }
 

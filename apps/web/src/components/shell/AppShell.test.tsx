@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { ShellFrame } from "./AppShell";
+import { ShellFrame } from "./ShellFrame";
 
 function renderFrame() {
   return render(

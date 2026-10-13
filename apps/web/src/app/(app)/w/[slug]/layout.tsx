@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { AppShell, ShellSkeleton } from "@/components/shell/AppShell";
+import { AppShell } from "@/components/shell/AppShell";
+import { ShellSkeleton } from "@/components/shell/ShellFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { useWorkspace, useWorkspaces } from "@/lib/api/queries";

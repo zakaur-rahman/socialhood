@@ -161,11 +161,15 @@ export function AskButton({ variant, collapsed = false }: { variant: "sidebar" |
     </button>
   );
   // The hint stays shut while the panel is open: a tooltip is a dismiss layer, and one that opens
-  // under a resting pointer would take the panel's Esc.
+  // under a resting pointer would take the panel's Esc. Its content is not even mounted then: a
+  // closing tooltip lingers for its exit animation, and a layer left over from the button's focus
+  // (after the panel closed) can end up above the panel's and swallow its first Esc.
   return (
     <Tooltip open={hint && !panelOpen} onOpenChange={setHint}>
       <TooltipTrigger asChild>{button}</TooltipTrigger>
-      <TooltipContent side="right">{collapsed ? `Ask Social Hood (${key} K)` : `${key} K`}</TooltipContent>
+      {panelOpen ? null : (
+        <TooltipContent side="right">{collapsed ? `Ask Social Hood (${key} K)` : `${key} K`}</TooltipContent>
+      )}
     </Tooltip>
   );
 }

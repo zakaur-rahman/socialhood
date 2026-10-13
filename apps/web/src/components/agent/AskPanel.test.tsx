@@ -204,8 +204,9 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     const run = await within(panel).findByRole("article", { name: "Question: How did my latest post do?" });
     const bubble = within(run).getByText("How did my latest post do?");
     expect(bubble).toHaveClass("bg-raised", "rounded-2xl", "max-w-[80%]");
-    expect(bubble).toHaveAttribute("title", expect.stringMatching(/15:30$/));
+    // The time is the `time` element beside it (no `title` tooltip repeating it).
     const time = run.querySelector("time");
+    expect(time).toHaveTextContent(/15:30$/);
     expect(time).toHaveAttribute("dateTime", "2026-09-29T10:00:00Z");
     expect(time).toHaveClass("opacity-0", "group-hover/run:opacity-100", "group-focus-within/run:opacity-100");
     // No card around the answer: the reading size (`text-md`, 15 px on 28 px lines).
@@ -567,13 +568,14 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
     expect(await within(panel).findByTestId("steps-toggle")).toHaveTextContent(/^Steps$/);
   });
 
-  it("the notices are compact and inline, not cards", async () => {
+  it("the notices are Alerts: inline, polite for a cancelled run", async () => {
     setup({ runs: { r1: runDetail({ status: "cancelled" }) } });
     useAskStore.getState().setThread("w1", "r1");
     const { panel } = await openPanel();
     const notice = await within(panel).findByRole("status");
     expect(notice).toHaveAttribute("data-outcome", "cancelled");
-    expect(notice).toHaveClass("rounded-lg", "px-3", "py-2");
+    expect(notice).toHaveAttribute("data-slot", "alert");
+    expect(notice).toHaveAttribute("data-tone", "neutral");
   });
 
   it("an expired run says so", async () => {
