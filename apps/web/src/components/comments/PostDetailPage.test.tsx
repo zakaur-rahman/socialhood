@@ -555,6 +555,15 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     const layout = await screen.findByTestId("post-detail");
     expect(layout).toHaveClass("grid", "lg:grid-cols-[340px_minmax(0,1fr)]");
     expect(layout.className).not.toMatch(/(^|\s)grid-cols-/);
+    // UI-056: post, then comments, then the insights; from 1024 px the comments span both rows
+    // of the right column.
+    const [side, comments, insights] = Array.from(layout.children);
+    expect(side).toBe(screen.getByTestId("post-side"));
+    expect(insights).toBe(screen.getByTestId("post-insights"));
+    expect(comments).toContainElement(await screen.findByRole("list", { name: "Comments" }));
+    expect(comments).toHaveClass("lg:col-start-2", "lg:row-span-2", "lg:row-start-1");
+    expect(side).toContainElement(screen.getByRole("region", { name: "Post" }));
+    expect(insights).toContainElement(screen.getByRole("region", { name: "Summary" }));
     // the thumbnail is small beside the caption on phones and full width in the column on desktop
     const thumb = screen.getByRole("region", { name: "Post" }).querySelector(".aspect-square");
     expect(thumb).toHaveClass("w-24", "lg:w-full");
