@@ -10,7 +10,17 @@ vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,
 }));
 
+const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
+vi.mock("@sentry/nextjs", () => sentry);
+
 describe("the workspace error boundary (UX-011, UI-ISS-068)", () => {
+  it("reports the error to Sentry (RG-07)", () => {
+    sentry.captureException.mockClear();
+    const error = new Error("boom");
+    render(<WorkspaceError error={error} retry={() => {}} />);
+    expect(sentry.captureException).toHaveBeenCalledExactlyOnceWith(error);
+  });
+
   beforeEach(() => {
     nav.pathname = "/w/maple/knowledge";
   });
