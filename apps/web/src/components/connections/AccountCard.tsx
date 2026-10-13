@@ -151,7 +151,7 @@ export function AccountCard({
               </SelectTrigger>
               <SelectContent>
                 {AI_MODES.map((mode) => (
-                  <SelectItem key={mode.value} value={mode.value} disabled={mode.value === "auto" && autoLocked}>
+                  <SelectItem key={mode.value} value={mode.value}>
                     {mode.label}
                     {mode.value === "auto" && autoLocked ? " · Pro" : ""}
                     <span className="sr-only">: {mode.hint}</span>

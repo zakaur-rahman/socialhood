@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { DisabledReason } from "@/components/ui/disabled-reason";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, isPlanLimitError } from "@/lib/api/errors";
 import { useCompleteWhatsAppSignup } from "@/lib/api/queries";
 import { errorMessage, whatsappConnectError, whatsappConnected } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
@@ -37,11 +37,17 @@ export function whatsappSignupError(error: unknown): string {
  * code and whichever ids Meta's session info gave to the API (it finds the rest), and names the
  * connected number. Used to connect and to reconnect.
  */
-export function useWhatsAppConnect(wid: string) {
+export function useWhatsAppConnect(wid: string, onFailure?: (message: string) => void) {
   const complete = useCompleteWhatsAppSignup(wid);
   const [opening, setOpening] = useState(false);
 
   const { appId, configId } = metaConfig();
+
+  // UI-061: a screen that shows the last connect error inline takes it here; elsewhere a toast.
+  const fail = (error: unknown, message?: string) => {
+    if (!onFailure || isPlanLimitError(error)) return toastError(error, message);
+    onFailure(message ?? errorMessage(error));
+  };
 
   const connect = async () => {
     setOpening(true);
@@ -53,7 +59,8 @@ export function useWhatsAppConnect(wid: string) {
         return;
       }
       if (result.kind === "error") {
-        toast.error(result.message);
+        if (onFailure) onFailure(result.message);
+        else toast.error(result.message);
         return;
       }
       const { code, waba_id, phone_number_id } = result;
@@ -62,11 +69,11 @@ export function useWhatsAppConnect(wid: string) {
         {
           onSuccess: (account) => toast.success(whatsappConnected(account.display_name, account.phone_number)),
           // Over accounts_per_platform (402): the upgrade dialog says so.
-          onError: (error) => toastError(error, whatsappSignupError(error)),
+          onError: (error) => fail(error, whatsappSignupError(error)),
         },
       );
     } catch (error) {
-      toastError(error, error instanceof Error && !(error instanceof ApiError) ? error.message : undefined);
+      fail(error, error instanceof Error && !(error instanceof ApiError) ? error.message : undefined);
     } finally {
       setOpening(false);
     }
@@ -79,11 +86,19 @@ export function useWhatsAppConnect(wid: string) {
   };
 }
 
-export function ConnectWhatsAppButton({ wid }: { wid: string }) {
-  const { connect, busy, configured } = useWhatsAppConnect(wid);
+export function ConnectWhatsAppButton({
+  wid,
+  size = "lg",
+  onFailure,
+}: {
+  wid: string;
+  size?: "lg" | "xl";
+  onFailure?: (message: string) => void;
+}) {
+  const { connect, busy, configured } = useWhatsAppConnect(wid, onFailure);
   return (
     <DisabledReason reason={configured ? null : "WhatsApp isn't set up for this app yet"}>
-      <Button variant="secondary" size="lg" disabled={!configured} loading={busy} onClick={connect}>
+      <Button variant="secondary" size={size} disabled={!configured} loading={busy} onClick={connect}>
         <WhatsAppGlyph className="size-4" />
         Connect WhatsApp
       </Button>

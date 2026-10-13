@@ -1,8 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { account, json, noContent, problem, renderWithApi, type Call } from "@/test/api";
+import { account, json, noContent, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
 import ConnectionsPage from "./page";
 
@@ -15,6 +15,12 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/w/maple/settings/connections",
   useRouter: () => ({ push: vi.fn(), replace: nav.replace }),
 }));
+
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
 
 beforeEach(() => {
   nav.search = "";
@@ -61,16 +67,41 @@ describe("finishing an Instagram connect (F-03, X-1)", () => {
   ])("explains a refused nonce", async (response, message) => {
     nav.search = "instagram=n0nce";
     renderPage(() => response);
-    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1));
-    expect(toast.error.mock.calls[0][0]).toBe(message);
+    expect(await screen.findByText(message)).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
     expect(toast.success).not.toHaveBeenCalled();
   });
 
   it("still shows the callback's own errors without calling the API", async () => {
     nav.search = "error=access_denied";
     const { calls } = renderPage(() => json(account()));
-    await waitFor(() => expect(toast.error).toHaveBeenCalledWith("Connection cancelled", undefined));
+    expect(await screen.findByText("Connection cancelled")).toBeInTheDocument();
     expect(completeCalls(calls)).toEqual([]);
+  });
+
+  it("keeps the last connect error inline with Try again until dismissed (UI-061)", async () => {
+    const user = userEvent.setup();
+    nav.search = "error=connect_failed";
+    renderPage(() => json(account()));
+    expect(await screen.findByText("Instagram didn't respond. Try again.")).toBeInTheDocument();
+    expect(toast.error).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByText("Instagram didn't respond. Try again.")).toBeNull();
+  });
+
+  it("an error that can't be retried has no Try again", async () => {
+    nav.search = "error=account_in_use";
+    renderPage(() => json(account()));
+    await screen.findByText(/connected to another Social Hood workspace/);
+    expect(screen.queryByRole("button", { name: "Try again" })).toBeNull();
+  });
+
+  it("the empty state offers both Connect buttons, once", async () => {
+    renderPage(() => json(account()));
+    expect(await screen.findByRole("button", { name: /Connect Instagram/ })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /Connect Instagram/ })).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /Connect WhatsApp/ })).toHaveLength(1);
   });
 });
 
@@ -163,6 +194,20 @@ describe("search and filters (C-066)", () => {
     expect(within(card).queryAllByRole("button")).toEqual([]);
     const filters = screen.getByRole("radiogroup", { name: "Show accounts" });
     expect(counts(filters)).toEqual(["All1", "Connected0", "Disconnected1", "Sandboxes0"]);
+  });
+
+  it("Auto on the Free plan opens the upgrade dialog, with no request (UI-061)", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderWithApi(<ConnectionsPage />, {
+      ws: { ...workspace, plan: "free" },
+      upgradeDialog: true,
+      handlers: { "GET /v1/w/:wid/social-accounts": () => json({ items }) },
+    });
+    const card = await screen.findByRole("article", { name: "Maple Bakery" });
+    await user.click(within(card).getByRole("combobox", { name: /AI replies/ }));
+    await user.click(await screen.findByRole("option", { name: /Auto/ }));
+    expect(await screen.findByTestId("upgrade-dialog")).toBeInTheDocument();
+    expect(calls.filter((c) => c.method === "PATCH")).toEqual([]);
   });
 
   it("names the page's tab in the breadcrumb and keeps the connect actions", async () => {
