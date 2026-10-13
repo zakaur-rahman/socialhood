@@ -54,7 +54,7 @@ export function RunView({ run: listed, context, latest = false }: { run: AgentRu
       <div className="flex items-end justify-end gap-2">
         <time
           dateTime={run.created_at}
-          className="mb-2 shrink-0 text-2xs text-fg-secondary opacity-0 group-focus-within/run:opacity-100 group-hover/run:opacity-100 motion-safe:transition-opacity"
+          className="mb-2 shrink-0 text-2xs text-fg-secondary opacity-60 group-focus-within/run:opacity-100 group-hover/run:opacity-100 motion-safe:transition-opacity"
         >
           {asked}
         </time>

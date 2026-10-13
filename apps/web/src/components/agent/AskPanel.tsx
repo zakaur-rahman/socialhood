@@ -3,12 +3,11 @@
 import { Maximize2, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Dialog as DialogPrimitive } from "radix-ui";
 import { useState, useSyncExternalStore } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
-import { MODAL_OVERLAY } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { modifierKey } from "@/lib/agent/format";
 import { askHref, isAskPage } from "@/lib/agent/routes";
 import { useAskStore } from "@/lib/agent/store";
@@ -69,7 +68,7 @@ export function AskRoot() {
  * The Ask Social Hood side sheet: 420 px on the right from 768 px, the full screen on phones. It
  * traps focus, closes on Esc and returns focus to what opened it (UX-A11Y-02). Its surface is the
  * sheets' (DESIGN_SYSTEM §6, level 2; D-12): `overlay` with `shadow-overlay` and a `line` edge,
- * over the modal scrim. UI-067 moves it onto SheetContent, with the sheets' motion.
+ * over the modal scrim. It is a `SheetContent size="panel"`, so it moves like every sheet.
  */
 export function AskPanel() {
   const workspace = useCurrentWorkspace();
@@ -80,42 +79,39 @@ export function AskPanel() {
   const returnFocus = useReturnFocus();
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className={MODAL_OVERLAY} />
-        <DialogPrimitive.Content
-          aria-describedby={undefined}
-          onOpenAutoFocus={(event) => {
-            returnFocus.onOpenAutoFocus();
-            event.preventDefault();
-            focusComposer(PANEL_COMPOSER_ID);
-          }}
-          onCloseAutoFocus={returnFocus.onCloseAutoFocus}
-          className="fixed inset-0 z-50 flex flex-col bg-overlay shadow-overlay outline-none duration-slow data-open:animate-in data-open:slide-in-from-right-10 data-closed:animate-out data-closed:slide-out-to-right-10 motion-reduce:animate-none md:inset-y-0 md:right-0 md:left-auto md:w-[420px] md:border-l md:border-line"
-          data-testid="ask-panel"
-        >
-          <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line pr-2 pl-4">
-            <Sparkles className="size-4 shrink-0 text-brand-fg" aria-hidden />
-            <DialogPrimitive.Title className="ml-1 min-w-0 flex-1 truncate text-base font-semibold">
-              Ask Social Hood
-            </DialogPrimitive.Title>
-            <NewThreadButton wid={workspace.id} iconOnly onStart={() => focusComposer(PANEL_COMPOSER_ID)} />
-            <ThreadMenu wid={workspace.id} now={now} />
-            <Button asChild variant="ghost" size="icon" className="text-fg-secondary">
-              <Link href={askHref(workspace.slug)} onClick={close} aria-label="Open the Ask page">
-                <Maximize2 aria-hidden />
-              </Link>
-            </Button>
-            <DialogPrimitive.Close asChild>
-              <Button variant="ghost" size="icon" className="text-fg-secondary" aria-label="Close">
-                <X aria-hidden />
-              </Button>
-            </DialogPrimitive.Close>
-          </header>
-          <AskConversation composerId={PANEL_COMPOSER_ID} onNavigate={close} />
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetContent
+        size="panel"
+        showCloseButton={false}
+        aria-describedby={undefined}
+        onOpenAutoFocus={(event) => {
+          returnFocus.onOpenAutoFocus();
+          event.preventDefault();
+          focusComposer(PANEL_COMPOSER_ID);
+        }}
+        onCloseAutoFocus={returnFocus.onCloseAutoFocus}
+        className="gap-0"
+        data-testid="ask-panel"
+      >
+        <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line pr-2 pl-4">
+          <Sparkles className="size-4 shrink-0 text-brand-fg" aria-hidden />
+          <SheetTitle className="ml-1 min-w-0 flex-1 truncate text-base font-semibold">
+            Ask Social Hood
+          </SheetTitle>
+          <NewThreadButton wid={workspace.id} iconOnly onStart={() => focusComposer(PANEL_COMPOSER_ID)} />
+          <ThreadMenu wid={workspace.id} now={now} />
+          <Button asChild variant="ghost" size="icon" className="text-fg-secondary">
+            <Link href={askHref(workspace.slug)} onClick={close} aria-label="Open the Ask page">
+              <Maximize2 aria-hidden />
+            </Link>
+          </Button>
+          <Button variant="ghost" size="icon" className="text-fg-secondary" aria-label="Close" onClick={close}>
+            <X aria-hidden />
+          </Button>
+        </header>
+        <AskConversation composerId={PANEL_COMPOSER_ID} onNavigate={close} />
+      </SheetContent>
+    </Sheet>
   );
 }
 
