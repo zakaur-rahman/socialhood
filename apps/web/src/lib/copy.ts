@@ -79,6 +79,11 @@ export function inboxFilterEmpty(what: string): { title: string; body: string } 
   return { title: "All caught up", body: `Nothing matches "${what}" right now.` };
 }
 
+/** The Scheduled tab with a platform chosen and nothing scheduled there (UI-052). */
+export function scheduledPlatformEmpty(platformLabel: string): { title: string; body: string } {
+  return { title: "No scheduled messages", body: `Nothing is scheduled on ${platformLabel}. Choose All to see the rest.` };
+}
+
 // ---- sending (§4.7 error codes, F-07)
 
 type SendContext = {
