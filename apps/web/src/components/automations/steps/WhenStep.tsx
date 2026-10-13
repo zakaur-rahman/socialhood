@@ -10,7 +10,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition, SocialAccount, TriggerName } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
 import { errorsFor, triggerPatch, type FieldErrors } from "@/lib/automations/definition";
-import { TRIGGER_LABEL } from "@/lib/automations/format";
+import { TRIGGER_LABEL_IG } from "@/lib/automations/format";
 
 import { StepCard, type StepState } from "../StepCard";
 
@@ -105,7 +105,7 @@ export function WhenStep({
             {TRIGGERS.map(({ value, icon: Icon }) => (
               <ToggleGroupItem key={value} value={value}>
                 <Icon className="size-4" aria-hidden />
-                {TRIGGER_LABEL[value]}
+                {TRIGGER_LABEL_IG[value]}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>

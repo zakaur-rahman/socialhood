@@ -32,7 +32,7 @@ import {
 } from "@/lib/api/queries";
 import type { Automation, AutomationSort, AutomationStatus, SocialAccount, TriggerName } from "@/lib/api/types";
 import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
-import { etaText, formatCount, TRIGGER_LABEL } from "@/lib/automations/format";
+import { etaText, formatCount, TRIGGER_LABEL_IG } from "@/lib/automations/format";
 import { emptyStates, errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
@@ -40,6 +40,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AccountGroup, type GroupActions } from "./AccountGroup";
 import { AgentDraftDialog } from "./AgentDraftDialog";
+import { InstagramOnlyNotice } from "./InstagramOnlyNotice";
 import { editorHref, TemplateCard, TemplateGallery, useStartAutomation, type Choice } from "./TemplateGallery";
 
 export const SEARCH_DEBOUNCE_MS = 250;
@@ -129,6 +130,9 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const templates = useAutomationTemplates(wid);
   const allAccounts = useSocialAccounts(wid);
   const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  // UI-064: no Instagram account (WhatsApp only, or nothing connected) hears that first.
+  const noInstagram = allAccounts.isSuccess && accounts.length === 0;
+  const canConnect = workspace.role !== "agent";
 
   // ---- gallery (UX-SCR-11)
   // The gallery stays mounted, so closing it plays its exit. Its state is its own; a new key on
@@ -281,10 +285,15 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
     setTrigger(null);
   };
 
+  // The notice stands alone: figures and filters for automations that can't exist would only crowd it.
+  const bare = noInstagram && list.isSuccess && items.length === 0 && !filtered;
+
   let content;
   if (list.isPending) content = <RowSkeletons />;
   else if (list.isError) content = <ErrorState error={list.error} onRetry={() => void list.refetch()} />;
-  else if (items.length === 0 && !filtered) {
+  else if (items.length === 0 && !filtered && noInstagram) {
+    content = <InstagramOnlyNotice slug={workspace.slug} variant="page" canConnect={canConnect} />;
+  } else if (items.length === 0 && !filtered) {
     content = (
       <EmptyAutomations
         templates={templates.data ?? []}
@@ -337,6 +346,12 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
       }
     >
       <div className="space-y-5">
+        {/* Without an Instagram account and with nothing yet, the notice below is the whole page. */}
+        {noInstagram && (items.length > 0 || filtered) ? (
+          <InstagramOnlyNotice slug={workspace.slug} variant="inline" canConnect={canConnect} />
+        ) : null}
+        {bare ? null : (
+          <>
         <SummaryStrip summary={summary.data} loading={summary.isPending} />
 
         <div className="flex flex-wrap items-center gap-2">
@@ -388,7 +403,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
               <SelectItem value={ALL}>All triggers</SelectItem>
               {TRIGGERS.map((value) => (
                 <SelectItem key={value} value={value}>
-                  {TRIGGER_LABEL[value]}
+                  {TRIGGER_LABEL_IG[value]}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -422,6 +437,8 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             </Button>
           </div>
         ) : null}
+          </>
+        )}
 
         {content}
       </div>
