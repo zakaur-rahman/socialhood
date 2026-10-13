@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
-import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { CalendarMessage, ScheduledPostSummary } from "@/lib/api/types";
 import { contactName } from "@/lib/inbox/format";
@@ -33,10 +32,13 @@ export function AgendaView({
   days,
   posts,
   messages,
+  quietWhenEmpty = false,
 }: {
   days: string[];
   posts: ScheduledPostSummary[];
   messages: CalendarMessage[];
+  /** The page already shows its one empty state (nothing planned, no drafts). */
+  quietWhenEmpty?: boolean;
 }) {
   const schedule = useSchedule();
   const { timeZone, now } = schedule;
@@ -52,6 +54,7 @@ export function AgendaView({
       .map(([day, rows]) => [day, rows.sort((a, b) => a.at.localeCompare(b.at))] as const);
   }, [days, posts, messages, timeZone]);
 
+  if (groups.length === 0 && quietWhenEmpty) return null;
   if (groups.length === 0) {
     return (
       <Card>
@@ -59,11 +62,6 @@ export function AgendaView({
           size="compact"
           title="Nothing planned for these days"
           body="Drafts and scheduled posts appear here with their times."
-          action={
-            <Button size="sm" onClick={() => schedule.actions.newPostAt(null)}>
-              New post
-            </Button>
-          }
         />
       </Card>
     );

@@ -38,6 +38,7 @@ import {
 import type { HashtagGroup } from "@/lib/publishing/types";
 import { cn } from "@/lib/utils";
 
+import { useComposerTools } from "./ComposerTools";
 import { Section } from "./Section";
 
 type Tools = { ai: boolean; suggest: boolean; groups: boolean };
@@ -444,10 +445,12 @@ function HashtagGroupMenu({
   slug: string;
   onInsert: (group: HashtagGroup) => void;
 }) {
+  const tools = useComposerTools();
+  const trigger = useRef<HTMLButtonElement>(null);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="sm">
+        <Button ref={trigger} type="button" variant="ghost" size="sm">
           <Tags aria-hidden /> Insert hashtag group
         </Button>
       </DropdownMenuTrigger>
@@ -466,9 +469,14 @@ function HashtagGroupMenu({
           ))
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={`/w/${slug}/schedule` as Route}>Manage hashtag groups</Link>
-        </DropdownMenuItem>
+        {tools ? (
+          // In place: the groups dialog opens over the composer and gives focus back to this button.
+          <DropdownMenuItem onSelect={() => tools.openHashtagGroups(trigger.current)}>Manage hashtag groups</DropdownMenuItem>
+        ) : (
+          <DropdownMenuItem asChild>
+            <Link href={`/w/${slug}/schedule` as Route}>Manage hashtag groups</Link>
+          </DropdownMenuItem>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

@@ -45,3 +45,8 @@ export function useSchedule(): ScheduleContextValue {
 export function accountColor(value: ScheduleContextValue, accountId: string | null | undefined): AccountColor {
   return (accountId && value.colors.get(accountId)) || UNKNOWN_ACCOUNT_COLOR;
 }
+
+/** The page's context, or null outside it (the posting-times drawer also opens from the composer). */
+export function useOptionalSchedule(): ScheduleContextValue | null {
+  return useContext(ScheduleContext);
+}

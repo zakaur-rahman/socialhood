@@ -165,7 +165,7 @@ function mediaItemOf(post: Pick<ScheduledPostSummary, "targets">): string | null
  * pressed match Button's ghost.
  */
 const CARD_TRIGGER =
-  "mr-0.5 grid size-6 shrink-0 place-items-center rounded-md text-fg-secondary transition-[color,background-color] duration-fast ease-standard hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:absolute pointer-coarse:inset-0 pointer-coarse:mr-0 pointer-coarse:size-auto pointer-coarse:[&_svg]:hidden";
+  "mr-0.5 grid size-6 shrink-0 place-items-center rounded-md text-fg-secondary transition-[color,background-color] duration-fast ease-standard hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:absolute pointer-coarse:inset-0 pointer-coarse:mr-0 pointer-coarse:size-auto pointer-coarse:justify-items-end pointer-coarse:pr-1.5";
 
 /**
  * The post's actions (UX-A11Y-02: always visible). "Move to…" is the keyboard and phone
@@ -228,6 +228,12 @@ export function PostMenu({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem asChild>
+          <Link href={schedule.composerHref(post)}>
+            <Pencil aria-hidden />
+            {status === "failed" || status === "canceled" ? "Edit and retry" : status === "draft" || status === "scheduled" ? "Edit" : "Open"}
+          </Link>
+        </DropdownMenuItem>
         {status === "scheduled" ? (
           <DropdownMenuItem onSelect={() => actions.moveTo(post, trigger.current)}>
             <CalendarClock aria-hidden /> Move to…
@@ -257,12 +263,6 @@ export function PostMenu({
             </Link>
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuItem asChild>
-          <Link href={schedule.composerHref(post)}>
-            <Pencil aria-hidden />
-            {status === "failed" || status === "canceled" ? "Edit and retry" : status === "draft" || status === "scheduled" ? "Edit" : "Open"}
-          </Link>
-        </DropdownMenuItem>
         {status === "scheduled" ? (
           <DropdownMenuItem onSelect={() => actions.unschedule(post)}>
             <Undo2 aria-hidden /> Move to drafts

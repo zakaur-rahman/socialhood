@@ -89,6 +89,7 @@ import { PostPreview } from "./PostPreview";
 import { StatusBanner } from "./StatusBanner";
 import { toRequest, usePostDraft, type Draft, type PostSaveStatus } from "./use-post-draft";
 import { useMediaUploads, type Uploader } from "./use-media-uploads";
+import { ComposerTools } from "./ComposerTools";
 import { sharedFreeTime, WHEN_DATE_ID, WhenSection, type QueuePreview, type WhenMode } from "./WhenSection";
 
 export type ComposerDeps = {
@@ -572,6 +573,7 @@ function Composer({
   const publishAtLabel = server.status === "scheduled" && server.publish_at ? server.publish_at : null;
 
   return (
+    <ComposerTools wid={wid} timeZone={timeZone} now={now} accounts={igAccounts}>
     <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
       {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
           state wrap inside their own group instead of pushing More onto a line of its own. */}
@@ -865,6 +867,7 @@ function Composer({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </ComposerTools>
   );
 }
 
