@@ -13,7 +13,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from sqlalchemy import ColumnElement, func, select
+from sqlalchemy import ColumnElement, and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError
@@ -41,17 +41,24 @@ async def post_or_404(session: AsyncSession, post_id: uuid.UUID) -> MediaItem:
     return item
 
 
-async def get_post(session: AsyncSession, post_id: uuid.UUID) -> PostDetail:
-    return views.post_detail(await post_or_404(session, post_id))
+async def get_post(session: AsyncSession, post_id: uuid.UUID, *, now: datetime) -> PostDetail:
+    item = await post_or_404(session, post_id)
+    detail = views.post_detail(item)
+    detail.needs_reply_count = (await needs_reply_counts(session, [item.id], now=now)).get(
+        item.id, 0
+    )
+    return detail
 
 
-def filter_condition(name: CommentFilter) -> ColumnElement[bool] | None:
+def filter_condition(name: CommentFilter, *, now: datetime) -> ColumnElement[bool] | None:
     """The chip as a condition on Comment and its (outer-joined) CommentAnalysis."""
     analysed = Comment.analysis_status == AnalysisStatus.DONE
     if name == "all":
         return None
     if name == "hidden":
         return Comment.hidden.is_(True)
+    if name == "needs_reply":
+        return and_(*needs_reply_conditions(now))
     if name == "spam":
         return analysed & CommentAnalysis.is_spam.is_(True)
     not_spam = analysed & CommentAnalysis.is_spam.is_(False)
@@ -172,21 +179,43 @@ async def find_comments(session: AsyncSession, query: CommentQuery, *, limit: in
 NEEDS_REPLY_WINDOW = timedelta(days=7)
 
 
-async def comment_counts(session: AsyncSession, *, now: datetime) -> CommentCounts:
-    """The Comments nav badge. A comment needs a reply when the account has not replied to it,
-    publicly or privately (``CommentQuery.replied``), it is not spam (unanalysed included, as
-    ``CommentQuery.spam=False``), it is neither hidden nor deleted, and it came in the last 7 days
-    (Instagram's private-reply window). The window keeps the count to what can still be answered:
-    the backfill on connect brings in older comments, and replies made in the Instagram app are
-    never stored, so those would otherwise wait forever."""
+def needs_reply_conditions(now: datetime) -> list[ColumnElement[bool]]:
+    """The one rule for "needs a reply", on Comment and its (outer-joined) CommentAnalysis: the
+    account has not replied to it, publicly or privately (``CommentQuery.replied``), it is not spam
+    (unanalysed included, as ``CommentQuery.spam=False``), it is neither hidden nor deleted, and it
+    came in the last 7 days (Instagram's private-reply window). The window keeps the count to what
+    can still be answered: the backfill on connect brings in older comments, and replies made in
+    the Instagram app are never stored, so those would otherwise wait forever. The nav badge, a
+    post's ``needs_reply_count`` and the ``needs_reply`` comment filter all use it."""
     query = CommentQuery(start=now - NEEDS_REPLY_WINDOW, replied=False)
+    return [*_scope(query), *_analysis_filters(query), Comment.hidden.is_(False)]
+
+
+async def comment_counts(session: AsyncSession, *, now: datetime) -> CommentCounts:
+    """The Comments nav badge: comments that need a reply, across all posts."""
     needs_reply = await session.scalar(
         select(func.count())
         .select_from(Comment)
         .outerjoin(CommentAnalysis, CommentAnalysis.comment_id == Comment.id)
-        .where(*_scope(query), *_analysis_filters(query), Comment.hidden.is_(False))
+        .where(*needs_reply_conditions(now))
     )
     return CommentCounts(needs_reply=int(needs_reply or 0))
+
+
+async def needs_reply_counts(
+    session: AsyncSession, post_ids: Sequence[uuid.UUID], *, now: datetime
+) -> dict[uuid.UUID, int]:
+    """Each post's comments that need a reply (posts with none are left out)."""
+    if not post_ids:
+        return {}
+    rows = await session.execute(
+        select(Comment.media_item_id, func.count())
+        .select_from(Comment)
+        .outerjoin(CommentAnalysis, CommentAnalysis.comment_id == Comment.id)
+        .where(Comment.media_item_id.in_(list(post_ids)), *needs_reply_conditions(now))
+        .group_by(Comment.media_item_id)
+    )
+    return {post_id: int(count) for post_id, count in rows.all()}
 
 
 @dataclass(frozen=True)
@@ -238,12 +267,13 @@ async def list_comments(
     comment_filter: CommentFilter,
     cursor: str | None,
     limit: int,
+    now: datetime,
 ) -> CommentList:
     item = await post_or_404(session, post_id)
     rows = await comments_repo.list_for_post(
         session,
         item.id,
-        condition=filter_condition(comment_filter),
+        condition=filter_condition(comment_filter, now=now),
         after=decode_cursor(cursor) if cursor else None,
         limit=limit + 1,
     )

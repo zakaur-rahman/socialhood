@@ -11,9 +11,11 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePostGrid, useSocialAccounts } from "@/lib/api/queries";
+import { useCommentCounts, usePostGrid, useSocialAccounts } from "@/lib/api/queries";
+import type { PostSort } from "@/lib/api/types";
 import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
 import { flattenPosts } from "@/lib/comments/cache";
+import { formatCount } from "@/lib/comments/format";
 import { emptyStates } from "@/lib/copy";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -55,7 +57,10 @@ export function CommentsPage() {
   const [accountId, setAccountId] = useState<string | null>(null);
   const allAccounts = useSocialAccounts(wid);
   const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
-  const posts = usePostGrid(wid, accountId);
+  const [sort, setSort] = useState<PostSort>("recent");
+  const posts = usePostGrid(wid, accountId, sort);
+  const counts = useCommentCounts(wid);
+  const waiting = counts.data?.needs_reply ?? 0;
   const items = flattenPosts(posts.data);
   const chosen = accounts.find((account) => account.id === accountId);
 
@@ -101,6 +106,22 @@ export function CommentsPage() {
   } else {
     content = (
       <div className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <p className="text-sm text-fg-secondary" data-testid="needs-reply-total">
+            {waiting > 0
+              ? `${formatCount(waiting)} ${waiting === 1 ? "comment needs" : "comments need"} a reply. Open a post to answer.`
+              : "No comments are waiting for a reply."}
+          </p>
+          <Select value={sort} onValueChange={(value) => setSort(value as PostSort)}>
+            <SelectTrigger aria-label="Sort posts" size="lg" className="max-w-56">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="recent">Newest first</SelectItem>
+              <SelectItem value="needs_reply">Most to reply to</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
         <ul className={GRID_CLASS} aria-label="Posts" data-testid="posts-grid">
           {items.map((post) => (
             <PostCard key={post.id} post={post} slug={workspace.slug} timeZone={workspace.timezone} now={now} />

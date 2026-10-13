@@ -33,16 +33,19 @@ function setup({
   onList,
   failList = false,
   nextCursor = null,
+  waiting = 0,
 }: {
   items?: PostSummary[];
   accounts?: SocialAccount[];
   onList?: (call: Call) => void;
   failList?: boolean;
   nextCursor?: string | null;
+  waiting?: number;
 } = {}) {
   return renderWithApi(<CommentsPage />, {
     handlers: {
       "GET /v1/w/:wid/social-accounts": () => json({ items: accounts }),
+      "GET /v1/w/:wid/comments/counts": () => json({ needs_reply: waiting }),
       "GET /v1/w/:wid/posts": (call) => {
         onList?.(call);
         if (failList) return problem(500, "internal");
@@ -86,6 +89,29 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
     expect(within(reel).getByText("Analysing 3 of 8")).toBeInTheDocument();
     // a zero count has no segment
     expect(within(reel).getByTestId("sentiment-bar").querySelectorAll("[data-sentiment]")).toHaveLength(2);
+  });
+
+  it("says how many comments need a reply: on the card, the page and the sort (D-11)", async () => {
+    const user = userEvent.setup();
+    const sorts: (string | null)[] = [];
+    setup({
+      items: [post({ id: "po1", needs_reply_count: 3 }), post({ id: "po2", needs_reply_count: 1 }), post({ id: "po3", needs_reply_count: 0 })],
+      waiting: 4,
+      onList: (call) => sorts.push(call.url.searchParams.get("sort")),
+    });
+    await screen.findAllByTestId("post-card");
+
+    expect(within(card("po1")).getByTestId("needs-reply-count")).toHaveTextContent("3 need a reply");
+    expect(within(card("po2")).getByTestId("needs-reply-count")).toHaveTextContent("1 needs a reply");
+    expect(within(card("po3")).queryByTestId("needs-reply-count")).not.toBeInTheDocument();
+    // the card opens the post with the Needs reply chip chosen
+    expect(within(card("po1")).getByRole("link")).toHaveAttribute("href", "/w/maple/comments/po1?filter=needs_reply");
+    expect(within(card("po3")).getByRole("link")).toHaveAttribute("href", "/w/maple/comments/po3");
+    expect(await screen.findByTestId("needs-reply-total")).toHaveTextContent("4 comments need a reply");
+
+    await user.click(screen.getByRole("combobox", { name: "Sort posts" }));
+    await user.click(await screen.findByRole("option", { name: "Most to reply to" }));
+    await waitFor(() => expect(sorts).toContain("needs_reply"));
   });
 
   it("a new comment updates the card's counts live (post.updated, T6.4 done-when)", async () => {

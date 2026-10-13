@@ -143,6 +143,8 @@ export type CommentCounts = Schemas["CommentCounts"];
 export type CommentFilter = NonNullable<
   NonNullable<operations["list_post_comments"]["parameters"]["query"]>["filter"]
 >;
+/** The Comments grid's sort (D-11): newest first, or the posts with the most comments to reply to. */
+export type PostSort = NonNullable<NonNullable<operations["list_posts"]["parameters"]["query"]>["sort"]>;
 export type PostPerformance = Schemas["PostPerformance"];
 export type PostComparison = Schemas["PostComparison"];
 export type PostMetrics = Schemas["PostMetrics"];

@@ -33,7 +33,17 @@ from tests.support.automations import make_automation, make_comment, make_media_
 from tests.support.ingest import jobs, stream
 from tests.support.sending import clean_outbox
 
-CHIPS = ("all", "positive", "neutral", "negative", "questions", "buying", "spam", "hidden")
+CHIPS = (
+    "all",
+    "positive",
+    "neutral",
+    "negative",
+    "questions",
+    "buying",
+    "spam",
+    "hidden",
+    "needs_reply",
+)
 
 
 @pytest.fixture(autouse=True)
@@ -270,6 +280,74 @@ async def test_the_comments_badge_counts_recent_comments_waiting_for_a_reply(sho
     )
     assert private.status_code == 202, private.text
     assert await needs_reply() == 2
+
+
+async def test_a_post_counts_its_comments_waiting_for_a_reply_by_the_badge_s_rule(
+    shop: Shop,
+) -> None:
+    """D-11: needs_reply_count, the needs_reply chip and the badge share one rule, so the counts
+    over all posts add up to the badge."""
+    busy = await shop.post(posted_at=datetime.now(UTC) - timedelta(days=3))
+    quiet = await shop.post(posted_at=datetime.now(UTC) - timedelta(days=2))
+    newest = await shop.post(posted_at=datetime.now(UTC) - timedelta(days=1))
+    now = datetime.now(UTC)
+    made: dict[str, uuid.UUID] = {}
+    for name in ("one", "two", "three", "spam", "hidden", "replied", "old"):
+        age = timedelta(days=9) if name == "old" else timedelta(hours=2)
+        made[name] = await shop.comment(busy, name, commented_at=now - age)
+    await shop.comment(quiet, "waiting", commented_at=now - timedelta(hours=3))
+    await shop.analyse(made["spam"], intent="spam", is_spam=True)
+    await shop.execute("UPDATE comments SET hidden = true WHERE id = :id", id=made["hidden"])
+    replied = await shop.post_json(
+        f"/comments/{made['replied']}/reply", {"text": "Thanks!"}, key="needs-reply-1"
+    )
+    assert replied.status_code == 200, replied.text
+
+    listed = (await shop.get("/posts")).json()["items"]
+    counts = {item["id"]: item["needs_reply_count"] for item in listed}
+    assert counts == {str(busy): 3, str(quiet): 1, str(newest): 0}
+    badge = (await shop.get("/comments/counts")).json()["needs_reply"]
+    assert sum(counts.values()) == badge == 4
+    assert (await shop.get(f"/posts/{busy}")).json()["needs_reply_count"] == 3
+
+    chip = (await shop.get(f"/posts/{busy}/comments", filter="needs_reply")).json()["items"]
+    assert sorted(c["text"] for c in chip) == ["one", "three", "two"]
+    # The chip leaves a reply out as soon as it is made.
+    sent = await shop.post_json(
+        f"/comments/{made['one']}/reply", {"text": "Hello!"}, key="needs-reply-2"
+    )
+    assert sent.status_code == 200, sent.text
+    chip = (await shop.get(f"/posts/{busy}/comments", filter="needs_reply")).json()["items"]
+    assert sorted(c["text"] for c in chip) == ["three", "two"]
+    assert (await shop.get(f"/posts/{busy}")).json()["needs_reply_count"] == 2
+
+
+async def test_the_posts_list_can_sort_by_comments_waiting_for_a_reply(shop: Shop) -> None:
+    now = datetime.now(UTC)
+    older = await shop.post(posted_at=now - timedelta(days=5))
+    middle = await shop.post(posted_at=now - timedelta(days=4))
+    newest = await shop.post(posted_at=now - timedelta(days=1))
+    for index in range(2):
+        await shop.comment(older, f"a{index}", commented_at=now - timedelta(hours=1))
+    await shop.comment(middle, "b", commented_at=now - timedelta(hours=1))
+
+    def ids(response: httpx.Response) -> list[str]:
+        assert response.status_code == 200, response.text
+        return [item["id"] for item in response.json()["items"]]
+
+    assert ids(await shop.get("/posts")) == [str(newest), str(middle), str(older)]
+    by_need = await shop.get("/posts", sort="needs_reply")
+    assert ids(by_need) == [str(older), str(middle), str(newest)]
+    # Paging keeps the order.
+    first = await shop.get("/posts", sort="needs_reply", limit=2)
+    assert ids(first) == [str(older), str(middle)]
+    cursor = first.json()["next_cursor"]
+    assert cursor
+    assert ids(await shop.get("/posts", sort="needs_reply", limit=2, cursor=cursor)) == [
+        str(newest)
+    ]
+    assert (await shop.get("/posts", sort="needs_reply", cursor="junk")).status_code == 422
+    assert (await shop.get("/posts", sort="loud")).status_code == 422
 
 
 async def test_the_summary_refresh_queues_the_job_or_says_why_not(shop: Shop) -> None:

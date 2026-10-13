@@ -30,6 +30,7 @@ export function toSummary(post: PostDetail | PostSummary): PostSummary {
     like_count: post.like_count ?? null,
     comments_count: post.comments_count ?? null,
     stats: post.stats,
+    needs_reply_count: post.needs_reply_count ?? null,
   };
 }
 
@@ -77,11 +78,18 @@ function upsertPost(data: PostPages, key: QueryKey, post: PostSummary): PostPage
 
 /** post.updated (F-12): the card's counts and sentiment bar, and the open post detail. */
 export function applyPost(queryClient: QueryClient, wid: string, post: PostDetail): void {
-  queryClient.setQueryData<PostDetail>(keys.post(wid, post.id), (current) => (current ? post : current));
+  // The event does not carry needs_reply_count (null): keep the count the cache already has.
+  queryClient.setQueryData<PostDetail>(keys.post(wid, post.id), (current) =>
+    current ? { ...post, needs_reply_count: post.needs_reply_count ?? current.needs_reply_count ?? null } : current,
+  );
   const summary = toSummary(post);
   for (const [key, data] of queryClient.getQueriesData<PostPages>({ queryKey: keys.postLists(wid) })) {
     if (!data?.pages) continue;
-    const next = upsertPost(data, key, summary);
+    const current = data.pages.flatMap((page) => page.items).find((item) => item.id === post.id);
+    const next = upsertPost(data, key, {
+      ...summary,
+      needs_reply_count: summary.needs_reply_count ?? current?.needs_reply_count ?? null,
+    });
     if (next !== data) queryClient.setQueryData(key, next);
   }
 }
@@ -132,10 +140,16 @@ export function applyComment(queryClient: QueryClient, wid: string, comment: Pos
     const next = upsertComment(data, filter, comment);
     if (next !== data) queryClient.setQueryData(key, next);
   }
+  // A comment arriving, or being replied to, hidden or deleted, changes its post's needs_reply_count
+  // (and the nav badge); the server owns that rule, so ask it again instead of counting here.
+  void queryClient.invalidateQueries({ queryKey: keys.postLists(wid) });
+  void queryClient.invalidateQueries({ queryKey: keys.post(wid, comment.post_id) });
 }
 
 /** Delete answered 204: drop the row from every list of the post. */
 export function removeComment(queryClient: QueryClient, wid: string, postId: string, commentId: string): void {
+  void queryClient.invalidateQueries({ queryKey: keys.postLists(wid) });
+  void queryClient.invalidateQueries({ queryKey: keys.post(wid, postId) });
   queryClient.setQueriesData<CommentPages>({ queryKey: keys.postCommentLists(wid, postId) }, (data) =>
     data?.pages
       ? { ...data, pages: data.pages.map((page) => ({ ...page, items: page.items.filter((item) => item.id !== commentId) })) }

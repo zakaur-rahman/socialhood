@@ -1675,7 +1675,9 @@ export interface paths {
         /**
          * List Posts
          * @description Newest first; ``q`` searches captions. Stories are left out (they take no comments).
-         *     Each post carries its comment counts and sentiment split (``stats``, FR-CMT-03).
+         *     Each post carries its comment counts and sentiment split (``stats``, FR-CMT-03) and its
+         *     ``needs_reply_count`` (D-11). ``sort=needs_reply`` puts the posts with the most comments
+         *     waiting for a reply first (newest first among equals); its cursor is opaque like the other.
          */
         get: operations["list_posts"];
         put?: never;
@@ -1717,7 +1719,8 @@ export interface paths {
         /**
          * List Post Comments
          * @description The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are
-         *     defined with ``CommentFilter`` in schemas/posts.py). Deleted comments are left out.
+         *     defined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,
+         *     D-11). Deleted comments are left out.
          */
         get: operations["list_post_comments"];
         put?: never;
@@ -5016,6 +5019,8 @@ export interface components {
             media_type: string;
             /** Media Url */
             media_url?: string | null;
+            /** Needs Reply Count */
+            needs_reply_count?: number | null;
             /** Permalink */
             permalink?: string | null;
             /** Platform Media Id */
@@ -5142,6 +5147,8 @@ export interface components {
             media_type: string;
             /** Media Url */
             media_url?: string | null;
+            /** Needs Reply Count */
+            needs_reply_count?: number | null;
             /** Permalink */
             permalink?: string | null;
             /** Platform Media Id */
@@ -10284,6 +10291,7 @@ export interface operations {
                 q?: string | null;
                 cursor?: string | null;
                 limit?: number;
+                sort?: "recent" | "needs_reply";
             };
             header?: never;
             path: {
@@ -10366,7 +10374,7 @@ export interface operations {
     list_post_comments: {
         parameters: {
             query?: {
-                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden";
+                filter?: "all" | "positive" | "neutral" | "negative" | "questions" | "buying" | "spam" | "hidden" | "needs_reply";
                 cursor?: string | null;
                 limit?: number;
             };

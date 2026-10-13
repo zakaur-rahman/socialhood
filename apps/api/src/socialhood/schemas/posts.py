@@ -25,8 +25,10 @@ CommentAnalysisStatus = Literal["pending", "done", "skipped"]
 # - positive, neutral, negative: analysed, not spam, with that sentiment
 # - questions, buying: analysed, not spam, intent in COMMENT_FILTER_INTENTS
 # - spam: analysed as spam; hidden: hidden on Instagram (by a member or auto-hide, FR-CMT-05)
+# - needs_reply: the Comments nav badge's rule (D-11), so a post's chip adds up to the badge: the
+#   account has not replied (public or private), not spam, not hidden, from the last 7 days
 CommentFilter = Literal[
-    "all", "positive", "neutral", "negative", "questions", "buying", "spam", "hidden"
+    "all", "positive", "neutral", "negative", "questions", "buying", "spam", "hidden", "needs_reply"
 ]
 COMMENT_FILTER_INTENTS: dict[str, tuple[IntentName, ...]] = {
     "questions": ("pricing", "product_inquiry", "shipping", "order_status", "support"),
@@ -77,6 +79,13 @@ class PostSummary(ResponseModel):
     like_count: int | None = None  # from Instagram at the last sync or snapshot
     comments_count: int | None = None
     stats: CommentStats
+    # Comments on this post waiting for a reply, by the nav badge's rule (comments/queries.py
+    # ``needs_reply_conditions``); the posts list and post detail fill it. None where it is not
+    # computed (analytics, the post.updated event): a client keeps the count it already has.
+    needs_reply_count: int | None = None
+
+
+PostSort = Literal["recent", "needs_reply"]
 
 
 class PostList(ResponseModel):

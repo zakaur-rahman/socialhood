@@ -258,6 +258,7 @@ describe("Comment list and filter chips (UX-SCR-05)", () => {
     const chips = screen.getByRole("radiogroup", { name: "Filter comments" });
     expect(within(chips).getAllByRole("radio").map((r) => r.textContent)).toEqual([
       "All",
+      "Needs reply",
       "Positive",
       "Neutral",
       "Negative",
@@ -283,6 +284,23 @@ describe("Comment list and filter chips (UX-SCR-05)", () => {
 
     const asked = calls.filter((c) => c.path.endsWith("/posts/po1/comments")).map((c) => c.url.searchParams.get("filter"));
     expect(asked).toEqual(["all", "negative", "spam", "buying"]);
+  });
+
+  it("the Needs reply chip shows the post's count and asks the API for that filter (D-11)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ detail: postDetail({ needs_reply_count: 2 }) });
+    await screen.findByRole("list", { name: "Comments" });
+    const chips = screen.getByRole("radiogroup", { name: "Filter comments" });
+    const chip = within(chips).getByRole("radio", { name: /Needs reply/ });
+    expect(chip).toHaveTextContent("Needs reply2");
+    expect(within(chips).getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
+
+    await user.click(chip);
+    await waitFor(() =>
+      expect(
+        calls.filter((c) => c.path.endsWith("/posts/po1/comments")).map((c) => c.url.searchParams.get("filter")),
+      ).toContain("needs_reply"),
+    );
   });
 
   it("new comments and changes arrive live (comment.created, comment.updated)", async () => {
