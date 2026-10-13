@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Clock, EllipsisVertical, PanelRight } from "lucide-react";
+import { ArrowLeft, EllipsisVertical, PanelRight } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRef, useState, type ReactNode } from "react";
@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DisabledReason } from "@/components/ui/disabled-reason";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +37,6 @@ type Props = {
   /** The context panel is showing (inline or as a sheet). */
   detailsOpen: boolean;
   onToggleDetails: () => void;
-  canSchedule: boolean;
-  onSchedule: () => void;
   onArchive: (archived: boolean) => void;
   onMarkUnread: () => void;
   /** The one AI mode control (a compact menu); without it the header shows a read-only chip. */
@@ -48,8 +45,8 @@ type Props = {
 
 /**
  * UX-INB-05, re-arranged (C-063): who (avatar, name, handle, platform and our linked account),
- * the reply-window chip beside the name, then the AI mode menu, scheduling, the context panel
- * toggle and the conversation's other actions.
+ * the reply-window chip beside the name, then the AI mode menu, the context panel toggle and the
+ * conversation's other actions. Scheduling is only in the composer ("Schedule message", D-15).
  *
  * The header follows the thread pane's width, not the viewport's (a container query: the pane is
  * 370 px on a tablet and 395 px at 1280 px with the panel open). The name keeps at least 80 px and
@@ -64,8 +61,6 @@ export function ThreadHeader({
   backHref,
   detailsOpen,
   onToggleDetails,
-  canSchedule,
-  onSchedule,
   onArchive,
   onMarkUnread,
   aiControl,
@@ -140,24 +135,6 @@ export function ThreadHeader({
               {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}
             </Badge>
           )}
-          {/* Disabled, it says why (DisabledReason): to keyboard, touch and screen reader users too. */}
-          <DisabledReason
-            reason={canSchedule ? null : "Scheduling needs an open reply window"}
-            side="bottom"
-            className="hidden md:inline-flex"
-          >
-            <IconTooltip label={canSchedule ? "Schedule a message" : null}>
-              <Button
-                variant="ghost"
-                size="icon-lg"
-                aria-label="Schedule a message"
-                disabled={!canSchedule}
-                onClick={onSchedule}
-              >
-                <Clock aria-hidden />
-              </Button>
-            </IconTooltip>
-          </DisabledReason>
           {/* A toggle: pressed (the panel is open) it is the soft Button, like a selected chip. */}
           <IconTooltip label={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}>
             <Button

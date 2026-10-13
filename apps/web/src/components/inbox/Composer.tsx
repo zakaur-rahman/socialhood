@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Clock, Heart, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
+import { AlertTriangle, Clock, Paperclip, SendHorizontal, Smile, Sparkles, Sticker, Undo2 } from "lucide-react";
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -328,7 +328,9 @@ export function Composer({
           // 16 px below md, where iOS zooms into smaller fields (UI-ISS-017); the wrapper draws the focus outline.
           className="block max-h-40 min-h-10 w-full resize-none bg-transparent px-3 pt-2.5 pb-1 text-sm leading-relaxed focus-visible:outline-none max-md:text-base"
         />
-        <div className="flex items-center gap-0.5 px-1.5 pb-1.5">
+        {/* Wraps instead of clipping when the row is wider than the card (320 px phones with the touch sizes);
+            Send keeps the end of the last line. */}
+        <div className="flex flex-wrap items-center gap-0.5 px-1.5 pb-1.5">
           {canAttach ? (
             <>
               <Button variant="ghost" size="icon" className={TOOL} aria-label="Attach files" onClick={() => fileRef.current?.click()}>
@@ -353,14 +355,23 @@ export function Composer({
             </PopoverTrigger>
             {/* Esc empties the picker's search first; the next Esc closes the popover (UI-031). */}
             <PopoverContent align="start" side="top" className="w-auto p-2" onEscapeKeyDown={clearSearchOnEscape}>
-              {emojiOpen ? <EmojiPicker onPick={insertEmoji} /> : null}
+              {emojiOpen ? (
+                <EmojiPicker
+                  onPick={insertEmoji}
+                  // D-15: the heart is in the emoji popover, Instagram only; it sends at once.
+                  onHeart={
+                    conversation.platform === "instagram"
+                      ? () => {
+                          setEmojiOpen(false);
+                          sendHeart();
+                        }
+                      : undefined
+                  }
+                />
+              ) : null}
             </PopoverContent>
           </Popover>
-          {conversation.platform === "instagram" ? (
-            <Button variant="ghost" size="icon" className={TOOL} aria-label="Send a heart" onClick={sendHeart}>
-              <Heart aria-hidden />
-            </Button>
-          ) : canAttach ? (
+          {conversation.platform === "whatsapp" && canAttach ? (
             <>
               <Button
                 variant="ghost"
@@ -388,7 +399,7 @@ export function Composer({
           <DisabledReason reason={draft.trim() === "" ? "Write a reply to polish" : null} className="ml-1">
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="soft" size="sm" disabled={draft.trim() === ""} loading={polish.isPending} onClick={polishDraft}>
+                <Button variant="soft" disabled={draft.trim() === ""} loading={polish.isPending} onClick={polishDraft}>
                   <Sparkles aria-hidden />
                   AI Polish
                 </Button>
@@ -403,7 +414,7 @@ export function Composer({
           ) : null}
           <Popover open={scheduleOpen} onOpenChange={onScheduleOpenChange}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className={TOOL} aria-label="Schedule for later">
+              <Button variant="ghost" size="icon" className={TOOL} aria-label="Schedule message">
                 <Clock aria-hidden />
               </Button>
             </PopoverTrigger>
