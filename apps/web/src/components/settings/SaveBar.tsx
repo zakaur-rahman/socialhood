@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, CircleAlert } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { useEffect } from "react";
 
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
@@ -47,11 +47,12 @@ export function useLeaveWarning(dirty: boolean) {
 }
 
 /**
- * The sticky bar at the bottom of a settings form (C-066), in place of a Save button in the top
- * bar: "All changes saved" when clean; "Unsaved changes" with Reset and Save when dirty; a
- * spinner while saving; a failed save's error in place. While dirty, leaving warns first.
- * A page whose switches save as they change (Notifications) passes `dirty={false}` and gets the
- * saving and error states only.
+ * The sticky bar at the bottom of a settings form (C-066, amended by D-08), in place of a Save
+ * button in the top bar. It shows only when there is something to say: "Unsaved changes" with Reset
+ * and Save when dirty; a spinner while saving; a failed save's error in place. A clean page has no
+ * bar. While dirty, leaving warns first. A page whose switches save as they change (Notifications)
+ * passes `dirty={false}`: the bar appears only if a change fails, and the page shows an inline
+ * `AutosaveStatus` ("Saved") the rest of the time.
  *
  * It floats (DESIGN_SYSTEM §6, level 1; D-12): the opaque `overlay` surface with a `line` ring and
  * `shadow-floating`, like a menu or a toast, no blur. It reserves its height so a focused control
@@ -71,6 +72,7 @@ export function SaveBar({
   onSave?: () => void;
 }) {
   useLeaveWarning(dirty);
+  if (!dirty && !saving && !error) return null;
   const showActions = (dirty || saving) && onSave;
   return (
     <div
@@ -92,15 +94,10 @@ export function SaveBar({
                 <span className="size-2 shrink-0 rounded-full bg-warning" aria-hidden />
                 Unsaved changes
               </>
-            ) : error ? (
+            ) : (
               <>
                 <CircleAlert className="size-4 shrink-0 text-danger-fg" aria-hidden />
                 Last change not saved
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="size-4 shrink-0 text-success" aria-hidden />
-                All changes saved
               </>
             )}
           </p>

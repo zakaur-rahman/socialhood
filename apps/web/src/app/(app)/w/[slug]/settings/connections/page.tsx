@@ -160,7 +160,6 @@ function Connections() {
     <SettingsFrame
       header={
         <SettingsPageHeader
-          label="Channels"
           title="Connections"
           description="The Instagram and WhatsApp accounts this workspace uses, and how the AI works on each."
           actions={connectButtons}

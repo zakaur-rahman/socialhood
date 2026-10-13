@@ -146,8 +146,7 @@ export function BillingPage() {
     <SettingsFrame
       header={
         <SettingsPageHeader
-          label="Plan & usage"
-          title="Billing & Usage"
+          title="Billing and usage"
           description="Your plan, what this workspace has used of it, and every payment."
         />
       }

@@ -56,7 +56,7 @@ function handleOf(account: SocialAccount): string {
 }
 
 /**
- * UX-SCR-07 AI Rules & Takeover (C-066): on the left each connected account's AI mode
+ * UX-SCR-07 AI rules and takeover (C-066): on the left each connected account's AI mode
  * (FR-SUG-01; Auto needs a paid plan and a confirmation, F-09) and the human takeover period
  * (FR-SUG-05); on the right the built-in escalation rules and the workspace's escalation phrases
  * (FR-SUG-06). Modes save as they change; takeover and phrases save from the save bar.
@@ -74,8 +74,7 @@ export function AiSettingsPage() {
   const live = accounts.data.filter((a) => a.status !== "disconnected");
   const header = (
     <SettingsPageHeader
-      label="Autonomy & safety"
-      title="AI Rules & Takeover"
+      title="AI rules and takeover"
       description="How the AI replies on each account, how long it steps back when you reply, and what always comes to you."
     />
   );

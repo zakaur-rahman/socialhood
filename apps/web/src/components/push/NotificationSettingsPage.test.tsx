@@ -57,6 +57,9 @@ describe("Settings → Notifications (UX-SCR-07, FR-NOT-03, FR-NOT-04)", () => {
     }
     await user.click(within(section).getByRole("switch", { name: "Reply window closing" }));
     await waitFor(() => expect(puts()).toEqual([{ ...prefs, push: { ...prefs.push, window_closing: false } }]));
+    // D-08: the inline status says Saved, and there is no bar.
+    expect(await screen.findByText("Saved")).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Save changes" })).toBeNull();
     // The device's own state shows beside them.
     expect(within(section).getByText("This browser can't show notifications from Social Hood")).toBeInTheDocument();
   });
@@ -66,7 +69,7 @@ describe("Settings → Notifications (UX-SCR-07, FR-NOT-03, FR-NOT-04)", () => {
     setup(() => problem(500, "internal"));
     const lead = await screen.findByRole("switch", { name: "New lead" });
     await user.click(lead);
-    // C-066: the save bar says why, in place (the switches still save as they change).
+    // D-08: the save bar appears only for a failure, and says why (the switches save as they change).
     const bar = screen.getByRole("region", { name: "Save changes" });
     expect(await within(bar).findByRole("alert")).toHaveTextContent(/./);
     await waitFor(() => expect(screen.getByRole("switch", { name: "New lead" })).toBeChecked());

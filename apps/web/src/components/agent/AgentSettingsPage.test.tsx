@@ -6,7 +6,7 @@ import type { AgentRunDetail } from "@/lib/api/types";
 import { json, problem, renderWithApi, workspace, type Call } from "@/test/api";
 import { agentRun, agentStep, LATEST_POST_ANSWER, LATEST_POST_REFS, runDetail, scheduleCard } from "@/test/agent";
 
-import { AgentSettingsPage } from "./AgentSettingsPage";
+import { AgentSettingsPage, capabilitySentence } from "./AgentSettingsPage";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/w/maple/settings/agent",
@@ -95,17 +95,17 @@ describe("Settings → Agent (FR-AGT-07, agent-architecture.html §12)", () => {
     renderWithApi(<AgentSettingsPage />, { handlers: handlers() });
     expect(await screen.findByText("Read only")).toBeInTheDocument();
     expect(screen.getByText(/doesn't send, schedule or change anything itself/)).toBeInTheDocument();
-    const permissions = screen.getByRole("list", { name: "Agent permissions" });
-    expect(within(permissions).getAllByText("Off")).toHaveLength(6);
-    expect(within(permissions).getAllByText("Coming later")).toHaveLength(6);
-    expect(within(permissions).getAllByRole("listitem").map((li) => li.querySelector("p")?.textContent)).toEqual([
-      "Send replies",
-      "Schedule messages",
-      "Schedule posts",
-      "Create automations",
-      "Delete automations",
-      "Bulk actions",
-    ]);
+    // D-08: the six permission tiles are one sentence.
+    expect(screen.queryByRole("list", { name: "Agent permissions" })).toBeNull();
+    expect(screen.queryByText("Coming later")).toBeNull();
+  });
+
+  it("states what the assistant may do in one sentence (D-08)", () => {
+    const off = { send_replies: false, schedule_messages: false, schedule_posts: false, create_automations: false, delete_automations: false, bulk_actions: false };
+    expect(capabilitySentence("read_only", off)).toMatch(/doesn't send, schedule or change anything itself\.$/);
+    expect(capabilitySentence("custom", { ...off, send_replies: true, schedule_posts: true })).toBe(
+      "Ask Social Hood reads your workspace to answer and may send replies and schedule posts, following the member's role. Everything else it prepares for someone to finish.",
+    );
   });
 
   it("lists every run with its request, who asked, outcome, credits and time", async () => {
