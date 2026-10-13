@@ -46,6 +46,8 @@ type Props = {
   ask?: ReactNode;
   /** Called when a link is followed, so the mobile drawer can close. */
   onNavigate?: () => void;
+  /** "Show setup checklist" in the workspace menu (UI-058); absent where the user can't change the workspace. */
+  onShowChecklist?: () => void;
   className?: string;
 };
 
@@ -74,6 +76,7 @@ export function AppSidebar({
   notifications,
   ask,
   onNavigate,
+  onShowChecklist,
   className,
 }: Props) {
   const pathname = usePathname();
@@ -104,7 +107,13 @@ export function AppSidebar({
       />
 
       <div className={cn("relative w-full", collapsed && "flex justify-center")}>
-        <WorkspaceMenu workspace={workspace} workspaces={workspaces} collapsed={collapsed} onNavigate={onNavigate} />
+        <WorkspaceMenu
+          workspace={workspace}
+          workspaces={workspaces}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+          onShowChecklist={onShowChecklist}
+        />
       </div>
 
       {ask ? <AskCard ask={ask} collapsed={collapsed} hint={shortcutHint(modifier, "K")} /> : null}
