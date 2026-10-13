@@ -133,12 +133,17 @@ beforeEach(() => {
 });
 
 describe("Brand voice (FR-KB-04, F-14)", () => {
-  it("the first visit opens the form with the description hint; Save sends the whole settings object", async () => {
+  it("the first visit shows a summary with Set up; it opens the form with the description hint, and Save sends the whole settings object", async () => {
     const user = userEvent.setup();
     const { calls } = setup({
       settings: aiSettings({ escalation_phrases: ["lawyer"], takeover_minutes: 30 }),
     });
+    const summary = await screen.findByRole("region", { name: "Brand voice" });
+    expect(screen.queryByRole("form", { name: "Brand voice" })).not.toBeInTheDocument();
+    expect(within(summary).getByTestId("brand-voice-empty")).toBeInTheDocument();
+    await user.click(within(summary).getByRole("button", { name: "Set up" }));
     const form = await screen.findByRole("form", { name: "Brand voice" });
+    expect(within(form).getByLabelText("Business name")).toHaveFocus();
     expect(within(form).getByLabelText("Business description")).toHaveValue("");
     expect(within(form).getByText("Two or three sentences about what you sell and who buys it.")).toBeInTheDocument();
 
@@ -212,15 +217,15 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
     expect(within(rows[2]).getByText("https://maple.example/faq")).toBeInTheDocument();
   });
 
-  it("keeps the source name readable on phones: the status goes under it below 768 px (UI-038)", async () => {
+  it("keeps the source name readable on phones: the status goes under it in a table narrower than 512 px (UI-038, UI-057)", async () => {
     setup({ sources: [knowledgeSource({ title: "Shipping", status: "ready" })] });
     const table = await screen.findByRole("table", { name: "Knowledge sources" });
-    expect(within(table).getByRole("columnheader", { name: "Status" })).toHaveClass("hidden", "md:table-cell");
+    expect(within(table).getByRole("columnheader", { name: "Status" })).toHaveClass("hidden", "@lg:table-cell");
     const [, row] = within(table).getAllByRole("row");
     const [source, status] = within(row).getAllByRole("cell");
-    expect(within(source).getByText("Ready")).toHaveClass("md:hidden");
-    expect(status).toHaveClass("hidden", "md:table-cell");
-    expect(within(status).getByText("Ready")).not.toHaveClass("md:hidden");
+    expect(within(source).getByText("Ready")).toHaveClass("@lg:hidden");
+    expect(status).toHaveClass("hidden", "@lg:table-cell");
+    expect(within(status).getByText("Ready")).not.toHaveClass("@lg:hidden");
     // Edit and Delete: 32 px icon Buttons, 40 px on touch, without a viewport patch.
     for (const name of ["Edit Shipping", "Delete Shipping"]) {
       const button = within(row).getByRole("button", { name });
@@ -414,6 +419,24 @@ describe("Test your knowledge (FR-KB-03)", () => {
     expect(answer).toHaveTextContent("Missing: gift wrapping options.");
   });
 
+  it("Add answer under a miss opens the FAQ form with the question filled in (UI-057)", async () => {
+    const user = userEvent.setup();
+    const { posted } = setup({ test: { can_answer: false, answer: null, missing_info: "gift wrapping", sources: [] } });
+    const box = await screen.findByRole("region", { name: "Test your knowledge" });
+    await user.type(within(box).getByLabelText("Question"), "Do you gift wrap?{Enter}");
+    const answer = await within(box).findByTestId("test-answer");
+    await user.click(within(answer).getByRole("button", { name: "Add answer" }));
+    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    expect(within(form).getByLabelText("Question")).toHaveValue("Do you gift wrap?");
+    await user.type(within(form).getByLabelText("Answer"), "Yes, free of charge.");
+    await user.click(within(form).getByRole("button", { name: "Add" }));
+    await waitFor(() =>
+      expect(posted()).toEqual([
+        { type: "faq", question: "Do you gift wrap?", body: "Yes, free of charge.", gap_id: null },
+      ]),
+    );
+  });
+
   it("out of credits (402): one message where the answer goes, with Upgrade", async () => {
     const user = userEvent.setup();
     setup({
@@ -442,6 +465,17 @@ describe("Questions the AI couldn't answer (FR-KB-06, F-17)", () => {
     expect(within(card).getByText("“Do you ship to Dubai?”")).toBeInTheDocument();
     const brandVoice = screen.getByRole("region", { name: "Brand voice" });
     expect(card.compareDocumentPosition(brandVoice) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("orders the page: gaps, Sources, then Brand voice (UI-ISS-089)", async () => {
+    setup({ gaps: [knowledgeGap()] });
+    const gaps = await screen.findByRole("region", { name: "Questions the AI couldn't answer" });
+    const sources = await screen.findByRole("region", { name: "Sources" });
+    const brandVoice = await screen.findByRole("region", { name: "Brand voice" });
+    const before = (a: HTMLElement, b: HTMLElement) =>
+      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(before(gaps, sources)).toBe(true);
+    expect(before(sources, brandVoice)).toBe(true);
   });
 
   it("Add answer opens the FAQ form with the customer's question; saving answers the gap", async () => {

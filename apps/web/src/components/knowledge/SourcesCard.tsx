@@ -171,7 +171,9 @@ export function SourcesCard({
             />
           </div>
         </div>
-        <CardBleed className="mt-5 border-t border-line">
+        {/* A container, so the columns follow the room the table has, not the screen: beside the
+        Test box (from 1280 px) the table is about 640 px, and Updated would leave the name 12 characters. */}
+        <CardBleed className="@container mt-5 border-t border-line">
           {items.length === 0 ? (
             <div className="p-(--card-padding)">
               <EmptyState
@@ -187,9 +189,9 @@ export function SourcesCard({
               <TableHeader>
                 <TableRow>
                   <TableHead>Source</TableHead>
-                  <TableHead className="hidden md:table-cell">Status</TableHead>
-                  <TableHead className="hidden text-right sm:table-cell">Characters</TableHead>
-                  <TableHead className="hidden md:table-cell">Updated</TableHead>
+                  <TableHead className="hidden @lg:table-cell">Status</TableHead>
+                  <TableHead className="hidden text-right @xl:table-cell">Characters</TableHead>
+                  <TableHead className="hidden @3xl:table-cell">Updated</TableHead>
                   <TableHead className="text-right">
                     <span className="sr-only">Actions</span>
                   </TableHead>
@@ -201,7 +203,7 @@ export function SourcesCard({
                   const sub = detail(source);
                   return (
                     <TableRow key={source.id} data-status={source.status}>
-                      {/* The name takes the room the other columns leave, and truncates in it. Below 768 px the
+                      {/* The name takes the room the other columns leave, and truncates in it. Below 512 px of table the
                       status sits under the name, so the name keeps the Status column's 75 px (at 320 px it
                       had about 35 px beside the status and two 40 px buttons). */}
                       <TableCell className="w-full max-w-0">
@@ -213,17 +215,17 @@ export function SourcesCard({
                               {source.title}
                             </p>
                             {sub ? <p className="truncate text-xs text-fg-secondary">{sub}</p> : null}
-                            <StatusChip source={source} className="mt-1 md:hidden" />
+                            <StatusChip source={source} className="mt-1 @lg:hidden" />
                             {source.status === "failed" && source.error ? (
                               <p className="text-xs text-danger-fg">{source.error}</p>
                             ) : null}
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell">
+                      <TableCell className="hidden @lg:table-cell">
                         <StatusChip source={source} />
                       </TableCell>
-                      <TableCell className="hidden text-right sm:table-cell">
+                      <TableCell className="hidden text-right @xl:table-cell">
                         {source.status === "ready" ? (
                           <>
                             {count.format(source.char_count)}
@@ -235,7 +237,7 @@ export function SourcesCard({
                           <span className="text-fg-secondary">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="hidden text-fg-secondary md:table-cell">
+                      <TableCell className="hidden text-fg-secondary @3xl:table-cell">
                         {relativeTime(source.updated_at, now)}
                       </TableCell>
                       <TableCell>

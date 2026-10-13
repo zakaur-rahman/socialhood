@@ -4,7 +4,7 @@ import { AlertTriangle, Sparkles } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { UpgradeAction } from "@/components/billing/UpgradeAction";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,9 +16,10 @@ import { aiCopy, errorMessage } from "@/lib/copy";
 
 /**
  * FR-KB-03: ask what a customer would and see the drafted answer with the sources it used, or
- * "Not in your knowledge". Nothing is stored or sent (1 AI credit).
+ * "Not in your knowledge". Nothing is stored or sent (1 AI credit). "Add answer" under a miss opens
+ * the FAQ sheet with the question filled in (UI-ISS-069).
  */
-export function TestBox({ wid }: { wid: string }) {
+export function TestBox({ wid, onAddAnswer }: { wid: string; onAddAnswer?: (question: string) => void }) {
   const test = useTestKnowledge(wid);
   const [question, setQuestion] = useState("");
   const [asked, setAsked] = useState("");
@@ -83,7 +84,17 @@ export function TestBox({ wid }: { wid: string }) {
                 ) : null}
               </Alert>
             ) : (
-              <Alert tone="warning" variant="outline" icon={<AlertTriangle />} data-testid="test-answer">
+              <Alert
+                tone="warning"
+                variant="outline"
+                icon={<AlertTriangle />}
+                data-testid="test-answer"
+                action={
+                  onAddAnswer ? (
+                    <AlertAction onClick={() => onAddAnswer(asked)}>Add answer</AlertAction>
+                  ) : undefined
+                }
+              >
                 <AlertTitle>{aiCopy.notInKnowledge}</AlertTitle>
                 <AlertDescription>
                   {result.missing_info ? `Missing: ${result.missing_info}.` : "Add an FAQ or a note that answers it."}
