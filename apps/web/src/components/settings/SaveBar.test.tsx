@@ -31,6 +31,7 @@ function renderBar(props: Partial<Parameters<typeof SaveBar>[0]> = {}) {
     </>,
   );
   const bar = () => screen.getByRole("region", { name: "Save changes" });
+  const hasBar = () => screen.queryByRole("region", { name: "Save changes" }) !== null;
   const rerender = (next: Partial<Parameters<typeof SaveBar>[0]>) =>
     view.rerender(
       <>
@@ -38,7 +39,7 @@ function renderBar(props: Partial<Parameters<typeof SaveBar>[0]> = {}) {
         <SaveBar dirty={false} saving={false} onReset={onReset} onSave={onSave} {...props} {...next} />
       </>,
     );
-  return { bar, onReset, onSave, navigated, rerender };
+  return { bar, hasBar, onReset, onSave, navigated, rerender };
 }
 
 function unload(): Event {
@@ -50,12 +51,12 @@ function unload(): Event {
 afterEach(() => vi.restoreAllMocks());
 
 describe("SaveBar (C-066)", () => {
-  it("clean: all changes saved, no buttons, leaving is free", async () => {
+  it("clean: no bar at all (D-08), and leaving is free", async () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, "confirm");
-    const { bar, navigated } = renderBar();
-    expect(within(bar()).getByRole("status")).toHaveTextContent("All changes saved");
-    expect(within(bar()).queryByRole("button")).toBeNull();
+    const { hasBar, navigated } = renderBar();
+    expect(hasBar()).toBe(false);
+    expect(screen.queryByText("All changes saved")).toBeNull();
     expect(unload().defaultPrevented).toBe(false);
     await user.click(screen.getByRole("link", { name: "Inbox" }));
     expect(confirm).not.toHaveBeenCalled();
@@ -111,7 +112,7 @@ describe("SaveBar (C-066)", () => {
   });
 
   it("floats opaque, without blur; sticks, but not on short viewports (UI-ISS-014, UI-ISS-031)", () => {
-    const { bar } = renderBar();
+    const { bar } = renderBar({ dirty: true });
     expect(bar()).toHaveClass("sticky", "bottom-0", "short:static");
     const surface = bar().firstElementChild;
     // DESIGN_SYSTEM §6 level 1 (D-12): the floating surface, edge and shadow (UI-036), opaque.
@@ -119,12 +120,14 @@ describe("SaveBar (C-066)", () => {
     expect(surface?.className).not.toMatch(/backdrop-blur|bg-overlay\/|bg-panel|shadow-xl|shadow-2xl/);
   });
 
-  it("status only (switches that save as they change): saving, saved, or the error", () => {
-    const { bar, rerender } = renderBar({ onReset: undefined, onSave: undefined, saving: true });
+  it("status only (switches that save as they change): saving, or the error; clean again once fixed", () => {
+    const { bar, hasBar, rerender } = renderBar({ onReset: undefined, onSave: undefined, saving: true });
     expect(within(bar()).getByRole("status")).toHaveTextContent("Saving…");
     expect(within(bar()).queryByRole("button")).toBeNull();
     rerender({ onReset: undefined, onSave: undefined, saving: false, error: "Something went wrong." });
     expect(within(bar()).getByRole("status")).toHaveTextContent("Last change not saved");
     expect(within(bar()).getByRole("alert")).toHaveTextContent("Something went wrong.");
+    rerender({ onReset: undefined, onSave: undefined, saving: false, error: null });
+    expect(hasBar()).toBe(false);
   });
 });

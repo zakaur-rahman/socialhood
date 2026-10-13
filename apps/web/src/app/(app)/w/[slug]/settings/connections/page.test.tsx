@@ -210,10 +210,10 @@ describe("search and filters (C-066)", () => {
     expect(calls.filter((c) => c.method === "PATCH")).toEqual([]);
   });
 
-  it("names the page's tab in the breadcrumb and keeps the connect actions", async () => {
+  it("has no breadcrumb (D-08) and keeps the connect actions", async () => {
     renderList();
-    const trail = await screen.findByRole("navigation", { name: "Breadcrumb" });
-    expect(within(trail).getByText("Connections")).toHaveAttribute("aria-current", "page");
+    expect(await screen.findByRole("heading", { level: 1, name: "Connections" })).toBeInTheDocument();
+    expect(screen.queryByRole("navigation", { name: "Breadcrumb" })).toBeNull();
     expect(screen.getByRole("button", { name: /Connect Instagram/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Connect WhatsApp/ })).toBeInTheDocument();
   });

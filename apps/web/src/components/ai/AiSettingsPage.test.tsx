@@ -147,7 +147,7 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
       tone: "friendly",
     });
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("AI settings saved"));
-    await waitFor(() => expect(within(bar).getByRole("status")).toHaveTextContent("All changes saved"));
+    await waitFor(() => expect(screen.queryByRole("region", { name: "Save changes" })).toBeNull());
   });
 
   it("phrases are removable chips; Add skips a duplicate; Reset undoes (C-066)", async () => {
@@ -162,7 +162,7 @@ describe("Settings → AI (UX-SCR-07, T5.5)", () => {
     const bar = screen.getByRole("region", { name: "Save changes" });
     await user.click(within(bar).getByRole("button", { name: "Reset" }));
     expect(screen.getByRole("button", { name: "Remove lawyer" })).toBeInTheDocument();
-    expect(within(bar).getByRole("status")).toHaveTextContent("All changes saved");
+    expect(screen.queryByRole("region", { name: "Save changes" })).toBeNull();
     expect(calls.some((c) => c.method === "PUT")).toBe(false);
   });
 

@@ -3,6 +3,7 @@
 import { BellRing, Mail, RotateCw } from "lucide-react";
 import { useState, type ReactNode } from "react";
 
+import { AutosaveStatus } from "@/components/settings/AutosaveStatus";
 import { SaveBar } from "@/components/settings/SaveBar";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
@@ -81,18 +82,23 @@ function Section({
  * UX-SCR-07 Notifications (FR-NOT-03, FR-NOT-04, F-19): the member's weekly digest switch, this
  * device's push state, and a switch per push event. The switches are the member's own, for this
  * workspace (C-049); PUT sends the whole object, and a switch that fails to save moves back.
- * C-066: the settings header and cards; switches still save as they change, so the save bar only
- * says so (saving, saved, or why the last change didn't save).
+ * C-066: the settings header and cards; switches still save as they change (D-08): an inline
+ * "Saved" status, and the save bar only if a change fails, with the reason.
  */
 export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBrowser }) {
   const workspace = useCurrentWorkspace();
   const prefs = useNotificationPreferences(workspace.id);
   const update = useUpdateNotificationPreferences(workspace.id);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const save = (next: NotificationPreferences) => {
     setSaveError(null);
-    update.mutate(next, { onError: (error) => setSaveError(errorMessage(error)) });
+    setSaved(false);
+    update.mutate(next, {
+      onSuccess: () => setSaved(true),
+      onError: (error) => setSaveError(errorMessage(error)),
+    });
   };
 
   const loading = (
@@ -114,9 +120,9 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
     <SettingsFrame
       header={
         <SettingsPageHeader
-          label="Alerts"
           title="Notifications"
           description={`Your own email digest and push alerts for ${workspace.name}. Each member chooses theirs.`}
+          actions={<AutosaveStatus saving={update.isPending} saved={saved} />}
         />
       }
     >
@@ -174,7 +180,7 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
           </div>
         </Section>
       </div>
-      <SaveBar dirty={false} saving={update.isPending} error={saveError} />
+      <SaveBar dirty={false} saving={false} error={saveError} />
     </SettingsFrame>
   );
 }

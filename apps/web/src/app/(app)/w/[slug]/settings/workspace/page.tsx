@@ -100,7 +100,6 @@ export default function WorkspaceSettingsPage() {
     <SettingsFrame
       header={
         <SettingsPageHeader
-          label="Configuration"
           title="Workspace"
           description="Its name and address, the timezone schedules use, the language AI replies in, and how automated messages identify themselves."
         />

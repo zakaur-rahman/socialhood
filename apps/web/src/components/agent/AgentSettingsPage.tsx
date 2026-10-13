@@ -1,23 +1,15 @@
 "use client";
 
 import {
-  CalendarClock,
-  CalendarPlus,
   ChevronLeft,
   ChevronRight,
-  Info,
-  Layers,
-  Lock,
   MessageSquareText,
-  Reply,
   ShieldCheck,
-  Trash2,
-  Workflow,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { SectionLabel, SettingsCard } from "@/components/settings/SettingsCard";
+import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -42,14 +34,25 @@ import { RunStatusChip, RunTrace, RunTraceSkeleton } from "./RunTrace";
 import { useReturnFocus } from "./use-return-focus";
 
 /** Each write capability of the agent policy (schemas/agent.py AgentPermissions), in words. */
-const CAPABILITIES: Record<keyof AgentPermissions, { label: string; hint: string; icon: ReactNode }> = {
-  send_replies: { label: "Send replies", hint: "Reply to messages and comments", icon: <Reply /> },
-  schedule_messages: { label: "Schedule messages", hint: "Schedule messages to customers", icon: <CalendarClock /> },
-  schedule_posts: { label: "Schedule posts", hint: "Schedule and publish posts", icon: <CalendarPlus /> },
-  create_automations: { label: "Create automations", hint: "Create and turn on automations", icon: <Workflow /> },
-  delete_automations: { label: "Delete automations", hint: "Remove automations", icon: <Trash2 /> },
-  bulk_actions: { label: "Bulk actions", hint: "Change many items at once", icon: <Layers /> },
+const CAPABILITIES: Record<keyof AgentPermissions, string> = {
+  send_replies: "send replies",
+  schedule_messages: "schedule messages",
+  schedule_posts: "schedule posts",
+  create_automations: "create automations",
+  delete_automations: "delete automations",
+  bulk_actions: "change many items at once",
 };
+
+/** D-08: what the assistant may do, in one sentence (the six permission tiles it replaces). */
+export function capabilitySentence(mode: string, permissions: AgentPermissions): string {
+  const on = (Object.keys(CAPABILITIES) as (keyof AgentPermissions)[]).filter((key) => permissions[key]);
+  if (mode === "read_only" || on.length === 0) {
+    return "Ask Social Hood reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself.";
+  }
+  const list = on.map((key) => CAPABILITIES[key]);
+  const joined = list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}` : list[0];
+  return `Ask Social Hood reads your workspace to answer and may ${joined}, following the member's role. Everything else it prepares for someone to finish.`;
+}
 
 /**
  * The run history's chips (C-066) as run statuses: Answered is a full or partial answer, Action
@@ -88,8 +91,6 @@ export function AgentSettingsPage() {
     <SettingsFrame
       header={
         <SettingsPageHeader
-          variant="card"
-          label="Assistant"
           title="Ask Social Hood"
           description="What the assistant may do in this workspace, and every question it has answered: its steps, tools, results and credits."
           actions={<CreditsStat />}
@@ -150,49 +151,7 @@ function PolicyCard() {
       ) : policy.isError ? (
         <ErrorState error={policy.error} onRetry={() => void policy.refetch()} />
       ) : (
-        <div className="space-y-4">
-          <div className="rounded-xl border border-line p-4">
-            <SectionLabel className="flex items-center gap-1.5 text-brand-fg">
-              <Info className="size-3.5" aria-hidden />
-              Operational bounds
-            </SectionLabel>
-            <p className="mt-2 text-sm">
-              {policy.data.mode === "read_only"
-                ? "Ask Social Hood reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself."
-                : "Writes follow the switches below and the member's role."}
-            </p>
-          </div>
-          <ul className="grid gap-2 md:grid-cols-2" aria-label="Agent permissions">
-            {(Object.keys(CAPABILITIES) as (keyof AgentPermissions)[]).map((key) => {
-              const on = policy.data.permissions[key];
-              const capability = CAPABILITIES[key];
-              return (
-                <li key={key} className="flex min-h-14 items-center gap-3 rounded-xl border border-line p-3">
-                  <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-raised text-fg-secondary [&_svg]:size-4">
-                    {capability.icon}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{capability.label}</p>
-                    <p className="text-xs text-fg-secondary">{capability.hint}</p>
-                  </div>
-                  {on ? (
-                    <Badge tone="success" size="md">On</Badge>
-                  ) : (
-                    <span className="flex shrink-0 flex-col items-end gap-0.5">
-                      <Badge size="md">
-                        <Lock aria-hidden />
-                        <span>Off</span>
-                      </Badge>
-                      {policy.data.mode === "read_only" ? (
-                        <span className="text-2xs text-fg-secondary">Coming later</span>
-                      ) : null}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <p className="text-sm">{capabilitySentence(policy.data.mode, policy.data.permissions)}</p>
       )}
     </SettingsCard>
   );
