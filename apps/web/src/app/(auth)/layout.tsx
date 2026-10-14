@@ -1,13 +1,14 @@
-import { LogoMark } from "@/components/marketing/primitives";
-
+/** The sign-in and sign-up pages render their own <main> (AuthShell); this adds the skip link. */
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 p-4">
-      <div className="flex items-center gap-2.5">
-        <LogoMark className="size-9" />
-        <span className="text-base font-semibold">Social Hood</span>
-      </div>
+    <>
+      <a
+        href="#main"
+        className="sr-only z-50 rounded-lg bg-brand-strong text-sm font-medium text-on-brand focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:inline-flex focus:min-h-10 focus:items-center focus:px-4"
+      >
+        Skip to content
+      </a>
       {children}
-    </main>
+    </>
   );
 }

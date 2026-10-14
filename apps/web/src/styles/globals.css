@@ -212,3 +212,16 @@
     }
   }
 }
+
+/*
+ * Sign-in and sign-up (UI-079): the shell draws the page's h1, so Clerk's heading is hidden on the
+ * start step only. On every later step (verify your email, second factor, reset password) Clerk's
+ * title stays and the shell's h1 steps aside, so each step has exactly one h1.
+ */
+.cl-header:has([data-localization-key^="signIn.start."], [data-localization-key^="signUp.start."]) {
+  display: none;
+}
+main:has(.cl-headerTitle:not([data-localization-key^="signIn.start."], [data-localization-key^="signUp.start."]))
+  [data-auth-title] {
+  display: none;
+}
