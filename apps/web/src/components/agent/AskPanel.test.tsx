@@ -208,7 +208,7 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     const time = run.querySelector("time");
     expect(time).toHaveTextContent(/15:30$/);
     expect(time).toHaveAttribute("dateTime", "2026-09-29T10:00:00Z");
-    expect(time.className).not.toMatch(/opacity/);
+    expect(time?.className).not.toMatch(/opacity/);
     // No card around the answer: the reading size (`text-md`, 15 px on 28 px lines).
     expect(within(run).getByTestId("answer")).toHaveClass("text-md");
     expect(within(run).getByTestId("run-result").className).not.toMatch(/\bborder\b/);
