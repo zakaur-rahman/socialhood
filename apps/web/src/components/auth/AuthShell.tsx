@@ -1,6 +1,5 @@
 import { BadgeCheck, Inbox, ListChecks, Sparkles, Zap, type LucideIcon } from "lucide-react";
 import Image from "next/image";
-import type { Route } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
@@ -47,11 +46,6 @@ const BENEFITS: Record<AuthMode, Benefit[]> = {
   ],
 };
 
-const COPY: Record<AuthMode, { title: string; other: { lead: string; label: string; href: "/sign-in" | "/sign-up" } }> = {
-  "sign-in": { title: "Welcome back", other: { lead: "New to Social Hood?", label: "Create your account", href: "/sign-up" } },
-  "sign-up": { title: "Create your account", other: { lead: "Already have an account?", label: "Sign in", href: "/sign-in" } },
-};
-
 function BenefitList({ mode, className, itemClass }: { mode: AuthMode; className?: string; itemClass?: string }) {
   return (
     <ul className={className}>
@@ -75,11 +69,11 @@ function BenefitList({ mode, className, itemClass }: { mode: AuthMode; className
  * benefits, the real inbox screen) beside Clerk's card. From `lg` the page is exactly one viewport
  * tall and the screenshot fades out at the panel's bottom and right. Below `lg` the panel shrinks to
  * a header (logo and promise), the card follows, and from `md` the benefits and an untilted inbox
- * shot fill the space below it. Clerk's own heading and switch link are hidden (see
- * `authAppearance`), so each step has one h1 and the start step one switch link.
+ * shot fill the space below it. The card is Clerk's own, styled by `authAppearance`: the logo,
+ * its title (the page's h1) and subtitle, the Google button, the fields and the "Sign in" / "Sign
+ * up" switch in its footer, so every step (verify your email, second factor) has one h1.
  */
 export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactNode }) {
-  const copy = COPY[mode];
   return (
     <main id="main" className="flex min-h-dvh flex-col lg:grid lg:h-dvh lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-1 lg:overflow-hidden">
       <section
@@ -129,20 +123,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
 
       <section className="relative flex flex-col items-center justify-center gap-5 px-4 py-6 sm:px-8 lg:justify-start lg:overflow-y-auto lg:px-10 lg:py-12 lg:before:flex-1 lg:before:content-[''] lg:after:flex-1 lg:after:content-['']">
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-glow-brand opacity-50" />
-        <div className="relative w-full max-w-sm text-center">
-          <h1 data-auth-title className="text-2xl font-semibold tracking-tight text-balance lg:text-3xl">{copy.title}</h1>
-          <p className="mt-1 text-sm text-fg-secondary">
-            {copy.other.lead}{" "}
-            <Link
-              href={copy.other.href as Route}
-              prefetch={false}
-              className="inline-flex min-h-10 items-center rounded-sm font-medium text-brand-fg underline underline-offset-4"
-            >
-              {copy.other.label}
-            </Link>
-          </p>
-        </div>
-        <div className="relative">{children}</div>
+        <div className="relative w-full max-w-sm">{children}</div>
       </section>
 
       {/* Tablet: the space below the card, with the same benefits and the inbox shot (untilted). */}
@@ -168,12 +149,41 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
 }
 
 /**
- * Clerk's switch link is replaced by the shell's. Its heading is hidden on the start step only
- * (the shell's h1 stands in for it): see `.cl-header:has(...)` in globals.css. Later steps (verify
- * your email, second factor, reset password) keep Clerk's own title, which is then the page's h1.
+ * The sign-in and sign-up card, as the owner asked (2026-10-17): the Social Hood logo inside the
+ * card, Clerk's title and subtitle, one bordered Google button, the "or" divider, bordered fields,
+ * a full-width Continue, and the switch link plus "Secured by Clerk" in the footer. The colours
+ * come from the app-wide `clerkAppearance` (root layout); these are layout and shape only, on the
+ * app's tokens.
  */
 export const authAppearance = {
+  options: {
+    logoPlacement: "inside",
+    logoImageUrl: "/icons/icon-192.png",
+    logoLinkUrl: "/",
+    socialButtonsVariant: "blockButton",
+  },
   elements: {
-    footerAction: { display: "none" },
+    cardBox: {
+      width: "100%",
+      border: "1px solid var(--color-line)",
+      borderRadius: "0.75rem",
+      boxShadow: "var(--shadow-overlay)",
+    },
+    logoBox: { justifyContent: "center", height: "2.5rem" },
+    logoImage: { borderRadius: "0.625rem" },
+    socialButtonsBlockButton: {
+      border: "1px solid var(--color-line-control)",
+      backgroundColor: "transparent",
+      boxShadow: "none",
+      "&:hover": { backgroundColor: "var(--color-hover)" },
+    },
+    dividerLine: { backgroundColor: "var(--color-line)" },
+    formFieldInput: {
+      border: "1px solid var(--color-line-control)",
+      backgroundColor: "var(--color-field)",
+      boxShadow: "none",
+      "&:focus": { borderColor: "var(--color-brand)" },
+    },
+    formButtonPrimary: { width: "100%" },
   },
 } as const;
