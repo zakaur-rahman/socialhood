@@ -162,28 +162,12 @@ export const authAppearance = {
     logoLinkUrl: "/",
     socialButtonsVariant: "blockButton",
   },
+  // The card's surfaces, fields and the gradient Continue come from the app-wide `clerkAppearance`
+  // (lib/clerk-appearance.ts), so the user menu and the account page match too.
   elements: {
-    cardBox: {
-      width: "100%",
-      border: "1px solid var(--color-line)",
-      borderRadius: "0.75rem",
-      boxShadow: "var(--shadow-overlay)",
-    },
+    cardBox: { width: "100%" },
     logoBox: { justifyContent: "center", height: "2.5rem" },
     logoImage: { borderRadius: "0.625rem" },
-    socialButtonsBlockButton: {
-      border: "1px solid var(--color-line-control)",
-      backgroundColor: "transparent",
-      boxShadow: "none",
-      "&:hover": { backgroundColor: "var(--color-hover)" },
-    },
-    dividerLine: { backgroundColor: "var(--color-line)" },
-    formFieldInput: {
-      border: "1px solid var(--color-line-control)",
-      backgroundColor: "var(--color-field)",
-      boxShadow: "none",
-      "&:focus": { borderColor: "var(--color-brand)" },
-    },
     formButtonPrimary: { width: "100%" },
   },
 } as const;
