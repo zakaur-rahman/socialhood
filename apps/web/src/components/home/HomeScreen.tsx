@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { SourceSheet, type SourceSheetMode } from "@/components/knowledge/SourceSheet";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -21,6 +21,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AccountHealth } from "./AccountHealth";
 import { Checklist } from "./Checklist";
+import { markAllSetShown, useAllSetPhase } from "./checklist-state";
 import { channelsConnected, channelsLine, formatSpan, periodLabel, periodPhrase, rangeHeading } from "./format";
 import { KnowledgeGapBanner } from "./KnowledgeGapBanner";
 import { MetricTiles, MetricTilesSkeleton } from "./MetricTiles";
@@ -34,8 +35,8 @@ import { TopPostsCard } from "./TopPostsCard";
 /**
  * Home (UX-SCR-01, FR-HOME-01; redesigned, C-065): the greeting with the channels and the period,
  * the channels pill, 7 days / 30 days / Custom (remembered on this device) and refresh; the
- * onboarding checklist until dismissed; accounts to fix; the metric tiles with their Attention and
- * Fast labels; sentiment, the most commented posts and what customers asked about; open questions
+ * onboarding checklist until dismissed (once complete, for one session only); accounts to fix; the
+ * metric tiles with their Attention and Fast labels; sentiment, the most commented posts and what customers asked about; open questions
  * with View thread and Train AI; and the Live Priority Queue. All from GET …/overview. Real data
  * only: a metric without data shows "—" and a hint, and nothing is shown that the API didn't count.
  */
@@ -123,6 +124,7 @@ export function HomeScreen() {
         <Body
           data={data}
           slug={workspace.slug}
+          workspaceId={workspace.id}
           canManage={canManage}
           now={now}
           // While another range loads, the previous one stays on screen: busy, its numbers in the
@@ -143,6 +145,7 @@ export function HomeScreen() {
 function Body({
   data,
   slug,
+  workspaceId,
   canManage,
   now,
   switching,
@@ -154,6 +157,7 @@ function Body({
 }: {
   data: Overview;
   slug: string;
+  workspaceId: string;
   canManage: boolean;
   now: Date;
   switching: boolean;
@@ -166,6 +170,15 @@ function Body({
   const connected = data.checklist.steps.some((step) => step.key === "connect_account" && step.done);
   const period = periodLabel(data.days);
   const within = periodPhrase(data);
+  // A finished checklist says "You're all set" for this session, then goes (UI-058); Show setup
+  // checklist in the workspace menu brings it back.
+  const allDone = data.checklist.steps.every((step) => step.done);
+  const phase = useAllSetPhase(workspaceId);
+  const showAllSet = allDone && !data.checklist.dismissed;
+  useEffect(() => {
+    if (showAllSet && phase === "fresh") markAllSetShown(workspaceId);
+  }, [showAllSet, phase, workspaceId]);
+  const showChecklist = !data.checklist.dismissed && !(allDone && phase === "past");
   return (
     <div className="space-y-6">
       {staleError ? (
@@ -178,9 +191,9 @@ function Body({
           Couldn&apos;t refresh: {errorMessage(staleError)} These are the last numbers that loaded.
         </Alert>
       ) : null}
-      {data.checklist.dismissed ? null : (
+      {showChecklist ? (
         <Checklist steps={data.checklist.steps} slug={slug} onDismiss={onDismissChecklist} dismissing={dismissing} />
-      )}
+      ) : null}
       <AccountHealth accounts={data.accounts_needing_attention} slug={slug} canManage={canManage} />
 
       <div aria-busy={switching} className="group/overview space-y-6" data-testid="overview">

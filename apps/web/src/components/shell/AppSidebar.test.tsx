@@ -168,6 +168,24 @@ describe("workspace menu", () => {
     expect(onNavigate).toHaveBeenCalledOnce();
   });
 
+  it("offers Show setup checklist when it can bring the checklist back (UI-058)", async () => {
+    const onShowChecklist = vi.fn();
+    const onNavigate = vi.fn();
+    renderSidebar({ onShowChecklist, onNavigate });
+    await userEvent.click(screen.getByRole("button", { name: "Workspace menu: Aria Label" }));
+    const item = within(await screen.findByRole("menu")).getByRole("menuitem", { name: "Show setup checklist" });
+    expect(item).toHaveAttribute("href", "/w/aria/home");
+    await userEvent.click(item);
+    expect(onShowChecklist).toHaveBeenCalledOnce();
+    expect(onNavigate).toHaveBeenCalledOnce();
+  });
+
+  it("has no Show setup checklist without the handler (agents)", async () => {
+    renderSidebar();
+    await userEvent.click(screen.getByRole("button", { name: "Workspace menu: Aria Label" }));
+    expect(within(await screen.findByRole("menu")).queryByRole("menuitem", { name: "Show setup checklist" })).toBeNull();
+  });
+
   it("lists just the current workspace until the list loads", async () => {
     renderSidebar();
     await userEvent.click(screen.getByRole("button", { name: "Workspace menu: Aria Label" }));

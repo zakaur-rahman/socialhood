@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronsUpDown, Settings } from "lucide-react";
+import { Check, ChevronsUpDown, ListChecks, Settings } from "lucide-react";
 import Link from "next/link";
 
 import {
@@ -52,11 +52,17 @@ export function WorkspaceMenu({
   workspaces,
   collapsed,
   onNavigate,
+  onShowChecklist,
 }: {
   workspace: SidebarWorkspace;
   workspaces?: readonly SidebarWorkspace[];
   collapsed: boolean;
   onNavigate?: () => void;
+  /**
+   * Brings the Home setup checklist back (UI-058). The menu offers "Show setup checklist", which
+   * leads to Home, when this is given; it is left out for roles that can't change the workspace.
+   */
+  onShowChecklist?: () => void;
 }) {
   const others = (workspaces ?? []).filter((w) => w.slug !== workspace.slug);
   const trigger = (
@@ -114,6 +120,20 @@ export function WorkspaceMenu({
           </DropdownMenuItem>
         ))}
         <DropdownMenuSeparator />
+        {onShowChecklist ? (
+          <DropdownMenuItem asChild className="gap-2 py-1.5">
+            <Link
+              href={WORKSPACE_HOME_HREF(workspace.slug)}
+              onClick={() => {
+                onShowChecklist();
+                onNavigate?.();
+              }}
+            >
+              <ListChecks className="text-fg-secondary" aria-hidden />
+              Show setup checklist
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem asChild className="gap-2 py-1.5">
           <Link href={WORKSPACE_SETTINGS_HREF(workspace.slug)} onClick={onNavigate}>
             <Settings className="text-fg-secondary" aria-hidden />

@@ -20,11 +20,14 @@ import {
   useInboxCounts,
   useMe,
   useSocialAccounts,
+  useUpdateWorkspace,
   useWorkspaces,
 } from "@/lib/api/queries";
 import type { BillingState, Plan, Role, SocialAccount } from "@/lib/api/types";
+import { resetAllSet } from "@/components/home/checklist-state";
 import { aiCreditsExhausted, reconnectBanner } from "@/lib/copy";
 import { useReconnecting } from "@/lib/realtime/status";
+import { toastError } from "@/lib/toast-error";
 import { useStoredString } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -70,6 +73,11 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
   const reconnecting = useReconnecting();
   const pathname = usePathname();
   const sidebar = useSidebarState(pathname, workspace.slug);
+  const updateWorkspace = useUpdateWorkspace(workspace.id);
+  const showChecklist = () => {
+    resetAllSet(workspace.id);
+    updateWorkspace.mutate({ checklist_dismissed: false }, { onError: (error) => toastError(error) });
+  };
 
   const shared = {
     workspace,
@@ -81,6 +89,8 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
     commentsCount: commentCounts.data?.needs_reply ?? 0,
     credits: creditsUsage(billing.data, billing.isPending),
     reconnecting,
+    // UI-058: the setup checklist comes back from the workspace menu (those who can change the workspace).
+    onShowChecklist: workspace.role === "agent" ? undefined : showChecklist,
   };
 
   return (

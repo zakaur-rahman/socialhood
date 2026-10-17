@@ -46,6 +46,40 @@ describe("Checklist (FR-ACC-04)", () => {
     expect(screen.getByRole("link", { name: "Choose a mode" })).toHaveAttribute("href", "/w/aria/settings/connections");
   });
 
+  it("folds done steps into one row that opens on request (UI-058)", async () => {
+    render(<Checklist steps={steps({ connect_account: true, add_knowledge: true })} slug="aria" onDismiss={() => {}} />);
+    const toggle = screen.getByRole("button", { name: "2 steps done" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // Collapsed: only the open steps are list items you can reach.
+    expect(screen.getAllByRole("listitem").map((item) => item.getAttribute("data-step"))).toEqual([
+      "choose_ai_mode",
+      "create_automation",
+    ]);
+    await userEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getAllByRole("listitem").map((item) => item.getAttribute("data-step"))).toEqual([
+      "connect_account",
+      "add_knowledge",
+      "choose_ai_mode",
+      "create_automation",
+    ]);
+  });
+
+  it("says You're all set when every step is done (UI-058)", async () => {
+    const onDismiss = vi.fn();
+    render(
+      <Checklist
+        steps={steps({ connect_account: true, add_knowledge: true, choose_ai_mode: true, create_automation: true })}
+        slug="aria"
+        onDismiss={onDismiss}
+      />,
+    );
+    expect(screen.getByRole("region", { name: "You're all set" })).toBeInTheDocument();
+    expect(screen.queryByRole("listitem")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss the checklist" }));
+    expect(onDismiss).toHaveBeenCalledOnce();
+  });
+
   it("calls onDismiss", async () => {
     const onDismiss = vi.fn();
     render(<Checklist steps={steps()} slug="aria" onDismiss={onDismiss} />);
