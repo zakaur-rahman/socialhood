@@ -96,7 +96,7 @@ describe("ToggleGroup (segmented)", () => {
     expect(track).toHaveClass("inline-flex", "w-full", "gap-1", "rounded-lg", "bg-field", "p-1")
     expect(track).toHaveAttribute("data-variant", "segmented")
     const item = screen.getByRole("radio", { name: "7 days" })
-    expect(item).toHaveClass("rounded-md", "data-[state=on]:bg-raised", "data-[state=on]:text-brand-fg", "text-fg-secondary", "hover:text-fg")
+    expect(item).toHaveClass("rounded-md", "aria-checked:bg-raised", "aria-checked:text-brand-fg", "text-fg-secondary", "hover:text-fg")
     expect(item).toHaveAttribute("data-state", "on")
     expect(classes(item).filter((c) => c.includes("shadow"))).toEqual([])
   })
@@ -244,9 +244,9 @@ describe("ToggleGroup (chips)", () => {
       "font-medium",
       "whitespace-nowrap",
       "hover:bg-hover",
-      "data-[state=on]:bg-brand-soft",
-      "data-[state=on]:text-brand-fg",
-      "data-[state=on]:border-brand-line",
+      "aria-checked:bg-brand-soft",
+      "aria-checked:text-brand-fg",
+      "aria-checked:border-brand-line",
       "pointer-coarse:min-h-10",
       "focus-visible:-outline-offset-2"
     )
