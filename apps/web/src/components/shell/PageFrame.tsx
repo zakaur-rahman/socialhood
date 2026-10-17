@@ -34,7 +34,7 @@ export function PageFrame({
   children: ReactNode;
 }) {
   return (
-    <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+    <div className="w-full p-4 md:p-6">
       {back ? <BackLink {...back} /> : null}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <h1 className={cn("min-w-0 break-words", PAGE_TITLE)}>{title}</h1>

@@ -149,7 +149,7 @@ export function PostComposer({
 
 function ComposerSkeleton() {
   return (
-    <div role="status" aria-busy="true" aria-label="Loading" className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+    <div role="status" aria-busy="true" aria-label="Loading" className="w-full p-4 md:p-6">
       <Skeleton className="h-8 w-40" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4 lg:max-w-[640px]">
@@ -576,7 +576,7 @@ function Composer({
 
   return (
     <ComposerTools wid={wid} timeZone={timeZone} now={now} accounts={igAccounts}>
-    <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+    <div className="w-full p-4 md:p-6">
       {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
           state wrap inside their own group instead of pushing More onto a line of its own. */}
       <header className="flex items-center gap-3 border-b border-line pb-4">

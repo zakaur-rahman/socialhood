@@ -92,11 +92,22 @@ export function PriorityQueue({
         <CardBleed className="mt-4 border-t border-line">
           {items.length === 0 ? (
             <div data-testid="queue-empty" className="px-(--card-padding) pt-4">
-              <EmptyState
-                size="compact"
-                title="Nothing is waiting."
-                body="Conversations that need a reply show up here as they arrive."
-              />
+              {/* The queue leaves out conversations whose reply window has closed (no free-form reply
+                  is possible any more), so an empty queue can sit beside a Needs reply count. Say so
+                  instead of "Nothing is waiting". */}
+              {needsReply > 0 ? (
+                <EmptyState
+                  size="compact"
+                  title="No replies are possible right now."
+                  body={`${formatCount(needsReply)} ${needsReply === 1 ? "conversation needs" : "conversations need"} a reply, but the reply window has closed. A free-form reply opens again when the customer writes.`}
+                />
+              ) : (
+                <EmptyState
+                  size="compact"
+                  title="Nothing is waiting."
+                  body="Conversations that need a reply show up here as they arrive."
+                />
+              )}
             </div>
           ) : (
             <ul className="divide-y divide-line-subtle">

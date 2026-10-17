@@ -140,7 +140,7 @@ export function ListHeader({
               size="lg"
               value={text}
               onChange={(event) => setText(event.target.value)}
-              placeholder="Search people and messages"
+              placeholder="Search"
               className="flex-1"
             />
             {accounts.length > 1 ? (

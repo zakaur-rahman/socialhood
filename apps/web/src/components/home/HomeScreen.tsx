@@ -108,7 +108,7 @@ export function HomeScreen() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+    <div className="w-full p-4 md:p-6">
       {/* `?plan=pro` from the pricing page opens the upgrade dialog once (UI-063). */}
       <Suspense fallback={null}>
         <ProTrialOffer />

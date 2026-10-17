@@ -31,7 +31,7 @@ export const DETAIL_GRID_CLASS =
 
 function DetailSkeleton() {
   return (
-    <div role="status" className="mx-auto w-full max-w-[1200px] p-4 md:p-6" aria-busy="true" aria-label="Loading the post">
+    <div role="status" className="w-full p-4 md:p-6" aria-busy="true" aria-label="Loading the post">
       <Skeleton className="mb-6 h-8 w-56" />
       <div className={DETAIL_GRID_CLASS}>
         <div className="space-y-4">

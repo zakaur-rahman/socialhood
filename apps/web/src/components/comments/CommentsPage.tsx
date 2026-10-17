@@ -25,7 +25,7 @@ import { PostCard } from "./PostCard";
 const ALL = "all";
 
 /** 2 columns on phones, 3 from 768 px, 4 from 1024 px (UX-SCR-05). */
-export const GRID_CLASS = "grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4";
+export const GRID_CLASS = "grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6";
 
 function GridSkeleton() {
   return (

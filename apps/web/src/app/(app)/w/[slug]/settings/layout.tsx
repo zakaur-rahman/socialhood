@@ -23,7 +23,7 @@ export default function SettingsLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   return (
     <div>
-      <div className="mx-auto w-full max-w-[1200px] px-4 pt-4 md:px-6 md:pt-6">
+      <div className="w-full px-4 pt-4 md:px-6 md:pt-6">
         <div className="border-b border-line">
           <nav aria-label="Settings" className="mask-fade-x -mb-px flex gap-1 overflow-x-auto pe-4 scroll-pe-4">
             {SETTINGS_SECTIONS.filter((section) => section.roles.includes(role)).map((section) => {

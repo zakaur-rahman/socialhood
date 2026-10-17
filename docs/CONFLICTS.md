@@ -1433,3 +1433,25 @@ shown on `/dev/tokens`. Measured in Chromium on the e2e stack at 375 and 1280 px
   so it stays dark in any theme), not `canvas`, the same black today: computed
   `color(srgb 0 0 0 / 0.6) 0 0 0 9999px`. It is a utility, not a `--shadow-*` token, so elevation
   keeps its two shadows. `cn` treats it as a shadow size, like `shadow-floating`.
+
+## C-074 · Pages fill the width (owner decision, 2026-10-14, UI-076)
+On a wide screen (about 2,130 CSS px) Home and every PageFrame page sat in a centred 1200 px column
+with about 465 px of empty canvas each side, next to a full-width Inbox and Ask. The owner decided:
+"fill the width and responsive to any size". This amends the spec's page width (UX-SCR), and UI-071
+updates DESIGN_SYSTEM and the spec.
+- **No page cap:** `max-w-[1200px]` is gone from PageFrame, HomeScreen, the settings layout and
+  SettingsFrame, AutomationEditor, PostDetailPage, PostComposer and PageSkeleton. Pages fill the
+  space beside the sidebar with the same `p-4 md:p-6` gutters.
+- **Readability limits stay inside components:** fields in settings cards are at most `max-w-2xl`;
+  message bubbles keep their own maximum width. The marketing site keeps its centred layout.
+- **Grids gain columns as space grows:** the comments posts grid now goes up to 5 columns at `xl`
+  and 6 at `2xl`.
+- **One frame:** the inbox panel is inset on all four sides (`md:m-4 md:rounded-xl md:border`), as
+  the Ask page already was. It used to run into the window's right edge.
+- **In the same task:**
+  - Home's empty priority queue no longer says "Nothing is waiting" while conversations need a
+    reply. The queue leaves out closed reply windows, so it now says so.
+  - The sidebar's Ask card puts the name on its own line, so it is no longer cut to
+    "Ask Social Ho…", and its subtitle is "Your AI assistant".
+  - The inbox and Automations search placeholders are short ("Search", "Name or keyword"); their
+    accessible names are unchanged.
