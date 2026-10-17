@@ -4,6 +4,7 @@ import type { CSSProperties } from "react";
 import { Badge } from "@/components/ui/badge";
 import { CREDIT_COSTS, type PlanCard, type Pricing as PricingData } from "@/lib/marketing/plans";
 import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
 import { cn } from "@/lib/utils";
 
 import { MovingBorderFrame } from "./effects/moving-border";
@@ -88,7 +89,7 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
       {card.available ? (
         <>
           <CtaLink
-            href={SIGN_UP_PATH}
+            href={card.plan === "pro" ? PRO_SIGN_UP_PATH : SIGN_UP_PATH}
             prefetch={false}
             variant={featured ? "primary" : "secondary"}
             className="mt-6 w-full"
@@ -96,7 +97,7 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
             {card.plan === "pro" ? "Start free, then try Pro" : "Start free"}
           </CtaLink>
           {card.plan === "pro" ? (
-            <p className="mt-2 text-center text-xs text-fg-secondary">Start the trial from Settings → Billing after you sign up.</p>
+            <p className="mt-2 text-center text-xs text-fg-secondary">You can start the trial as soon as you sign up.</p>
           ) : null}
           <ul className="mt-6 space-y-2.5 border-t border-line pt-6 text-sm" aria-label={`${card.name} includes`}>
             {card.features.map((feature) => (

@@ -9,9 +9,11 @@ import type { Route } from "next";
 
 import { AskButton, AskRoot } from "@/components/agent/AskPanel";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
+import { creditsUpgrade } from "@/components/billing/upgrade-requests";
 import { useOpenPortal } from "@/components/billing/use-billing-actions";
 import { PushSignOutCleanup } from "@/components/push/PushSignOutCleanup";
 import { ServiceWorkerRegistrar } from "@/components/push/ServiceWorkerRegistrar";
+import { useUpgradeDialog, type UpgradeRequest } from "@/lib/api/provider";
 import {
   exhaustedAiCredits,
   keys,
@@ -50,6 +52,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
   const me = useMe();
   const accounts = useSocialAccounts(workspace.id);
   const billing = useBilling(workspace.id);
+  const upgradeDialog = useUpgradeDialog();
   const portal = useOpenPortal(workspace.id);
   const [dismissedTrial, setDismissedTrial] = useStoredString<string>("socialhood:trial-reminder-dismissed", "");
   usePlanChanges(workspace.id, workspace.plan, billing.data?.plan);
@@ -64,7 +67,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
       onDismissTrial: setDismissedTrial,
     }),
     ...accountBanners(accounts.data ?? [], workspace.slug),
-    ...creditBanners(billing.data, workspace.slug, workspace.role),
+    ...creditBanners(billing.data, workspace.role, upgradeDialog.open),
     ...banners,
   ];
   const counts = useInboxCounts(workspace.id);
@@ -156,15 +159,22 @@ function usePlanChanges(wid: string, workspacePlan: Plan, billingPlan: Plan | un
  * FR-AI-05: when the AI credits are used up, analysis, suggestions and auto replies stop and a
  * banner says when they reset, with an upgrade link for those who can upgrade. Messaging goes on.
  */
-export function creditBanners(billing: BillingState | undefined, slug: string, role: Role, now?: Date): Banner[] {
+export function creditBanners(
+  billing: BillingState | undefined,
+  role: Role,
+  /** Upgrade opens the upgrade dialog, like every Upgrade (UI-063). */
+  openUpgrade: (request: UpgradeRequest) => void,
+  now?: Date,
+): Banner[] {
   const meter = exhaustedAiCredits(billing);
   if (!meter || meter.limit === null || meter.limit === undefined) return [];
+  const { used, limit } = meter;
   return [
     {
       id: "ai-credits",
       tone: "warning",
-      message: aiCreditsExhausted(meter.limit, meter.period_end, now),
-      action: role === "agent" ? undefined : { label: "Upgrade", href: BILLING_HREF(slug) },
+      message: aiCreditsExhausted(limit, meter.period_end, now),
+      action: role === "agent" ? undefined : { label: "Upgrade", onClick: () => openUpgrade(creditsUpgrade(used, limit)) },
     },
   ];
 }

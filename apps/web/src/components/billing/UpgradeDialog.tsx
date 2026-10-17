@@ -56,6 +56,7 @@ export function UpgradeDialog() {
 
   const state = billing.data;
   const isOwner = workspace.role === "owner";
+  const isAgent = workspace.role === "agent";
   const mayPay = isOwner && canCheckout(state);
   const credits = usageMeter(state, METRIC_FOR_ENTITLEMENT.ai_credits_monthly);
   const copy = upgradeCopy(
@@ -95,9 +96,14 @@ export function UpgradeDialog() {
           <Alert tone="danger">{checkout.error}</Alert>
         ) : null}
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
-            Not now
-          </Button>
+          {isAgent ? (
+            // Nothing for an agent to upgrade: one button, not a "Not now" with no other choice.
+            <Button onClick={() => onOpenChange(false)}>OK</Button>
+          ) : (
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>
+              Not now
+            </Button>
+          )}
           {mayPay ? (
             <>
               <Button asChild variant="secondary">
@@ -113,7 +119,7 @@ export function UpgradeDialog() {
                 {trial ? billingCopy.trialCta(trialDays) : billingCopy.upgradeCta}
               </Button>
             </>
-          ) : workspace.role !== "agent" ? (
+          ) : !isAgent ? (
             <Button asChild>
               <Link href={BILLING_HREF(workspace.slug)} onClick={() => onOpenChange(false)}>
                 {isOwner ? "View billing" : "See plans"}

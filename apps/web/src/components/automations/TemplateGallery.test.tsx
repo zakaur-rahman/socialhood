@@ -84,6 +84,9 @@ describe("TemplateGallery (UX-SCR-11)", () => {
     // D-10: a card's action is secondary.
     expect(within(card).getByRole("button", { name: "Use template: Price on request" })).toHaveAttribute("data-variant", "secondary");
     expect(within(screen.getByRole("article", { name: "Send a link to commenters" })).queryByText("Pro")).toBeNull();
+    // UI-063: a Pro template says on Free that it can be set up and runs on Pro; the others don't.
+    expect(within(card).getByText("Set it up on Free. It runs on Pro.")).toBeInTheDocument();
+    expect(screen.getAllByText("Set it up on Free. It runs on Pro.")).toHaveLength(1);
   });
 
   it("with one account: creates the draft from the template and opens the editor on the first incomplete step", async () => {

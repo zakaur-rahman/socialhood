@@ -186,12 +186,7 @@ export function AppSidebar({
         ) : null}
       </div>
 
-      <UsageCard
-        view={usageView(credits, workspace.role)}
-        collapsed={collapsed}
-        slug={workspace.slug}
-        onNavigate={onNavigate}
-      />
+      <UsageCard view={usageView(credits, workspace.role)} collapsed={collapsed} />
 
       {reconnecting ? <ReconnectingNotice collapsed={collapsed} /> : null}
 
