@@ -122,7 +122,7 @@ export function NotificationsPanel({
                 </span>
                 <span className="shrink-0 text-xs text-fg-secondary">{relativeTime(item.created_at, now)}</span>
                 {item.read_at ? null : (
-                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" aria-label="unread" />
+                  <span className="mt-1.5 size-2 shrink-0 rounded-full bg-brand" role="img" aria-label="unread" />
                 )}
               </>
             );

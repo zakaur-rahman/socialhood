@@ -468,6 +468,8 @@ describe("Comment actions (FR-CMT-04)", () => {
     expect(deletes()[0].path).toBe("/v1/w/w1/comments/cm-bot");
     await waitFor(() => expect(screen.queryByRole("listitem", { name: "Comment by @free.followers" })).not.toBeInTheDocument());
     expect(toast.success).toHaveBeenCalledWith("Comment deleted");
+    // The row and its dialog are gone: focus lands on the list's heading, not on <body> (UI-066).
+    await waitFor(() => expect(document.getElementById("post-comments-heading")).toHaveFocus());
   });
 
   it("agents can reply, DM and hide, but not delete", async () => {

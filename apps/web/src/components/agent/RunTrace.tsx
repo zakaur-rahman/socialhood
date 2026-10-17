@@ -42,7 +42,7 @@ function Json({ label, value }: { label: string; value: unknown }) {
         {label}
       </summary>
       {/* Text only: arguments and results are shown, never interpreted. */}
-      <pre className="mt-1 max-h-64 overflow-auto rounded-md border border-line bg-canvas p-2 font-mono text-2xs leading-relaxed whitespace-pre-wrap break-all">
+      <pre role="group" aria-label={label} tabIndex={0} className="mt-1 max-h-64 overflow-auto rounded-md border border-line bg-canvas p-2 font-mono text-2xs leading-relaxed whitespace-pre-wrap break-all">
         {JSON.stringify(value, null, 2)}
       </pre>
     </details>
@@ -201,7 +201,7 @@ function StepTrace({ step }: { step: AgentStep }) {
 
 export function RunTraceSkeleton() {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading the run">
+    <div role="status" className="space-y-3" aria-busy="true" aria-label="Loading the run">
       <Skeleton className="h-4 w-3/4" />
       <Skeleton className="h-16 w-full rounded-lg" />
       <Skeleton className="h-16 w-full rounded-lg" />

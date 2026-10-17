@@ -102,7 +102,7 @@ export function NotificationSettingsPage({ pushBrowser }: { pushBrowser?: PushBr
   };
 
   const loading = (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading">
+    <div role="status" className="space-y-3" aria-busy="true" aria-label="Loading">
       <Skeleton className="h-4 w-40" />
       <Skeleton className="h-3 w-64 max-w-full" />
     </div>

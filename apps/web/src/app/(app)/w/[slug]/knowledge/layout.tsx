@@ -13,7 +13,7 @@ export default function KnowledgeLayout({ children }: { children: ReactNode }) {
   if (workspace.role === "agent") {
     return (
       <EmptyState
-        className="min-h-[60vh]"
+        className="flex-1"
         title="Knowledge is for owners and admins"
         body="Ask an owner or admin of this workspace to add what the AI should know."
         action={

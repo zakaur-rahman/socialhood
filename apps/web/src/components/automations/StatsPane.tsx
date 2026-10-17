@@ -50,7 +50,7 @@ export function StatsPane({
         <ToggleGroupItem value="30">30 days</ToggleGroupItem>
       </ToggleGroup>
       {stats.isPending ? (
-        <div aria-busy="true" aria-label="Loading results" className="space-y-3">
+        <div role="status" aria-busy="true" aria-label="Loading results" className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {Array.from({ length: 4 }, (_, i) => (
               <Skeleton key={i} className="h-16 rounded-lg" />

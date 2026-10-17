@@ -74,7 +74,7 @@ export function AccountPicker({
   return (
     <Section id="composer-accounts" title="Accounts" tabIndex={-1}>
       {loading ? (
-        <div className="flex gap-2" aria-busy="true" aria-label="Loading accounts">
+        <div role="status" className="flex gap-2" aria-busy="true" aria-label="Loading accounts">
           <Skeleton className="h-10 w-36 rounded-full" />
           <Skeleton className="h-10 w-36 rounded-full" />
         </div>

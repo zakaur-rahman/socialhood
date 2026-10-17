@@ -67,7 +67,7 @@ export function TemplatePicker({
         </DialogHeader>
 
         {templates.isPending ? (
-          <div className="space-y-2" aria-busy="true" aria-label="Loading templates">
+          <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading templates">
             <Skeleton className="h-14 w-full" />
             <Skeleton className="h-14 w-full" />
           </div>

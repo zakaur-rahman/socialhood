@@ -25,6 +25,7 @@ import { useSocialAccounts, useUpdateWorkspace, useWorkspace } from "@/lib/api/q
 import type { Workspace, WorkspacePatch } from "@/lib/api/types";
 import { billingDate } from "@/lib/billing/plan";
 import { PLAN_NAME, errorMessage } from "@/lib/copy";
+import { useDocumentTitle } from "@/lib/document-title";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,46}[a-z0-9])$/;
@@ -92,6 +93,7 @@ function browserTimezone(): string | null {
  * disclosure line (FR-AUT-11); for owners, the danger zone that deletes the workspace
  * (FR-ACC-05). C-066: cards, a sticky save bar, and a summary of the workspace beside them. */
 export default function WorkspaceSettingsPage() {
+  useDocumentTitle("Workspace settings");
   const current = useCurrentWorkspace();
   const workspace = useWorkspace(current.id);
   if (workspace.isPending) return <PageSkeleton rows={3} />;

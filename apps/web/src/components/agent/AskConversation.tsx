@@ -155,7 +155,7 @@ export function AskConversation({
     body = <Welcome variant={variant} onPick={send} disabled={ask.isPending || Boolean(credits)} />;
   } else if (runs.isPending) {
     body = (
-      <div className="space-y-6" aria-busy="true" aria-label="Loading the thread">
+      <div role="status" className="space-y-6" aria-busy="true" aria-label="Loading the thread">
         <Skeleton className="ml-auto h-11 w-2/3 rounded-2xl" />
         <div className="flex gap-3">
           <Skeleton className="size-7 shrink-0 rounded-full" />
@@ -208,7 +208,8 @@ export function AskConversation({
           onScroll={onScroll}
           role="log"
           aria-label="Conversation with Social Hood"
-          className="min-h-0 flex-1 overflow-y-auto"
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-y-auto focus-visible:-outline-offset-2"
           data-testid="ask-conversation"
         >
           <div ref={content} className={cn(column, "flex min-h-full flex-col py-6")}>

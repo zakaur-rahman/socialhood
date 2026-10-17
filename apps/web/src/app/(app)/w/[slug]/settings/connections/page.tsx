@@ -48,6 +48,7 @@ import {
   type ConnectResult,
 } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
+import { useDocumentTitle } from "@/lib/document-title";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const SANDBOX_TOOLS = process.env.NODE_ENV !== "production";
@@ -58,6 +59,7 @@ const SANDBOX_TOOLS = process.env.NODE_ENV !== "production";
  * two columns of account cards on wide screens. C-067 (amended by D-09): Delete account and data in each card's menu.
  */
 export default function ConnectionsPage() {
+  useDocumentTitle("Connections");
   return (
     <Suspense fallback={<PageSkeleton rows={2} />}>
       <Connections />

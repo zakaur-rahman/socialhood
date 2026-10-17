@@ -21,7 +21,7 @@ import { TestBox } from "./TestBox";
 
 function CardSkeleton({ label, rows = 2 }: { label: string; rows?: number }) {
   return (
-    <Card padding="roomy" className="space-y-3" aria-busy="true" aria-label={label}>
+    <Card padding="roomy" className="space-y-3" role="status" aria-busy="true" aria-label={label}>
       <Skeleton className="h-4 w-40" />
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-3 w-full" />
@@ -97,7 +97,7 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
 
           {gaps.isSuccess && openGaps.length === 0 ? gapsCard : null}
         </div>
-        <aside className="xl:sticky xl:top-6 xl:self-start">
+        <aside aria-label="Try the AI" className="xl:sticky xl:top-6 xl:self-start">
           <TestBox wid={wid} onAddAnswer={(question) => setSheet({ kind: "create", type: "faq", question })} />
         </aside>
       </div>

@@ -196,6 +196,27 @@ function attachment(type: Attachment["type"], extra: Partial<Attachment> = {}): 
   return { id: `att-${type}`, type, url: `https://res.cloudinary.com/demo/${type}`, ...extra };
 }
 
+describe("Screen-reader semantics (UI-066)", () => {
+  it("a customer's text carries the language the analysis found; our own does not", () => {
+    const { row } = renderBubble({ text: "Hola, ¿tienen talla M?" }, { lang: "es" });
+    expect(within(row).getByText("Hola, ¿tienen talla M?")).toHaveAttribute("lang", "es");
+    const sent = renderBubble({ ...out, text: "Sí, claro" }, { lang: "es" });
+    expect(within(sent.row).getByText("Sí, claro")).not.toHaveAttribute("lang");
+  });
+
+  it("a photo says who sent it and when, on the thumbnail and in the lightbox", async () => {
+    renderBubble({ kind: "image", text: null, occurred_at: "2026-09-28T12:42:00Z", attachments: [attachment("image")] });
+    expect(screen.getByRole("img", { name: "Photo from Priya Nair, 18:12" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Open photo" }));
+    expect(await screen.findByRole("dialog", { name: "Photo from Priya Nair, 18:12" })).toBeInTheDocument();
+  });
+
+  it("our photo says it was sent to the contact", () => {
+    renderBubble({ ...out, kind: "image", text: null, occurred_at: "2026-09-28T12:42:00Z", attachments: [attachment("image")] });
+    expect(screen.getByRole("img", { name: "Photo sent to Priya Nair, 18:12" })).toBeInTheDocument();
+  });
+});
+
 describe("AttachmentView (FR-INB-02)", () => {
   it("image: opens a lightbox", async () => {
     renderBubble({ kind: "image", text: null, attachments: [attachment("image")] });

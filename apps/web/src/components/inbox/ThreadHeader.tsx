@@ -96,7 +96,12 @@ export function ThreadHeader({
         />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-2">
-            <h2 className="min-w-20 truncate text-sm font-semibold @xl/header:min-w-0">{name}</h2>
+            {/* On a phone the list pane is gone, so the contact's name is the page's heading. */}
+            {backHref ? (
+              <h1 className="min-w-20 truncate text-sm font-semibold @xl/header:min-w-0">{name}</h1>
+            ) : (
+              <h2 className="min-w-20 truncate text-sm font-semibold @xl/header:min-w-0">{name}</h2>
+            )}
             <ReplyWindowChip window={conversation.reply_window} now={now} className="hidden @xl/header:inline-flex" />
             {conversation.needs_human ? (
               <Badge tone="danger" size="md" className="hidden @2xl/header:inline-flex">

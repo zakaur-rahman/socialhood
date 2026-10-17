@@ -76,7 +76,7 @@ export function AgentSettingsPage() {
   if (workspace.role === "agent") {
     return (
       <EmptyState
-        className="min-h-[60vh]"
+        className="flex-1"
         title="Run history is for owners and admins"
         body="Your own questions and answers are in Ask Social Hood."
         action={
@@ -144,7 +144,7 @@ function PolicyCard() {
       }
     >
       {policy.isPending ? (
-        <div className="space-y-2" aria-busy="true" aria-label="Loading the agent's mode">
+        <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading the agent's mode">
           <Skeleton className="h-3 w-1/3" />
           <Skeleton className="h-3 w-2/3" />
         </div>

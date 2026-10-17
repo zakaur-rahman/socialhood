@@ -78,7 +78,7 @@ export function DetailsPanel({
 
   if (!conversation.data) {
     return (
-      <div className="space-y-3 p-4" aria-busy="true" aria-label="Loading details">
+      <div role="status" className="space-y-3 p-4" aria-busy="true" aria-label="Loading details">
         <Skeleton className="size-12 rounded-full" />
         <Skeleton className="h-3 w-2/3" />
         <Skeleton className="h-3 w-1/2" />

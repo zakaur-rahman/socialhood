@@ -507,7 +507,7 @@ function SummaryStrip({
 
 function RowSkeletons() {
   return (
-    <div aria-busy="true" aria-label="Loading automations" className="space-y-2">
+    <div role="status" aria-busy="true" aria-label="Loading automations" className="space-y-2">
       {Array.from({ length: 4 }, (_, i) => (
         <Card key={i} className="flex items-center gap-3">
           <Skeleton className="h-5 w-8 rounded-full" />

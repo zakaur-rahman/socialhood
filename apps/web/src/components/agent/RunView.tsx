@@ -113,7 +113,7 @@ function Finished({
         </>
       ) : !outcome ? (
         // Final, but the answer is still on its way (agent.completed is followed by a fetch).
-        <div aria-busy="true" aria-label="Getting the answer" className="space-y-2 pt-1">
+        <div role="status" aria-busy="true" aria-label="Getting the answer" className="space-y-2 pt-1">
           <Skeleton className="h-3 w-5/6" />
           <Skeleton className="h-3 w-2/3" />
         </div>
@@ -268,7 +268,7 @@ function StepsDisclosure({
           ) : fetched.isError ? (
             <p className="text-xs text-danger-fg">{errorMessage(fetched.error)}</p>
           ) : (
-            <div aria-busy="true" aria-label="Loading steps">
+            <div role="status" aria-busy="true" aria-label="Loading steps">
               <Skeleton className="h-3 w-1/2" />
             </div>
           )}

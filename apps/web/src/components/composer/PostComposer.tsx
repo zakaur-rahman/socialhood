@@ -129,7 +129,7 @@ export function PostComposer({
     if (post.error instanceof ApiError && post.error.status === 404) {
       return (
         <EmptyState
-          className="min-h-[60vh]"
+          className="flex-1"
           title="Post not found"
           body="It may have been deleted."
           action={
@@ -148,7 +148,7 @@ export function PostComposer({
 
 function ComposerSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading" className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+    <div role="status" aria-busy="true" aria-label="Loading" className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
       <Skeleton className="h-8 w-40" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4 lg:max-w-[640px]">
