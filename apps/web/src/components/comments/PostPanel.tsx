@@ -101,14 +101,15 @@ export function PostPanel({
           </div>
         </div>
 
-        <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-          <CardInset padding="compact">
+        {/* Below 1024 px the two counts are one line, so the comments stay near the top (UI-056). */}
+        <dl className="mt-3 flex gap-4 text-sm lg:mt-4 lg:grid lg:grid-cols-2 lg:gap-2">
+          <CardInset padding="compact" className="flex items-baseline gap-1.5 max-lg:border-0 max-lg:p-0 lg:block">
             <dt className="text-xs text-fg-secondary">Likes</dt>
             <dd className="font-semibold tabular-nums">
               {post.like_count == null ? "—" : formatCount(post.like_count)}
             </dd>
           </CardInset>
-          <CardInset padding="compact">
+          <CardInset padding="compact" className="flex items-baseline gap-1.5 max-lg:border-0 max-lg:p-0 lg:block">
             <dt className="text-xs text-fg-secondary">Comments</dt>
             <dd className="font-semibold tabular-nums">{formatCount(stats.total)}</dd>
           </CardInset>

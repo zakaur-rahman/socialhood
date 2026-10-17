@@ -84,7 +84,12 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
 
     const reel = card("po2");
     expect(reel.querySelector("img")).toHaveAttribute("src", "https://scontent.cdninstagram.com/po2.jpg");
-    expect(within(reel).getByTestId("spam-count")).toHaveTextContent("No spam");
+    // UI-056: the caption's first line is visible, on one line
+    expect(within(reel).getByTestId("post-caption")).toHaveTextContent("Behind the scenes");
+    expect(within(reel).getByTestId("post-caption")).toHaveClass("truncate");
+    // UI-056: no "No spam" on a card with none
+    expect(within(reel).queryByTestId("spam-count")).toBeNull();
+    expect(within(reel).queryByText("No spam")).toBeNull();
     // FR-CMT-02: still analysing
     expect(within(reel).getByText("Analysing 3 of 8")).toBeInTheDocument();
     // a zero count has no segment
