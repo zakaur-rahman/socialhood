@@ -143,7 +143,7 @@ function AccountTimes({
 
   if (slots.isPending) {
     return (
-      <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading posting times">
+      <div role="status" className="space-y-2 p-4" aria-busy="true" aria-label="Loading posting times">
         {Array.from({ length: 7 }, (_, i) => (
           <Skeleton key={i} className="h-10 w-full" />
         ))}

@@ -104,7 +104,7 @@ export function WeekView({
   }, [posts, messages, slots, timeZone]);
 
   return (
-    <Card className="flex min-h-0 flex-col overflow-hidden p-0">
+    <Card className="flex min-h-0 flex-1 flex-col overflow-hidden p-0">
       <div className={cn(GRID_COLUMNS, "overflow-hidden border-b border-line [scrollbar-gutter:stable]")}>
         <div aria-hidden />
         {days.map((day) => {
@@ -129,7 +129,10 @@ export function WeekView({
       <div
         ref={scroller}
         data-testid="week-scroller"
-        className="relative h-[calc(100dvh-260px)] min-h-[420px] overflow-y-auto [scrollbar-gutter:stable]"
+        role="region"
+        aria-label="Week calendar"
+        tabIndex={0}
+        className="relative min-h-[420px] flex-1 overflow-y-auto [scrollbar-gutter:stable] focus-visible:-outline-offset-2"
       >
         <div className={GRID_COLUMNS} style={{ height: ROWS * ROW_PX }}>
           <div aria-hidden className="relative">

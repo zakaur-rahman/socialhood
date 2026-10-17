@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 export function PageSkeleton({ fullPage = false, rows = 4 }: { fullPage?: boolean; rows?: number }) {
   return (
     <div
+      role="status"
       aria-busy="true"
       aria-label="Loading"
       className={cn("mx-auto w-full max-w-[1200px] space-y-4 p-4 md:p-6", fullPage && "min-h-dvh")}

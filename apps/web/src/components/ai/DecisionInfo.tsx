@@ -41,7 +41,7 @@ export function DecisionInfo({ messageId }: { messageId: string }) {
       </PopoverTrigger>
       <PopoverContent align="end" className="w-80 p-3">
         {decision.isPending ? (
-          <div className="space-y-2" aria-busy="true" aria-label="Loading the decision">
+          <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading the decision">
             <Skeleton className="h-3 w-1/2" />
             <Skeleton className="h-3 w-full" />
             <Skeleton className="h-3 w-5/6" />

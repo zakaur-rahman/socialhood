@@ -31,7 +31,7 @@ export const DETAIL_GRID_CLASS =
 
 function DetailSkeleton() {
   return (
-    <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6" aria-busy="true" aria-label="Loading the post">
+    <div role="status" className="mx-auto w-full max-w-[1200px] p-4 md:p-6" aria-busy="true" aria-label="Loading the post">
       <Skeleton className="mb-6 h-8 w-56" />
       <div className={DETAIL_GRID_CLASS}>
         <div className="space-y-4">
@@ -74,7 +74,7 @@ export function PostDetailPage({ postId }: { postId: string }) {
     if (post.error instanceof ApiError && post.error.status === 404) {
       return (
         <EmptyState
-          className="min-h-[60vh]"
+          className="flex-1"
           title="Post not found"
           body="It may have been deleted on Instagram, or it belongs to another workspace."
           action={

@@ -6,6 +6,7 @@ import { Dialog as SheetPrimitive } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
 import { MODAL_MOTION, MODAL_OVERLAY } from "@/components/ui/dialog"
+import { ModalInert } from "@/components/ui/modal-inert"
 import { XIcon } from "lucide-react"
 
 /**
@@ -88,6 +89,7 @@ function SheetContent({
         )}
         {...props}
       >
+        <ModalInert />
         {children}
         {showCloseButton && (
           <SheetPrimitive.Close data-slot="sheet-close" asChild>

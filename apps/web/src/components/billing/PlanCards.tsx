@@ -36,7 +36,7 @@ export function PlanCards({
 }) {
   if (plans.isPending) {
     return (
-      <div className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-label="Loading plans">
+      <div role="status" className="grid gap-4 md:grid-cols-3" aria-busy="true" aria-label="Loading plans">
         {[0, 1, 2].map((i) => (
           <Card key={i} padding="roomy" className="space-y-3">
             <Skeleton className="h-4 w-16" />

@@ -115,7 +115,7 @@ export function HomeScreen() {
       </Suspense>
       {header}
       {overview.isPending ? (
-        <div className="space-y-6" aria-busy="true" aria-label="Loading Home">
+        <div role="status" className="space-y-6" aria-busy="true" aria-label="Loading Home">
           <MetricTilesSkeleton />
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             {[0, 1, 2].map((i) => (

@@ -82,7 +82,7 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
 
   if (groups.isPending) {
     return (
-      <div className="space-y-2" aria-busy="true" aria-label="Loading hashtag groups">
+      <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading hashtag groups">
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />
       </div>

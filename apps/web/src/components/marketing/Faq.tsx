@@ -16,9 +16,11 @@ export function Faq() {
         <SectionHeading id="faq-title" eyebrow="FAQ" title="Common questions" />
         <div data-reveal className="mx-auto mt-12 max-w-3xl divide-y divide-line overflow-hidden rounded-2xl border border-line bg-panel/40">
           {FAQ.map((item) => (
-            <details key={item.question} className="group">
+            <div key={item.question}>
+            <h3 className="sr-only">{item.question}</h3>
+            <details className="group">
               <summary className="flex min-h-14 cursor-pointer list-none items-center gap-4 px-5 py-3 text-left text-base font-medium transition-colors duration-normal hover:bg-hover focus-visible:-outline-offset-2 [&::-webkit-details-marker]:hidden">
-                <h3 className="flex-1 text-base font-medium">{item.question}</h3>
+                <span className="flex-1 text-base font-medium">{item.question}</span>
                 <ChevronDown
                   className="size-5 shrink-0 text-fg-secondary transition-transform duration-normal group-open:rotate-180 motion-reduce:transition-none"
                   aria-hidden
@@ -26,6 +28,7 @@ export function Faq() {
               </summary>
               <p className="px-5 pb-5 text-sm leading-relaxed text-fg-secondary">{item.answer}</p>
             </details>
+            </div>
           ))}
         </div>
       </Container>

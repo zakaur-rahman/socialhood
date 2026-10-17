@@ -57,6 +57,8 @@ type Props = {
   reconnectHref?: Route;
   /** An AI auto reply's "why" button, in the "Sent by AI" label row (F-09). */
   aiInfo?: ReactNode;
+  /** The language the analysis found in a customer message (BCP-47), so a screen reader uses its voice. */
+  lang?: string | null;
   /** Under the bubble: the analysis chips of an analysed customer message (FR-AI-02). */
   below?: ReactNode;
 };
@@ -75,6 +77,7 @@ export function MessageBubble({
   onChooseTemplate,
   reconnectHref,
   aiInfo,
+  lang,
   below,
 }: Props) {
   if (message.direction === "system" || message.kind === "system") {
@@ -156,7 +159,13 @@ export function MessageBubble({
           {message.attachments.length > 0 ? (
             <div className="mb-1 flex flex-col gap-1.5">
               {message.attachments.map((attachment) => (
-                <AttachmentView key={attachment.id} attachment={attachment} kind={message.kind} outbound={outbound && !nativeApp} />
+                <AttachmentView
+                  key={attachment.id}
+                  attachment={attachment}
+                  kind={message.kind}
+                  outbound={outbound && !nativeApp}
+                  photoAlt={`Photo ${outbound ? "sent to" : "from"} ${contact.name}, ${formatTime(message.occurred_at, timeZone)}`}
+                />
               ))}
             </div>
           ) : null}
@@ -190,7 +199,7 @@ export function MessageBubble({
           ) : message.kind === "location" && !message.text ? (
             <p>Shared a location</p>
           ) : message.text ? (
-            <p>{message.text}</p>
+            <p lang={!outbound && lang ? lang : undefined}>{message.text}</p>
           ) : null}
           {quickReplies.length > 0 ? (
             // Tap first's button (FR-AUT-21): shown as it was offered; the customer taps it in Instagram.
@@ -214,6 +223,7 @@ export function MessageBubble({
                 "absolute -bottom-3 flex gap-0.5 rounded-full border border-line bg-raised px-1.5 py-0.5 text-xs",
                 outbound ? "right-2" : "left-2",
               )}
+              role="img"
               aria-label={`Reactions: ${reactions.map((r) => r.emoji).join(" ")}`}
             >
               {reactions.map((reaction, i) => (

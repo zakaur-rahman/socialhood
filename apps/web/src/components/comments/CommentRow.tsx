@@ -3,7 +3,7 @@
 import { Eye, EyeOff, MessageCircle, Reply, Send, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { IntentChip } from "@/components/ai/AnalysisChips";
@@ -80,6 +80,28 @@ export function CommentRow({
   onRemoved?: () => void;
 }) {
   const rowRef = useRef<HTMLLIElement>(null);
+  // Set when a confirmed delete went through: the row (and this dialog with it) is going away, so
+  // the dialog must not return focus to its trigger (SourcesCard's pattern, UI-039).
+  const removedRef = useRef(false);
+  // A confirmed delete removes the row from the cache before this component's own mutate
+  // callbacks run, and TanStack Query skips those callbacks once the row has unmounted. So the
+  // row hands focus on itself when it unmounts mid-delete holding focus (on the Delete trigger the
+  // dialog returned it to): layout cleanups run before the row's DOM is removed.
+  const deletingRef = useRef(false);
+  const onRemovedRef = useRef(onRemoved);
+  useLayoutEffect(() => {
+    onRemovedRef.current = onRemoved;
+  });
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    return () => {
+      if (!deletingRef.current) return;
+      const active = document.activeElement;
+      if (active === document.body || (active && row?.contains(active))) {
+        requestAnimationFrame(() => onRemovedRef.current?.());
+      }
+    };
+  }, []);
   const [initial] = useState(() =>
     prepared && !(prepared.kind === "dm" && comment.private_reply) ? prepared : null,
   );
@@ -126,15 +148,29 @@ export function CommentRow({
     );
   };
 
-  const confirmDelete = () =>
-    remove.mutate(comment, {
-      onSuccess: () => {
+  const confirmDelete = () => {
+    deletingRef.current = true;
+    // mutateAsync, not mutate's callbacks: the promise settles even after the row has unmounted, so
+    // the toast and the focus move still happen.
+    remove.mutateAsync(comment).then(
+      () => {
         toast.success("Comment deleted");
+        removedRef.current = true;
         const active = document.activeElement;
         if (!active || active === document.body || rowRef.current?.contains(active)) onRemoved?.();
+        // The row leaves on the next render; if focus fell to <body> or into the closing dialog by
+        // then, the list's heading takes it.
+        requestAnimationFrame(() => {
+          const current = document.activeElement;
+          if (!current || current === document.body || !current.isConnected || current.closest("[role=alertdialog]")) onRemovedRef.current?.();
+        });
       },
-      onError: (error) => toast.error(commentActionError(error, "delete", accountUsername)),
-    });
+      (error) => {
+        deletingRef.current = false;
+        toast.error(commentActionError(error, "delete", accountUsername));
+      },
+    );
+  };
 
   return (
     <li
@@ -247,7 +283,13 @@ export function CommentRow({
                   <Trash2 aria-hidden /> Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent
+                onCloseAutoFocus={(event) => {
+                  if (!removedRef.current) return;
+                  event.preventDefault();
+                  onRemoved?.();
+                }}
+              >
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
                   <AlertDialogDescription>

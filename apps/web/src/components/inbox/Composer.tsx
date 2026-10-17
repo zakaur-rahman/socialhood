@@ -522,7 +522,7 @@ export function SchedulePanel({
   };
 
   return (
-    <div className="space-y-3" aria-label="Schedule message">
+    <div className="space-y-3" role="group" aria-label="Schedule message">
       <p className="text-sm font-semibold">Schedule message</p>
       {initialAt ? (
         <p className="text-xs text-brand-fg">

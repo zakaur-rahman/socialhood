@@ -217,7 +217,7 @@ function PostPicker({
       </div>
 
       {posts.isPending ? (
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5" aria-busy="true" aria-label="Loading posts">
+        <div role="status" className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5" aria-busy="true" aria-label="Loading posts">
           {Array.from({ length: 10 }, (_, i) => (
             <Skeleton key={i} className="aspect-square rounded-lg" />
           ))}

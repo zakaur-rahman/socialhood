@@ -104,7 +104,7 @@ export function SchedulePage({ now }: { now?: Date } = {}) {
   if (workspace.role === "agent") {
     return (
       <EmptyState
-        className="min-h-[60vh]"
+        className="flex-1"
         title="Schedule is for owners and admins"
         body="Ask an owner or admin of this workspace to plan posts."
         action={
@@ -407,11 +407,16 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   } else {
     main = <WeekView days={range.days} posts={posts} messages={messages} slots={slots} />;
   }
+  // The week grid scrolls inside the frame, so the page is the shell's full-height frame (RG-14).
+  const fillsHeight = view === "week" && !phone;
 
   return (
     <ScheduleProvider value={context}>
       <CalendarDndProvider enabled={!phone} onDrop={onDrop} onLocked={onLocked} describe={describeDrag}>
-        <div className="w-full p-4 md:p-6">
+        <div
+          className={cn("w-full p-4 md:p-6", fillsHeight && "flex min-h-0 flex-1 flex-col")}
+          data-shell-fill={fillsHeight ? "" : undefined}
+        >
           <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 ref={heading} tabIndex={-1} className={cn(PAGE_TITLE, "outline-none")}>
@@ -548,10 +553,10 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
             </Card>
           ) : null}
 
-          <div className="flex gap-4">
-            <div className="min-w-0 flex-1">{main}</div>
+          <div className={cn("flex gap-4", fillsHeight && "min-h-0 flex-1")}>
+            <div className={cn("min-w-0 flex-1", fillsHeight && "flex min-h-0 flex-col")}>{main}</div>
             {wide ? (
-              <aside aria-label="Drafts and queue" className="w-[250px] shrink-0">
+              <aside aria-label="Drafts and queue" className={cn("w-[250px] shrink-0", fillsHeight && "min-h-0 overflow-y-auto")}>
                 {rail(true)}
               </aside>
             ) : null}
@@ -653,7 +658,7 @@ function deleteDescription(post: ScheduledPostSummary): string {
 
 function CalendarSkeleton() {
   return (
-    <Card className="space-y-2" aria-busy="true" aria-label="Loading the calendar">
+    <Card role="status" className="space-y-2" aria-busy="true" aria-label="Loading the calendar">
       <Skeleton className="h-6 w-full" />
       {Array.from({ length: 6 }, (_, i) => (
         <Skeleton key={i} className="h-16 w-full" />

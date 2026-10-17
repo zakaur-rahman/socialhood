@@ -36,7 +36,7 @@ export function PaymentHistory() {
   let content;
   if (payments.isPending) {
     content = (
-      <div className="space-y-3" aria-busy="true" aria-label="Loading payments">
+      <div role="status" className="space-y-3" aria-busy="true" aria-label="Loading payments">
         {[0, 1, 2].map((i) => (
           <Skeleton key={i} className="h-4 w-full" />
         ))}

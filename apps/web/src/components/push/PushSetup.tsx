@@ -54,7 +54,7 @@ function StateView({
   switch (state.kind) {
     case "checking":
       return (
-        <div className="space-y-2" aria-busy="true" aria-label="Checking this device">
+        <div role="status" className="space-y-2" aria-busy="true" aria-label="Checking this device">
           <Skeleton className="h-4 w-48" />
           <Skeleton className="h-3 w-72 max-w-full" />
         </div>

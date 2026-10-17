@@ -122,7 +122,7 @@ export function ConversationList({
 /** §4.7 loading: skeleton rows shaped like the real row, never a spinner. */
 export function RowSkeletons({ count = 8 }: { count?: number }) {
   return (
-    <div aria-busy="true" aria-label="Loading conversations">
+    <div role="status" aria-busy="true" aria-label="Loading conversations">
       {Array.from({ length: count }, (_, i) => (
         <div key={i} className="flex h-[68px] items-center gap-3 px-4 py-3">
           <Skeleton className="size-10 shrink-0 rounded-full" />

@@ -95,7 +95,7 @@ export function AutomationEditor({ id, upload }: { id: string; upload?: Uploader
     if (automation.error instanceof ApiError && automation.error.status === 404) {
       return (
         <EmptyState
-          className="min-h-[60vh]"
+          className="flex-1"
           title="Automation not found"
           body="It may have been deleted."
           action={
@@ -242,6 +242,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   return (
     <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
       <header className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line pb-4">
+        <h1 className="sr-only">{draft.name.trim() || DEFAULT_NAME}</h1>
         <div className="min-w-0 flex-1 basis-64">
           <BackLink href={`/w/${slug}/automations` as Route} label="Automations" />
           <input
@@ -496,7 +497,7 @@ function QueueBanner({
 
 function EditorSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading automation" className="mx-auto w-full max-w-[1200px] space-y-6 p-4 md:p-6">
+    <div role="status" aria-busy="true" aria-label="Loading automation" className="mx-auto w-full max-w-[1200px] space-y-6 p-4 md:p-6">
       <div className="space-y-2 border-b border-line pb-4">
         <Skeleton className="h-3 w-24" />
         <Skeleton className="h-7 w-64" />

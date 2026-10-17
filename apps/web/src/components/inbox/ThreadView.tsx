@@ -37,6 +37,7 @@ import {
 } from "@/lib/api/queries";
 import type { Conversation, Message } from "@/lib/api/types";
 import { sendFailure, type SendFailure } from "@/lib/copy";
+import { useDocumentTitle } from "@/lib/document-title";
 import { flattenMessages, setPendingSuggestion } from "@/lib/inbox/cache";
 import { contactName } from "@/lib/inbox/format";
 import { useInboxStore } from "@/lib/inbox/store";
@@ -93,7 +94,7 @@ export function ThreadView({
   }
   if (!conversation.data) {
     return (
-      <div className="flex h-full flex-col" aria-busy="true" aria-label="Loading conversation">
+      <div role="status" className="flex h-full flex-col" aria-busy="true" aria-label="Loading conversation">
         <div className="flex h-14 items-center gap-3 border-b border-line bg-panel px-4">
           <Skeleton className="size-8 rounded-full" />
           <Skeleton className="h-3 w-40" />
@@ -195,6 +196,7 @@ function Thread({
   useAutoRead(wid, conversation, ui?.manualUnreadId === conversationId);
 
   const name = contactName(conversation.contact, conversation.platform);
+  useDocumentTitle(name);
   const account = accounts.data?.find((a) => a.id === conversation.social_account_id);
   const canAttach = account ? account.capabilities.includes("dm_attachments") : true;
   const handle =
@@ -243,6 +245,9 @@ function Thread({
         timeZone={workspace.timezone}
         now={now}
         label={`Messages with ${name}`}
+        announce={(message) =>
+          `New message from ${name}: ${message.text ?? (message.attachments.length > 0 ? "an attachment" : "unsupported format")}`
+        }
         loading={messages.isPending}
         hasOlder={messages.hasNextPage}
         loadingOlder={messages.isFetchingNextPage}
@@ -260,6 +265,7 @@ function Thread({
             onDiscard={isLocalMessage(message) ? () => discard(message) : undefined}
             onChooseTemplate={() => setTemplateOpen(true)}
             reconnectHref={reconnectHref}
+            lang={analysis && message.id === analysis.message_id ? analysis.language : undefined}
             aiInfo={message.source === "ai_auto" && !isLocalMessage(message) ? <DecisionInfo messageId={message.id} /> : undefined}
             below={
               analysis && message.id === analysis.message_id && message.direction === "inbound" ? (

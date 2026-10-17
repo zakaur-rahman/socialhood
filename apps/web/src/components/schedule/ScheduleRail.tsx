@@ -69,7 +69,7 @@ export function ScheduleRail({
     <div className="space-y-5 text-sm">
       <RailSection title="Unscheduled drafts" count={drafts.isPending ? undefined : items.length}>
         {drafts.isPending ? (
-          <div className="space-y-2" aria-busy="true" aria-label="Loading drafts">
+          <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading drafts">
             <Skeleton className="h-12 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>

@@ -112,7 +112,7 @@ export function ThreadMenu({ wid, now, onPick }: { wid: string; now: Date; onPic
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {threads.isPending ? (
-          <div className="space-y-2 p-2" aria-busy="true" aria-label="Loading threads">
+          <div role="status" className="space-y-2 p-2" aria-busy="true" aria-label="Loading threads">
             <Skeleton className="h-3 w-3/4" />
             <Skeleton className="h-3 w-1/2" />
           </div>
@@ -157,7 +157,7 @@ export function ThreadList({ wid, now }: { wid: string; now: Date }) {
 
   if (threads.isPending) {
     return (
-      <div className="space-y-3 p-4" aria-busy="true" aria-label="Loading threads">
+      <div role="status" className="space-y-3 p-4" aria-busy="true" aria-label="Loading threads">
         {Array.from({ length: 5 }, (_, i) => (
           <Skeleton key={i} className="h-3 w-4/5" />
         ))}
