@@ -238,7 +238,7 @@ function CurrentPlan({
         </Button>
       ) : null}
       {status.cancellable ? (
-        <Button variant="ghost" size="lg" className="text-fg-secondary" loading={cancel.isPending} onClick={() => setConfirm("cancel")}>
+        <Button variant="ghost" size="lg" loading={cancel.isPending} onClick={() => setConfirm("cancel")}>
           {trial ? "Cancel trial" : "Cancel plan"}
         </Button>
       ) : null}

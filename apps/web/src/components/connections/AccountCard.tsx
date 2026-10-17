@@ -201,7 +201,7 @@ export function AccountCard({
         {canManage && !deleting ? (
           <div className="flex flex-wrap items-center gap-2">
             {reconnectable ? (
-              <Button size="lg" disabled={busy.reconnecting}
+              <Button variant="secondary" size="lg" disabled={busy.reconnecting}
                 onClick={actions.onReconnect}
               >
                 {busy.reconnecting ? `Opening ${platformName}…` : "Reconnect"}

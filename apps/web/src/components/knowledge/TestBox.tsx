@@ -51,7 +51,7 @@ export function TestBox({ wid, onAddAnswer }: { wid: string; onAddAnswer?: (ques
               autoComplete="off"
             />
           </Field>
-          <Button type="submit" disabled={!question.trim()} loading={test.isPending}>
+          <Button type="submit" variant="secondary" disabled={!question.trim()} loading={test.isPending}>
             Ask
           </Button>
         </form>

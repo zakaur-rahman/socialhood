@@ -68,7 +68,7 @@ function StepRow({ step, slug, open }: { step: ChecklistStep; slug: string; open
         {open ? (
           <>
             <p className="mt-0.5 text-sm text-fg-secondary">{copy.why}</p>
-            <Button asChild size="sm" className="mt-2">
+            <Button asChild variant="secondary" size="sm" className="mt-2">
               <Link href={copy.href(slug)}>{copy.action}</Link>
             </Button>
           </>

@@ -222,7 +222,7 @@ export function TemplateCard({
           {ACTION_TAG[template.action]}
         </Badge>
       </div>
-      <Button className="mt-3 self-start" disabled={disabled} onClick={onUse} aria-label={`Use template: ${template.name}`}>
+      <Button variant="secondary" className="mt-3 self-start" disabled={disabled} onClick={onUse} aria-label={`Use template: ${template.name}`}>
         {pending ? <Spinner /> : null}
         Use template
       </Button>

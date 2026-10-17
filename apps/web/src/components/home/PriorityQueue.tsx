@@ -47,7 +47,7 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
         <Badge data-testid="queue-state" tone={state.chip.tone}>
           {state.chip.label}
         </Badge>
-        <Button asChild variant={state.action === "Review & Send" ? "default" : "outline"}>
+        <Button asChild variant={state.action === "Review & Send" ? "secondary" : "outline"}>
           <Link href={`/w/${slug}/inbox/${item.id}` as Route} aria-label={`${state.action}: ${name}`}>
             {state.action}
           </Link>
