@@ -26,6 +26,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* Clerk Core 3: the provider sits inside <body>. */}
         <ClerkProvider
           appearance={clerkAppearance}
+          // The sign-up card's subtitle (the Free plan needs no card, as the landing page says).
+          localization={{ signUp: { start: { subtitle: "No credit card required." } } }}
           signInFallbackRedirectUrl="/app"
           signUpFallbackRedirectUrl="/app"
           afterSignOutUrl="/"
