@@ -1,6 +1,6 @@
 "use client";
 
-import { History, Sparkles } from "lucide-react";
+import { History, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -52,7 +52,7 @@ export function AskPage() {
           {admin ? (
             <Button asChild variant="ghost" size="icon" className="text-fg-secondary lg:hidden">
               <Link href={agentSettingsHref(workspace.slug)} aria-label="Run history">
-                <History aria-hidden />
+                <ListChecks aria-hidden />
               </Link>
             </Button>
           ) : null}

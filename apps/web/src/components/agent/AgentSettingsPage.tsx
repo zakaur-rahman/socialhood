@@ -356,7 +356,7 @@ function RunDetailSheet({ runId, onClose }: { runId: string | null; onClose: () 
         aria-describedby={undefined}
         onOpenAutoFocus={returnFocus.onOpenAutoFocus}
         onCloseAutoFocus={returnFocus.onCloseAutoFocus}
-        className="gap-0 md:w-140"
+        className="gap-0"
         data-testid="run-detail"
       >
         <SheetHeader className="h-14 shrink-0 justify-center border-b border-line py-0 pl-4">

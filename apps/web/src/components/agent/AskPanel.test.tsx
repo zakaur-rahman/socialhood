@@ -208,7 +208,7 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     const time = run.querySelector("time");
     expect(time).toHaveTextContent(/15:30$/);
     expect(time).toHaveAttribute("dateTime", "2026-09-29T10:00:00Z");
-    expect(time).toHaveClass("opacity-0", "group-hover/run:opacity-100", "group-focus-within/run:opacity-100");
+    expect(time?.className).not.toMatch(/opacity/);
     // No card around the answer: the reading size (`text-md`, 15 px on 28 px lines).
     expect(within(run).getByTestId("answer")).toHaveClass("text-md");
     expect(within(run).getByTestId("run-result").className).not.toMatch(/\bborder\b/);
@@ -640,7 +640,9 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     });
     useAskStore.getState().setThread("w1", "r1");
     const { panel } = await openPanel();
-    expect(panel).toHaveClass("fixed", "inset-0", "md:left-auto", "md:w-[420px]");
+    expect(panel).toHaveAttribute("data-slot", "sheet-content");
+    expect(panel).toHaveAttribute("data-size", "panel");
+    expect(panel).toHaveClass("fixed", "inset-0", "md:w-105", "md:data-[side=right]:left-auto");
     for (const name of ["New thread", "Threads", "Close"]) {
       expect(within(panel).getByRole("button", { name })).toHaveClass("size-8", "pointer-coarse:size-10");
     }
