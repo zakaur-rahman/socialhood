@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_TITLE } from "@/styles/tokens";
 import { ChevronLeft, ChevronRight, ListFilter, PanelRight, Plus } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
@@ -413,7 +414,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
         <div className="w-full p-4 md:p-6">
           <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 ref={heading} tabIndex={-1} className="text-2xl font-semibold tracking-tight outline-none">
+              <h1 ref={heading} tabIndex={-1} className={cn(PAGE_TITLE, "outline-none")}>
                 Schedule
               </h1>
               <p className="text-xs text-fg-secondary">Times in {zoneLabel(timeZone)}</p>

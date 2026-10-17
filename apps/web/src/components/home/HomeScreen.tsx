@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_TITLE } from "@/styles/tokens";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -67,7 +68,7 @@ export function HomeScreen() {
   const header = (
     <header className="mb-6 flex flex-col gap-4 border-b border-line pb-6 lg:flex-row lg:items-end lg:justify-between">
       <div className="min-w-0">
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className={PAGE_TITLE}>{title}</h1>
         {data ? (
           <p className="mt-1 text-sm text-fg-secondary" data-testid="home-subtitle">
             {channelsLine(data.platforms_connected)}

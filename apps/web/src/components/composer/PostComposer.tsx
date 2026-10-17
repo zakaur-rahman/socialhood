@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_TITLE } from "@/styles/tokens";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, Copy, EllipsisVertical, RotateCw, Send, Trash2, Undo2 } from "lucide-react";
 import type { Route } from "next";
@@ -585,7 +586,7 @@ function Composer({
             </Link>{" "}
             <span aria-hidden>/</span>
           </nav>
-          <h1 className="text-2xl font-semibold tracking-tight">Post</h1>
+          <h1 className={PAGE_TITLE}>Post</h1>
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
           <Badge data-testid="status-pill" tone={STATUS_TONE[server.status]} size="md">

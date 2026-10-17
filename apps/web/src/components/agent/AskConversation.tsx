@@ -1,5 +1,6 @@
 "use client";
 
+import { SECTION_TITLE } from "@/styles/tokens";
 import { ArrowDown, BarChart3, Inbox, MessageSquare, Sparkles, Zap, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -308,7 +309,7 @@ function Welcome({
         <Sparkles className="size-6" />
       </span>
       <div className="max-w-md space-y-1.5">
-        <h2 className="text-xl font-semibold tracking-tight">What would you like to know?</h2>
+        <h2 className={cn(SECTION_TITLE, "tracking-tight")}>What would you like to know?</h2>
         <p className="text-sm text-fg-secondary">
           Ask about your posts, comments, conversations and automations. Answers show the numbers they used and
           link to them; Social Hood can prepare a reply for you to finish, but doesn&apos;t change anything itself.

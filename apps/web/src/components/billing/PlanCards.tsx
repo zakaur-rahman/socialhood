@@ -1,5 +1,6 @@
 "use client";
 
+import { KPI } from "@/styles/tokens";
 import { Check, RotateCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -91,7 +92,7 @@ export function PlanCards({
               ) : null}
             </div>
             <p className="text-xs text-fg-secondary">{TAGLINE[offer.plan]}</p>
-            <p className="mt-4 text-3xl font-semibold tracking-tight tabular-nums">
+            <p className={cn("mt-4", KPI)}>
               {offer.plan === "free" ? (
                 "Free"
               ) : offer.price ? (
