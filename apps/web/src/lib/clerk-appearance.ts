@@ -56,53 +56,60 @@ export const clerkAppearance = {
         "&:hover": { filter: "brightness(1.1)" },
         "&:active": { filter: "brightness(0.95)" },
       },
-      // Outline and ghost buttons (Google, "Add", "Cancel"): the app's control edge and hover fill.
+      // Outline buttons ("Add", "Cancel"): the app's control edge and hover fill. Clerk draws its
+      // own edges as a near-invisible 1% box shadow with `border-width: 0`, and its internal rules
+      // outrank these, so the edges in this file are !important.
       '&[data-variant="outline"]': {
-        borderColor: "var(--color-line-control)",
+        border: "1px solid var(--color-line-control) !important",
         backgroundColor: "transparent",
-        boxShadow: "none",
+        boxShadow: "none !important",
         "&:hover": { backgroundColor: "var(--color-hover)" },
       },
       // Link buttons ("Resend", "Use another method", the edit pencil) are always the primary colour.
       '&[data-variant="link"]': BRAND_TEXT,
     },
-    // Surfaces, as the app draws them: cards on `panel` with a `line` edge and `rounded-xl`; the
-    // user menu and the account modal float on `overlay` with the overlay shadow (D-12).
+    // Surfaces, as the app draws its cards: one `panel` surface with a crisp `line` edge and
+    // `rounded-xl`. The inner card and the footer sit on it transparently, so there is one edge,
+    // not two. The user menu and the account modal float on `overlay` (D-12).
     cardBox: {
-      border: "1px solid var(--color-line)",
+      backgroundColor: "var(--color-panel)",
+      border: "1px solid var(--color-line) !important",
       borderRadius: "0.75rem",
-      boxShadow: "var(--shadow-overlay)",
+      boxShadow: "var(--shadow-overlay) !important",
     },
-    card: { backgroundColor: "var(--color-panel)", boxShadow: "none" },
-    footer: { background: "var(--color-panel)", borderTop: "1px solid var(--color-line)" },
+    card: { backgroundColor: "transparent", border: "0 !important", borderRadius: "0", boxShadow: "none !important" },
+    footer: { background: "transparent !important", borderTop: "1px solid var(--color-line) !important" },
     userButtonPopoverCard: {
-      backgroundColor: "var(--color-overlay)",
-      border: "1px solid var(--color-line)",
+      backgroundColor: "var(--color-overlay) !important",
+      border: "1px solid var(--color-line) !important",
       borderRadius: "0.75rem",
-      boxShadow: "var(--shadow-floating)",
+      boxShadow: "var(--shadow-floating) !important",
     },
-    userButtonPopoverFooter: { background: "var(--color-overlay)", borderTop: "1px solid var(--color-line)" },
-    modalContent: { borderRadius: "0.75rem" },
-    navbar: { backgroundColor: "var(--color-panel)", borderRight: "1px solid var(--color-line)" },
+    userButtonPopoverMain: { backgroundColor: "var(--color-overlay)" },
+    userButtonPopoverFooter: {
+      background: "var(--color-overlay) !important",
+      borderTop: "1px solid var(--color-line) !important",
+    },
+    modalContent: { borderRadius: "0.75rem", border: "1px solid var(--color-line) !important" },
+    navbar: { backgroundColor: "var(--color-panel)", borderRight: "1px solid var(--color-line) !important" },
     scrollBox: { backgroundColor: "var(--color-overlay)" },
     dividerLine: { backgroundColor: "var(--color-line)" },
     // Fields, on the app's field recipe: `field` fill, the 40% control edge, `rounded-lg`, and the
     // brand edge on a raised fill when focused.
     formFieldInput: {
       backgroundColor: "var(--color-field)",
-      border: "1px solid var(--color-line-control)",
+      border: "1px solid var(--color-line-control) !important",
       borderRadius: "0.5rem",
-      boxShadow: "none",
+      boxShadow: "none !important",
       "&:focus, &:focus-visible": {
-        borderColor: "var(--color-brand)",
+        borderColor: "var(--color-brand) !important",
         backgroundColor: "var(--color-raised)",
-        boxShadow: "none",
       },
     },
     socialButtonsBlockButton: {
-      border: "1px solid var(--color-line-control)",
+      border: "1px solid var(--color-line-control) !important",
       backgroundColor: "transparent",
-      boxShadow: "none",
+      boxShadow: "none !important",
       "&:hover": { backgroundColor: "var(--color-hover)" },
     },
     footerActionLink: BRAND_TEXT, // "Sign up", "Sign in"
