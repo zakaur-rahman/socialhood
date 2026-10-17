@@ -109,7 +109,7 @@ function InboxFrame({ children, className }: { children: ReactNode; className?: 
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 overflow-hidden bg-panel md:my-4 md:ml-4 md:rounded-l-xl md:border md:border-r-0 md:border-line",
+        "flex min-h-0 flex-1 overflow-hidden bg-panel md:m-4 md:rounded-xl md:border md:border-line",
         className,
       )}
       data-testid="inbox"

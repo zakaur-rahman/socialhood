@@ -41,7 +41,14 @@ export function SettingsCard({
   children?: ReactNode;
 }) {
   return (
-    <Card asChild padding="roomy" tone={tone === "danger" ? "danger" : "default"} className={cn("space-y-5", className)}>
+    // Cards fill the page (pages are not capped, the owner's rule); fields inside keep a readable
+    // width, so an input never stretches across a wide screen.
+    <Card
+      asChild
+      padding="roomy"
+      tone={tone === "danger" ? "danger" : "default"}
+      className={cn("space-y-5 [&_[data-slot=field]]:max-w-2xl", className)}
+    >
       <section aria-labelledby={`${id}-title`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-3">

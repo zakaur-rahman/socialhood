@@ -8,7 +8,7 @@ export function PageSkeleton({ fullPage = false, rows = 4 }: { fullPage?: boolea
       role="status"
       aria-busy="true"
       aria-label="Loading"
-      className={cn("mx-auto w-full max-w-[1200px] space-y-4 p-4 md:p-6", fullPage && "min-h-dvh")}
+      className={cn("w-full space-y-4 p-4 md:p-6", fullPage && "min-h-dvh")}
     >
       <Skeleton className="h-8 w-48" />
       {Array.from({ length: rows }, (_, i) => (

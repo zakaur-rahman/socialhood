@@ -361,7 +361,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             size="lg"
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Search by name or keyword"
+            placeholder="Name or keyword"
             className="min-w-48 flex-1"
           />
           {accounts.length > 1 ? (

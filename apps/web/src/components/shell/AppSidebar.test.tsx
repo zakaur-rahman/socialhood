@@ -383,7 +383,7 @@ describe("Ask Social Hood in the sidebar (FR-AGT-01)", () => {
     expect(button.compareDocumentPosition(home) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const card = screen.getByTestId("ask-card");
     expect(card).toContainElement(button);
-    expect(card).toHaveTextContent("Your business assistant");
+    expect(card).toHaveTextContent("Your AI assistant");
     expect(card).toHaveTextContent("AI");
     expect(card).toHaveTextContent("Ctrl K");
     await userEvent.click(button);

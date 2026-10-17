@@ -209,7 +209,7 @@ export function AppSidebar({
 }
 
 /**
- * Ask Social Hood as a card: icon tile (with the AI tag), name, "Your business assistant" and the
+ * Ask Social Hood as a card: icon tile (with the AI tag), name, "Your AI assistant" and the
  * shortcut. The button itself comes from components/agent and keeps its behaviour and name; here
  * it is stretched, transparent, over the card, so the whole card opens it and shows its focus.
  * Collapsed, the button is shown as it is: an icon with a tooltip.
@@ -232,11 +232,13 @@ function AskCard({ ask, collapsed, hint }: { ask: ReactNode; collapsed: boolean;
         </span>
       </span>
       <span aria-hidden className="min-w-0 flex-1">
+        {/* The name gets its own line, so it is never cut ("Ask Social Ho…"); the shortcut sits with
+            the subtitle. */}
+        <span className="block truncate text-sm font-semibold text-fg">Ask Social Hood</span>
         <span className="flex items-center gap-1.5">
-          <span className="min-w-0 flex-1 truncate text-sm font-semibold text-fg">Ask Social Hood</span>
+          <span className="min-w-0 flex-1 truncate text-xs leading-4 text-fg-secondary">Your AI assistant</span>
           <kbd className={KBD_CLASS}>{hint}</kbd>
         </span>
-        <span className="block truncate text-xs leading-4 text-fg-secondary">Your business assistant</span>
       </span>
       <div className="absolute inset-0 [&_button]:absolute [&_button]:inset-0 [&_button]:size-full [&_button]:cursor-pointer [&_button]:rounded-xl [&_button]:opacity-0 [&_button]:outline-none">
         {ask}

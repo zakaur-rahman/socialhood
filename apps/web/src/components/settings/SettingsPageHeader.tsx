@@ -31,7 +31,7 @@ export function SettingsPageHeader({
 /** A settings page: the header, then the page's cards, then (for a form) its save bar. */
 export function SettingsFrame({ header, children }: { header: ReactNode; children: ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-[1200px] space-y-6 px-4 pt-5 pb-6 md:px-6 md:pt-6">
+    <div className="w-full space-y-6 px-4 pt-5 pb-6 md:px-6 md:pt-6">
       {header}
       {children}
     </div>
