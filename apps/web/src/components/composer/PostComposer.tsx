@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
+import { BackLink } from "@/components/shell/PageFrame";
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -580,12 +581,7 @@ function Composer({
           state wrap inside their own group instead of pushing More onto a line of its own. */}
       <header className="flex items-center gap-3 border-b border-line pb-4">
         <div className="min-w-max flex-1">
-          <nav aria-label="Breadcrumb" className="text-xs text-fg-secondary">
-            <Link href={scheduleHref(slug)} className="hover:text-fg hover:underline">
-              Schedule
-            </Link>{" "}
-            <span aria-hidden>/</span>
-          </nav>
+          <BackLink href={scheduleHref(slug)} label="Schedule" />
           <h1 className={PAGE_TITLE}>Post</h1>
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">

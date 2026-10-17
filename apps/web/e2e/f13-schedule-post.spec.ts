@@ -60,7 +60,7 @@ test.describe("F-13 schedule and publish a post", () => {
     await expect(page.getByRole("main").getByText("Scheduled", { exact: true })).toBeVisible();
 
     // The schedule's list view has it, with its time and account.
-    await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Schedule" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Schedule", exact: true }).click();
     await page.getByRole("radiogroup", { name: "View" }).getByRole("radio", { name: "List" }).click();
     const listed = page.getByRole("main").getByText(caption).first();
     await expect(listed).toBeVisible();
