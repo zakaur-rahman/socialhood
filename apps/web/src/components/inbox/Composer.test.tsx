@@ -409,7 +409,10 @@ describe("AI Polish (C-063)", () => {
     // UI-031: what it does and costs is a Tooltip (on keyboard focus too), not a title (UI-ISS-042).
     expect(polish).not.toHaveAttribute("title");
     await user.hover(polish);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Fix grammar and clarity, in the same language (1 AI credit)");
+    // The tooltip opens after its 300 ms delay; a busy CI runner can take longer than findBy's 1 s default.
+    expect(await screen.findByRole("tooltip", {}, { timeout: 3000 })).toHaveTextContent(
+      "Fix grammar and clarity, in the same language (1 AI credit)",
+    );
   });
 
   it("replaces the reply with a spinner while it works, and Undo brings the original back", async () => {
