@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ResizeHandle } from "./resize-handle";
 
@@ -23,6 +23,20 @@ function Pane({ edge, initial = 320 }: { edge: "start" | "end"; initial?: number
 }
 
 const handle = () => screen.getByRole("separator", { name: "Resize the list" });
+
+// jsdom has no pointer capture; every pointer-down on the handle (a drag, user-event's clicks) calls it.
+const capture = ["setPointerCapture", "hasPointerCapture", "releasePointerCapture"] as const;
+const added: string[] = [];
+beforeAll(() => {
+  for (const name of capture) {
+    if (name in Element.prototype) continue;
+    Object.assign(Element.prototype, { [name]: () => false });
+    added.push(name);
+  }
+});
+afterAll(() => {
+  for (const name of added) delete (Element.prototype as unknown as Record<string, unknown>)[name];
+});
 
 describe("ResizeHandle (UI-078)", () => {
   it("is a focusable vertical separator that states its width range", () => {
