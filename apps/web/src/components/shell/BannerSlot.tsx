@@ -1,13 +1,13 @@
 "use client";
 
-import { X } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
+import { Alert, AlertAction } from "@/components/ui/alert";
 import type { BillingState, Role } from "@/lib/api/types";
 import { billingDate, daysUntil, priceOf } from "@/lib/billing/plan";
 import { paymentFailedBanner, pricePerMonth, trialEndingBanner } from "@/lib/copy";
-import { cn } from "@/lib/utils";
 
 export type BannerAction =
   | { label: string; href: Route; onClick?: never; pending?: never }
@@ -22,54 +22,38 @@ export type Banner = {
   onDismiss?: () => void;
 };
 
-const actionClass =
-  "inline-flex min-h-10 shrink-0 items-center rounded-md bg-white/10 px-3 py-1 font-medium text-fg hover:bg-white/15 disabled:opacity-60 md:min-h-7";
-
 /**
  * UX-SH-04: app-level banners above page content (account needs reconnecting, payment on hold,
- * AI credits exhausted, trial ending). One action each; critical states cannot be dismissed.
- * They sit in `<main>`'s flow and keep their height; a full-height frame below takes the rest.
+ * AI credits exhausted, trial ending), drawn with Alert (DESIGN_SYSTEM §8.2): one action each, danger
+ * banners announced at once, critical states cannot be dismissed. They sit in `<main>`'s flow and keep
+ * their height; a full-height frame below takes the rest.
  */
 export function BannerSlot({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
   return (
-    <div className="shrink-0 space-y-2 px-4 pt-4 md:px-6" role="status">
+    <div className="shrink-0 space-y-2 px-4 pt-4 md:px-6">
       {banners.map((banner) => (
-        <div
+        // The Alert is the live region: `alert` for danger (payment on hold), `status` otherwise.
+        <Alert
           key={banner.id}
           data-banner={banner.id}
-          className={cn(
-            "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-4 py-2.5 text-sm",
-            banner.tone === "danger" ? "bg-danger/15 text-danger-fg" : "bg-warning/15 text-warning",
-          )}
+          tone={banner.tone}
+          icon={<TriangleAlert />}
+          onDismiss={banner.onDismiss}
+          action={
+            banner.action?.href ? (
+              <AlertAction asChild>
+                <Link href={banner.action.href}>{banner.action.label}</Link>
+              </AlertAction>
+            ) : banner.action ? (
+              <AlertAction onClick={banner.action.onClick} loading={banner.action.pending}>
+                {banner.action.label}
+              </AlertAction>
+            ) : undefined
+          }
         >
-          <p className="min-w-0 flex-1 basis-60">{banner.message}</p>
-          {banner.action?.href ? (
-            <Link href={banner.action.href} className={actionClass}>
-              {banner.action.label}
-            </Link>
-          ) : banner.action ? (
-            <button
-              type="button"
-              className={actionClass}
-              onClick={banner.action.onClick}
-              disabled={banner.action.pending}
-              aria-busy={banner.action.pending || undefined}
-            >
-              {banner.action.label}
-            </button>
-          ) : null}
-          {banner.onDismiss ? (
-            <button
-              type="button"
-              aria-label="Dismiss"
-              onClick={banner.onDismiss}
-              className="-mr-2 grid size-10 shrink-0 place-items-center rounded-md text-current hover:bg-white/10 md:size-7"
-            >
-              <X className="size-4" aria-hidden />
-            </button>
-          ) : null}
-        </div>
+          {banner.message}
+        </Alert>
       ))}
     </div>
   );

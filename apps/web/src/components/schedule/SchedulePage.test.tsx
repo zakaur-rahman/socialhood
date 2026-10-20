@@ -372,6 +372,8 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     const trigger = within(day("Tuesday 29 September")).getByRole("button", { name: "Actions for Linen styles" });
     trigger.focus();
     await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Edit" })).toHaveFocus());
+    await user.keyboard("{ArrowDown}");
     const item = await screen.findByRole("menuitem", { name: "Move to…" });
     await waitFor(() => expect(item).toHaveFocus());
     await user.keyboard("{Enter}");
@@ -400,6 +402,9 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     const trigger = within(day("Tuesday 29 September")).getByRole("button", { name: "Actions for Linen styles" });
     trigger.focus();
     await user.keyboard("{Enter}");
+    // Edit is always first; Move to… follows it.
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: "Edit" })).toHaveFocus());
+    await user.keyboard("{ArrowDown}");
     await waitFor(() => expect(screen.getByRole("menuitem", { name: "Move to…" })).toHaveFocus());
     await user.keyboard("{Enter}");
     await screen.findByRole("dialog", { name: "Move to…" });
@@ -412,9 +417,9 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     setup();
     const linenCard = await card("p-linen");
     const trigger = within(linenCard).getByRole("button", { name: "Actions for Linen styles" });
-    // 24 px (WCAG 2.5.8); on coarse pointers it covers the card, glyph hidden, instead of a 40 px
+    // 24 px (WCAG 2.5.8); on coarse pointers it covers the card, glyph at its right edge, instead of a 40 px
     // button beside the title.
-    expect(trigger).toHaveClass("size-6", "pointer-coarse:absolute", "pointer-coarse:inset-0", "pointer-coarse:[&_svg]:hidden");
+    expect(trigger).toHaveClass("size-6", "pointer-coarse:absolute", "pointer-coarse:inset-0", "pointer-coarse:justify-items-end");
     expect(trigger).not.toHaveClass("size-5");
     expect(trigger).not.toHaveClass("pointer-coarse:size-10");
 
@@ -500,14 +505,13 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/w/maple/schedule/new1"));
   });
 
-  it("New post and Add to queue open the composer on a new draft", async () => {
+  it("New post opens the composer on a new draft, and the header has no Add to queue", async () => {
     const user = userEvent.setup();
     setup();
     await card("p-linen");
+    expect(screen.queryByRole("button", { name: "Add to queue" })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "New post" }));
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/w/maple/schedule/new1"));
-    await user.click(screen.getByRole("button", { name: "Add to queue" }));
-    await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/w/maple/schedule/new1?when=queue"));
   });
 
   it("moves between weeks and back to today", async () => {

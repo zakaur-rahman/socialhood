@@ -3,7 +3,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
@@ -15,6 +15,7 @@ import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   useConversations,
+  useInboxCounts,
   useMarkUnread,
   useScheduledMessages,
   useSocialAccounts,
@@ -23,6 +24,7 @@ import {
 import { keys, type ConversationFilters } from "@/lib/api/queries/keys";
 import type { AiMode, Conversation, InboxView, Platform, SocialAccount } from "@/lib/api/types";
 import { minWidth } from "@/lib/breakpoints";
+import { inboxSearch } from "@/lib/inbox/url";
 import { emptyStates, inboxFilterEmpty } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useMediaQuery, useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
@@ -35,9 +37,14 @@ import { InboxUiProvider, useInboxLayout, type InboxLayout, type InboxUi } from 
 import { ListHeader, VIEWS, type InboxTab } from "./ListHeader";
 import { PlatformStrip, type PlatformChoice } from "./PlatformStrip";
 import { ScheduledList } from "./ScheduledList";
-import { useInboxShortcuts } from "./use-inbox-shortcuts";
+import { ShortcutsDialog } from "./ShortcutsDialog";
+import { useInboxShortcuts, useSingleKeyShortcuts } from "./use-inbox-shortcuts";
 
 const PLATFORM_ORDER: Platform[] = ["instagram", "whatsapp"];
+
+function viewFromLink(value: string | null): InboxView {
+  return VIEWS.find((option) => option.value === value)?.value ?? "all";
+}
 
 /** Remembered per device (try/catch-guarded localStorage, lib/use-browser-state). */
 export const CONTEXT_PANEL_KEY = "socialhood:inbox-details";
@@ -102,7 +109,7 @@ function InboxFrame({ children, className }: { children: ReactNode; className?: 
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 overflow-hidden bg-panel md:my-4 md:ml-4 md:rounded-l-xl md:border md:border-r-0 md:border-line",
+        "flex min-h-0 flex-1 overflow-hidden bg-panel md:m-4 md:rounded-xl md:border md:border-line",
         className,
       )}
       data-testid="inbox"
@@ -118,6 +125,8 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   const wid = workspace.id;
   const slug = workspace.slug;
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const params = useParams<{ id?: string }>();
   const selectedId = params.id ?? null;
   const layout = useInboxLayout();
@@ -128,14 +137,48 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
     () => PLATFORM_ORDER.filter((p) => accounts.some((account) => account.platform === p)),
     [accounts],
   );
+  // `view` and `platform` live in the address (UI-052): Back, refresh and Home's link land on the same list.
+  // The state follows the address when it changes (Back, a link while the inbox is mounted) and
+  // leads it when a chip is pressed, so the list answers before the navigation settles.
   const [storedPlatform, setStoredPlatform] = useStoredString<PlatformChoice>(`socialhood:inbox-platform:${wid}`, "all");
-  const platform: PlatformChoice = platforms.includes(storedPlatform as Platform) ? (storedPlatform as Platform) : "all";
+  const urlView = viewFromLink(searchParams.get("view"));
+  const [view, setView] = useState<InboxView>(urlView);
+  const [seenUrlView, setSeenUrlView] = useState(urlView);
+  if (urlView !== seenUrlView) {
+    setSeenUrlView(urlView);
+    setView(urlView);
+  }
+  const urlPlatform = searchParams.get("platform");
+  const [chosenPlatform, setChosenPlatform] = useState<string | null>(urlPlatform);
+  const [seenUrlPlatform, setSeenUrlPlatform] = useState(urlPlatform);
+  if (urlPlatform !== seenUrlPlatform) {
+    setSeenUrlPlatform(urlPlatform);
+    setChosenPlatform(urlPlatform);
+  }
+  // The address wins over the device's remembered platform; a platform no account has falls back to all.
+  const rawPlatform = chosenPlatform ?? storedPlatform;
+  const platform: PlatformChoice = platforms.includes(rawPlatform as Platform) ? (rawPlatform as Platform) : "all";
   const [accountId, setAccountId] = useState<string | null>(null);
-  // Home's Needs reply tile opens this view (?view=needs_reply); the chips change it from there.
-  const linkedView = useSearchParams().get("view");
-  const [view, setView] = useState<InboxView>(() => VIEWS.find((option) => option.value === linkedView)?.value ?? "all");
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<InboxTab>("chats");
+  /** The filters as an address query, kept on the way to a conversation so Back returns to this list. */
+  const listQuery = inboxSearch("", { view, platform: chosenPlatform });
+  const changeView = useCallback(
+    (next: InboxView) => {
+      setView(next);
+      router.push(`${pathname}${inboxSearch(searchParams, { view: next })}` as Route, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
+  const changePlatform = useCallback(
+    (choice: PlatformChoice) => {
+      setStoredPlatform(choice);
+      setChosenPlatform(choice);
+      setAccountId(null);
+      router.push(`${pathname}${inboxSearch(searchParams, { platform: choice })}` as Route, { scroll: false });
+    },
+    [pathname, router, searchParams, setStoredPlatform],
+  );
   const platformAccounts = platform === "all" ? [] : accounts.filter((account) => account.platform === platform);
   const effectiveAccountId = platformAccounts.some((account) => account.id === accountId) ? accountId : null;
 
@@ -148,8 +191,14 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   const conversations = useConversations(wid, filters);
   const items = useMemo(() => conversations.data?.pages.flatMap((page) => page.items) ?? [], [conversations.data]);
   const scheduled = useScheduledMessages(wid);
+  // The Scheduled tab follows the platform filter, so its count does too (the account filter can't apply: a
+  // scheduled message carries no account).
   const scheduledCount =
-    scheduled.data?.pages.reduce((sum, page) => sum + page.items.filter((s) => s.status === "scheduled").length, 0) ?? 0;
+    scheduled.data?.pages.reduce(
+      (sum, page) => sum + page.items.filter((s) => s.status === "scheduled" && (platform === "all" || s.platform === platform)).length,
+      0,
+    ) ?? 0;
+  const counts = useInboxCounts(wid).data;
   const accountModes = useMemo(
     () => Object.fromEntries(accounts.map((account) => [account.id, account.ai_mode])) as Record<string, AiMode>,
     [accounts],
@@ -185,8 +234,8 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   }
 
   const open = useCallback((id: string | null) => {
-    router.push((id ? `/w/${slug}/inbox/${id}` : `/w/${slug}/inbox`) as Route);
-  }, [router, slug]);
+    router.push((id ? `/w/${slug}/inbox/${id}${listQuery}` : `/w/${slug}/inbox${listQuery}`) as Route);
+  }, [router, slug, listQuery]);
 
   const archive = useCallback(
     (id: string, archived: boolean) => {
@@ -221,6 +270,10 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   );
 
   const searchRef = useRef<HTMLInputElement>(null);
+  // D-14: the per-device switch for the single-key shortcuts lives in the Keyboard shortcuts dialog, which the
+  // list header's keyboard button and "?" open.
+  const [singleKeys] = useSingleKeyShortcuts();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   useInboxShortcuts({
     move: (step) => {
       const index = selectedId ? items.findIndex((item) => item.id === selectedId) : -1;
@@ -244,11 +297,12 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
     markUnread: () => {
       if (selectedId) markUnread(selectedId);
     },
+    help: () => setShortcutsOpen(true),
     escape: () => {
       if (detailsOpen) closeDetails();
       else if (layout === "phone" && selectedId) open(null);
     },
-  });
+  }, singleKeys);
 
   const ui: InboxUi = {
     layout,
@@ -270,6 +324,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
 
   return (
     <InboxUiProvider value={ui}>
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
       <InboxFrame>
         {showList ? (
           <section
@@ -280,10 +335,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
             <PlatformStrip
               platforms={platforms}
               value={platform}
-              onChange={(choice) => {
-                setStoredPlatform(choice);
-                setAccountId(null);
-              }}
+              onChange={changePlatform}
             />
             {/* Chats | Scheduled swap the list below (UX-INB-03): the tabs are in ListHeader, the panels here. */}
             <Tabs value={tab} onValueChange={(value) => setTab(value as InboxTab)} className="min-h-0 flex-1 gap-0">
@@ -291,7 +343,9 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                 tab={tab}
                 scheduledCount={scheduledCount}
                 view={view}
-                onViewChange={setView}
+                onViewChange={changeView}
+                counts={counts}
+                onShortcuts={() => setShortcutsOpen(true)}
                 search={q}
                 onSearchChange={setQ}
                 searchRef={searchRef}
@@ -313,7 +367,7 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                           variant="secondary"
                           size="sm"
                           onClick={() => {
-                            setView("all");
+                            changeView("all");
                             setQ("");
                           }}
                         >
@@ -336,11 +390,12 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
                     isFetchingNextPage={conversations.isFetchingNextPage}
                     fetchNextPage={() => void conversations.fetchNextPage()}
                     accountModes={accountModes}
+                    query={listQuery}
                   />
                 )}
               </TabsContent>
               <TabsContent value="scheduled" className={PANEL}>
-                <ScheduledList onOpen={(id) => open(id)} now={now} />
+                <ScheduledList onOpen={(id) => open(id)} now={now} platform={platform === "all" ? null : platform} />
               </TabsContent>
             </Tabs>
           </section>

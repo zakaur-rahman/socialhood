@@ -2,7 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, ExternalLink, Pencil } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import { Alert, AlertAction, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import type { SocialAccount } from "@/lib/api/types";
 import { handleOf } from "@/lib/publishing/rules";
@@ -89,39 +89,46 @@ export function StatusBanner({
       return null;
     case "publishing":
       return (
-        <div role="status" data-testid="status-banner" className="mt-4 rounded-xl border border-brand-line bg-brand-soft p-4">
-          <p className="flex items-center gap-2 text-sm font-medium">
-            <Spinner className="text-brand-fg" />
-            Publishing started. The post can&apos;t be changed now.
-          </p>
+        <Alert variant="outline" tone="brand" data-testid="status-banner" className="mt-4" icon={<Spinner />}>
+          <AlertTitle>Publishing started. The post can&apos;t be changed now.</AlertTitle>
           <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} />
-        </div>
+        </Alert>
       );
     case "published":
     case "partially_published":
       return (
-        <div role="status" data-testid="status-banner" className="mt-4 rounded-xl border border-line bg-panel p-4">
-          <p className="flex items-center gap-2 text-sm font-medium">
-            <CheckCircle2 className={cn("size-4", post.status === "published" ? "text-success" : "text-warning")} aria-hidden />
+        <Alert
+          variant="outline"
+          tone={post.status === "published" ? "success" : "warning"}
+          data-testid="status-banner"
+          className="mt-4"
+          icon={<CheckCircle2 />}
+        >
+          <AlertTitle>
             {post.status === "published" ? "Published" : "Partly published"}
             {post.published_at ? ` ${formatDayTime(post.published_at, timeZone, now)}` : ""}
-          </p>
+          </AlertTitle>
           <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} />
-        </div>
+        </Alert>
       );
     case "failed":
     case "canceled":
       return (
-        <div role="alert" data-testid="status-banner" className="mt-4 rounded-xl border border-danger bg-danger-soft p-4">
-          <p className="flex items-center gap-2 text-sm font-medium text-danger-fg">
-            <AlertTriangle className="size-4" aria-hidden />
-            {post.status === "failed" ? "This post didn't publish." : "This post was cancelled."}
-          </p>
+        <Alert
+          variant="outline"
+          tone="danger"
+          data-testid="status-banner"
+          className="mt-4"
+          icon={<AlertTriangle />}
+          action={
+            <AlertAction onClick={onEditAndRetry} loading={retrying}>
+              <Pencil aria-hidden /> Edit and retry
+            </AlertAction>
+          }
+        >
+          <AlertTitle>{post.status === "failed" ? "This post didn't publish." : "This post was cancelled."}</AlertTitle>
           <TargetRows targets={post.targets} accounts={accounts} timeZone={timeZone} now={now} />
-          <Button className="mt-3" variant="secondary" size="lg" onClick={onEditAndRetry} disabled={retrying}>
-            {retrying ? <Spinner /> : <Pencil aria-hidden />} Edit and retry
-          </Button>
-        </div>
+        </Alert>
       );
   }
 }

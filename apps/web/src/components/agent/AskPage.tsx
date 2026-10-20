@@ -1,6 +1,8 @@
 "use client";
 
-import { History, Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { PANE_TITLE } from "@/styles/tokens";
+import { History, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
@@ -30,14 +32,14 @@ export function AskPage() {
       data-testid="ask-page"
       data-shell-fill
     >
-      <aside aria-label="Thread history" className="hidden w-[272px] shrink-0 flex-col border-r border-line bg-panel lg:flex">
+      <aside aria-label="Thread history" className="hidden w-68 shrink-0 flex-col border-r border-line bg-panel lg:flex">
         <div className="p-3">
           <NewThreadButton wid={workspace.id} onStart={focus} />
         </div>
         <ThreadList wid={workspace.id} now={now} />
         {admin ? (
           <div className="border-t border-line p-2">
-            <Button asChild variant="ghost" className="min-h-9 w-full justify-start gap-2 px-2.5 text-fg-secondary">
+            <Button asChild variant="ghost" size="lg" className="w-full justify-start gap-2 px-2.5 text-fg-secondary">
               <Link href={agentSettingsHref(workspace.slug)}>
                 <History aria-hidden /> Run history
               </Link>
@@ -48,11 +50,11 @@ export function AskPage() {
       <section aria-label="Conversation" className="flex min-w-0 flex-1 flex-col">
         <div className="flex h-14 shrink-0 items-center gap-2 border-b border-line-subtle px-4" data-testid="ask-header">
           <Sparkles className="size-4 shrink-0 text-brand-fg" aria-hidden />
-          <h1 className="min-w-0 flex-1 truncate text-base font-semibold">Ask Social Hood</h1>
+          <h1 className={cn("min-w-0 flex-1 truncate", PANE_TITLE)}>Ask Social Hood</h1>
           {admin ? (
-            <Button asChild variant="ghost" size="icon" className="size-10 text-fg-secondary lg:hidden">
+            <Button asChild variant="ghost" size="icon" className="text-fg-secondary lg:hidden">
               <Link href={agentSettingsHref(workspace.slug)} aria-label="Run history">
-                <History aria-hidden />
+                <ListChecks aria-hidden />
               </Link>
             </Button>
           ) : null}

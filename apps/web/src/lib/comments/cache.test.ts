@@ -54,6 +54,26 @@ describe("post.updated patches the grid and the open post (F-12)", () => {
     expect(gridIds(queryClient, null)).toEqual(["po1", "po2"]);
   });
 
+  it("keeps the needs-reply count the event does not carry", () => {
+    queryClient.setQueryData(keys.posts(wid, null, ""), pages([post({ id: "po1", needs_reply_count: 4 })]));
+    queryClient.setQueryData(keys.post(wid, "po1"), postDetail({ id: "po1", needs_reply_count: 4 }));
+
+    send(queryClient, "post.updated", { post: postDetail({ id: "po1", needs_reply_count: null }) });
+
+    expect(queryClient.getQueryData<PostPages>(keys.posts(wid, null, ""))!.pages[0].items[0].needs_reply_count).toBe(4);
+    expect(queryClient.getQueryData<{ needs_reply_count: number }>(keys.post(wid, "po1"))?.needs_reply_count).toBe(4);
+  });
+
+  it("asks the server again for the counts when a comment changes", () => {
+    queryClient.setQueryData(keys.posts(wid, null, ""), pages([post({ id: "po1", needs_reply_count: 4 })]));
+    queryClient.setQueryData(keys.post(wid, "po1"), postDetail({ id: "po1", needs_reply_count: 4 }));
+
+    applyComment(queryClient, wid, comment({ id: "c9", post_id: "po1" }));
+
+    expect(queryClient.getQueryState(keys.posts(wid, null, ""))?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(keys.post(wid, "po1"))?.isInvalidated).toBe(true);
+  });
+
   it("adds a new post to lists it belongs in, newest first, and never to searches or other accounts", () => {
     queryClient.setQueryData(keys.posts(wid, null, ""), pages([post({ id: "po1" })]));
     queryClient.setQueryData(keys.posts(wid, "a2", ""), pages([]));

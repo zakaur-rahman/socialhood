@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { handOff } from "@/lib/agent/handoff";
 import { actionPath, workspaceHref } from "@/lib/agent/routes";
 import type { ActionCard, ActionKind } from "@/lib/api/types";
@@ -101,7 +102,7 @@ export function ActionCardView({
   return (
     <section
       aria-label={kind.title}
-      className="flex items-center gap-3 rounded-xl border border-line-subtle bg-white/5 px-3 py-2.5"
+      className="flex items-center gap-3 rounded-xl border border-line-subtle bg-hover px-3 py-2.5"
       data-testid={`action-${card.kind}`}
     >
       <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand-fg" aria-hidden>
@@ -117,17 +118,21 @@ export function ActionCardView({
           {kind.hint}
         </p>
       </div>
-      <Button
-        variant="secondary"
-        className="min-h-10 shrink-0 px-3 md:min-h-8"
-        // The visible "Open" starts the name (WCAG 2.5.3), then what it opens.
-        aria-label={/^open\b/i.test(card.label) ? card.label : `Open: ${card.label}`}
-        aria-describedby={hintId}
-        title={kind.hint}
-        onClick={open}
-      >
-        Open
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="secondary"
+            className="shrink-0 px-3"
+            // The visible "Open" starts the name (WCAG 2.5.3), then what it opens.
+            aria-label={/^open\b/i.test(card.label) ? card.label : `Open: ${card.label}`}
+            aria-describedby={hintId}
+            onClick={open}
+          >
+            Open
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{kind.hint}</TooltipContent>
+      </Tooltip>
     </section>
   );
 }

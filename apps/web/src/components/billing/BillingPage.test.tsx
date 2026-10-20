@@ -103,6 +103,10 @@ describe("Billing page (UX-SCR-07, F-15)", () => {
     expect(cards[1]).toHaveTextContent("50 active automations");
     expect(cards[2]).toHaveTextContent("Coming soon");
 
+    // D-10: the header card holds the one primary; the Pro plan card offers the same action as a secondary.
+    expect(within(current).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "default");
+    expect(within(cards[1]).getByRole("button", { name: "Start 7-day trial" })).toHaveAttribute("data-variant", "secondary");
+
     await user.click(within(current).getByRole("button", { name: "Start 7-day trial" }));
     await waitFor(() => expect(assign).toHaveBeenCalledWith("https://checkout.dodo.test/s/1"));
     expect(posts("/billing/checkout")[0].body).toEqual({ plan: "pro" });
@@ -326,7 +330,8 @@ describe("plan hero and quotas (C-066)", () => {
     expect(tiles[0]).toHaveTextContent("1%");
     expect(tiles[0]).toHaveTextContent("Resets on 28 Oct");
     expect(tiles[1]).toHaveTextContent("Instagram accounts");
-    expect(tiles[1]).toHaveTextContent("67%");
+    // The percentage rounds down, like the ring (UI-037): 2 of 3 is 66%, it read 67% before.
+    expect(tiles[1]).toHaveTextContent("66%");
     expect(within(tiles[2]).getByRole("meter", { name: "WhatsApp accounts" })).toHaveAttribute(
       "aria-valuetext",
       "1 of 3 connected",

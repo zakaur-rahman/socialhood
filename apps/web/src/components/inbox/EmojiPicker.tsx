@@ -1,8 +1,10 @@
 "use client";
 
+import { Heart } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
+import { Button } from "@/components/ui/button";
 import { SearchInput } from "@/components/ui/search-input";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
@@ -69,7 +71,14 @@ const GROUPS: { name: string; emoji: [string, string][] }[] = [
   },
 ];
 
-export default function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
+export default function EmojiPicker({
+  onPick,
+  onHeart,
+}: {
+  onPick: (emoji: string) => void;
+  /** Instagram only: "Send a heart" sends Instagram's heart sticker at once (D-15). */
+  onHeart?: () => void;
+}) {
   const [query, setQuery] = useState("");
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -103,6 +112,11 @@ export default function EmojiPicker({ onPick }: { onPick: (emoji: string) => voi
         placeholder="Search emoji"
         autoFocus
       />
+      {onHeart ? (
+        <Button variant="secondary" size="sm" className="w-full justify-start" onClick={onHeart}>
+          <Heart aria-hidden /> Send a heart
+        </Button>
+      ) : null}
       <div className="max-h-64 overflow-y-auto">
         {results ? (
           results.length ? (

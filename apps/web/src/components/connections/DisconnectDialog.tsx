@@ -29,7 +29,7 @@ export function DisconnectDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button variant="destructive-ghost" size="lg">
+        <Button variant="ghost" size="lg">
           Disconnect
         </Button>
       </AlertDialogTrigger>
@@ -39,7 +39,7 @@ export function DisconnectDialog({
           <AlertDialogDescription>
             Social Hood deletes this account&apos;s access now and stops receiving its messages and
             comments. Its conversations, comments and posts stay here for reference; to delete them
-            too, use Disconnect and delete data. You can connect it again later.
+            too, use Delete account and data. You can connect it again later.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

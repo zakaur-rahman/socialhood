@@ -77,7 +77,7 @@ export function AdminOnly({ children }: { children: ReactNode }) {
   if (workspace.role !== "agent") return children;
   return (
     <EmptyState
-      className="min-h-[60vh]"
+      className="flex-1"
       title="Scheduling is for owners and admins"
       body="Ask an owner or admin of this workspace to schedule posts."
       action={

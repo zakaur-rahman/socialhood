@@ -204,12 +204,13 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     const run = await within(panel).findByRole("article", { name: "Question: How did my latest post do?" });
     const bubble = within(run).getByText("How did my latest post do?");
     expect(bubble).toHaveClass("bg-raised", "rounded-2xl", "max-w-[80%]");
-    expect(bubble).toHaveAttribute("title", expect.stringMatching(/15:30$/));
+    // The time is the `time` element beside it (no `title` tooltip repeating it).
     const time = run.querySelector("time");
+    expect(time).toHaveTextContent(/15:30$/);
     expect(time).toHaveAttribute("dateTime", "2026-09-29T10:00:00Z");
-    expect(time).toHaveClass("opacity-0", "group-hover/run:opacity-100", "group-focus-within/run:opacity-100");
-    // No card around the answer: 15 px type on 28 px lines.
-    expect(within(run).getByTestId("answer")).toHaveClass("text-[15px]", "leading-7");
+    expect(time?.className).not.toMatch(/opacity/);
+    // No card around the answer: the reading size (`text-md`, 15 px on 28 px lines).
+    expect(within(run).getByTestId("answer")).toHaveClass("text-md");
     expect(within(run).getByTestId("run-result").className).not.toMatch(/\bborder\b/);
   });
 
@@ -477,11 +478,14 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
       },
     });
     useAskStore.getState().setThread("w1", "r1");
-    const { panel } = await openPanel();
+    const { user, panel } = await openPanel();
     const notice = await within(panel).findByRole("alert");
     expect(notice).toHaveTextContent("Out of AI credits");
     expect(notice).toHaveTextContent("You've used all 5,000 AI credits for this month.");
-    expect(within(notice).getByRole("link", { name: "Upgrade" })).toHaveAttribute("href", "/w/maple/settings/billing");
+    // UI-063: Upgrade opens the upgrade dialog (it used to navigate to Billing).
+    expect(within(notice).queryByRole("link", { name: "Upgrade" })).toBeNull();
+    await user.click(within(notice).getByRole("button", { name: "Upgrade" }));
+    expect(await screen.findByRole("dialog", { name: "AI credits used up" })).toBeInTheDocument();
     // What was done is still shown.
     expect(within(panel).getByTestId("answer")).toHaveTextContent("Your latest reel reached 4,120 people");
   });
@@ -567,13 +571,14 @@ describe("Runs that didn't answer (FR-AGT-06)", () => {
     expect(await within(panel).findByTestId("steps-toggle")).toHaveTextContent(/^Steps$/);
   });
 
-  it("the notices are compact and inline, not cards", async () => {
+  it("the notices are Alerts: inline, polite for a cancelled run", async () => {
     setup({ runs: { r1: runDetail({ status: "cancelled" }) } });
     useAskStore.getState().setThread("w1", "r1");
     const { panel } = await openPanel();
     const notice = await within(panel).findByRole("status");
     expect(notice).toHaveAttribute("data-outcome", "cancelled");
-    expect(notice).toHaveClass("rounded-lg", "px-3", "py-2");
+    expect(notice).toHaveAttribute("data-slot", "alert");
+    expect(notice).toHaveAttribute("data-tone", "neutral");
   });
 
   it("an expired run says so", async () => {
@@ -638,20 +643,22 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     });
     useAskStore.getState().setThread("w1", "r1");
     const { panel } = await openPanel();
-    expect(panel).toHaveClass("fixed", "inset-0", "md:left-auto", "md:w-[420px]");
+    expect(panel).toHaveAttribute("data-slot", "sheet-content");
+    expect(panel).toHaveAttribute("data-size", "panel");
+    expect(panel).toHaveClass("fixed", "inset-0", "md:w-105", "md:data-[side=right]:left-auto");
     for (const name of ["New thread", "Threads", "Close"]) {
-      expect(within(panel).getByRole("button", { name })).toHaveClass("size-10");
+      expect(within(panel).getByRole("button", { name })).toHaveClass("size-8", "pointer-coarse:size-10");
     }
-    expect(within(panel).getByRole("button", { name: "Ask" })).toHaveClass("size-10");
+    expect(within(panel).getByRole("button", { name: "Ask" })).toHaveClass("size-8", "pointer-coarse:size-10");
     // Wide tables scroll inside the answer, never the page.
     const table = await within(panel).findByRole("table");
     expect(table.closest('[role="region"]')).toHaveClass("overflow-x-auto", "max-w-full");
     for (const link of within(within(panel).getByRole("list", { name: "Sources" })).getAllByRole("link")) {
-      expect(link).toHaveClass("min-h-10", "md:min-h-7");
+      expect(link).toHaveClass("min-h-7", "pointer-coarse:min-h-10");
     }
-    expect(within(panel).getByRole("button", { name: "Copy answer" })).toHaveClass("min-h-10");
+    expect(within(panel).getByRole("button", { name: "Copy answer" })).toHaveClass("pointer-coarse:min-h-10");
     for (const button of within(within(panel).getByRole("list", { name: "Follow-up questions" })).getAllByRole("button")) {
-      expect(button).toHaveClass("min-h-10");
+      expect(button).toHaveClass("min-h-8", "pointer-coarse:min-h-10");
     }
     // The question box keeps clear of the phone's home indicator.
     const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
@@ -665,7 +672,8 @@ describe("The question box", () => {
     const { panel } = await openPanel();
     const box = within(panel).getByRole("textbox", { name: "Ask Social Hood a question" });
     const field = box.parentElement!;
-    expect(field).toHaveClass("rounded-2xl", "border", "bg-field", "focus-within:ring-3");
+    expect(field).toHaveClass("rounded-xl", "border", "bg-field", "has-[textarea:focus-visible]:outline-brand");
+    expect(field.className).not.toMatch(/ring-3/);
     expect(field).toContainElement(within(panel).getByRole("button", { name: "Ask" }));
     expect(box).toHaveClass("overflow-y-hidden", "resize-none");
     expect(box.style.overflowY).toBe("hidden");

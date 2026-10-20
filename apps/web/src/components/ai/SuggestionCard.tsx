@@ -16,6 +16,8 @@ import { cn } from "@/lib/utils";
 
 /** Longer drafts start clamped to two lines with "More" (UX-INB-08). */
 const LONG_REPLY = 160;
+/** On phones the bar is one line, so anything past about a line of text can be opened with "More" (UI-051). */
+const PHONE_LINE = 40;
 
 export type SuggestionActions = {
   onSend: () => void;
@@ -46,6 +48,7 @@ export function SuggestionCard({
   generating,
   customerName,
   canSend,
+  composerHasText = false,
   busy = false,
   addingToKnowledge = false,
   actions,
@@ -57,6 +60,8 @@ export function SuggestionCard({
   customerName: string;
   /** The composer can send right now (window open, account connected). */
   canSend: boolean;
+  /** The composer holds a typed reply: its Send is the primary one, so the draft's Send steps back (D-10). */
+  composerHasText?: boolean;
   /** A dismiss or regenerate request is in flight. */
   busy?: boolean;
   /** Add to knowledge is looking up the question's knowledge gap. */
@@ -109,23 +114,27 @@ export function SuggestionCard({
       </section>
     );
   }
-  return <ReadyBar suggestion={suggestion} canSend={canSend} busy={busy} actions={actions} />;
+  return <ReadyBar suggestion={suggestion} canSend={canSend} composerHasText={composerHasText} busy={busy} actions={actions} />;
 }
 
 function ReadyBar({
   suggestion,
   canSend,
+  composerHasText,
   busy,
   actions,
 }: {
   suggestion: Suggestion;
   canSend: boolean;
+  composerHasText: boolean;
   busy: boolean;
   actions: SuggestionActions;
 }) {
   const [expanded, setExpanded] = useState(false);
   const text = suggestion.reply_text ?? "";
   const long = text.length > LONG_REPLY || text.includes("\n");
+  // On phones a draft longer than a line is clamped to one, whatever its length on a wide screen.
+  const phoneLong = long || text.length > PHONE_LINE;
   const { shown, more } = sourceChips(suggestion.sources);
   const left = suggestion.regenerations_left;
 
@@ -134,14 +143,20 @@ function ReadyBar({
       <div className="flex items-start gap-2">
         <Sparkles className="mt-0.5 size-3.5 shrink-0 text-brand-fg" aria-hidden />
         <div className="min-w-0 flex-1">
-          <p className={cn("text-sm whitespace-pre-wrap break-words text-fg", long && !expanded && "line-clamp-2")}>
+          <p
+            className={cn(
+              "text-sm whitespace-pre-wrap break-words text-fg",
+              !expanded && (long ? "line-clamp-1 sm:line-clamp-2" : phoneLong && "line-clamp-1 sm:line-clamp-none"),
+            )}
+            data-testid="draft-text"
+          >
             <span className="font-medium text-brand-fg">AI draft: </span>
             {text}
           </p>
-          {long ? (
+          {phoneLong ? (
             <button
               type="button"
-              className="text-xs font-medium text-brand-fg hover:underline"
+              className={cn("text-xs font-medium text-brand-fg hover:underline", !long && "sm:hidden")}
               aria-expanded={expanded}
               onClick={() => setExpanded(!expanded)}
             >
@@ -194,7 +209,8 @@ function ReadyBar({
             </TooltipTrigger>
             <TooltipContent>Put the draft in the reply box to edit</TooltipContent>
           </Tooltip>
-          <Button size="sm" disabled={!canSend || !text} onClick={actions.onSend}>
+          {/* One primary Send at a time: while the composer has text, its Send is the primary one. */}
+          <Button size="sm" variant={composerHasText ? "secondary" : "default"} disabled={!canSend || !text} onClick={actions.onSend}>
             <SendHorizontal aria-hidden /> Send
           </Button>
         </span>
@@ -230,7 +246,7 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
           aria-label="Stop editing the suggestion"
           onClick={onStop}
           // The chip's ×: 16 px, with a 40 px hit area on coarse pointers (DESIGN_SYSTEM §8.4).
-          className="relative grid size-4 place-items-center rounded-full after:absolute after:-inset-1 hover:bg-pressed pointer-coarse:after:-inset-3"
+          className="relative grid size-4 place-items-center rounded-md after:absolute after:-inset-1 hover:bg-pressed pointer-coarse:after:-inset-3"
         >
           <X aria-hidden />
         </button>

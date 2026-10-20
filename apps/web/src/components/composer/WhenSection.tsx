@@ -1,14 +1,16 @@
 "use client";
 
-import { CalendarClock, ListOrdered } from "lucide-react";
+import { CalendarClock, Clock, ListOrdered } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
 import { ScheduleFields, type ScheduleValue } from "@/components/inbox/ScheduleFields";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { formatDayTime } from "@/lib/tz";
 
+import { useComposerTools } from "./ComposerTools";
 import { Section } from "./Section";
 
 export const WHEN_PREFIX = "composer-when";
@@ -60,8 +62,20 @@ export function WhenSection({
   now: Date;
 }) {
   const limits = { min: new Date(now.getTime() + 5 * 60_000), max: null };
+  const tools = useComposerTools();
   return (
-    <Section id="composer-when" title="When">
+    <Section
+      id="composer-when"
+      title="When"
+      aside={
+        // One click to the queue's times from here, in either mode (UI-054).
+        tools ? (
+          <Button type="button" variant="ghost" size="sm" onClick={(event) => tools.openPostingTimes(event.currentTarget)}>
+            <Clock aria-hidden /> Posting times
+          </Button>
+        ) : null
+      }
+    >
       {scheduledAt ? (
         <p className="mb-3 flex items-center gap-2 text-sm">
           <CalendarClock className="size-4 text-brand-fg" aria-hidden />
@@ -91,7 +105,16 @@ export function WhenSection({
 }
 
 function QueueLine({ queue, timeZone, now, slug }: { queue: QueuePreview; timeZone: string; now: Date; slug: string }) {
-  const scheduleLink = (
+  const tools = useComposerTools();
+  const scheduleLink = tools ? (
+    <button
+      type="button"
+      onClick={(event) => tools.openPostingTimes(event.currentTarget)}
+      className="text-brand-fg underline-offset-4 hover:underline"
+    >
+      Set posting times
+    </button>
+  ) : (
     <Link href={`/w/${slug}/schedule` as Route} className="text-brand-fg underline-offset-4 hover:underline">
       Set posting times
     </Link>

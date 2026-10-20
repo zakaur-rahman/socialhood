@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Pencil } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -10,6 +10,8 @@ import { z } from "zod";
 import { ChipListInput } from "@/components/ai/ChipListInput";
 import { useLeaveWarning } from "@/components/settings/SaveBar";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,49 +50,55 @@ const TONE_LABEL = Object.fromEntries(TONE_OPTIONS.map((o) => [o.value, o.label]
 const EMOJI_LABEL = Object.fromEntries(EMOJI_OPTIONS.map((o) => [o.value, o.label])) as Record<EmojiPolicy, string>;
 
 /**
- * FR-KB-04 / F-14: how replies sound. Opens as a form while the business description is empty
- * (the first visit); afterwards it shows a summary with Edit. Saves the whole settings object.
+ * FR-KB-04 / F-14: how replies sound. Always collapsed to a summary (UI-ISS-089): "Set up" while
+ * the business description is empty (the first visit), "Edit" afterwards; either opens the form
+ * in place. Saves the whole settings object.
  */
 export function BrandVoiceCard({ wid, settings, workspaceName }: { wid: string; settings: AiSettings; workspaceName: string }) {
   const [editing, setEditing] = useState(false);
-  const open = editing || !settings.business_description?.trim();
+  const open = editing;
+  const described = Boolean(settings.business_description?.trim());
 
   return (
-    <section aria-labelledby="brand-voice-title" className="rounded-xl border border-line bg-panel p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 id="brand-voice-title" className="text-base font-semibold">
-            Brand voice
-          </h2>
-          <p className="text-xs text-fg-secondary">How suggested and automatic replies sound.</p>
-        </div>
-        {!open ? (
-          <Button variant="ghost" size="sm" onClick={() => setEditing(true)}>
-            <Pencil aria-hidden /> Edit
-          </Button>
-        ) : null}
-      </div>
-      {open ? (
-        <BrandVoiceForm
-          wid={wid}
-          settings={settings}
-          workspaceName={workspaceName}
-          onDone={() => setEditing(false)}
-          onCancel={editing ? () => setEditing(false) : undefined}
-        />
-      ) : (
-        <div className="mt-4 space-y-2 text-sm">
-          <p className="font-medium">{settings.business_name?.trim() || workspaceName}</p>
-          <p className="line-clamp-3 text-fg-secondary">{settings.business_description}</p>
-          <p className="text-xs text-fg-secondary">
-            {TONE_LABEL[settings.tone]} · {EMOJI_LABEL[settings.emoji_policy]} emoji
-            {settings.sign_off ? ` · Signs off “${settings.sign_off}”` : ""}
-            {settings.do_list.length ? ` · ${settings.do_list.length} always` : ""}
-            {settings.dont_list.length ? ` · ${settings.dont_list.length} never` : ""}
+    <Card asChild padding="roomy">
+      <section aria-labelledby="brand-voice-title">
+        <CardHeader>
+          <CardTitle id="brand-voice-title">Brand voice</CardTitle>
+          <CardDescription>How suggested and automatic replies sound.</CardDescription>
+          {!open ? (
+            <CardAction>
+              <Button variant={described ? "ghost" : "secondary"} size="sm" onClick={() => setEditing(true)}>
+                <Pencil aria-hidden /> {described ? "Edit" : "Set up"}
+              </Button>
+            </CardAction>
+          ) : null}
+        </CardHeader>
+        {open ? (
+          <BrandVoiceForm
+            wid={wid}
+            settings={settings}
+            workspaceName={workspaceName}
+            onDone={() => setEditing(false)}
+            onCancel={() => setEditing(false)}
+          />
+        ) : !described ? (
+          <p className="mt-4 text-sm text-fg-secondary" data-testid="brand-voice-empty">
+            Not set up yet. Describe your business so replies sound like you.
           </p>
-        </div>
-      )}
-    </section>
+        ) : (
+          <div className="mt-4 space-y-2 text-sm">
+            <p className="font-medium">{settings.business_name?.trim() || workspaceName}</p>
+            <p className="line-clamp-3 text-fg-secondary">{settings.business_description}</p>
+            <p className="text-xs text-fg-secondary">
+              {TONE_LABEL[settings.tone]} · {EMOJI_LABEL[settings.emoji_policy]} emoji
+              {settings.sign_off ? ` · Signs off “${settings.sign_off}”` : ""}
+              {settings.do_list.length ? ` · ${settings.do_list.length} always` : ""}
+              {settings.dont_list.length ? ` · ${settings.dont_list.length} never` : ""}
+            </p>
+          </div>
+        )}
+      </section>
+    </Card>
   );
 }
 
@@ -110,6 +118,9 @@ function BrandVoiceForm({
   const update = useUpdateAiSettings(wid);
   const form = useForm<Values>({ resolver: zodResolver(schema), defaultValues: formValues(settings) });
   const { errors, isDirty } = form.formState;
+  // The form opens from "Set up" or "Edit": the cursor goes to its first field.
+  const { setFocus } = form;
+  useEffect(() => setFocus("business_name"), [setFocus]);
   // Brand voice saves with Save only: leaving with changes asks first (UI-ISS-022).
   useLeaveWarning(isDirty);
 
@@ -148,28 +159,23 @@ function BrandVoiceForm({
 
   return (
     <form onSubmit={onSubmit} noValidate className="mt-5 space-y-5" aria-label="Brand voice">
-      <Field id="bv-name" label="Business name" hint={`Replies use “${workspaceName}” when this is empty.`} error={errors.business_name?.message}>
-        <Input id="bv-name" maxLength={80} placeholder={workspaceName} {...form.register("business_name")} />
+      <Field id="bv-name" invalid={!!errors.business_name}>
+        <FieldLabel>Business name</FieldLabel>
+        <Input maxLength={80} placeholder={workspaceName} {...form.register("business_name")} />
+        <FieldDescription>Replies use “{workspaceName}” when this is empty.</FieldDescription>
+        <FieldError>{errors.business_name?.message}</FieldError>
       </Field>
-      <Field
-        id="bv-description"
-        label="Business description"
-        hint={aiCopy.businessDescriptionHint}
-        error={errors.business_description?.message}
-      >
-        <Textarea
-          id="bv-description"
-          rows={3}
-          maxLength={1000}
-          aria-invalid={!!errors.business_description}
-          {...form.register("business_description")}
-        />
+      <Field id="bv-description" invalid={!!errors.business_description}>
+        <FieldLabel>Business description</FieldLabel>
+        <Textarea rows={3} maxLength={1000} {...form.register("business_description")} />
+        <FieldDescription>{aiCopy.businessDescriptionHint}</FieldDescription>
+        <FieldError>{errors.business_description?.message}</FieldError>
       </Field>
       <div className="grid gap-5 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <p id="bv-tone" className="text-sm font-medium">
-            Tone
-          </p>
+        <Field aria-labelledby="bv-tone">
+          <Label asChild>
+            <span id="bv-tone">Tone</span>
+          </Label>
           <Controller
             control={form.control}
             name="tone"
@@ -190,11 +196,11 @@ function BrandVoiceForm({
               </ToggleGroup>
             )}
           />
-        </div>
-        <div className="space-y-1.5">
-          <p id="bv-emoji" className="text-sm font-medium">
-            Emoji
-          </p>
+        </Field>
+        <Field aria-labelledby="bv-emoji">
+          <Label asChild>
+            <span id="bv-emoji">Emoji</span>
+          </Label>
           <Controller
             control={form.control}
             name="emoji_policy"
@@ -208,11 +214,13 @@ function BrandVoiceForm({
               </ToggleGroup>
             )}
           />
-        </div>
+        </Field>
       </div>
       <div className="grid gap-5 md:grid-cols-2">
-        <div className="space-y-1.5">
-          <p className="text-sm font-medium">Always</p>
+        <Field id="bv-do">
+          <Label asChild>
+            <span>Always</span>
+          </Label>
           <Controller
             control={form.control}
             name="do_list"
@@ -222,14 +230,16 @@ function BrandVoiceForm({
                 label="Always"
                 items={field.value}
                 onChange={field.onChange}
-                // As long as Never's, so it fits the field at 16 px on a 320 px phone ("…over ₹3,000" was cut).
-                placeholder="e.g. Mention free shipping"
+                // Shorter than Never's, so it fits the field at 16 px on a 320 or 375 px phone.
+                placeholder="e.g. Say hello first"
               />
             )}
           />
-        </div>
-        <div className="space-y-1.5">
-          <p className="text-sm font-medium">Never</p>
+        </Field>
+        <Field id="bv-dont">
+          <Label asChild>
+            <span>Never</span>
+          </Label>
           <Controller
             control={form.control}
             name="dont_list"
@@ -239,14 +249,17 @@ function BrandVoiceForm({
                 label="Never"
                 items={field.value}
                 onChange={field.onChange}
-                placeholder="e.g. Promise delivery dates"
+                placeholder="e.g. Promise dates"
               />
             )}
           />
-        </div>
+        </Field>
       </div>
-      <Field id="bv-signoff" label="Sign-off" hint="Added at the end of replies, e.g. “Team Maple”. Leave empty for none." error={errors.sign_off?.message}>
-        <Input id="bv-signoff" maxLength={60} {...form.register("sign_off")} />
+      <Field id="bv-signoff" invalid={!!errors.sign_off}>
+        <FieldLabel>Sign-off</FieldLabel>
+        <Input maxLength={60} {...form.register("sign_off")} />
+        <FieldDescription>Added at the end of replies, e.g. “Team Maple”. Leave empty for none.</FieldDescription>
+        <FieldError>{errors.sign_off?.message}</FieldError>
       </Field>
       <div className="flex justify-end gap-2">
         {onCancel ? (
@@ -254,38 +267,10 @@ function BrandVoiceForm({
             Cancel
           </Button>
         ) : null}
-        <Button type="submit" disabled={!isDirty || update.isPending}>
-          {update.isPending ? "Saving…" : "Save"}
+        <Button type="submit" disabled={!isDirty} loading={update.isPending}>
+          Save
         </Button>
       </div>
     </form>
-  );
-}
-
-function Field({
-  id,
-  label,
-  hint,
-  error,
-  children,
-}: {
-  id: string;
-  label: string;
-  hint?: string;
-  error?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label htmlFor={id}>{label}</Label>
-      {children}
-      {error ? (
-        <p role="alert" className="text-sm text-danger-fg">
-          {error}
-        </p>
-      ) : hint ? (
-        <p className="text-xs text-fg-secondary">{hint}</p>
-      ) : null}
-    </div>
   );
 }

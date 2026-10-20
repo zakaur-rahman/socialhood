@@ -5,7 +5,11 @@ import type { Route } from "next";
 import Link from "next/link";
 import { useRef, useState, type ChangeEvent, type RefObject } from "react";
 
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
+import { Field, FieldLabel } from "@/components/ui/field";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -293,9 +297,9 @@ function DmBuilder({
           </p>
         </div>
       ) : null}
-      <div className="space-y-2">
+      <Field id="automation-message">
         <div className="flex items-center justify-between gap-2">
-          <Label htmlFor="automation-message">Message</Label>
+          <FieldLabel>Message</FieldLabel>
           <InsertFieldMenu target={textarea} text={text} onChange={(next) => change({ message_text: next })} />
         </div>
         <Textarea
@@ -331,7 +335,7 @@ function DmBuilder({
             Shorten the message.
           </p>
         ) : null}
-      </div>
+      </Field>
 
       {!imageAllowed && !draft.message_media_asset_id ? (
         // A comment's DM is a private reply, which Instagram sends as text and buttons only.
@@ -438,14 +442,12 @@ function TapFirst({
   const buttonProblem = errorsFor(errors, "opening_button")[0] ?? problems.button;
 
   return (
-    <div className="space-y-4 rounded-lg border border-line p-4">
+    <CardInset className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="automation-tap-first">
             Tap first{" "}
-            <span className="rounded-full bg-brand-soft px-2 py-0.5 text-2xs font-semibold text-brand-fg">
-              Recommended
-            </span>
+            <Badge tone="brand">Recommended</Badge>
           </Label>
           <p id="automation-tap-first-hint" className="text-xs text-fg-secondary">
             Instagram allows one text-only reply to a comment until the person answers. Once they tap the button or
@@ -463,9 +465,9 @@ function TapFirst({
 
       {on ? (
         <>
-          <div className="space-y-2">
+          <Field id="automation-opening">
             <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="automation-opening">Opening message</Label>
+              <FieldLabel>Opening message</FieldLabel>
               <InsertFieldMenu
                 target={textarea}
                 text={text}
@@ -508,10 +510,10 @@ function TapFirst({
                 {textProblem}
               </p>
             ) : null}
-          </div>
+          </Field>
 
-          <div className="space-y-1">
-            <Label htmlFor="automation-opening-button">Button title</Label>
+          <Field id="automation-opening-button">
+            <FieldLabel>Button title</FieldLabel>
             <Input
               id="automation-opening-button"
               value={button}
@@ -528,10 +530,10 @@ function TapFirst({
             >
               {buttonProblem ?? `${charCount(button)} / ${OPENING_BUTTON_MAX}`}
             </p>
-          </div>
+          </Field>
         </>
       ) : null}
-    </div>
+    </CardInset>
   );
 }
 
@@ -547,7 +549,7 @@ function FollowNudge({ draft, change, errors }: { draft: AutomationDefinition; c
   const problem = errorsFor(errors, "follow_nudge_text")[0] ?? (on ? followNudgeProblem(text) : null);
 
   return (
-    <div className="space-y-4 rounded-lg border border-line p-4">
+    <CardInset className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1.5">
           <Label htmlFor="automation-follow-nudge" className="leading-snug">
@@ -574,8 +576,8 @@ function FollowNudge({ draft, change, errors }: { draft: AutomationDefinition; c
       </div>
 
       {on ? (
-        <div className="space-y-2">
-          <Label htmlFor="automation-follow-nudge-text">Follow message</Label>
+        <Field id="automation-follow-nudge-text">
+          <FieldLabel>Follow message</FieldLabel>
           <Textarea
             id="automation-follow-nudge-text"
             value={text}
@@ -602,9 +604,9 @@ function FollowNudge({ draft, change, errors }: { draft: AutomationDefinition; c
               View profile
             </span>
           </div>
-        </div>
+        </Field>
       ) : null}
-    </div>
+    </CardInset>
   );
 }
 
@@ -734,11 +736,11 @@ function LinkButtons({
         const titleProblem = serverTitle ?? (button.url.trim() ? problems.title : undefined);
         const shownUrlProblem = serverUrl ?? (button.url.trim() ? problems.url : undefined);
         return (
-          <div key={index} className="grid gap-2 rounded-lg border border-line p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
-            <div className="space-y-1">
-              <Label htmlFor={`automation-button-${index}-title`} className="text-xs text-fg-secondary">
+          <CardInset key={index} padding="compact" className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_auto]">
+            <Field id={`automation-button-${index}-title`} density="compact">
+              <FieldLabel>
                 Button {index + 1} title
-              </Label>
+              </FieldLabel>
               <Input
                 id={`automation-button-${index}-title`}
                 value={button.title}
@@ -751,11 +753,11 @@ function LinkButtons({
               <p className={cn("text-xs tabular-nums", titleProblem ? "text-danger-fg" : "text-fg-secondary")}>
                 {titleProblem ?? `${button.title.length} / ${BUTTON_TITLE_MAX}`}
               </p>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor={`automation-button-${index}-url`} className="text-xs text-fg-secondary">
+            </Field>
+            <Field id={`automation-button-${index}-url`} density="compact">
+              <FieldLabel>
                 Button {index + 1} link
-              </Label>
+              </FieldLabel>
               <Input
                 id={`automation-button-${index}-url`}
                 type="url"
@@ -773,7 +775,7 @@ function LinkButtons({
                   {shownUrlProblem}
                 </p>
               ) : null}
-            </div>
+            </Field>
             <Button
               variant="ghost"
               size="icon-lg"
@@ -783,7 +785,7 @@ function LinkButtons({
             >
               <X aria-hidden />
             </Button>
-          </div>
+          </CardInset>
         );
       })}
       <Button
@@ -819,12 +821,14 @@ function AiReplyFields({
   return (
     <div className="space-y-3">
       {plan === "free" ? (
-        <p className="flex items-center gap-2 rounded-lg bg-brand-soft px-3 py-2 text-sm text-brand-fg">
-          <ProBadge /> Replies with AI are part of Pro. Set it up now and activate it after upgrading.
-        </p>
+        <Alert tone="brand">
+          <span className="flex items-center gap-2">
+            <ProBadge /> Replies with AI are part of Pro. Set it up now and activate it after upgrading.
+          </span>
+        </Alert>
       ) : null}
-      <div className="space-y-2">
-        <Label htmlFor="automation-ai">Instructions</Label>
+      <Field id="automation-ai">
+        <FieldLabel>Instructions</FieldLabel>
         <Textarea
           id="automation-ai"
           value={text}
@@ -838,7 +842,7 @@ function AiReplyFields({
         <p id="automation-ai-count" className="text-right text-xs text-fg-secondary tabular-nums">
           {formatCount(text.length)} / {formatCount(AI_INSTRUCTIONS_MAX)}
         </p>
-      </div>
+      </Field>
       <p className="text-xs text-fg-secondary">
         {/* The sentence alone describes the field; the link is its own stop. */}
         <span id="automation-ai-note">

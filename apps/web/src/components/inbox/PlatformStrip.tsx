@@ -28,7 +28,7 @@ export function PlatformStrip({
 }) {
   if (loading) {
     return (
-      <div className="px-3 pt-3" aria-busy="true" aria-label="Loading platforms">
+      <div className="px-3 pt-3" role="status" aria-busy="true" aria-label="Loading platforms">
         <Skeleton className="h-9 rounded-lg" />
       </div>
     );

@@ -6,7 +6,15 @@ import { applyComment, removeComment, type CommentPages, type PostPages } from "
 
 import type { Api } from "../client";
 import { useApi } from "../provider";
-import type { CommentCounts, CommentFilter, CommentList, PostComment, PostDetail, PostList } from "../types";
+import type {
+  CommentCounts,
+  CommentFilter,
+  CommentList,
+  PostComment,
+  PostDetail,
+  PostList,
+  PostSort,
+} from "../types";
 import { keys } from "./keys";
 import { expectOk, unwrap } from "./unwrap";
 
@@ -15,9 +23,9 @@ export type { CommentPages, PostPages };
 /** Both the picker and the grid read 24 posts a page (divisible by the grid's 2, 3 and 4 columns). */
 const POSTS_PAGE = 24;
 
-function postsQuery(api: Api, wid: string, accountId: string | null, q: string) {
+function postsQuery(api: Api, wid: string, accountId: string | null, q: string, sort: PostSort = "recent") {
   return {
-    queryKey: keys.posts(wid, accountId, q.trim()),
+    queryKey: keys.posts(wid, accountId, q.trim(), sort),
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }: { pageParam: string | null }) =>
       unwrap(
@@ -29,6 +37,7 @@ function postsQuery(api: Api, wid: string, accountId: string | null, q: string) 
               q: q.trim() || undefined,
               cursor: pageParam ?? undefined,
               limit: POSTS_PAGE,
+              sort,
             },
           },
         }),
@@ -57,11 +66,14 @@ export function usePosts(wid: string, accountId: string | null, q: string, enabl
   });
 }
 
-/** The Comments grid (FR-CMT-03): every account's posts, or one account's, newest first. */
-export function usePostGrid(wid: string, accountId: string | null) {
+/**
+ * The Comments grid (FR-CMT-03): every account's posts, or one account's, newest first, or with the
+ * most comments waiting for a reply first (D-11).
+ */
+export function usePostGrid(wid: string, accountId: string | null, sort: PostSort = "recent") {
   const api = useApi();
   return useInfiniteQuery<PostList, Error, PostPages, ReturnType<typeof keys.posts>, string | null>({
-    ...postsQuery(api, wid, accountId, ""),
+    ...postsQuery(api, wid, accountId, "", sort),
     // Switching accounts keeps the cards on screen until the other account's arrive.
     placeholderData: (previous) => previous,
   });

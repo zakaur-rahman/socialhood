@@ -19,6 +19,7 @@ import Link from "next/link";
 import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -31,7 +32,7 @@ import { usePost } from "@/lib/api/queries";
 import type { ScheduledPostSummary, SocialAccount } from "@/lib/api/types";
 import { formatCount } from "@/lib/automations/format";
 import { initial } from "@/lib/inbox/format";
-import { captionLine, CHIP_CLASS, POST_STATUS } from "@/lib/schedule/format";
+import { captionLine, POST_STATUS } from "@/lib/schedule/format";
 import { IDENTITY_FILL } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
 
@@ -138,9 +139,9 @@ export function TargetAvatars({ post }: { post: Pick<ScheduledPostSummary, "targ
 export function StatusChip({ post, className }: { post: Pick<ScheduledPostSummary, "status">; className?: string }) {
   const status = POST_STATUS[post.status];
   return (
-    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs font-medium", CHIP_CLASS[status.tone], className)}>
+    <Badge tone={status.tone} size="md" className={className}>
       {status.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -164,7 +165,7 @@ function mediaItemOf(post: Pick<ScheduledPostSummary, "targets">): string | null
  * pressed match Button's ghost.
  */
 const CARD_TRIGGER =
-  "mr-0.5 grid size-6 shrink-0 place-items-center rounded-md text-fg-secondary transition-[color,background-color] duration-fast ease-standard hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:absolute pointer-coarse:inset-0 pointer-coarse:mr-0 pointer-coarse:size-auto pointer-coarse:[&_svg]:hidden";
+  "mr-0.5 grid size-6 shrink-0 place-items-center rounded-md text-fg-secondary transition-[color,background-color] duration-fast ease-standard hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:absolute pointer-coarse:inset-0 pointer-coarse:mr-0 pointer-coarse:size-auto pointer-coarse:justify-items-end pointer-coarse:pr-1.5";
 
 /**
  * The post's actions (UX-A11Y-02: always visible). "Move to…" is the keyboard and phone
@@ -227,6 +228,12 @@ export function PostMenu({
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem asChild>
+          <Link href={schedule.composerHref(post)}>
+            <Pencil aria-hidden />
+            {status === "failed" || status === "canceled" ? "Edit and retry" : status === "draft" || status === "scheduled" ? "Edit" : "Open"}
+          </Link>
+        </DropdownMenuItem>
         {status === "scheduled" ? (
           <DropdownMenuItem onSelect={() => actions.moveTo(post, trigger.current)}>
             <CalendarClock aria-hidden /> Move to…
@@ -256,12 +263,6 @@ export function PostMenu({
             </Link>
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuItem asChild>
-          <Link href={schedule.composerHref(post)}>
-            <Pencil aria-hidden />
-            {status === "failed" || status === "canceled" ? "Edit and retry" : status === "draft" || status === "scheduled" ? "Edit" : "Open"}
-          </Link>
-        </DropdownMenuItem>
         {status === "scheduled" ? (
           <DropdownMenuItem onSelect={() => actions.unschedule(post)}>
             <Undo2 aria-hidden /> Move to drafts

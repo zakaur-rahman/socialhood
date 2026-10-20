@@ -13,6 +13,8 @@ type Props = {
   kind: MessageKind;
   /** On the gradient (business) side: link colours change. */
   outbound: boolean;
+  /** What a photo shows, e.g. "Photo from Asha, 14:02"; "Photo" without it. */
+  photoAlt?: string;
 };
 
 /** A platform image that may have expired: a placeholder instead of a broken image. */
@@ -33,7 +35,7 @@ function Unavailable({ label }: { label: string }) {
 }
 
 /** UX-INB-06: every attachment type (FR-INB-02). */
-export function AttachmentView({ attachment, kind, outbound }: Props) {
+export function AttachmentView({ attachment, kind, outbound, photoAlt = "Photo" }: Props) {
   const [lightbox, setLightbox] = useState(false);
   const linkClass = outbound ? "text-on-brand underline" : "text-brand-fg";
 
@@ -48,12 +50,12 @@ export function AttachmentView({ attachment, kind, outbound }: Props) {
             aria-label="Open photo"
             className="block overflow-hidden rounded-lg"
           >
-            <MediaImage src={attachment.url} alt="Photo" className="max-h-64 w-auto rounded-lg object-cover" />
+            <MediaImage src={attachment.url} alt={photoAlt} className="max-h-64 w-auto rounded-lg object-cover" />
           </button>
           <Dialog open={lightbox} onOpenChange={setLightbox}>
             <DialogContent size="xl" className="p-2">
-              <DialogTitle className="sr-only">Photo</DialogTitle>
-              <MediaImage src={attachment.url} alt="Photo" className="max-h-[80dvh] w-full rounded-lg object-contain" />
+              <DialogTitle className="sr-only">{photoAlt}</DialogTitle>
+              <MediaImage src={attachment.url} alt={photoAlt} className="max-h-[80dvh] w-full rounded-lg object-contain" />
             </DialogContent>
           </Dialog>
         </>

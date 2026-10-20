@@ -1,5 +1,6 @@
 "use client";
 
+import { PAGE_TITLE } from "@/styles/tokens";
 import { useQueryClient } from "@tanstack/react-query";
 import { AlertCircle, Check, Copy, EllipsisVertical, RotateCw, Send, Trash2, Undo2 } from "lucide-react";
 import type { Route } from "next";
@@ -10,6 +11,7 @@ import { toast } from "sonner";
 
 import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
+import { BackLink } from "@/components/shell/PageFrame";
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -23,7 +25,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { DisabledReason } from "@/components/ui/disabled-reason";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -86,6 +91,7 @@ import { PostPreview } from "./PostPreview";
 import { StatusBanner } from "./StatusBanner";
 import { toRequest, usePostDraft, type Draft, type PostSaveStatus } from "./use-post-draft";
 import { useMediaUploads, type Uploader } from "./use-media-uploads";
+import { ComposerTools } from "./ComposerTools";
 import { sharedFreeTime, WHEN_DATE_ID, WhenSection, type QueuePreview, type WhenMode } from "./WhenSection";
 
 export type ComposerDeps = {
@@ -124,7 +130,7 @@ export function PostComposer({
     if (post.error instanceof ApiError && post.error.status === 404) {
       return (
         <EmptyState
-          className="min-h-[60vh]"
+          className="flex-1"
           title="Post not found"
           body="It may have been deleted."
           action={
@@ -143,7 +149,7 @@ export function PostComposer({
 
 function ComposerSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading" className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+    <div role="status" aria-busy="true" aria-label="Loading" className="w-full p-4 md:p-6">
       <Skeleton className="h-8 w-40" />
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4 lg:max-w-[640px]">
@@ -564,29 +570,24 @@ function Composer({
   else if (uploads.busy) publishBlock = "Wait for the uploads to finish.";
   // When both buttons are blocked for the same reason, it is said once, for both of them.
   const publishReason = publishBlock !== scheduleBlock ? publishBlock : null;
-  const publishReasonId = publishReason ? "composer-publish-reason" : publishBlock ? "composer-schedule-reason" : undefined;
   const scheduleLabel = !isDraft ? "Update schedule" : whenMode === "queue" ? "Add to queue" : "Schedule";
 
   const publishAtLabel = server.status === "scheduled" && server.publish_at ? server.publish_at : null;
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] p-4 md:p-6">
+    <ComposerTools wid={wid} timeZone={timeZone} now={now} accounts={igAccounts}>
+    <div className="w-full p-4 md:p-6">
       {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
           state wrap inside their own group instead of pushing More onto a line of its own. */}
       <header className="flex items-center gap-3 border-b border-line pb-4">
         <div className="min-w-max flex-1">
-          <nav aria-label="Breadcrumb" className="text-xs text-fg-secondary">
-            <Link href={scheduleHref(slug)} className="hover:text-fg hover:underline">
-              Schedule
-            </Link>{" "}
-            <span aria-hidden>/</span>
-          </nav>
-          <h1 className="text-2xl font-semibold tracking-tight">Post</h1>
+          <BackLink href={scheduleHref(slug)} label="Schedule" />
+          <h1 className={PAGE_TITLE}>Post</h1>
         </div>
         <div className="flex min-w-0 flex-wrap items-center justify-end gap-x-3 gap-y-1">
-          <span data-testid="status-pill" className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", STATUS_TONE[server.status])}>
+          <Badge data-testid="status-pill" tone={STATUS_TONE[server.status]} size="md">
             {STATUS_LABEL[server.status]}
-          </span>
+          </Badge>
           {editable ? <SaveState status={saveStatus} autosave={isDraft} onRetry={() => void flush()} /> : null}
         </div>
         <DropdownMenu>
@@ -612,10 +613,9 @@ function Composer({
         </DropdownMenu>
       </header>
       {saveStatus === "error" && saveError && saveError.code !== "validation_error" ? (
-        <p role="alert" className="mt-3 flex items-start gap-2 text-sm text-danger-fg">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
+        <Alert tone="danger" icon={<AlertCircle />} className="mt-3">
           {errorMessage(saveError)}
-        </p>
+        </Alert>
       ) : null}
 
       <StatusBanner
@@ -734,26 +734,28 @@ function Composer({
                       Save draft
                     </Button>
                   ) : null}
-                  <Button
-                    variant="secondary"
-                    size="lg"
-                    disabled={Boolean(publishBlock) || acting}
-                    aria-describedby={publishReasonId}
-                    onClick={() => setConfirmPublish(true)}
-                  >
-                    {publishNow.isPending ? <Spinner /> : <Send aria-hidden />}
-                    Publish now
-                  </Button>
-                  <Button
-                    size="lg"
-                    className="ml-auto"
-                    disabled={Boolean(scheduleBlock) || acting}
-                    aria-describedby={scheduleBlock ? "composer-schedule-reason" : undefined}
-                    onClick={() => void onSchedule()}
-                  >
-                    {schedule.isPending || queuePost.isPending || (put.isPending && !isDraft) ? <Spinner /> : null}
-                    {scheduleLabel}
-                  </Button>
+                  <DisabledReason reason={publishBlock}>
+                    <Button
+                      variant="secondary"
+                      size="lg"
+                      disabled={Boolean(publishBlock) || acting}
+                      loading={publishNow.isPending}
+                      onClick={() => setConfirmPublish(true)}
+                    >
+                      <Send aria-hidden />
+                      Publish now
+                    </Button>
+                  </DisabledReason>
+                  <DisabledReason reason={scheduleBlock} className="ml-auto">
+                    <Button
+                      size="lg"
+                      disabled={Boolean(scheduleBlock) || acting}
+                      loading={schedule.isPending || queuePost.isPending || (put.isPending && !isDraft)}
+                      onClick={() => void onSchedule()}
+                    >
+                      {scheduleLabel}
+                    </Button>
+                  </DisabledReason>
                 </div>
                 {scheduleBlock || publishReason ? (
                   // On a short viewport the reasons share one line; the buttons keep the full text
@@ -862,6 +864,7 @@ function Composer({
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </ComposerTools>
   );
 }
 

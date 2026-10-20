@@ -3,7 +3,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { AlertAction } from "@/components/ui/alert";
 import type { NotificationItem } from "@/lib/api/types";
 import { usePushOffer } from "@/lib/push/use-push-device";
 
@@ -41,11 +41,11 @@ export function GetAlertsCard({
       always
       className="m-3 mb-1"
       action={
-        <Button asChild variant="secondary">
+        <AlertAction asChild>
           <Link href={`/w/${slug}/settings/notifications` as Route} onClick={onNavigate}>
             Turn on alerts
           </Link>
-        </Button>
+        </AlertAction>
       }
     />
   );

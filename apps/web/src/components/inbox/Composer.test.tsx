@@ -90,7 +90,7 @@ describe("Composer (UX-INB-07)", () => {
 
   it("the toolbar's icon buttons are the Button's icon size, with no touch patches", () => {
     renderComposer();
-    for (const name of ["Attach files", "Add emoji", "Send a heart", "Schedule for later"]) {
+    for (const name of ["Attach files", "Add emoji", "Schedule message"]) {
       const tool = screen.getByRole("button", { name });
       expect(tool).toHaveAttribute("data-size", "icon");
       expect(tool.className).not.toMatch(/md:size-/);
@@ -220,14 +220,30 @@ describe("Composer (UX-INB-07)", () => {
     vi.restoreAllMocks();
   });
 
-  it("sends Instagram's heart sticker on its own", async () => {
+  // D-15: the heart lives in the emoji popover, not the toolbar.
+  it("sends Instagram's heart sticker on its own, from the emoji popover", async () => {
     const user = userEvent.setup();
     const { onSend } = renderComposer({ platform: "instagram" });
     await user.type(textbox(), "Draft stays");
-    await user.click(screen.getByRole("button", { name: "Send a heart" }));
+    expect(screen.queryByRole("button", { name: "Send a heart" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Add emoji" }));
+    await user.click(await screen.findByRole("button", { name: "Send a heart" }));
     expect(onSend).toHaveBeenCalledWith({ heart: true, humanAgent: false });
     expect(textbox().value).toBe("Draft stays");
     expect(screen.queryByRole("button", { name: "Send a sticker" })).not.toBeInTheDocument();
+    // The popover closes after the heart.
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Send a heart" })).not.toBeInTheDocument());
+  });
+
+  it("the toolbar wraps instead of clipping (320 px phones)", () => {
+    renderComposer();
+    const toolbar = screen.getByRole("button", { name: "Add emoji" }).parentElement as HTMLElement;
+    expect(toolbar).toHaveClass("flex-wrap");
+  });
+
+  it("AI Polish is the same height as the tools beside it", () => {
+    renderComposer();
+    expect(screen.getByRole("button", { name: /AI Polish/ })).toHaveAttribute("data-size", "default");
   });
 
   it("uploads and sends a WhatsApp sticker", async () => {
@@ -235,7 +251,9 @@ describe("Composer (UX-INB-07)", () => {
     const asset = { id: "sticker-1", resource_type: "image", secure_url: "https://res.cloudinary.com/s.webp", bytes: 40_000 } as MediaAsset;
     const upload = vi.fn<Uploader>().mockResolvedValue(asset);
     const { onSend } = renderComposer({ platform: "whatsapp" }, { upload });
+    await user.click(screen.getByRole("button", { name: "Add emoji" }));
     expect(screen.queryByRole("button", { name: "Send a heart" })).not.toBeInTheDocument();
+    await user.keyboard("{Escape}");
     await user.upload(screen.getByTestId("composer-sticker-input"), new File(["x"], "wave.webp", { type: "image/webp" }));
     await waitFor(() => expect(onSend).toHaveBeenCalledWith({ sticker: asset, humanAgent: false }));
     expect(upload).toHaveBeenCalledOnce();
@@ -391,7 +409,10 @@ describe("AI Polish (C-063)", () => {
     // UI-031: what it does and costs is a Tooltip (on keyboard focus too), not a title (UI-ISS-042).
     expect(polish).not.toHaveAttribute("title");
     await user.hover(polish);
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Fix grammar and clarity, in the same language (1 AI credit)");
+    // The tooltip opens after its 300 ms delay; a busy CI runner can take longer than findBy's 1 s default.
+    expect(await screen.findByRole("tooltip", {}, { timeout: 3000 })).toHaveTextContent(
+      "Fix grammar and clarity, in the same language (1 AI credit)",
+    );
   });
 
   it("replaces the reply with a spinner while it works, and Undo brings the original back", async () => {

@@ -29,6 +29,7 @@ function Resolver() {
   const params = useSearchParams();
   const connectError = params.get("error");
   const next = params.get("next"); // a page outside the app asked for (lib/resolve.ts)
+  const plan = params.get("plan"); // "pro" from the pricing page: Home offers the trial
 
   const target = me.data
     ? (me.data.workspaces.find((w) => w.id === me.data.last_workspace_id) ?? me.data.workspaces[0])
@@ -36,7 +37,7 @@ function Resolver() {
   const accounts = useSocialAccounts(target?.id ?? "", Boolean(target) && connectError !== "state_invalid");
   // Accounts failing to load should not strand the user: Home works without them.
   const destination = target
-    ? resolveDestination(target.slug, accounts.isError ? [] : accounts.data, connectError, next)
+    ? resolveDestination(target.slug, accounts.isError ? [] : accounts.data, connectError, next, plan)
     : null;
 
   useEffect(() => {

@@ -3,7 +3,7 @@
 import { Eye, EyeOff, MessageCircle, Reply, Send, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { IntentChip } from "@/components/ai/AnalysisChips";
@@ -19,19 +19,19 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useDeleteComment, usePrivateReply, useReplyToComment, useSetCommentHidden } from "@/lib/api/queries";
 import type { PostComment } from "@/lib/api/types";
 import { SENTIMENT_DOT, SENTIMENT_LABEL } from "@/lib/ai/format";
 import { authorHandle, authorName, commentActionError } from "@/lib/comments/format";
-import { TONE_CLASS } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
 import { CommentComposer, type ComposerKind } from "./CommentComposer";
 
-const CHIP = "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-medium";
 /**
  * Always visible (UX-A11Y-02); `sm` Buttons, so 28 px with a mouse and 40 px on touch (UX-A11Y-05).
  * While its composer is open, Reply or DM shows the ghost Button's open state (`aria-expanded`).
@@ -58,6 +58,7 @@ export function CommentRow({
   canDelete,
   accountUsername,
   prepared,
+  onRemoved,
 }: {
   comment: PostComment;
   wid: string;
@@ -72,7 +73,35 @@ export function CommentRow({
    * column remounts the row (by key) for each new one. A DM opens only if none was sent yet.
    */
   prepared?: { kind: ComposerKind; text: string };
+  /**
+   * Called when a confirmed delete went through, while focus is still lost or on this row: the
+   * row is about to vanish, so the list moves focus somewhere that stays (its heading).
+   */
+  onRemoved?: () => void;
 }) {
+  const rowRef = useRef<HTMLLIElement>(null);
+  // Set when a confirmed delete went through: the row (and this dialog with it) is going away, so
+  // the dialog must not return focus to its trigger (SourcesCard's pattern, UI-039).
+  const removedRef = useRef(false);
+  // A confirmed delete removes the row from the cache before this component's own mutate
+  // callbacks run, and TanStack Query skips those callbacks once the row has unmounted. So the
+  // row hands focus on itself when it unmounts mid-delete holding focus (on the Delete trigger the
+  // dialog returned it to): layout cleanups run before the row's DOM is removed.
+  const deletingRef = useRef(false);
+  const onRemovedRef = useRef(onRemoved);
+  useLayoutEffect(() => {
+    onRemovedRef.current = onRemoved;
+  });
+  useLayoutEffect(() => {
+    const row = rowRef.current;
+    return () => {
+      if (!deletingRef.current) return;
+      const active = document.activeElement;
+      if (active === document.body || (active && row?.contains(active))) {
+        requestAnimationFrame(() => onRemovedRef.current?.());
+      }
+    };
+  }, []);
   const [initial] = useState(() =>
     prepared && !(prepared.kind === "dm" && comment.private_reply) ? prepared : null,
   );
@@ -119,14 +148,33 @@ export function CommentRow({
     );
   };
 
-  const confirmDelete = () =>
-    remove.mutate(comment, {
-      onSuccess: () => toast.success("Comment deleted"),
-      onError: (error) => toast.error(commentActionError(error, "delete", accountUsername)),
-    });
+  const confirmDelete = () => {
+    deletingRef.current = true;
+    // mutateAsync, not mutate's callbacks: the promise settles even after the row has unmounted, so
+    // the toast and the focus move still happen.
+    remove.mutateAsync(comment).then(
+      () => {
+        toast.success("Comment deleted");
+        removedRef.current = true;
+        const active = document.activeElement;
+        if (!active || active === document.body || rowRef.current?.contains(active)) onRemoved?.();
+        // The row leaves on the next render; if focus fell to <body> or into the closing dialog by
+        // then, the list's heading takes it.
+        requestAnimationFrame(() => {
+          const current = document.activeElement;
+          if (!current || current === document.body || !current.isConnected || current.closest("[role=alertdialog]")) onRemovedRef.current?.();
+        });
+      },
+      (error) => {
+        deletingRef.current = false;
+        toast.error(commentActionError(error, "delete", accountUsername));
+      },
+    );
+  };
 
   return (
     <li
+      ref={rowRef}
       className="flex gap-3 border-b border-line-subtle px-4 py-3 last:border-b-0"
       data-testid="comment-row"
       data-comment-id={comment.id}
@@ -141,13 +189,14 @@ export function CommentRow({
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-sm font-medium">{name}</span>
-          <time
-            dateTime={comment.commented_at}
-            title={formatDayTime(comment.commented_at, timeZone, now)}
-            className="text-xs text-fg-secondary"
-          >
-            {when(comment.commented_at, now)}
-          </time>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <time dateTime={comment.commented_at} className="text-xs text-fg-secondary">
+                {when(comment.commented_at, now)}
+              </time>
+            </TooltipTrigger>
+            <TooltipContent>{formatDayTime(comment.commented_at, timeZone, now)}</TooltipContent>
+          </Tooltip>
           {analysis && !analysis.is_spam ? (
             <>
               <span
@@ -159,11 +208,11 @@ export function CommentRow({
               <IntentChip intent={analysis.intent} />
             </>
           ) : null}
-          {analysis?.is_spam ? <span className={cn(CHIP, TONE_CLASS.warning)}>Spam</span> : null}
+          {analysis?.is_spam ? <Badge tone="warning">Spam</Badge> : null}
           {comment.hidden ? (
-            <span className={cn(CHIP, TONE_CLASS.neutral)}>
-              <EyeOff className="size-3" aria-hidden /> Hidden
-            </span>
+            <Badge>
+              <EyeOff aria-hidden /> Hidden
+            </Badge>
           ) : null}
         </div>
         {comment.parent_platform_comment_id ? (
@@ -234,7 +283,13 @@ export function CommentRow({
                   <Trash2 aria-hidden /> Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent
+                onCloseAutoFocus={(event) => {
+                  if (!removedRef.current) return;
+                  event.preventDefault();
+                  onRemoved?.();
+                }}
+              >
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete this comment?</AlertDialogTitle>
                   <AlertDialogDescription>

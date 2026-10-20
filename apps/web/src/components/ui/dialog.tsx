@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import { Dialog as DialogPrimitive } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
+import { ModalInert } from "@/components/ui/modal-inert"
 import { XIcon } from "lucide-react"
 
 /**
@@ -96,6 +97,7 @@ function DialogContent({
         )}
         {...props}
       >
+        <ModalInert />
         {children}
         {showCloseButton && (
           <DialogPrimitive.Close data-slot="dialog-close" asChild>

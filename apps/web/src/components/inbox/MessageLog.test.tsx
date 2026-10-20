@@ -62,7 +62,7 @@ describe("buildRows: separators and groups", () => {
 });
 
 describe("MessageLog (UX-A11Y-03)", () => {
-  it("is a polite log and renders every message", () => {
+  it("is a log that is not live itself, and renders every message", () => {
     render(
       <MessageLog
         messages={[message({ id: "a", text: "First" }), message({ id: "b", text: "Second" })]}
@@ -77,9 +77,47 @@ describe("MessageLog (UX-A11Y-03)", () => {
       />,
     );
     const log = screen.getByRole("log", { name: "Messages with Priya" });
-    expect(log).toHaveAttribute("aria-live", "polite");
+    expect(log).toHaveAttribute("aria-live", "off");
     expect(log).toHaveTextContent("First");
     expect(log).toHaveTextContent("Second");
+  });
+
+  describe("announces only a new inbound message (UI-ISS-063)", () => {
+    const base = {
+      timeZone: tz,
+      now,
+      label: "Messages",
+      loading: false,
+      hasOlder: false,
+      loadingOlder: false,
+      loadOlder: () => {},
+      announce: (m: { text?: string | null }) => `New: ${m.text}`,
+      renderMessage: (m: { text?: string | null }) => <p>{m.text}</p>,
+    };
+    const first = message({ id: "a", text: "First", occurred_at: "2026-09-28T09:00:00Z" });
+
+    it("says nothing for the first load", () => {
+      render(<MessageLog {...base} messages={[first]} />);
+      expect(screen.getByTestId("message-announcer")).toBeEmptyDOMElement();
+    });
+
+    it("announces a new inbound message, not our own send or an older page", () => {
+      const { rerender } = render(<MessageLog {...base} messages={[first]} />);
+      const announcer = screen.getByTestId("message-announcer");
+      expect(announcer).toHaveAttribute("role", "status");
+
+      const mine = message({ id: "b", direction: "outbound", source: "human", text: "Mine", occurred_at: "2026-09-28T09:01:00Z" });
+      rerender(<MessageLog {...base} messages={[first, mine]} />);
+      expect(announcer).toBeEmptyDOMElement();
+
+      const older = message({ id: "o", text: "Older", occurred_at: "2026-09-28T08:00:00Z" });
+      rerender(<MessageLog {...base} messages={[older, first, mine]} />);
+      expect(announcer).toBeEmptyDOMElement();
+
+      const theirs = message({ id: "c", text: "Hello", occurred_at: "2026-09-28T09:05:00Z" });
+      rerender(<MessageLog {...base} messages={[older, first, mine, theirs]} />);
+      expect(announcer).toHaveTextContent("New: Hello");
+    });
   });
 
   it("loads older pages near the top and keeps the reader's place (UX-INB-06)", () => {

@@ -66,9 +66,22 @@ export const emptyStates = {
   },
 } as const;
 
+/** UI-064: automations answer comments and DMs on Instagram only; said first when there is no account. */
+export const instagramOnly = {
+  title: "Automations work on Instagram",
+  body: "They reply to Instagram comments and DMs, and WhatsApp isn't supported yet. Connect an Instagram account to create one.",
+  action: "Connect Instagram",
+  ask: "Ask an owner or admin to connect Instagram.",
+} as const;
+
 /** "All caught up" when a view or search has no results (§4.7). */
 export function inboxFilterEmpty(what: string): { title: string; body: string } {
   return { title: "All caught up", body: `Nothing matches "${what}" right now.` };
+}
+
+/** The Scheduled tab with a platform chosen and nothing scheduled there (UI-052). */
+export function scheduledPlatformEmpty(platformLabel: string): { title: string; body: string } {
+  return { title: "No scheduled messages", body: `Nothing is scheduled on ${platformLabel}. Choose All to see the rest.` };
 }
 
 // ---- sending (§4.7 error codes, F-07)
@@ -450,6 +463,13 @@ export function upgradeCopy(
 ): { title: string; body: string } {
   const key = input.entitlement ?? "";
   if (input.code === "entitlement_required") {
+    // A plain Upgrade (the sidebar's, a banner's): no feature was blocked.
+    if (key === "pro") {
+      return {
+        title: "Upgrade to Pro",
+        body: "Pro adds Auto replies, AI replies in automations and higher limits on credits, knowledge, automations and scheduled posts.",
+      };
+    }
     const feature = FEATURE_COPY[key];
     if (feature) return { title: `${feature.feature} is part of Pro`, body: feature.body };
     const named = input.detail?.match(/^(.+?) is part of Pro\.?$/);
@@ -520,6 +540,8 @@ export function pricePerMonth(price: { amount_minor: number; currency: string })
 
 export const billingCopy = {
   upgradeCta: "Upgrade to Pro",
+  /** A Pro template on a Free workspace (UI-ISS-072): it can be set up, it runs on Pro. */
+  proTemplateNote: "Set it up on Free. It runs on Pro.",
   trialCta: (days: number) => `Start ${days}-day trial`,
   trialOffer: (days: number, price: string | null) =>
     price ? `Try Pro free for ${days} days, then ${price}. Cancel anytime.` : `Try Pro free for ${days} days. Cancel anytime.`,

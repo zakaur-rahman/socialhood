@@ -3,13 +3,14 @@
 import { useState } from "react";
 
 import { ErrorState } from "@/components/states/ErrorState";
+import { CardInset } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAutomationStats } from "@/lib/api/queries";
 import type { AutomationStats } from "@/lib/api/types";
 import { formatCount, repliedShare } from "@/lib/automations/format";
 import { cn } from "@/lib/utils";
-import { EYEBROW } from "@/styles/tokens";
+import { EYEBROW, KPI } from "@/styles/tokens";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -49,7 +50,7 @@ export function StatsPane({
         <ToggleGroupItem value="30">30 days</ToggleGroupItem>
       </ToggleGroup>
       {stats.isPending ? (
-        <div aria-busy="true" aria-label="Loading results" className="space-y-3">
+        <div role="status" aria-busy="true" aria-label="Loading results" className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             {Array.from({ length: 4 }, (_, i) => (
               <Skeleton key={i} className="h-16 rounded-lg" />
@@ -88,10 +89,10 @@ export function StatsView({ stats, tapFirst = false, followNudge = false }: { st
     <div className="space-y-4">
       <dl className="grid grid-cols-2 gap-2">
         {figures.map((figure) => (
-          <div key={figure.label} className="rounded-lg bg-field p-3">
+          <CardInset key={figure.label} padding="compact">
             <dt className="text-xs text-fg-secondary">{figure.label}</dt>
-            <dd className="mt-0.5 text-xl font-semibold tabular-nums">{figure.value}</dd>
-          </div>
+            <dd className={cn("mt-0.5", KPI)}>{figure.value}</dd>
+          </CardInset>
         ))}
       </dl>
       <DailyChart daily={stats.daily} />

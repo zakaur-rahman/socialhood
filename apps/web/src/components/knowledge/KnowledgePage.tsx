@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { PageFrame } from "@/components/shell/PageFrame";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAiSettings, useDismissKnowledgeGap, useKnowledgeGaps, useKnowledgeSources } from "@/lib/api/queries";
 import type { KnowledgeGap } from "@/lib/api/types";
@@ -20,19 +21,19 @@ import { TestBox } from "./TestBox";
 
 function CardSkeleton({ label, rows = 2 }: { label: string; rows?: number }) {
   return (
-    <div className="space-y-3 rounded-xl border border-line bg-panel p-5" aria-busy="true" aria-label={label}>
+    <Card padding="roomy" className="space-y-3" role="status" aria-busy="true" aria-label={label}>
       <Skeleton className="h-4 w-40" />
       {Array.from({ length: rows }, (_, i) => (
         <Skeleton key={i} className="h-3 w-full" />
       ))}
-    </div>
+    </Card>
   );
 }
 
 /**
- * UX-SCR-06 / F-14, F-17: open questions the AI couldn't answer (when there are any), brand
- * voice, the sources with their status and the plan usage, and the test box (sticky on the
- * right at ≥ 1280 px, below on smaller screens).
+ * UX-SCR-06 / F-14, F-17: open questions the AI couldn't answer (when there are any), the
+ * sources with their status and the plan usage, brand voice collapsed to a summary (UI-ISS-089),
+ * and the test box (sticky on the right at ≥ 1280 px, below on smaller screens).
  */
 export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
   const workspace = useCurrentWorkspace();
@@ -73,14 +74,6 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
           {gaps.isError ? <ErrorState error={gaps.error} onRetry={() => void gaps.refetch()} /> : null}
           {openGaps.length > 0 ? gapsCard : null}
 
-          {settings.isPending ? (
-            <CardSkeleton label="Loading brand voice" rows={3} />
-          ) : settings.isError ? (
-            <ErrorState error={settings.error} onRetry={() => void settings.refetch()} />
-          ) : (
-            <BrandVoiceCard wid={wid} settings={settings.data} workspaceName={workspace.name} />
-          )}
-
           {sources.isPending ? (
             <CardSkeleton label="Loading sources" rows={4} />
           ) : sources.isError ? (
@@ -94,10 +87,18 @@ export function KnowledgePage({ upload }: { upload?: KnowledgeUploader }) {
             />
           )}
 
+          {settings.isPending ? (
+            <CardSkeleton label="Loading brand voice" rows={2} />
+          ) : settings.isError ? (
+            <ErrorState error={settings.error} onRetry={() => void settings.refetch()} />
+          ) : (
+            <BrandVoiceCard wid={wid} settings={settings.data} workspaceName={workspace.name} />
+          )}
+
           {gaps.isSuccess && openGaps.length === 0 ? gapsCard : null}
         </div>
-        <aside className="xl:sticky xl:top-6 xl:self-start">
-          <TestBox wid={wid} />
+        <aside aria-label="Try the AI" className="xl:sticky xl:top-6 xl:self-start">
+          <TestBox wid={wid} onAddAnswer={(question) => setSheet({ kind: "create", type: "faq", question })} />
         </aside>
       </div>
       <SourceSheet mode={sheet} onOpenChange={(open) => (open ? undefined : setSheet(null))} upload={upload} />

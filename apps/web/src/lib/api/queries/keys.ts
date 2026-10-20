@@ -6,6 +6,7 @@ import type {
   CommentFilter,
   InboxView,
   Platform,
+  PostSort,
   RunResult,
   ScheduledPostView,
   TriggerName,
@@ -59,7 +60,8 @@ export const keys = {
   automationStats: (wid: string, id: string, days: 7 | 30) => ["w", wid, "automation", id, "stats", days] as const,
   // posts: the automation post picker (P4) and the Comments grid (P6) share these lists
   postLists: (wid: string) => ["w", wid, "posts"] as const,
-  posts: (wid: string, accountId: string | null, q: string) => ["w", wid, "posts", accountId, q] as const,
+  posts: (wid: string, accountId: string | null, q: string, sort: PostSort = "recent") =>
+    ["w", wid, "posts", accountId, q, sort] as const,
   // comments and post analytics (P6)
   commentCounts: (wid: string) => ["w", wid, "comment-counts"] as const,
   post: (wid: string, postId: string) => ["w", wid, "post", postId] as const,

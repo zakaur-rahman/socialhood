@@ -9,7 +9,11 @@ import { uuid } from "@/lib/uuid";
 /** Each hand-off is new, even with the same values, so a screen already open takes it again. */
 type Fresh = { nonce: string };
 
-export type ScheduleHandoff = Fresh & { sendAt: string | null };
+/**
+ * `replaces`: the composer already holds a different typed reply. The hand-off leaves it alone and
+ * carries `text`; the thread asks before replacing it (UI-051).
+ */
+export type ScheduleHandoff = Fresh & { sendAt: string | null; text: string; replaces: boolean };
 export type CommentReplyHandoff = Fresh & CommentReplyPrefill;
 export type AutomationDraftHandoff = Fresh & AutomationDraftPrefill;
 
@@ -50,10 +54,13 @@ export function handOff(card: ActionCard): void {
   switch (card.kind) {
     case "schedule_message": {
       const { conversation_id: conversationId, text, send_at: sendAt } = card.prefill;
-      // The message goes in the conversation's composer, which the schedule popover sends from.
-      useInboxStore.getState().setDraft(conversationId, text);
+      // The message goes in the conversation's composer, which the schedule popover sends from; a
+      // reply the member already typed there is theirs, so it stays until they say it can go.
+      const typed = useInboxStore.getState().drafts[conversationId] ?? "";
+      const replaces = typed.trim() !== "" && typed.trim() !== text.trim();
+      if (!replaces) useInboxStore.getState().setDraft(conversationId, text);
       useAgentHandoff.setState((state) => ({
-        schedule: { ...state.schedule, [conversationId]: { nonce, sendAt: sendAt ?? null } },
+        schedule: { ...state.schedule, [conversationId]: { nonce, sendAt: sendAt ?? null, text, replaces } },
       }));
       return;
     }

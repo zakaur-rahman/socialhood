@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { useEffect, useLayoutEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Message } from "@/lib/api/types";
@@ -67,6 +67,8 @@ type Props = {
   hasOlder: boolean;
   loadingOlder: boolean;
   loadOlder: () => void;
+  /** The words a screen reader hears for a new inbound message; without it nothing is announced. */
+  announce?: (message: Message) => string;
   renderMessage: (message: Message, row: Extract<LogRow, { type: "message" }>) => ReactNode;
 };
 
@@ -75,9 +77,10 @@ type Snapshot = { firstKey: string | null; lastKey: string | null; scrollHeight:
 /**
  * The message area (UX-INB-06, UX-A11Y-03): opens at the newest message, loads older pages
  * near the top while keeping the scroll position, follows new messages when already at the
- * bottom, and is a polite live log.
+ * bottom, and is a log. The log itself is not live: a polite region beside it announces only a new
+ * inbound message, so older pages, virtualised rows and our own sends stay silent (UI-ISS-063).
  */
-export function MessageLog({ messages, timeZone, now, label, loading, hasOlder, loadingOlder, loadOlder, renderMessage }: Props) {
+export function MessageLog({ messages, timeZone, now, label, loading, hasOlder, loadingOlder, loadOlder, announce, renderMessage }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const rows = useMemo(() => buildRows(messages, timeZone), [messages, timeZone]);
   const virtual = rows.length > VIRTUALIZE_ABOVE;
@@ -96,6 +99,14 @@ export function MessageLog({ messages, timeZone, now, label, loading, hasOlder, 
   const firstKey = rows.find((row) => row.type === "message")?.key ?? null;
   const lastRow = rows[rows.length - 1];
   const lastKey = lastRow?.key ?? null;
+
+  // The last row changed after the first load: say so when it is a customer's message. Set during
+  // render (the previous-value pattern), so the text and the row it belongs to change together.
+  const [announced, setAnnounced] = useState<{ key: string | null | undefined; text: string }>({ key: undefined, text: "" });
+  if (!loading && lastKey !== announced.key) {
+    const inbound = lastRow?.type === "message" && lastRow.message.direction === "inbound" ? lastRow.message : null;
+    setAnnounced({ key: lastKey, text: announced.key !== undefined && inbound && announce ? announce(inbound) : "" });
+  }
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -149,15 +160,16 @@ export function MessageLog({ messages, timeZone, now, label, loading, hasOlder, 
     );
 
   return (
+    <>
     <div
       ref={scrollRef}
       onScroll={onScroll}
       role="log"
-      aria-live="polite"
-      aria-relevant="additions"
+      aria-live="off"
       aria-label={label}
       aria-busy={loading || loadingOlder}
-      className="min-h-0 flex-1 overflow-y-auto bg-canvas px-4 py-3 [overflow-anchor:none]"
+      tabIndex={0}
+      className="min-h-0 flex-1 overflow-y-auto bg-canvas focus-visible:-outline-offset-2 px-4 py-3 [overflow-anchor:none]"
       data-virtual={virtual}
     >
       {loadingOlder ? <OlderSkeleton /> : null}
@@ -181,6 +193,10 @@ export function MessageLog({ messages, timeZone, now, label, loading, hasOlder, 
         rows.map((row) => <div key={row.key}>{renderRow(row)}</div>)
       )}
     </div>
+    <div role="status" aria-live="polite" aria-atomic="true" className="sr-only" data-testid="message-announcer">
+      {announced.text}
+    </div>
+    </>
   );
 }
 
@@ -195,7 +211,7 @@ function OlderSkeleton() {
 /** Bubble-shaped placeholders while the first page loads (§4.7: never a spinner). */
 function ThreadSkeleton() {
   return (
-    <div className="flex flex-col gap-3 pt-6" aria-label="Loading messages">
+    <div className="flex flex-col gap-3 pt-6" role="status" aria-label="Loading messages">
       <Skeleton className="h-10 w-1/2 rounded-2xl" />
       <Skeleton className="h-14 w-2/5 self-end rounded-2xl" />
       <Skeleton className="h-10 w-3/5 rounded-2xl" />

@@ -2,6 +2,7 @@
 
 import { TriangleAlert } from "lucide-react";
 
+import { Alert } from "@/components/ui/alert";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition, MatchMode, OverlapWarning } from "@/lib/api/types";
 import { errorsFor, type FieldErrors } from "@/lib/automations/definition";
@@ -67,16 +68,12 @@ export function KeywordsStep({
             {shown.map((overlap) => {
               const text = overlapText(overlap);
               return (
-                <li
-                  key={`${overlap.automation_id}-${overlap.keyword}`}
-                  className="flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2 text-sm text-warning"
-                >
-                  <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-                  <span>
+                <li key={`${overlap.automation_id}-${overlap.keyword}`}>
+                  <Alert tone="warning" icon={<TriangleAlert />}>
                     {text.before}
                     <strong className="font-semibold">{text.name}</strong>
                     {text.after}
-                  </span>
+                  </Alert>
                 </li>
               );
             })}

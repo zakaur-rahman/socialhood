@@ -1,17 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { AlertTriangle } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Card, CardBleed, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAgentHandoff, type CommentReplyHandoff } from "@/lib/agent/handoff";
 import { usePostComments } from "@/lib/api/queries";
 import type { CommentFilter, PostDetail } from "@/lib/api/types";
 import { flattenComments } from "@/lib/comments/cache";
-import { COMMENT_FILTERS, filterEmpty, isAnalysing } from "@/lib/comments/format";
+import { COMMENT_FILTERS, filterEmpty, formatCount, isAnalysing } from "@/lib/comments/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { CommentRow } from "./CommentRow";
@@ -20,7 +24,7 @@ function RowSkeletons() {
   return (
     <ul aria-busy="true" aria-label="Loading comments">
       {Array.from({ length: 5 }, (_, i) => (
-        <li key={i} className="flex gap-3 border-b border-line-subtle px-4 py-3 last:border-b-0">
+        <li key={i} className="flex gap-3 border-b border-line-subtle px-(--card-padding) py-3 last:border-b-0">
           <Skeleton className="size-8 rounded-full" />
           <div className="flex-1 space-y-2">
             <Skeleton className="h-3 w-1/3" />
@@ -33,7 +37,7 @@ function RowSkeletons() {
 }
 
 /**
- * UX-SCR-05 main column: the filter chips (All, Positive, Neutral, Negative, Questions, Buying
+ * UX-SCR-05 main column: the filter chips (All, Needs reply, Positive, Neutral, Negative, Questions, Buying
  * signals, Spam, Hidden) and the comment rows, newest first. comment.created and comment.updated
  * patch the loaded lists (F-12).
  */
@@ -47,9 +51,13 @@ export function CommentsColumn({
   accountUsername?: string | null;
 }) {
   const workspace = useCurrentWorkspace();
-  const [filter, setFilter] = useState<CommentFilter>("all");
+  // The card's "n need a reply" opens the post with this chip chosen (?filter=needs_reply).
+  const requested = useSearchParams()?.get("filter");
+  const [filter, setFilter] = useState<CommentFilter>(requested === "needs_reply" ? "needs_reply" : "all");
   const comments = usePostComments(workspace.id, post.id, filter);
   const items = flattenComments(comments.data);
+  // Where focus goes when a confirmed delete removes the row it was on.
+  const headingRef = useRef<HTMLHeadingElement>(null);
   const canDelete = workspace.role === "owner" || workspace.role === "admin";
 
   // FR-AGT-03: a reply Ask Social Hood prepared for a comment on this post opens in that
@@ -78,16 +86,19 @@ export function CommentsColumn({
   else if (comments.isError) content = <ErrorState error={comments.error} onRetry={() => void comments.refetch()} />;
   else if (items.length === 0) {
     content = (
-      <EmptyState
-        {...filterEmpty(filter, isAnalysing(post.stats))}
-        action={
-          filter === "all" ? undefined : (
-            <Button variant="secondary" onClick={() => setFilter("all")}>
-              Show all
-            </Button>
-          )
-        }
-      />
+      <div className="p-(--card-padding)">
+        <EmptyState
+          size="compact"
+          {...filterEmpty(filter, isAnalysing(post.stats))}
+          action={
+            filter === "all" ? undefined : (
+              <Button variant="secondary" size="sm" onClick={() => setFilter("all")}>
+                Show all
+              </Button>
+            )
+          }
+        />
+      </div>
     );
   } else {
     content = (
@@ -104,6 +115,7 @@ export function CommentsColumn({
                 timeZone={workspace.timezone}
                 now={now}
                 canDelete={canDelete}
+                onRemoved={() => headingRef.current?.focus()}
                 accountUsername={accountUsername}
                 prepared={isTarget ? { kind: prepared.private ? "dm" : "reply", text: prepared.text } : undefined}
               />
@@ -126,41 +138,43 @@ export function CommentsColumn({
   }
 
   return (
-    <section aria-labelledby="post-comments-heading" className="min-w-0 rounded-xl border border-line bg-panel">
-      <div className="space-y-3 border-b border-line p-4">
-        <h2 id="post-comments-heading" className="text-base font-semibold">
+    <Card asChild>
+      <section aria-labelledby="post-comments-heading">
+        <CardTitle id="post-comments-heading" ref={headingRef} tabIndex={-1} className="mb-3">
           Comments
-        </h2>
+        </CardTitle>
         <ToggleGroup
+          variant="chips"
           aria-label="Filter comments"
           value={filter}
           onValueChange={(value) => setFilter(value as CommentFilter)}
-          className="flex-wrap bg-transparent p-0"
           data-testid="comment-filters"
         >
           {COMMENT_FILTERS.map((option) => (
-            <ToggleGroupItem
-              key={option.value}
-              value={option.value}
-              // The segment's own sizes (32 px, 40 px on touch); the chip look moves to `variant="chips"` in UI-039.
-              className="flex-none rounded-full border border-line bg-field px-3 py-1 text-xs data-[state=on]:border-brand-line data-[state=on]:bg-brand-soft"
-            >
+            <ToggleGroupItem key={option.value} value={option.value}>
               {option.label}
+              {option.value === "needs_reply" && (post.needs_reply_count ?? 0) > 0 ? (
+                <span className="ml-1 tabular-nums" data-testid="needs-reply-chip-count">
+                  {formatCount(post.needs_reply_count ?? 0)}
+                </span>
+              ) : null}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
-      </div>
-      {missing && prepared ? (
-        <div role="status" className="space-y-1 border-b border-line bg-warning-soft px-4 py-3 text-sm" data-testid="prepared-missing">
-          <p className="text-warning">
-            The comment Ask Social Hood prepared a reply for isn&apos;t among this post&apos;s latest comments. It may
-            have been deleted.
-          </p>
-          <p className="break-words whitespace-pre-wrap text-fg-secondary">{prepared.text}</p>
-        </div>
-      ) : null}
-      {content}
-    </section>
+        {missing && prepared ? (
+          <Alert tone="warning" icon={<AlertTriangle />} className="mt-4" data-testid="prepared-missing">
+            <AlertDescription>
+              <p>
+                The comment Ask Social Hood prepared a reply for isn&apos;t among this post&apos;s latest comments. It
+                may have been deleted.
+              </p>
+              <p className="mt-1 break-words whitespace-pre-wrap text-fg-secondary">{prepared.text}</p>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        <CardBleed className="mt-4 border-t border-line">{content}</CardBleed>
+      </section>
+    </Card>
   );
 }
 

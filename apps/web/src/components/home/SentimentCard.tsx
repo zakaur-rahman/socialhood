@@ -1,4 +1,5 @@
 import { SentimentBar } from "@/components/comments/SentimentBar";
+import { Card, CardTitle } from "@/components/ui/card";
 import type { SentimentSplit } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
@@ -70,12 +71,12 @@ export function SentimentCard({
   within: string;
 }) {
   return (
-    <section aria-labelledby="home-sentiment" className="flex min-w-0 flex-col gap-5 rounded-xl border border-line bg-panel p-4">
-      <h2 id="home-sentiment" className="text-base font-semibold">
-        Sentiment, {period}
-      </h2>
-      <SplitRow title="Messages" noun="messages" split={messages} within={within} />
-      <SplitRow title="Comments" noun="comments" split={comments} within={within} />
-    </section>
+    <Card asChild className="flex flex-col gap-5">
+      <section aria-labelledby="home-sentiment">
+        <CardTitle id="home-sentiment">Sentiment, {period}</CardTitle>
+        <SplitRow title="Messages" noun="messages" split={messages} within={within} />
+        <SplitRow title="Comments" noun="comments" split={comments} within={within} />
+      </section>
+    </Card>
   );
 }

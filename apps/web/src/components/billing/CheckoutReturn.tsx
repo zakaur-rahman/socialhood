@@ -3,7 +3,7 @@
 import { CircleCheck, Clock, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import type { BillingState } from "@/lib/api/types";
 import { canCheckout } from "@/lib/billing/plan";
 import { PLAN_NAME, billingCopy } from "@/lib/copy";
@@ -59,31 +59,13 @@ export function CheckoutReturn({
   const body = phase === "waiting" ? billingCopy.confirmingBody : phase === "confirmed" ? billingCopy.confirmedBody : null;
   const Icon = phase === "waiting" ? LoaderCircle : phase === "confirmed" ? CircleCheck : Clock;
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      className={cn(
-        "mb-6 flex flex-wrap items-start gap-3 rounded-xl border p-4",
-        phase === "confirmed" ? "border-success/40 bg-success-soft" : "border-brand-line bg-brand-soft",
-      )}
+    <Alert
+      tone={phase === "confirmed" ? "success" : "brand"}
+      icon={<Icon className={cn(phase === "waiting" && "motion-safe:animate-spin")} />}
+      action={phase === "waiting" ? undefined : <AlertAction onClick={onDone}>Done</AlertAction>}
     >
-      <Icon
-        className={cn(
-          "mt-0.5 size-5 shrink-0",
-          phase === "waiting" && "motion-safe:animate-spin",
-          phase === "confirmed" ? "text-success" : "text-brand-fg",
-        )}
-        aria-hidden
-      />
-      <div className="min-w-0 flex-1 basis-60">
-        <p className="text-sm font-semibold">{title}</p>
-        {body ? <p className="text-sm text-fg-secondary">{body}</p> : null}
-      </div>
-      {phase === "waiting" ? null : (
-        <Button variant="ghost" onClick={onDone}>
-          Done
-        </Button>
-      )}
-    </div>
+      <AlertTitle>{title}</AlertTitle>
+      {body ? <AlertDescription>{body}</AlertDescription> : null}
+    </Alert>
   );
 }

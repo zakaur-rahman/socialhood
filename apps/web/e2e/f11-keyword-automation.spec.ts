@@ -21,7 +21,7 @@ test.describe("F-11 create a keyword automation", () => {
     await expect(page.getByTestId("save-status")).toHaveText("Saved");
 
     const when = page.getByRole("region", { name: /^When/ });
-    await expect(when.getByRole("radio", { name: "DM keyword" })).toBeChecked();
+    await expect(when.getByRole("radio", { name: "Instagram DM keyword" })).toBeChecked();
     const keywords = page.getByRole("region", { name: /^Keywords/ }).getByRole("list", { name: "Keywords" });
     await expect(keywords).toContainText("catalogue");
     await expect(keywords).toContainText("catalog");
@@ -51,7 +51,7 @@ test.describe("F-11 create a keyword automation", () => {
     await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
 
     // The list shows it active, with its keywords and no runs yet.
-    await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Automations" }).click();
+    await page.getByRole("main").getByRole("link", { name: "Automations", exact: true }).click();
     const row = page.getByRole("listitem").filter({ has: page.getByRole("switch", { name: "Active: Catalogue by DM" }) });
     await expect(row.getByRole("switch", { name: "Active: Catalogue by DM" })).toBeChecked();
     await expect(row).toContainText("catalogue");
@@ -64,10 +64,11 @@ test.describe("F-11 create a keyword automation", () => {
     await page.getByRole("list", { name: "Conversations" }).getByRole("link").filter({ hasText: "Here's our latest catalogue." }).click();
     const log = page.getByRole("log", { name: /^Messages with / });
     await expect(log.getByText(question)).toBeVisible();
-    // The bubble's label is C-063's "AI Assisted" until UI-050 applies D-07 ("Automation · {name}");
-    // UI-050 asserts the label here again.
+    // D-07: the bubble's label is "Automation · {name}", never "AI".
     const reply = log.locator("[data-direction='outbound']").filter({ hasText: "Here's our latest catalogue." });
     await expect(reply).toBeVisible();
+    await expect(reply.getByText(/^Automation( · .+)?$/)).toBeVisible();
+    await expect(reply.getByText(/\bAI\b/)).toHaveCount(0);
     await expect(reply.getByRole("img", { name: "Sent" })).toBeVisible();
 
     await page.goto(`/w/${workspace.slug}/automations`);

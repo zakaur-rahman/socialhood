@@ -48,15 +48,18 @@ function handlers({
   accounts = [account()],
   list = rows,
   scheduled = [],
+  counts = { needs_reply: 0, needs_you: 0, unread: 0 },
   onList,
 }: {
   accounts?: SocialAccount[];
   list?: ConversationListItem[];
   scheduled?: ScheduledMessage[];
+  counts?: { needs_reply: number; needs_you: number; unread: number };
   onList?: (call: Call) => void;
 } = {}) {
   return {
     "GET /v1/w/:wid/social-accounts": () => json({ items: accounts }),
+    "GET /v1/w/:wid/conversations/counts": () => json(counts),
     "GET /v1/w/:wid/conversations": (call: Call) => {
       onList?.(call);
       const view = call.url.searchParams.get("view");
@@ -220,19 +223,78 @@ describe("InboxShell list states (§4.7)", () => {
     expect(views).toEqual(["all", "unread"]);
   });
 
-  it("Needs you is a chip; Archived sits behind More", async () => {
+  it("Needs you and Archived are plain chips; there is no More menu (D-15 item 4)", async () => {
     const user = userEvent.setup();
     const views: (string | null)[] = [];
     renderShell({ onList: (call) => views.push(call.url.searchParams.get("view")) });
     await screen.findByText("Kabir Shah");
+    expect(screen.queryByRole("button", { name: /More views/ })).not.toBeInTheDocument();
     await user.click(screen.getByRole("radio", { name: "Needs you" }));
     expect(await screen.findByText('Nothing matches "Needs you" right now.')).toBeInTheDocument();
-    expect(screen.queryByRole("radio", { name: "Archived" })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "More views" }));
-    await user.click(await screen.findByRole("menuitemradio", { name: "Archived" }));
+    await user.click(screen.getByRole("radio", { name: "Archived" }));
     expect(await screen.findByText('Nothing matches "Archived" right now.')).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "More views: Archived" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Archived" })).toHaveAttribute("aria-checked", "true");
     expect(views).toEqual(["all", "needs_you", "archived"]);
+  });
+
+  // UI-052: the counts query, on the two chips that mean "waiting on someone".
+  it("Needs reply and Needs you carry their counts in the name; the other chips don't", async () => {
+    renderShell({ counts: { needs_reply: 3, needs_you: 120, unread: 9 } });
+    await screen.findByText("Kabir Shah");
+    const reply = await screen.findByRole("radio", { name: "Needs reply, 3" });
+    expect(within(reply).getByTestId("count-needs_reply")).toHaveTextContent("3");
+    expect(screen.getByRole("radio", { name: "Needs you, 99+" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Unread" })).toBeInTheDocument();
+  });
+
+  it("a zero count shows no badge", async () => {
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    expect(screen.getByRole("radio", { name: "Needs reply" })).toBeInTheDocument();
+    expect(screen.queryByTestId("count-needs_reply")).not.toBeInTheDocument();
+  });
+
+  it("a chip writes the view to the address; All takes it out", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.click(screen.getByRole("radio", { name: "Unread" }));
+    expect(nav.push).toHaveBeenLastCalledWith("/w/maple/inbox?view=unread", { scroll: false });
+    await user.click(within(screen.getByRole("radiogroup", { name: "Views" })).getByRole("radio", { name: "All" }));
+    expect(nav.push).toHaveBeenLastCalledWith("/w/maple/inbox", { scroll: false });
+  });
+
+  it("the view follows the address when it changes (Back, or Home's link with the inbox mounted)", async () => {
+    const views: (string | null)[] = [];
+    const shell = renderShell({ onList: (call) => views.push(call.url.searchParams.get("view")) });
+    await screen.findByText("Kabir Shah");
+    nav.search = "view=needs_reply";
+    shell.rerender(
+      <InboxShell>
+        <div>Thread pane</div>
+      </InboxShell>,
+    );
+    expect(await screen.findByRole("radio", { name: "Needs reply" })).toHaveAttribute("aria-checked", "true");
+    expect(views).toContain("needs_reply");
+    nav.search = "";
+    shell.rerender(
+      <InboxShell>
+        <div>Thread pane</div>
+      </InboxShell>,
+    );
+    const chips = screen.getByRole("radiogroup", { name: "Views" });
+    await waitFor(() => expect(within(chips).getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true"));
+  });
+
+  it("opening a conversation keeps the list's filters in the address, rows included", async () => {
+    setWidth(1440);
+    const user = userEvent.setup();
+    nav.search = "platform=instagram";
+    renderShell();
+    const row = await screen.findByRole("link", { name: /Kabir Shah/ });
+    expect(row).toHaveAttribute("href", "/w/maple/inbox/c2?platform=instagram");
+    await user.keyboard("j");
+    expect(nav.push).toHaveBeenLastCalledWith("/w/maple/inbox/c1?platform=instagram");
   });
 
   it("opens on the view in the link (Home's Needs reply tile)", async () => {
@@ -307,6 +369,59 @@ describe("InboxShell list states (§4.7)", () => {
     await user.click(screen.getByRole("radio", { name: "WhatsApp" }));
     await waitFor(() => expect(platforms).toContain("whatsapp"));
     expect(window.localStorage.getItem("socialhood:inbox-platform:w1")).toBe("whatsapp");
+  });
+
+  it("the platform is in the address, and the address wins over the remembered one", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("socialhood:inbox-platform:w1", "instagram");
+    nav.search = "platform=whatsapp";
+    const platforms: (string | null)[] = [];
+    renderShell({
+      accounts: [account(), account({ id: "a2", platform: "whatsapp", username: null, phone_number: "+91 98765 43210" })],
+      onList: (call) => platforms.push(call.url.searchParams.get("platform")),
+    });
+    await screen.findByRole("radiogroup", { name: "Platform" });
+    await waitFor(() => expect(platforms).toContain("whatsapp"));
+    expect(platforms).not.toContain("instagram");
+    await user.click(within(screen.getByRole("radiogroup", { name: "Platform" })).getByRole("radio", { name: "All" }));
+    expect(nav.push).toHaveBeenLastCalledWith("/w/maple/inbox?platform=all", { scroll: false });
+  });
+
+  // UI-052 (UI-ISS-078): the Scheduled tab honours the platform filter; the account filter can't apply
+  // (a scheduled message carries no account), so it isn't offered there.
+  it("the Scheduled tab shows only the chosen platform's messages, with its count", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("socialhood:inbox-platform:w1", "all"); // an earlier test's choice stays in memory
+    const base: ScheduledMessage = {
+      id: "s1",
+      conversation_id: "c1",
+      text: "Following up on the Aria dress",
+      attachment_asset_ids: [],
+      send_at: "2026-09-28T13:00:00Z",
+      status: "scheduled",
+      error: null,
+      contact: { display_name: "Priya Nair", username: "priya.styles", profile_picture_url: null },
+      platform: "instagram",
+    };
+    const whatsapp: ScheduledMessage = {
+      ...base,
+      id: "s2",
+      platform: "whatsapp",
+      contact: { display_name: "Kabir Shah", username: null, profile_picture_url: null },
+    };
+    renderShell({
+      accounts: [account(), account({ id: "a2", platform: "whatsapp", username: null, phone_number: "+91 98765 43210" })],
+      scheduled: [base, whatsapp],
+    });
+    await screen.findByText("Kabir Shah");
+    await screen.findByRole("tab", { name: "Scheduled, 2 to send" });
+    await user.click(screen.getByRole("radio", { name: "WhatsApp" }));
+    const tab = await screen.findByRole("tab", { name: "Scheduled, 1 to send" });
+    await user.click(tab);
+    const list = await screen.findByRole("list", { name: "Scheduled messages" });
+    expect(within(list).getAllByRole("listitem")).toHaveLength(1);
+    expect(within(list).getByText("Kabir Shah")).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "Platform" })).toBeInTheDocument();
   });
 
   // UI-031: the search is the SearchInput primitive; Esc empties it before anything else.
@@ -413,5 +528,90 @@ describe("keyboard shortcuts (FR-INB-12)", () => {
     expect(pane("details")).toBeNull();
     // Remembered per device (C-063). Last in the file: the choice also stays in memory.
     expect(window.localStorage.getItem("socialhood:inbox-details")).toBe("0");
+  });
+});
+
+// UI-053 (D-14, WCAG 2.1.4): the single-key shortcuts can be turned off, per device, from the Keyboard
+// shortcuts dialog. The setting is read first from localStorage, so each test sets it explicitly (a value
+// written in one test also stays in memory).
+describe("single-key shortcuts switch (D-14)", () => {
+  beforeEach(() => {
+    setWidth(1440);
+    window.localStorage.setItem("socialhood:inbox-shortcuts", "1");
+    window.localStorage.setItem("socialhood:inbox-details", "1");
+  });
+
+  it("? opens the Keyboard shortcuts dialog, which lists the keys and holds the switch (on by default)", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.keyboard("?");
+    const dialog = await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    const keys = dialog.querySelectorAll("kbd");
+    expect(Array.from(keys).map((key) => key.textContent)).toEqual(["j", "k", "/", "e", "u", "?", "Esc"]);
+    expect(within(dialog).getByRole("switch", { name: "Single-key shortcuts" })).toBeChecked();
+  });
+
+  it("the list header's keyboard button opens it, and Esc returns focus to the button", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    const trigger = screen.getByRole("button", { name: "Keyboard shortcuts" });
+    await user.click(trigger);
+    await screen.findByRole("dialog", { name: "Keyboard shortcuts" });
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("off: j, k, e, u, / and ? do nothing; the choice is saved on the device", async () => {
+    const user = userEvent.setup();
+    nav.params = { id: "c1" };
+    const { calls } = renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+    await user.click(await screen.findByRole("switch", { name: "Single-key shortcuts" }));
+    expect(window.localStorage.getItem("socialhood:inbox-shortcuts")).toBe("0");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+
+    await user.keyboard("jkeu/?");
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(calls.some((c) => c.method === "PATCH" || c.path.endsWith("/unread"))).toBe(false);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("searchbox")).not.toHaveFocus();
+
+    // Esc is not a character key: it still closes the details panel.
+    expect(pane("details")).not.toBeNull();
+    await user.keyboard("{Escape}");
+    expect(pane("details")).toBeNull();
+  });
+
+  it("a stored off keeps them off on load; turning it back on restores them", async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem("socialhood:inbox-shortcuts", "0");
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.keyboard("j");
+    expect(nav.push).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
+    const toggle = await screen.findByRole("switch", { name: "Single-key shortcuts" });
+    expect(toggle).not.toBeChecked();
+    await user.click(toggle);
+    expect(window.localStorage.getItem("socialhood:inbox-shortcuts")).toBe("1");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await user.keyboard("j");
+    expect(nav.push).toHaveBeenLastCalledWith("/w/maple/inbox/c1");
+  });
+
+  it("shortcuts with a modifier are left alone", async () => {
+    const user = userEvent.setup();
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    await user.keyboard("{Control>}j{/Control}");
+    expect(nav.push).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

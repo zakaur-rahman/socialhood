@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
@@ -6,6 +6,7 @@ import type { ChecklistStep, Overview, PriorityConversation, SentimentSplit } fr
 import { dayKey } from "@/lib/tz";
 import { json, knowledgeSource, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
+import { resetAllSet } from "./checklist-state";
 import { HomeScreen } from "./HomeScreen";
 import { addDays } from "./range";
 
@@ -254,6 +255,7 @@ function overviewCalls(calls: Call[]): URLSearchParams[] {
 
 beforeEach(() => {
   window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 
 describe("Home (UX-SCR-01, FR-HOME-01)", () => {
@@ -379,6 +381,31 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
     expect(screen.queryByLabelText("Account health")).not.toBeInTheDocument();
     expect(screen.getByTestId("queue-empty")).toHaveTextContent("Nothing is waiting.");
     expect(screen.getByRole("link", { name: /Open Inbox/ })).toHaveTextContent("Open Inbox (0)");
+  });
+
+  it("a finished checklist says You're all set for the session, then is gone in the next (UI-058)", async () => {
+    const allDone = (): ChecklistStep[] => steps(true).map((step) => ({ ...step, done: true }));
+    const done = { dismissed: false, completed: 4, steps: allDone() };
+    const first = setup({ overview: empty({ checklist: done }) });
+    expect(await screen.findByRole("region", { name: "You're all set" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("socialhood:checklist-all-set:w1")).toBe("1");
+    expect(window.sessionStorage.getItem("socialhood:checklist-all-set:w1")).toBe("1");
+    first.unmount();
+
+    // The same session still shows it
+    const again = setup({ overview: empty({ checklist: done }) });
+    expect(await screen.findByRole("region", { name: "You're all set" })).toBeInTheDocument();
+    again.unmount();
+
+    // A new session: the tab's flag is gone, the device remembers it was shown
+    window.sessionStorage.clear();
+    setup({ overview: empty({ checklist: done }) });
+    await screen.findAllByTestId("metric-tile");
+    expect(screen.queryByRole("region", { name: "You're all set" })).not.toBeInTheDocument();
+
+    // Show setup checklist (resetAllSet) brings it back
+    act(() => resetAllSet("w1"));
+    expect(await screen.findByRole("region", { name: "You're all set" })).toBeInTheDocument();
   });
 
   it("connected but quiet: zeros where there is a count, a dash where there is nothing to divide", async () => {

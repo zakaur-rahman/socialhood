@@ -107,17 +107,24 @@ describe("ConversationRow (UX-INB-04)", () => {
     expect(screen.queryByText(/Lead/)).not.toBeInTheDocument();
   });
 
-  it("AI Auto when the AI replies on its own", async () => {
+  it("shows at most two badges, the most urgent first (D-07)", () => {
+    renderRow({ needs_human: true, needs_human_reason: "refund", signal: "complaint", lead_score: 72 });
+    const keys = Array.from(document.querySelectorAll("[data-badge]")).map((el) => el.getAttribute("data-badge"));
+    expect(keys).toEqual(["needs_you", "complaint"]);
+  });
+
+  it("Auto replies (neutral) when the AI replies on its own", async () => {
     const { rerender } = render(
       <ConversationRow item={listItem()} href={"/w/maple/inbox/c1" as Route} selected={false} now={now} aiMode="auto" />,
       { wrapper },
     );
-    const auto = screen.getByText("AI Auto");
+    const auto = screen.getByText("Auto replies");
     expect(auto).not.toHaveAttribute("title");
+    expect(auto).toHaveAttribute("data-tone", "neutral");
     await userEvent.hover(auto);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("The AI replies on its own in this conversation");
     rerender(<ConversationRow item={listItem()} href={"/w/maple/inbox/c1" as Route} selected={false} now={now} aiMode="suggest" />);
-    expect(screen.queryByText("AI Auto")).not.toBeInTheDocument();
+    expect(screen.queryByText("Auto replies")).not.toBeInTheDocument();
   });
 
   it("prefixes outbound previews", () => {
@@ -144,7 +151,7 @@ describe("ConversationRow (UX-INB-04)", () => {
         now={now}
       />,
     );
-    expect(screen.getByText("Auto: Here's the link")).toBeInTheDocument();
+    expect(screen.getByText("Automation: Here's the link")).toBeInTheDocument();
   });
 
   it("labels attachments with an icon and a word", () => {

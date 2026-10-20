@@ -4,8 +4,12 @@ import { Copy, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { ErrorState } from "@/components/states/ErrorState";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -20,7 +24,9 @@ import { WEEKDAYS_LONG, WEEKDAYS_SHORT, zoneLabel } from "@/lib/schedule/dates";
 import { formatDayTime } from "@/lib/tz";
 import { EYEBROW } from "@/styles/tokens";
 
-import { useSchedule } from "./schedule-context";
+import { useOptionalSchedule } from "./schedule-context";
+
+export type TimesBasics = { wid: string; timeZone: string; now: Date };
 
 /** Times per weekday, "HH:MM", sorted: 0 = Monday … 6 = Sunday. */
 export type WeekTimes = string[][];
@@ -51,17 +57,27 @@ export function PostingTimesDrawer({
   open,
   onOpenChange,
   accounts,
+  basics,
+  onCloseAutoFocus,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   accounts: SocialAccount[];
+  /** Outside the Schedule page (the composer opens this drawer in place), the workspace and clock. */
+  basics?: TimesBasics;
+  /** Where focus goes when it closes (Radix returns it to the trigger by default). */
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
+  const fromPage = useOptionalSchedule();
+  const context = basics ?? fromPage;
+  if (!context) throw new Error("PostingTimesDrawer needs the Schedule page or `basics`");
   const [accountId, setAccountId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, WeekTimes>>({});
   const current = accounts.find((a) => a.id === accountId) ?? accounts[0];
   const times = (account: SocialAccount) => (
     <AccountTimes
       key={account.id}
+      basics={context}
       account={account}
       draft={drafts[account.id]}
       onDraftChange={(week) => setDrafts((all) => ({ ...all, [account.id]: week }))}
@@ -78,7 +94,7 @@ export function PostingTimesDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {/* A side panel: the full screen below 768 px, 420 px beside the page from there. */}
-      <SheetContent side="right" size="panel" className="gap-0">
+      <SheetContent side="right" size="panel" className="gap-0" onCloseAutoFocus={onCloseAutoFocus}>
         <SheetHeader className="border-b border-line">
           <SheetTitle>Posting times</SheetTitle>
           <SheetDescription>
@@ -109,24 +125,25 @@ export function PostingTimesDrawer({
 }
 
 function AccountTimes({
+  basics: schedule,
   account,
   draft,
   onDraftChange,
   onSaved,
 }: {
+  basics: TimesBasics;
   account: SocialAccount;
   draft?: WeekTimes;
   onDraftChange: (week: WeekTimes) => void;
   onSaved: () => void;
 }) {
-  const schedule = useSchedule();
   const slots = usePostingSlots(schedule.wid, account.id);
   const save = useReplacePostingSlots(schedule.wid);
   const [error, setError] = useState<string | null>(null);
 
   if (slots.isPending) {
     return (
-      <div className="space-y-2 p-4" aria-busy="true" aria-label="Loading posting times">
+      <div role="status" className="space-y-2 p-4" aria-busy="true" aria-label="Loading posting times">
         {Array.from({ length: 7 }, (_, i) => (
           <Skeleton key={i} className="h-10 w-full" />
         ))}
@@ -135,11 +152,8 @@ function AccountTimes({
   }
   if (slots.isError) {
     return (
-      <div className="space-y-2 p-4">
-        <p className="text-sm text-fg-secondary">{errorMessage(slots.error)}</p>
-        <Button variant="secondary" onClick={() => void slots.refetch()}>
-          Try again
-        </Button>
+      <div className="p-4">
+        <ErrorState size="compact" error={slots.error} onRetry={() => void slots.refetch()} />
       </div>
     );
   }
@@ -181,7 +195,7 @@ function AccountTimes({
             />
           ))}
         </ul>
-        <div className="mt-4 rounded-lg border border-line bg-field p-3">
+        <CardInset padding="compact" className="mt-4">
           <p className={EYEBROW}>Next free times</p>
           <p className="mt-1 text-sm tabular-nums" data-testid="next-free-times">
             {slots.data.next_free_at.length > 0
@@ -189,22 +203,18 @@ function AccountTimes({
               : "No free times yet. Add a posting time."}
           </p>
           {dirty ? <p className="mt-1 text-xs text-fg-secondary">Save to see the times your changes give.</p> : null}
-        </div>
+        </CardInset>
       </div>
       <SheetFooter className="border-t border-line">
-        {error ? (
-          <p role="alert" className="text-xs text-danger-fg">
-            {error}
-          </p>
-        ) : null}
+        {error ? <Alert tone="danger">{error}</Alert> : null}
         <div className="flex justify-end gap-2">
           {dirty ? (
             <Button variant="ghost" onClick={() => update(saved)} disabled={save.isPending}>
               Discard changes
             </Button>
           ) : null}
-          <Button onClick={submit} disabled={!dirty || save.isPending}>
-            {save.isPending ? "Saving…" : "Save posting times"}
+          <Button onClick={submit} disabled={!dirty} loading={save.isPending}>
+            Save posting times
           </Button>
         </div>
       </SheetFooter>
@@ -260,24 +270,23 @@ function DayRow({
             ))}
           </ul>
           <div className="flex items-center gap-1.5">
-            <label htmlFor={inputId} className="sr-only">
-              New time on {name}
-            </label>
             {/* The time field and its two buttons share the `default` height: 32 px, 40 px on touch. */}
-            <Input
-              id={inputId}
-              type="time"
-              step={60}
-              value={adding}
-              onChange={(event) => setAdding(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  add();
-                }
-              }}
-              className="w-auto tabular-nums"
-            />
+            <Field id={inputId} className="w-auto">
+              <FieldLabel className="sr-only">New time on {name}</FieldLabel>
+              <Input
+                type="time"
+                step={60}
+                value={adding}
+                onChange={(event) => setAdding(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    add();
+                  }
+                }}
+                className="w-auto tabular-nums"
+              />
+            </Field>
             <Button variant="secondary" onClick={add} disabled={!adding} aria-label={`Add time on ${name}`}>
               <Plus aria-hidden /> Add
             </Button>
@@ -303,15 +312,15 @@ function DayRow({
                 <div className="grid gap-1">
                   {WEEKDAYS_LONG.map((other, index) =>
                     index === weekday ? null : (
-                      <label key={other} className="flex min-h-9 items-center gap-2 text-sm">
+                      <Field key={other} orientation="horizontal" className="min-h-9 gap-2">
                         <Checkbox
                           checked={copyTo.includes(index)}
                           onCheckedChange={(value) =>
                             setCopyTo((list) => (value === true ? [...list, index] : list.filter((d) => d !== index)))
                           }
                         />
-                        {other}
-                      </label>
+                        <FieldLabel className="font-normal">{other}</FieldLabel>
+                      </Field>
                     ),
                   )}
                 </div>

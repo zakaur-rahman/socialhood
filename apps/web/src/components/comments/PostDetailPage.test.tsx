@@ -258,6 +258,7 @@ describe("Comment list and filter chips (UX-SCR-05)", () => {
     const chips = screen.getByRole("radiogroup", { name: "Filter comments" });
     expect(within(chips).getAllByRole("radio").map((r) => r.textContent)).toEqual([
       "All",
+      "Needs reply",
       "Positive",
       "Neutral",
       "Negative",
@@ -283,6 +284,23 @@ describe("Comment list and filter chips (UX-SCR-05)", () => {
 
     const asked = calls.filter((c) => c.path.endsWith("/posts/po1/comments")).map((c) => c.url.searchParams.get("filter"));
     expect(asked).toEqual(["all", "negative", "spam", "buying"]);
+  });
+
+  it("the Needs reply chip shows the post's count and asks the API for that filter (D-11)", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ detail: postDetail({ needs_reply_count: 2 }) });
+    await screen.findByRole("list", { name: "Comments" });
+    const chips = screen.getByRole("radiogroup", { name: "Filter comments" });
+    const chip = within(chips).getByRole("radio", { name: /Needs reply/ });
+    expect(chip).toHaveTextContent("Needs reply2");
+    expect(within(chips).getByRole("radio", { name: "All" })).toHaveAttribute("aria-checked", "true");
+
+    await user.click(chip);
+    await waitFor(() =>
+      expect(
+        calls.filter((c) => c.path.endsWith("/posts/po1/comments")).map((c) => c.url.searchParams.get("filter")),
+      ).toContain("needs_reply"),
+    );
   });
 
   it("new comments and changes arrive live (comment.created, comment.updated)", async () => {
@@ -450,6 +468,8 @@ describe("Comment actions (FR-CMT-04)", () => {
     expect(deletes()[0].path).toBe("/v1/w/w1/comments/cm-bot");
     await waitFor(() => expect(screen.queryByRole("listitem", { name: "Comment by @free.followers" })).not.toBeInTheDocument());
     expect(toast.success).toHaveBeenCalledWith("Comment deleted");
+    // The row and its dialog are gone: focus lands on the list's heading, not on <body> (UI-066).
+    await waitFor(() => expect(document.getElementById("post-comments-heading")).toHaveFocus());
   });
 
   it("agents can reply, DM and hide, but not delete", async () => {
@@ -537,6 +557,15 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     const layout = await screen.findByTestId("post-detail");
     expect(layout).toHaveClass("grid", "lg:grid-cols-[340px_minmax(0,1fr)]");
     expect(layout.className).not.toMatch(/(^|\s)grid-cols-/);
+    // UI-056: post, then comments, then the insights; from 1024 px the comments span both rows
+    // of the right column.
+    const [side, comments, insights] = Array.from(layout.children);
+    expect(side).toBe(screen.getByTestId("post-side"));
+    expect(insights).toBe(screen.getByTestId("post-insights"));
+    expect(comments).toContainElement(await screen.findByRole("list", { name: "Comments" }));
+    expect(comments).toHaveClass("lg:col-start-2", "lg:row-span-2", "lg:row-start-1");
+    expect(side).toContainElement(screen.getByRole("region", { name: "Post" }));
+    expect(insights).toContainElement(screen.getByRole("region", { name: "Summary" }));
     // the thumbnail is small beside the caption on phones and full width in the column on desktop
     const thumb = screen.getByRole("region", { name: "Post" }).querySelector(".aspect-square");
     expect(thumb).toHaveClass("w-24", "lg:w-full");
@@ -546,11 +575,12 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     setup();
     await screen.findByRole("list", { name: "Comments" });
     expect(screen.getByTestId("comment-filters")).toHaveClass("flex-wrap");
-    // UI-038: the 40 px comes from the primitives on coarse pointers (DESIGN_SYSTEM §8.4), not from a
-    // `min-h-10 md:min-h-*` patch keyed to the viewport: the segment's 32 px and the `sm` Button's 28 px
-    // stay with a mouse, at any width.
+    // UI-039: the filters are `ToggleGroup variant="chips"`. The 40 px comes from the primitives on coarse
+    // pointers (DESIGN_SYSTEM §8.4), not from a `min-h-10 md:min-h-*` patch keyed to the viewport: the chip's
+    // 28 px and the `sm` Button's 28 px stay with a mouse, at any width.
+    expect(screen.getByTestId("comment-filters")).toHaveAttribute("data-variant", "chips");
     for (const chip of within(screen.getByTestId("comment-filters")).getAllByRole("radio")) {
-      expect(chip).toHaveClass("min-h-8", "pointer-coarse:min-h-10");
+      expect(chip).toHaveClass("h-7", "rounded-full", "pointer-coarse:min-h-10");
       expect(chip.className).not.toMatch(/(^|\s)(min-h-10|md:min-h-8)(\s|$)/);
     }
     for (const button of within(row("@kabir")).getAllByRole("button")) {

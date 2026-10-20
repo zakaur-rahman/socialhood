@@ -1,7 +1,8 @@
-import { AlertTriangle, ChevronRight } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
+import { Alert, AlertAction } from "@/components/ui/alert";
 import type { AccountAttention } from "@/lib/api/types";
 
 function problem(account: AccountAttention): string {
@@ -13,7 +14,8 @@ function problem(account: AccountAttention): string {
 
 /**
  * UX-SCR-01: account health, only when an account needs attention (needs reconnecting or in
- * error). Admins go to Connections to fix it; agents are told who can.
+ * error). An urgent Alert (a state to act on, UX-SH-04). Admins go to Connections to fix it;
+ * agents are told who can.
  */
 export function AccountHealth({
   accounts,
@@ -26,25 +28,27 @@ export function AccountHealth({
 }) {
   if (accounts.length === 0) return null;
   return (
-    <section aria-label="Account health" className="rounded-xl border border-warning/40 bg-panel p-4">
-      <ul className="space-y-2">
+    <Alert
+      tone="warning"
+      variant="outline"
+      urgent
+      aria-label="Account health"
+      icon={<AlertTriangle />}
+      action={
+        canManage ? (
+          <AlertAction asChild>
+            <Link href={`/w/${slug}/settings/connections` as Route}>Open Connections</Link>
+          </AlertAction>
+        ) : undefined
+      }
+    >
+      <ul className="space-y-1">
         {accounts.map((account) => (
-          <li key={account.id} data-testid="account-attention" className="flex items-start gap-3 text-sm">
-            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
-            <span className="flex-1">
-              {problem(account)}.{canManage ? null : <span className="text-fg-secondary"> Ask an admin to fix it.</span>}
-            </span>
+          <li key={account.id} data-testid="account-attention">
+            {problem(account)}.{canManage ? null : <span className="text-fg-secondary"> Ask an admin to fix it.</span>}
           </li>
         ))}
       </ul>
-      {canManage ? (
-        <Link
-          href={`/w/${slug}/settings/connections` as Route}
-          className="mt-3 inline-flex min-h-8 items-center gap-1 text-sm font-medium text-brand-fg hover:underline pointer-coarse:min-h-10"
-        >
-          Open Connections <ChevronRight className="size-4" aria-hidden />
-        </Link>
-      ) : null}
-    </section>
+    </Alert>
   );
 }

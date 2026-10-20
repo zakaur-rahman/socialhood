@@ -9,7 +9,9 @@ import { ToggleGroup as ToggleGroupPrimitive } from "radix-ui"
  * The segment look, shared by ToggleGroupItem and TabsTrigger, so the two read as one control
  * (DESIGN_SYSTEM §8.2–§8.4):
  *
- * - the chosen segment is `bg-raised` with `brand-fg` text (no shadow: it does nothing on dark);
+ * - the chosen segment is `bg-raised` with `brand-fg` text (no shadow: it does nothing on dark). It
+ *   is styled on `aria-checked` / `aria-pressed`, not Radix's `data-state`: a Tooltip (or any
+ *   `asChild` trigger) around an item overwrites `data-state` with its own open/closed value;
  * - focus is the global outline, drawn inset because the track clips (§8.3);
  * - labels stay on one line ("30 days", "Action needed");
  * - heights follow the control ladder on fine pointers (`sm` 28, `default` 32, `xl` 40) and are at
@@ -48,7 +50,7 @@ type ToggleGroupVariant = "segmented" | "chips"
  * pointers), selected `brand-soft` with `brand-fg` text and a `brand-line` edge. They ignore `size`.
  */
 const chipClass =
-  "inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-line px-3 text-xs font-medium whitespace-nowrap text-fg-secondary transition-[color,background-color,border-color] duration-fast ease-standard hover:bg-hover hover:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10 data-[state=on]:border-brand-line data-[state=on]:bg-brand-soft data-[state=on]:text-brand-fg"
+  "inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-line px-3 text-xs font-medium whitespace-nowrap text-fg-secondary transition-[color,background-color,border-color] duration-fast ease-standard hover:bg-hover hover:text-fg focus-visible:-outline-offset-2 disabled:pointer-events-none disabled:opacity-50 pointer-coarse:min-h-10 aria-checked:border-brand-line aria-pressed:border-brand-line aria-checked:bg-brand-soft aria-pressed:bg-brand-soft aria-checked:text-brand-fg aria-pressed:text-brand-fg"
 
 const ToggleGroupContext = React.createContext<{ variant: ToggleGroupVariant; size: SegmentSize }>({
   variant: "segmented",
@@ -123,7 +125,7 @@ function ToggleGroupItem({ className, ...props }: React.ComponentProps<typeof To
       className={cn(
         variant === "chips"
           ? chipClass
-          : cn(segmentVariants({ size }), "data-[state=on]:bg-raised data-[state=on]:text-brand-fg"),
+          : cn(segmentVariants({ size }), "aria-checked:bg-raised aria-checked:text-brand-fg aria-pressed:bg-raised aria-pressed:text-brand-fg"),
         className
       )}
       {...props}

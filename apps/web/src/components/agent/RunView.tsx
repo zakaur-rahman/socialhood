@@ -1,15 +1,16 @@
 "use client";
 
 import { AlertTriangle, Ban, ChevronRight, CircleSlash, Copy, CreditCard, RotateCw, Sparkles } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { BILLING_HREF } from "@/components/shell/nav";
+import { CREDITS_EXHAUSTED } from "@/components/billing/upgrade-requests";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { answerToPlainText } from "@/lib/agent/answer";
 import { creditsText, followUpsFor, isActive, runOutcome, workedFor, type RunOutcome } from "@/lib/agent/format";
+import { useUpgradeDialog } from "@/lib/api/provider";
 import { useAgentRun } from "@/lib/api/queries";
 import type { AgentRun, AgentRunDetail, Role } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
@@ -53,13 +54,12 @@ export function RunView({ run: listed, context, latest = false }: { run: AgentRu
       <div className="flex items-end justify-end gap-2">
         <time
           dateTime={run.created_at}
-          className="mb-2 shrink-0 text-[11px] text-fg-secondary opacity-0 group-focus-within/run:opacity-100 group-hover/run:opacity-100 motion-safe:transition-opacity"
+          className="mb-2 shrink-0 text-2xs text-fg-secondary"
         >
           {asked}
         </time>
         <div
-          title={asked}
-          className="max-w-[80%] rounded-2xl bg-raised px-4 py-2.5 text-[15px] leading-7 break-words whitespace-pre-wrap text-fg"
+          className="max-w-[80%] rounded-2xl bg-raised px-4 py-2.5 text-md break-words whitespace-pre-wrap text-fg"
         >
           {run.request}
         </div>
@@ -113,9 +113,9 @@ function Finished({
         </>
       ) : !outcome ? (
         // Final, but the answer is still on its way (agent.completed is followed by a fetch).
-        <div aria-busy="true" aria-label="Getting the answer" className="space-y-2 pt-1">
-          <Skeleton className="h-3 w-5/6 bg-raised" />
-          <Skeleton className="h-3 w-2/3 bg-raised" />
+        <div role="status" aria-busy="true" aria-label="Getting the answer" className="space-y-2 pt-1">
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-2/3" />
         </div>
       ) : null}
       {run.action_cards.length > 0 ? (
@@ -141,7 +141,7 @@ function Finished({
                 type="button"
                 disabled={context.busy}
                 onClick={() => context.onAsk?.(prompt)}
-                className="min-h-10 rounded-full border border-line px-3.5 text-left text-sm text-fg-secondary hover:bg-white/5 hover:text-fg disabled:opacity-50 md:min-h-8"
+                className="min-h-8 rounded-full border border-line px-3.5 text-left text-sm text-fg-secondary hover:bg-hover hover:text-fg disabled:opacity-50 motion-safe:transition-[color,background-color] pointer-coarse:min-h-10"
               >
                 {prompt}
               </button>
@@ -178,7 +178,7 @@ function AnswerActions({ answer, credits, alwaysVisible }: { answer: string; cre
       <Button
         variant="ghost"
         size="sm"
-        className="min-h-10 px-2 text-fg-secondary hover:text-fg md:min-h-7"
+        className="px-2 text-fg-secondary"
         aria-label="Copy answer"
         onClick={() => void copy()}
       >
@@ -190,50 +190,36 @@ function AnswerActions({ answer, credits, alwaysVisible }: { answer: string; cre
 }
 
 const OUTCOME_ICON = { quota: CreditCard, failed: AlertTriangle, cancelled: CircleSlash, expired: Ban } as const;
-const OUTCOME_TONE = {
-  quota: "bg-warning/10 text-warning",
-  failed: "bg-danger/10 text-danger-fg",
-  cancelled: "bg-white/5 text-fg-secondary",
-  expired: "bg-white/5 text-fg-secondary",
-} as const;
+const OUTCOME_TONE = { quota: "warning", failed: "danger", cancelled: "neutral", expired: "neutral" } as const;
 
-/** A compact inline notice: what happened, in one or two lines, with Try again or Upgrade. */
+/**
+ * An inline notice, drawn with Alert: what happened, with Try again or Upgrade. Out of credits and
+ * failures are announced at once (`alert`); a cancelled or expired run is a polite `status`.
+ */
 function OutcomeNotice({ outcome, run, context }: { outcome: RunOutcome; run: AgentRun; context: RunContext }) {
   const Icon = OUTCOME_ICON[outcome.kind];
   const canAskAgain = outcome.kind !== "quota" && context.onAsk;
+  const upgrade = outcome.kind === "quota" && context.role !== "agent";
+  const { open: openUpgrade } = useUpgradeDialog();
   return (
-    <div
-      role={outcome.kind === "cancelled" ? "status" : "alert"}
-      className={cn("flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg px-3 py-2 text-sm", OUTCOME_TONE[outcome.kind])}
+    <Alert
+      tone={OUTCOME_TONE[outcome.kind]}
+      urgent={outcome.kind === "quota"}
+      icon={<Icon />}
       data-outcome={outcome.kind}
+      action={
+        canAskAgain ? (
+          <AlertAction disabled={context.busy} onClick={() => context.onAsk?.(run.request)}>
+            <RotateCw aria-hidden /> {outcome.kind === "failed" ? "Try again" : "Ask again"}
+          </AlertAction>
+        ) : upgrade ? (
+          <AlertAction onClick={() => openUpgrade(CREDITS_EXHAUSTED)}>Upgrade</AlertAction>
+        ) : undefined
+      }
     >
-      <p className="flex min-w-0 flex-1 basis-56 items-start gap-2">
-        <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
-        <span className="min-w-0">
-          <span className="font-medium">{outcome.title}</span>
-          <span className="text-fg-secondary"> · </span>
-          <span className="text-fg-secondary">{outcome.body}</span>
-        </span>
-      </p>
-      {canAskAgain ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="min-h-10 px-2 text-fg hover:bg-white/10 md:min-h-7"
-          disabled={context.busy}
-          onClick={() => context.onAsk?.(run.request)}
-        >
-          <RotateCw aria-hidden /> {outcome.kind === "failed" ? "Try again" : "Ask again"}
-        </Button>
-      ) : null}
-      {outcome.kind === "quota" && context.role !== "agent" ? (
-        <Button asChild size="sm" className="bg-brand-gradient min-h-10 text-white md:min-h-7">
-          <Link href={BILLING_HREF(context.slug)} onClick={context.onNavigate}>
-            Upgrade
-          </Link>
-        </Button>
-      ) : null}
-    </div>
+      <AlertTitle>{outcome.title}</AlertTitle>
+      <AlertDescription>{outcome.body}</AlertDescription>
+    </Alert>
   );
 }
 
@@ -265,7 +251,7 @@ function StepsDisclosure({
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen(!open)}
-        className="-ml-1 inline-flex min-h-10 items-center gap-1 rounded-md px-1 text-xs text-fg-secondary hover:text-fg md:min-h-6"
+        className="-ml-1 inline-flex min-h-6 items-center gap-1 rounded-md px-1 text-xs text-fg-secondary hover:text-fg pointer-coarse:min-h-10"
         data-testid="steps-toggle"
       >
         {label || "Steps"}
@@ -282,8 +268,8 @@ function StepsDisclosure({
           ) : fetched.isError ? (
             <p className="text-xs text-danger-fg">{errorMessage(fetched.error)}</p>
           ) : (
-            <div aria-busy="true" aria-label="Loading steps">
-              <Skeleton className="h-3 w-1/2 bg-raised" />
+            <div role="status" aria-busy="true" aria-label="Loading steps">
+              <Skeleton className="h-3 w-1/2" />
             </div>
           )}
         </div>

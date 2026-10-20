@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils"
  * sites. Name it with `label` (visually hidden), or with a FieldLabel inside a Field, which also
  * links its descriptions and errors.
  *
- *   <SearchInput label="Search automations" placeholder="Search by name or keyword"
+ *   <SearchInput label="Search automations" placeholder="Name or keyword"
  *     value={text} onChange={(event) => setText(event.target.value)} className="flex-1" />
  */
 

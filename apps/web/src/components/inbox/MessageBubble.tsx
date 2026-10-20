@@ -57,6 +57,8 @@ type Props = {
   reconnectHref?: Route;
   /** An AI auto reply's "why" button, in the "Sent by AI" label row (F-09). */
   aiInfo?: ReactNode;
+  /** The language the analysis found in a customer message (BCP-47), so a screen reader uses its voice. */
+  lang?: string | null;
   /** Under the bubble: the analysis chips of an analysed customer message (FR-AI-02). */
   below?: ReactNode;
 };
@@ -75,6 +77,7 @@ export function MessageBubble({
   onChooseTemplate,
   reconnectHref,
   aiInfo,
+  lang,
   below,
 }: Props) {
   if (message.direction === "system" || message.kind === "system") {
@@ -98,14 +101,15 @@ export function MessageBubble({
     outbound && "rounded-br-md",
     outbound && !failed && !pending && !nativeApp && !sticker && "bg-brand-gradient text-on-brand",
     outbound && nativeApp && !failed && !pending && !sticker && "bg-raised text-fg",
-    pending && !sticker && "bg-brand/60 text-on-brand",
-    pending && "opacity-80",
+    // Sending: the solid brand fill, no dimming (DESIGN_SYSTEM: no opacity on a container); the
+    // spinner in the meta row says it hasn't gone yet.
+    pending && !sticker && "bg-brand-strong text-on-brand",
     failed && "bg-danger-fill text-on-brand",
   );
   // On a coloured bubble, labels are on-brand at full strength: white/75 was 3.46:1 at the gradient's light end.
   const metaClass = outbound && !nativeApp && !sticker ? "text-on-brand" : "text-fg-secondary";
 
-  // Written by the AI (an auto reply) or an automation: "AI Assisted" under the bubble (C-063).
+  // Written by the AI (an auto reply) or an automation, named under the bubble (C-063, D-07).
   const assisted =
     outbound && message.source === "ai_auto"
       ? "Sent by AI: an auto reply"
@@ -114,6 +118,14 @@ export function MessageBubble({
           ? `Sent by an automation: ${message.automation.name}`
           : "Sent by an automation"
         : null;
+  // D-07: "Sent by AI" for an auto reply; "Automation · {name}" for an automation. The API doesn't say
+  // whether an automation step was an AI reply, so "AI" never appears on those.
+  const assistedLabel =
+    message.source === "ai_auto"
+      ? "Sent by AI"
+      : message.automation
+        ? `Automation · ${message.automation.name}`
+        : "Automation";
   const label = nativeApp ? `Sent from ${platformName}` : null;
 
   const statusInfo = outbound && status ? STATUS[status] : undefined;
@@ -127,7 +139,7 @@ export function MessageBubble({
       className={cn(
         "flex items-end gap-2",
         outbound ? "justify-end" : "justify-start",
-        live && "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-150",
+        live && "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-1 motion-safe:duration-normal",
       )}
       data-direction={message.direction}
       data-status={status ?? undefined}
@@ -147,7 +159,13 @@ export function MessageBubble({
           {message.attachments.length > 0 ? (
             <div className="mb-1 flex flex-col gap-1.5">
               {message.attachments.map((attachment) => (
-                <AttachmentView key={attachment.id} attachment={attachment} kind={message.kind} outbound={outbound && !nativeApp} />
+                <AttachmentView
+                  key={attachment.id}
+                  attachment={attachment}
+                  kind={message.kind}
+                  outbound={outbound && !nativeApp}
+                  photoAlt={`Photo ${outbound ? "sent to" : "from"} ${contact.name}, ${formatTime(message.occurred_at, timeZone)}`}
+                />
               ))}
             </div>
           ) : null}
@@ -181,7 +199,7 @@ export function MessageBubble({
           ) : message.kind === "location" && !message.text ? (
             <p>Shared a location</p>
           ) : message.text ? (
-            <p>{message.text}</p>
+            <p lang={!outbound && lang ? lang : undefined}>{message.text}</p>
           ) : null}
           {quickReplies.length > 0 ? (
             // Tap first's button (FR-AUT-21): shown as it was offered; the customer taps it in Instagram.
@@ -205,6 +223,7 @@ export function MessageBubble({
                 "absolute -bottom-3 flex gap-0.5 rounded-full border border-line bg-raised px-1.5 py-0.5 text-xs",
                 outbound ? "right-2" : "left-2",
               )}
+              role="img"
               aria-label={`Reactions: ${reactions.map((r) => r.emoji).join(" ")}`}
             >
               {reactions.map((reaction, i) => (
@@ -232,14 +251,13 @@ export function MessageBubble({
           {assisted ? (
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="ml-1 inline-flex items-center gap-0.5 font-medium text-brand-fg">
+                <span className="ml-1 inline-flex min-w-0 items-center gap-0.5 font-medium text-brand-fg">
                   {message.source === "automation" ? (
                     <Zap className="size-3" aria-hidden />
                   ) : (
                     <Sparkles className="size-3" aria-hidden />
                   )}
-                  <span>AI Assisted</span>
-                  <span className="sr-only"> ({assisted})</span>
+                  <span className="truncate">{assistedLabel}</span>
                 </span>
               </TooltipTrigger>
               <TooltipContent>{assisted}</TooltipContent>

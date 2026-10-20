@@ -1,10 +1,13 @@
 "use client";
 
+import { SECTION_TITLE } from "@/styles/tokens";
 import { ArrowDown, BarChart3, Inbox, MessageSquare, Sparkles, Zap, type LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ErrorState } from "@/components/states/ErrorState";
+import { Alert, AlertAction } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { FLOATING_SURFACE } from "@/components/ui/floating";
 import { Skeleton } from "@/components/ui/skeleton";
 import { threadRunsOldestFirst } from "@/lib/agent/cache";
 import { isActive, SUGGESTED_PROMPTS, type PromptArea } from "@/lib/agent/format";
@@ -152,13 +155,13 @@ export function AskConversation({
     body = <Welcome variant={variant} onPick={send} disabled={ask.isPending || Boolean(credits)} />;
   } else if (runs.isPending) {
     body = (
-      <div className="space-y-6" aria-busy="true" aria-label="Loading the thread">
-        <Skeleton className="ml-auto h-11 w-2/3 rounded-2xl bg-raised" />
+      <div role="status" className="space-y-6" aria-busy="true" aria-label="Loading the thread">
+        <Skeleton className="ml-auto h-11 w-2/3 rounded-2xl" />
         <div className="flex gap-3">
-          <Skeleton className="size-7 shrink-0 rounded-full bg-raised" />
+          <Skeleton className="size-7 shrink-0 rounded-full" />
           <div className="flex-1 space-y-2">
-            <Skeleton className="h-3 w-5/6 bg-raised" />
-            <Skeleton className="h-3 w-2/3 bg-raised" />
+            <Skeleton className="h-3 w-5/6" />
+            <Skeleton className="h-3 w-2/3" />
           </div>
         </div>
       </div>
@@ -166,8 +169,8 @@ export function AskConversation({
   } else if (runs.isError) {
     body = (
       <div className="space-y-2">
-        <ErrorState error={runs.error} onRetry={() => void runs.refetch()} />
-        <div className="flex justify-center">
+        <ErrorState size="compact" error={runs.error} onRetry={() => void runs.refetch()} />
+        <div>
           <Button variant="ghost" size="sm" onClick={() => setThread(wid, null)}>
             Start a new thread
           </Button>
@@ -179,8 +182,8 @@ export function AskConversation({
       <div className="space-y-8">
         {runs.hasNextPage ? (
           <div className="flex justify-center">
-            <Button variant="ghost" size="sm" disabled={runs.isFetchingNextPage} onClick={() => void runs.fetchNextPage()}>
-              {runs.isFetchingNextPage ? "Loading…" : "Show earlier questions"}
+            <Button variant="ghost" size="sm" loading={runs.isFetchingNextPage} onClick={() => void runs.fetchNextPage()}>
+              Show earlier questions
             </Button>
           </div>
         ) : null}
@@ -205,7 +208,8 @@ export function AskConversation({
           onScroll={onScroll}
           role="log"
           aria-label="Conversation with Social Hood"
-          className="min-h-0 flex-1 overflow-y-auto"
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-y-auto focus-visible:-outline-offset-2"
           data-testid="ask-conversation"
         >
           <div ref={content} className={cn(column, "flex min-h-full flex-col py-6")}>
@@ -220,7 +224,12 @@ export function AskConversation({
               setAway(false);
               toBottom(true);
             }}
-            className="absolute bottom-3 left-1/2 inline-flex min-h-10 -translate-x-1/2 items-center gap-1.5 rounded-full border border-line bg-panel px-3.5 text-sm shadow-xl hover:bg-raised md:min-h-8"
+            // It floats over the conversation: the floating surface and its shadow (DESIGN_SYSTEM §6,
+            // level 1), 32 px, 40 px on coarse pointers.
+            className={cn(
+              FLOATING_SURFACE,
+              "absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-1.5 rounded-full px-3.5 text-sm hover:bg-raised-hover motion-safe:transition-[background-color] pointer-coarse:h-10",
+            )}
           >
             <ArrowDown className="size-4" aria-hidden /> Jump to latest
           </button>
@@ -234,21 +243,26 @@ export function AskConversation({
         )}
       >
         {error ? (
-          <div role="alert" className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg px-1 text-sm">
-            <p className={cn("min-w-0 flex-1", outOfCredits ? "text-warning" : "text-danger-fg")}>
-              {askError(error, credits, now)}
-            </p>
-            {outOfCredits && workspace.role !== "agent" ? (
-              // The ask opts out of the automatic dialog (INLINE_PLAN_LIMITS): this message is the one.
-              <Button
-                size="sm"
-                className="bg-brand-gradient min-h-10 text-white md:min-h-7"
-                onClick={() => (error instanceof ApiError ? upgrade.open(upgradeRequestFrom(error)) : undefined)}
-              >
-                Upgrade
-              </Button>
-            ) : null}
-          </div>
+          // A warning when the credits are out (with Upgrade), a danger Alert otherwise; both are
+          // announced at once, like the answer they replace.
+          <Alert
+            tone={outOfCredits ? "warning" : "danger"}
+            urgent
+            className="mb-2"
+            data-testid="ask-error"
+            action={
+              outOfCredits && workspace.role !== "agent" ? (
+                // The ask opts out of the automatic dialog (INLINE_PLAN_LIMITS): this message is the one.
+                <AlertAction
+                  onClick={() => (error instanceof ApiError ? upgrade.open(upgradeRequestFrom(error)) : undefined)}
+                >
+                  Upgrade
+                </AlertAction>
+              ) : undefined
+            }
+          >
+            {askError(error, credits, now)}
+          </Alert>
         ) : null}
         <AskComposer
           id={composerId}
@@ -296,7 +310,7 @@ function Welcome({
         <Sparkles className="size-6" />
       </span>
       <div className="max-w-md space-y-1.5">
-        <h2 className="text-xl font-semibold tracking-tight">What would you like to know?</h2>
+        <h2 className={cn(SECTION_TITLE, "tracking-tight")}>What would you like to know?</h2>
         <p className="text-sm text-fg-secondary">
           Ask about your posts, comments, conversations and automations. Answers show the numbers they used and
           link to them; Social Hood can prepare a reply for you to finish, but doesn&apos;t change anything itself.
@@ -315,7 +329,7 @@ function Welcome({
                 disabled={disabled}
                 onClick={() => onPick(text)}
                 className={cn(
-                  "flex min-h-10 w-full items-start gap-3 rounded-xl border border-line bg-white/5 text-sm text-fg hover:border-line-strong hover:bg-white/10 disabled:opacity-50",
+                  "flex min-h-10 w-full items-start gap-3 rounded-xl border border-line bg-hover text-sm text-fg hover:border-line-strong hover:bg-pressed disabled:opacity-50",
                   variant === "page" ? "h-full px-4 py-3.5" : "px-3.5 py-2.5",
                 )}
               >

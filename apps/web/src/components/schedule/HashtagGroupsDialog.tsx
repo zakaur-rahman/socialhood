@@ -6,10 +6,12 @@ import { toast } from "sonner";
 
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { CardInset } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ApiError } from "@/lib/api/errors";
@@ -32,7 +34,16 @@ const PREVIEW = 4;
  * UX-SCR-14 hashtag groups (FR-PUB-12): the list (name, count, first hashtags) with create, edit
  * and delete. The editor counts hashtags against the limit of 30. The composer inserts groups.
  */
-export function HashtagGroupsDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function HashtagGroupsDialog({
+  open,
+  onOpenChange,
+  onCloseAutoFocus,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Where focus goes when it closes (Radix returns it to the trigger by default). */
+  onCloseAutoFocus?: (event: Event) => void;
+}) {
   const [editing, setEditing] = useState<HashtagGroup | "new" | null>(null);
   return (
     <Dialog
@@ -42,7 +53,7 @@ export function HashtagGroupsDialog({ open, onOpenChange }: { open: boolean; onO
         if (!value) setEditing(null);
       }}
     >
-      <DialogContent size="lg">
+      <DialogContent size="lg" onCloseAutoFocus={onCloseAutoFocus}>
         <DialogHeader>
           <DialogTitle>{editing === "new" ? "New hashtag group" : editing ? `Edit ${editing.name}` : "Hashtag groups"}</DialogTitle>
           <DialogDescription>Save sets of hashtags to add to a caption or first comment in one click.</DialogDescription>
@@ -71,24 +82,27 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
 
   if (groups.isPending) {
     return (
-      <div className="space-y-2" aria-busy="true" aria-label="Loading hashtag groups">
+      <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading hashtag groups">
         <Skeleton className="h-14 w-full" />
         <Skeleton className="h-14 w-full" />
       </div>
     );
   }
-  if (groups.isError) return <ErrorState error={groups.error} onRetry={() => void groups.refetch()} />;
+  if (groups.isError) return <ErrorState size="compact" error={groups.error} onRetry={() => void groups.refetch()} />;
 
   return (
     <div className="space-y-3">
       {groups.data.length === 0 ? (
-        <EmptyState
-          className="rounded-xl border border-line bg-field py-6"
-          title="No hashtag groups yet"
-          body="Group the hashtags you use often, like #handmade #linen #summerstyle."
-        />
+        <CardInset>
+          <EmptyState
+            size="compact"
+            title="No hashtag groups yet"
+            body="Group the hashtags you use often, like #handmade #linen #summerstyle."
+          />
+        </CardInset>
       ) : (
-        <ul className="divide-y divide-line-subtle rounded-xl border border-line bg-field" aria-label="Hashtag groups">
+        <CardInset asChild className="divide-y divide-line-subtle overflow-hidden p-0">
+         <ul aria-label="Hashtag groups">
           {groups.data.map((group) => (
             <li key={group.id} className="flex items-center gap-2 px-3 py-2.5">
               {confirming === group.id ? (
@@ -102,7 +116,7 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
                   <Button
                     variant="destructive"
                     size="sm"
-                    disabled={remove.isPending}
+                    loading={remove.isPending}
                     onClick={() =>
                       remove.mutate(group, {
                         onSuccess: () => {
@@ -148,7 +162,8 @@ function GroupList({ onNew, onEdit }: { onNew: () => void; onEdit: (group: Hasht
               )}
             </li>
           ))}
-        </ul>
+         </ul>
+        </CardInset>
       )}
       <Button onClick={onNew}>
         <Plus aria-hidden /> New group
@@ -197,30 +212,19 @@ function GroupEditor({ group, onDone }: { group: HashtagGroup | null; onDone: ()
 
   return (
     <form onSubmit={submit} className="grid gap-4" noValidate>
-      <div className="space-y-1">
-        <Label htmlFor="hashtag-group-name" className="text-xs text-fg-secondary">
-          Name
-        </Label>
+      <Field id="hashtag-group-name" density="compact" invalid={Boolean(errors.name)}>
+        <FieldLabel>Name</FieldLabel>
         <Input
-          id="hashtag-group-name"
           size="lg"
           value={name}
           maxLength={HASHTAG_GROUP_NAME_MAX}
-          aria-invalid={Boolean(errors.name)}
-          aria-describedby={errors.name ? "hashtag-group-name-error" : undefined}
           onChange={(event) => setName(event.target.value)}
         />
-        {errors.name ? (
-          <p id="hashtag-group-name-error" className="text-xs text-danger-fg">
-            {errors.name}
-          </p>
-        ) : null}
-      </div>
-      <div className="space-y-1">
+        <FieldError>{errors.name}</FieldError>
+      </Field>
+      <Field id="hashtag-group-tags" density="compact" invalid={Boolean(errors.hashtags) || over}>
         <div className="flex items-baseline justify-between">
-          <Label htmlFor="hashtag-group-tags" className="text-xs text-fg-secondary">
-            Hashtags
-          </Label>
+          <FieldLabel>Hashtags</FieldLabel>
           <span
             data-testid="hashtag-count"
             aria-live="polite"
@@ -230,29 +234,20 @@ function GroupEditor({ group, onDone }: { group: HashtagGroup | null; onDone: ()
           </span>
         </div>
         <Textarea
-          id="hashtag-group-tags"
           value={text}
           rows={5}
-          aria-invalid={Boolean(errors.hashtags) || over}
-          aria-describedby="hashtag-group-tags-help"
           onChange={(event) => setText(event.target.value)}
           className="max-h-60 min-h-32 resize-none"
         />
-        <p id="hashtag-group-tags-help" className="text-xs text-fg-secondary">
-          Separate them with spaces, commas or new lines. The # is optional.
-        </p>
-        {errors.hashtags ? <p className="text-xs text-danger-fg">{errors.hashtags}</p> : null}
-      </div>
-      {errors.form ? (
-        <p role="alert" className="text-xs text-danger-fg">
-          {errors.form}
-        </p>
-      ) : null}
+        <FieldDescription>Separate them with spaces, commas or new lines. The # is optional.</FieldDescription>
+        <FieldError>{errors.hashtags}</FieldError>
+      </Field>
+      {errors.form ? <Alert tone="danger">{errors.form}</Alert> : null}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" loading={pending}>
           {group ? "Save group" : "Create group"}
         </Button>
       </div>

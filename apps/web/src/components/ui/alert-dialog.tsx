@@ -6,6 +6,7 @@ import { AlertDialog as AlertDialogPrimitive } from "radix-ui"
 
 import { Button } from "@/components/ui/button"
 import { MODAL_MOTION, MODAL_OVERLAY } from "@/components/ui/dialog"
+import { ModalInert } from "@/components/ui/modal-inert"
 
 function AlertDialog({
   ...props
@@ -44,6 +45,7 @@ function AlertDialogOverlay({
 
 function AlertDialogContent({
   className,
+  children,
   size = "default",
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Content> & {
@@ -61,7 +63,10 @@ function AlertDialogContent({
           className
         )}
         {...props}
-      />
+      >
+        <ModalInert />
+        {children}
+      </AlertDialogPrimitive.Content>
     </AlertDialogPortal>
   )
 }

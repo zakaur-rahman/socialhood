@@ -8,6 +8,7 @@ workspace's post is 404 not_found.
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
@@ -15,7 +16,7 @@ from fastapi import APIRouter, Query, Response
 from socialhood.api import ratelimit
 from socialhood.auth.deps import AnyMember, Session
 from socialhood.billing.entitlements import credits_gate
-from socialhood.schemas.posts import CommentFilter, CommentList, PostDetail, PostList
+from socialhood.schemas.posts import CommentFilter, CommentList, PostDetail, PostList, PostSort
 from socialhood.services.automations import queries
 from socialhood.services.comments import queries as comment_queries
 from socialhood.services.comments import summaries
@@ -31,17 +32,28 @@ async def list_posts(
     q: Annotated[str | None, Query(max_length=100)] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=60)] = 24,
+    sort: Annotated[PostSort, Query()] = "recent",
 ) -> PostList:
     """Newest first; ``q`` searches captions. Stories are left out (they take no comments).
-    Each post carries its comment counts and sentiment split (``stats``, FR-CMT-03)."""
-    return await queries.list_posts(session, account_id=account_id, q=q, cursor=cursor, limit=limit)
+    Each post carries its comment counts and sentiment split (``stats``, FR-CMT-03) and its
+    ``needs_reply_count`` (D-11). ``sort=needs_reply`` puts the posts with the most comments
+    waiting for a reply first (newest first among equals); its cursor is opaque like the other."""
+    return await queries.list_posts(
+        session,
+        account_id=account_id,
+        q=q,
+        cursor=cursor,
+        limit=limit,
+        sort=sort,
+        now=datetime.now(UTC),
+    )
 
 
 @router.get("/posts/{post_id}", operation_id="get_post")
 async def get_post(post_id: uuid.UUID, ctx: AnyMember, session: Session) -> PostDetail:
     """FR-CMT-04: the post with its counts, sentiment split, summary and topics (at most 6,
     largest first). post.updated carries the same shape when any of them change."""
-    return await comment_queries.get_post(session, post_id)
+    return await comment_queries.get_post(session, post_id, now=datetime.now(UTC))
 
 
 @router.post(
@@ -71,7 +83,13 @@ async def list_post_comments(
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> CommentList:
     """The post's comments, newest first, narrowed by one filter chip (UX-SCR-05; the filters are
-    defined with ``CommentFilter`` in schemas/posts.py). Deleted comments are left out."""
+    defined with ``CommentFilter`` in schemas/posts.py; ``needs_reply`` is the nav badge's rule,
+    D-11). Deleted comments are left out."""
     return await comment_queries.list_comments(
-        session, post_id, comment_filter=comment_filter, cursor=cursor, limit=limit
+        session,
+        post_id,
+        comment_filter=comment_filter,
+        cursor=cursor,
+        limit=limit,
+        now=datetime.now(UTC),
     )

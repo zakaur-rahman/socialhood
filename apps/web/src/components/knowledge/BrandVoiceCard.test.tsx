@@ -47,6 +47,7 @@ describe("BrandVoiceCard leaving with unsaved changes (UI-ISS-022)", () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
     const { navigated, leave } = setup();
+    await user.click(screen.getByRole("button", { name: "Set up" }));
     const description = screen.getByRole("textbox", { name: "Business description" });
     await user.type(description, "Handmade linen dresses.");
 
@@ -67,6 +68,7 @@ describe("BrandVoiceCard leaving with unsaved changes (UI-ISS-022)", () => {
     await leave();
     expect(navigated).toHaveBeenCalledOnce();
 
+    await user.click(screen.getByRole("button", { name: "Set up" }));
     await user.type(screen.getByRole("textbox", { name: "Business description" }), "Handmade linen dresses.");
     await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith("Brand voice saved"));

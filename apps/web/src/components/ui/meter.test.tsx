@@ -174,4 +174,11 @@ describe("Meter ring (UI-022)", () => {
     expect(screen.queryByRole("meter")).toBeNull();
     expect(slot("meter")).toBeNull();
   });
+
+  it("lets the label and value row wrap, so a narrow tile never squeezes the label to nothing", () => {
+    render(<Meter label="Knowledge" value={347} max={200000} unit="characters" />);
+    const row = slot("meter-value").parentElement as HTMLElement;
+    expect(row).toHaveClass("flex-wrap");
+    expect(row.firstElementChild).toHaveClass("min-w-0");
+  });
 });

@@ -3,20 +3,17 @@ import type { Route } from "next";
 import Link from "next/link";
 
 import { ContactAvatar } from "@/components/inbox/ContactAvatar";
+import { EmptyState } from "@/components/states/EmptyState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card, CardAction, CardBleed, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PriorityConversation } from "@/lib/api/types";
-import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, TONE_CLASS } from "@/lib/inbox/format";
+import { contactName, ESCALATION_LABEL, PLATFORM_LABEL } from "@/lib/inbox/format";
 import { relativeTime } from "@/lib/time";
-import { cn } from "@/lib/utils";
 
 import { agoLabel, formatCount } from "./format";
 import { queueState } from "./rules";
-
-const PLATFORM_TONE = {
-  instagram: "border-instagram/40 text-fg",
-  whatsapp: "border-whatsapp/40 text-fg",
-} as const;
 
 function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: string; now: Date }) {
   const name = contactName(item.contact, item.platform);
@@ -24,19 +21,14 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
   const state = queueState(item);
   const when = item.last_customer_message_at ? agoLabel(relativeTime(item.last_customer_message_at, now)) : null;
   return (
-    <li data-testid="queue-row" className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center">
+    <li data-testid="queue-row" className="flex flex-col gap-3 px-(--card-padding) py-3 sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <ContactAvatar id={item.contact.id} name={name} pictureUrl={item.contact.profile_picture_url} size={32} />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
             <span className="font-medium">{name}</span>
             {handle ? <span className="text-fg-secondary">@{handle}</span> : null}
-            <span
-              data-testid="queue-platform"
-              className={cn("rounded-full border px-2 text-2xs", PLATFORM_TONE[item.platform])}
-            >
-              {PLATFORM_LABEL[item.platform]}
-            </span>
+            <Badge data-testid="queue-platform">{PLATFORM_LABEL[item.platform]}</Badge>
             {when ? (
               <time dateTime={item.last_customer_message_at ?? undefined} className="text-xs text-fg-secondary tabular-nums">
                 {when}
@@ -52,13 +44,10 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2 pl-11 sm:pl-0">
-        <span
-          data-testid="queue-state"
-          className={cn("rounded-full px-2 text-2xs leading-5 font-medium", TONE_CLASS[state.chip.tone])}
-        >
+        <Badge data-testid="queue-state" tone={state.chip.tone}>
           {state.chip.label}
-        </span>
-        <Button asChild variant={state.action === "Review & Send" ? "default" : "outline"}>
+        </Badge>
+        <Button asChild variant={state.action === "Review & Send" ? "secondary" : "outline"}>
           <Link href={`/w/${slug}/inbox/${item.id}` as Route} aria-label={`${state.action}: ${name}`}>
             {state.action}
           </Link>
@@ -72,7 +61,7 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
  * Home's Live Priority Queue: up to five conversations to answer first, as the API orders them
  * (services/priority_queue.py: needs you, then lead score, priority and the longest wait), and
  * Open Inbox with the Needs reply count. It refreshes with the overview on new messages, replies
- * and suggestions.
+ * and suggestions. The rows run to the card's edges (CardBleed).
  */
 export function PriorityQueue({
   items,
@@ -86,44 +75,60 @@ export function PriorityQueue({
   now: Date;
 }) {
   return (
-    <section aria-labelledby="home-queue" className="rounded-xl border border-line bg-panel">
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-line p-4">
-        <div>
-          <h2 id="home-queue" className="text-base font-semibold">
-            Live priority queue
-          </h2>
-          <p className="text-xs text-fg-secondary">Conversations waiting for you, most urgent first.</p>
-        </div>
-        <Link
-          href={`/w/${slug}/inbox?view=needs_reply` as Route}
-          className="-my-1 inline-flex min-h-8 items-center gap-0.5 rounded-md text-sm font-medium text-brand-fg hover:underline pointer-coarse:min-h-10"
-        >
-          Open Inbox <span className="tabular-nums">({formatCount(needsReply)})</span>
-          <ChevronRight className="size-4" aria-hidden />
-        </Link>
-      </div>
-      {items.length === 0 ? (
-        <p className="p-4 text-sm text-fg-secondary" data-testid="queue-empty">
-          Nothing is waiting. Conversations that need a reply show up here as they arrive.
-        </p>
-      ) : (
-        <ul className="divide-y divide-line-subtle">
-          {items.map((item) => (
-            <QueueRow key={item.id} item={item} slug={slug} now={now} />
-          ))}
-        </ul>
-      )}
-    </section>
+    <Card asChild>
+      <section aria-labelledby="home-queue">
+        <CardHeader>
+          <CardTitle id="home-queue">Live priority queue</CardTitle>
+          <CardDescription>Conversations waiting for you, most urgent first.</CardDescription>
+          <CardAction>
+            <Button asChild variant="link" size="sm">
+              <Link href={`/w/${slug}/inbox?view=needs_reply` as Route}>
+                Open Inbox <span className="tabular-nums">({formatCount(needsReply)})</span>
+                <ChevronRight aria-hidden />
+              </Link>
+            </Button>
+          </CardAction>
+        </CardHeader>
+        <CardBleed className="mt-4 border-t border-line">
+          {items.length === 0 ? (
+            <div data-testid="queue-empty" className="px-(--card-padding) pt-4">
+              {/* The queue leaves out conversations whose reply window has closed (no free-form reply
+                  is possible any more), so an empty queue can sit beside a Needs reply count. Say so
+                  instead of "Nothing is waiting". */}
+              {needsReply > 0 ? (
+                <EmptyState
+                  size="compact"
+                  title="No replies are possible right now."
+                  body={`${formatCount(needsReply)} ${needsReply === 1 ? "conversation needs" : "conversations need"} a reply, but the reply window has closed. A free-form reply opens again when the customer writes.`}
+                />
+              ) : (
+                <EmptyState
+                  size="compact"
+                  title="Nothing is waiting."
+                  body="Conversations that need a reply show up here as they arrive."
+                />
+              )}
+            </div>
+          ) : (
+            <ul className="divide-y divide-line-subtle">
+              {items.map((item) => (
+                <QueueRow key={item.id} item={item} slug={slug} now={now} />
+              ))}
+            </ul>
+          )}
+        </CardBleed>
+      </section>
+    </Card>
   );
 }
 
 export function PriorityQueueSkeleton() {
   return (
-    <div aria-hidden className="space-y-3 rounded-xl border border-line bg-panel p-4">
+    <Card aria-hidden className="space-y-3">
       <Skeleton className="h-4 w-40" />
       {[0, 1, 2].map((i) => (
         <Skeleton key={i} className="h-12 w-full" />
       ))}
-    </div>
+    </Card>
   );
 }

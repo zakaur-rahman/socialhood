@@ -1,31 +1,22 @@
 "use client";
 
 import {
-  CalendarClock,
-  CalendarPlus,
   ChevronLeft,
   ChevronRight,
-  Info,
-  Layers,
-  Lock,
   MessageSquareText,
-  Reply,
-  Search,
   ShieldCheck,
-  Trash2,
-  Workflow,
-  X,
 } from "lucide-react";
 import Link from "next/link";
-import { Dialog as DialogPrimitive } from "radix-ui";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { SectionLabel, SettingsCard } from "@/components/settings/SettingsCard";
+import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { SearchInput } from "@/components/ui/search-input";
+import { Badge } from "@/components/ui/badge";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { creditsText, MODE_LABEL } from "@/lib/agent/format";
@@ -37,19 +28,31 @@ import { relativeTime } from "@/lib/time";
 import { formatDayTime } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { EYEBROW } from "@/styles/tokens";
 
 import { RunStatusChip, RunTrace, RunTraceSkeleton } from "./RunTrace";
 import { useReturnFocus } from "./use-return-focus";
 
 /** Each write capability of the agent policy (schemas/agent.py AgentPermissions), in words. */
-const CAPABILITIES: Record<keyof AgentPermissions, { label: string; hint: string; icon: ReactNode }> = {
-  send_replies: { label: "Send replies", hint: "Reply to messages and comments", icon: <Reply /> },
-  schedule_messages: { label: "Schedule messages", hint: "Schedule messages to customers", icon: <CalendarClock /> },
-  schedule_posts: { label: "Schedule posts", hint: "Schedule and publish posts", icon: <CalendarPlus /> },
-  create_automations: { label: "Create automations", hint: "Create and turn on automations", icon: <Workflow /> },
-  delete_automations: { label: "Delete automations", hint: "Remove automations", icon: <Trash2 /> },
-  bulk_actions: { label: "Bulk actions", hint: "Change many items at once", icon: <Layers /> },
+const CAPABILITIES: Record<keyof AgentPermissions, string> = {
+  send_replies: "send replies",
+  schedule_messages: "schedule messages",
+  schedule_posts: "schedule posts",
+  create_automations: "create automations",
+  delete_automations: "delete automations",
+  bulk_actions: "change many items at once",
 };
+
+/** D-08: what the assistant may do, in one sentence (the six permission tiles it replaces). */
+export function capabilitySentence(mode: string, permissions: AgentPermissions): string {
+  const on = (Object.keys(CAPABILITIES) as (keyof AgentPermissions)[]).filter((key) => permissions[key]);
+  if (mode === "read_only" || on.length === 0) {
+    return "Ask Social Hood reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself.";
+  }
+  const list = on.map((key) => CAPABILITIES[key]);
+  const joined = list.length > 1 ? `${list.slice(0, -1).join(", ")} and ${list[list.length - 1]}` : list[0];
+  return `Ask Social Hood reads your workspace to answer and may ${joined}, following the member's role. Everything else it prepares for someone to finish.`;
+}
 
 /**
  * The run history's chips (C-066) as run statuses: Answered is a full or partial answer, Action
@@ -73,7 +76,7 @@ export function AgentSettingsPage() {
   if (workspace.role === "agent") {
     return (
       <EmptyState
-        className="min-h-[60vh]"
+        className="flex-1"
         title="Run history is for owners and admins"
         body="Your own questions and answers are in Ask Social Hood."
         action={
@@ -88,8 +91,6 @@ export function AgentSettingsPage() {
     <SettingsFrame
       header={
         <SettingsPageHeader
-          variant="card"
-          label="Assistant"
           title="Ask Social Hood"
           description="What the assistant may do in this workspace, and every question it has answered: its steps, tools, results and credits."
           actions={<CreditsStat />}
@@ -110,8 +111,8 @@ function CreditsStat() {
   if (!credits || typeof credits.limit !== "number") return null;
   const count = new Intl.NumberFormat("en-US");
   return (
-    <div className="rounded-xl border border-line-subtle bg-field/60 px-4 py-2.5 text-right">
-      <p className="text-[11px] font-semibold tracking-[0.12em] text-fg-secondary uppercase">AI credits</p>
+    <div className="rounded-lg border border-line px-4 py-2.5 text-right">
+      <p className={EYEBROW}>AI credits</p>
       <p className="text-sm tabular-nums">
         <span className="text-lg font-semibold text-brand-fg">{count.format(credits.used)}</span>
         <span className="text-fg-secondary"> / {count.format(credits.limit)}</span>
@@ -135,64 +136,22 @@ function PolicyCard() {
       description="What Ask Social Hood can do on its own. Writes arrive in a later release."
       aside={
         mode ? (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-success/30 bg-success/10 px-2.5 py-1 text-xs font-medium text-success">
-            <ShieldCheck className="size-3.5" aria-hidden />
+          <Badge tone="success" size="md">
+            <ShieldCheck aria-hidden />
             Mode: <span>{MODE_LABEL[mode]}</span>
-          </span>
+          </Badge>
         ) : null
       }
     >
       {policy.isPending ? (
-        <div className="space-y-2" aria-busy="true" aria-label="Loading the agent's mode">
-          <Skeleton className="h-3 w-1/3 bg-raised" />
-          <Skeleton className="h-3 w-2/3 bg-raised" />
+        <div role="status" className="space-y-2" aria-busy="true" aria-label="Loading the agent's mode">
+          <Skeleton className="h-3 w-1/3" />
+          <Skeleton className="h-3 w-2/3" />
         </div>
       ) : policy.isError ? (
         <ErrorState error={policy.error} onRetry={() => void policy.refetch()} />
       ) : (
-        <div className="space-y-4">
-          <div className="rounded-xl border border-line-subtle bg-field/60 p-4">
-            <SectionLabel className="flex items-center gap-1.5 text-brand-fg">
-              <Info className="size-3.5" aria-hidden />
-              Operational bounds
-            </SectionLabel>
-            <p className="mt-2 text-sm">
-              {policy.data.mode === "read_only"
-                ? "Ask Social Hood reads your posts, comments, conversations, automations and knowledge to answer. It can prepare a message, reply or automation for someone to finish, but it doesn't send, schedule or change anything itself."
-                : "Writes follow the switches below and the member's role."}
-            </p>
-          </div>
-          <ul className="grid gap-2 md:grid-cols-2" aria-label="Agent permissions">
-            {(Object.keys(CAPABILITIES) as (keyof AgentPermissions)[]).map((key) => {
-              const on = policy.data.permissions[key];
-              const capability = CAPABILITIES[key];
-              return (
-                <li key={key} className="flex min-h-14 items-center gap-3 rounded-xl border border-line-subtle bg-field/60 p-3">
-                  <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-lg bg-raised text-fg-secondary [&_svg]:size-4">
-                    {capability.icon}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{capability.label}</p>
-                    <p className="text-xs text-fg-secondary">{capability.hint}</p>
-                  </div>
-                  {on ? (
-                    <span className="rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">On</span>
-                  ) : (
-                    <span className="flex shrink-0 flex-col items-end gap-0.5">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-raised px-2 py-0.5 text-xs font-medium text-fg-secondary">
-                        <Lock className="size-3" aria-hidden />
-                        <span>Off</span>
-                      </span>
-                      {policy.data.mode === "read_only" ? (
-                        <span className="text-[11px] text-fg-secondary">Coming later</span>
-                      ) : null}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <p className="text-sm">{capabilitySentence(policy.data.mode, policy.data.permissions)}</p>
       )}
     </SettingsCard>
   );
@@ -244,9 +203,9 @@ export function RunHistory() {
     content = (
       <ul aria-busy="true" aria-label="Loading runs" className="space-y-2">
         {Array.from({ length: 4 }, (_, i) => (
-          <li key={i} className="space-y-2 rounded-xl border border-line-subtle p-4">
-            <Skeleton className="h-3 w-2/3 bg-raised" />
-            <Skeleton className="h-3 w-1/3 bg-raised" />
+          <li key={i} className="space-y-2 rounded-xl border border-line p-4">
+            <Skeleton className="h-3 w-2/3" />
+            <Skeleton className="h-3 w-1/3" />
           </li>
         ))}
       </ul>
@@ -261,7 +220,6 @@ export function RunHistory() {
         action={
           <Button
             variant="secondary"
-            className="min-h-10"
             onClick={() => {
               setText("");
               setFilter("all");
@@ -295,7 +253,6 @@ export function RunHistory() {
           <div className="flex gap-2">
             <Button
               variant="secondary"
-              className="min-h-10 md:min-h-9"
               aria-label="Previous page"
               disabled={page === 0}
               onClick={() => setPage((current) => Math.max(0, current - 1))}
@@ -304,12 +261,12 @@ export function RunHistory() {
             </Button>
             <Button
               variant="secondary"
-              className="min-h-10 md:min-h-9"
               aria-label="Next page"
-              disabled={!hasNext || history.isFetchingNextPage}
+              disabled={!hasNext}
+              loading={history.isFetchingNextPage}
               onClick={() => void next()}
             >
-              {history.isFetchingNextPage ? "Loading…" : "Next"} <ChevronRight aria-hidden />
+              Next <ChevronRight aria-hidden />
             </Button>
           </div>
         </nav>
@@ -325,18 +282,14 @@ export function RunHistory() {
       description="Every question asked in this workspace: its steps, tools, results and credits."
     >
       <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center">
-        <div className="relative min-w-0 flex-1">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-fg-secondary" aria-hidden />
-          <Input
-            type="search"
-            aria-label="Search runs"
-            placeholder="Search questions"
-            value={text}
-            onChange={(event) => setText(event.target.value)}
-            size="xl"
-            className="pl-9"
-          />
-        </div>
+        <SearchInput
+          label="Search runs"
+          placeholder="Search questions"
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          size="xl"
+          className="flex-1"
+        />
         {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
             Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
         <ToggleGroup
@@ -365,7 +318,7 @@ function RunRow({ run, now, onOpen }: { run: AgentRun; now: Date; onOpen: () => 
     <button
       type="button"
       onClick={onOpen}
-      className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line-subtle bg-field/60 px-4 py-3 text-left outline-none hover:bg-raised focus-visible:ring-2 focus-visible:ring-brand"
+      className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-line px-4 py-3 text-left hover:bg-hover"
       aria-label={`Open the run: ${run.request}`}
     >
       <span aria-hidden className="hidden size-9 shrink-0 place-items-center rounded-lg bg-raised text-fg-secondary sm:grid">
@@ -382,9 +335,9 @@ function RunRow({ run, now, onOpen }: { run: AgentRun; now: Date; onOpen: () => 
           </time>
         </span>
       </span>
-      <span className="shrink-0 rounded-md bg-raised px-2 py-0.5 text-xs text-fg-secondary tabular-nums">
+      <Badge size="md" shape="tag" className="tabular-nums">
         {creditsText(run.credits)}
-      </span>
+      </Badge>
       <ChevronRight className="size-4 shrink-0 text-fg-secondary" aria-hidden />
     </button>
   );
@@ -397,35 +350,28 @@ function RunDetailSheet({ runId, onClose }: { runId: string | null; onClose: () 
   const run = useAgentRun(workspace.id, runId, runId !== null);
   const returnFocus = useReturnFocus();
   return (
-    <DialogPrimitive.Root open={runId !== null} onOpenChange={(open) => (open ? null : onClose())}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/60 duration-200 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0 motion-reduce:animate-none" />
-        <DialogPrimitive.Content
-          aria-describedby={undefined}
-          onOpenAutoFocus={returnFocus.onOpenAutoFocus}
-          onCloseAutoFocus={returnFocus.onCloseAutoFocus}
-          className="fixed inset-0 z-50 flex flex-col bg-panel shadow-xl outline-none duration-200 data-open:animate-in data-open:slide-in-from-right-10 data-closed:animate-out data-closed:slide-out-to-right-10 motion-reduce:animate-none md:inset-y-0 md:right-0 md:left-auto md:w-[560px] md:border-l md:border-line"
-          data-testid="run-detail"
-        >
-          <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line pr-2 pl-4">
-            <DialogPrimitive.Title className="min-w-0 flex-1 truncate text-base font-semibold">Run</DialogPrimitive.Title>
-            <DialogPrimitive.Close asChild>
-              <Button variant="ghost" size="icon" className="size-10 text-fg-secondary md:size-8" aria-label="Close">
-                <X aria-hidden />
-              </Button>
-            </DialogPrimitive.Close>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            {run.isPending ? (
-              <RunTraceSkeleton />
-            ) : run.isError ? (
-              <ErrorState error={run.error} onRetry={() => void run.refetch()} />
-            ) : (
-              <RunTrace run={run.data} slug={workspace.slug} timeZone={workspace.timezone} now={now} onNavigate={onClose} />
-            )}
-          </div>
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
+    <Sheet open={runId !== null} onOpenChange={(open) => (open ? null : onClose())}>
+      <SheetContent
+        size="panel"
+        aria-describedby={undefined}
+        onOpenAutoFocus={returnFocus.onOpenAutoFocus}
+        onCloseAutoFocus={returnFocus.onCloseAutoFocus}
+        className="gap-0"
+        data-testid="run-detail"
+      >
+        <SheetHeader className="h-14 shrink-0 justify-center border-b border-line py-0 pl-4">
+          <SheetTitle className="truncate">Run</SheetTitle>
+        </SheetHeader>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {run.isPending ? (
+            <RunTraceSkeleton />
+          ) : run.isError ? (
+            <ErrorState error={run.error} onRetry={() => void run.refetch()} />
+          ) : (
+            <RunTrace run={run.data} slug={workspace.slug} timeZone={workspace.timezone} now={now} onNavigate={onClose} />
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

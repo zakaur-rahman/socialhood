@@ -107,6 +107,41 @@ describe("the AI draft bar (UX-INB-08, C-063)", () => {
     expect(screen.getByRole("button", { name: "Less" })).toHaveAttribute("aria-expanded", "true");
   });
 
+  // UI-051: one primary Send at a time. With text in the composer its Send is the primary one.
+  it("Send is the primary Button, and secondary while the composer has text", () => {
+    const { unmount } = rtlRender(
+      <SuggestionCard suggestion={suggestion()} generating={false} customerName="Priya" canSend actions={actions()} />,
+      { wrapper: TooltipProvider },
+    );
+    expect(screen.getByRole("button", { name: "Send" })).toHaveAttribute("data-variant", "default");
+    unmount();
+    card({ composerHasText: true });
+    expect(screen.getByRole("button", { name: "Send" })).toHaveAttribute("data-variant", "secondary");
+  });
+
+  it("on phones the draft is one line; wider, a short draft shows whole and a long one clamps to two", async () => {
+    const user = userEvent.setup();
+    card({ suggestion: suggestion({ reply_text: "Yes, we ship to Dubai in 5 to 7 business days." }) });
+    const text = screen.getByTestId("draft-text");
+    expect(text).toHaveClass("line-clamp-1", "sm:line-clamp-none");
+    const more = screen.getByRole("button", { name: "More" });
+    expect(more).toHaveClass("sm:hidden");
+    await user.click(more);
+    expect(text).not.toHaveClass("line-clamp-1");
+  });
+
+  it("a very short draft needs no More", () => {
+    card({ suggestion: suggestion({ reply_text: "Yes, we do!" }) });
+    expect(screen.queryByRole("button", { name: "More" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("draft-text")).not.toHaveClass("line-clamp-1");
+  });
+
+  it("long drafts clamp to one line on phones and two from sm", () => {
+    card({ suggestion: suggestion({ reply_text: "A long answer. ".repeat(30) }) });
+    expect(screen.getByTestId("draft-text")).toHaveClass("line-clamp-1", "sm:line-clamp-2");
+    expect(screen.getByRole("button", { name: "More" })).not.toHaveClass("sm:hidden");
+  });
+
   it("one draft only: no quick-reply chips", () => {
     card();
     expect(screen.getAllByText(/AI draft:/)).toHaveLength(1);

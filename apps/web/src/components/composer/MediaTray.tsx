@@ -3,7 +3,10 @@
 import { AlertCircle, Crop, FileVideo, GripVertical, ImagePlus, Library, RotateCw, X } from "lucide-react";
 import { useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import {
   assetLabel,
@@ -43,20 +46,11 @@ function ProgressBar({ item, label }: { item: UploadItem; label: string }) {
   const percent = Math.round(item.progress * 100);
   return (
     <div className="absolute inset-x-0 bottom-0 space-y-1 bg-media-scrim/80 p-1.5">
-      <div
-        role="progressbar"
+      <Progress
         aria-label={`Uploading ${label}`}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-        aria-valuetext={item.status === "processing" ? "Processing" : `${percent}%`}
-        className="h-1.5 overflow-hidden rounded-full bg-raised"
-      >
-        <div
-          className="bg-brand-gradient-decor h-full rounded-full motion-safe:transition-[width] motion-safe:duration-normal motion-safe:ease-standard"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
+        value={percent}
+        valueText={item.status === "processing" ? "Processing" : `${percent}%`}
+      />
       <p className="flex items-center gap-1 text-2xs text-fg tabular-nums">
         {item.status === "processing" ? (
           <>
@@ -176,9 +170,9 @@ export function MediaTray({
       title="Media"
       aside={
         formatText ? (
-          <span data-testid="post-format" className="rounded-full bg-raised px-2.5 py-0.5 text-xs font-medium text-fg-secondary">
+          <Badge data-testid="post-format" size="md">
             {formatText}
-          </span>
+          </Badge>
         ) : null
       }
     >
@@ -225,15 +219,17 @@ export function MediaTray({
                     </span>
                   ) : null}
                   {crop ? (
-                    <button
+                    <Button
                       type="button"
+                      variant="destructive"
+                      size="xs"
                       data-focus-target
                       onClick={() => onCrop(asset.id)}
-                      className="absolute inset-x-1 bottom-1 flex min-h-7 items-center justify-center gap-1 rounded-md bg-danger-fill px-1 text-2xs font-medium text-on-brand hover:bg-danger-fill/90 pointer-coarse:min-h-10"
+                      className="absolute inset-x-1 bottom-1"
                     >
-                      <Crop className="size-3" aria-hidden /> Crop needed
+                      <Crop aria-hidden /> Crop needed
                       <span className="sr-only">: {label}</span>
-                    </button>
+                    </Button>
                   ) : tooLong ? (
                     <span className="absolute inset-x-1 bottom-1 rounded-sm bg-danger-fill px-1 py-0.5 text-center text-2xs font-medium text-on-brand">
                       Over 90 s
@@ -335,9 +331,9 @@ export function MediaTray({
           : "Photos: JPEG, PNG, WEBP or HEIC up to 8 MB. Videos: MP4 or MOV up to 100 MB and 90 seconds. One video makes a Reel; 2 to 10 items make a carousel."}
       </p>
       {notice ? (
-        <p role="alert" className="mt-2 flex items-start gap-1.5 text-xs text-danger-fg">
-          <AlertCircle className="mt-px size-3.5 shrink-0" aria-hidden /> {notice}
-        </p>
+        <Alert tone="danger" icon={<AlertCircle />} className="mt-2">
+          {notice}
+        </Alert>
       ) : null}
       <p role="status" aria-live="polite" className="sr-only">
         {announcement}

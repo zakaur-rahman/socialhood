@@ -55,7 +55,8 @@ function renderPage(initial: Workspace, patch?: (call: Call) => Response | Promi
     },
   });
   const bar = () => screen.getByRole("region", { name: "Save changes" });
-  return { ...view, patches, bar };
+  const hasBar = () => screen.queryByRole("region", { name: "Save changes" }) !== null;
+  return { ...view, patches, bar, hasBar };
 }
 
 describe("automation disclosure (FR-AUT-11)", () => {
@@ -101,12 +102,11 @@ describe("automation disclosure (FR-AUT-11)", () => {
 });
 
 describe("the save bar (C-066)", () => {
-  it("is clean until something changes; Reset puts the saved values back", async () => {
+  it("has no bar until something changes; Reset puts the saved values back (D-08)", async () => {
     const user = userEvent.setup();
-    const { patches, bar } = renderPage(settings());
+    const { patches, bar, hasBar } = renderPage(settings());
     const name = await screen.findByLabelText("Workspace name");
-    expect(within(bar()).getByRole("status")).toHaveTextContent("All changes saved");
-    expect(within(bar()).queryByRole("button", { name: "Save" })).toBeNull();
+    expect(hasBar()).toBe(false);
     expect(screen.getByText("12 / 80")).toBeInTheDocument();
 
     await user.clear(name);
@@ -116,14 +116,14 @@ describe("the save bar (C-066)", () => {
 
     await user.click(within(bar()).getByRole("button", { name: "Reset" }));
     expect(name).toHaveValue("Maple Bakery");
-    expect(within(bar()).getByRole("status")).toHaveTextContent("All changes saved");
+    expect(hasBar()).toBe(false);
     expect(patches).toEqual([]);
   });
 
   it("Save sends what changed, shows a spinner meanwhile, then is clean", async () => {
     const user = userEvent.setup();
     let finish: (response: Response) => void = () => {};
-    const { patches, bar } = renderPage(settings(), () => new Promise<Response>((resolve) => (finish = resolve)));
+    const { patches, bar, hasBar } = renderPage(settings(), () => new Promise<Response>((resolve) => (finish = resolve)));
     const name = await screen.findByLabelText("Workspace name");
     await user.clear(name);
     await user.type(name, "Maple & Co");
@@ -134,7 +134,7 @@ describe("the save bar (C-066)", () => {
     expect(patches).toEqual([{ name: "Maple & Co" }]);
 
     finish(json({ ...settings(), name: "Maple & Co" }));
-    await waitFor(() => expect(within(bar()).getByRole("status")).toHaveTextContent("All changes saved"));
+    await waitFor(() => expect(hasBar()).toBe(false));
     expect(name).toHaveValue("Maple & Co");
   });
 

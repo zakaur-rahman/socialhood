@@ -157,6 +157,9 @@ beforeEach(() => {
   toast.error.mockReset();
 });
 
+/** DisabledReason's focusable wrapper around a disabled button: it carries the reason. */
+const reasonOf = (button: HTMLElement) => button.closest<HTMLElement>('[data-slot="disabled-reason"]')!;
+
 describe("PostComposer autosave (F-13)", () => {
   it("saves the whole draft 1 s after the last edit and says Saved once the API has it", async () => {
     const user = userEvent.setup();
@@ -208,7 +211,8 @@ describe("PostComposer checklist gating (FR-PUB-10, T7.5 done-when)", () => {
 
     expect(scheduleButton()).toBeDisabled();
     expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Schedule: Fix the item in the checklist to schedule.");
-    expect(scheduleButton()).toHaveAccessibleDescription(/Fix the item in the checklist to schedule/);
+    // The reason is on DisabledReason's focusable wrapper: a disabled button can't take focus (UI-033).
+    expect(reasonOf(scheduleButton())).toHaveAccessibleDescription(/Fix the item in the checklist to schedule/);
     const item = within(checklist()).getByRole("link", { name: /The caption is 2,201 characters. Instagram allows 2,200./ });
     expect(item).toHaveAttribute("href", "#composer-caption");
     await user.click(item);
@@ -357,11 +361,9 @@ describe("PostComposer media (FR-PUB-13, TR-MED-02)", () => {
     expect(screen.getByRole("progressbar", { name: "Uploading dress.jpg" })).toHaveAttribute("aria-valuenow", "50");
     expect(scheduleButton()).toBeDisabled();
     expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Wait for the uploads to finish.");
-    // Both buttons wait for the same reason: it is said once, and describes both (UI-032).
+    // Both buttons wait for the same reason: the line says it once, and each wrapper carries it (UI-033).
     expect(screen.getByTestId("schedule-reason")).toHaveTextContent("Schedule and Publish now: Wait for the uploads to finish.");
-    expect(screen.getByRole("button", { name: "Publish now" })).toHaveAccessibleDescription(
-      "Schedule and Publish now: Wait for the uploads to finish.",
-    );
+    expect(reasonOf(screen.getByRole("button", { name: "Publish now" }))).toHaveAccessibleDescription("Wait for the uploads to finish.");
     act(() => control.progress(1));
     expect(screen.getByText("Processing…")).toBeInTheDocument();
 
@@ -589,6 +591,41 @@ describe("PostComposer When (FR-PUB-04, FR-PUB-09)", () => {
     await user.click(await screen.findByRole("radio", { name: "Add to queue" }));
     expect(await screen.findByText(/@maple.bakery has no posting times./)).toBeInTheDocument();
     expect(scheduleButton("Add to queue")).toBeDisabled();
+  });
+});
+
+describe("PostComposer tools in place (UI-054)", () => {
+  const slots = () => json({ social_account_id: "a1", timezone: TZ, slots: [], next_free_at: [] });
+
+  it("Posting times opens over the composer in one click, and Esc gives focus back", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost(), handlers: { "GET /v1/w/:wid/social-accounts/:id/posting-slots": slots } });
+    const open = await screen.findByRole("button", { name: "Posting times" });
+    await user.click(open);
+    expect(await screen.findByRole("dialog", { name: "Posting times" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(open).toHaveFocus());
+  });
+
+  it("Set posting times in the queue preview opens the same sheet", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost(), handlers: { "GET /v1/w/:wid/social-accounts/:id/posting-slots": slots } });
+    await user.click(await screen.findByRole("radio", { name: "Add to queue" }));
+    await user.click(await screen.findByRole("button", { name: "Set posting times" }));
+    expect(await screen.findByRole("dialog", { name: "Posting times" })).toBeInTheDocument();
+  });
+
+  it("Manage hashtag groups opens the groups dialog in place, and Esc gives focus back", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost() });
+    const menu = (await screen.findAllByRole("button", { name: "Insert hashtag group" }))[0];
+    await user.click(menu);
+    await user.click(await screen.findByRole("menuitem", { name: "Manage hashtag groups" }));
+    expect(await screen.findByRole("dialog", { name: "Hashtag groups" })).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(menu).toHaveFocus());
   });
 });
 
@@ -937,7 +974,7 @@ describe("PostComposer comment automation (FR-AUT-18)", () => {
     renderComposer({ initial: readyPost({ targets: [] }) });
     const button = await screen.findByRole("button", { name: "Add comment automation" });
     expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleDescription("Choose an account first.");
+    expect(reasonOf(button)).toHaveAccessibleDescription("Choose an account first.");
   });
 });
 

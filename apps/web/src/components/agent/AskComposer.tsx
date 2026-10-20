@@ -1,8 +1,10 @@
 "use client";
 
-import { ArrowUp, LoaderCircle, Square } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
 import { useCallback, useLayoutEffect, useRef, type FormEvent, type KeyboardEvent } from "react";
 
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { REQUEST_MAX_CHARS } from "@/lib/agent/format";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +15,15 @@ const MAX_HEIGHT = 160;
 const COUNT_FROM = REQUEST_MAX_CHARS - 200;
 
 const count = new Intl.NumberFormat("en-US");
+
+/**
+ * Ask (UX-INB-07, DESIGN_SYSTEM §8.3; AGENT_CONTEXT §6) takes the inbox Send's recipe: the primary
+ * Button once there is a question to send; while empty, a disabled `secondary` Button that keeps
+ * the neutral look (`raised` with `fg-disabled`, at full opacity) instead of the usual `opacity-50`.
+ * 32 px, 40 px on coarse pointers. Rounded like every icon-only button (D-16).
+ */
+const SEND = "rounded-lg";
+const SEND_EMPTY = "disabled:text-fg-disabled disabled:opacity-100";
 
 /**
  * The textarea's height for its text: scrollHeight measures the content and padding only, so
@@ -80,11 +91,11 @@ export function AskComposer({
     submit();
   };
 
-  const buttonClass = "grid size-10 shrink-0 place-items-center rounded-full md:size-8";
-
   return (
     <form onSubmit={submit} className={cn("shrink-0", className)}>
-      <div className="flex items-end gap-2 rounded-2xl border border-line bg-field py-1.5 pr-1.5 pl-4 focus-within:border-brand-line focus-within:ring-3 focus-within:ring-ring/40 motion-safe:transition-shadow">
+      {/* The textarea draws no outline of its own; the field shows the focus outline, as the inbox
+          composer's does (DESIGN_SYSTEM §8.3). Its radius waits for D-16. */}
+      <div className="flex items-end gap-2 rounded-xl border border-line bg-field py-1.5 pr-1.5 pl-4 focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
         <label htmlFor={id} className="sr-only">
           Ask Social Hood a question
         </label>
@@ -98,32 +109,39 @@ export function AskComposer({
           placeholder="Ask about your posts, comments or messages…"
           maxLength={REQUEST_MAX_CHARS}
           aria-describedby={blockedReason ? `${id}-blocked` : undefined}
-          className="block max-h-40 min-h-9 flex-1 resize-none overflow-y-hidden bg-transparent py-1.5 text-[15px] leading-6 outline-none"
+          // The reading size (15/24); 16 px below md, where iOS zooms into smaller fields (UI-ISS-017).
+          className="block max-h-40 min-h-9 flex-1 resize-none overflow-y-hidden bg-transparent py-1.5 text-md focus-visible:outline-none max-md:text-base"
         />
         {working ? (
-          <button
-            type="button"
-            onClick={onStop}
-            disabled={stopping || !onStop}
-            aria-label="Stop"
-            title="Stop this answer"
-            className={cn(buttonClass, "bg-fg text-canvas hover:bg-fg/90 disabled:opacity-60")}
-          >
-            <Square className="size-3 fill-current" aria-hidden />
-          </button>
+          // Stop is the one inverted control (an `fg` fill), so it stays hand-built: 32 px, 40 px on
+          // coarse pointers, and the global focus outline.
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onStop}
+                disabled={stopping || !onStop}
+                aria-label="Stop"
+                className="grid size-8 shrink-0 place-items-center rounded-lg bg-fg text-canvas hover:bg-fg/90 disabled:opacity-50 motion-safe:transition-[background-color] pointer-coarse:size-10"
+              >
+                <Square className="size-3 fill-current" aria-hidden />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Stop this answer</TooltipContent>
+          </Tooltip>
         ) : (
-          <button
+          <Button
             type="submit"
+            variant={canSend ? "default" : "secondary"}
+            size="icon"
             disabled={!canSend}
+            loading={sending}
             aria-label="Ask"
-            className={cn(buttonClass, canSend ? "bg-brand-gradient text-white" : "bg-raised text-fg-disabled")}
+            data-ready={canSend}
+            className={cn(SEND, !canSend && SEND_EMPTY)}
           >
-            {sending ? (
-              <LoaderCircle className="size-4 motion-safe:animate-spin" aria-hidden />
-            ) : (
-              <ArrowUp className="size-4" aria-hidden />
-            )}
-          </button>
+            <ArrowUp aria-hidden />
+          </Button>
         )}
       </div>
       {blockedReason ? (
@@ -135,7 +153,7 @@ export function AskComposer({
           {count.format(value.length)} / {count.format(REQUEST_MAX_CHARS)}
         </p>
       ) : (
-        <p className="mt-1.5 hidden text-center text-[11px] text-fg-secondary pointer-fine:block">
+        <p className="mt-1.5 hidden text-center text-2xs text-fg-secondary pointer-fine:block">
           Enter to ask · Shift+Enter for a new line
         </p>
       )}

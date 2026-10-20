@@ -34,9 +34,9 @@ import {
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { useCancelScheduled, useScheduledMessages, useUpdateScheduled } from "@/lib/api/queries";
-import type { ScheduledMessage } from "@/lib/api/types";
-import { emptyStates, errorMessage } from "@/lib/copy";
-import { contactName, type Tone } from "@/lib/inbox/format";
+import type { Platform, ScheduledMessage } from "@/lib/api/types";
+import { emptyStates, errorMessage, scheduledPlatformEmpty } from "@/lib/copy";
+import { contactName, PLATFORM_LABEL, type Tone } from "@/lib/inbox/format";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime, toZonedInputs } from "@/lib/tz";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -55,7 +55,16 @@ const STATUS: Record<ScheduledMessage["status"], { label: string; tone: Tone }> 
 };
 
 /** UX-INB-10, FR-SMS-02: scheduled messages across conversations. */
-export function ScheduledList({ onOpen, now }: { onOpen: (conversationId: string) => void; now: Date }) {
+export function ScheduledList({
+  onOpen,
+  now,
+  platform = null,
+}: {
+  onOpen: (conversationId: string) => void;
+  now: Date;
+  /** The inbox's platform filter (UI-052): only that platform's messages. A scheduled message carries no account, so the account filter can't apply. */
+  platform?: Platform | null;
+}) {
   const workspace = useCurrentWorkspace();
   const scheduled = useScheduledMessages(workspace.id);
   const cancel = useCancelScheduled(workspace.id);
@@ -65,8 +74,11 @@ export function ScheduledList({ onOpen, now }: { onOpen: (conversationId: string
 
   if (scheduled.isPending) return <RowSkeletons count={4} />;
   if (scheduled.isError) return <ErrorState error={scheduled.error} onRetry={() => void scheduled.refetch()} />;
-  const items = scheduled.data.pages.flatMap((page) => page.items).filter((s) => s.status !== "canceled");
-  if (items.length === 0) return <EmptyState {...emptyStates.scheduled} />;
+  const all = scheduled.data.pages.flatMap((page) => page.items).filter((s) => s.status !== "canceled");
+  const items = platform ? all.filter((s) => s.platform === platform) : all;
+  if (items.length === 0) {
+    return <EmptyState {...(platform && all.length > 0 ? scheduledPlatformEmpty(PLATFORM_LABEL[platform]) : emptyStates.scheduled)} />;
+  }
 
   return (
     <div

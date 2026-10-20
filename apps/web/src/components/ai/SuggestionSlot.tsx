@@ -85,6 +85,7 @@ export function useSuggestionSlot({
   const editingId = useInboxStore((state) => state.suggestionEdits[conversationId] ?? null);
   const setSuggestionEdit = useInboxStore((state) => state.setSuggestionEdit);
   const setDraft = useInboxStore((state) => state.setDraft);
+  const composerHasText = useInboxStore((state) => (state.drafts[conversationId] ?? "").trim() !== "");
   const [waitingFor, setWaitingFor] = useState<string | null>(null);
 
   const suggestion: Suggestion | null = conversation.pending_suggestion ?? null;
@@ -202,6 +203,7 @@ export function useSuggestionSlot({
             generating={regenerating || (!suggestion && drafting)}
             customerName={name}
             canSend={canReply}
+            composerHasText={composerHasText}
             busy={dismiss.isPending || regenerate.isPending}
             addingToKnowledge={teachAi.opening}
             actions={{

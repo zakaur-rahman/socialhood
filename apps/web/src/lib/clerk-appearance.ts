@@ -47,12 +47,70 @@ export const clerkAppearance = {
       // Solid primary buttons (Continue, Save): flat. Clerk's top shine (white 11%) took the label
       // under 4.5:1 and its hover lightens the fill (3.4:1); hover is the fill at 90%, as the
       // destructive fill's is (DESIGN_SYSTEM §8.3), so the label gets more contrast, not less.
+      // They wear the app's primary: the brand gradient (Button `default`), brighter on hover.
       '&[data-variant="solid"][data-color="primary"]': {
+        backgroundImage: "linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%)",
+        color: "var(--color-on-brand)",
+        boxShadow: "none",
         "&::after": { display: "none" },
-        "&:hover": { backgroundColor: "color-mix(in srgb, var(--color-brand-strong) 90%, transparent)" },
+        "&:hover": { filter: "brightness(1.1)" },
+        "&:active": { filter: "brightness(0.95)" },
+      },
+      // Outline buttons ("Add", "Cancel"): the app's control edge and hover fill. Clerk draws its
+      // own edges as a near-invisible 1% box shadow with `border-width: 0`, and its internal rules
+      // outrank these, so the edges in this file are !important.
+      '&[data-variant="outline"]': {
+        border: "1px solid var(--color-line-control) !important",
+        backgroundColor: "transparent",
+        boxShadow: "none !important",
+        "&:hover": { backgroundColor: "var(--color-hover)" },
       },
       // Link buttons ("Resend", "Use another method", the edit pencil) are always the primary colour.
       '&[data-variant="link"]': BRAND_TEXT,
+    },
+    // Surfaces, as the app draws its cards: one `panel` surface with a crisp `line` edge and
+    // `rounded-xl`. The inner card and the footer sit on it transparently, so there is one edge,
+    // not two. The user menu and the account modal float on `overlay` (D-12).
+    cardBox: {
+      backgroundColor: "var(--color-panel)",
+      border: "1px solid var(--color-line) !important",
+      borderRadius: "0.75rem",
+      boxShadow: "var(--shadow-overlay) !important",
+    },
+    card: { backgroundColor: "transparent", border: "0 !important", borderRadius: "0", boxShadow: "none !important" },
+    footer: { background: "transparent !important", borderTop: "1px solid var(--color-line) !important" },
+    userButtonPopoverCard: {
+      backgroundColor: "var(--color-overlay) !important",
+      border: "1px solid var(--color-line) !important",
+      borderRadius: "0.75rem",
+      boxShadow: "var(--shadow-floating) !important",
+    },
+    userButtonPopoverMain: { backgroundColor: "var(--color-overlay)" },
+    userButtonPopoverFooter: {
+      background: "var(--color-overlay) !important",
+      borderTop: "1px solid var(--color-line) !important",
+    },
+    modalContent: { borderRadius: "0.75rem", border: "1px solid var(--color-line) !important" },
+    navbar: { backgroundColor: "var(--color-panel)", borderRight: "1px solid var(--color-line) !important" },
+    scrollBox: { backgroundColor: "var(--color-overlay)" },
+    dividerLine: { backgroundColor: "var(--color-line)" },
+    // Fields, on the app's field recipe: `field` fill, the 40% control edge, `rounded-lg`, and the
+    // brand edge on a raised fill when focused.
+    formFieldInput: {
+      backgroundColor: "var(--color-field)",
+      border: "1px solid var(--color-line-control) !important",
+      borderRadius: "0.5rem",
+      boxShadow: "none !important",
+      "&:focus, &:focus-visible": {
+        borderColor: "var(--color-brand) !important",
+        backgroundColor: "var(--color-raised)",
+      },
+    },
+    socialButtonsBlockButton: {
+      border: "1px solid var(--color-line-control) !important",
+      backgroundColor: "transparent",
+      boxShadow: "none !important",
+      "&:hover": { backgroundColor: "var(--color-hover)" },
     },
     footerActionLink: BRAND_TEXT, // "Sign up", "Sign in"
     formFieldAction: BRAND_TEXT, // "Forgot password?"

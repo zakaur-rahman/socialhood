@@ -4,7 +4,8 @@ import { Send } from "lucide-react";
 import { useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { CardInset } from "@/components/ui/card";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import {
   authorName,
@@ -71,48 +72,41 @@ export function CommentComposer({
 
   const label = kind === "dm" ? `Private reply to ${name}` : `Public reply to ${name}`;
   return (
-    <div className="mt-2 space-y-2 rounded-lg border border-line bg-field p-2" data-testid={`composer-${kind}`}>
-      <label htmlFor={id} className="sr-only">
-        {label}
-      </label>
-      {kind === "dm" ? (
-        <p id={`${id}-hint`} className="px-1 text-xs text-fg-secondary">
-          Sent as a DM to {name}. Instagram allows one private reply per comment, within 7 days of it.
-        </p>
-      ) : null}
-      <Textarea
-        id={id}
-        autoFocus
-        rows={2}
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={onKeyDown}
-        placeholder={kind === "dm" ? "Write a DM…" : "Reply publicly…"}
-        aria-describedby={kind === "dm" ? `${id}-hint ${id}-count` : `${id}-count`}
-        aria-invalid={over || undefined}
-        // The field recipe (DESIGN_SYSTEM §8.2); two lines tall, as with rows={2}, growing to 160 px.
-        className="max-h-40 min-h-16 resize-none"
-      />
-      {error ? (
-        <p role="alert" className="px-1 text-xs text-danger-fg">
-          {error}
-        </p>
-      ) : null}
-      <div className="flex items-center justify-between gap-2">
-        <span id={`${id}-count`} className={cn("px-1 text-xs tabular-nums", over ? "text-danger-fg" : "text-fg-secondary")}>
-          {formatCount(size)} / {formatCount(limit)}
-          {kind === "dm" ? " bytes" : ""}
-        </span>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="sm" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button size="sm" disabled={!canSend} onClick={send}>
-            {pending ? <Spinner size="sm" /> : <Send aria-hidden />}
-            {kind === "dm" ? "Send DM" : "Send reply"}
-          </Button>
+    <CardInset padding="compact" className="mt-2" data-testid={`composer-${kind}`}>
+      <Field id={id} invalid={over || undefined} className="gap-2">
+        <FieldLabel className="sr-only">{label}</FieldLabel>
+        {kind === "dm" ? (
+          <FieldDescription className="px-1">
+            Sent as a DM to {name}. Instagram allows one private reply per comment, within 7 days of it.
+          </FieldDescription>
+        ) : null}
+        <Textarea
+          autoFocus
+          rows={2}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={onKeyDown}
+          placeholder={kind === "dm" ? "Write a DM…" : "Reply publicly…"}
+          // The field recipe (DESIGN_SYSTEM §8.2); two lines tall, as with rows={2}, growing to 160 px.
+          className="max-h-40 min-h-16 resize-none"
+        />
+        <FieldError className="px-1">{error}</FieldError>
+        <div className="flex items-center justify-between gap-2">
+          <FieldDescription className={cn("px-1 tabular-nums", over && "text-danger-fg")}>
+            {formatCount(size)} / {formatCount(limit)}
+            {kind === "dm" ? " bytes" : ""}
+          </FieldDescription>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button size="sm" disabled={!canSend && !pending} loading={pending} onClick={send}>
+              <Send aria-hidden />
+              {kind === "dm" ? "Send DM" : "Send reply"}
+            </Button>
+          </div>
         </div>
-      </div>
-    </div>
+      </Field>
+    </CardInset>
   );
 }

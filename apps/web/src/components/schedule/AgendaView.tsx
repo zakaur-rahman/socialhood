@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useMemo } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
-import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { CalendarMessage, ScheduledPostSummary } from "@/lib/api/types";
 import { contactName } from "@/lib/inbox/format";
 import { agendaDayLabel } from "@/lib/schedule/dates";
@@ -32,10 +32,13 @@ export function AgendaView({
   days,
   posts,
   messages,
+  quietWhenEmpty = false,
 }: {
   days: string[];
   posts: ScheduledPostSummary[];
   messages: CalendarMessage[];
+  /** The page already shows its one empty state (nothing planned, no drafts). */
+  quietWhenEmpty?: boolean;
 }) {
   const schedule = useSchedule();
   const { timeZone, now } = schedule;
@@ -51,16 +54,16 @@ export function AgendaView({
       .map(([day, rows]) => [day, rows.sort((a, b) => a.at.localeCompare(b.at))] as const);
   }, [days, posts, messages, timeZone]);
 
+  if (groups.length === 0 && quietWhenEmpty) return null;
   if (groups.length === 0) {
     return (
-      <EmptyState
-        className="rounded-xl border border-line bg-panel"
-        title="Nothing planned for these days"
-        body="Drafts and scheduled posts appear here with their times."
-        action={
-          <Button onClick={() => schedule.actions.newPostAt(null)}>New post</Button>
-        }
-      />
+      <Card>
+        <EmptyState
+          size="compact"
+          title="Nothing planned for these days"
+          body="Drafts and scheduled posts appear here with their times."
+        />
+      </Card>
     );
   }
 
@@ -72,7 +75,8 @@ export function AgendaView({
             <h2 id={`agenda-${day}`} className={cn(EYEBROW, "mb-2")}>
               {agendaDayLabel(day, today)}
             </h2>
-            <ul className="divide-y divide-line-subtle overflow-hidden rounded-xl border border-line bg-panel">
+            <Card asChild className="divide-y divide-line-subtle overflow-hidden p-0">
+             <ul>
               {rows.map((row) =>
                 row.kind === "post" ? (
                   <li key={row.post.id} className="flex min-h-14 items-center gap-3 px-3 py-2">
@@ -112,7 +116,8 @@ export function AgendaView({
                   </li>
                 ),
               )}
-            </ul>
+             </ul>
+            </Card>
           </section>
         );
       })}

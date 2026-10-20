@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
 import { Button } from "@/components/ui/button";
+import { Card, CardBleed, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import type { KnowledgeGap } from "@/lib/api/types";
 import { emptyStates } from "@/lib/copy";
 import { relativeTime } from "@/lib/time";
@@ -40,59 +41,72 @@ export function KnowledgeGapsCard({
   const shown = showAll ? gaps : gaps.slice(0, GAPS_SHOWN);
 
   return (
-    <section aria-labelledby="gaps-title" className="rounded-xl border border-line bg-panel">
-      <div className="border-b border-line p-5">
-        <h2 id="gaps-title" className="text-base font-semibold">
-          Questions the AI couldn&apos;t answer
-        </h2>
-        <p className="text-xs text-fg-secondary">From the last 30 days. Answer one and the AI can use it next time.</p>
-      </div>
-      {gaps.length === 0 ? (
-        <EmptyState title={emptyStates.knowledgeGaps.title} body={emptyStates.knowledgeGaps.body} />
-      ) : (
-        <>
-          <ul className="divide-y divide-line-subtle">
-            {shown.map((gap) => {
-              const example = gap.examples[0]?.text;
-              return (
-                <li key={gap.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center" data-gap={gap.id}>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{gap.topic}</p>
-                    <p className="text-xs text-fg-secondary tabular-nums">{askedLine(gap, now)}</p>
-                    {example ? <p className="mt-1 line-clamp-2 text-sm text-fg-secondary">“{example}”</p> : null}
-                  </div>
-                  <div className="flex shrink-0 gap-2">
-                    <Button
-                      size="sm"
-                      aria-label={`Add answer: ${gap.topic}`}
-                      disabled={busyId === gap.id}
-                      onClick={() => onAddAnswer(gap)}
-                    >
-                      Add answer
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      aria-label={`Dismiss: ${gap.topic}`}
-                      disabled={busyId === gap.id}
-                      onClick={() => onDismiss(gap)}
-                    >
-                      Dismiss
-                    </Button>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-          {gaps.length > GAPS_SHOWN ? (
-            <div className="border-t border-line px-5 py-3">
-              <Button variant="ghost" size="sm" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>
-                {showAll ? "Show fewer" : `Show all ${gaps.length}`}
-              </Button>
+    <Card asChild padding="roomy">
+      <section aria-labelledby="gaps-title">
+        <CardHeader>
+          <CardTitle id="gaps-title">Questions the AI couldn&apos;t answer</CardTitle>
+          <CardDescription>From the last 30 days. Answer one and the AI can use it next time.</CardDescription>
+        </CardHeader>
+        <CardBleed className="mt-5 border-t border-line">
+          {gaps.length === 0 ? (
+            <div className="p-(--card-padding)">
+              <EmptyState
+                size="compact"
+                title={emptyStates.knowledgeGaps.title}
+                body={emptyStates.knowledgeGaps.body}
+              />
             </div>
-          ) : null}
-        </>
-      )}
-    </section>
+          ) : (
+            <>
+              <ul className="divide-y divide-line-subtle">
+                {shown.map((gap) => {
+                  const example = gap.examples[0]?.text;
+                  return (
+                    <li
+                      key={gap.id}
+                      className="flex flex-col gap-3 px-(--card-padding) py-4 sm:flex-row sm:items-center"
+                      data-gap={gap.id}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{gap.topic}</p>
+                        <p className="text-xs text-fg-secondary tabular-nums">{askedLine(gap, now)}</p>
+                        {example ? <p className="mt-1 line-clamp-2 text-sm text-fg-secondary">“{example}”</p> : null}
+                      </div>
+                      <div className="flex shrink-0 gap-2">
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          aria-label={`Add answer: ${gap.topic}`}
+                          disabled={busyId === gap.id}
+                          onClick={() => onAddAnswer(gap)}
+                        >
+                          Add answer
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          aria-label={`Dismiss: ${gap.topic}`}
+                          disabled={busyId === gap.id}
+                          onClick={() => onDismiss(gap)}
+                        >
+                          Dismiss
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              {gaps.length > GAPS_SHOWN ? (
+                <div className="border-t border-line px-(--card-padding) py-3">
+                  <Button variant="ghost" size="sm" aria-expanded={showAll} onClick={() => setShowAll(!showAll)}>
+                    {showAll ? "Show fewer" : `Show all ${gaps.length}`}
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </CardBleed>
+      </section>
+    </Card>
   );
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { PANE_TITLE } from "@/styles/tokens";
 import { Menu } from "lucide-react";
 import { useState, type ComponentProps, type ReactNode } from "react";
 
@@ -31,21 +32,23 @@ export function MobileNav({ title, ask, ...sidebar }: Props) {
       )}
     >
       <span className="bg-shell-gradient size-8 shrink-0 rounded-lg" aria-hidden />
-      <p className="min-w-0 flex-1 truncate text-base font-semibold">{title}</p>
+      <p className={cn("min-w-0 flex-1 truncate", PANE_TITLE)}>{title}</p>
       {ask}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           aria-label="Open menu"
-          className="grid size-10 place-items-center rounded-lg text-fg-secondary hover:bg-white/5 hover:text-fg"
+          className="grid size-10 place-items-center rounded-lg text-fg-secondary hover:bg-hover hover:text-fg"
         >
           <Menu className="size-5" aria-hidden />
         </SheetTrigger>
         {/* The expanded sidebar's layout at its 232 px width; rows are 40 px for touch. The drawer
-            is panel, like the sidebar, not the overlay surface (DESIGN_SYSTEM §1.1, D-12). */}
+            is `canvas`, so the sidebar card (`panel`, with its `line` edge) reads as it does on
+            desktop, floating on the page background; on `panel` it read only by its border. The
+            sheet's own `line` border is its edge. */}
         <SheetContent
           side="left"
           showCloseButton={false}
-          className="w-[256px] gap-0 border-line bg-panel p-3 data-[side=left]:w-[256px] sm:max-w-[256px] data-[side=left]:sm:max-w-[256px]"
+          className="w-64 gap-0 bg-canvas p-3 data-[side=left]:w-64 sm:max-w-64 data-[side=left]:sm:max-w-64"
         >
           <SheetTitle className="sr-only">Menu</SheetTitle>
           <AppSidebar {...sidebar} collapsed={false} onNavigate={() => setOpen(false)} className="w-full" />

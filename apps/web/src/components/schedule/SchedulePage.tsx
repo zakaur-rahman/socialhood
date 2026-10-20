@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ListFilter, ListPlus, PanelRight, Plus } from "lucide-react";
+import { PAGE_TITLE } from "@/styles/tokens";
+import { ChevronLeft, ChevronRight, ListFilter, PanelRight, Plus } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { EmptyState } from "@/components/states/EmptyState";
@@ -20,6 +21,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -31,6 +33,7 @@ import {
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useSocialAccounts } from "@/lib/api/queries";
 import {
@@ -101,7 +104,7 @@ export function SchedulePage({ now }: { now?: Date } = {}) {
   if (workspace.role === "agent") {
     return (
       <EmptyState
-        className="min-h-[60vh]"
+        className="flex-1"
         title="Schedule is for owners and admins"
         body="Ask an owner or admin of this workspace to plan posts."
         action={
@@ -186,6 +189,8 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   const [deleteRequest, setDeleteRequest] = useState<MoveRequest | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [announcement, setAnnouncement] = useState("");
+  const heading = useRef<HTMLHeadingElement>(null);
+  const deleted = useRef(false);
 
   // ---- mutations
   const create = useCreateScheduledPost(wid);
@@ -277,12 +282,12 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
     say(lockedMessage(post));
   };
 
-  const newPost = (at: Date | null, query = "") => {
+  const newPost = (at: Date | null) => {
     if (create.isPending) return;
     create.mutate(
       { publishAt: at ? at.toISOString() : null },
       {
-        onSuccess: (post) => openComposer(post, query),
+        onSuccess: (post) => openComposer(post),
         onError: (error) => toastError(error),
       },
     );
@@ -385,7 +390,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   } else if (calendar.isError && !calendar.data) {
     main = <ErrorState error={calendar.error} onRetry={() => void calendar.refetch()} />;
   } else if (phone) {
-    main = <AgendaView days={range.days} posts={posts} messages={messages} />;
+    main = <AgendaView days={range.days} posts={posts} messages={messages} quietWhenEmpty={emptyRange} />;
   } else if (view === "month") {
     main = (
       <MonthView
@@ -402,24 +407,28 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
   } else {
     main = <WeekView days={range.days} posts={posts} messages={messages} slots={slots} />;
   }
+  // The week grid scrolls inside the frame, so the page is the shell's full-height frame (RG-14).
+  const fillsHeight = view === "week" && !phone;
 
   return (
     <ScheduleProvider value={context}>
       <CalendarDndProvider enabled={!phone} onDrop={onDrop} onLocked={onLocked} describe={describeDrag}>
-        <div className="w-full p-4 md:p-6">
+        <div
+          className={cn("w-full p-4 md:p-6", fillsHeight && "flex min-h-0 flex-1 flex-col")}
+          data-shell-fill={fillsHeight ? "" : undefined}
+        >
           <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Schedule</h1>
+              <h1 ref={heading} tabIndex={-1} className={cn(PAGE_TITLE, "outline-none")}>
+                Schedule
+              </h1>
               <p className="text-xs text-fg-secondary">Times in {zoneLabel(timeZone)}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="secondary" onClick={() => newPost(null, "?when=queue")} disabled={create.isPending}>
-                <ListPlus aria-hidden /> Add to queue
-              </Button>
-              <Button onClick={() => newPost(null)} disabled={create.isPending}>
-                <Plus aria-hidden /> New post
-              </Button>
-            </div>
+            {/* The only primary on the page: the empty states below point at it. The queue is a choice in
+                the composer's When section (UI-054: the header's "Add to queue" was removed). */}
+            <Button onClick={() => newPost(null)} loading={create.isPending}>
+              <Plus aria-hidden /> New post
+            </Button>
           </header>
 
           <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -454,27 +463,30 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
                   const shown = !hidden.has(account.id);
                   return (
                     // A toggle around the account's avatar: 32 px, 40 px on coarse pointers.
-                    <button
-                      key={account.id}
-                      type="button"
-                      aria-pressed={shown}
-                      aria-label={accountLabel(account)}
-                      title={accountLabel(account)}
-                      onClick={() =>
-                        setHidden((current) => {
-                          const next = new Set(current);
-                          if (shown) next.add(account.id);
-                          else next.delete(account.id);
-                          return next;
-                        })
-                      }
-                      className={cn(
-                        "grid size-8 place-items-center rounded-full transition-[opacity,filter,background-color] duration-fast ease-standard hover:bg-hover pointer-coarse:size-10",
-                        !shown && "opacity-40 grayscale",
-                      )}
-                    >
-                      <AccountAvatar account={account} accountId={account.id} />
-                    </button>
+                    <Tooltip key={account.id}>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          aria-pressed={shown}
+                          aria-label={accountLabel(account)}
+                          onClick={() =>
+                            setHidden((current) => {
+                              const next = new Set(current);
+                              if (shown) next.add(account.id);
+                              else next.delete(account.id);
+                              return next;
+                            })
+                          }
+                          className={cn(
+                            "grid size-8 place-items-center rounded-full transition-[opacity,filter,background-color] duration-fast ease-standard hover:bg-hover pointer-coarse:size-10",
+                            !shown && "opacity-40 grayscale",
+                          )}
+                        >
+                          <AccountAvatar account={account} accountId={account.id} />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>{accountLabel(account)}</TooltipContent>
+                    </Tooltip>
                   );
                 })}
               </div>
@@ -533,19 +545,18 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           </div>
 
           {emptyRange && view !== "list" ? (
-            <EmptyState
-              className="mb-3 rounded-xl border border-line bg-panel py-6"
-              {...emptyStates.schedule}
-              action={
-                <Button onClick={() => newPost(null)}>New post</Button>
-              }
-            />
+            <Card className="mb-3">
+              <EmptyState
+                size="compact"
+                {...emptyStates.schedule}
+              />
+            </Card>
           ) : null}
 
-          <div className="flex gap-4">
-            <div className="min-w-0 flex-1">{main}</div>
+          <div className={cn("flex gap-4", fillsHeight && "min-h-0 flex-1")}>
+            <div className={cn("min-w-0 flex-1", fillsHeight && "flex min-h-0 flex-col")}>{main}</div>
             {wide ? (
-              <aside aria-label="Drafts and queue" className="w-[250px] shrink-0">
+              <aside aria-label="Drafts and queue" className={cn("w-[250px] shrink-0", fillsHeight && "min-h-0 overflow-y-auto")}>
                 {rail(true)}
               </aside>
             ) : null}
@@ -588,7 +599,12 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
               if (deleteRequest?.returnFocus?.isConnected) {
                 event.preventDefault();
                 deleteRequest.returnFocus.focus();
+              } else if (deleted.current) {
+                // The post, and the menu button that asked, are gone: land on the page heading.
+                event.preventDefault();
+                heading.current?.focus();
               }
+              deleted.current = false;
             }}
           >
             <AlertDialogHeader>
@@ -603,7 +619,10 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
                   const post = deleteRequest?.post;
                   if (!post) return;
                   remove.mutate(post, {
-                    onSuccess: () => toast.success("Post deleted"),
+                    onSuccess: () => {
+                      deleted.current = true;
+                      toast.success("Post deleted");
+                    },
                     onError: (error) => toast.error(moveErrorMessage(error)),
                   });
                 }}
@@ -639,11 +658,11 @@ function deleteDescription(post: ScheduledPostSummary): string {
 
 function CalendarSkeleton() {
   return (
-    <div className="space-y-2 rounded-xl border border-line bg-panel p-3" aria-busy="true" aria-label="Loading the calendar">
+    <Card role="status" className="space-y-2" aria-busy="true" aria-label="Loading the calendar">
       <Skeleton className="h-6 w-full" />
       {Array.from({ length: 6 }, (_, i) => (
         <Skeleton key={i} className="h-16 w-full" />
       ))}
-    </div>
+    </Card>
   );
 }
