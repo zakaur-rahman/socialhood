@@ -645,7 +645,11 @@ describe("Layout at 375 px (UX-A11Y-05)", () => {
     const { panel } = await openPanel();
     expect(panel).toHaveAttribute("data-slot", "sheet-content");
     expect(panel).toHaveAttribute("data-size", "panel");
-    expect(panel).toHaveClass("fixed", "inset-0", "md:w-105", "md:data-[side=right]:left-auto");
+    // UI-078: the width is the resizable --pane-w (420 px by default), not the sheet's fixed md:w-105.
+    expect(panel).toHaveClass("fixed", "inset-0", "md:w-(--pane-w)", "md:data-[side=right]:left-auto");
+    expect(panel).not.toHaveClass("md:w-105");
+    expect(panel.style.getPropertyValue("--pane-w")).toBe("420px");
+    expect(within(panel).getByRole("separator", { name: "Resize the Ask panel" })).toHaveAttribute("aria-valuenow", "420");
     for (const name of ["New thread", "Threads", "Close"]) {
       expect(within(panel).getByRole("button", { name })).toHaveClass("size-8", "pointer-coarse:size-10");
     }
