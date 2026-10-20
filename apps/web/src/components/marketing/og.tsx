@@ -1,19 +1,28 @@
 import { ImageResponse } from "next/og";
 
 import { OG_IMAGE, SITE_NAME } from "@/lib/marketing/site";
+import { colorValue } from "@/styles/tokens";
 
-// Satori can't read CSS variables, so the token values are written out (globals.css @theme).
+/** `rgb(r g b / a)` as `rgba(r,g,b,a)`: Satori parses only the comma form. */
+function legacyRgba(value: string): string {
+  const match = value.match(/^rgb\((\d+) (\d+) (\d+) \/ ([\d.]+)\)$/);
+  if (!match) throw new Error(`Not an rgb() token: ${value}`);
+  return `rgba(${match.slice(1).join(",")})`;
+}
+
+// Satori can't read CSS variables, so the values come from styles/tokens.ts (UI-ISS-095).
 const TOKENS = {
-  canvas: "#000000",
-  panel: "#1F1F1F",
-  fg: "#FFFFFF",
-  fgSecondary: "#9B9CA0",
-  brandFg: "#9DB5FF",
-  brandDeep: "#20338A",
-  shell1: "#3352CC",
-  shell2: "#1C2D70",
-  instagram: "#BE185D",
-  whatsapp: "#16A34A",
+  canvas: colorValue("canvas"),
+  panel: colorValue("panel"),
+  fg: colorValue("fg"),
+  fgSecondary: colorValue("fg-secondary"),
+  brandFg: colorValue("brand-fg"),
+  brandDeep: colorValue("brand-deep"),
+  brandLine: legacyRgba(colorValue("brand-line")),
+  shell1: colorValue("shell-1"),
+  shell2: colorValue("shell-2"),
+  instagram: colorValue("instagram"),
+  whatsapp: colorValue("whatsapp"),
 };
 
 /** The share card for every public page (Open Graph and Twitter), drawn with next/og. */
@@ -29,7 +38,7 @@ export function renderOgImage(): ImageResponse {
           justifyContent: "space-between",
           padding: 72,
           backgroundColor: TOKENS.canvas,
-          backgroundImage: "radial-gradient(circle at 85% 0%, rgba(86,127,248,0.35), rgba(0,0,0,0) 55%)",
+          backgroundImage: `radial-gradient(circle at 85% 0%, ${TOKENS.brandLine}, rgba(0,0,0,0) 55%)`,
           color: TOKENS.fg,
           fontFamily: "sans-serif",
         }}

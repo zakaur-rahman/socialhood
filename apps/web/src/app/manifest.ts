@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
 
+import { colorValue } from "@/styles/tokens";
+
 /**
  * TR-FE-09, FR-NOT-03: the web app manifest, served at /manifest.webmanifest and linked from every
  * page. Installed, the app opens at /app (the last workspace) in its own window. The icons come
@@ -14,8 +16,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/app",
     scope: "/",
     display: "standalone",
-    background_color: "#000000",
-    theme_color: "#000000",
+    background_color: colorValue("canvas"),
+    theme_color: colorValue("canvas"),
     categories: ["business", "productivity", "social"],
     icons: [
       { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },

@@ -18,6 +18,12 @@
    mirrors every value and tokens.test.ts checks this file against it. */
 
 @theme {
+  /* The palette lock (UI-070, C-075): Tailwind's default colours are cleared, so only the
+     tokens below compile. A stray `bg-red-500` or `text-white` generates no CSS, and the design
+     lint (styles/design-lint.test.ts) names it. White and black exist only as tokens: fg, on-brand,
+     canvas and media-scrim. */
+  --color-*: initial;
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
@@ -71,6 +77,13 @@
   --color-whatsapp: #16A34A;
   --color-facebook: #2563EB;
   --color-linkedin: #1E40AF;
+
+  /* Charts (COLOR_SYSTEM §11.6, C-075): aliases, no new hues. Every chart reads these, so a
+     series' colour is set in one place; the legend, numbers and an sr-only table carry the values. */
+  --color-chart-positive: var(--color-success);
+  --color-chart-neutral: var(--color-fg-secondary);
+  --color-chart-negative: var(--color-danger);
+  --color-chart-series-1: var(--color-brand);
 
   /* Type: the two sizes the scale lacked, each with its line height (C-070) */
   --text-2xs: 0.6875rem; --text-2xs--line-height: 1rem;      /* 11/16: status badges, chips, eyebrows */

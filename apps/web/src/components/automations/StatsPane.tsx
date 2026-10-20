@@ -134,10 +134,10 @@ function DailyChart({ daily }: { daily: AutomationStats["daily"] }) {
         <figcaption className="text-fg-secondary">Runs per day</figcaption>
         <span className="flex items-center gap-3 text-fg-secondary">
           <span className="flex items-center gap-1">
-            <span aria-hidden className="size-2 rounded-sm bg-brand" /> Runs
+            <span aria-hidden className="size-2 rounded-sm bg-chart-series-1" /> Runs
           </span>
           <span className="flex items-center gap-1">
-            <span aria-hidden className="size-2 rounded-sm bg-danger" /> Failures
+            <span aria-hidden className="size-2 rounded-sm bg-chart-negative" /> Failures
           </span>
         </span>
       </div>
@@ -166,12 +166,12 @@ function DailyChart({ daily }: { daily: AutomationStats["daily"] }) {
             >
               {ok > 0 ? (
                 <span
-                  className={cn("block w-full bg-brand", failures === 0 && "rounded-t-sm")}
+                  className={cn("block w-full bg-chart-series-1", failures === 0 && "rounded-t-sm")}
                   style={{ height: Math.max(okHeight, 2) }}
                 />
               ) : null}
               {failures > 0 ? (
-                <span className="block w-full rounded-t-sm bg-danger" style={{ height: Math.max(failHeight, 2) }} />
+                <span className="block w-full rounded-t-sm bg-chart-negative" style={{ height: Math.max(failHeight, 2) }} />
               ) : null}
             </div>
           );

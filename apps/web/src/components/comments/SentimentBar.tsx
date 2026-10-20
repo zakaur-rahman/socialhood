@@ -2,9 +2,9 @@ import { formatCount, sentimentLabel } from "@/lib/comments/format";
 import { cn } from "@/lib/utils";
 
 const SEGMENTS = [
-  { key: "positive", className: "bg-success" },
-  { key: "neutral", className: "bg-fg-secondary" },
-  { key: "negative", className: "bg-danger" },
+  { key: "positive", className: "bg-chart-positive" },
+  { key: "neutral", className: "bg-chart-neutral" },
+  { key: "negative", className: "bg-chart-negative" },
 ] as const;
 
 /**

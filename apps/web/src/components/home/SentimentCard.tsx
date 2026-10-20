@@ -6,9 +6,9 @@ import { cn } from "@/lib/utils";
 import { formatCount, formatShare } from "./format";
 
 const KEY = [
-  { key: "positive", label: "Positive", dot: "bg-success" },
-  { key: "neutral", label: "Neutral", dot: "bg-fg-secondary" },
-  { key: "negative", label: "Negative", dot: "bg-danger" },
+  { key: "positive", label: "Positive", dot: "bg-chart-positive" },
+  { key: "neutral", label: "Neutral", dot: "bg-chart-neutral" },
+  { key: "negative", label: "Negative", dot: "bg-chart-negative" },
 ] as const;
 
 function SplitRow({ title, noun, split, within }: { title: string; noun: string; split: SentimentSplit; within: string }) {
