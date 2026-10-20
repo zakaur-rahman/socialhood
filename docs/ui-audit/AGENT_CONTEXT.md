@@ -168,6 +168,8 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
   pressed (`variant={pressed ? "soft" : "ghost"}`, with `aria-pressed`) use `variant="soft"`:
   `brand-soft`, `brand-fg`, a `brand-line` edge, `brand-soft-hover` on hover and open. Never paste
   brand-soft classes onto a ghost Button.
+- **Muted ghost** (DS-7, C-076): a tertiary action may be a ghost Button with `text-fg-secondary`;
+  ghost's hover and open turn the text `fg`. That is the only text-colour override on Button.
 - **Settings forms** (C-066) use `size="xl"` on Input, Select, Button, ToggleGroup and Tabs: 40 px
   segments at 14 px in a 48 px track. A segmented filter in a row beside a 40 px search uses
   `default` (a 40 px track), so the edges line up.
@@ -193,6 +195,9 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
 - [ ] `[@media(max-height:500px)]:` (use `short:`) and arbitrary `shadow-[…]`
 - [ ] `border-line bg-panel`, `shadow-*` or `max-h-*` on overlay content
 - [ ] Skeleton colour overrides
+- [ ] the design lint (`styles/design-lint.test.ts`, C-075) and the copy lint
+  (`lib/copy-lint.test.ts`, UI-068) pass: they catch the next four lines' colours, sizes, radii and
+  focus removals, and the renamed labels
 - [ ] `ring-ring/50`, `ring-3`, `outline-none`/`outline-hidden` without a focus replacement
 - [ ] raw `<input>`, `<textarea>`, `<select>` (native date and time go through Input)
 - [ ] `text-white`, `bg-white/*`, `bg-black/*` (media uses `bg-media-scrim/N`), `bg-{status}/10|15`
@@ -282,7 +287,10 @@ per-site overlay patches.
 - Field is shadcn's Field; the three private copies go.
 - Spinners stop under reduced motion (C-065's precedent); the suggestion bar moves to 200 ms
   (logged for confirmation).
-- No `shadow-raised`, RadioGroup, Calendar, Command, info or chart colour tokens for now.
+- No `shadow-raised`, RadioGroup, Calendar, Command or info tokens for now. Charts use the four
+  `chart-*` aliases (C-075).
+- **The lock (C-075):** Tailwind's default palette is off; `colorValue()` in `tokens.ts` feeds the
+  hex mirrors (Clerk, OG image, manifest). Pages fill the width (C-074); four panes resize (UI-078).
 - **Primitive follow-ups (C-073):** Button `soft` (AI actions, a pressed toggle) with the
   `brand-soft-hover` token (brand 25%); ToggleGroup and Tabs `xl` (40 px segments at 14 px, 8 px
   minimum side padding), named `xl` because `lg` is 36 px on every other control; native date and
@@ -295,22 +303,22 @@ new work to the decided rule:
 | ID | Topic | Status | Decision |
 |---|---|---|---|
 | D-01 | Control-border token `line-control` and its scope | Applied (UI-018, C-071) | Checkbox, radio, switch **and** text fields; checked boxes `brand` |
-| D-02 | Card radius | Approved | `xl` everywhere |
+| D-02 | Card radius | Applied (sweeps, UI-037) | `xl` everywhere |
 | D-03 | Tooltip colour | Applied (UI-017) | Dark, like other floating surfaces |
-| D-04 | Native date and time pickers in R1 | Approved | Accept native |
-| D-05 | Page and pane title sizes | Approved | 24 px page, 18 px pane |
+| D-04 | Native date and time pickers in R1 | Applied (Input, C-073; no UI-029) | Accept native |
+| D-05 | Page and pane title sizes | Applied (UI-069) | 24 px page, 18 px pane |
 | D-06 | Placeholder colour | Applied (UI-018, C-071) | `fg-secondary` |
-| D-07 | "AI Assisted" and AI/automation labels (C-063) | Approved | "Sent by AI" / "Automation · {name}" |
-| D-08 | Settings breadcrumb, eyebrow, tab labels, save bar, Agent tiles (C-066) | Approved | Drop, match, only when needed, one sentence |
-| D-09 | "Remove" and account-card destructive actions (C-067) | Approved | Disconnect visible; "Delete account and data" in ⋯ |
-| D-10 | Gradient on every primary (VH-003) | Approved | One per view region |
-| D-11 | Comments needs-reply API (UX-001) | Approved | Per-post count and filter now |
+| D-07 | "AI Assisted" and AI/automation labels (C-063) | Applied (UI-050) | "Sent by AI" / "Automation · {name}" |
+| D-08 | Settings breadcrumb, eyebrow, tab labels, save bar, Agent tiles (C-066) | Applied (UI-060, UI-069) | Drop, match, only when needed, one sentence |
+| D-09 | "Remove" and account-card destructive actions (C-067) | Applied (UI-062) | Disconnect visible; "Delete account and data" in ⋯ |
+| D-10 | Gradient on every primary (VH-003) | Applied (UI-059) | One per view region |
+| D-11 | Comments needs-reply API (UX-001) | Applied (UI-055) | Per-post count and filter now |
 | D-12 | Overlay surface and elevation shadows | Applied (UI-018, C-071) | Adopt; the edge is a ring beside the shadow |
 | D-13 | Identity palette | Applied (UI-027, C-072) | Three pairs from existing values (`lib/ui/identity.ts`) |
-| D-14 | Single-key shortcuts | Approved | A per-device switch |
-| D-15 | Inbox refinements (C-063) | Approved | Neutral segment, heart in emoji popover, composer-only scheduling, Archived chip |
-| D-16 | Spec-prescribed layouts (back link, editor panel, icon-button and composer radius) | Approved | Back link, panel after steps, `rounded-lg`, `rounded-xl` |
-| D-17 | Devanagari fallback font | Approved | System fallback in R1 |
+| D-14 | Single-key shortcuts | Applied (UI-053) | A per-device switch |
+| D-15 | Inbox refinements (C-063) | Applied (UI-051, UI-052) | Neutral segment, heart in emoji popover, composer-only scheduling, Archived chip |
+| D-16 | Spec-prescribed layouts (back link, editor panel, icon-button and composer radius) | Applied (UI-040, UI-065) | Back link, panel after steps, `rounded-lg`, `rounded-xl` |
+| D-17 | Devanagari fallback font | Applied (nothing to build) | System fallback in R1 |
 
 ## 11. Working environment: renders, screens and tests
 

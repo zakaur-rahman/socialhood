@@ -1486,3 +1486,43 @@ screen: every colour below resolves to the value it had.
 - **One alias outside the primitives:** Settings › Workspace's URL field drew its focus edge and
   outline with `border-ring` and `outline-ring`; they are `border-brand` and `outline-brand`, the
   same colour, so app code uses tokens only (DESIGN_SYSTEM §1.10).
+
+## C-076 · The spec brought in step with the audit's decisions (UI-071, feature/ui-spec-sync)
+UI-071's final pass: `docs/BUILD_SPEC.html`, `DESIGN_SYSTEM.md` and `AGENT_CONTEXT.md` now say what
+the code does after C-069 to C-075. No code changes.
+- **§4.2 (UX-TOK-01, UX-TOK-02):**
+  - The CSS block is `globals.css` as it stands, with the palette lock first.
+  - The palette table is generated from `tokens.ts`: 39 tokens, the 4 chart aliases and the 4
+    gradients.
+  - UX-TOK-02 adds the audit's contrast fixes: `brand-strong` behind text (3.6 → 4.9:1), the
+    `line-control` edge (D-01) and `fg-secondary` placeholders (D-06).
+  - The type table follows `typeRoles`: the 11 px chip and eyebrow rows, the 15 px reading row, and
+    the pane title at 18 px (D-05). It replaces `text-xl` and `text-[11px]`.
+  - The rules are rewritten from DESIGN_SYSTEM: spacing, width (C-074), radius (D-02 cards, D-16
+    icon buttons and composer shells), borders and focus (D-01), placeholders (D-06), elevation
+    (D-12, replacing "`shadow-xl` on popovers"), motion (§7, with 200 ms for the suggestion bar) and
+    charts (C-075).
+- **UX-SH-01:** the nav row is 14 px (`text-sm`, C-048), not `text-[15px]`. Its hover is `bg-hover`,
+  not `bg-white/5`. The active row has the selection bar. The count badge uses `text-on-brand`.
+- **UX-SH-03:** no 1200 px cap (C-074). The inbox is inset on all four sides, as Ask is.
+- **UX-INB-03:**
+  - The focus wording is fixed: the 2 px outline is the cue, and `raised` is extra, never the only
+    one.
+  - The search is SearchInput, with the placeholder "Search" and the name "Search conversations".
+  - The chips are the built set, including "Needs you" and "Handled by AI" (UI-068).
+  - The segments have no shadow.
+- **UX-INB-07:** the composer is one `rounded-xl` shell (D-16) with the tool row below the textarea.
+  Send is a Button (`secondary` while empty, the gradient when ready), not a 36 px circle.
+- **UX-SCR-03:** the back link "‹ Automations" replaces the breadcrumb, and below 1280 px the side
+  panel follows the steps (D-16).
+- **UX-A11Y-01:** control edges are `line-control` (D-01), placeholders `fg-secondary` (D-06), and
+  focus is the 2 px brand outline on every focusable element.
+- **DS-7, the muted ghost (the Design System Architect's decision, review gate RG-09):**
+  - A tertiary action may be a ghost Button with `text-fg-secondary`. Ghost's hover and open
+    already turn the text `fg`, so all nine call sites behave alike, and a `quiet` variant would
+    only rename them.
+  - It is the one text-colour override allowed on Button. AI actions use `soft` (C-073), never
+    `text-brand-fg`.
+- **AGENT_CONTEXT:** the decision table marks D-02, D-04, D-05, D-07 to D-11 and D-14 to D-17 as
+  applied, with their tasks. The checklist names the design lint and the copy lint. The chart
+  aliases, the palette lock and the resizable panes are listed.
