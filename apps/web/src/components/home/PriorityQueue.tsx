@@ -47,7 +47,7 @@ function QueueRow({ item, slug, now }: { item: PriorityConversation; slug: strin
         <Badge data-testid="queue-state" tone={state.chip.tone}>
           {state.chip.label}
         </Badge>
-        <Button asChild variant={state.action === "Review & Send" ? "secondary" : "outline"}>
+        <Button asChild variant={state.action === "Review and send" ? "secondary" : "outline"}>
           <Link href={`/w/${slug}/inbox/${item.id}` as Route} aria-label={`${state.action}: ${name}`}>
             {state.action}
           </Link>
@@ -83,7 +83,7 @@ export function PriorityQueue({
           <CardAction>
             <Button asChild variant="link" size="sm">
               <Link href={`/w/${slug}/inbox?view=needs_reply` as Route}>
-                Open Inbox <span className="tabular-nums">({formatCount(needsReply)})</span>
+                Open inbox <span className="tabular-nums">({formatCount(needsReply)})</span>
                 <ChevronRight aria-hidden />
               </Link>
             </Button>

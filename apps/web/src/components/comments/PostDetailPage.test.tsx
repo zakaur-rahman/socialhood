@@ -182,7 +182,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     });
     const summary = await screen.findByRole("region", { name: "Summary" });
     expect(summary).toHaveTextContent("No summary yet. It appears once comments are analysed.");
-    expect(within(summary).getByRole("button", { name: "Summarize" })).toBeInTheDocument();
+    expect(within(summary).getByRole("button", { name: "Summarise" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Topics" })).toHaveTextContent("Topics appear once comments are analysed.");
     expect(screen.getByRole("img", { name: "No analysed comments yet" })).toBeInTheDocument();
   });

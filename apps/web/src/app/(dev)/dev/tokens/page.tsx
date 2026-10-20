@@ -180,7 +180,7 @@ export default function TokensPage() {
           tabIndex={0}
           className="mask-fade-x flex gap-2 overflow-x-auto pe-4 [scrollbar-width:none]"
         >
-          {["All", "Unread", "Needs reply", "Leads", "AI handled", "Instagram", "WhatsApp", "Archived", "More"].map((label) => (
+          {["All", "Unread", "Needs reply", "Leads", "Handled by AI", "Instagram", "WhatsApp", "Archived", "More"].map((label) => (
             <span key={label} className="shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-sm">
               {label}
             </span>

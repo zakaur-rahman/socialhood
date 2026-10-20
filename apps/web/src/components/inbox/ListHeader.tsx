@@ -25,7 +25,7 @@ export const CHIP_VIEWS: { value: InboxView; label: string }[] = [
   { value: "needs_reply", label: "Needs reply" },
   { value: "needs_you", label: "Needs you" },
   { value: "leads", label: "Leads" },
-  { value: "ai_handled", label: "AI handled" },
+  { value: "ai_handled", label: "Handled by AI" },
   { value: "archived", label: "Archived" },
 ];
 

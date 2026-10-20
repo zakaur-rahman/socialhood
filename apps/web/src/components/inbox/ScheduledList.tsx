@@ -50,7 +50,7 @@ const STATUS: Record<ScheduledMessage["status"], { label: string; tone: Tone }> 
   sending: { label: "Sending", tone: "brand" },
   sent: { label: "Sent", tone: "neutral" },
   failed: { label: "Failed", tone: "danger" },
-  canceled: { label: "Canceled", tone: "neutral" },
+  canceled: { label: "Cancelled", tone: "neutral" },
   expired: { label: "Expired", tone: "warning" },
 };
 
@@ -106,7 +106,7 @@ export function ScheduledList({
               canceling={cancel.isPending && cancel.variables?.id === item.id}
               onCancel={() =>
                 cancel.mutate(item, {
-                  onSuccess: () => toast.success("Scheduled message canceled"),
+                  onSuccess: () => toast.success("Scheduled message cancelled"),
                   onError: (error) => toastError(error),
                 })
               }

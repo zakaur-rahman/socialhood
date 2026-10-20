@@ -22,7 +22,7 @@ import { useReturnFocusOr } from "./return-focus";
 import { editorHref } from "./TemplateGallery";
 
 const ACTION_LABEL = { send_message: "Send a message", ai_reply: "Reply with AI" } as const;
-const SCOPE_LABEL = { all: "All posts", selected: "Chosen posts", next_post: "The next post I publish" } as const;
+const SCOPE_LABEL = { all: "All posts", selected: "Selected posts", next_post: "The next post I publish" } as const;
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (

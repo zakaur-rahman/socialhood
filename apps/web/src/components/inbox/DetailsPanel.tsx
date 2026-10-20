@@ -157,7 +157,7 @@ export function DetailsPanel({
                     void teachAi.teach(text, messageId);
                   }}
                 >
-                  Teach AI
+                  Add answer
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="bottom">Add the customer&apos;s question to your knowledge, with your answer</TooltipContent>

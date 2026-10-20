@@ -63,7 +63,7 @@ export function Platforms() {
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     <h3 className="text-sm font-semibold">{platform.name}</h3>
                     <Badge size="md" tone={platform.status === "available" ? "success" : "neutral"}>
-                      {platform.status === "available" ? "Official API" : "Coming later"}
+                      {platform.status === "available" ? "Official API" : "Coming soon"}
                     </Badge>
                   </div>
                   <p className="mt-1.5 text-sm leading-relaxed text-fg-secondary">{platform.body}</p>

@@ -34,7 +34,7 @@ export const POST_STATUS: Record<ScheduledPostStatus, StatusMeta> = {
   published: { label: "Published", tone: "success", border: "border-l-success", group: "published" },
   partially_published: { label: "Partly published", tone: "warning", border: "border-l-success", group: "published" },
   failed: { label: "Failed", tone: "danger", border: "border-l-danger", group: "failed" },
-  canceled: { label: "Canceled", tone: "neutral", border: "border-l-danger", group: "failed" },
+  canceled: { label: "Cancelled", tone: "neutral", border: "border-l-danger", group: "failed" },
 };
 
 /** The post status chip's fill and text: the one tone map (lib/ui/tone), under its old name. */

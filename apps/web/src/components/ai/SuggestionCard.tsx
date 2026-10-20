@@ -90,7 +90,7 @@ export function SuggestionCard({
           variant="outline"
           icon={<AlertTriangle />}
           onDismiss={actions.onDismiss}
-          dismissLabel="Dismiss suggestion"
+          dismissLabel="Dismiss draft"
           action={
             <>
               <Button variant="ghost" size="sm" onClick={actions.onWriteReply}>
@@ -98,7 +98,7 @@ export function SuggestionCard({
               </Button>
               {actions.onAddToKnowledge ? (
                 <Button size="sm" loading={addingToKnowledge} onClick={actions.onAddToKnowledge}>
-                  Add to knowledge
+                  Add answer
                 </Button>
               ) : null}
             </>
@@ -225,7 +225,7 @@ function DismissButton({ onDismiss, disabled }: { onDismiss: () => void; disable
     <Button
       variant="ghost"
       size="icon-sm"
-      aria-label="Dismiss suggestion"
+      aria-label="Dismiss draft"
       disabled={disabled}
       onClick={onDismiss}
       className="-my-1 text-fg-secondary"
@@ -240,7 +240,7 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
   return (
     <div className="mx-4 mb-2 flex items-center gap-2">
       <Badge tone="brand" size="md" className="pr-1">
-        <Sparkles aria-hidden /> Editing suggestion
+        <Sparkles aria-hidden /> Editing AI draft
         <button
           type="button"
           aria-label="Stop editing the suggestion"

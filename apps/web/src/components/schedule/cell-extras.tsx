@@ -19,7 +19,7 @@ const DM_STATUS: Record<ScheduledMessage["status"], string | null> = {
   sending: "Sending",
   sent: "Sent",
   failed: "Failed",
-  canceled: "Canceled",
+  canceled: "Cancelled",
   expired: "Expired",
 };
 

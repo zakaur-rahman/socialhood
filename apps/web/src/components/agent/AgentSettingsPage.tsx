@@ -132,8 +132,8 @@ function PolicyCard() {
     <SettingsCard
       id="agent-mode"
       icon={<ShieldCheck />}
-      title="Capabilities & permissions"
-      description="What Ask Social Hood can do on its own. Writes arrive in a later release."
+      title="Capabilities and permissions"
+      description="What Ask Social Hood can do on its own."
       aside={
         mode ? (
           <Badge tone="success" size="md">

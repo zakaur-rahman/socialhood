@@ -380,7 +380,7 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
     expect(screen.queryByTestId("gap-banner")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Account health")).not.toBeInTheDocument();
     expect(screen.getByTestId("queue-empty")).toHaveTextContent("Nothing is waiting.");
-    expect(screen.getByRole("link", { name: /Open Inbox/ })).toHaveTextContent("Open Inbox (0)");
+    expect(screen.getByRole("link", { name: /Open inbox/ })).toHaveTextContent("Open inbox (0)");
   });
 
   it("a finished checklist says You're all set for the session, then is gone in the next (UI-058)", async () => {
@@ -526,27 +526,27 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
     expect(within(meera).getByTestId("queue-state")).toHaveTextContent("Needs you");
     expect(meera).toHaveTextContent("Handed to you: complaint");
     expect(meera).toHaveTextContent("3h ago");
-    expect(within(meera).getByRole("link", { name: "Open chat: Meera" })).toHaveAttribute("href", "/w/maple/inbox/c3");
+    expect(within(meera).getByRole("link", { name: "Open conversation: Meera" })).toHaveAttribute("href", "/w/maple/inbox/c3");
 
     expect(priya).toHaveTextContent("Priya Nair@priya.styles");
     expect(within(priya).getByTestId("queue-platform")).toHaveTextContent("Instagram");
     expect(priya).toHaveTextContent("12m ago");
     expect(priya).toHaveTextContent("“Do you ship to Dubai?”");
     expect(within(priya).getByTestId("queue-state")).toHaveTextContent("AI draft ready");
-    expect(within(priya).getByRole("link", { name: "Review & Send: Priya Nair" })).toHaveAttribute(
+    expect(within(priya).getByRole("link", { name: "Review and send: Priya Nair" })).toHaveAttribute(
       "href",
       "/w/maple/inbox/c1",
     );
 
     expect(within(arjun).getByTestId("queue-platform")).toHaveTextContent("WhatsApp");
     expect(within(arjun).getByTestId("queue-state")).toHaveTextContent("Needs reply");
-    expect(within(arjun).getByRole("link", { name: "Open chat: Arjun K." })).toHaveAttribute("href", "/w/maple/inbox/c2");
+    expect(within(arjun).getByRole("link", { name: "Open conversation: Arjun K." })).toHaveAttribute("href", "/w/maple/inbox/c2");
 
-    expect(screen.getByRole("link", { name: /Open Inbox/ })).toHaveAttribute("href", "/w/maple/inbox?view=needs_reply");
-    expect(screen.getByRole("link", { name: /Open Inbox/ })).toHaveTextContent("Open Inbox (2)");
+    expect(screen.getByRole("link", { name: /Open inbox/ })).toHaveAttribute("href", "/w/maple/inbox?view=needs_reply");
+    expect(screen.getByRole("link", { name: /Open inbox/ })).toHaveTextContent("Open inbox (2)");
   });
 
-  it("the gap banner: View thread opens the conversation; Train AI adds the question as an FAQ that answers the gap", async () => {
+  it("the gap banner: Open conversation opens the conversation; Add answer adds the question as an FAQ that answers the gap", async () => {
     const user = userEvent.setup();
     const posted: unknown[] = [];
     setup({ onPost: (body) => posted.push(body) });
@@ -554,10 +554,10 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
     expect(within(banner).getByRole("heading")).toHaveTextContent("2 questions the AI couldn't answer");
     expect(within(banner).getByTestId("gap-topics")).toHaveTextContent("Most asked: Do you ship to Dubai? · Eggless options");
     expect(within(banner).getByTestId("gap-latest")).toHaveTextContent("Latest: “Any eggless cakes?”");
-    expect(within(banner).getByRole("link", { name: "View thread" })).toHaveAttribute("href", "/w/maple/inbox/c9");
+    expect(within(banner).getByRole("link", { name: "Open conversation" })).toHaveAttribute("href", "/w/maple/inbox/c9");
 
-    await user.click(within(banner).getByRole("button", { name: "Train AI" }));
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    await user.click(within(banner).getByRole("button", { name: "Add answer" }));
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     expect(within(form).getByLabelText("Question")).toHaveValue("Any eggless cakes?");
     await user.type(within(form).getByLabelText("Answer"), "Yes, every cake has an eggless option.");
     await user.click(within(form).getByRole("button", { name: "Add" }));
@@ -584,15 +584,15 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
       }),
     });
     const banner = await screen.findByTestId("gap-banner");
-    expect(within(banner).queryByRole("link", { name: "View thread" })).not.toBeInTheDocument();
-    expect(within(banner).getByRole("button", { name: "Train AI" })).toBeInTheDocument();
+    expect(within(banner).queryByRole("link", { name: "Open conversation" })).not.toBeInTheDocument();
+    expect(within(banner).getByRole("button", { name: "Add answer" })).toBeInTheDocument();
   });
 
   it("agents can view the thread but not train the AI or fix connections", async () => {
     setup({ ws: { ...workspace, role: "agent" } });
     const banner = await screen.findByTestId("gap-banner");
-    expect(within(banner).getByRole("link", { name: "View thread" })).toBeInTheDocument();
-    expect(within(banner).queryByRole("button", { name: "Train AI" })).not.toBeInTheDocument();
+    expect(within(banner).getByRole("link", { name: "Open conversation" })).toBeInTheDocument();
+    expect(within(banner).queryByRole("button", { name: "Add answer" })).not.toBeInTheDocument();
     expect(screen.getByTestId("account-attention")).toHaveTextContent("Ask an admin to fix it.");
     expect(screen.queryByRole("link", { name: "Open Connections" })).not.toBeInTheDocument();
   });

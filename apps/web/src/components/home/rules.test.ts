@@ -25,16 +25,16 @@ describe("Home's labels (C-065)", () => {
   it("a queue row: needs you first, then a draft to review, else a reply to write", () => {
     expect(queueState({ needs_you: false, has_pending_suggestion: true })).toEqual({
       chip: { label: "AI draft ready", tone: "brand" },
-      action: "Review & Send",
+      action: "Review and send",
     });
     expect(queueState({ needs_you: false, has_pending_suggestion: false })).toEqual({
       chip: { label: "Needs reply", tone: "warning" },
-      action: "Open chat",
+      action: "Open conversation",
     });
     expect(queueState({ needs_you: true, has_pending_suggestion: false })).toEqual({
       chip: { label: "Needs you", tone: "danger" },
-      action: "Open chat",
+      action: "Open conversation",
     });
-    expect(queueState({ needs_you: true, has_pending_suggestion: true }).action).toBe("Review & Send");
+    expect(queueState({ needs_you: true, has_pending_suggestion: true }).action).toBe("Review and send");
   });
 });

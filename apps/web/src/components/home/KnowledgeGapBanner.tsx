@@ -39,12 +39,12 @@ export function KnowledgeGapBanner({
         <div className="flex flex-wrap gap-2">
           {latest?.conversation_id ? (
             <AlertAction asChild>
-              <Link href={`/w/${slug}/inbox/${latest.conversation_id}` as Route}>View thread</Link>
+              <Link href={`/w/${slug}/inbox/${latest.conversation_id}` as Route}>Open conversation</Link>
             </AlertAction>
           ) : null}
           {canManage && latest ? (
             <AlertAction onClick={() => onTrain(latest)}>
-              <Sparkles aria-hidden /> Train AI
+              <Sparkles aria-hidden /> Add answer
             </AlertAction>
           ) : null}
           {canManage && !latest ? (

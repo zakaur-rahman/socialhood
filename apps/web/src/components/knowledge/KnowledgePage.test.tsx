@@ -244,7 +244,7 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
     const { posted } = setup();
     await screen.findByRole("table", { name: "Knowledge sources" });
     const user = await addFromMenu("FAQ");
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     await user.click(within(form).getByRole("button", { name: "Add" }));
     expect(within(form).getByText("Enter the customer's question.")).toBeInTheDocument();
     expect(posted()).toHaveLength(0);
@@ -314,7 +314,7 @@ describe("Sources (FR-KB-01, FR-KB-02)", () => {
       problem(402, "quota_exceeded", "Plan limit reached", { entitlement: "knowledge_characters", limit: 200_000 });
     await screen.findByRole("table", { name: "Knowledge sources" });
     const user = await addFromMenu("FAQ");
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     await user.type(within(form).getByLabelText("Question"), "Q?");
     await user.type(within(form).getByLabelText("Answer"), "A.");
     await user.click(within(form).getByRole("button", { name: "Add" }));
@@ -430,7 +430,7 @@ describe("Test your knowledge (FR-KB-03)", () => {
     await user.type(within(box).getByLabelText("Question"), "Do you gift wrap?{Enter}");
     const answer = await within(box).findByTestId("test-answer");
     await user.click(within(answer).getByRole("button", { name: "Add answer" }));
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     expect(within(form).getByLabelText("Question")).toHaveValue("Do you gift wrap?");
     await user.type(within(form).getByLabelText("Answer"), "Yes, free of charge.");
     await user.click(within(form).getByRole("button", { name: "Add" }));
@@ -487,7 +487,7 @@ describe("Questions the AI couldn't answer (FR-KB-06, F-17)", () => {
     const { posted } = setup({ gaps: [knowledgeGap()] });
     const card = await screen.findByRole("region", { name: "Questions the AI couldn't answer" });
     await user.click(within(card).getByRole("button", { name: "Add answer: shipping to uae" }));
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     expect(within(form).getByLabelText("Question")).toHaveValue("Do you ship to Dubai?");
     await user.type(within(form).getByLabelText("Answer"), "Yes, 5–7 business days.");
     await user.click(within(form).getByRole("button", { name: "Add" }));

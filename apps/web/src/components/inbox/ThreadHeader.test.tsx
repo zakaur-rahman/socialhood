@@ -169,7 +169,7 @@ describe("ThreadHeader (UX-INB-05)", () => {
     const details = screen.getByRole("button", { name: "Details" });
     expect(details).not.toHaveAttribute("title");
     act(() => details.focus());
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Show the customer panel");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Show details");
   });
 
   // Pressed, the toggle is the soft Button (C-073), so hovering it keeps the brand look; closed, a ghost one.
