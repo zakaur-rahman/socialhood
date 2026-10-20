@@ -265,12 +265,12 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         </Badge>
         <SaveIndicator status={status} onRetry={() => void flush()} />
         {active ? (
-          <Button variant="secondary" size="lg" onClick={onPause} disabled={statusBusy}>
-            {pause.isPending ? <Spinner /> : <Pause aria-hidden />} Pause
+          <Button variant="secondary" size="lg" onClick={onPause} disabled={statusBusy} loading={pause.isPending}>
+            <Pause aria-hidden /> Pause
           </Button>
         ) : (
-          <Button size="lg" onClick={() => void onActivate()} disabled={statusBusy}>
-            {activate.isPending ? <Spinner /> : <Play aria-hidden />} Activate
+          <Button size="lg" onClick={() => void onActivate()} disabled={statusBusy} loading={activate.isPending}>
+            <Play aria-hidden /> Activate
           </Button>
         )}
         <DropdownMenu>

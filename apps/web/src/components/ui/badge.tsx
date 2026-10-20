@@ -9,7 +9,7 @@ import { Slot } from "radix-ui"
  *
  * - `tone`: the status tones from lib/ui/tone (`neutral`, `brand` for info, `success`, `warning`,
  *   `danger`), or `count`: the brand gradient with `on-brand` text and tabular figures, for unread
- *   and needs-reply counts (UX-SH-01);
+ *   and needs-reply counts (UX-SH-01), or `media` for labels on photos and video (with `shape="tag"`);
  * - `size`: `sm` 11 px (status and signal chips), `md` 12 px (counts, and 12 px status chips),
  *   both 20 px tall; a count is at least as wide as it is tall;
  * - `shape`: `pill` (round), or `tag` (4 px corners) for thumbnail labels and counters.
@@ -23,6 +23,9 @@ const badgeVariants = cva(
       tone: {
         ...TONE_CLASS,
         count: "bg-brand-gradient text-on-brand tabular-nums",
+        // Labels laid on a photo or video (a file type, "Cover", a position): white on the media
+        // scrim, readable over any picture (RG-02).
+        media: "bg-media-scrim/70 text-on-brand",
       },
       size: {
         sm: "text-2xs",

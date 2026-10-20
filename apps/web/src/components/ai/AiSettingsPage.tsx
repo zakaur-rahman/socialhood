@@ -5,6 +5,7 @@ import { useState, type ReactNode } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { toast } from "sonner";
 
+import { cardInsetVariants } from "@/components/ui/card";
 import { ProBadge } from "@/components/automations/TemplateGallery";
 import { PLATFORM_BG, PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { PhraseChips } from "@/components/settings/PhraseChips";
@@ -152,7 +153,7 @@ function AccountModes({ accounts, canManage }: { accounts: SocialAccount[]; canM
           {accounts.map((account) => (
             <li
               key={account.id}
-              className="flex flex-col gap-3 rounded-lg border border-line p-3 sm:flex-row sm:items-center sm:justify-between"
+              className={cn(cardInsetVariants({ padding: "compact" }), "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between")}
             >
               <div className="flex min-w-0 items-center gap-3">
                 <span
@@ -298,7 +299,7 @@ function RulesForm({ settings, modes }: { settings: AiSettings; modes: ReactNode
               <SectionLabel id="built-in-label">Always built in</SectionLabel>
               <ul className="grid gap-2 sm:grid-cols-2" aria-label="Built-in escalation rules">
                 {BUILT_IN_ESCALATIONS.map((rule) => (
-                  <li key={rule} className="flex items-start gap-2 rounded-lg border border-line p-3 text-sm">
+                  <li key={rule} className={cn(cardInsetVariants({ padding: "compact" }), "flex items-start gap-2 text-sm")}>
                     <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
                     {rule}
                   </li>
