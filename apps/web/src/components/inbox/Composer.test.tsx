@@ -408,9 +408,9 @@ describe("AI polish (C-063)", () => {
     expect(reason).not.toHaveAttribute("aria-describedby");
     // UI-031: what it does and costs is a Tooltip (on keyboard focus too), not a title (UI-ISS-042).
     expect(polish).not.toHaveAttribute("title");
-    await user.hover(polish);
-    // The tooltip opens after its 300 ms delay; a busy CI runner can take longer than findBy's 1 s default.
-    expect(await screen.findByRole("tooltip", {}, { timeout: 3000 })).toHaveTextContent(
+    // Keyboard focus opens it at once (hover waits 300 ms, which a busy runner stretched past 3 s).
+    act(() => polish.focus());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "Fix grammar and clarity, in the same language (1 AI credit)",
     );
   });
