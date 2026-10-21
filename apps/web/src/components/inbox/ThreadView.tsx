@@ -82,7 +82,7 @@ export function ThreadView({
 }: {
   conversationId: string;
   upload?: Uploader;
-  /** Tests inject a fake for "Add to knowledge" file sources. */
+  /** Tests inject a fake for "Add answer" file sources. */
   knowledgeUpload?: KnowledgeUploader;
 }) {
   const workspace = useCurrentWorkspace();

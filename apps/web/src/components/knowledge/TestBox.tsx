@@ -97,7 +97,7 @@ export function TestBox({ wid, onAddAnswer }: { wid: string; onAddAnswer?: (ques
               >
                 <AlertTitle>{aiCopy.notInKnowledge}</AlertTitle>
                 <AlertDescription>
-                  {result.missing_info ? `Missing: ${result.missing_info}.` : "Add an FAQ or a note that answers it."}
+                  {result.missing_info ? `Missing: ${result.missing_info}.` : "Add an answer or a note that covers it."}
                 </AlertDescription>
               </Alert>
             )

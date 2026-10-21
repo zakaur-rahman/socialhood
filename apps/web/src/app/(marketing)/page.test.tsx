@@ -73,7 +73,9 @@ describe("the landing page", () => {
     expect(screen.getByRole("heading", { name: "Ask Social Hood" })).toBeInTheDocument();
     expect(screen.getByText("Never sends, changes or deletes anything by itself")).toBeInTheDocument();
     expect(screen.getByText("Illustrations with example data.")).toBeInTheDocument();
-    expect(screen.getByText("Coming later")).toBeInTheDocument();
+    // The platform tile and the Max plan both say "Coming soon" (UI-068), so look in the platforms section.
+    const platforms = within(container.querySelector('section[aria-labelledby="platforms-title"]') as HTMLElement);
+    expect(platforms.getByText("Coming soon")).toBeInTheDocument();
 
     // How it works: three steps, each with a real screen.
     const how = within(container.querySelector("section#how-it-works") as HTMLElement);

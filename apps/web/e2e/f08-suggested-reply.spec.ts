@@ -53,7 +53,7 @@ test.describe("F-08 use a suggested reply", () => {
     await expect(card).toContainText(SUGGESTED);
     await card.getByRole("button", { name: "Insert" }).click();
     await expect(composer).toHaveValue(SUGGESTED);
-    await expect(thread.getByText("Editing suggestion")).toBeVisible();
+    await expect(thread.getByText("Editing AI draft")).toBeVisible();
     await expect(card).toBeHidden();
 
     const edited = `${SUGGESTED} Shall I reserve one?`;
@@ -65,7 +65,7 @@ test.describe("F-08 use a suggested reply", () => {
     expect(body.suggestion_id).toBeTruthy();
     const bubble = log.locator("[data-direction='outbound']").filter({ hasText: "Shall I reserve one?" });
     await expect(bubble.getByRole("img", { name: "Sent" })).toBeVisible();
-    await expect(thread.getByText("Editing suggestion")).toBeHidden();
+    await expect(thread.getByText("Editing AI draft")).toBeHidden();
     await expect(card).toBeHidden();
   });
 
@@ -80,7 +80,7 @@ test.describe("F-08 use a suggested reply", () => {
     await expect(card).toContainText("4 drafts left");
     await expect(card).toContainText(SUGGESTED);
 
-    await card.getByRole("button", { name: "Dismiss suggestion" }).click();
+    await card.getByRole("button", { name: "Dismiss draft" }).click();
     await expect(card).toBeHidden();
   });
 
@@ -90,7 +90,7 @@ test.describe("F-08 use a suggested reply", () => {
 
     const card = thread.getByRole("region", { name: "Not in your knowledge" });
     await expect(card).toContainText("asked about whether you offer gift wrapping.");
-    await expect(card.getByRole("button", { name: "Add to knowledge" })).toBeVisible();
+    await expect(card.getByRole("button", { name: "Add answer" })).toBeVisible();
     await card.getByRole("button", { name: "Write reply" }).click();
     await expect(thread.getByRole("textbox", { name: /^Reply to / })).toBeFocused();
   });

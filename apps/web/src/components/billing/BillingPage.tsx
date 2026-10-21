@@ -337,7 +337,7 @@ function Usage({ billing }: { billing: BillingState }) {
     <SettingsCard
       id="usage"
       icon={<Gauge />}
-      title="Resource quotas & usage"
+      title="Resource quotas and usage"
       description={`What this workspace has used of ${PLAN_NAME[billing.plan]}'s limits.`}
     >
       {meters.length > 0 ? (

@@ -77,7 +77,7 @@ function HowToDelete({ heading: Heading }: { heading: "h1" | "h2" }) {
         </Option>
         <Option>
           <strong className="text-fg">Owners and admins, for one account</strong>: in Settings → Connections, use
-          Disconnect and delete data (or Remove, for an account already disconnected). The account&apos;s
+          Delete account and data (in the account&apos;s ⋯ menu; it disconnects the account first if needed). The account&apos;s
           conversations, messages, comments, contacts, posts and automations are permanently deleted; the
           workspace&apos;s knowledge, settings and billing stay.
         </Option>

@@ -17,7 +17,7 @@ describe("PriorityQueue's empty state", () => {
     expect(empty).toHaveTextContent("No replies are possible right now.");
     expect(empty).toHaveTextContent("13 conversations need a reply, but the reply window has closed.");
     expect(empty).not.toHaveTextContent("Nothing is waiting.");
-    expect(screen.getByRole("link", { name: /Open Inbox/ })).toHaveTextContent("Open Inbox (13)");
+    expect(screen.getByRole("link", { name: /Open inbox/ })).toHaveTextContent("Open inbox (13)");
   });
 
   it("uses the singular for one conversation", () => {

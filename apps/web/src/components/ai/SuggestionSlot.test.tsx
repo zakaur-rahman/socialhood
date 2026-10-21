@@ -102,7 +102,7 @@ describe("Suggested reply in the thread (F-08)", () => {
 
     const box = screen.getByRole("textbox", { name: "Reply to Priya Nair" });
     expect(box).toHaveValue("Yes, we ship to the UAE! Delivery to Dubai takes 5–7 business days.");
-    expect(screen.getByText("Editing suggestion")).toBeInTheDocument();
+    expect(screen.getByText("Editing AI draft")).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Suggested reply" })).not.toBeInTheDocument();
 
     await user.type(box, " Free over ₹3,000.{Enter}");
@@ -111,7 +111,7 @@ describe("Suggested reply in the thread (F-08)", () => {
       text: "Yes, we ship to the UAE! Delivery to Dubai takes 5–7 business days. Free over ₹3,000.",
       suggestion_id: "s1",
     });
-    expect(screen.queryByText("Editing suggestion")).not.toBeInTheDocument();
+    expect(screen.queryByText("Editing AI draft")).not.toBeInTheDocument();
   });
 
   it("stopping the edit keeps the text, drops the link and brings the card back", async () => {
@@ -166,7 +166,7 @@ describe("Suggested reply in the thread (F-08)", () => {
     const user = userEvent.setup();
     const { calls } = setup();
     const card = await screen.findByRole("region", { name: "Suggested reply" });
-    await user.click(within(card).getByRole("button", { name: "Dismiss suggestion" }));
+    await user.click(within(card).getByRole("button", { name: "Dismiss draft" }));
     expect(screen.queryByRole("region", { name: "Suggested reply" })).not.toBeInTheDocument();
     await waitFor(() => expect(calls.some((c) => c.path === "/v1/w/w1/suggestions/s1/dismiss")).toBe(true));
   });
@@ -175,7 +175,7 @@ describe("Suggested reply in the thread (F-08)", () => {
     const user = userEvent.setup();
     setup({}, { "POST /v1/w/:wid/suggestions/:id/dismiss": () => problem(500, "internal") });
     const card = await screen.findByRole("region", { name: "Suggested reply" });
-    await user.click(within(card).getByRole("button", { name: "Dismiss suggestion" }));
+    await user.click(within(card).getByRole("button", { name: "Dismiss draft" }));
     expect(await screen.findByRole("region", { name: "Suggested reply" })).toBeInTheDocument();
   });
 
@@ -221,7 +221,7 @@ describe("Suggested reply in the thread (F-08)", () => {
   // fell back to the first-draft shimmer instead of closing.
   it.each([
     ["Send", "Send"],
-    ["Dismiss", "Dismiss suggestion"],
+    ["Dismiss", "Dismiss draft"],
   ])("after %s, a just-analysed message's card closes instead of drafting again", async (_, button) => {
     const user = userEvent.setup();
     const { calls } = setup({
@@ -273,14 +273,14 @@ describe("Suggested reply in the thread (F-08)", () => {
 describe("Not in your knowledge (FR-SUG-03, F-08)", () => {
   const gap = suggestion({ can_answer: false, reply_text: null, missing_info: "shipping to Dubai", sources: [] });
 
-  it("Add to knowledge opens the FAQ form with the customer's question and saves it", async () => {
+  it("Add answer opens the FAQ form with the customer's question and saves it", async () => {
     const user = userEvent.setup();
     const { calls } = setup({ pending_suggestion: gap });
     const card = await screen.findByRole("region", { name: "Not in your knowledge" });
     expect(within(card).getByText("Priya asked about shipping to Dubai.")).toBeInTheDocument();
-    await user.click(within(card).getByRole("button", { name: "Add to knowledge" }));
+    await user.click(within(card).getByRole("button", { name: "Add answer" }));
 
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     expect(within(form).getByLabelText("Question")).toHaveValue("Do you ship to Dubai?");
     await user.type(within(form).getByLabelText("Answer"), "Yes, 5–7 business days, free over ₹3,000.");
     await user.click(within(form).getByRole("button", { name: "Add" }));
@@ -288,18 +288,18 @@ describe("Not in your knowledge (FR-SUG-03, F-08)", () => {
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources")).toBe(true));
     const body = calls.find((c) => c.method === "POST" && c.path === "/v1/w/w1/knowledge-sources")?.body as KnowledgeSourceCreate;
     expect(body).toMatchObject({ type: "faq", question: "Do you ship to Dubai?", body: "Yes, 5–7 business days, free over ₹3,000." });
-    await waitFor(() => expect(screen.queryByRole("form", { name: "Add an FAQ" })).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("form", { name: "Add an answer" })).not.toBeInTheDocument());
   });
 
-  it("Add to knowledge links the question's knowledge gap, so the answer resolves it (C-063)", async () => {
+  it("Add answer links the question's knowledge gap, so the answer resolves it (C-063)", async () => {
     const user = userEvent.setup();
     const { calls } = setup(
       { pending_suggestion: gap },
       { "GET /v1/w/:wid/knowledge-gaps": () => json({ items: [knowledgeGap({ id: "g7" })] }) },
     );
     const card = await screen.findByRole("region", { name: "Not in your knowledge" });
-    await user.click(within(card).getByRole("button", { name: "Add to knowledge" }));
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    await user.click(within(card).getByRole("button", { name: "Add answer" }));
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     expect(within(form).getByLabelText("Question")).toHaveValue("Do you ship to Dubai?");
     await user.type(within(form).getByLabelText("Answer"), "Yes, 5–7 business days.");
     await user.click(within(form).getByRole("button", { name: "Add" }));
@@ -321,7 +321,7 @@ describe("Not in your knowledge (FR-SUG-03, F-08)", () => {
       },
     });
     const card = await screen.findByRole("region", { name: "Not in your knowledge" });
-    expect(within(card).queryByRole("button", { name: "Add to knowledge" })).not.toBeInTheDocument();
+    expect(within(card).queryByRole("button", { name: "Add answer" })).not.toBeInTheDocument();
     await user.click(within(card).getByRole("button", { name: "Write reply" }));
     await waitFor(() => expect(screen.getByRole("textbox", { name: "Reply to Priya Nair" })).toHaveFocus());
   });

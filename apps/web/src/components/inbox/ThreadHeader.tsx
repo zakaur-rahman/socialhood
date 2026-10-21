@@ -141,7 +141,7 @@ export function ThreadHeader({
             </Badge>
           )}
           {/* A toggle: pressed (the panel is open) it is the soft Button, like a selected chip. */}
-          <IconTooltip label={detailsOpen ? "Hide the customer panel" : "Show the customer panel"}>
+          <IconTooltip label={detailsOpen ? "Hide details" : "Show details"}>
             <Button
               ref={detailsRef}
               variant={detailsOpen ? "soft" : "ghost"}

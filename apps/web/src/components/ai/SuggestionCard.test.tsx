@@ -59,7 +59,7 @@ describe("the AI draft bar (UX-INB-08, C-063)", () => {
     await user.click(within(region).getByRole("button", { name: "Send" }));
     await user.click(within(region).getByRole("button", { name: "Insert" }));
     await user.click(within(region).getByRole("button", { name: "Draft again" }));
-    await user.click(within(region).getByRole("button", { name: "Dismiss suggestion" }));
+    await user.click(within(region).getByRole("button", { name: "Dismiss draft" }));
     expect(handlers.onSend).toHaveBeenCalledOnce();
     expect(handlers.onEdit).toHaveBeenCalledOnce();
     expect(handlers.onRegenerate).toHaveBeenCalledOnce();
@@ -148,7 +148,7 @@ describe("the AI draft bar (UX-INB-08, C-063)", () => {
     expect(screen.queryByRole("list")).not.toBeInTheDocument();
   });
 
-  it("not in knowledge: the missing fact, Add to knowledge and Write reply", async () => {
+  it("not in knowledge: the missing fact, Add answer and Write reply", async () => {
     const user = userEvent.setup();
     const handlers = card({
       suggestion: suggestion({ can_answer: false, reply_text: null, missing_info: "shipping to Dubai", sources: [] }),
@@ -159,18 +159,18 @@ describe("the AI draft bar (UX-INB-08, C-063)", () => {
       "Not in your knowledge: Priya asked about shipping to Dubai.",
     );
     expect(within(region).queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
-    await user.click(within(region).getByRole("button", { name: "Add to knowledge" }));
+    await user.click(within(region).getByRole("button", { name: "Add answer" }));
     await user.click(within(region).getByRole("button", { name: "Write reply" }));
     expect(handlers.onAddToKnowledge).toHaveBeenCalledOnce();
     expect(handlers.onWriteReply).toHaveBeenCalledOnce();
   });
 
-  it("Add to knowledge waits while the question's gap is looked up", () => {
+  it("Add answer waits while the question's gap is looked up", () => {
     card({
       suggestion: suggestion({ can_answer: false, reply_text: null, missing_info: "shipping to Dubai", sources: [] }),
       addingToKnowledge: true,
     });
-    expect(screen.getByRole("button", { name: "Add to knowledge" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Add answer" })).toBeDisabled();
   });
 
   it("not in knowledge without the right to add knowledge (agents): only Write reply", () => {
@@ -184,7 +184,7 @@ describe("the AI draft bar (UX-INB-08, C-063)", () => {
         actions={{ ...handlers, onAddToKnowledge: undefined }}
       />,
     );
-    expect(screen.queryByRole("button", { name: "Add to knowledge" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add answer" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Write reply" })).toBeInTheDocument();
   });
 
@@ -197,7 +197,7 @@ describe("the AI draft bar (UX-INB-08, C-063)", () => {
       </>,
     );
     expect(screen.getByRole("status")).toHaveTextContent("AI didn't reply: customer is asking for a refund");
-    expect(screen.getByText("Editing suggestion")).toBeInTheDocument();
+    expect(screen.getByText("Editing AI draft")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Stop editing the suggestion" }));
     expect(onStop).toHaveBeenCalledOnce();
   });

@@ -261,7 +261,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                     )}
                   />
                   <FieldDescription>
-                    The language AI replies use. Customer&apos;s language answers in whatever they wrote in.
+                    The language AI replies use. With Customer&apos;s language, the AI replies in the language the customer wrote in.
                   </FieldDescription>
                   <FieldError>{errors.reply_language?.message}</FieldError>
                 </Field>

@@ -241,9 +241,9 @@ describe("Composer (UX-INB-07)", () => {
     expect(toolbar).toHaveClass("flex-wrap");
   });
 
-  it("AI Polish is the same height as the tools beside it", () => {
+  it("AI polish is the same height as the tools beside it", () => {
     renderComposer();
-    expect(screen.getByRole("button", { name: /AI Polish/ })).toHaveAttribute("data-size", "default");
+    expect(screen.getByRole("button", { name: /AI polish/ })).toHaveAttribute("data-size", "default");
   });
 
   it("uploads and sends a WhatsApp sticker", async () => {
@@ -360,7 +360,7 @@ describe("Schedule popover (F-10)", () => {
   });
 });
 
-describe("AI Polish (C-063)", () => {
+describe("AI polish (C-063)", () => {
   function renderWithPolish(respond: (call: Call) => Response | Promise<Response>) {
     return renderWithApi(
       <Composer
@@ -383,7 +383,7 @@ describe("AI Polish (C-063)", () => {
   it("is off while the reply is empty", async () => {
     const user = userEvent.setup();
     renderWithPolish(() => json({ text: "" }));
-    const polish = screen.getByRole("button", { name: "AI Polish" });
+    const polish = screen.getByRole("button", { name: "AI polish" });
     expect(polish).toBeDisabled();
     // An AI action on the soft Button (C-073), dimmed by the primitive's disabled rule, not greyed here.
     expect(polish).toHaveAttribute("data-variant", "soft");
@@ -399,7 +399,7 @@ describe("AI Polish (C-063)", () => {
   it("says why it's off: a focusable reason while the reply is empty, none once there is text", async () => {
     const user = userEvent.setup();
     renderWithPolish(() => json({ text: "" }));
-    const polish = screen.getByRole("button", { name: "AI Polish" });
+    const polish = screen.getByRole("button", { name: "AI polish" });
     const reason = polish.closest('[data-slot="disabled-reason"]') as HTMLElement;
     expect(reason).toHaveAttribute("tabindex", "0");
     expect(reason).toHaveAccessibleDescription("Write a reply to polish");
@@ -408,9 +408,9 @@ describe("AI Polish (C-063)", () => {
     expect(reason).not.toHaveAttribute("aria-describedby");
     // UI-031: what it does and costs is a Tooltip (on keyboard focus too), not a title (UI-ISS-042).
     expect(polish).not.toHaveAttribute("title");
-    await user.hover(polish);
-    // The tooltip opens after its 300 ms delay; a busy CI runner can take longer than findBy's 1 s default.
-    expect(await screen.findByRole("tooltip", {}, { timeout: 3000 })).toHaveTextContent(
+    // Keyboard focus opens it at once (hover waits 300 ms, which a busy runner stretched past 3 s).
+    act(() => polish.focus());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
       "Fix grammar and clarity, in the same language (1 AI credit)",
     );
   });
@@ -421,9 +421,9 @@ describe("AI Polish (C-063)", () => {
     const { calls } = renderWithPolish(() => new Promise<Response>((resolve) => (release = resolve)));
     await user.type(textbox(), "haan ji cake ready hai kal tak");
 
-    await user.click(screen.getByRole("button", { name: "AI Polish" }));
+    await user.click(screen.getByRole("button", { name: "AI polish" }));
     // UI-031: Button `loading`: the spinner over the kept label, busy and disabled (was "Polishing…").
-    const busy = screen.getByRole("button", { name: "AI Polish" });
+    const busy = screen.getByRole("button", { name: "AI polish" });
     await waitFor(() => expect(busy).toHaveAttribute("aria-busy", "true"));
     expect(busy).toBeDisabled();
     // The Spinner primitive: it spins only when motion is allowed (UI-030; was a bare animate-spin).
@@ -434,7 +434,7 @@ describe("AI Polish (C-063)", () => {
 
     await act(async () => release(json({ text: "Haan ji, cake kal tak ready ho jayega." })));
     await waitFor(() => expect(textbox()).toHaveValue("Haan ji, cake kal tak ready ho jayega."));
-    expect(screen.getByRole("button", { name: "AI Polish" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "AI polish" })).toBeEnabled();
 
     await user.click(screen.getByRole("button", { name: "Undo" }));
     expect(textbox()).toHaveValue("haan ji cake ready hai kal tak");
@@ -445,7 +445,7 @@ describe("AI Polish (C-063)", () => {
     const user = userEvent.setup();
     renderWithPolish(() => json({ text: "Yes, we deliver on Sundays." }));
     await user.type(textbox(), "yes we deliver sunday");
-    await user.click(screen.getByRole("button", { name: "AI Polish" }));
+    await user.click(screen.getByRole("button", { name: "AI polish" }));
     await waitFor(() => expect(textbox()).toHaveValue("Yes, we deliver on Sundays."));
     expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
     await user.type(textbox(), " See you!");
@@ -456,8 +456,8 @@ describe("AI Polish (C-063)", () => {
     const user = userEvent.setup();
     renderWithPolish(() => problem(503, "service_unavailable", "The AI couldn't polish this just now. Try again."));
     await user.type(textbox(), "yes we deliver sunday");
-    await user.click(screen.getByRole("button", { name: "AI Polish" }));
-    await waitFor(() => expect(screen.getByRole("button", { name: "AI Polish" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "AI polish" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "AI polish" })).toBeEnabled());
     expect(textbox()).toHaveValue("yes we deliver sunday");
     expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   });
