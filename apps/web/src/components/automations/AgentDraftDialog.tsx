@@ -7,7 +7,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
 import { draftAccount } from "@/lib/agent/draft";
 import type { AutomationDraftHandoff } from "@/lib/agent/handoff";
 import { useStartAutomationDraft } from "@/lib/api/queries";
@@ -152,8 +151,7 @@ function AgentDraftBody({
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button disabled={start.isPending || (chooseAccount && !accountId)} onClick={open}>
-          {start.isPending ? <Spinner /> : null}
+        <Button loading={start.isPending} disabled={chooseAccount && !accountId} onClick={open}>
           Open in editor
         </Button>
       </DialogFooter>

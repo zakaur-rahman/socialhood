@@ -5,7 +5,6 @@ import { useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointer
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { CROP_RATIOS, CropError, cropRect, focusOf, moveFocus, suggestedRatio, type Cropper, type CropRatio, type CropSource } from "@/lib/publishing/crop";
 import type { AssetInfo } from "@/lib/publishing/rules";
@@ -168,8 +167,7 @@ export function CropDialog({
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>
             Cancel
           </Button>
-          <Button type="button" onClick={() => void apply()} disabled={!rect || busy}>
-            {busy ? <Spinner /> : null}
+          <Button type="button" onClick={() => void apply()} disabled={!rect} loading={busy}>
             Crop and upload
           </Button>
         </DialogFooter>
