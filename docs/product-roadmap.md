@@ -12,6 +12,15 @@ External API facts (permissions, review processes, costs) change. **Re-check eac
 official documentation before starting an item**; the notes below are what we believed on the
 date above, not guarantees.
 
+**Status (2026-10-22):**
+- Every item below, plus the gaps from the competitor analysis ([competitors.md](competitors.md),
+  [competitor-manychat.md](competitor-manychat.md)), is now scheduled in
+  **[roadmap/IMPLEMENTATION_PLAN.md](roadmap/IMPLEMENTATION_PLAN.md)** as tasks GR-00 to GR-37,
+  with an owner track (O-1 to O-11) and decisions (PD-1 to PD-10).
+- The plan sets the build order. This file keeps the why and what.
+- P0 runs as the owner track while engineering builds, because every feature can be developed and
+  tested with role accounts and the sandbox before App Review passes.
+
 ## What Social Hood already covers
 
 Several of the reviewed ideas are already built. Build on these instead of starting over.
@@ -61,6 +70,30 @@ Three separate things, often confused:
 
 **Done when:** an Instagram account with no role on the app can connect and use the inbox and
 automations in production.
+
+## Parity and growth: the competitor gaps (added 2026-10-22)
+
+These gaps recur across Manychat, the Instagram DM tools, the Indian WhatsApp platforms,
+omnichannel inboxes and social suites. Detail, design and order are in the implementation plan.
+
+| Item | Tasks | Size |
+|---|---|---|
+| Webhook coverage: postbacks, referrals, opt-ins, Live comments | GR-01 | S–M |
+| Contacts: tags, fields, consent, CSV export; a contacts page | GR-02, GR-17 | M + M |
+| Flow engine and editor: branching, data capture, actions, delays, A/B | GR-03, GR-13, GR-14, GR-16 | L + L + M + S |
+| Outbound webhooks and events | GR-04 | M |
+| New triggers: story replies, story mentions, entry links and QR codes, click-to-DM and click-to-WhatsApp ads, Live comments, ice breakers, welcome and default replies | GR-06 to GR-12 | S each, mostly |
+| Link click tracking and flow analytics | GR-15 | M |
+| Team: members and roles, assignment, saved replies, business hours | GR-19 to GR-22 | M, M, S, S |
+| WhatsApp broadcasts and sequences | GR-23, GR-24 | L + M |
+| Public API, Zapier and Make, Google Sheets | GR-25 to GR-27 | M, M, S–M |
+| Website chat widget | GR-28 | L |
+| Facebook publishing and best posting times (with P4) | GR-29, GR-30 | L + M |
+| Commerce: product catalogue, payment requests and orders, WhatsApp catalogue | GR-31 to GR-33 | M–L, L, M |
+| Website crawl into knowledge | GR-35 | S–M |
+| Go-to-market pages (switch from Manychat, comparisons) | GR-37 | S |
+
+The existing items map to tasks: P1 → GR-05, P2 → GR-18, P3 → GR-34, P4 → GR-29, P5 → GR-36.
 
 ## P1: Activity and reliability page (S)
 
@@ -225,6 +258,9 @@ Each one is a new `PlatformAdapter`, implementing only what its official API sup
 
 | Item | Why not now |
 |---|---|
+| Follow to DM, Share to DM | No generally available webhook for new followers or story shares (Oct 2026); even Manychat's follow trigger is an unreliable beta |
+| Follow-gating | Against Meta's Spam Community Standard; our nudge never gates (`services/automations/nudge.py`) |
+| SMS | DLT registration and per-message cost in India; low fit |
 | TikTok | Its official APIs centre on posting; DMs and comment replies, our core, aren't broadly available to general apps. Re-check if that changes. |
 | LinkedIn | The community management API needs approval as a LinkedIn partner. |
 | X | API access is paid per tier. |
