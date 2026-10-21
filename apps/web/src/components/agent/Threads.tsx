@@ -1,12 +1,13 @@
 "use client";
 
-import { History, LoaderCircle, SquarePen } from "lucide-react";
+import { History, SquarePen } from "lucide-react";
 import { Fragment, useMemo } from "react";
 
 import { SELECTED_ROW } from "@/components/shell/sidebar-styles";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,7 @@ function ThreadLine({ thread, now }: { thread: AgentThread; now: Date }) {
   return (
     <>
       {isActive(thread.last_status) ? (
-        <LoaderCircle className="size-3.5 shrink-0 text-brand-fg motion-safe:animate-spin" aria-label="Working" />
+        <Spinner size="sm" className="shrink-0 text-brand-fg" aria-label="Working" />
       ) : null}
       <span className="min-w-0 flex-1 truncate">{thread.title}</span>
       {/* The count takes the row's text colour: secondary text on its fill over a hovered or

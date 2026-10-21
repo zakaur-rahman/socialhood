@@ -664,7 +664,7 @@ function ImageAttach({
         Image <span className="font-normal text-fg-secondary">· optional, sent before the text</span>
       </p>
       {progress !== null ? (
-        <div className="flex items-center gap-3 rounded-lg border border-line bg-field p-3 text-sm">
+        <CardInset padding="compact" className="flex items-center gap-3 bg-field text-sm">
           <Spinner className="text-brand-fg" />
           <span className="tabular-nums" role="status">
             Uploading {Math.round(progress * 100)}%
@@ -672,7 +672,7 @@ function ImageAttach({
           <Button variant="ghost" size="sm" className="ml-auto" onClick={() => controller.current?.abort()}>
             Cancel
           </Button>
-        </div>
+        </CardInset>
       ) : assetId ? (
         <div className="flex items-center gap-3">
           {url ? (

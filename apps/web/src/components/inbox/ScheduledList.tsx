@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { cardInsetVariants } from "@/components/ui/card";
 import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -39,6 +40,7 @@ import { emptyStates, errorMessage, scheduledPlatformEmpty } from "@/lib/copy";
 import { contactName, PLATFORM_LABEL, type Tone } from "@/lib/inbox/format";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime, toZonedInputs } from "@/lib/tz";
+import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { ContactAvatar } from "./ContactAvatar";
@@ -148,7 +150,7 @@ export function ScheduledCard({
   const status = STATUS[item.status];
   const pending = item.status === "scheduled";
   return (
-    <article aria-label={`Scheduled message to ${name}`} className="rounded-lg border border-line-subtle bg-field p-3">
+    <article aria-label={`Scheduled message to ${name}`} className={cn(cardInsetVariants({ padding: "compact" }), "bg-field")}>
       <Link
         href={`/w/${slug}/inbox/${item.conversation_id}` as Route}
         onClick={onOpen ? (event) => { event.preventDefault(); onOpen(); } : undefined}

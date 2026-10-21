@@ -216,9 +216,9 @@ function FeedPreview({
         {current ? <Media asset={current} /> : <NoMedia />}
         {assets.length > 1 ? (
           <>
-            <span className="absolute top-2 right-2 rounded-full bg-media-scrim/70 px-2 py-0.5 text-xs tabular-nums" data-testid="carousel-counter">
+            <Badge tone="media" size="md" className="absolute top-2 right-2 tabular-nums" data-testid="carousel-counter">
               {index + 1}/{assets.length}
-            </span>
+            </Badge>
             {/* Instagram's white arrows on the photo: 32 px, 40 px on coarse pointers. */}
             {index > 0 ? (
               <button
@@ -250,7 +250,7 @@ function FeedPreview({
         {assets.length > 1 ? (
           <span className="mx-auto flex gap-1">
             {assets.map((asset, dot) => (
-              <span key={asset.id} className={cn("size-1.5 rounded-full", dot === index ? "bg-brand" : "bg-fg-disabled")} />
+              <span key={asset.id} className={cn("size-1.5 rounded-full", dot === index ? "bg-brand" : "bg-line-strong")} />
             ))}
           </span>
         ) : (

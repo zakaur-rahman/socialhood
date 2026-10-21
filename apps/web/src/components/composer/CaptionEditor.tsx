@@ -379,7 +379,7 @@ function WriteWithAi({ wid, caption, onWritten }: { wid: string; caption: string
       }}
     >
       <PopoverTrigger asChild>
-        <Button type="button" variant="ghost" size="sm" className="text-brand-fg">
+        <Button type="button" variant="soft" size="sm">
           <Sparkles aria-hidden /> Write with AI
         </Button>
       </PopoverTrigger>
