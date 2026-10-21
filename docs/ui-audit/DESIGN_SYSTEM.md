@@ -150,8 +150,11 @@ AccountAvatar and the schedule's account rings and dots read it; categorical cha
 
 ### 1.8 Charts
 
-No new tokens. Status charts use status tokens (runs `brand`, failures `danger`; sentiment
-`success`, `fg-secondary`, `danger`). Categorical series use the identity palette. Every chart keeps
+No new hues: four aliases (C-075), so a chart's colours are set in one place. `chart-positive`
+(`success`), `chart-neutral` (`fg-secondary`), `chart-negative` (`danger`: negative sentiment,
+failures) and `chart-series-1` (`brand`: a single series such as runs or the 7-day trend). The
+sentiment bar and card, the automation stats and the trend line read them; `tokens.ts`
+(`chartAliases`) lists them. Categorical series use the identity palette. Every chart keeps
 the pattern from the automation stats: colour plus a legend plus numbers in text, and an `sr-only`
 table or `role="img"` with a label.
 
@@ -224,6 +227,14 @@ text.
 
 A light theme would then be one block that redefines the `--color-*` values under a theme selector,
 with no component edits. It is not planned for R1.
+
+**The palette is locked (C-075).** `--color-*: initial` opens `@theme`, so Tailwind's default
+colours generate no CSS; white and black exist only as `fg`, `on-brand`, `canvas` and
+`media-scrim`. `styles/design-lint.test.ts` names any default colour, `text-[…]`, `rounded-[…]`
+(except `rounded-[inherit]`), `ring-ring/50`, `bg-brand-gradient` on a Button, or bare
+`outline-none` without a `focus-visible:` replacement in the source. Consumers that can't read
+CSS variables (Clerk, the OG image, the manifest, the viewport) take values from `colorValue()` in
+`tokens.ts`, and `tokens.test.ts` rejects literals there.
 
 ### 1.13 Token changes in one place
 
@@ -506,7 +517,7 @@ and one safety net in `globals.css`:
 
 | Family | Canonical | Variants and props | Replaces (source) | Status |
 |---|---|---|---|---|
-| Button | `ui/button` | `variant`: **`default` = primary** (brand gradient, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `soft` (`brand-soft`, `brand-fg`, `brand-line` edge; `brand-soft-hover` on hover and open: AI actions such as the AI pill and AI Polish, and a toggle while pressed; C-073), `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`) · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16), brand-soft classes on ghost (C-073) | Change |
+| Button | `ui/button` | `variant`: **`default` = primary** (brand gradient, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `soft` (`brand-soft`, `brand-fg`, `brand-line` edge; `brand-soft-hover` on hover and open: AI actions such as the AI pill and AI Polish, and a toggle while pressed; C-073), `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`); a ghost may take `text-fg-secondary` for a tertiary action (the muted ghost: its hover and open turn `fg`, so no variant is needed; DS-7, C-076), but an AI action is `soft`, never a `text-brand-fg` override · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16), brand-soft classes on ghost (C-073) | Change |
 | Disabled reason | `ui/disabled-reason` (focusable wrapper with Tooltip and `sr-only` text) | `reason` | `title` on disabled controls (CMP-010) | Add |
 | Spinner | `ui/spinner` | `size` | 36 `Loader2`/`LoaderCircle` with mixed rules (MOT-006) | Add |
 | Text field | `ui/input` | `size` (`sm`, `default`, `lg`, `xl`); native `type="date"`/`"time"` allowed (D-04), focused at every stop, the picker button included (§8.3, C-073) | 17 raw inputs; two looks (CMP-011) | Change |
@@ -588,6 +599,14 @@ and one safety net in `globals.css`:
 ---
 
 ## 9. Responsive rules
+
+- **Page width (C-074):** pages fill the space beside the sidebar at any size; no page cap. Limits
+  for reading live inside components (settings fields `max-w-2xl`, bubbles their own maximum);
+  grids gain columns as space grows. The marketing site keeps its centred layout.
+- **Resizable panes (UI-078):** the inbox list (260–560 px) and details (280–480), the Ask page's
+  thread history (220–440) and the Ask panel (360–720) resize with `ResizeHandle` (drag, ← and →,
+  Shift for 64 px, Home and End, double-click to reset); the width is remembered per device by
+  `usePaneWidth`. Hidden below `md`, where phones keep one pane.
 
 - **Breakpoints:** `md` 768 (top bar and drawer below it), `lg` 1024 (sidebar expands; three-column
   dashboards), `xl` 1280 (inbox details inline; settings two columns), `wide` 1440 (inbox details

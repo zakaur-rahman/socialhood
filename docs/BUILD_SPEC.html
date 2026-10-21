@@ -2203,34 +2203,67 @@ stateDiagram-v2
   </ol>
 
   <h2 id="ux-tokens"><span class="sn">4.2</span>Design tokens</h2>
-  <p><strong>UX-TOK-01</strong> Tokens live in <code>apps/web/src/styles/globals.css</code> exactly as below. Components use the generated utilities (<code>bg-panel</code>, <code>text-fg-secondary</code>, <code>border-line</code>, <code>bg-brand-gradient</code>…), never raw hex values. v1 used utilities that did not exist (so secondary text rendered white) and loaded Geist without applying it; this file fixes both.</p>
+  <p><strong>UX-TOK-01</strong> Tokens live in <code>apps/web/src/styles/globals.css</code>, shown below as it stands (C-070 to C-075). <code>styles/tokens.ts</code> mirrors every value: <code>tokens.test.ts</code> checks the CSS against it, <code>/dev/tokens</code> renders it, and the consumers that can't read CSS variables (Clerk, the OG image, the manifest and the viewport colour) read <code>colorValue()</code> from it. Tailwind's default palette is switched off (<code>--color-*: initial</code>), so only these tokens compile, and <code>styles/design-lint.test.ts</code> rejects default colours, arbitrary text sizes and radii, the translucent shadcn ring and a focus outline removed without a replacement (C-075). Components use the generated utilities (<code>bg-panel</code>, <code>text-fg-secondary</code>, <code>border-line</code>, <code>bg-brand-gradient</code>…), never raw hex values; the shadcn aliases stay inside <code>components/ui</code>. v1 used utilities that did not exist (so secondary text rendered white) and loaded Geist without applying it; this file fixes both.</p>
 <pre><code>@import "tailwindcss";
 @import "tw-animate-css";
+/* Addition to §4.2 (docs/CONFLICTS.md C-002): keyframes and data-state variants used by shadcn v4 components. No colours. */
+@import "shadcn/tailwind.css";
+
+/* Addition to §4.2 (C-002): the app is dark-only (D13), so `dark:` follows the class on &lt;html&gt;, not the OS setting. */
+@custom-variant dark (&amp;:is(.dark *));
+
+/* A short viewport, 500 px tall or less: 200% zoom, a landscape phone (RSP-006). Sticky bars stay in
+   the flow there (`short:static`, shell/sticky-bar.ts) so they can't take a quarter of the screen,
+   and their text gets one line (C-073; it replaces `[@media(max-height:500px)]:`). */
+@custom-variant short (@media (max-height: 500px));
+
+/* Additions marked "C-070" are the UI audit's token foundation (docs/ui-audit/DESIGN_SYSTEM.md
+   §1.13, §1.9, §2, §7): names for values already in use; the few on-screen changes are listed in
+   docs/CONFLICTS.md C-070. Those marked "C-071" apply the owner's decisions D-01 (control edges),
+   D-06 (placeholders) and D-12 (overlay surface and elevation), approved in C-069. styles/tokens.ts
+   mirrors every value and tokens.test.ts checks this file against it. */
 
 @theme {
+  /* The palette lock (UI-070, C-075): Tailwind's default colours are cleared, so only the
+     tokens below compile. A stray `bg-red-500` or `text-white` generates no CSS, and the design
+     lint (styles/design-lint.test.ts) names it. White and black exist only as tokens: fg, on-brand,
+     canvas and media-scrim. */
+  --color-*: initial;
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Surfaces: the v1 ladder */
   --color-canvas: #000000;        /* app and thread background */
-  --color-panel: #1F1F1F;         /* sidebar card, list pane, headers, composer bar, popovers */
+  --color-panel: #1F1F1F;         /* cards, sidebar, list pane, headers, composer bar, the phone drawer */
   --color-field: #1D1D1D;         /* inputs, incoming bubbles, segmented track */
   --color-raised: #2A2A2A;        /* selected row, active segment, focused input, secondary button */
   --color-raised-hover: #333333;
+  --color-overlay: #262626;       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
   --color-line: rgb(255 255 255 / 0.10);
   --color-line-subtle: rgb(255 255 255 / 0.05);
   --color-line-strong: rgb(255 255 255 / 0.20);
+  --color-line-control: rgb(255 255 255 / 0.40);  /* edges that identify a control, 3:1 or more on every surface; --input (D-01, C-071) */
+
+  /* States, as overlays so they work on any surface (C-070) */
+  --color-hover: rgb(255 255 255 / 0.05);    /* hover fill on any surface; neutral chip fill */
+  --color-pressed: rgb(255 255 255 / 0.10);  /* pressed or open: aria-expanded, data-state=open */
+  --color-scrim: rgb(0 0 0 / 0.60);          /* modal and drawer backdrop (UX-SH-02) */
+  --color-media-scrim: #000000;              /* on photos and video only, with an opacity (bg-media-scrim/60) */
 
   /* Text */
   --color-fg: #FFFFFF;
-  --color-fg-secondary: #9B9CA0;  /* all secondary and meta text, including timestamps */
-  --color-fg-disabled: #71717A;   /* disabled controls and placeholders only */
+  --color-fg-secondary: #9B9CA0;  /* all secondary and meta text, including timestamps; placeholders (D-06, C-071) */
+  --color-fg-disabled: #71717A;   /* disabled controls only (3.41:1 on panel: never readable text) */
+  --color-on-brand: #FFFFFF;      /* text and icons on the brand gradient, brand-strong, danger-fill and platform fills (C-070) */
 
   /* Brand */
-  --color-brand: #567FF8;         /* fills, borders, dots, focus ring */
+  --color-brand: #567FF8;         /* non-text marks: focus ring, dots, selection bar, switch on; never behind text */
+  --color-brand-strong: #4467E6;  /* solid brand fills that carry text (4.85:1 with on-brand); the gradient's end (C-070) */
   --color-brand-deep: #20338A;
   --color-brand-fg: #9DB5FF;      /* brand-coloured text and icons on dark surfaces */
   --color-brand-soft: rgb(86 127 248 / 0.15);
+  --color-brand-soft-hover: rgb(86 127 248 / 0.25);  /* hover and open on brand-soft: the soft button (C-073) */
   --color-brand-line: rgb(86 127 248 / 0.35);
   --color-shell-1: #3352CC;       /* logo tile and upgrade button */
   --color-shell-2: #1C2D70;
@@ -2241,48 +2274,162 @@ stateDiagram-v2
   --color-danger: #EF4444;        /* icons and borders */
   --color-danger-fg: #FCA5A5;     /* danger text on dark */
   --color-danger-fill: #C53030;   /* failed bubble background (white text) */
+  --color-success-soft: rgb(34 197 94 / 0.15);  /* chip, banner and callout fills (C-070) */
+  --color-warning-soft: rgb(251 146 60 / 0.15);
+  --color-danger-soft: rgb(239 68 68 / 0.15);
 
   /* Platforms */
   --color-instagram: #BE185D;
   --color-whatsapp: #16A34A;
   --color-facebook: #2563EB;
   --color-linkedin: #1E40AF;
+
+  /* Charts (COLOR_SYSTEM §11.6, C-075): aliases, no new hues. Every chart reads these, so a
+     series' colour is set in one place; the legend, numbers and an sr-only table carry the values. */
+  --color-chart-positive: var(--color-success);
+  --color-chart-neutral: var(--color-fg-secondary);
+  --color-chart-negative: var(--color-danger);
+  --color-chart-series-1: var(--color-brand);
+
+  /* Type: the two sizes the scale lacked, each with its line height (C-070) */
+  --text-2xs: 0.6875rem; --text-2xs--line-height: 1rem;      /* 11/16: status badges, chips, eyebrows */
+  --text-md: 0.9375rem;  --text-md--line-height: 1.5rem;     /* 15/24: reading (Ask, legal prose) */
+
+  /* Motion easings (C-070); the durations are --motion-* below */
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* state changes: colour, opacity, toggles */
+  --ease-enter: cubic-bezier(0, 0, 0.2, 1);       /* things arriving */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);        /* things leaving */
+
+  /* Tailwind's breakpoints plus one (C-070) */
+  --breakpoint-wide: 90rem;       /* 1440 px: inbox details open by default, schedule rail inline */
+
+  /* Elevation (DESIGN_SYSTEM §6; D-12, C-071): on near-black, Tailwind's 10% shadows don't show.
+     Only what floats gets one, from its primitive: floating (popovers, menus, select options,
+     toasts) and overlay (dialogs, alert dialogs, sheets, over the scrim). The 1 px `line` edge is a
+     separate ring-1 ring-line (or a sheet's side border), so a call site's leftover shadow can't
+     take the edge with it. */
+  --shadow-floating: 0 8px 24px -6px rgb(0 0 0 / 0.7);
+  --shadow-overlay: 0 24px 64px -12px rgb(0 0 0 / 0.8);
 }
 
-@utility bg-brand-gradient { background-image: linear-gradient(135deg, #20338A 0%, #4467E6 100%); }
-@utility bg-brand-gradient-decor { background-image: linear-gradient(135deg, #20338A 0%, #567FF8 100%); }
-@utility bg-shell-gradient { background-image: linear-gradient(135deg, #3352CC 0%, #1C2D70 100%); }
+/* Gradients (DESIGN_SYSTEM §1.9): four, each with one job; the stops are tokens (C-070). */
+@utility bg-brand-gradient { background-image: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%); }
+@utility bg-brand-gradient-decor { background-image: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%); }
+@utility bg-shell-gradient { background-image: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%); }
+@utility bg-glow-brand { background-image: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%); }
+
+/* Motion durations (DESIGN_SYSTEM §7, C-070). The utilities set --tw-duration too, which
+   tw-animate-css reads, so `duration-slow ease-enter` times transitions and animate-in alike. */
+:root {
+  --motion-fast: 120ms;    /* hover, press, toggles, menus, popovers, tooltips; every exit */
+  --motion-normal: 150ms;  /* content arriving in place: live message, inline reveals */
+  --motion-slow: 200ms;    /* surfaces: dialogs, sheets, the drawer, panels, the suggestion bar */
+}
+@utility duration-fast { --tw-duration: var(--motion-fast); transition-duration: var(--motion-fast); }
+@utility duration-normal { --tw-duration: var(--motion-normal); transition-duration: var(--motion-normal); }
+@utility duration-slow { --tw-duration: var(--motion-slow); transition-duration: var(--motion-slow); }
+
+/* A row that scrolls sideways fades out at its trailing edge, so options past the edge read as
+   more to scroll to (RSP-012; the sidebar's bottom fade, turned sideways). Give the row the same
+   end padding (pe-4) so its last item can scroll clear of the fade. The mask uses alpha only. */
+@utility mask-fade-x { mask-image: linear-gradient(to right, black calc(100% - 1rem), transparent); }
+
+/* The crop box's mask (DESIGN_SYSTEM §6: box-shadow for another job than elevation, named here): a
+   spread shadow that dims the photo outside the box with media-scrim at 60%, dark in any theme. Its
+   container clips it (overflow-hidden). Not an elevation, so it stays out of the --shadow-* family
+   (C-073). */
+@utility shadow-crop-mask { box-shadow: 0 0 0 9999px color-mix(in srgb, var(--color-media-scrim) 60%, transparent); }
+
+/* UX-SCR-03: the editor's gutter line while an automation is active, a dashed brand gradient moving
+   down (2 s per cycle); static under reduced motion. Built from tokens only. */
+@utility automation-line-active {
+  background-image:
+    repeating-linear-gradient(to bottom, var(--color-canvas) 0 4px, transparent 4px 10px),
+    linear-gradient(to bottom, var(--color-brand), var(--color-brand-deep));
+  background-size: 100% 20px, 100% 100%;
+  animation: automation-line 2s linear infinite;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@keyframes automation-line {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 20px, 0 0; }
+}
+
+/* Ask Social Hood: the label of the step a run is on, a light sweeping across the secondary text
+   (1.6 s per sweep); plain secondary text under reduced motion. Built from tokens only. */
+@utility text-shimmer {
+  color: var(--color-fg-secondary);
+  @media (prefers-reduced-motion: no-preference) {
+    background-image: linear-gradient(
+      90deg,
+      var(--color-fg-secondary) 0%,
+      var(--color-fg-secondary) 40%,
+      var(--color-fg) 50%,
+      var(--color-fg-secondary) 60%,
+      var(--color-fg-secondary) 100%
+    );
+    background-size: 200% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    animation: text-shimmer 1.6s linear infinite;
+  }
+}
+
+@keyframes text-shimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
 
 :root {
   color-scheme: dark;
-  /* shadcn/ui semantic variables mapped onto the tokens */
+  /* shadcn/ui semantic variables mapped onto the tokens. They stay inside components/ui; app code
+     uses the tokens (DESIGN_SYSTEM §1.10). Every one has a --color-* mapping below (C-070). */
   --background: var(--color-canvas);   --foreground: var(--color-fg);
   --card: var(--color-panel);          --card-foreground: var(--color-fg);
-  --popover: var(--color-panel);       --popover-foreground: var(--color-fg);
-  --primary: var(--color-brand);       --primary-foreground: #FFFFFF;
+  --popover: var(--color-overlay);     --popover-foreground: var(--color-fg);
+  --primary: var(--color-brand-strong); --primary-foreground: var(--color-on-brand);
   --secondary: var(--color-raised);    --secondary-foreground: var(--color-fg);
   --muted: var(--color-field);         --muted-foreground: var(--color-fg-secondary);
-  --accent: var(--color-raised);       --accent-foreground: var(--color-fg);
+  --accent: var(--color-hover);        --accent-foreground: var(--color-fg);
   --destructive: var(--color-danger);
-  --border: var(--color-line);  --input: var(--color-line);  --ring: var(--color-brand);
-  --radius: 0.5rem;
+  --border: var(--color-line);  --input: var(--color-line-control);  --ring: var(--color-brand);
+  --radius: 0.5rem;  /* inert: nothing reads it; Tailwind's default radii are the scale (DESIGN_SYSTEM §4) */
 }
 @theme inline {
   --color-background: var(--background); --color-foreground: var(--foreground);
-  --color-card: var(--card); --color-popover: var(--popover);
+  --color-card: var(--card); --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover); --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary); --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary); --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground); --color-accent: var(--accent);
+  --color-secondary: var(--secondary); --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted); --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent); --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive); --color-border: var(--border);
   --color-input: var(--input); --color-ring: var(--ring);
 }
 
 @layer base {
   * { border-color: var(--color-line); }
+  /* Below md the 56 px top bar is sticky: a control scrolled into view lands below it (A11Y-008, C-070). */
+  html { @variant max-md { scroll-padding-top: 4rem; } }
   body { background: var(--color-canvas); color: var(--color-fg); }
   /* In the base layer, so utilities still win (v1's unlayered rule squared off focused pills) */
   :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
-  ::placeholder { color: var(--color-fg-disabled); }
+  /* Placeholders are text: fg-secondary is 4.6:1 or more on every surface (D-06, C-071). */
+  ::placeholder { color: var(--color-fg-secondary); }
+  /* Weights are 400, 500 and 600 only: bold text is 600, not the browser's 700 (TYP-013, C-070). */
+  strong, b { font-weight: 600; }
+  /* Reduced motion (DESIGN_SYSTEM §7.4, C-070): overlays, their scrims and skeletons appear and
+     leave at once. A safety net under the primitives' own motion-reduce: classes. */
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot$="-overlay"], [data-slot$="-content"], [data-slot="skeleton"] {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
 }</code></pre>
   <p>Fonts in <code>app/layout.tsx</code>:</p>
 <pre><code>import { Geist, Geist_Mono } from "next/font/google";
@@ -2295,15 +2442,53 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
   <div class="tw"><table class="wide">
     <thead><tr><th>Token</th><th>Value</th><th>Where</th></tr></thead>
     <tbody>
-      <tr><td><span class="sw" style="background:#000"></span>canvas</td><td class="m">#000000</td><td>App background, message area</td></tr>
-      <tr><td><span class="sw" style="background:#1F1F1F"></span>panel</td><td class="m">#1F1F1F</td><td>Sidebar card, list pane, thread header, composer bar, context panel, popovers, menus</td></tr>
-      <tr><td><span class="sw" style="background:#1D1D1D"></span>field</td><td class="m">#1D1D1D</td><td>Inputs, composer textarea, incoming bubbles, segmented track</td></tr>
-      <tr><td><span class="sw" style="background:#2A2A2A"></span>raised</td><td class="m">#2A2A2A</td><td>Selected row, active segment, focused inputs, secondary buttons</td></tr>
-      <tr><td><span class="sw" style="background:#9B9CA0"></span>fg-secondary</td><td class="m">#9B9CA0</td><td>Previews, timestamps, labels, help text</td></tr>
-      <tr><td><span class="sw" style="background:#567FF8"></span>brand</td><td class="m">#567FF8</td><td>Unread dot, selected-row bar, focus ring, switch, decorative gradient</td></tr>
-      <tr><td><span class="sw" style="background:#9DB5FF"></span>brand-fg</td><td class="m">#9DB5FF</td><td>Active segment text, AI labels, links on dark</td></tr>
-      <tr><td><span class="sw" style="background:linear-gradient(135deg,#20338A,#4467E6)"></span>brand-gradient</td><td class="m">#20338A → #4467E6</td><td>Outgoing bubbles, primary buttons, send button, count badges</td></tr>
-      <tr><td><span class="sw" style="background:#BE185D"></span><span class="sw" style="background:#16A34A"></span>platforms</td><td class="m">#BE185D · #16A34A</td><td>Platform strip, platform badges on avatars</td></tr>
+      <tr><td><span class="sw" style="background:#000000"></span>canvas</td><td class="m">#000000</td><td>App and thread background</td></tr>
+      <tr><td><span class="sw" style="background:#1F1F1F"></span>panel</td><td class="m">#1F1F1F</td><td>Cards, sidebar, list pane, headers, composer bar, the phone drawer</td></tr>
+      <tr><td><span class="sw" style="background:#1D1D1D"></span>field</td><td class="m">#1D1D1D</td><td>Inputs, incoming bubbles, segmented track</td></tr>
+      <tr><td><span class="sw" style="background:#2A2A2A"></span>raised</td><td class="m">#2A2A2A</td><td>Selected row, active segment, focused input, secondary button</td></tr>
+      <tr><td><span class="sw" style="background:#333333"></span>raised-hover</td><td class="m">#333333</td><td>Hover on raised surfaces</td></tr>
+      <tr><td><span class="sw" style="background:#262626"></span>overlay</td><td class="m">#262626</td><td>What floats: popovers, menus, select options, dialogs, sheets, toasts (D-12)</td></tr>
+      <tr><td><span class="sw" style="background:rgb(255 255 255 / 0.05)"></span>hover</td><td class="m">rgb(255 255 255 / 0.05)</td><td>Hover fill on any surface; neutral chip fill</td></tr>
+      <tr><td><span class="sw" style="background:rgb(255 255 255 / 0.10)"></span>pressed</td><td class="m">rgb(255 255 255 / 0.10)</td><td>Pressed or open (aria-expanded, data-state=open)</td></tr>
+      <tr><td><span class="sw" style="background:rgb(0 0 0 / 0.60)"></span>scrim</td><td class="m">rgb(0 0 0 / 0.60)</td><td>Modal and drawer backdrop</td></tr>
+      <tr><td><span class="sw" style="background:#000000"></span>media-scrim</td><td class="m">#000000</td><td>On photos and video only, with an opacity (bg-media-scrim/60)</td></tr>
+      <tr><td><span class="sw" style="background:rgb(255 255 255 / 0.10)"></span>line</td><td class="m">rgb(255 255 255 / 0.10)</td><td>Borders</td></tr>
+      <tr><td><span class="sw" style="background:rgb(255 255 255 / 0.05)"></span>line-subtle</td><td class="m">rgb(255 255 255 / 0.05)</td><td>Faint borders</td></tr>
+      <tr><td><span class="sw" style="background:rgb(255 255 255 / 0.20)"></span>line-strong</td><td class="m">rgb(255 255 255 / 0.20)</td><td>Emphasised borders</td></tr>
+      <tr><td><span class="sw" style="background:rgb(255 255 255 / 0.40)"></span>line-control</td><td class="m">rgb(255 255 255 / 0.40)</td><td>Control edges, 3:1 or more on every surface: fields, selects, checkboxes, switches (--input; D-01)</td></tr>
+      <tr><td><span class="sw" style="background:#FFFFFF"></span>fg</td><td class="m">#FFFFFF</td><td>Primary text</td></tr>
+      <tr><td><span class="sw" style="background:#9B9CA0"></span>fg-secondary</td><td class="m">#9B9CA0</td><td>Secondary and meta text, timestamps, placeholders (D-06)</td></tr>
+      <tr><td><span class="sw" style="background:#71717A"></span>fg-disabled</td><td class="m">#71717A</td><td>Disabled controls only</td></tr>
+      <tr><td><span class="sw" style="background:#FFFFFF"></span>on-brand</td><td class="m">#FFFFFF</td><td>Text and icons on the brand gradient, brand-strong, danger-fill, platform fills</td></tr>
+      <tr><td><span class="sw" style="background:#567FF8"></span>brand</td><td class="m">#567FF8</td><td>Non-text marks: focus ring, dots, selection bar, switch on, checkbox checked</td></tr>
+      <tr><td><span class="sw" style="background:#4467E6"></span>brand-strong</td><td class="m">#4467E6</td><td>Solid brand fills that carry text; the gradient's end</td></tr>
+      <tr><td><span class="sw" style="background:#20338A"></span>brand-deep</td><td class="m">#20338A</td><td>Gradient start</td></tr>
+      <tr><td><span class="sw" style="background:#9DB5FF"></span>brand-fg</td><td class="m">#9DB5FF</td><td>Brand-coloured text and icons on dark</td></tr>
+      <tr><td><span class="sw" style="background:rgb(86 127 248 / 0.15)"></span>brand-soft</td><td class="m">rgb(86 127 248 / 0.15)</td><td>Soft brand fills; the info tone</td></tr>
+      <tr><td><span class="sw" style="background:rgb(86 127 248 / 0.25)"></span>brand-soft-hover</td><td class="m">rgb(86 127 248 / 0.25)</td><td>Hover and open on brand-soft: the soft button (C-073)</td></tr>
+      <tr><td><span class="sw" style="background:rgb(86 127 248 / 0.35)"></span>brand-line</td><td class="m">rgb(86 127 248 / 0.35)</td><td>Brand borders</td></tr>
+      <tr><td><span class="sw" style="background:#3352CC"></span>shell-1</td><td class="m">#3352CC</td><td>Logo tile and upgrade button</td></tr>
+      <tr><td><span class="sw" style="background:#1C2D70"></span>shell-2</td><td class="m">#1C2D70</td><td>Logo tile and upgrade button</td></tr>
+      <tr><td><span class="sw" style="background:#22C55E"></span>success</td><td class="m">#22C55E</td><td>Success</td></tr>
+      <tr><td><span class="sw" style="background:#FB923C"></span>warning</td><td class="m">#FB923C</td><td>Warning</td></tr>
+      <tr><td><span class="sw" style="background:#EF4444"></span>danger</td><td class="m">#EF4444</td><td>Danger icons and borders</td></tr>
+      <tr><td><span class="sw" style="background:#FCA5A5"></span>danger-fg</td><td class="m">#FCA5A5</td><td>Danger text on dark</td></tr>
+      <tr><td><span class="sw" style="background:#C53030"></span>danger-fill</td><td class="m">#C53030</td><td>Failed bubble background</td></tr>
+      <tr><td><span class="sw" style="background:rgb(34 197 94 / 0.15)"></span>success-soft</td><td class="m">rgb(34 197 94 / 0.15)</td><td>Success chip, banner and callout fill</td></tr>
+      <tr><td><span class="sw" style="background:rgb(251 146 60 / 0.15)"></span>warning-soft</td><td class="m">rgb(251 146 60 / 0.15)</td><td>Warning chip, banner and callout fill</td></tr>
+      <tr><td><span class="sw" style="background:rgb(239 68 68 / 0.15)"></span>danger-soft</td><td class="m">rgb(239 68 68 / 0.15)</td><td>Danger chip, banner and callout fill; destructive menu highlight</td></tr>
+      <tr><td><span class="sw" style="background:#BE185D"></span>instagram</td><td class="m">#BE185D</td><td>Instagram</td></tr>
+      <tr><td><span class="sw" style="background:#16A34A"></span>whatsapp</td><td class="m">#16A34A</td><td>WhatsApp</td></tr>
+      <tr><td><span class="sw" style="background:#2563EB"></span>facebook</td><td class="m">#2563EB</td><td>Facebook</td></tr>
+      <tr><td><span class="sw" style="background:#1E40AF"></span>linkedin</td><td class="m">#1E40AF</td><td>LinkedIn</td></tr>
+      <tr><td>chart-positive</td><td class="m">→ success</td><td>Positive sentiment (an alias, no new hue; C-075)</td></tr>
+      <tr><td>chart-neutral</td><td class="m">→ fg-secondary</td><td>Neutral sentiment (an alias, no new hue; C-075)</td></tr>
+      <tr><td>chart-negative</td><td class="m">→ danger</td><td>Negative sentiment; failures (an alias, no new hue; C-075)</td></tr>
+      <tr><td>chart-series-1</td><td class="m">→ brand</td><td>A single series: runs, the 7-day trend (an alias, no new hue; C-075)</td></tr>
+      <tr><td>bg-brand-gradient</td><td class="m">linear-gradient(135deg, brand-deep 0%, brand-strong 100%)</td><td>Primary buttons, outgoing bubbles, count badges; on-brand text</td></tr>
+      <tr><td>bg-brand-gradient-decor</td><td class="m">linear-gradient(135deg, brand-deep 0%, brand 100%)</td><td>Meters, progress fills, decorative icon tiles; never under text</td></tr>
+      <tr><td>bg-shell-gradient</td><td class="m">linear-gradient(135deg, shell-1 0%, shell-2 100%)</td><td>Logo tile and Upgrade only</td></tr>
+      <tr><td>bg-glow-brand</td><td class="m">radial-gradient(120% 140% at 0% 0%, brand-soft, transparent 60%)</td><td>One per view at most: the marketing hero and the plan hero</td></tr>
     </tbody>
   </table></div>
   <h4>Contrast adjustments to the v1 palette</h4>
@@ -2315,36 +2500,56 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
       <tr><td><code>#567FF8</code> active-tab text on <code>#2A2A2A</code></td><td>4.0:1</td><td><code>brand-fg #9DB5FF</code></td><td>7.2:1</td></tr>
       <tr><td><code>#71717A</code> timestamps on <code>#1F1F1F</code></td><td>3.5:1</td><td><code>fg-secondary #9B9CA0</code></td><td>6.0:1</td></tr>
       <tr><td>White on <code>red-500</code> failed bubble</td><td>3.8:1</td><td><code>danger-fill #C53030</code></td><td>5.5:1</td></tr>
+      <tr><td>White on solid <code>brand #567FF8</code> fills (primary)</td><td>3.6:1</td><td><code>brand-strong #4467E6</code> for every solid fill that carries text</td><td>4.9:1</td></tr>
+      <tr><td>Control edges in <code>line</code> (white 10%) on <code>panel</code></td><td>1.4:1</td><td><code>line-control</code> (white 40%) on fields, selects, checkboxes and switches (D-01)</td><td>3:1 or more</td></tr>
+      <tr><td>Placeholders in <code>fg-disabled #71717A</code> on <code>panel</code></td><td>3.4:1</td><td><code>fg-secondary</code> (D-06); <code>fg-disabled</code> for disabled controls only</td><td>4.6:1 or more</td></tr>
     </tbody>
   </table></div>
 
   <h3>Type, space, radius, motion</h3>
+  <p>The type roles are constants in <code>styles/tokens.ts</code> (the name under each row): import them instead of restating the classes. Weights are 400, 500 and 600 only (<code>strong</code> and <code>b</code> are 600); nothing is smaller than 11 px; no arbitrary sizes (<code>text-[…]</code>); tracking is −0.025em at 24 px and up, +0.08em on eyebrows only (DESIGN_SYSTEM §2).</p>
   <div class="tw"><table class="wide">
-    <thead><tr><th>Role</th><th>Classes</th><th>Use</th></tr></thead>
+    <thead><tr><th>Role</th><th>Classes</th><th>Size / line (px)</th><th>Use</th></tr></thead>
     <tbody>
-      <tr><td>Page title</td><td class="m">text-2xl font-semibold tracking-tight</td><td>Top of non-inbox pages</td></tr>
-      <tr><td>Pane title</td><td class="m">text-xl font-semibold</td><td>"Inbox" in the list header (as v1)</td></tr>
-      <tr><td>Section title</td><td class="m">text-base font-semibold</td><td>Cards, steps, panel sections</td></tr>
-      <tr><td>Body</td><td class="m">text-sm</td><td>Default UI text</td></tr>
-      <tr><td>Bubble text</td><td class="m">text-sm leading-relaxed whitespace-pre-wrap break-words</td><td>Messages (as v1)</td></tr>
-      <tr><td>Meta</td><td class="m">text-xs text-fg-secondary</td><td>Timestamps, counts, hints</td></tr>
-      <tr><td>Micro label</td><td class="m">text-[11px] uppercase tracking-[0.08em] font-semibold text-fg-secondary</td><td>Step labels, panel section labels</td></tr>
-      <tr><td>Numbers</td><td class="m">tabular-nums</td><td>Counts, meters, times in lists</td></tr>
+      <tr><td>Display</td><td class="m">text-4xl font-semibold tracking-tight leading-[1.08] sm:text-5xl lg:text-6xl<br><small>DISPLAY</small></td><td class="m">36 → 60</td><td>The marketing hero only</td></tr>
+      <tr><td>Marketing heading</td><td class="m">text-3xl font-semibold tracking-tight sm:text-4xl<br><small>MARKETING_HEADING</small></td><td class="m">30 → 36</td><td>Marketing H2, legal H1</td></tr>
+      <tr><td>Page title</td><td class="m">text-2xl font-semibold tracking-tight<br><small>PAGE_TITLE</small></td><td class="m">24/32</td><td>The H1 of every app page, Settings included (D-05)</td></tr>
+      <tr><td>KPI number</td><td class="m">text-2xl font-semibold tracking-tight tabular-nums<br><small>KPI</small></td><td class="m">24/32</td><td>Metric tiles, plan name</td></tr>
+      <tr><td>Pane title</td><td class="m">text-lg font-semibold<br><small>PANE_TITLE</small></td><td class="m">18/28</td><td>The H1 of a pane: Inbox, Ask, the phone top bar (D-05)</td></tr>
+      <tr><td>Section title</td><td class="m">text-lg font-semibold<br><small>SECTION_TITLE</small></td><td class="m">18/28</td><td>Page sections, large dialogs</td></tr>
+      <tr><td>Card title</td><td class="m">text-base font-semibold<br><small>CARD_TITLE</small></td><td class="m">16/24</td><td>Card and panel headings; dialog and sheet titles</td></tr>
+      <tr><td>Item title</td><td class="m">text-sm font-semibold<br><small>ITEM_TITLE</small></td><td class="m">14/20</td><td>Row names, template names, step titles</td></tr>
+      <tr><td>Reading</td><td class="m">text-md<br><small>READING</small></td><td class="m">15/24</td><td>Ask answers and composer, legal prose</td></tr>
+      <tr><td>Body</td><td class="m">text-sm<br><small>BODY</small></td><td class="m">14/20</td><td>Default UI text (the app's &lt;main&gt; is text-sm)</td></tr>
+      <tr><td>Message</td><td class="m">text-sm leading-relaxed<br><small>MESSAGE</small></td><td class="m">14/22.75</td><td>Bubbles (with whitespace-pre-wrap break-words) and composers</td></tr>
+      <tr><td>Control</td><td class="m">text-sm font-medium<br><small>CONTROL</small></td><td class="m">14/20</td><td>Buttons, nav, tabs, segments, labels, menu items</td></tr>
+      <tr><td>Input</td><td class="m">text-base md:text-sm<br><small>INPUT_TEXT</small></td><td class="m">16 → 14</td><td>Every text-entry field (16 px on phones: no iOS zoom)</td></tr>
+      <tr><td>Meta</td><td class="m">text-xs text-fg-secondary<br><small>META</small></td><td class="m">12/16</td><td>Timestamps, hints, inline errors, table headers</td></tr>
+      <tr><td>Small control</td><td class="m">text-xs font-medium<br><small>SMALL_CONTROL</small></td><td class="m">12/16</td><td>Button xs and sm, filter chips</td></tr>
+      <tr><td>Chip, status badge</td><td class="m">text-2xs font-medium<br><small>CHIP</small></td><td class="m">11/16</td><td>Status and signal badges, plan badge, kbd</td></tr>
+      <tr><td>Count badge</td><td class="m">text-xs font-medium<br><small>COUNT</small></td><td class="m">12/16</td><td>Unread and needs-reply counts (h-5 min-w-5)</td></tr>
+      <tr><td>Eyebrow (micro label)</td><td class="m">text-2xs font-semibold uppercase tracking-[0.08em] text-fg-secondary<br><small>EYEBROW</small></td><td class="m">11/16</td><td>Step labels, panel section labels, nav group labels</td></tr>
+      <tr><td>Mono</td><td class="m">font-mono text-xs<br><small>MONO</small></td><td class="m">12/16</td><td>Traces, IDs</td></tr>
+      <tr><td>Numbers</td><td class="m">tabular-nums</td><td class="m"></td><td>Counts, meters, times in lists</td></tr>
     </tbody>
   </table></div>
   <ul>
-    <li><strong>Spacing:</strong> 4 px grid. <code>px-4</code> (16 px) gutter in every inbox region. Page padding <code>p-6</code> on desktop, <code>p-4</code> on phones.</li>
-    <li><strong>Radius:</strong> Tailwind defaults. Bubbles <code>rounded-2xl</code> with a 6 px tail corner (<code>rounded-br-md</code> outgoing, <code>rounded-bl-md</code> incoming). Cards and the sidebar <code>rounded-xl</code>. Inputs, menus, popovers <code>rounded-lg</code>. Segments and small buttons <code>rounded-md</code>. Avatars, icon buttons, send button, chips <code>rounded-full</code>. Platform strip buttons keep the v1 leaf: <code>rounded-tl-lg rounded-br-lg</code>.</li>
-    <li><strong>Elevation:</strong> flat. Only popovers, menus and dialogs get <code>shadow-xl</code>; incoming bubbles <code>shadow-sm</code>.</li>
-    <li><strong>Motion:</strong> a message that arrives live fades in and rises 4 px over 150 ms; history loads without animation (v1 animated every row in sequence). Suggestion card: 180 ms rise from 8 px. Send button: 120 ms scale-in when text appears. Sheets and dialogs: 200 ms. Under <code>prefers-reduced-motion</code>, all of these are instant.</li>
+    <li><strong>Spacing:</strong> 4 px grid, steps by role (DESIGN_SYSTEM §3). <code>px-4</code> (16 px) gutter in every inbox region. Page padding <code>p-4 md:p-6</code>; section gap 24 px; card padding <code>p-4</code> for data cards and <code>p-5 md:p-6</code> for settings, billing and form cards. Half steps only inside controls.</li>
+    <li><strong>Width:</strong> pages fill the space beside the sidebar at any size, with no page cap (C-074). Readability limits live inside components: settings fields are at most <code>max-w-2xl</code> and bubbles keep their own maximum width; grids gain columns as space grows. The marketing site keeps its centred layout. The inbox list and details, the Ask page's thread history and the Ask panel can be resized (UI-078).</li>
+    <li><strong>Radius:</strong> Tailwind defaults, one role per step (DESIGN_SYSTEM §4). <code>rounded-sm</code> kbd, inline code, checkboxes; <code>rounded-md</code> small buttons, segments, menu items, tooltips, bubble tails; <code>rounded-lg</code> buttons, icon-only buttons (D-16), inputs, selects, segmented tracks, menus, popovers, banners, inset panels; <code>rounded-xl</code> every app card, dialogs, the sidebar and composer shells (D-02, D-16); <code>rounded-2xl</code> message and Ask bubbles with a 6 px tail corner (<code>rounded-br-md</code> outgoing, <code>rounded-bl-md</code> incoming); <code>rounded-full</code> only for circles: avatars, dots, status pills, count badges, switches. Platform strip buttons keep the v1 leaf: <code>rounded-tl-lg rounded-br-lg</code>. Nested radius is the outer one minus the padding between them.</li>
+    <li><strong>Borders and focus:</strong> cards, panes and lists <code>line</code>; row dividers inside a card <code>line-subtle</code>; outline buttons <code>line-strong</code>; every control edge (fields, selects, checkboxes, switches) <code>line-control</code>, white 40%, 3:1 or more on every surface (D-01). Focus is one recipe: the base layer's 2 px <code>brand</code> outline, 2 px offset, on <code>:focus-visible</code> (3.96:1 or more on every surface). Fields also turn their border <code>brand</code> and their fill <code>raised</code>, as an extra cue, never the only one; no translucent rings. An <code>outline-none</code> needs a <code>focus-visible:</code> replacement (or is a programmatic focus target).</li>
+    <li><strong>Placeholders:</strong> <code>fg-secondary</code>, which is text contrast (D-06). <code>fg-disabled</code> is for disabled controls only, never readable text; a disabled control is the control at <code>opacity-50</code>.</li>
+    <li><strong>Elevation:</strong> flat; only what floats gets a shadow, from its primitive (D-12; DESIGN_SYSTEM §6). Floating (popovers, menus, select options, tooltips, toasts): the <code>overlay</code> surface, a 1 px <code>line</code> ring and <code>shadow-floating</code>. Overlay (dialogs, alert dialogs, sheets, the Ask panel): <code>overlay</code>, a <code>line</code> ring or side border and <code>shadow-overlay</code>, over the <code>scrim</code> (black 60%). No backdrop blur in the app; no call-site shadows; bubbles and cards have none.</li>
+    <li><strong>Motion:</strong> three durations, <code>duration-fast</code> 120 ms, <code>duration-normal</code> 150 ms and <code>duration-slow</code> 200 ms, and three easings, <code>ease-standard</code>, <code>ease-enter</code> and <code>ease-exit</code> (DESIGN_SYSTEM §7). Hover, press, toggles, menus, popovers and tooltips: fast. A message that arrives live fades in and rises 4 px (normal); history loads without animation (v1 animated every row in sequence). The suggestion bar rises 8 px (slow). Send: a fast scale-in from 95% when it becomes ready. Dialogs, sheets, the drawer and the Ask panel: slow in, fast out, with the scrim fading alongside. Name the transitioned properties (no <code>transition-all</code>, never <code>outline-color</code>). Under <code>prefers-reduced-motion</code> every enter and exit is instant, ambient loops and spinners stop, and colour changes may keep a fast fade.</li>
+    <li><strong>Charts:</strong> <code>chart-positive</code>, <code>chart-neutral</code>, <code>chart-negative</code> and <code>chart-series-1</code>, aliases of the status and brand tokens; categorical series (accounts, people) use the identity palette; every chart has a legend with numbers and an <code>sr-only</code> table (C-075).</li>
     <li><strong>Icons:</strong> <code>lucide-react</code> only, 16 px in dense UI and 20 px in toolbars, <code>stroke-width 2</code>. Platform glyphs from <code>react-icons/si</code> (Instagram, WhatsApp).</li>
   </ul>
 
   <h2 id="ux-shell"><span class="sn">4.3</span>App shell</h2>
   <div class="reqs">
-    <div class="req"><div class="id">UX-SH-01</div><div><div class="t">Sidebar</div><p>A floating card as in v1: <code>bg-panel border border-line rounded-xl</code>, inset 16 px from the viewport on desktop, with the v1 grain texture at 5% opacity. Width 200 px expanded, 64 px collapsed (icons with tooltips); collapse state is remembered per browser. Contents top to bottom: logo tile (<code>bg-shell-gradient</code>, 36 px, <code>rounded-xl</code>) with "Social Hood"; workspace switcher (R2; in R1 the workspace name as text); nav items; flexible space; Notifications; Settings; Help; account card (Clerk <code>UserButton</code>, name, plan badge; Free users see "Upgrade" in <code>bg-shell-gradient</code>).</p><p>Nav item: <code>flex items-center gap-3 px-3 py-2.5 rounded-lg text-[15px] font-medium text-fg-secondary hover:bg-white/5 hover:text-fg</code>. Active item (v1 had none): <code>bg-raised text-fg</code> with the icon in <code>text-brand-fg</code>. Inbox shows an unread count badge (<code>bg-brand-gradient text-white text-xs rounded-full min-w-5 h-5 px-1.5</code>).</p></div></div>
+    <div class="req"><div class="id">UX-SH-01</div><div><div class="t">Sidebar</div><p>A floating card as in v1: <code>bg-panel border border-line rounded-xl</code>, inset 16 px from the viewport on desktop, with the v1 grain texture at 5% opacity. Width 200 px expanded, 64 px collapsed (icons with tooltips); collapse state is remembered per browser. Contents top to bottom: logo tile (<code>bg-shell-gradient</code>, 36 px, <code>rounded-xl</code>) with "Social Hood"; workspace switcher (R2; in R1 the workspace name as text); nav items; flexible space; Notifications; Settings; Help; account card (Clerk <code>UserButton</code>, name, plan badge; Free users see "Upgrade" in <code>bg-shell-gradient</code>).</p><p>Nav row (<code>sidebarRowClass</code>, C-048): 36 px tall, 40 px on touch, <code>flex items-center gap-3 rounded-lg px-3 text-sm font-medium text-fg-secondary hover:bg-hover hover:text-fg</code>. Active row (v1 had none): <code>bg-raised text-fg</code> with the selection bar (2 px <code>brand</code> on its leading edge, inset 8 px) and the icon in <code>text-brand-fg</code>. Inbox shows an unread count badge (Badge <code>count</code>: <code>bg-brand-gradient text-on-brand text-xs font-medium rounded-full min-w-5 h-5 px-1.5</code>).</p></div></div>
     <div class="req"><div class="id">UX-SH-02</div><div><div class="t">Phones and tablets</div><p>Below 1024 px the sidebar is collapsed. Below 768 px it becomes a 56 px top bar (<code>bg-panel border-b border-line</code>) with the logo, page title and a menu button; the drawer (<code>w-[240px]</code>, over a <code>bg-black/60</code> scrim) is <strong>closed on load</strong> and closes when a link is tapped (v1 opened on load and stayed open).</p></div></div>
-    <div class="req"><div class="id">UX-SH-03</div><div><div class="t">Page frame</div><p>Non-inbox pages: page title and optional actions in a header row, content below, max width 1200 px. The inbox fills the height (<code>h-[calc(100dvh-32px)]</code> on desktop, matching the sidebar's 16 px insets, with its left corners rounded as in v1; <code>h-[calc(100dvh-56px)]</code> on phones).</p></div></div>
+    <div class="req"><div class="id">UX-SH-03</div><div><div class="t">Page frame</div><p>Non-inbox pages: page title and optional actions in a header row, content below, filling the width beside the sidebar (no page cap; readability limits live inside components, C-074). The inbox fills the height and, from <code>md</code>, is inset 16 px on all four sides with <code>rounded-xl</code> and a <code>line</code> border, as the Ask page is (C-074); on phones it runs edge to edge below the 56 px top bar.</p></div></div>
     <div class="req"><div class="id">UX-SH-04</div><div><div class="t">Banners and notifications</div><p>App-level banners (account needs reconnecting, payment on hold, AI credits exhausted) sit above page content: <code>rounded-lg px-4 py-2.5 text-sm</code> with a warning or danger soft background, one action button and no dismiss for critical states. Notifications open a 360 px popover from the sidebar bell: icon, title, one-line body, relative time, unread dot, "Mark all read". Toasts use sonner with <code>theme="dark"</code> at the bottom right (top on phones).</p></div></div>
   </div>
 
@@ -2409,7 +2614,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
         </tbody>
       </table></div></div></div>
     <div class="req"><div class="id">UX-INB-02</div><div><div class="t">Platform strip (kept from v1)</div><p>At the top of the list: <code>grid grid-cols-{n} gap-2 p-1</code> with segments All plus each connected platform. The strip's background takes the active segment's colour (All: <code>bg-brand-gradient</code>; Instagram <code>bg-instagram</code>; WhatsApp <code>bg-whatsapp</code>). Buttons <code>p-2.5 rounded-tl-lg rounded-br-lg border-2</code>: active uses the same colour with <code>border-white/40</code>; inactive <code>bg-panel border-transparent hover:bg-[#181818]</code>. Icon 20 px white plus a visible label at ≥ 1280 px and an <code>aria-label</code> otherwise. The choice is stored per workspace in localStorage and read before first paint (v1 flashed Instagram first).</p></div></div>
-    <div class="req"><div class="id">UX-INB-03</div><div><div class="t">List header</div><p><code>px-4 pt-3 pb-2 border-b border-line bg-panel</code>. Row 1: "Inbox" and, on the right, the AI mode pill for the selected platform (<code>bg-brand-soft text-brand-fg text-xs font-medium rounded-full px-2.5 py-1</code>, a menu for admins) and an account filter when a platform has several accounts. Row 2: the v1 segmented control Chats | Scheduled (<code>bg-field rounded-lg p-1</code>; segment <code>py-2 text-sm font-medium rounded-md</code>; active <code>bg-raised text-brand-fg shadow-sm</code>; inactive <code>text-fg-secondary hover:text-fg</code>) with the gradient count badge on Scheduled. Row 3: search (<code>pl-10 py-2 bg-field border border-line rounded-lg text-sm focus:bg-raised</code>, placeholder "Search people and messages", debounced 250 ms, server-side). Row 4 (Chats only): view chips All · Unread · Needs reply · Leads · Closing soon · AI handled · Archived, horizontally scrollable; active chip <code>bg-brand-soft text-brand-fg</code>.</p></div></div>
+    <div class="req"><div class="id">UX-INB-03</div><div><div class="t">List header</div><p><code>px-4 pt-3 pb-2 border-b border-line bg-panel</code>. Row 1: "Inbox" (the pane title, 18 px, D-05) and, on the right, the AI mode pill for the selected platform (<code>bg-brand-soft text-brand-fg text-xs font-medium rounded-full px-2.5 py-1</code>, a menu for admins) and an account filter when a platform has several accounts. Row 2: the v1 segmented control Chats | Scheduled (Tabs: a <code>bg-field rounded-lg p-1</code> track; segment <code>text-sm font-medium rounded-md</code>; active <code>bg-raised text-brand-fg</code>, no shadow; inactive <code>text-fg-secondary hover:text-fg</code>) with the gradient count badge on Scheduled. Row 3: search (the SearchInput primitive, 36 px: <code>bg-field</code> with the <code>line-control</code> edge; accessible name "Search conversations", placeholder "Search"; debounced 250 ms, server-side; Esc empties it first). Focused, it shows the 2 px <code>brand</code> outline (§4.2) and turns its border <code>brand</code>; the <code>raised</code> fill is an extra cue, never the only one. Row 4 (Chats only): view chips All · Unread · Needs reply · Needs you · Leads · Handled by AI · Archived, horizontally scrollable with a fade at the trailing edge; active chip <code>bg-brand-soft text-brand-fg</code>.</p></div></div>
     <div class="req"><div class="id">UX-INB-04</div><div><div class="t">Conversation row</div><p>An <code>&lt;a&gt;</code> to <code>/inbox/[id]</code> (v1 rows were unfocusable divs): <code>flex items-center gap-3 px-4 py-3 hover:bg-white/5</code>; selected <code>bg-raised shadow-[inset_-2px_0_0_var(--color-brand)]</code> (the v1 right-hand accent bar).</p>
       <ul>
         <li><strong>Avatar</strong> 48 px round; fallback is the initial on a gradient chosen by hashing the contact id over six pairs. <strong>Platform badge</strong> 16 px circle at the bottom right in the platform colour with a 2 px <code>panel</code> border (replaces v1's always-green "online" dot, which meant nothing).</li>
@@ -2433,7 +2638,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
         </tbody>
       </table></div>
       <p><strong>Meta row</strong> inside the bubble: <code>mt-1 text-xs</code>, time (<code>HH:mm</code> in the workspace timezone) and status icon: clock (queued), spinner (sending), check (sent), double check (delivered), double check in <code>brand-fg</code> (read), alert (failed). <strong>Attachments</strong>: images <code>rounded-lg max-h-64</code> opening a lightbox; video with controls; audio player; files as a row (icon, name, size, download); story mention or reply as a small card with the thumbnail and "Story" label (and "Story expired" once gone); shared posts as a card with thumbnail and "View post". <strong>Reactions</strong> from the customer overlap the bubble's bottom edge in a small <code>bg-raised</code> pill.</p></div></div>
-    <div class="req"><div class="id">UX-INB-07</div><div><div class="t">Composer</div><p><code>bg-panel border-t border-line px-4 py-3</code>. Row: attach, textarea, emoji, schedule, send. Textarea <code>bg-field border border-line rounded-[20px] px-4 py-2 text-sm leading-relaxed focus:bg-raised</code>, 40–160 px auto-height, reset after send (v1 did not). Placeholder "Reply to {first name}…". Send is a 36 px circle, disabled (<code>bg-raised text-fg-disabled</code>) until there is text or an attachment, then <code>bg-brand-gradient</code> with the scale-in. Enter sends, Shift+Enter adds a line; with the schedule popover open, Enter does not send. Above the row: the attachment tray (64 px thumbnails, progress ring, remove), the suggestion card, and window notices.</p>
+    <div class="req"><div class="id">UX-INB-07</div><div><div class="t">Composer</div><p><code>bg-panel border-t border-line px-4 py-3</code>. One composer shell (<code>rounded-xl border border-line bg-field</code>, D-16; focused: <code>bg-raised</code> with the 2 px <code>brand</code> outline) holds the textarea (Message role, 16 px on phones; 40–160 px auto-height, reset after send, which v1 did not do; placeholder "Reply to {first name}…") and, below it, the tool row: Attach files, Add emoji (with "Send a heart" and stickers), AI polish (the <code>soft</code> Button, C-073), Schedule message, then Send. Send is a Button, 32 px tall (40 px on touch), labelled "Send" from <code>sm</code> and icon-only on phones: <code>secondary</code> with <code>fg-disabled</code> text until there is text or an attachment, then the primary gradient with the fast scale-in. Enter sends, Shift+Enter adds a line; with the schedule popover open, Enter does not send. Above the row: the attachment tray (64 px thumbnails, progress ring, remove), the suggestion card, and window notices.</p>
       <p><strong>States.</strong> Window <code>human_agent</code>: a note under the textarea. <code>closed</code> (Instagram): textarea replaced by "You can reply after {name} messages again. Last message {relative time}." <code>template_only</code> (WhatsApp): "The 24-hour window has closed. Send an approved template to restart the conversation." with "Choose template", opening a picker listing template names, languages and a body preview with inputs for each variable. Account needs reconnecting: disabled with Reconnect.</p></div></div>
     <div class="req"><div class="id">UX-INB-08</div><div><div class="t">Suggestion card</div><p>Between messages and composer, <code>mx-4 mb-2 bg-panel border border-brand-line rounded-xl p-3</code>. Header: sparkles icon and "Suggested reply" (<code>text-xs font-medium text-brand-fg</code>); right side: source chips "From: Shipping policy" (at most 2, then "+1"); "Check this" warning chip when confidence is under 0.6; a close button. Body <code>text-sm text-fg</code>, up to 6 lines with "More". Actions: Send (primary), Edit, Regenerate, all <code>h-8 px-3 rounded-md text-xs font-medium</code>. Keyboard: with an empty composer, <kbd>Ctrl/⌘ Enter</kbd> sends the suggestion and <kbd>Esc</kbd> dismisses it.</p>
       <p><strong>Generating</strong>: two shimmer lines and "Drafting a reply…". <strong>Not in knowledge</strong>: header "Not in your knowledge" in warning, body "{Name} asked about {missing_info}.", actions "Add to knowledge" and "Write reply". <strong>Escalated in Auto</strong>: a warning banner above the card, "AI didn't reply: {reason}".</p></div></div>
@@ -2484,7 +2689,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
   <div class="reqs">
     <div class="req"><div class="id">UX-SCR-02</div><div><div class="t">Automations list</div><p>Header "Automations" with New automation (opens UX-SCR-11). A strip of four figures for the last 7 days: active automations, runs, DMs sent, and people waiting in private-reply queues (with the longest ETA). Toolbar: search, filters (account, status, trigger), sort (Recent runs, Name, Created). Rows grouped by account, <code>bg-panel rounded-xl</code>, 8 px apart, with a drag handle on hover to set priority (FR-AUT-15): Active switch; name; trigger icon and label ("Comment on 3 posts", "Any comment on next post", "DM keyword"); up to three keyword chips and "+n"; action badge (Message, Message + link, AI reply with sparkles); 7-day runs with a 60 px trend line; last run ("12m ago"); a queue badge when DMs are waiting ("2,140 waiting · about 3 h"); status text for Scheduled ("Starts 1 Oct") and Ended; row menu (Duplicate, Pause, Delete). Checkboxes appear on hover for bulk pause. Empty state: three template cards and "Browse all templates". Below 768 px rows become cards with the switch at the top right.</p></div></div>
     <div class="req"><div class="id">UX-SCR-11</div><div><div class="t">Template gallery</div><p>Dialog (<code>max-w-3xl</code>) with category chips (All, Grow, Sell, Support) and a grid of cards (3 columns at ≥ 1024 px, 1 on phones): icon, name, one-line outcome ("Send your link to everyone who comments LINK"), trigger and action tags, Use template. Start from blank is the last card. Choosing a card asks for the account when the workspace has more than one, then opens the editor with the template filled in and the first incomplete step focused.</p></div></div>
-    <div class="req"><div class="id">UX-SCR-03</div><div><div class="t">Automation editor</div><p>Replaces v1's canvas. Header: breadcrumb "Automations /", inline-editable name, status pill (Draft, Scheduled, Active, Paused, Ended), "Saved" or "Saving…", Activate or Pause, More (Duplicate, Delete). Steps in one column (max 720 px), each <code>bg-panel border border-line rounded-xl p-5</code> with a micro label, joined by a 2 px line in the left gutter through a 10 px node per step (<code>bg-brand</code> when complete, <code>bg-danger</code> when activation found a problem); when active, the line shows the animated dashed gradient (2 s per cycle, static under reduced motion).</p>
+    <div class="req"><div class="id">UX-SCR-03</div><div><div class="t">Automation editor</div><p>Replaces v1's canvas. Header: the back link "‹ Automations" (PageFrame's BackLink, D-16), inline-editable name, status pill (Draft, Scheduled, Active, Paused, Ended), "Saved" or "Saving…", Activate or Pause, More (Duplicate, Delete). Steps in one column (max 720 px), each <code>bg-panel border border-line rounded-xl p-5</code> with a micro label, joined by a 2 px line in the left gutter through a 10 px node per step (<code>bg-brand</code> when complete, <code>bg-danger</code> when activation found a problem); when active, the line shows the animated dashed gradient (2 s per cycle, static under reduced motion). Below 1280 px the side panel (Preview, Test, Runs, Stats) follows the steps instead of sitting beside them (D-16).</p>
       <ul>
         <li><strong>When:</strong> account picker; trigger as a segmented control (Comment keyword · Any comment · DM keyword).</li>
         <li><strong>On these posts</strong> (comment triggers): All posts · Selected posts · Next post I publish. Selected posts come from a thumbnail grid of recent and scheduled posts with date and type, searchable by caption.</li>
@@ -2611,7 +2816,7 @@ const mono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
   <h2 id="ux-a11y"><span class="sn">4.8</span>Accessibility</h2>
   <ul>
-    <li><strong>UX-A11Y-01</strong> WCAG 2.2 AA. Text contrast ≥ 4.5:1 using the tokens in §4.2; icons and control borders ≥ 3:1.</li>
+    <li><strong>UX-A11Y-01</strong> WCAG 2.2 AA. Text contrast ≥ 4.5:1 using the tokens in §4.2; icons and control borders ≥ 3:1: every control edge (fields, selects, checkboxes, switches) is <code>line-control</code> (D-01), placeholders are <code>fg-secondary</code> (D-06), and focus is the 2 px <code>brand</code> outline, at least 3:1 on every surface, on every focusable element.</li>
     <li><strong>UX-A11Y-02</strong> Everything works by keyboard: rows are links; list navigation with <kbd>j</kbd>/<kbd>k</kbd> and arrow keys; Retry and other message actions are always visible (v1 showed them only on hover); popovers and dialogs trap focus and close on <kbd>Esc</kbd>, returning focus to their trigger.</li>
     <li><strong>UX-A11Y-03</strong> The message list is a <code>role="log"</code> with <code>aria-live="polite"</code> for new inbound messages; the conversation list announces new unread conversations once, politely.</li>
     <li><strong>UX-A11Y-04</strong> Every icon-only button has an <code>aria-label</code>. Inputs have visible or screen-reader labels, not placeholders only. Unread state is announced ("unread") as well as shown by colour and weight. Toggles use <code>role="switch"</code> and <code>aria-checked</code> (the v1 ChatBot toggle is the pattern to copy).</li>
