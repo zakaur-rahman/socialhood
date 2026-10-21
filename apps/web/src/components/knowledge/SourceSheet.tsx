@@ -44,7 +44,7 @@ export type SourceSheetMode =
   | {
       kind: "create";
       type: KnowledgeType;
-      /** "Add answer" (F-17) and "Add to knowledge" (F-08) prefill the customer's question. */
+      /** "Add answer", from the gap banner (F-17) and from a suggestion (F-08), prefills the customer's question. */
       question?: string;
       gapId?: string;
     }
@@ -58,7 +58,7 @@ export const SOURCE_TYPE_LABEL: Record<KnowledgeType, string> = {
 };
 
 const TITLES: Record<KnowledgeType, { create: string; edit: string; hint: string }> = {
-  faq: { create: "Add an FAQ", edit: "Edit FAQ", hint: "A question customers ask and the answer you give." },
+  faq: { create: "Add an answer", edit: "Edit FAQ", hint: "A question customers ask and the answer you give." },
   text: { create: "Add a note", edit: "Edit note", hint: "Policies and details in your own words, like shipping or returns." },
   url: { create: "Add a web page", edit: "Edit web page", hint: "One page, such as your FAQ or shipping page. Its main text is read." },
   file: { create: "Add a file", edit: "Edit file", hint: "PDF, DOCX, TXT or MD, up to 10 MB." },

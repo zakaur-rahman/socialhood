@@ -7,7 +7,6 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
 import { draftAccount } from "@/lib/agent/draft";
 import type { AutomationDraftHandoff } from "@/lib/agent/handoff";
 import { useStartAutomationDraft } from "@/lib/api/queries";
@@ -22,7 +21,7 @@ import { useReturnFocusOr } from "./return-focus";
 import { editorHref } from "./TemplateGallery";
 
 const ACTION_LABEL = { send_message: "Send a message", ai_reply: "Reply with AI" } as const;
-const SCOPE_LABEL = { all: "All posts", selected: "Chosen posts", next_post: "The next post I publish" } as const;
+const SCOPE_LABEL = { all: "All posts", selected: "Selected posts", next_post: "The next post I publish" } as const;
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -152,8 +151,7 @@ function AgentDraftBody({
         <Button variant="ghost" onClick={onClose}>
           Cancel
         </Button>
-        <Button disabled={start.isPending || (chooseAccount && !accountId)} onClick={open}>
-          {start.isPending ? <Spinner /> : null}
+        <Button loading={start.isPending} disabled={chooseAccount && !accountId} onClick={open}>
           Open in editor
         </Button>
       </DialogFooter>

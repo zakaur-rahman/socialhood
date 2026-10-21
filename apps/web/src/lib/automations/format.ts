@@ -72,7 +72,7 @@ export const RESULT_LABEL: Record<RunResult, string> = {
   failed: "Failed",
   skipped_cooldown: "Skipped: cooldown",
   skipped_expired: "Skipped: 7-day limit passed",
-  escalated: "Escalated",
+  escalated: "Handed to you",
   awaiting_reply: "Waiting for tap",
   skipped_read_only: "Skipped: account is read-only",
 };

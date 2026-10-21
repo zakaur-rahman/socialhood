@@ -911,7 +911,7 @@ quality; existing system → audit → inconsistency → canonical pattern → r
    (AGENT_CONTEXT §11).
 8. Visual QA at **375, 768, 1280 and 1536 px**: before and after screenshots of every touched
    screen, attached to the PR (touch emulation at 375 and 768).
-9. **Class-assertion tests** are updated deliberately, never deleted to pass. A fresh count finds
+9. **Class-assertion tests** are updated deliberately, never deleted to pass. At the end of the programme (UI-073) there are 437 `toHaveClass` assertions in 63 test files; at the start, a fresh count found
    86 `toHaveClass` assertions in 18 test files (TYPOGRAPHY.md lists the 20 in 8 files that pin type
    and spacing; SPACING.md adds the touch-height ones). These are expected to change:
 

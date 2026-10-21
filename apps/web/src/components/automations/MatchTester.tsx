@@ -7,7 +7,6 @@ import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTestAutomation } from "@/lib/api/queries";
@@ -80,8 +79,7 @@ export function MatchTester({
           />
         </Field>
         <div className="flex items-center gap-3">
-          <Button type="submit" variant="secondary" disabled={!text.trim() || test.isPending}>
-            {test.isPending ? <Spinner /> : null}
+          <Button type="submit" variant="secondary" disabled={!text.trim()} loading={test.isPending}>
             Test
           </Button>
           <p className="text-xs text-fg-secondary">Nothing is sent.</p>

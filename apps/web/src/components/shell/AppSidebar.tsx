@@ -6,6 +6,7 @@ import type { Route } from "next";
 import { LifeBuoy, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
 import { useId, type ReactNode } from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Role } from "@/lib/api/types";
 import { SUPPORT_EMAIL } from "@/lib/copy";
@@ -307,18 +308,16 @@ function SidebarLink({
         <Icon className={sidebarIconClass(active)} aria-hidden />
         {collapsed ? null : <span className="min-w-0 flex-1 truncate">{item.label}</span>}
         {count ? (
-          <span
+          <Badge
+            tone="count"
+            size={collapsed ? "sm" : "md"}
             aria-hidden
             data-testid={`${item.key}-badge`}
-            className={cn(
-              "bg-brand-gradient grid shrink-0 place-items-center rounded-full font-medium text-on-brand tabular-nums",
-              collapsed
-                ? "absolute top-0.5 right-0.5 h-4 min-w-4 px-1 text-2xs leading-none ring-2 ring-panel"
-                : "h-5 min-w-5 px-1.5 text-xs",
-            )}
+            // Collapsed, the count sits on the icon corner: a smaller compound (RG-01, DS-3).
+            className={cn(collapsed && "absolute top-0.5 right-0.5 h-4 min-w-4 px-1 leading-none ring-2 ring-panel")}
           >
             {shown}
-          </span>
+          </Badge>
         ) : null}
       </Link>
     </WithTooltip>

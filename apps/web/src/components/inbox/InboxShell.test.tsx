@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -102,9 +102,12 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     nav.params = { id: "c1" };
     renderShell();
     await screen.findByText("Kabir Shah");
-    expect(pane("list")).toHaveClass("w-[320px]");
+    // UI-078: the list and details are resizable here, 320 px until someone drags them.
+    expect(pane("list")).toHaveClass("w-(--pane-w)");
+    expect(pane("list")?.style.getPropertyValue("--pane-w")).toBe("320px");
     expect(pane("thread")).toHaveTextContent("Thread pane");
-    expect(pane("details")).toHaveClass("w-[300px]");
+    expect(pane("details")).toHaveClass("w-(--pane-w)");
+    expect(pane("details")?.style.getPropertyValue("--pane-w")).toBe("320px");
     expect(pane("details")?.tagName).toBe("ASIDE");
     const strip = screen.getByRole("radiogroup", { name: "Platform" });
     expect(within(strip).getByRole("radio", { name: "All" })).toHaveTextContent("All");
@@ -115,7 +118,8 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     nav.params = { id: "c1" };
     renderShell();
     await screen.findByText("Kabir Shah");
-    expect(pane("list")).toHaveClass("w-[320px]");
+    expect(pane("list")).toHaveClass("w-(--pane-w)");
+    expect(pane("list")?.style.getPropertyValue("--pane-w")).toBe("320px");
     expect(pane("thread")).toBeInTheDocument();
     expect(pane("details")).toBeNull();
     // The segmented platform control is labelled at every width (C-063).
@@ -131,6 +135,20 @@ describe("InboxShell layout at the four widths (UX-INB-01)", () => {
     expect(pane("list")).toHaveClass("w-[300px]");
     expect(pane("thread")).toBeInTheDocument();
     expect(pane("details")).toBeNull();
+    // Not resizable on tablets: no handle.
+    expect(screen.queryByRole("separator", { name: "Resize the conversation list" })).toBeNull();
+  });
+
+  it("from 1024 px the list resizes with its handle, and the width is remembered (UI-078)", async () => {
+    setWidth(1100);
+    renderShell();
+    await screen.findByText("Kabir Shah");
+    const handle = screen.getByRole("separator", { name: "Resize the conversation list" });
+    handle.focus();
+    fireEvent.keyDown(handle, { key: "ArrowRight" });
+    expect(pane("list")?.style.getPropertyValue("--pane-w")).toBe("336px");
+    expect(window.localStorage.getItem("socialhood:pane-width:inbox-list")).toBe("336");
+    window.localStorage.removeItem("socialhood:pane-width:inbox-list");
   });
 
   it("< 768 px: one pane at a time", async () => {

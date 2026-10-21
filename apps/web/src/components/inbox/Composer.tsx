@@ -401,7 +401,7 @@ export function Composer({
               <TooltipTrigger asChild>
                 <Button variant="soft" disabled={draft.trim() === ""} loading={polish.isPending} onClick={polishDraft}>
                   <Sparkles aria-hidden />
-                  AI Polish
+                  AI polish
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Fix grammar and clarity, in the same language (1 AI credit)</TooltipContent>

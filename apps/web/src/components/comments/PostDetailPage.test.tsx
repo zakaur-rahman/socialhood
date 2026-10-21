@@ -127,6 +127,11 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     expect(screen.getByRole("link", { name: "Comments" })).toHaveAttribute("href", "/w/maple/comments");
   });
 
+  it("writes a relative day in lower case inside the title (UI-072)", async () => {
+    setup({ detail: postDetail({ posted_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }) });
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Photo from yesterday");
+  });
+
   it("shows the summary and the topics with counts and a small sentiment bar", async () => {
     setup();
     const summary = await screen.findByRole("region", { name: "Summary" });
@@ -182,7 +187,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     });
     const summary = await screen.findByRole("region", { name: "Summary" });
     expect(summary).toHaveTextContent("No summary yet. It appears once comments are analysed.");
-    expect(within(summary).getByRole("button", { name: "Summarize" })).toBeInTheDocument();
+    expect(within(summary).getByRole("button", { name: "Summarise" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Topics" })).toHaveTextContent("Topics appear once comments are analysed.");
     expect(screen.getByRole("img", { name: "No analysed comments yet" })).toBeInTheDocument();
   });

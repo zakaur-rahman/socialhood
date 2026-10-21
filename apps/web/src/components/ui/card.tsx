@@ -154,4 +154,4 @@ function CardBleed({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-export { Card, CardAction, CardBleed, CardDescription, CardHeader, CardInset, CardTitle, cardVariants }
+export { Card, CardAction, CardBleed, CardDescription, CardHeader, CardInset, CardTitle, cardInsetVariants, cardVariants }

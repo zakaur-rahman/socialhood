@@ -182,7 +182,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                   <FieldLabel>URL</FieldLabel>
                   {/* One field in two parts: the wrapper draws the focus outline, ring border and raised fill
                       while its input has focus (DESIGN_SYSTEM §8.3, like ChipInput); the input draws none. */}
-                  <div className="flex h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field has-[input:focus-visible]:border-ring has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-ring has-[input[aria-invalid=true]]:border-danger">
+                  <div className="flex h-10 items-stretch overflow-hidden rounded-lg border border-line-control bg-field has-[input:focus-visible]:border-brand has-[input:focus-visible]:bg-raised has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-brand has-[input[aria-invalid=true]]:border-danger">
                     <span className="flex items-center border-r border-line bg-raised/60 px-3 text-sm text-fg-secondary" aria-hidden>
                       …/w/
                     </span>
@@ -261,7 +261,7 @@ function WorkspaceForm({ workspace, canEdit }: { workspace: Workspace; canEdit: 
                     )}
                   />
                   <FieldDescription>
-                    The language AI replies use. Customer&apos;s language answers in whatever they wrote in.
+                    The language AI replies use. With Customer&apos;s language, the AI replies in the language the customer wrote in.
                   </FieldDescription>
                   <FieldError>{errors.reply_language?.message}</FieldError>
                 </Field>

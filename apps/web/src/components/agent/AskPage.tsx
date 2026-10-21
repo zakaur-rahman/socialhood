@@ -4,10 +4,13 @@ import { cn } from "@/lib/utils";
 import { PANE_TITLE } from "@/styles/tokens";
 import { History, ListChecks, Sparkles } from "lucide-react";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 
 import { Button } from "@/components/ui/button";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 import { agentSettingsHref } from "@/lib/agent/routes";
 import { useNow } from "@/lib/use-browser-state";
+import { usePaneWidth, type PaneWidthLimits } from "@/lib/use-pane-width";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AskConversation } from "./AskConversation";
@@ -19,9 +22,13 @@ import { NewThreadButton, ThreadList, ThreadMenu } from "./Threads";
  * 1024 px (a menu below that); the conversation and the question box in one centred, readable
  * column. It shows the same thread as the panel.
  */
+/** The thread history column is resizable (UI-078), remembered per device. */
+const THREADS_LIMITS: PaneWidthLimits = { fallback: 272, min: 220, max: 440 };
+
 export function AskPage() {
   const workspace = useCurrentWorkspace();
   const now = useNow();
+  const [threadsWidth, setThreadsWidth, resetThreadsWidth] = usePaneWidth("ask-threads", THREADS_LIMITS);
   const admin = workspace.role !== "agent";
   const focus = () => document.getElementById(PAGE_COMPOSER_ID)?.focus();
 
@@ -32,7 +39,20 @@ export function AskPage() {
       data-testid="ask-page"
       data-shell-fill
     >
-      <aside aria-label="Thread history" className="hidden w-68 shrink-0 flex-col border-r border-line bg-panel lg:flex">
+      <aside
+        aria-label="Thread history"
+        className="relative hidden w-(--pane-w) max-w-[40%] shrink-0 flex-col border-r border-line bg-panel lg:flex"
+        style={{ "--pane-w": `${threadsWidth}px` } as CSSProperties}
+      >
+        <ResizeHandle
+          edge="end"
+          label="Resize the thread history"
+          value={threadsWidth}
+          min={THREADS_LIMITS.min}
+          max={THREADS_LIMITS.max}
+          onChange={setThreadsWidth}
+          onReset={resetThreadsWidth}
+        />
         <div className="p-3">
           <NewThreadButton wid={workspace.id} onStart={focus} />
         </div>

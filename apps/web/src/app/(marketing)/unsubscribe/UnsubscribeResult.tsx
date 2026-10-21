@@ -2,10 +2,11 @@
 
 import createClient from "openapi-fetch";
 import type { paths } from "@socialhood/api-client";
-import { CircleCheck, CircleAlert, LoaderCircle, RotateCw } from "lucide-react";
+import { CircleCheck, CircleAlert, RotateCw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { unsubscribeCopy } from "@/lib/copy";
 import { PAGE_TITLE } from "@/styles/tokens";
 
@@ -54,7 +55,7 @@ export function UnsubscribeResult({ token, unsubscribe = postUnsubscribe }: { to
   if (outcome.kind === "working") {
     return (
       <div role="status" className="flex items-center gap-3 text-sm text-fg-secondary">
-        <LoaderCircle className="size-5 motion-safe:animate-spin" aria-hidden />
+        <Spinner size="lg" />
         {unsubscribeCopy.working}
       </div>
     );

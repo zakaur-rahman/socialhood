@@ -95,7 +95,7 @@ export function SummarySection({ conversation, now }: { conversation: Conversati
         disabled={waiting}
         onClick={ask}
       >
-        <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}
+        <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarise"}
       </Button>
     </div>
   );

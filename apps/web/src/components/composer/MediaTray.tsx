@@ -210,13 +210,13 @@ export function MediaTray({
               >
                 <div className="relative aspect-square overflow-hidden rounded-t-lg">
                   <Thumb asset={asset} />
-                  <span className="absolute top-1 left-1 grid min-w-5 place-items-center rounded-sm bg-media-scrim/80 px-1 text-2xs font-semibold tabular-nums">
+                  <Badge tone="media" shape="tag" className="absolute top-1 left-1 min-w-5 px-1 font-semibold tabular-nums">
                     {index + 1}
-                  </span>
+                  </Badge>
                   {asset.resource_type === "video" && asset.duration_s ? (
-                    <span className="absolute top-1 right-1 rounded-sm bg-media-scrim/80 px-1 text-2xs tabular-nums">
+                    <Badge tone="media" shape="tag" className="absolute top-1 right-1 px-1 tabular-nums">
                       {formatDuration(asset.duration_s)}
-                    </span>
+                    </Badge>
                   ) : null}
                   {crop ? (
                     <Button

@@ -115,7 +115,7 @@ export function CorrectAnalysis({
             <Pencil className="size-3" aria-hidden />
           </button>
         ) : (
-          <Button variant="ghost" size="xs" className="text-brand-fg">
+          <Button variant="soft" size="xs">
             Correct the AI
           </Button>
         )}

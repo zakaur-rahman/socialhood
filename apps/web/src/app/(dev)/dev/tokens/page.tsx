@@ -7,6 +7,7 @@ import {
   META,
   PAGE_TITLE,
   breakpoints,
+  chartAliases,
   colorTokens,
   customVariants,
   easings,
@@ -84,6 +85,22 @@ export default function TokensPage() {
             <li key={alias} className="flex justify-between gap-3 py-1">
               <code>--{alias}</code>
               <code className="text-fg-secondary">{token}</code>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section title="Charts">
+        <p className={META}>Aliases of the tokens, no new hues; categorical series use the identity palette.</p>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {chartAliases.map((alias) => (
+            <li key={alias.name} className={`${CARD} flex items-center gap-3 p-3`}>
+              <span className={`${alias.swatch} size-10 shrink-0 rounded-lg border border-line-strong`} aria-hidden />
+              <span className="min-w-0 text-sm">
+                <span className="block font-medium">{alias.name}</span>
+                <span className="block font-mono text-xs text-fg-secondary">{alias.token}</span>
+                <span className="block truncate text-xs text-fg-secondary">{alias.use}</span>
+              </span>
             </li>
           ))}
         </ul>
@@ -180,7 +197,7 @@ export default function TokensPage() {
           tabIndex={0}
           className="mask-fade-x flex gap-2 overflow-x-auto pe-4 [scrollbar-width:none]"
         >
-          {["All", "Unread", "Needs reply", "Leads", "AI handled", "Instagram", "WhatsApp", "Archived", "More"].map((label) => (
+          {["All", "Unread", "Needs reply", "Leads", "Handled by AI", "Instagram", "WhatsApp", "Archived", "More"].map((label) => (
             <span key={label} className="shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-sm">
               {label}
             </span>

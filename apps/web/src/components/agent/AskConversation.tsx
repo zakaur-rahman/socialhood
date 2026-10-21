@@ -329,7 +329,8 @@ function Welcome({
                 disabled={disabled}
                 onClick={() => onPick(text)}
                 className={cn(
-                  "flex min-h-10 w-full items-start gap-3 rounded-xl border border-line bg-hover text-sm text-fg hover:border-line-strong hover:bg-pressed disabled:opacity-50",
+                  // text-left: a <button> centres its text, so a question that wraps would centre.
+                  "flex min-h-10 w-full items-start gap-3 rounded-xl border border-line bg-hover text-left text-sm text-fg hover:border-line-strong hover:bg-pressed disabled:opacity-50",
                   variant === "page" ? "h-full px-4 py-3.5" : "px-3.5 py-2.5",
                 )}
               >

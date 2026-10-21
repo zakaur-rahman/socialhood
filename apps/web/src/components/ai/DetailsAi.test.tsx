@@ -172,7 +172,7 @@ describe("Summary (FR-AI-03)", () => {
     expect(within(section).queryByText("Updating the summary…")).not.toBeInTheDocument();
   });
 
-  it("without a summary: Summarize asks for one", async () => {
+  it("without a summary: Summarise asks for one", async () => {
     const user = userEvent.setup();
     const state = { detail: conversation() };
     const { calls } = renderWithApi(<DetailsPanel conversationId="c1" />, {
@@ -180,7 +180,7 @@ describe("Summary (FR-AI-03)", () => {
     });
     const section = await screen.findByRole("region", { name: "Summary" });
     expect(within(section).getByText(/No summary yet/)).toBeInTheDocument();
-    await user.click(within(section).getByRole("button", { name: "Summarize" }));
+    await user.click(within(section).getByRole("button", { name: "Summarise" }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path === "/v1/w/w1/conversations/c1/summary")).toBe(true));
   });
 });
@@ -222,7 +222,7 @@ describe("The context panel's customer card (C-063)", () => {
   });
 });
 
-describe("Teach AI (C-063)", () => {
+describe("Add answer (C-063)", () => {
   function teachSetup(gaps: KnowledgeGap[]) {
     const state = { detail: conversation({ latest_analysis: analysis({ message_id: "m1" }) }) };
     const view = renderWithApi(<DetailsPanel conversationId="c1" />, {
@@ -243,8 +243,8 @@ describe("Teach AI (C-063)", () => {
   async function teach(calls: Call[]) {
     const user = userEvent.setup();
     const section = await screen.findByRole("region", { name: "Latest message" });
-    await user.click(within(section).getByRole("button", { name: "Teach AI" }));
-    const form = await screen.findByRole("form", { name: "Add an FAQ" });
+    await user.click(within(section).getByRole("button", { name: "Add answer" }));
+    const form = await screen.findByRole("form", { name: "Add an answer" });
     expect(within(form).getByLabelText("Question")).toHaveValue("Do you deliver to Pune on Sundays?");
     expect(within(form).getByLabelText("Answer")).toHaveValue("");
     await user.type(within(form).getByLabelText("Answer"), "Yes, until 2 pm.");
@@ -273,7 +273,7 @@ describe("Teach AI (C-063)", () => {
       handlers: handlers(state),
     });
     const section = await screen.findByRole("region", { name: "Latest message" });
-    expect(within(section).queryByRole("button", { name: "Teach AI" })).not.toBeInTheDocument();
+    expect(within(section).queryByRole("button", { name: "Add answer" })).not.toBeInTheDocument();
   });
 });
 

@@ -3,6 +3,8 @@
 import { Check, X } from "lucide-react";
 import type { ReactNode } from "react";
 
+import { cardInsetVariants } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   creditsText,
@@ -17,7 +19,6 @@ import {
 } from "@/lib/agent/format";
 import { actionPath } from "@/lib/agent/routes";
 import type { AgentRunDetail, AgentStep } from "@/lib/api/types";
-import { TONE_CLASS } from "@/lib/inbox/format";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
@@ -26,12 +27,9 @@ import { AnswerText, SourcesList } from "./AnswerText";
 
 export function RunStatusChip({ status }: { status: AgentRunDetail["status"] }) {
   return (
-    <span
-      className={cn("inline-flex rounded-full px-2 py-0.5 text-2xs font-medium whitespace-nowrap", TONE_CLASS[RUN_STATUS_TONE[status]])}
-      data-status={status}
-    >
+    <Badge tone={RUN_STATUS_TONE[status]} data-status={status}>
       {RUN_STATUS_LABEL[status]}
-    </span>
+    </Badge>
   );
 }
 
@@ -119,7 +117,7 @@ export function RunTrace({
           <p className={EYEBROW}>Prepared actions</p>
           <ul className="space-y-2">
             {run.action_cards.map((card, index) => (
-              <li key={index} className="rounded-lg border border-line bg-field p-2 text-sm">
+              <li key={index} className={cn(cardInsetVariants({ padding: "compact" }), "bg-field text-sm")}>
                 <p className="font-medium">{card.label}</p>
                 {card.note ? <p className="text-xs text-fg-secondary">{card.note}</p> : null}
                 <p className="font-mono text-2xs break-all text-fg-secondary">{actionPath(card)}</p>
@@ -149,18 +147,13 @@ export function RunTrace({
 function StepTrace({ step }: { step: AgentStep }) {
   const failed = step.status === "failed" || step.status === "blocked";
   return (
-    <li className="space-y-1 rounded-lg border border-line bg-field p-3" data-testid="step-trace" data-status={step.status}>
+    <li className={cn(cardInsetVariants({ padding: "compact" }), "space-y-1 bg-field")} data-testid="step-trace" data-status={step.status}>
       <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
         <span className="text-xs text-fg-secondary tabular-nums">{step.ordinal + 1}.</span>
         <span className="min-w-0 flex-1 text-sm font-medium break-words">{step.label}</span>
-        <span
-          className={cn(
-            "rounded-full px-2 py-0.5 text-2xs font-medium",
-            failed ? TONE_CLASS.danger : step.status === "succeeded" ? TONE_CLASS.neutral : TONE_CLASS.warning,
-          )}
-        >
+        <Badge tone={failed ? "danger" : step.status === "succeeded" ? "neutral" : "warning"}>
           {STEP_STATUS_LABEL[step.status]}
-        </span>
+        </Badge>
       </div>
       <p className="text-xs text-fg-secondary">
         {[

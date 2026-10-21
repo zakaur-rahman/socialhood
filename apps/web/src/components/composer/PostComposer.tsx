@@ -463,7 +463,7 @@ function Composer({
   };
 
   const onSaveDraft = async () => {
-    if (await saveFirst()) toast.success("Draft saved.");
+    if (await saveFirst()) toast.success("Draft saved");
   };
 
   /** ⋯ Unschedule, once confirmed: the post goes back to the drafts, with its edits. */
@@ -551,7 +551,7 @@ function Composer({
     remove.mutate(postId, {
       onSuccess: () => {
         discard();
-        toast.success("Post deleted.");
+        toast.success("Post deleted");
         router.push(scheduleHref(slug));
       },
       onError: (caught) => toastError(caught),

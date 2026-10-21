@@ -97,7 +97,7 @@ describe("Settings → Agent (FR-AGT-07, agent-architecture.html §12)", () => {
     expect(screen.getByText(/doesn't send, schedule or change anything itself/)).toBeInTheDocument();
     // D-08: the six permission tiles are one sentence.
     expect(screen.queryByRole("list", { name: "Agent permissions" })).toBeNull();
-    expect(screen.queryByText("Coming later")).toBeNull();
+    expect(screen.queryByText("Coming soon")).toBeNull();
   });
 
   it("states what the assistant may do in one sentence (D-08)", () => {

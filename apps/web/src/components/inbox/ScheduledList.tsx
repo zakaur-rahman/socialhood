@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { cardInsetVariants } from "@/components/ui/card";
 import { useReturnFocus } from "@/components/agent/use-return-focus";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -39,6 +40,7 @@ import { emptyStates, errorMessage, scheduledPlatformEmpty } from "@/lib/copy";
 import { contactName, PLATFORM_LABEL, type Tone } from "@/lib/inbox/format";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime, toZonedInputs } from "@/lib/tz";
+import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { ContactAvatar } from "./ContactAvatar";
@@ -50,7 +52,7 @@ const STATUS: Record<ScheduledMessage["status"], { label: string; tone: Tone }> 
   sending: { label: "Sending", tone: "brand" },
   sent: { label: "Sent", tone: "neutral" },
   failed: { label: "Failed", tone: "danger" },
-  canceled: { label: "Canceled", tone: "neutral" },
+  canceled: { label: "Cancelled", tone: "neutral" },
   expired: { label: "Expired", tone: "warning" },
 };
 
@@ -106,7 +108,7 @@ export function ScheduledList({
               canceling={cancel.isPending && cancel.variables?.id === item.id}
               onCancel={() =>
                 cancel.mutate(item, {
-                  onSuccess: () => toast.success("Scheduled message canceled"),
+                  onSuccess: () => toast.success("Scheduled message cancelled"),
                   onError: (error) => toastError(error),
                 })
               }
@@ -148,7 +150,7 @@ export function ScheduledCard({
   const status = STATUS[item.status];
   const pending = item.status === "scheduled";
   return (
-    <article aria-label={`Scheduled message to ${name}`} className="rounded-lg border border-line-subtle bg-field p-3">
+    <article aria-label={`Scheduled message to ${name}`} className={cn(cardInsetVariants({ padding: "compact" }), "bg-field")}>
       <Link
         href={`/w/${slug}/inbox/${item.conversation_id}` as Route}
         onClick={onOpen ? (event) => { event.preventDefault(); onOpen(); } : undefined}

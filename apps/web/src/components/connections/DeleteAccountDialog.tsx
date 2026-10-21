@@ -11,6 +11,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cardInsetVariants } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -143,7 +144,7 @@ export function DeleteAccountDialog({
                     ))}
                   </ul>
                 </section>
-                <section aria-label="Kept" className="rounded-lg border border-line p-3">
+                <section aria-label="Kept" className={cardInsetVariants({ padding: "compact" })}>
                   <p className="font-medium text-fg">Kept</p>
                   <ul className="mt-1 list-disc space-y-1 pl-4">
                     {KEPT_FOR_ACCOUNT.map((item) => (

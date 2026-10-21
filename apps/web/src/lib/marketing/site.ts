@@ -60,9 +60,9 @@ export const NAV_LINKS = [
 ] as const;
 
 export const LEGAL_LINKS = [
-  { label: "Privacy Policy", href: "/privacy" },
-  { label: "Terms of Service", href: "/terms" },
-  { label: "Refund Policy", href: "/refunds" },
+  { label: "Privacy policy", href: "/privacy" },
+  { label: "Terms of service", href: "/terms" },
+  { label: "Refund policy", href: "/refunds" },
   { label: "Data deletion", href: "/data-deletion" },
 ] as const;
 

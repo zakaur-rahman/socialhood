@@ -169,7 +169,7 @@ export function sendToStorage(
       reject(new UploadError("The upload didn't finish. Try again."));
     };
     xhr.onerror = () => reject(new UploadError("The upload didn't finish. Check your connection and try again."));
-    xhr.onabort = () => reject(new DOMException("Upload canceled", "AbortError"));
+    xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
     signal?.addEventListener("abort", () => xhr.abort(), { once: true });
     xhr.send(form);
   });

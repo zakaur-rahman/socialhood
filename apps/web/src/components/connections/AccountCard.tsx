@@ -103,7 +103,7 @@ export function AccountCard({
   const menuTrigger = useRef<HTMLButtonElement>(null);
 
   return (
-    <Card asChild padding="roomy" className={cn("flex flex-col gap-4", !live && "bg-panel/60")}>
+    <Card asChild padding="roomy" className={cn("flex flex-col gap-4", !live && "bg-field")}>
       <article aria-label={name} data-status={deleting ? "deleting" : account.status}>
       <header className="flex items-start gap-3">
         <Avatar size="lg">

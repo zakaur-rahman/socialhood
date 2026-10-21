@@ -26,7 +26,7 @@ export function TrendLine({ values, className }: { values: number[]; className?:
       width={WIDTH}
       height={HEIGHT}
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className={cn("shrink-0 overflow-visible text-brand", className)}
+      className={cn("shrink-0 overflow-visible text-chart-series-1", className)}
     >
       <polyline
         points={points}

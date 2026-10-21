@@ -52,7 +52,7 @@ System rules that follow from the audits:
 | Token | Value | Role | Status |
 |---|---|---|---|
 | `canvas` | `#000000` | App background, thread area, marketing | Keep |
-| `panel` | `#1F1F1F` | Cards, sidebar, panes, headers, composer bar; **the phone drawer** | Keep; drawer Change (COL-010), applied (C-071) |
+| `panel` | `#1F1F1F` | Cards, sidebar, panes, headers, composer bar; the sidebar card inside the phone drawer (the drawer itself is `canvas`, UI-041) | Keep; drawer Change (COL-010), applied (C-071), then UI-041 |
 | `field` | `#1D1D1D` | **Every** text field, select trigger and textarea; incoming bubbles; segmented tracks | Keep; Input and SelectTrigger move onto it (CMP-011) |
 | `raised` | `#2A2A2A` | Selected row, active segment, secondary button, skeleton, meter track | Keep |
 | `raised-hover` | `#333333` | Hover on `raised` (secondary button) | Keep |
@@ -150,8 +150,11 @@ AccountAvatar and the schedule's account rings and dots read it; categorical cha
 
 ### 1.8 Charts
 
-No new tokens. Status charts use status tokens (runs `brand`, failures `danger`; sentiment
-`success`, `fg-secondary`, `danger`). Categorical series use the identity palette. Every chart keeps
+No new hues: four aliases (C-075), so a chart's colours are set in one place. `chart-positive`
+(`success`), `chart-neutral` (`fg-secondary`), `chart-negative` (`danger`: negative sentiment,
+failures) and `chart-series-1` (`brand`: a single series such as runs or the 7-day trend). The
+sentiment bar and card, the automation stats and the trend line read them; `tokens.ts`
+(`chartAliases`) lists them. Categorical series use the identity palette. Every chart keeps
 the pattern from the automation stats: colour plus a legend plus numbers in text, and an `sr-only`
 table or `role="img"` with a label.
 
@@ -167,6 +170,10 @@ Four gradients, each with one job; stops reference tokens (no hex in `@utility`)
 | `bg-glow-brand` | radial `brand-soft → transparent` | One per view at most: the marketing hero and the plan hero | Any |
 
 Marks under 12 px (dots, bars) are solid `brand`, never a gradient.
+
+The marketing site may also draw radial glows as arbitrary `bg-[radial-gradient(…)]` built only from
+token variables (`var(--color-brand-soft)`, `var(--color-brand-fg)`): the hero, the automation
+showcase, the lazy illustrations and the moving border (DS-13). App screens use `bg-glow-brand` only.
 
 ### 1.10 shadcn alias map
 
@@ -224,6 +231,14 @@ text.
 
 A light theme would then be one block that redefines the `--color-*` values under a theme selector,
 with no component edits. It is not planned for R1.
+
+**The palette is locked (C-075).** `--color-*: initial` opens `@theme`, so Tailwind's default
+colours generate no CSS; white and black exist only as `fg`, `on-brand`, `canvas` and
+`media-scrim`. `styles/design-lint.test.ts` names any default colour, `text-[…]`, `rounded-[…]`
+(except `rounded-[inherit]`), `ring-ring/50`, `bg-brand-gradient` on a Button, or bare
+`outline-none` without a `focus-visible:` replacement in the source. Consumers that can't read
+CSS variables (Clerk, the OG image, the manifest, the viewport) take values from `colorValue()` in
+`tokens.ts`, and `tokens.test.ts` rejects literals there.
 
 ### 1.13 Token changes in one place
 
@@ -293,7 +308,7 @@ Motion durations, the reduced-motion safety net and the base-layer rules are in 
 | Marketing heading | `text-3xl sm:text-4xl` | 30 → 36 | 600 | −0.025em | Marketing H2, legal H1 | Keep |
 | Page title (H1) | `text-2xl` | 24/32 | 600 | −0.025em | Every app page, including Settings | **Owner D-05** for Settings |
 | KPI number | `text-2xl tabular-nums` | 24/32 | 600 | −0.025em | Metric tiles, plan name | Keep |
-| Pane title (H1 of a pane) | `text-lg` | 18/28 | 600 | 0 | Inbox, Ask, phone top bar | **Owner D-05** (spec says `text-xl`) |
+| Pane title (H1 of a pane) | `text-lg` | 18/28 | 600 | 0 | Inbox, the Ask page (`PANE_TITLE`, UI-069), the phone top bar; the Ask panel's title is a sheet title (DS-11) | **Owner D-05** (spec says `text-xl`) |
 | Section title (H2) | `text-lg` | 18/28 | 600 | 0 | Page sections ("Compare plans"), large dialogs | Keep |
 | Card title | `text-base` | 16/24 | 600 | 0 | Every card and panel heading; dialog and sheet titles | Change (14 and 18 px card titles align) |
 | Item title | `text-sm` | 14/20 | 600 | 0 | Row names, template names, step titles | Keep |
@@ -301,7 +316,7 @@ Motion durations, the reduced-motion safety net and the base-layer rules are in 
 | Body | `text-sm` | 14/20 | 400 | 0 | Default UI text | Keep |
 | Message | `text-sm leading-relaxed` | 14/22.75 | 400 | 0 | Bubbles and composers | Keep |
 | Control | `text-sm` | 14/20 | 500 | 0 | Buttons (default and up), nav, tabs, segments, labels, menu items | Keep |
-| Input | `text-base md:text-sm` | 16 → 14 | 400 | 0 | **Every** text-entry field (no iOS zoom) | Change (UI-ISS-017) |
+| Input | `text-base md:text-sm` | 16 → 14 | 400 | 0 | **Every** text-entry field (no iOS zoom); the Input primitive writes it `text-sm max-md:text-base`, so a call site's `text-sm` can't drop the 16 px (DS-1) | Change (UI-ISS-017) |
 | Meta, caption, helper, error | `text-xs` | 12/16 | 400 (500 for emphasis) | 0 | Timestamps, hints, descriptions in dense cards, inline errors, table headers | Keep |
 | Small control | `text-xs` | 12/16 | 500 | 0 | Button `xs` and `sm` (replaces `text-[0.8rem]`), filter chips | Change |
 | Chip, status badge | `text-2xs` | 11/16 | 500 | 0 | Status and signal badges, plan badge, `kbd`, the collapsed sidebar's overlaid count | **Add** (replaces `text-[11px]` and `text-[9px]`–`[10px]`) |
@@ -378,7 +393,8 @@ between them, rounded to a step (an inset panel in an `xl` card is `rounded-lg`)
 | `rounded-2xl` | 16 | Message and Ask bubbles (with the 6 px tail corner), marketing cards | Keep |
 | `rounded-full` | — | Avatars, dots, status pills and count badges, switches, things that are circles | Keep |
 
-Retire `rounded-3xl`, `rounded-4xl` (Badge), `rounded-[10px]` and the `min()` expressions.
+Retire `rounded-3xl`, `rounded-4xl` (Badge), `rounded-[10px]` and the `min()` expressions. `rounded-[inherit]` is allowed for a child that fills a rounded parent (a clipped image, a
+stretched link); the design lint allows it and no other arbitrary radius (DS-16).
 
 ---
 
@@ -413,7 +429,7 @@ get one.
 |---|---|---|---|---|
 | 0 Flat | `panel` on `canvas` | `border-line`, no shadow | Cards, panes, sidebar, bubbles | Keep (drop the no-op `shadow-sm` on bubbles and active segments) |
 | 1 Floating | `overlay` | a 1 px `line` ring (`ring-1 ring-line`; the toast: a `line-strong` border) plus `shadow-floating`, a dark drop shadow | Popovers, menus, selects, tooltip, toasts, the jump-to-latest pill, drag previews, the sticky save bar | **Owner D-12**, applied (C-071) |
-| 2 Overlay | `overlay` (the phone drawer: `panel`, like the sidebar) | a `line` ring (a sheet: its side border) plus `shadow-overlay`, over the `scrim` | Dialogs, alert dialogs, sheets, the phone drawer, the Ask panel, run detail | Scrim Change (UX-SH-02); surface and shadow **Owner D-12**, applied (C-071) |
+| 2 Overlay | `overlay` (the phone drawer: `canvas`, with the sidebar card on `panel`, UI-041) | a `line` ring (a sheet: its side border) plus `shadow-overlay`, over the `scrim` | Dialogs, alert dialogs, sheets, the phone drawer, the Ask panel, run detail | Scrim Change (UX-SH-02); surface and shadow **Owner D-12**, applied (C-071) |
 | Marketing glow | — | `shadow-brand/10–25` | Marketing pages only | Keep (not in the app) |
 
 - **No blur.** Backdrop blur is not used to separate layers in the app (it costs a full-viewport
@@ -506,9 +522,9 @@ and one safety net in `globals.css`:
 
 | Family | Canonical | Variants and props | Replaces (source) | Status |
 |---|---|---|---|---|
-| Button | `ui/button` | `variant`: **`default` = primary** (brand gradient, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `soft` (`brand-soft`, `brand-fg`, `brand-line` edge; `brand-soft-hover` on hover and open: AI actions such as the AI pill and AI Polish, and a toggle while pressed; C-073), `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`) · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16), brand-soft classes on ghost (C-073) | Change |
+| Button | `ui/button` | `variant`: **`default` = primary** (brand gradient, `on-brand`, brightness hover), `secondary`, `outline`, `ghost`, `soft` (`brand-soft`, `brand-fg`, `brand-line` edge; `brand-soft-hover` on hover and open: AI actions such as the AI pill and AI Polish, and a toggle while pressed; C-073), `destructive` (solid `danger-fill`), `destructive-ghost` (`danger-fg` text, for triggers that open a confirmation), `link` (`brand-fg`); a ghost may take `text-fg-secondary` for a tertiary action (the muted ghost: its hover and open turn `fg`, so no variant is needed; DS-7, C-076), but an AI action is `soft`, never a `text-brand-fg` override · `size`: `xs`, `sm`, `default`, `lg`, `xl`, `icon-xs`, `icon-sm`, `icon`, `icon-lg` · `loading` | 58 gradient overrides (D1), 5 destructive styles (D2), 7 raw links, label-only loading (D16), brand-soft classes on ghost (C-073) | Change |
 | Disabled reason | `ui/disabled-reason` (focusable wrapper with Tooltip and `sr-only` text) | `reason` | `title` on disabled controls (CMP-010) | Add |
-| Spinner | `ui/spinner` | `size` | 36 `Loader2`/`LoaderCircle` with mixed rules (MOT-006) | Add |
+| Spinner | `ui/spinner` | `size`. A loading Button uses `loading`, never a `<Spinner>` child. A status-icon map (a message sending, a step running, a checkout waiting) may keep `LoaderCircle` with `motion-safe:animate-spin` (DS-14) | 36 `Loader2`/`LoaderCircle` with mixed rules (MOT-006) | Add |
 | Text field | `ui/input` | `size` (`sm`, `default`, `lg`, `xl`); native `type="date"`/`"time"` allowed (D-04), focused at every stop, the picker button included (§8.3, C-073) | 17 raw inputs; two looks (CMP-011) | Change |
 | Textarea | `ui/textarea` | — | 5 raw textareas (composers may keep a wrapper, focus per §8.3) | Change |
 | Select | `ui/select` | trigger `size` like Input | the native `<select>` in PostPreview | Change |
@@ -526,8 +542,8 @@ and one safety net in `globals.css`:
 | Dropdown menu | `ui/dropdown-menu` | item `variant="destructive"` (`danger-fg`) · content `min-w-48 w-auto` | per-site widths and labels | Change |
 | Tooltip | `ui/tooltip` (level 1 surface on `rounded-md`, an arrow with the same fill and edge) | — | native `title` on meaningful elements (D15) | Change; colour **Owner D-03**, applied (UI-017; C-069) |
 | Toaster | `ui/sonner` | `position` by width; action toasts last 10 s or more | bare `<Toaster>` | Add |
-| Badge | `ui/badge` | `tone`: `neutral` (`hover` fill), `brand` (info), `success`, `warning`, `danger` (soft fills), `count` (brand gradient, `on-brand`) · `size`: `sm` (11 px), `md` (12 px; counts) · `shape`: `pill`, `tag` (`rounded-sm`, thumbnail labels) | 77 ad-hoc badges, 8 tone maps, two `StatusChip`s (D6) | Change |
-| Card | `ui/card` (`Card`, `CardHeader`, `CardInset`) | `padding`: `standard`, `roomy` · `tone`: `default`, `danger`, `brand` · exposes its padding for bleeds | SettingsCard (becomes a thin wrapper), composer Section, 85 surfaces (D7) | Add; radius **Owner D-02** |
+| Badge | `ui/badge` | `tone`: `neutral` (`hover` fill), `brand` (info), `success`, `warning`, `danger` (soft fills), `count` (brand gradient, `on-brand`), `media` (`media-scrim` at 70% with `on-brand`, for labels on photos and video, with `shape="tag"`; UI-075) · `size`: `sm` (11 px), `md` (12 px; counts) · `shape`: `pill`, `tag` (`rounded-sm`, thumbnail labels) | 77 ad-hoc badges, 8 tone maps, two `StatusChip`s (D6) | Change |
+| Card | `ui/card` (`Card`, `CardHeader`, `CardInset`, `CardBleed`) | `padding`: `standard`, `roomy` · `tone`: `default`, `danger`, `brand` · exposes its padding (`--card-padding`) so `CardBleed` runs a table or row list to the edges · `CardInset` `padding`: `standard` 16 px (form groups), `compact` 12 px (rows) | SettingsCard (becomes a thin wrapper), composer Section, 85 surfaces (D7) | Add; radius **Owner D-02** |
 | Alert | `ui/alert` | `tone` · `variant`: `soft`, `outline` · one action (`Button secondary size="sm"`) | BannerSlot internals, 17 callouts, 4 tinted actions (D8, D9) | Add |
 | Meter | `ui/meter` (`role="meter"`) | `kind`: `consumable` (warning at 80%, danger at 100%), `slot` (neutral "All used" at 100%) | UsageMeter, QuotaTile, UsageCard, ScheduleRail, LeadScore (D5) | Add |
 | Progress | `ui/progress` (`role="progressbar"`) | — | upload and analysis bars (D5) | Add |
@@ -542,7 +558,7 @@ and one safety net in `globals.css`:
 |---|---|
 | **Hover** | Neutral controls and rows `bg-hover`; on `raised`, `bg-raised-hover`; primary `brightness-110`; destructive `danger-fill/90`; links underline. Tailwind 4's `hover:` already applies only to devices that hover. |
 | **Pressed / open** | `bg-pressed` for `aria-expanded` and `data-state=open`; primary `active:brightness-95`. |
-| **Focus** | One recipe: the global `:focus-visible` outline (2 px `ring`, offset 2 px). Primitives don't remove it (`outline-none`, `outline-hidden`) and don't add a ring halo. Inside clipping containers (menu items, segmented tracks, scrolling rows) the outline is inset: `focus-visible:-outline-offset-2`. Text fields also turn their border `ring`. A wrapper whose inner element takes focus (the composers) shows the outline with `has-[:focus-visible]:`. Native date and time fields hold a picker button that takes focus while the field matches only `:focus-within`, so Input draws the same outline, `ring` border and `raised` fill from `focus-within:` for those types (C-073). A soft halo is allowed only beside the outline, never instead of it. |
+| **Focus** | One recipe: the global `:focus-visible` outline (2 px `ring`, offset 2 px). Primitives don't remove it (`outline-none`, `outline-hidden`) and don't add a ring halo. A bare `outline-none` is allowed only on a programmatic focus target (`tabIndex={-1}`: the skip link's `<main>`, a heading focused after navigation), on the dialog, alert dialog and popover content that Radix focuses on open, and with a `focus-visible:` replacement; the design lint enforces this (C-075, DS-12). Inside clipping containers (menu items, segmented tracks, scrolling rows) the outline is inset: `focus-visible:-outline-offset-2`. Text fields also turn their border `ring`. A wrapper whose inner element takes focus (the composers) shows the outline with `has-[:focus-visible]:`. Native date and time fields hold a picker button that takes focus while the field matches only `:focus-within`, so Input draws the same outline, `ring` border and `raised` fill from `focus-within:` for those types (C-073). A soft halo is allowed only beside the outline, never instead of it. |
 | **Selected** | Rows and nav: `bg-raised` + the selection bar, `aria-current`. Segments: `bg-raised text-brand-fg`, `aria-pressed`/`aria-selected`. Chips: `bg-brand-soft text-brand-fg border-brand-line`. A toggle Button while pressed (`aria-pressed`): `variant="soft"`, the chip's colours. Tiles: 2 px `brand` border. |
 | **Disabled** | `opacity-50`. A control disabled for a reason is wrapped in `DisabledReason`. Exception: the composers' Send while empty keeps UX-INB-07's neutral look (`bg-raised text-fg-disabled`), as a Button state, not hand-rolled. |
 | **Loading** | Buttons: `loading` (Spinner, `aria-busy`, disabled, width kept). Lists and cards: skeletons shaped like the content. Pages: PageSkeleton inside the shell. |
@@ -580,7 +596,11 @@ and one safety net in `globals.css`:
 - **No `tint` button variant** for actions on coloured banners: they use `secondary size="sm"`.
 - **No `shadow-raised`**: active segments are already distinct (`raised` + `brand-fg`).
 - **No RadioGroup yet**: the three native radio cards pass (visible focus, labelled). Add it when a
-  new radio list appears.
+  new radio list appears. Their unchecked edge is the browser's (`accent-brand`, `color-scheme:
+  dark`) and hasn't been measured against 3:1 on `panel` (DS-15); measure it when RadioGroup comes.
+- **No share bar**: Home's top-intents card draws its ranked bars by hand (`bg-brand-gradient-decor`
+  with an inline width). It is the only one; it becomes a Meter or Progress kind if a second
+  appears (DS-9).
 - **No Calendar, Command, ScrollArea or Separator yet** (D-04 for Calendar; Command when the
   timezone picker needs search).
 - **No new info, chart or tint colour tokens** (§1.5, §1.8).
@@ -588,6 +608,14 @@ and one safety net in `globals.css`:
 ---
 
 ## 9. Responsive rules
+
+- **Page width (C-074):** pages fill the space beside the sidebar at any size; no page cap. Limits
+  for reading live inside components (settings fields `max-w-2xl`, bubbles their own maximum);
+  grids gain columns as space grows. The marketing site keeps its centred layout.
+- **Resizable panes (UI-078):** the inbox list (260–560 px) and details (280–480), the Ask page's
+  thread history (220–440) and the Ask panel (360–720) resize with `ResizeHandle` (drag, ← and →,
+  Shift for 64 px, Home and End, double-click to reset); the width is remembered per device by
+  `usePaneWidth`. Hidden below `md`, where phones keep one pane.
 
 - **Breakpoints:** `md` 768 (top bar and drawer below it), `lg` 1024 (sidebar expands; three-column
   dashboards), `xl` 1280 (inbox details inline; settings two columns), `wide` 1440 (inbox details

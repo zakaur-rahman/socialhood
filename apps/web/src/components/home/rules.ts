@@ -26,11 +26,11 @@ export function isFast(medianSeconds: number | null | undefined): boolean {
 
 export type QueueState = {
   chip: { label: string; tone: Tone };
-  action: "Review & Send" | "Open chat";
+  action: "Review and send" | "Open conversation";
 };
 
 export function queueState(item: Pick<PriorityConversation, "needs_you" | "has_pending_suggestion">): QueueState {
-  const action = item.has_pending_suggestion ? "Review & Send" : "Open chat";
+  const action = item.has_pending_suggestion ? "Review and send" : "Open conversation";
   if (item.needs_you) return { chip: { label: "Needs you", tone: "danger" }, action };
   if (item.has_pending_suggestion) return { chip: { label: "AI draft ready", tone: "brand" }, action };
   return { chip: { label: "Needs reply", tone: "warning" }, action };

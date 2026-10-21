@@ -32,7 +32,7 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           </p>
         </div>
         <nav aria-labelledby="footer-product">
-          <h2 id="footer-product" className="text-xs font-semibold tracking-[0.14em] text-fg uppercase">
+          <h2 id="footer-product" className="text-xs font-semibold tracking-[0.08em] text-fg uppercase">
             Product
           </h2>
           <ul className="mt-3 grid gap-1 sm:gap-1.5">
@@ -46,7 +46,7 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           </ul>
         </nav>
         <nav aria-labelledby="footer-legal">
-          <h2 id="footer-legal" className="text-xs font-semibold tracking-[0.14em] text-fg uppercase">
+          <h2 id="footer-legal" className="text-xs font-semibold tracking-[0.08em] text-fg uppercase">
             Legal
           </h2>
           <ul className="mt-3 grid gap-1 sm:gap-1.5">

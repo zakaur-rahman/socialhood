@@ -3,15 +3,17 @@
 import { Maximize2, Sparkles, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore, type CSSProperties } from "react";
 
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { modifierKey } from "@/lib/agent/format";
 import { askHref, isAskPage } from "@/lib/agent/routes";
 import { useAskStore } from "@/lib/agent/store";
 import { useNow } from "@/lib/use-browser-state";
+import { usePaneWidth, type PaneWidthLimits } from "@/lib/use-pane-width";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -70,7 +72,11 @@ export function AskRoot() {
  * sheets' (DESIGN_SYSTEM §6, level 2; D-12): `overlay` with `shadow-overlay` and a `line` edge,
  * over the modal scrim. It is a `SheetContent size="panel"`, so it moves like every sheet.
  */
+/** The panel is resizable from its left edge on md and up (UI-078), remembered per device. */
+const PANEL_LIMITS: PaneWidthLimits = { fallback: 420, min: 360, max: 720 };
+
 export function AskPanel() {
+  const [panelWidth, setPanelWidth, resetPanelWidth] = usePaneWidth("ask-panel", PANEL_LIMITS);
   const workspace = useCurrentWorkspace();
   const open = useAskStore((state) => state.open);
   const setOpen = useAskStore((state) => state.setOpen);
@@ -90,9 +96,19 @@ export function AskPanel() {
           focusComposer(PANEL_COMPOSER_ID);
         }}
         onCloseAutoFocus={returnFocus.onCloseAutoFocus}
-        className="gap-0"
+        className="gap-0 md:w-(--pane-w) md:max-w-[90vw]"
+        style={{ "--pane-w": `${panelWidth}px` } as CSSProperties}
         data-testid="ask-panel"
       >
+        <ResizeHandle
+          edge="start"
+          label="Resize the Ask panel"
+          value={panelWidth}
+          min={PANEL_LIMITS.min}
+          max={PANEL_LIMITS.max}
+          onChange={setPanelWidth}
+          onReset={resetPanelWidth}
+        />
         <header className="flex h-14 shrink-0 items-center gap-1 border-b border-line pr-2 pl-4">
           <Sparkles className="size-4 shrink-0 text-brand-fg" aria-hidden />
           <SheetTitle className="ml-1 min-w-0 flex-1 truncate text-base font-semibold">

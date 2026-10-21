@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -144,9 +145,9 @@ export function MediaLibraryDialog({
                       <img src={asset.secure_url ?? ""} alt="" loading="lazy" className="size-full object-cover" />
                     )}
                     {asset.resource_type === "video" && asset.duration_s ? (
-                      <span className="absolute right-1 bottom-1 rounded-sm bg-media-scrim/80 px-1 text-2xs tabular-nums">
+                      <Badge tone="media" shape="tag" className="absolute right-1 bottom-1 px-1 tabular-nums">
                         {formatDuration(asset.duration_s)}
-                      </span>
+                      </Badge>
                     ) : null}
                     {isPicked ? (
                       <span className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-brand text-on-brand">
@@ -154,7 +155,9 @@ export function MediaLibraryDialog({
                       </span>
                     ) : null}
                     {already ? (
-                      <span className="absolute inset-x-1 bottom-1 rounded-sm bg-media-scrim/80 px-1 text-2xs">In post</span>
+                      <Badge tone="media" shape="tag" className="absolute inset-x-1 bottom-1 w-auto px-1">
+                        In post
+                      </Badge>
                     ) : null}
                   </button>
                 </li>

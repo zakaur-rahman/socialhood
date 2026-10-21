@@ -19,8 +19,11 @@ export const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]
 export const PHONE_BELOW = 768;
 export const TOUCH_BELOW = 1024;
 
-/** A common screen height for each width (phone, tablet portrait, laptop, large laptop). */
-export const HEIGHT: Record<number, number> = { 320: 640, 360: 740, 375: 812, 768: 1024, 1024: 768, 1280: 800, 1440: 900, 1536: 864 };
+/**
+ * A common screen height for each width (phone, tablet portrait, laptop, large laptop). 640 is
+ * 450 tall: a 1280 × 900 window at 200% zoom (WCAG 1.4.10 reflow, UI-072).
+ */
+export const HEIGHT: Record<number, number> = { 320: 640, 360: 740, 375: 812, 640: 450, 768: 1024, 1024: 768, 1280: 800, 1440: 900, 1536: 864 };
 
 const REPO_ROOT = resolve(__dirname, "..", "..", "..", "..");
 

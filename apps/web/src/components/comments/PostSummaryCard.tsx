@@ -18,7 +18,7 @@ import { EYEBROW } from "@/styles/tokens";
 
 const NONE = "none";
 
-export const NOTHING_TO_SUMMARIZE = "There are no analysed comments to summarize yet.";
+export const NOTHING_TO_SUMMARIZE = "There are no analysed comments to summarise yet.";
 
 /**
  * UX-SCR-05 summary card (FR-CMT-04, TR-AI-11): two or three sentences about what people say.
@@ -89,7 +89,7 @@ export function PostSummaryCard({ post, now }: { post: PostDetail; now: Date }) 
           </span>
           {/* An AI action: the brand-soft Button (C-073). */}
           <Button variant="soft" size="sm" disabled={waiting} loading={refresh.isPending} onClick={ask}>
-            <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarize"}
+            <RefreshCw aria-hidden /> {summary ? "Refresh" : "Summarise"}
           </Button>
         </div>
       </section>
