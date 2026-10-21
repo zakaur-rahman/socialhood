@@ -4,13 +4,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { Route } from "next";
 import Link from "next/link";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
@@ -28,6 +29,7 @@ import { inboxSearch } from "@/lib/inbox/url";
 import { emptyStates, inboxFilterEmpty } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useMediaQuery, useNow, useStoredFlag, useStoredString } from "@/lib/use-browser-state";
+import { usePaneWidth, type PaneWidthLimits } from "@/lib/use-pane-width";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -60,6 +62,13 @@ const LIST_WIDTH: Record<InboxLayout, string> = {
   tablet: "w-[300px]",
   phone: "w-full",
 };
+
+// The owner's resizable panes (UI-078): on desktop and wide layouts the list and the details pane
+// take the width set on their handle (remembered per device), within these limits; the panes also
+// never take more than a share of the inbox, so the thread keeps room on a narrow window.
+const LIST_LIMITS: PaneWidthLimits = { fallback: 320, min: 260, max: 560 };
+const DETAILS_LIMITS: PaneWidthLimits = { fallback: 320, min: 280, max: 480 };
+const paneWidth = (width: number) => ({ "--pane-w": `${width}px` }) as CSSProperties;
 
 /** A tab panel fills the list pane under the header; its focus outline is inset, as the pane clips. */
 const PANEL = "flex min-h-0 flex-1 flex-col focus-visible:-outline-offset-2";
@@ -131,6 +140,9 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
   const selectedId = params.id ?? null;
   const layout = useInboxLayout();
   const now = useNow();
+  const resizable = layout === "desktop" || layout === "wide";
+  const [listWidth, setListWidth, resetListWidth] = usePaneWidth("inbox-list", LIST_LIMITS);
+  const [detailsWidth, setDetailsWidth, resetDetailsWidth] = usePaneWidth("inbox-details", DETAILS_LIMITS);
 
   // ---- filters (FR-INB-01)
   const platforms = useMemo(
@@ -330,8 +342,24 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
           <section
             aria-label="Conversation list"
             data-pane="list"
-            className={cn("flex shrink-0 flex-col border-r border-line bg-panel", LIST_WIDTH[layout], layout === "phone" && "border-r-0")}
+            className={cn(
+              "relative flex shrink-0 flex-col border-r border-line bg-panel",
+              resizable ? "w-(--pane-w) max-w-[45%]" : LIST_WIDTH[layout],
+              layout === "phone" && "border-r-0",
+            )}
+            style={resizable ? paneWidth(listWidth) : undefined}
           >
+            {resizable ? (
+              <ResizeHandle
+                edge="end"
+                label="Resize the conversation list"
+                value={listWidth}
+                min={LIST_LIMITS.min}
+                max={LIST_LIMITS.max}
+                onChange={setListWidth}
+                onReset={resetListWidth}
+              />
+            ) : null}
             <PlatformStrip
               platforms={platforms}
               value={platform}
@@ -408,8 +436,25 @@ function Inbox({ accounts, children }: { accounts: SocialAccount[]; children: Re
         ) : null}
 
         {selectedId && detailsOpen && layout === "wide" ? (
-          <aside aria-label="Details" data-pane="details" className="w-[300px] shrink-0 overflow-y-auto border-l border-line bg-panel wide:w-[320px]">
-            <DetailsPanel conversationId={selectedId} />
+          <aside
+            aria-label="Details"
+            data-pane="details"
+            className="relative w-(--pane-w) max-w-[40%] shrink-0 border-l border-line bg-panel"
+            style={paneWidth(detailsWidth)}
+          >
+            <ResizeHandle
+              edge="start"
+              label="Resize the details panel"
+              value={detailsWidth}
+              min={DETAILS_LIMITS.min}
+              max={DETAILS_LIMITS.max}
+              onChange={setDetailsWidth}
+              onReset={resetDetailsWidth}
+            />
+            {/* The scroller is inside, so the handle stays put while the details scroll. */}
+            <div className="h-full overflow-y-auto">
+              <DetailsPanel conversationId={selectedId} />
+            </div>
           </aside>
         ) : null}
       </InboxFrame>
