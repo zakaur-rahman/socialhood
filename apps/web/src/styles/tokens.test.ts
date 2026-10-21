@@ -6,7 +6,9 @@ import { describe, expect, it } from "vitest";
 import {
   EYEBROW,
   breakpoints,
+  chartAliases,
   colorTokens,
+  colorValue,
   customVariants,
   easings,
   fontSizes,
@@ -19,6 +21,8 @@ import {
 } from "./tokens";
 
 const css = readFileSync(join(__dirname, "globals.css"), "utf8");
+/** A source file under src/, for the checks on the token mirrors. */
+const source = (path: string) => readFileSync(join(__dirname, "..", path), "utf8");
 
 function declared(name: string): string | undefined {
   const match = css.match(new RegExp(`--color-${name}:\\s*([^;]+);`));
@@ -177,5 +181,34 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
       expect(className).not.toMatch(/tracking-\[0\.(1|12|14)em\]/);
     }
     expect(new Set(typeRoles.map((r) => r.name)).size).toBe(typeRoles.length);
+  });
+
+  it("locks the palette: Tailwind's default colours are cleared before the tokens (UI-070, UI-ISS-028)", () => {
+    const theme = blocks(/@theme/)[0].replace(/\/\*[\s\S]*?\*\//g, "").trim();
+    expect(theme.startsWith("--color-*: initial;")).toBe(true);
+    // White and black survive only as tokens.
+    expect(css).not.toMatch(/--color-(white|black):/);
+  });
+
+  it.each(chartAliases)("aliases $name to $token: no new hue (UI-ISS-097)", ({ name, token, swatch }) => {
+    expect(declared(name)).toBe(`var(--color-${token})`);
+    expect(colorTokens.map((t) => t.name)).toContain(token);
+    expect(swatch).toBe(`bg-${name}`);
+  });
+
+  it.each(["lib/clerk-appearance.ts", "components/marketing/og.tsx", "app/manifest.ts", "app/layout.tsx"])(
+    "%s reads its colours from tokens.ts instead of restating them (UI-ISS-095)",
+    (path) => {
+      const text = source(path);
+      expect(text).toContain("colorValue");
+      // rgba(0,0,0,0) is the OG glow's transparent end, not a token.
+      expect(text.replaceAll("rgba(0,0,0,0)", "")).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(\d/i);
+    },
+  );
+
+  it("looks colour tokens up by name and refuses unknown ones", () => {
+    expect(colorValue("canvas")).toBe("#000000");
+    expect(colorValue("brand-line")).toBe("rgb(86 127 248 / 0.35)");
+    expect(() => colorValue("red-500")).toThrow(/Unknown colour token/);
   });
 });

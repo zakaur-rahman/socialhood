@@ -56,6 +56,29 @@ export const colorTokens: ColorToken[] = [
   { name: "linkedin", value: "#1E40AF", use: "LinkedIn", swatch: "bg-linkedin" },
 ];
 
+/**
+ * A colour token's value, for the consumers that can't read CSS variables: Clerk (it computes
+ * shades), the OG image (Satori), the manifest and the viewport (UI-ISS-095). They read it here
+ * instead of restating the hex, so a token change reaches them too.
+ */
+export function colorValue(name: string): string {
+  const found = colorTokens.find((entry) => entry.name === name);
+  if (!found) throw new Error(`Unknown colour token: ${name}`);
+  return found.value;
+}
+
+/**
+ * The chart palette (COLOR_SYSTEM §11.6, UI-ISS-097): aliases of existing tokens, no new hues.
+ * Status series (sentiment, failures) sit on the status tokens; a single neutral series on brand.
+ * Categorical series (accounts, people) use the identity palette (lib/ui/identity.ts) instead.
+ */
+export const chartAliases = [
+  { name: "chart-positive", token: "success", use: "Positive sentiment", swatch: "bg-chart-positive" },
+  { name: "chart-neutral", token: "fg-secondary", use: "Neutral sentiment", swatch: "bg-chart-neutral" },
+  { name: "chart-negative", token: "danger", use: "Negative sentiment; failures", swatch: "bg-chart-negative" },
+  { name: "chart-series-1", token: "brand", use: "A single series: runs, the 7-day trend", swatch: "bg-chart-series-1" },
+] as const;
+
 /** DESIGN_SYSTEM §1.9: four gradients, each with one job; the stops are tokens. */
 export const gradientUtilities = [
   {

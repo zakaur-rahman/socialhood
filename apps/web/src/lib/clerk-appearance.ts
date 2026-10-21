@@ -1,13 +1,6 @@
 import { dark } from "@clerk/ui/themes";
 
-import { colorTokens } from "@/styles/tokens";
-
-/** A colour token's value from styles/tokens.ts, for consumers that can't read CSS variables. */
-function token(name: string): string {
-  const found = colorTokens.find((entry) => entry.name === name);
-  if (!found) throw new Error(`Unknown colour token: ${name}`);
-  return found.value;
-}
+import { colorValue as token } from "@/styles/tokens";
 
 const BRAND_TEXT = { color: "var(--color-brand-fg)", "&:hover": { color: "var(--color-brand-fg)" } };
 

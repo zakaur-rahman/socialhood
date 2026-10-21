@@ -1455,3 +1455,34 @@ updates DESIGN_SYSTEM and the spec.
     "Ask Social Ho…", and its subtitle is "Your AI assistant".
   - The inbox and Automations search placeholders are short ("Search", "Name or keyword"); their
     accessible names are unchanged.
+
+## C-075 · Palette lock, design lint, chart aliases and guarded token mirrors (UI-070, feature/ui-palette-lock)
+The Wave-5 lock (UI-ISS-028, UI-ISS-095, UI-ISS-097; COLOR_SYSTEM §11.6–§11.7). Nothing changes on
+screen: every colour below resolves to the value it had.
+- **Palette lock (no visible change):** `--color-*: initial;` opens `@theme` in `globals.css`, so
+  Tailwind's default palette (`red-500`, `white`, `black` …) no longer compiles; only the tokens
+  do. White and black exist only as tokens (`fg`, `on-brand`, `canvas`, `media-scrim`). The sweeps
+  had already moved app code off the default palette; `tokens.test.ts` checks that the lock comes
+  first.
+- **Design lint (`styles/design-lint.test.ts`):** a Vitest scan of the app's source, beside the
+  copy lint, that fails on a default Tailwind colour, an arbitrary text size or colour
+  (`text-[`), an arbitrary radius (`rounded-[`, except `rounded-[inherit]`), the translucent
+  shadcn ring (`ring-ring/50`), `bg-brand-gradient` restated on a Button, and a bare
+  `outline-none` without a `focus-visible:` replacement. A bare `outline-none` stays allowed on a
+  programmatic focus target (`tabIndex={-1}`: the skip link's `<main>`, a heading focused after
+  navigation) and in the dialog, alert dialog and popover primitives, whose content Radix focuses
+  on open. Tests, test helpers and comment lines are skipped.
+- **Chart aliases (an addition, the same pixels):** `chart-positive`, `chart-neutral`,
+  `chart-negative` and `chart-series-1`, aliases of `success`, `fg-secondary`, `danger` and
+  `brand`. SentimentBar, SentimentCard, StatsPane (runs and failures) and TrendLine read them, so a
+  chart's colours are set in one place. Categorical series (accounts, people) use the identity
+  palette (C-072). Listed in `tokens.ts` (`chartAliases`), checked by `tokens.test.ts` and shown
+  on `/dev/tokens`.
+- **Token mirrors read `tokens.ts` (UI-ISS-095):** `colorValue()` in `styles/tokens.ts` is the one
+  lookup for consumers that can't read CSS variables: Clerk (it computes shades), the OG image
+  (Satori, which also gets the glow as `rgba()` from `brand-line`), the manifest and the
+  viewport's theme colour. `tokens.test.ts` fails if any of them writes a hex or `rgb()` literal
+  again. The logo mark already drew in `currentColor` and token classes.
+- **One alias outside the primitives:** Settings › Workspace's URL field drew its focus edge and
+  outline with `border-ring` and `outline-ring`; they are `border-brand` and `outline-brand`, the
+  same colour, so app code uses tokens only (DESIGN_SYSTEM §1.10).

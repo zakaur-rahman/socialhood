@@ -5,6 +5,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { clerkAppearance } from "@/lib/clerk-appearance";
+import { colorValue } from "@/styles/tokens";
 import "@/styles/globals.css";
 
 const sans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -17,7 +18,7 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, title: "Social Hood", statusBarStyle: "black" },
 };
 
-export const viewport: Viewport = { themeColor: "#000000" };
+export const viewport: Viewport = { themeColor: colorValue("canvas") };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
