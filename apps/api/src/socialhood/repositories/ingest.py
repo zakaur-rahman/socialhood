@@ -104,6 +104,14 @@ async def _lock_for_contact(
     ).one_or_none()
 
 
+async def find_conversation_for_contact(
+    session: AsyncSession, social_account_id: uuid.UUID, contact_id: uuid.UUID
+) -> Conversation | None:
+    """The (account, contact) conversation, locked, or None: a referral (GR-01) records itself on
+    an existing conversation but never starts one, so the inbox shows no empty threads."""
+    return await _lock_for_contact(session, social_account_id, contact_id)
+
+
 async def get_or_create_conversation(
     session: AsyncSession,
     *,

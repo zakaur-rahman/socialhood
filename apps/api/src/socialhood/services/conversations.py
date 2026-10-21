@@ -59,6 +59,7 @@ from socialhood.schemas.inbox import (
     ContactDetail,
     ConversationAccount,
     ConversationAi,
+    ConversationEntry,
     ConversationList,
     ConversationPatch,
     ConversationSummary,
@@ -416,10 +417,31 @@ async def conversation_detail(
             ),
             "scheduled_count": int(scheduled or 0),
             "last_inbound_at": conv.last_inbound_at,
+            "entry": entry_out(conv),
         }
     )
     out.pending_suggestion = await suggestions.pending_out(session, conv.id)  # T5.4, F-08
     return out
+
+
+def entry_out(conv: Conversation) -> ConversationEntry | None:
+    """GR-01: the conversation's entry. An ad's title comes from the latest referral when it is
+    the same ad."""
+    if conv.entry_source is None:
+        return None
+    last = conv.last_referral or {}
+    ad_title = (
+        last.get("ad_title") if conv.entry_ad_id and last.get("ad_id") == conv.entry_ad_id else None
+    )
+    return ConversationEntry.model_validate(
+        {
+            "source": conv.entry_source,
+            "ref": conv.entry_ref,
+            "ad_id": conv.entry_ad_id,
+            "ad_title": ad_title,
+            "at": conv.entry_at,
+        }
+    )
 
 
 # ---------------------------------------------------------------- messages (FR-INB-02)

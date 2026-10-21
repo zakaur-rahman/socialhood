@@ -32,8 +32,13 @@ from socialhood.platforms.instagram import oauth
 # Attachment types the Send API takes by URL; the only sticker is the built-in heart.
 INSTAGRAM_SENDABLE = frozenset({"image", "video", "audio", "file"})
 
-# Fields every connected account is subscribed to (@mentions arrive inside comments).
-SUBSCRIBED_FIELDS = "messages,messaging_seen,message_reactions,message_edit,comments"
+# Fields every connected account is subscribed to (@mentions arrive inside comments). GR-01 adds
+# postbacks (ice breakers), referrals (entry links, ads), opt-ins and Live comments; the
+# reconcile_subscriptions job re-subscribes connected accounts with this list (TR-WH-08).
+SUBSCRIBED_FIELDS = (
+    "messages,messaging_seen,message_reactions,message_edit,comments,"
+    "messaging_postbacks,messaging_referral,messaging_optins,live_comments"
+)
 
 # The User Profile API fields we read (TR-PL-06; FR-AUT-22 for the follow status).
 PROFILE_FIELDS = "name,username,profile_pic,is_user_follow_business"

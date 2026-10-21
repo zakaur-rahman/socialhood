@@ -12,6 +12,7 @@ from socialhood.platforms.events import (
     InboundMediaRef,
     InboundMessage,
     Reaction,
+    ReferralInfo,
     Unsupported,
 )
 from socialhood.platforms.whatsapp.parse import WhatsAppDeliveryStatus, parse_event
@@ -169,3 +170,23 @@ def test_malformed_shapes_are_unsupported_not_errors() -> None:
     [other] = parsed("whatsapp_webhook_template_status.json")
     assert isinstance(other, Unsupported)
     assert other.reason == "message_template_status_update events are not used"
+
+
+def test_a_message_from_a_click_to_whatsapp_ad_carries_its_referral() -> None:
+    """GR-01: ``referral`` on the message (Meta's messages webhook reference)."""
+    [event] = parsed("whatsapp_webhook_from_ad.json")
+    assert isinstance(event, InboundMessage), event
+    assert event.text == "Hi, I saw your ad"
+    assert event.referral == ReferralInfo(
+        source="ad",
+        ad_id="120210000000000002",
+        ad_title="Fresh sourdough, delivered",
+        ctwa_clid="ARAkLkA8rmlFeiCktEJQ-QTwRiyYHAFDLMNDBH0CD3qpjd0HR4irJ6LEkR7JwFF4XvnO2E4Nx0-eM-GABDLOPaOdRMv-_zfUQ2a",
+        platform_source="ad",
+    )
+
+
+def test_a_plain_whatsapp_message_has_no_referral() -> None:
+    [event] = parsed("whatsapp_webhook_text.json")
+    assert isinstance(event, InboundMessage)
+    assert event.referral is None

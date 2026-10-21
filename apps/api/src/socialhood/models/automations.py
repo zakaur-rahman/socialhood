@@ -246,6 +246,8 @@ class Comment(IdMixin, TimestampMixin, TenantScoped, Base):
     hidden: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     commented_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # A comment on a live broadcast (GR-01); comment automations skip these until GR-10.
+    is_live: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     analysis_status: Mapped[str] = mapped_column(Text, server_default=sql("'pending'"))
     our_reply_platform_id: Mapped[str | None] = mapped_column(Text)
     our_reply_text: Mapped[str | None] = mapped_column(Text)

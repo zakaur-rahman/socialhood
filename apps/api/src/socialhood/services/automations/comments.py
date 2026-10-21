@@ -101,6 +101,7 @@ async def intake(
         "author_username": event.author_username,
         "text": event.text,
         "commented_at": event.occurred_at,
+        "is_live": event.is_live,
     }
     if isinstance(event, PlatformComment):  # read from the platform: what only a read returns
         values["like_count"] = event.like_count
@@ -112,7 +113,11 @@ async def intake(
     await session.flush()
     if backfill:
         return Intake(comment)
-    await runtime.enqueue_for_comment(session, comment)
+    if not comment.is_live:
+        # A Live comment is stored and shown, but comment automations don't answer it: their
+        # post scopes mean posts and Reels, and a Live's private reply works only while it is on
+        # air. GR-10 adds the Live scope.
+        await runtime.enqueue_for_comment(session, comment)
     views.queue_comment(
         session,
         comment.workspace_id,

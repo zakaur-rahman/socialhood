@@ -11,6 +11,14 @@ account (docs/verification.md); tests that use a file must keep passing when it 
   documents for unsent messages but no real payload has shown yet.
   `webhook_message_quick_reply.json` is a tapped quick reply (`message.quick_reply.payload`,
   T4.8) in the shape Meta documents; no real tap has been recorded yet.
+- GR-01, in the shapes of Meta's Instagram webhook examples (2026), none recorded yet:
+  `webhook_referral_link.json` (`messaging_referral`: an ig.me link with `ref` opened),
+  `webhook_message_from_ad.json` (a message whose `referral` is an ad: `source: "ADS"`, `ad_id`,
+  `ads_context_data`), `webhook_optin.json` (`messaging_optins`) and `webhook_live_comment.json`
+  (`live_comments`, whose id is `comment_id`). `webhook_postback.json` doubles as an ice breaker
+  tap (its `payload`). `whatsapp_webhook_from_ad.json` is a Click to WhatsApp ad message
+  (`referral` with `source_type: ad`, `source_id`, `headline`, `ctwa_clid`; Meta's messages
+  webhook reference).
 - `webhook_comment_*.json`: both comment shapes (the `changes[]` one is confirmed by a real
   delivery, T0.9 item 2).
 - `media_list.json`: `GET /me/media` for sync_media; `conversations_list.json` and
