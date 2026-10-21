@@ -127,6 +127,11 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     expect(screen.getByRole("link", { name: "Comments" })).toHaveAttribute("href", "/w/maple/comments");
   });
 
+  it("writes a relative day in lower case inside the title (UI-072)", async () => {
+    setup({ detail: postDetail({ posted_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() }) });
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Photo from yesterday");
+  });
+
   it("shows the summary and the topics with counts and a small sentiment bar", async () => {
     setup();
     const summary = await screen.findByRole("region", { name: "Summary" });
