@@ -196,7 +196,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(swatch).toBe(`bg-${name}`);
   });
 
-  it.each(["lib/clerk-appearance.ts", "components/marketing/og.tsx", "app/manifest.ts", "app/layout.tsx"])(
+  it.each(["lib/clerk-appearance.ts", "components/marketing/og.tsx", "app/manifest.ts", "app/layout.tsx", "app/global-error.tsx"])(
     "%s reads its colours from tokens.ts instead of restating them (UI-ISS-095)",
     (path) => {
       const text = source(path);

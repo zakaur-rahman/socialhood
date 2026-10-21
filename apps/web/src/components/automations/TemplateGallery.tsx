@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useCreateAutomation } from "@/lib/api/queries";
 import type { AutomationTemplate, SocialAccount, TemplateCategory } from "@/lib/api/types";
@@ -174,9 +173,9 @@ export function TemplateGallery({
                     variant="secondary"
                     className="mt-3 self-start"
                     disabled={pending}
+                    loading={pendingKey === "blank"}
                     onClick={() => choose(null)}
                   >
-                    {pendingKey === "blank" ? <Spinner /> : null}
                     Start from blank
                   </Button>
                 </div>
@@ -224,8 +223,7 @@ export function TemplateCard({
           {ACTION_TAG[template.action]}
         </Badge>
       </div>
-      <Button variant="secondary" className="mt-3 self-start" disabled={disabled} onClick={onUse} aria-label={`Use template: ${template.name}`}>
-        {pending ? <Spinner /> : null}
+      <Button variant="secondary" className="mt-3 self-start" disabled={disabled} loading={pending} onClick={onUse} aria-label={`Use template: ${template.name}`}>
         Use template
       </Button>
     </article>
@@ -297,8 +295,7 @@ function AccountQuestion({
         <Button type="button" variant="ghost" onClick={onBack}>
           <ArrowLeft aria-hidden /> Back
         </Button>
-        <Button type="submit" disabled={!accountId || pending}>
-          {pending ? <Spinner /> : null}
+        <Button type="submit" disabled={!accountId} loading={pending}>
           {choice ? "Use template" : "Start from blank"}
         </Button>
       </div>
