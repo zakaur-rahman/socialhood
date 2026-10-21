@@ -91,7 +91,10 @@ export function WhenStep({
           )}
         </div>
 
-        <div className="space-y-2">
+        {/* A container: the three triggers sit in a row only when the step is wide enough for their
+            labels (about 640 px, "Instagram comment keyword" …); narrower, they stack. Measured from
+            the step, not the window, because the editor's side panel and the sidebar take a share. */}
+        <div className="@container space-y-2">
           <p id="automation-trigger-label" className="text-sm font-medium">
             Trigger
           </p>
@@ -100,7 +103,7 @@ export function WhenStep({
             aria-describedby="automation-trigger-hint"
             value={draft.trigger ?? ""}
             onValueChange={(value) => setTrigger(value as TriggerName)}
-            className="flex-col sm:flex-row"
+            className="flex-col @2xl:flex-row"
           >
             {TRIGGERS.map(({ value, icon: Icon }) => (
               <ToggleGroupItem key={value} value={value}>
