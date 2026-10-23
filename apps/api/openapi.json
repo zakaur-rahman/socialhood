@@ -45,6 +45,121 @@
         "title": "AccountAttention",
         "type": "object"
       },
+      "AccountMetricFigure": {
+        "description": "A metric for the period and, when asked, the period before. ``change_pct`` is\n(current - previous) / previous x 100 to one decimal, computed here: None when either side is\nunknown, the previous value is 0, or the periods aren't comparable.",
+        "properties": {
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Pct"
+          },
+          "current": {
+            "$ref": "#/components/schemas/PeriodFigure"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "metric": {
+            "enum": [
+              "reach",
+              "views",
+              "accounts_engaged",
+              "interactions",
+              "followers",
+              "follows",
+              "unfollows",
+              "profile_link_taps",
+              "comments",
+              "messages_received"
+            ],
+            "title": "Metric",
+            "type": "string"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PeriodFigure"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "metric",
+          "current"
+        ],
+        "title": "AccountMetricFigure",
+        "type": "object"
+      },
+      "AccountMetrics": {
+        "description": "GET \u2026/analytics/account-metrics: an account's (or every account's) figures for a period,\noptionally against another. ``comparable`` is False when the two periods differ in length: the\nfigures are still given, but no change is computed.",
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "comparable": {
+            "title": "Comparable",
+            "type": "boolean"
+          },
+          "figures": {
+            "items": {
+              "$ref": "#/components/schemas/AccountMetricFigure"
+            },
+            "title": "Figures",
+            "type": "array"
+          },
+          "period": {
+            "$ref": "#/components/schemas/DaySpan"
+          },
+          "previous_period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DaySpan"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "period",
+          "comparable",
+          "figures"
+        ],
+        "title": "AccountMetrics",
+        "type": "object"
+      },
       "ActionStep": {
         "additionalProperties": false,
         "properties": {
@@ -869,6 +984,32 @@
             "format": "uuid",
             "title": "Thread Id",
             "type": "string"
+          },
+          "visuals": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "metric_comparison": "#/components/schemas/MetricComparisonVisual",
+                  "ranked_posts": "#/components/schemas/RankedPostsVisual",
+                  "sentiment_summary": "#/components/schemas/SentimentSummaryVisual"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/MetricComparisonVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/RankedPostsVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/SentimentSummaryVisual"
+                }
+              ]
+            },
+            "maxItems": 3,
+            "title": "Visuals",
+            "type": "array"
           }
         },
         "required": [
@@ -880,6 +1021,7 @@
           "status",
           "answer_refs",
           "action_cards",
+          "visuals",
           "credits",
           "created_at"
         ],
@@ -1101,6 +1243,32 @@
             "format": "uuid",
             "title": "Thread Id",
             "type": "string"
+          },
+          "visuals": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "metric_comparison": "#/components/schemas/MetricComparisonVisual",
+                  "ranked_posts": "#/components/schemas/RankedPostsVisual",
+                  "sentiment_summary": "#/components/schemas/SentimentSummaryVisual"
+                },
+                "propertyName": "kind"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/MetricComparisonVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/RankedPostsVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/SentimentSummaryVisual"
+                }
+              ]
+            },
+            "maxItems": 3,
+            "title": "Visuals",
+            "type": "array"
           }
         },
         "required": [
@@ -1112,6 +1280,7 @@
           "status",
           "answer_refs",
           "action_cards",
+          "visuals",
           "credits",
           "created_at",
           "steps"
@@ -2515,7 +2684,9 @@
                   "story_mention",
                   "entry_link",
                   "ad_click",
-                  "ice_breaker"
+                  "ice_breaker",
+                  "first_message",
+                  "default_reply"
                 ],
                 "type": "string"
               },
@@ -2872,7 +3043,9 @@
                   "story_mention",
                   "entry_link",
                   "ad_click",
-                  "ice_breaker"
+                  "ice_breaker",
+                  "first_message",
+                  "default_reply"
                 ],
                 "type": "string"
               },
@@ -3038,7 +3211,9 @@
                   "story_mention",
                   "entry_link",
                   "ad_click",
-                  "ice_breaker"
+                  "ice_breaker",
+                  "first_message",
+                  "default_reply"
                 ],
                 "type": "string"
               },
@@ -3447,7 +3622,9 @@
               "story_mention",
               "entry_link",
               "ad_click",
-              "ice_breaker"
+              "ice_breaker",
+              "first_message",
+              "default_reply"
             ],
             "title": "Trigger",
             "type": "string"
@@ -3485,6 +3662,16 @@
       "AutomationTest": {
         "additionalProperties": false,
         "properties": {
+          "choices": {
+            "items": {
+              "maximum": 20.0,
+              "minimum": 0.0,
+              "type": "integer"
+            },
+            "maxItems": 50,
+            "title": "Choices",
+            "type": "array"
+          },
           "first_name": {
             "anyOf": [
               {
@@ -3546,6 +3733,13 @@
       "AutomationTestResult": {
         "description": "What would happen; nothing is sent (T4.3).",
         "properties": {
+          "flow_path": {
+            "items": {
+              "$ref": "#/components/schemas/FlowPreviewStep"
+            },
+            "title": "Flow Path",
+            "type": "array"
+          },
           "matched": {
             "title": "Matched",
             "type": "boolean"
@@ -4111,6 +4305,7 @@
       },
       "BulkTagsUpdate": {
         "additionalProperties": false,
+        "description": "Name the contacts (up to 500) or give a filter for everything that matches it (up to the\nservice's cap); not both.",
         "properties": {
           "add": {
             "items": {
@@ -4122,14 +4317,31 @@
             "type": "array"
           },
           "contact_ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "maxItems": 500,
-            "minItems": 1,
-            "title": "Contact Ids",
-            "type": "array"
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Ids"
+          },
+          "filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactFilterSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "remove": {
             "items": {
@@ -4141,9 +4353,6 @@
             "type": "array"
           }
         },
-        "required": [
-          "contact_ids"
-        ],
         "title": "BulkTagsUpdate",
         "type": "object"
       },
@@ -5110,6 +5319,19 @@
         "title": "ContactCondition",
         "type": "object"
       },
+      "ContactCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "ContactCount",
+        "type": "object"
+      },
       "ContactDetail": {
         "properties": {
           "display_name": {
@@ -5177,6 +5399,328 @@
           "platform_user_id"
         ],
         "title": "ContactDetail",
+        "type": "object"
+      },
+      "ContactFilterOut": {
+        "description": "A saved filter as returned. A separate class from the request's, so the API description\nkeeps one name for each (a model used both ways with defaults would be split in two).",
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "active_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active After"
+          },
+          "active_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Before"
+          },
+          "active_within_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Within Days"
+          },
+          "fields": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "has_email": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Email"
+          },
+          "has_phone": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Phone"
+          },
+          "inactive_for_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactive For Days"
+          },
+          "marketing_consent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "instagram",
+                  "whatsapp",
+                  "email"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marketing Consent"
+          },
+          "min_lead_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Lead Score"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "enum": [
+                  "instagram",
+                  "whatsapp"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q"
+          },
+          "tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Tag Ids",
+            "type": "array"
+          }
+        },
+        "title": "ContactFilterOut",
+        "type": "object"
+      },
+      "ContactFilterSpec": {
+        "additionalProperties": false,
+        "description": "The contacts list's filter as a body (a saved segment, a bulk tag on everything that\nmatches). The same keys, rules and limits as the list's query string.",
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "active_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active After"
+          },
+          "active_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Before"
+          },
+          "active_within_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Within Days"
+          },
+          "fields": {
+            "items": {
+              "maxLength": 100,
+              "pattern": "^[a-z][a-z0-9_]{0,39}:.",
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Fields",
+            "type": "array"
+          },
+          "has_email": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Email"
+          },
+          "has_phone": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Has Phone"
+          },
+          "inactive_for_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inactive For Days"
+          },
+          "marketing_consent": {
+            "anyOf": [
+              {
+                "enum": [
+                  "instagram",
+                  "whatsapp",
+                  "email"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marketing Consent"
+          },
+          "min_lead_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Lead Score"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "enum": [
+                  "instagram",
+                  "whatsapp"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "q": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Q"
+          },
+          "tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 10,
+            "title": "Tag Ids",
+            "type": "array"
+          }
+        },
+        "title": "ContactFilterSpec",
         "type": "object"
       },
       "ContactList": {
@@ -6487,6 +7031,32 @@
         "title": "DataDeletionStatus",
         "type": "object"
       },
+      "DaySpan": {
+        "description": "Calendar days in the workspace's zone, both included.",
+        "properties": {
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "since": {
+            "format": "date",
+            "title": "Since",
+            "type": "string"
+          },
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "since",
+          "until",
+          "days"
+        ],
+        "title": "DaySpan",
+        "type": "object"
+      },
       "DelayStep": {
         "additionalProperties": false,
         "description": "A pause, at most 23 hours, so what follows can still go inside the 24-hour reply window\n(a send the window no longer allows ends the run instead).",
@@ -7248,6 +7818,73 @@
           "steps"
         ],
         "title": "FlowDefinition",
+        "type": "object"
+      },
+      "FlowPreviewStep": {
+        "description": "One step of a flow's dry run, as the contact would meet it.",
+        "properties": {
+          "buttons": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Buttons",
+            "type": "array"
+          },
+          "exits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Exits",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "picked": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picked"
+          },
+          "quick_replies": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Quick Replies",
+            "type": "array"
+          },
+          "step_id": {
+            "title": "Step Id",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_id",
+          "kind",
+          "title"
+        ],
+        "title": "FlowPreviewStep",
         "type": "object"
       },
       "FollowsCondition": {
@@ -8286,7 +8923,9 @@
                   "story_mention",
                   "entry_link",
                   "ad_click",
-                  "ice_breaker"
+                  "ice_breaker",
+                  "first_message",
+                  "default_reply"
                 ],
                 "type": "string"
               },
@@ -9135,6 +9774,219 @@
         "title": "MetricComparison",
         "type": "object"
       },
+      "MetricComparisonVisual": {
+        "description": "The current period against another, a card per metric (compare_periods).",
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "comparable": {
+            "title": "Comparable",
+            "type": "boolean"
+          },
+          "current": {
+            "$ref": "#/components/schemas/VisualPeriod"
+          },
+          "kind": {
+            "const": "metric_comparison",
+            "title": "Kind",
+            "type": "string"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/MetricDelta"
+            },
+            "maxItems": 8,
+            "title": "Metrics",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 240,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "previous": {
+            "$ref": "#/components/schemas/VisualPeriod"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "current",
+          "previous",
+          "comparable",
+          "metrics"
+        ],
+        "title": "MetricComparisonVisual",
+        "type": "object"
+      },
+      "MetricDelta": {
+        "description": "One card of a comparison. Every figure and ``change_pct`` come from the analytics\nservice; ``tone`` is the metric's rule (more unfollows is bad), not the model's.",
+        "properties": {
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Pct"
+          },
+          "current": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "current_coverage": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Coverage"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "format": {
+            "enum": [
+              "count",
+              "percent"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "key": {
+            "enum": [
+              "reach",
+              "views",
+              "accounts_engaged",
+              "interactions",
+              "followers",
+              "follows",
+              "unfollows",
+              "profile_link_taps",
+              "comments",
+              "messages_received",
+              "likes",
+              "shares",
+              "saves",
+              "engagement_rate"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          },
+          "previous_coverage": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Coverage"
+          },
+          "tone": {
+            "enum": [
+              "good",
+              "bad",
+              "neutral"
+            ],
+            "title": "Tone",
+            "type": "string"
+          },
+          "unavailable": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "format",
+          "tone"
+        ],
+        "title": "MetricDelta",
+        "type": "object"
+      },
       "NotificationList": {
         "properties": {
           "items": {
@@ -9836,6 +10688,52 @@
           "status"
         ],
         "title": "PaymentOut",
+        "type": "object"
+      },
+      "PeriodFigure": {
+        "description": "One metric over one period. ``value`` is None when it isn't known (``unavailable`` says\nwhy), never 0. With gaps it sums the days that have a reading: ``days_known`` of\n``days_total``.",
+        "properties": {
+          "days_known": {
+            "title": "Days Known",
+            "type": "integer"
+          },
+          "days_total": {
+            "title": "Days Total",
+            "type": "integer"
+          },
+          "unavailable": {
+            "anyOf": [
+              {
+                "enum": [
+                  "insights_not_granted",
+                  "no_readings",
+                  "no_account"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "days_known",
+          "days_total"
+        ],
+        "title": "PeriodFigure",
         "type": "object"
       },
       "PlanList": {
@@ -11341,6 +12239,162 @@
         "title": "RandomizeStep",
         "type": "object"
       },
+      "RankedPostRow": {
+        "description": "One post of a ranking. ``label`` is server copy; ``caption`` is the customer's own text:\nrender it as text.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "format": {
+            "maxLength": 20,
+            "title": "Format",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
+          "post_id": {
+            "format": "uuid",
+            "title": "Post Id",
+            "type": "string"
+          },
+          "thumbnail_url": {
+            "anyOf": [
+              {
+                "maxLength": 400,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thumbnail Url"
+          },
+          "value": {
+            "title": "Value",
+            "type": "number"
+          }
+        },
+        "required": [
+          "post_id",
+          "label",
+          "format",
+          "value"
+        ],
+        "title": "RankedPostRow",
+        "type": "object"
+      },
+      "RankedPostsVisual": {
+        "description": "Posts ranked by one metric, best first (top_posts).",
+        "properties": {
+          "age_label": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Label"
+          },
+          "considered": {
+            "minimum": 0.0,
+            "title": "Considered",
+            "type": "integer"
+          },
+          "format": {
+            "enum": [
+              "count",
+              "percent"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RankedPostRow"
+            },
+            "maxItems": 10,
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "const": "ranked_posts",
+            "title": "Kind",
+            "type": "string"
+          },
+          "metric_key": {
+            "enum": [
+              "reach",
+              "views",
+              "accounts_engaged",
+              "interactions",
+              "followers",
+              "follows",
+              "unfollows",
+              "profile_link_taps",
+              "comments",
+              "messages_received",
+              "likes",
+              "shares",
+              "saves",
+              "engagement_rate"
+            ],
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "metric_label": {
+            "maxLength": 40,
+            "title": "Metric Label",
+            "type": "string"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisualPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "metric_key",
+          "metric_label",
+          "format",
+          "considered",
+          "items"
+        ],
+        "title": "RankedPostsVisual",
+        "type": "object"
+      },
       "Reaction": {
         "properties": {
           "at": {
@@ -12431,6 +13485,101 @@
         "title": "ScheduledPostTarget",
         "type": "object"
       },
+      "Segment": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "filter": {
+            "$ref": "#/components/schemas/ContactFilterOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "filter",
+          "created_at"
+        ],
+        "title": "Segment",
+        "type": "object"
+      },
+      "SegmentCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "filter": {
+            "$ref": "#/components/schemas/ContactFilterSpec"
+          },
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "filter"
+        ],
+        "title": "SegmentCreate",
+        "type": "object"
+      },
+      "SegmentList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Segment"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "SegmentList",
+        "type": "object"
+      },
+      "SegmentPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "filter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactFilterSpec"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "SegmentPatch",
+        "type": "object"
+      },
       "SendMessage": {
         "additionalProperties": false,
         "description": "POST \u2026/conversations/{id}/messages with an Idempotency-Key header (TR-API-05).",
@@ -12790,6 +13939,94 @@
           "negative_pct"
         ],
         "title": "SentimentSplit",
+        "type": "object"
+      },
+      "SentimentSummaryVisual": {
+        "description": "Comment sentiment as one split, with the top topics when the run found them\n(sentiment_distribution, comment_topics).",
+        "properties": {
+          "kind": {
+            "const": "sentiment_summary",
+            "title": "Kind",
+            "type": "string"
+          },
+          "negative": {
+            "minimum": 0.0,
+            "title": "Negative",
+            "type": "integer"
+          },
+          "neutral": {
+            "minimum": 0.0,
+            "title": "Neutral",
+            "type": "integer"
+          },
+          "not_analysed": {
+            "minimum": 0.0,
+            "title": "Not Analysed",
+            "type": "integer"
+          },
+          "period": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VisualPeriod"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "positive": {
+            "minimum": 0.0,
+            "title": "Positive",
+            "type": "integer"
+          },
+          "scope": {
+            "maxLength": 120,
+            "title": "Scope",
+            "type": "string"
+          },
+          "spam": {
+            "minimum": 0.0,
+            "title": "Spam",
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "topics": {
+            "items": {
+              "$ref": "#/components/schemas/VisualTopic"
+            },
+            "maxItems": 6,
+            "title": "Topics",
+            "type": "array"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "scope",
+          "total",
+          "positive",
+          "neutral",
+          "negative",
+          "spam",
+          "not_analysed",
+          "topics"
+        ],
+        "title": "SentimentSummaryVisual",
         "type": "object"
       },
       "SetField": {
@@ -13687,6 +14924,94 @@
         "title": "TemplateSend",
         "type": "object"
       },
+      "TimelineItem": {
+        "properties": {
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "conversation",
+              "comment",
+              "automation_run",
+              "story_mention",
+              "consent",
+              "tag"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "occurred_at",
+          "title"
+        ],
+        "title": "TimelineItem",
+        "type": "object"
+      },
+      "TimelineList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TimelineList",
+        "type": "object"
+      },
       "TopPost": {
         "properties": {
           "age": {
@@ -13886,6 +15211,60 @@
           "used"
         ],
         "title": "UsageMeter",
+        "type": "object"
+      },
+      "VisualPeriod": {
+        "description": "Calendar days in the workspace's zone, both included, with the label the answer uses.",
+        "properties": {
+          "days": {
+            "maximum": 366.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "type": "integer"
+          },
+          "end": {
+            "format": "date",
+            "title": "End",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 60,
+            "title": "Label",
+            "type": "string"
+          },
+          "start": {
+            "format": "date",
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "label",
+          "days"
+        ],
+        "title": "VisualPeriod",
+        "type": "object"
+      },
+      "VisualTopic": {
+        "properties": {
+          "count": {
+            "minimum": 0.0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "label": {
+            "maxLength": 40,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "count"
+        ],
+        "title": "VisualTopic",
         "type": "object"
       },
       "WebhookDelivery": {
@@ -16030,7 +17409,7 @@
     },
     "/v1/w/{wid}/agent/runs/{run_id}": {
       "get": {
-        "description": "One run with every step: the tool in plain words, arguments, status, result summary,\nverification, latency; the run's credits, model and prompt version (TR-AGT-08).",
+        "description": "One run with every step: the tool in plain words, arguments, status, result summary,\nverification, latency; the run's credits, model and prompt version (TR-AGT-08).\n``visuals``: see schemas/agent.py (empty unless the server has visuals on).",
         "operationId": "get_agent_run",
         "parameters": [
           {
@@ -16554,6 +17933,156 @@
         "summary": "Suggest Hashtags",
         "tags": [
           "publishing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/analytics/account-metrics": {
+      "get": {
+        "description": "What the account (or every account) did over the range, from its daily readings and the\ncomment and message tables; ``compare=previous`` adds the period of the same length just\nbefore, with the change in % (worked out here). A day without a reading is a gap, not a zero:\neach figure says how many days it has, and is null with the reason when none. Today has no\nreading yet. ``metric`` (repeatable) picks metrics; default all. 404 for another workspace's\naccount.",
+        "operationId": "get_account_metrics",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "compare",
+            "required": false,
+            "schema": {
+              "default": "none",
+              "enum": [
+                "none",
+                "previous"
+              ],
+              "title": "Compare",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "metric",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "reach",
+                      "views",
+                      "accounts_engaged",
+                      "interactions",
+                      "followers",
+                      "follows",
+                      "unfollows",
+                      "profile_link_taps",
+                      "comments",
+                      "messages_received"
+                    ],
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Metric"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountMetrics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Account Metrics",
+        "tags": [
+          "analytics"
         ]
       }
     },
@@ -17203,7 +18732,9 @@
                     "story_mention",
                     "entry_link",
                     "ad_click",
-                    "ice_breaker"
+                    "ice_breaker",
+                    "first_message",
+                    "default_reply"
                   ],
                   "type": "string"
                 },
@@ -17957,7 +19488,7 @@
         ]
       },
       "put": {
-        "description": "Save the flow; from now on its steps replace the message settings. A broken graph is\nrefused (422 with each step's field); an active automation must stay complete.",
+        "description": "Save the flow; from now on its steps replace the message settings. A broken graph is\nrefused (422 with each step's field); an active automation must stay complete; more steps\nthan the plan allows is a 402 (``flow_steps``, pending PD-5).",
         "operationId": "update_automation_flow",
         "parameters": [
           {
@@ -19498,9 +21029,252 @@
         ]
       }
     },
+    "/v1/w/{wid}/contact-segments": {
+      "get": {
+        "description": "Every saved filter, by name.",
+        "operationId": "list_contact_segments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SegmentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Contact Segments",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "post": {
+        "description": "409 for a name in use; 404 for a tag that isn't there; 422 for a field that doesn't exist.",
+        "operationId": "create_contact_segment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Segment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Contact Segment",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contact-segments/{segment_id}": {
+      "delete": {
+        "operationId": "delete_contact_segment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Segment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Contact Segment",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "patch": {
+        "operationId": "update_contact_segment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "segment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Segment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SegmentPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Segment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Contact Segment",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
     "/v1/w/{wid}/contacts": {
       "get": {
-        "description": "Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches\npart of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose\ncurrent consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a\ncustom field's value ignoring case, ``city:*`` any value.",
+        "description": "Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches\npart of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose\ncurrent consent for that channel is granted. ``active_within_days`` keeps contacts active in\nthe last N days and ``inactive_for_days`` those with no activity for N days or more (moving\nranges, which a saved segment needs). ``field`` repeats: ``city:pune`` matches a\ncustom field's value ignoring case, ``city:*`` any value.",
         "operationId": "list_contacts",
         "parameters": [
           {
@@ -19695,6 +21469,42 @@
           },
           {
             "in": "query",
+            "name": "active_within_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active Within Days"
+            }
+          },
+          {
+            "in": "query",
+            "name": "inactive_for_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inactive For Days"
+            }
+          },
+          {
+            "in": "query",
             "name": "field",
             "required": false,
             "schema": {
@@ -19785,7 +21595,7 @@
     },
     "/v1/w/{wid}/contacts/bulk-tags": {
       "post": {
-        "description": "Add and remove tags on up to 500 contacts at once; 404 for an unknown tag.",
+        "description": "Add and remove tags on up to 500 named contacts, or on everyone a filter matches (up to\n5,000; a bigger match is a 422 with the count). 404 for an unknown tag.",
         "operationId": "bulk_tag_contacts",
         "parameters": [
           {
@@ -19842,6 +21652,298 @@
           }
         },
         "summary": "Bulk Tag Contacts",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/count": {
+      "get": {
+        "description": "How many contacts match the same filters as the list.",
+        "operationId": "count_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "instagram",
+                    "whatsapp"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_email",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Email"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_phone",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Phone"
+            }
+          },
+          {
+            "in": "query",
+            "name": "marketing_consent",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "instagram",
+                    "whatsapp",
+                    "email"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Marketing Consent"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_lead_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Lead Score"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_within_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active Within Days"
+            }
+          },
+          {
+            "in": "query",
+            "name": "inactive_for_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inactive For Days"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 100,
+                    "pattern": "^[a-z][a-z0-9_]{0,39}:.",
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactCount"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Count Contacts",
         "tags": [
           "contacts"
         ]
@@ -20040,6 +22142,42 @@
                 }
               ],
               "title": "Active Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_within_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active Within Days"
+            }
+          },
+          {
+            "in": "query",
+            "name": "inactive_for_days",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Inactive For Days"
             }
           },
           {
@@ -20376,6 +22514,99 @@
           }
         },
         "summary": "Tag Contact",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/{contact_id}/timeline": {
+      "get": {
+        "description": "Conversations, comments, automation runs, story mentions, consent and tags, newest first.",
+        "operationId": "get_contact_timeline",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TimelineList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Contact Timeline",
         "tags": [
           "contacts"
         ]

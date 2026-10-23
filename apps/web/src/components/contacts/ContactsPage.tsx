@@ -3,7 +3,6 @@
 import { AlertTriangle, Download, SlidersHorizontal, Tag, Users } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
 
 import { ContactAvatar } from "@/components/inbox/ContactAvatar";
 import { PageFrame } from "@/components/shell/PageFrame";

@@ -27,7 +27,8 @@ export function PathView({
   return (
     <ol className="space-y-3" aria-label="The flow, one way through">
       {steps.map((step) => {
-        const forkNumber = step.exits.length > 0 ? ++fork : 0;
+        const exits = step.exits ?? [];
+        const forkNumber = exits.length > 0 ? ++fork : 0;
         return (
           <li key={step.step_id} data-testid="path-step" data-kind={step.kind} className="space-y-2">
             <StepBubbles step={step} image={imageNote?.has(step.step_id) ?? false} />
@@ -37,7 +38,7 @@ export function PathView({
                 value={String(step.picked ?? 0)}
                 onChange={(value) => onChoose(forkNumber - 1, Number(value))}
               >
-                {step.exits.map((exit, index) => (
+                {exits.map((exit, index) => (
                   <option key={index} value={index}>
                     {exit}
                   </option>
@@ -53,22 +54,24 @@ export function PathView({
 
 function StepBubbles({ step, image }: { step: FlowPreviewStep; image: boolean }) {
   if (step.kind === "send" || step.kind === "ask") {
-    const tapped = step.picked !== null && step.picked !== undefined ? step.quick_replies[step.picked] : undefined;
+    const quickReplies = step.quick_replies ?? [];
+    const buttons = step.buttons ?? [];
+    const tapped = step.picked !== null && step.picked !== undefined ? quickReplies[step.picked] : undefined;
     return (
       <div className="space-y-1.5">
         <Mine>
           {image ? <span className="block rounded-lg bg-on-brand/15 py-6 text-center text-xs">Image</span> : null}
           {step.text ? <p className="leading-relaxed break-words whitespace-pre-wrap">{step.text}</p> : null}
-          {!step.text && step.buttons.length === 0 && !image ? <p className="opacity-80">Nothing written yet</p> : null}
-          {step.buttons.map((button, index) => (
+          {!step.text && buttons.length === 0 && !image ? <p className="opacity-80">Nothing written yet</p> : null}
+          {buttons.map((button, index) => (
             <span key={index} className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">
               {button}
             </span>
           ))}
         </Mine>
-        {step.quick_replies.length > 0 ? (
+        {quickReplies.length > 0 ? (
           <div className="flex flex-wrap justify-end gap-1.5">
-            {step.quick_replies.map((reply, index) => (
+            {quickReplies.map((reply, index) => (
               <span
                 key={index}
                 className={cn(
@@ -83,7 +86,7 @@ function StepBubbles({ step, image }: { step: FlowPreviewStep; image: boolean })
         ) : null}
         {step.kind === "ask" ? <Theirs muted>Their answer</Theirs> : null}
         {tapped ? <Theirs>{tapped}</Theirs> : null}
-        {step.kind === "send" && step.quick_replies.length > 0 && step.picked === step.quick_replies.length ? (
+        {step.kind === "send" && quickReplies.length > 0 && step.picked === quickReplies.length ? (
           <Theirs muted>They type an answer</Theirs>
         ) : null}
       </div>

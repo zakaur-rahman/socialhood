@@ -310,6 +310,7 @@ export interface paths {
          * Get Agent Run
          * @description One run with every step: the tool in plain words, arguments, status, result summary,
          *     verification, latency; the run's credits, model and prompt version (TR-AGT-08).
+         *     ``visuals``: see schemas/agent.py (empty unless the server has visuals on).
          */
         get: operations["get_agent_run"];
         put?: never;
@@ -445,6 +446,31 @@ export interface paths {
          *     ``exclude``.
          */
         post: operations["suggest_hashtags"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/analytics/account-metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Account Metrics
+         * @description What the account (or every account) did over the range, from its daily readings and the
+         *     comment and message tables; ``compare=previous`` adds the period of the same length just
+         *     before, with the change in % (worked out here). A day without a reading is a gap, not a zero:
+         *     each figure says how many days it has, and is null with the reason when none. Today has no
+         *     reading yet. ``metric`` (repeatable) picks metrics; default all. 404 for another workspace's
+         *     account.
+         */
+        get: operations["get_account_metrics"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -715,7 +741,8 @@ export interface paths {
         /**
          * Update Automation Flow
          * @description Save the flow; from now on its steps replace the message settings. A broken graph is
-         *     refused (422 with each step's field); an active automation must stay complete.
+         *     refused (422 with each step's field); an active automation must stay complete; more steps
+         *     than the plan allows is a 402 (``flow_steps``, pending PD-5).
          */
         put: operations["update_automation_flow"];
         post?: never;
@@ -1139,6 +1166,48 @@ export interface paths {
         patch: operations["update_contact_field"];
         trace?: never;
     };
+    "/v1/w/{wid}/contact-segments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Contact Segments
+         * @description Every saved filter, by name.
+         */
+        get: operations["list_contact_segments"];
+        put?: never;
+        /**
+         * Create Contact Segment
+         * @description 409 for a name in use; 404 for a tag that isn't there; 422 for a field that doesn't exist.
+         */
+        post: operations["create_contact_segment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contact-segments/{segment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Contact Segment */
+        delete: operations["delete_contact_segment"];
+        options?: never;
+        head?: never;
+        /** Update Contact Segment */
+        patch: operations["update_contact_segment"];
+        trace?: never;
+    };
     "/v1/w/{wid}/contacts": {
         parameters: {
             query?: never;
@@ -1150,7 +1219,9 @@ export interface paths {
          * List Contacts
          * @description Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches
          *     part of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose
-         *     current consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a
+         *     current consent for that channel is granted. ``active_within_days`` keeps contacts active in
+         *     the last N days and ``inactive_for_days`` those with no activity for N days or more (moving
+         *     ranges, which a saved segment needs). ``field`` repeats: ``city:pune`` matches a
          *     custom field's value ignoring case, ``city:*`` any value.
          */
         get: operations["list_contacts"];
@@ -1173,9 +1244,30 @@ export interface paths {
         put?: never;
         /**
          * Bulk Tag Contacts
-         * @description Add and remove tags on up to 500 contacts at once; 404 for an unknown tag.
+         * @description Add and remove tags on up to 500 named contacts, or on everyone a filter matches (up to
+         *     5,000; a bigger match is a 422 with the count). 404 for an unknown tag.
          */
         post: operations["bulk_tag_contacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Count Contacts
+         * @description How many contacts match the same filters as the list.
+         */
+        get: operations["count_contacts"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1256,6 +1348,26 @@ export interface paths {
         put?: never;
         /** Tag Contact */
         post: operations["tag_contact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Contact Timeline
+         * @description Conversations, comments, automation runs, story mentions, consent and tags, newest first.
+         */
+        get: operations["get_contact_timeline"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2814,6 +2926,41 @@ export interface components {
             /** Username */
             username: string | null;
         };
+        /**
+         * AccountMetricFigure
+         * @description A metric for the period and, when asked, the period before. ``change_pct`` is
+         *     (current - previous) / previous x 100 to one decimal, computed here: None when either side is
+         *     unknown, the previous value is 0, or the periods aren't comparable.
+         */
+        AccountMetricFigure: {
+            /** Change Pct */
+            change_pct?: number | null;
+            current: components["schemas"]["PeriodFigure"];
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Metric
+             * @enum {string}
+             */
+            metric: "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows" | "profile_link_taps" | "comments" | "messages_received";
+            previous?: components["schemas"]["PeriodFigure"] | null;
+        };
+        /**
+         * AccountMetrics
+         * @description GET …/analytics/account-metrics: an account's (or every account's) figures for a period,
+         *     optionally against another. ``comparable`` is False when the two periods differ in length: the
+         *     figures are still given, but no change is computed.
+         */
+        AccountMetrics: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Comparable */
+            comparable: boolean;
+            /** Figures */
+            figures: components["schemas"]["AccountMetricFigure"][];
+            period: components["schemas"]["DaySpan"];
+            previous_period?: components["schemas"]["DaySpan"] | null;
+        };
         /** ActionStep */
         ActionStep: {
             /** Action */
@@ -3137,6 +3284,8 @@ export interface components {
              * Format: uuid
              */
             thread_id: string;
+            /** Visuals */
+            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"])[];
         };
         /**
          * AgentRunCreate
@@ -3209,6 +3358,8 @@ export interface components {
              * Format: uuid
              */
             thread_id: string;
+            /** Visuals */
+            visuals: (components["schemas"]["MetricComparisonVisual"] | components["schemas"]["RankedPostsVisual"] | components["schemas"]["SentimentSummaryVisual"])[];
         };
         /**
          * AgentRunList
@@ -3691,7 +3842,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
             /**
              * Updated At
              * Format: date-time
@@ -3797,7 +3948,7 @@ export interface components {
              */
             surge_order: "oldest_first" | "newest_first" | "public_only";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
         };
         /** AutomationDraftAction */
         AutomationDraftAction: {
@@ -3845,7 +3996,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
         };
         /** AutomationList */
         AutomationList: {
@@ -3990,7 +4141,7 @@ export interface components {
              * Trigger
              * @enum {string}
              */
-            trigger: "dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker";
+            trigger: "dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply";
         };
         /** AutomationTemplateList */
         AutomationTemplateList: {
@@ -3999,6 +4150,8 @@ export interface components {
         };
         /** AutomationTest */
         AutomationTest: {
+            /** Choices */
+            choices?: number[];
             /** First Name */
             first_name?: string | null;
             /**
@@ -4018,6 +4171,8 @@ export interface components {
          * @description What would happen; nothing is sent (T4.3).
          */
         AutomationTestResult: {
+            /** Flow Path */
+            flow_path?: components["schemas"]["FlowPreviewStep"][];
             /** Matched */
             matched: boolean;
             /** Matched Keyword */
@@ -4192,12 +4347,17 @@ export interface components {
             /** Updated */
             updated: number;
         };
-        /** BulkTagsUpdate */
+        /**
+         * BulkTagsUpdate
+         * @description Name the contacts (up to 500) or give a filter for everything that matches it (up to the
+         *     service's cap); not both.
+         */
         BulkTagsUpdate: {
             /** Add */
             add?: string[];
             /** Contact Ids */
-            contact_ids: string[];
+            contact_ids?: string[] | null;
+            filter?: components["schemas"]["ContactFilterSpec"] | null;
             /** Remove */
             remove?: string[];
         };
@@ -4668,6 +4828,11 @@ export interface components {
              */
             known: boolean;
         };
+        /** ContactCount */
+        ContactCount: {
+            /** Count */
+            count: number;
+        };
         /** ContactDetail */
         ContactDetail: {
             /** Display Name */
@@ -4690,6 +4855,72 @@ export interface components {
             profile_picture_url?: string | null;
             /** Username */
             username?: string | null;
+        };
+        /**
+         * ContactFilterOut
+         * @description A saved filter as returned. A separate class from the request's, so the API description
+         *     keeps one name for each (a model used both ways with defaults would be split in two).
+         */
+        ContactFilterOut: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Active After */
+            active_after?: string | null;
+            /** Active Before */
+            active_before?: string | null;
+            /** Active Within Days */
+            active_within_days?: number | null;
+            /** Fields */
+            fields?: string[];
+            /** Has Email */
+            has_email?: boolean | null;
+            /** Has Phone */
+            has_phone?: boolean | null;
+            /** Inactive For Days */
+            inactive_for_days?: number | null;
+            /** Marketing Consent */
+            marketing_consent?: ("instagram" | "whatsapp" | "email") | null;
+            /** Min Lead Score */
+            min_lead_score?: number | null;
+            /** Platform */
+            platform?: ("instagram" | "whatsapp") | null;
+            /** Q */
+            q?: string | null;
+            /** Tag Ids */
+            tag_ids?: string[];
+        };
+        /**
+         * ContactFilterSpec
+         * @description The contacts list's filter as a body (a saved segment, a bulk tag on everything that
+         *     matches). The same keys, rules and limits as the list's query string.
+         */
+        ContactFilterSpec: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Active After */
+            active_after?: string | null;
+            /** Active Before */
+            active_before?: string | null;
+            /** Active Within Days */
+            active_within_days?: number | null;
+            /** Fields */
+            fields?: string[];
+            /** Has Email */
+            has_email?: boolean | null;
+            /** Has Phone */
+            has_phone?: boolean | null;
+            /** Inactive For Days */
+            inactive_for_days?: number | null;
+            /** Marketing Consent */
+            marketing_consent?: ("instagram" | "whatsapp" | "email") | null;
+            /** Min Lead Score */
+            min_lead_score?: number | null;
+            /** Platform */
+            platform?: ("instagram" | "whatsapp") | null;
+            /** Q */
+            q?: string | null;
+            /** Tag Ids */
+            tag_ids?: string[];
         };
         /** ContactList */
         ContactList: {
@@ -5056,6 +5287,24 @@ export interface components {
             status: "received" | "processing" | "completed" | "failed";
         };
         /**
+         * DaySpan
+         * @description Calendar days in the workspace's zone, both included.
+         */
+        DaySpan: {
+            /** Days */
+            days: number;
+            /**
+             * Since
+             * Format: date
+             */
+            since: string;
+            /**
+             * Until
+             * Format: date
+             */
+            until: string;
+        };
+        /**
          * DelayStep
          * @description A pause, at most 23 hours, so what follows can still go inside the 24-hour reply window
          *     (a send the window no longer allows ends the run instead).
@@ -5336,6 +5585,28 @@ export interface components {
             start: string;
             /** Steps */
             steps: (components["schemas"]["SendStep"] | components["schemas"]["AskStep"] | components["schemas"]["BranchStep"] | components["schemas"]["ActionStep"] | components["schemas"]["DelayStep"] | components["schemas"]["RandomizeStep"] | components["schemas"]["AiReplyStep"] | components["schemas"]["EndStep"])[];
+        };
+        /**
+         * FlowPreviewStep
+         * @description One step of a flow's dry run, as the contact would meet it.
+         */
+        FlowPreviewStep: {
+            /** Buttons */
+            buttons?: string[];
+            /** Exits */
+            exits?: string[];
+            /** Kind */
+            kind: string;
+            /** Picked */
+            picked?: number | null;
+            /** Quick Replies */
+            quick_replies?: string[];
+            /** Step Id */
+            step_id: string;
+            /** Text */
+            text?: string | null;
+            /** Title */
+            title: string;
         };
         /**
          * FollowsCondition
@@ -5740,7 +6011,7 @@ export interface components {
              */
             status: "draft" | "active" | "paused";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
         };
         /** MarkRead */
         MarkRead: {
@@ -5995,6 +6266,73 @@ export interface components {
             value?: number | null;
             /** Z Score */
             z_score?: number | null;
+        };
+        /**
+         * MetricComparisonVisual
+         * @description The current period against another, a card per metric (compare_periods).
+         */
+        MetricComparisonVisual: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Comparable */
+            comparable: boolean;
+            current: components["schemas"]["VisualPeriod"];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "metric_comparison";
+            /** Metrics */
+            metrics: components["schemas"]["MetricDelta"][];
+            /** Note */
+            note?: string | null;
+            previous: components["schemas"]["VisualPeriod"];
+            /** Title */
+            title: string;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
+        /**
+         * MetricDelta
+         * @description One card of a comparison. Every figure and ``change_pct`` come from the analytics
+         *     service; ``tone`` is the metric's rule (more unfollows is bad), not the model's.
+         */
+        MetricDelta: {
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Current */
+            current?: number | null;
+            /** Current Coverage */
+            current_coverage?: string | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "count" | "percent";
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows" | "profile_link_taps" | "comments" | "messages_received" | "likes" | "shares" | "saves" | "engagement_rate";
+            /** Label */
+            label: string;
+            /** Previous */
+            previous?: number | null;
+            /** Previous Coverage */
+            previous_coverage?: string | null;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "good" | "bad" | "neutral";
+            /** Unavailable */
+            unavailable?: string | null;
         };
         /** NotificationList */
         NotificationList: {
@@ -6284,6 +6622,22 @@ export interface components {
              * @enum {string}
              */
             status: "succeeded" | "failed" | "refunded" | "pending";
+        };
+        /**
+         * PeriodFigure
+         * @description One metric over one period. ``value`` is None when it isn't known (``unavailable`` says
+         *     why), never 0. With gaps it sums the days that have a reading: ``days_known`` of
+         *     ``days_total``.
+         */
+        PeriodFigure: {
+            /** Days Known */
+            days_known: number;
+            /** Days Total */
+            days_total: number;
+            /** Unavailable */
+            unavailable?: ("insights_not_granted" | "no_readings" | "no_account") | null;
+            /** Value */
+            value?: number | null;
         };
         /** PlanList */
         PlanList: {
@@ -6838,6 +7192,66 @@ export interface components {
              */
             type: "randomize";
         };
+        /**
+         * RankedPostRow
+         * @description One post of a ranking. ``label`` is server copy; ``caption`` is the customer's own text:
+         *     render it as text.
+         */
+        RankedPostRow: {
+            /** Caption */
+            caption?: string | null;
+            /** Format */
+            format: string;
+            /** Label */
+            label: string;
+            /**
+             * Post Id
+             * Format: uuid
+             */
+            post_id: string;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+            /** Value */
+            value: number;
+        };
+        /**
+         * RankedPostsVisual
+         * @description Posts ranked by one metric, best first (top_posts).
+         */
+        RankedPostsVisual: {
+            /** Age Label */
+            age_label?: string | null;
+            /** Considered */
+            considered: number;
+            /**
+             * Format
+             * @enum {string}
+             */
+            format: "count" | "percent";
+            /** Items */
+            items: components["schemas"]["RankedPostRow"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "ranked_posts";
+            /**
+             * Metric Key
+             * @enum {string}
+             */
+            metric_key: "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows" | "profile_link_taps" | "comments" | "messages_received" | "likes" | "shares" | "saves" | "engagement_rate";
+            /** Metric Label */
+            metric_label: string;
+            period?: components["schemas"]["VisualPeriod"] | null;
+            /** Title */
+            title: string;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
+        };
         /** Reaction */
         Reaction: {
             /**
@@ -7209,6 +7623,39 @@ export interface components {
              */
             status: "pending" | "publishing" | "container_created" | "published" | "failed" | "canceled";
         };
+        /** Segment */
+        Segment: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            filter: components["schemas"]["ContactFilterOut"];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** SegmentCreate */
+        SegmentCreate: {
+            filter: components["schemas"]["ContactFilterSpec"];
+            /** Name */
+            name: string;
+        };
+        /** SegmentList */
+        SegmentList: {
+            /** Items */
+            items: components["schemas"]["Segment"][];
+        };
+        /** SegmentPatch */
+        SegmentPatch: {
+            filter?: components["schemas"]["ContactFilterSpec"] | null;
+            /** Name */
+            name?: string | null;
+        };
         /**
          * SendMessage
          * @description POST …/conversations/{id}/messages with an Idempotency-Key header (TR-API-05).
@@ -7320,6 +7767,43 @@ export interface components {
             spam: number;
             /** Total */
             total: number;
+        };
+        /**
+         * SentimentSummaryVisual
+         * @description Comment sentiment as one split, with the top topics when the run found them
+         *     (sentiment_distribution, comment_topics).
+         */
+        SentimentSummaryVisual: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "sentiment_summary";
+            /** Negative */
+            negative: number;
+            /** Neutral */
+            neutral: number;
+            /** Not Analysed */
+            not_analysed: number;
+            period?: components["schemas"]["VisualPeriod"] | null;
+            /** Positive */
+            positive: number;
+            /** Scope */
+            scope: string;
+            /** Spam */
+            spam: number;
+            /** Title */
+            title: string;
+            /** Topics */
+            topics: components["schemas"]["VisualTopic"][];
+            /** Total */
+            total: number;
+            /**
+             * Version
+             * @default 1
+             * @constant
+             */
+            version: 1;
         };
         /** SetField */
         SetField: {
@@ -7658,6 +8142,37 @@ export interface components {
             /** Params */
             params?: string[];
         };
+        /** TimelineItem */
+        TimelineItem: {
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Detail */
+            detail?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag";
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /** Title */
+            title: string;
+        };
+        /** TimelineList */
+        TimelineList: {
+            /** Items */
+            items: components["schemas"]["TimelineItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
         /** TopPost */
         TopPost: {
             /**
@@ -7738,6 +8253,33 @@ export interface components {
             period_end?: string | null;
             /** Used */
             used: number;
+        };
+        /**
+         * VisualPeriod
+         * @description Calendar days in the workspace's zone, both included, with the label the answer uses.
+         */
+        VisualPeriod: {
+            /** Days */
+            days: number;
+            /**
+             * End
+             * Format: date
+             */
+            end: string;
+            /** Label */
+            label: string;
+            /**
+             * Start
+             * Format: date
+             */
+            start: string;
+        };
+        /** VisualTopic */
+        VisualTopic: {
+            /** Count */
+            count: number;
+            /** Label */
+            label: string;
         };
         /** WebhookDelivery */
         WebhookDelivery: {
@@ -9128,6 +9670,52 @@ export interface operations {
             };
         };
     };
+    get_account_metrics: {
+        parameters: {
+            query?: {
+                since?: string | null;
+                until?: string | null;
+                account_id?: string | null;
+                compare?: "none" | "previous";
+                metric?: ("reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows" | "profile_link_taps" | "comments" | "messages_received")[] | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountMetrics"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     compare_post: {
         parameters: {
             query?: {
@@ -9356,7 +9944,7 @@ export interface operations {
             query?: {
                 account_id?: string | null;
                 status?: ("draft" | "active" | "paused") | null;
-                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
+                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
                 q?: string | null;
                 sort?: "recent_runs" | "name" | "created";
             };
@@ -10788,6 +11376,174 @@ export interface operations {
             };
         };
     };
+    list_contact_segments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SegmentList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_contact_segment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SegmentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Segment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_contact_segment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                segment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_contact_segment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                segment_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SegmentPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Segment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_contacts: {
         parameters: {
             query?: {
@@ -10801,6 +11557,8 @@ export interface operations {
                 min_lead_score?: number | null;
                 active_after?: string | null;
                 active_before?: string | null;
+                active_within_days?: number | null;
+                inactive_for_days?: number | null;
                 field?: string[] | null;
                 cursor?: string | null;
                 limit?: number;
@@ -10886,6 +11644,60 @@ export interface operations {
             };
         };
     };
+    count_contacts: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                tag_id?: string[] | null;
+                platform?: ("instagram" | "whatsapp") | null;
+                account_id?: string | null;
+                has_email?: boolean | null;
+                has_phone?: boolean | null;
+                marketing_consent?: ("instagram" | "whatsapp" | "email") | null;
+                min_lead_score?: number | null;
+                active_after?: string | null;
+                active_before?: string | null;
+                active_within_days?: number | null;
+                inactive_for_days?: number | null;
+                field?: string[] | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactCount"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     export_contacts: {
         parameters: {
             query?: {
@@ -10899,6 +11711,8 @@ export interface operations {
                 min_lead_score?: number | null;
                 active_after?: string | null;
                 active_before?: string | null;
+                active_within_days?: number | null;
+                inactive_for_days?: number | null;
                 field?: string[] | null;
             };
             header?: never;
@@ -11092,6 +11906,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_contact_timeline: {
+        parameters: {
+            query?: {
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TimelineList"];
                 };
             };
             /** @description Validation error */

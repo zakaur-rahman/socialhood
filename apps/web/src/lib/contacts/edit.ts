@@ -22,8 +22,8 @@ export function editFrom(record: Pick<ContactRecord, "email" | "phone" | "fields
  * emptied field is removed (null); a number field is sent as a number. The API checks the rest
  * and names each value that does not fit.
  */
-export function buildPatch(before: ContactEdit, after: ContactEdit, definitions: readonly FieldDefinition[]): ContactPatch | null {
-  const patch: ContactPatch = {};
+export function buildPatch(before: ContactEdit, after: ContactEdit, definitions: readonly FieldDefinition[]): Partial<ContactPatch> | null {
+  const patch: Partial<ContactPatch> = {};
   const email = after.email.trim();
   if (email !== before.email) {
     if (email === "") patch.clear_email = true;

@@ -123,9 +123,14 @@ export function useContactFields(wid: string) {
 export function useUpdateContact(wid: string) {
   const api = useApi();
   const queryClient = useQueryClient();
-  return useMutation<ContactRecord, Error, { id: string; body: ContactPatch }>({
+  return useMutation<ContactRecord, Error, { id: string; body: Partial<ContactPatch> }>({
     mutationFn: ({ id, body }) =>
-      unwrap(api.PATCH("/v1/w/{wid}/contacts/{contact_id}", { params: { path: { wid, contact_id: id } }, body })),
+      unwrap(
+        api.PATCH("/v1/w/{wid}/contacts/{contact_id}", {
+          params: { path: { wid, contact_id: id } },
+          body: { clear_email: false, clear_phone: false, ...body },
+        }),
+      ),
     onSuccess: (record) => {
       queryClient.setQueryData(keys.contact(wid, record.id), record);
       void queryClient.invalidateQueries({ queryKey: keys.contactLists(wid) });

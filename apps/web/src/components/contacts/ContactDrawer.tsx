@@ -170,7 +170,7 @@ function TagsEditor({ record, admin }: { record: ContactRecord; admin: boolean }
     event.preventDefault();
     if (!name.trim()) return;
     create.mutate(
-      { name: name.trim() },
+      { name: name.trim(), color: 0 },
       {
         onSuccess: (made) => {
           setName("");

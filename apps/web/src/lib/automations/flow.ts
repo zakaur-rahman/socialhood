@@ -404,7 +404,7 @@ export function successors(step: FlowStep): (string | null)[] {
     case "ask":
       return [step.next ?? null, step.on_skip ?? null];
     case "branch":
-      return [...step.rules.map((rule) => rule.next ?? null), step.otherwise ?? null];
+      return [...(step.rules ?? []).map((rule) => rule.next ?? null), step.otherwise ?? null];
     case "randomize":
       return step.paths.map((path) => path.next ?? null);
     case "action":
@@ -552,7 +552,7 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
           break;
         }
         case "branch": {
-          const targets = [...step.rules.map((rule) => rule.next ?? null), step.otherwise ?? null];
+          const targets = [...(step.rules ?? []).map((rule) => rule.next ?? null), step.otherwise ?? null];
           const join = joinOf(targets);
           const arms: EditorStep[][] = [];
           for (const target of targets) {
@@ -563,7 +563,7 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
           list.push({
             kind: "branch",
             id: step.id,
-            rules: step.rules.map((rule, index) => ({ when: rule.when, steps: arms[index] })),
+            rules: (step.rules ?? []).map((rule, index) => ({ when: rule.when, steps: arms[index] })),
             otherwise: arms[arms.length - 1],
           });
           if (join === null) return list;
@@ -919,7 +919,7 @@ function exitLabels(step: FlowStep, tagName?: (id: string) => string | undefined
     case "ask":
       return ["Answers", "Doesn't answer in a way that fits"];
     case "branch":
-      return [...step.rules.map((rule) => describeCondition(rule.when, tagName)), "Otherwise"];
+      return [...(step.rules ?? []).map((rule) => describeCondition(rule.when, tagName)), "Otherwise"];
     case "randomize":
       return step.paths.map((path, index) => `Path ${letter(index)} (${path.weight ?? 1})`);
     default:

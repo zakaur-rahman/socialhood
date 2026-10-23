@@ -357,7 +357,11 @@ describe("checking a step", () => {
     expect(stepProblems(send("s", ""), CTX)).toEqual({ text: "Write the message to send." });
     expect(stepProblems(send("s", "Hi"), CTX)).toEqual({});
     const buttons = stepProblems(
-      send("s", "Hi", { buttons: [{ title: "", url: "http://x.test" }, { title: "Shop", url: "" }, { title: "Ok", url: "https://x.test" }] }),
+      send("s", "Hi", { buttons: [
+        { title: "", url: "http://x.test", profile: false },
+        { title: "Shop", url: "", profile: false },
+        { title: "Ok", url: "https://x.test", profile: false },
+      ] }),
       CTX,
     );
     expect(buttons).toEqual({
@@ -372,7 +376,7 @@ describe("checking a step", () => {
     const problems = stepProblems(
       send("s", "Hi", {
         replies: [{ title: "", steps: [] }],
-        buttons: [{ title: "Shop", url: "https://x.test" }],
+        buttons: [{ title: "Shop", url: "https://x.test", profile: false }],
         image_asset_id: "img-1",
       }),
       CTX,
@@ -390,8 +394,16 @@ describe("checking a step", () => {
   });
 
   it("a question needs its text and a field of the right type", () => {
-    const ask = (field_key: string | null, expect: "text" | "email" | "phone") =>
-      ({ kind: "ask", id: "q", text: "Q?", expect, field_key, retry_text: "", tries: 2, skip: [] }) as const;
+    const ask = (field_key: string | null, expect: "text" | "email" | "phone"): Extract<EditorStep, { kind: "ask" }> => ({
+      kind: "ask",
+      id: "q",
+      text: "Q?",
+      expect,
+      field_key,
+      retry_text: "",
+      tries: 2,
+      skip: [],
+    });
     expect(stepProblems(ask(null, "email"), CTX)).toEqual({});
     expect(stepProblems(ask(null, "text"), CTX)).toEqual({ field_key: "Choose the field to save the answer to." });
     expect(stepProblems(ask("city", "text"), CTX)).toEqual({});
