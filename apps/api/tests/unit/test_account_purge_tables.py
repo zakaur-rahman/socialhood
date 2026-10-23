@@ -33,6 +33,7 @@ EXPECTED = {
     "contacts",
     "conversations",
     "entry_links",
+    "ice_breakers",
     "media_items",
     "message_analyses",
     "messages",

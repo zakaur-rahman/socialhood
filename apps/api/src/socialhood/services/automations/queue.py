@@ -56,6 +56,7 @@ from socialhood.models.automations import (
     AutomationRun,
     AutomationStatus,
     Comment,
+    CommentSurface,
     FlowState,
     RunResult,
     SurgeOrder,
@@ -247,6 +248,16 @@ async def drain(
             code=code,
             message=reason,
         )
+        # GR-10: a Live comment still waiting once the Live is over is skipped, never sent.
+        live_code, live_reason = actions.LIVE_ENDED
+        expired += await runs.expire_queued_live(
+            session,
+            acct.id,
+            [a.id for a in queued],
+            live_before=now - actions.LIVE_REPLY_WINDOW,
+            code=live_code,
+            message=live_reason,
+        )
         settled = 0
         for automation in queued:
             if automation.surge_order == SurgeOrder.PUBLIC_ONLY:
@@ -273,7 +284,11 @@ async def drain(
         while (sendable or ai) and _done(tally) < max_sends:
             limit = min(BATCH, max_sends - _done(tally))
             if sendable:
-                claimed = await _claim(run, sendable, limit, tally)
+                pool = _live_first(sendable)
+                waiting_pool = list(pool)
+                claimed = await _claim(run, pool, limit, tally)
+                if pool is not sendable:  # _claim drops the automations it found empty
+                    sendable[:] = [a for a in sendable if a not in waiting_pool or a in pool]
                 if claimed:
                     await _send_batch(run, claimed, tally)
             for automation in list(ai):
@@ -302,6 +317,15 @@ async def drain(
             progressed=_done(tally) > 0,
         ),
     )
+
+
+def _live_first(sendable: list[Automation]) -> list[Automation]:
+    """GR-10: Live-only automations go ahead of the rest while they have runs waiting: a Live's
+    private reply works only while it is on air. The same bucket (750 an hour) and the same send
+    path as every other private reply; only the order differs. Returns ``sendable`` itself when
+    no Live-only automation is waiting."""
+    live = [a for a in sendable if a.comment_surface == CommentSurface.LIVE]
+    return live or sendable
 
 
 def _done(tally: _Tally) -> int:
@@ -387,6 +411,7 @@ async def _claim(
                 automation,
                 acct.id,
                 commented_after=now - PRIVATE_REPLY_LIMIT,
+                live_after=now - actions.LIVE_REPLY_WINDOW,
                 limit=limit,
             )
             if batch:
@@ -612,6 +637,7 @@ async def _drain_ai(run: _Pass, automation: Automation, limit: int, tally: _Tall
             automation,
             run.acct.id,
             commented_after=run.now - PRIVATE_REPLY_LIMIT,
+            live_after=run.now - actions.LIVE_REPLY_WINDOW,
             limit=max(1, min(limit, MAX_AI_DRAFTS - tally.drafted)),
         )
         ids = [q.id for q in peeked]

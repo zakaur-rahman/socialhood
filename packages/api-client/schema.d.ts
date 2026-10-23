@@ -2412,6 +2412,52 @@ export interface paths {
         patch: operations["update_social_account"];
         trace?: never;
     };
+    "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Ice Breakers
+         * @description The account's conversation starters in order, and how the last sync to Instagram went.
+         */
+        get: operations["list_ice_breakers"];
+        /**
+         * Replace Ice Breakers
+         * @description Save the whole list (up to 4, in order) and push it to Instagram. 422 validation_error
+         *     names each field; a failed push is not an error: the list is kept and ``sync_error`` says
+         *     why.
+         */
+        put: operations["replace_ice_breakers"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Ice Breakers
+         * @description Push the saved starters to Instagram again.
+         */
+        post: operations["sync_ice_breakers"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/social-accounts/{account_id}/posting-slots": {
         parameters: {
             query?: never;
@@ -3542,6 +3588,12 @@ export interface components {
             ad_ids?: string[];
             /** Ai Instructions */
             ai_instructions?: string | null;
+            /**
+             * Comment Surface
+             * @default posts
+             * @enum {string}
+             */
+            comment_surface: "posts" | "live" | "both";
             /** Confirm First */
             confirm_first: boolean;
             /** Cooldown Hours */
@@ -3639,7 +3691,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
             /**
              * Updated At
              * Format: date-time
@@ -3670,6 +3722,12 @@ export interface components {
             ad_ids?: string[];
             /** Ai Instructions */
             ai_instructions?: string | null;
+            /**
+             * Comment Surface
+             * @default posts
+             * @enum {string}
+             */
+            comment_surface: "posts" | "live" | "both";
             /**
              * Confirm First
              * @default false
@@ -3739,7 +3797,7 @@ export interface components {
              */
             surge_order: "oldest_first" | "newest_first" | "public_only";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
         };
         /** AutomationDraftAction */
         AutomationDraftAction: {
@@ -3787,7 +3845,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
         };
         /** AutomationList */
         AutomationList: {
@@ -3932,7 +3990,7 @@ export interface components {
              * Trigger
              * @enum {string}
              */
-            trigger: "dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click";
+            trigger: "dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker";
         };
         /** AutomationTemplateList */
         AutomationTemplateList: {
@@ -5375,6 +5433,61 @@ export interface components {
             /** Exclude */
             exclude?: string[];
         };
+        /** IceBreaker */
+        IceBreaker: {
+            /**
+             * Answer With Ai
+             * @default false
+             */
+            answer_with_ai: boolean;
+            /** Automation Id */
+            automation_id?: string | null;
+            /** Automation Name */
+            automation_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Position */
+            position: number;
+            /** Question */
+            question: string;
+        };
+        /** IceBreakerIn */
+        IceBreakerIn: {
+            /**
+             * Answer With Ai
+             * @default false
+             */
+            answer_with_ai: boolean;
+            /** Automation Id */
+            automation_id?: string | null;
+            /** Question */
+            question: string;
+        };
+        /** IceBreakerList */
+        IceBreakerList: {
+            /** Items */
+            items: components["schemas"]["IceBreaker"][];
+            /**
+             * Max Items
+             * @default 4
+             */
+            max_items: number;
+            /** Sync Error */
+            sync_error?: string | null;
+            /** Synced At */
+            synced_at?: string | null;
+        };
+        /**
+         * IceBreakersUpdate
+         * @description The whole list, in order. An empty list removes the starters.
+         */
+        IceBreakersUpdate: {
+            /** Items */
+            items: components["schemas"]["IceBreakerIn"][];
+        };
         /**
          * InboxCounts
          * @description The Inbox nav badge (FR-INB-04) and view chips.
@@ -5627,7 +5740,7 @@ export interface components {
              */
             status: "draft" | "active" | "paused";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
         };
         /** MarkRead */
         MarkRead: {
@@ -6801,6 +6914,8 @@ export interface components {
             ad_id?: string | null;
             /** Ad Title */
             ad_title?: string | null;
+            /** Age Seconds */
+            age_seconds?: number | null;
             /** From Id */
             from_id?: string | null;
             /** From Username */
@@ -9241,7 +9356,7 @@ export interface operations {
             query?: {
                 account_id?: string | null;
                 status?: ("draft" | "active" | "paused") | null;
-                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
+                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker") | null;
                 q?: string | null;
                 sort?: "recent_runs" | "name" | "created";
             };
@@ -13960,6 +14075,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_ice_breakers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IceBreakerList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    replace_ice_breakers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IceBreakersUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IceBreakerList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_ice_breakers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IceBreakerList"];
                 };
             };
             /** @description Validation error */

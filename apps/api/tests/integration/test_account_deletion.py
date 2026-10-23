@@ -235,6 +235,13 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         c=thread.contact_id,
     )
+    await execute(  # GR-11: a conversation starter
+        engine,
+        "INSERT INTO ice_breakers (workspace_id, social_account_id, position, question,"
+        " answer_with_ai) VALUES (:w, :a, 0, 'Opening hours?', true)",
+        w=wid,
+        a=account_id,
+    )
     await execute(  # GR-07: a story mention
         engine,
         "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id, message_id,"

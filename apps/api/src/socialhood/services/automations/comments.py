@@ -120,11 +120,9 @@ async def intake(
     await session.flush()
     if backfill:
         return Intake(comment)
-    if not comment.is_live:
-        # A Live comment is stored and shown, but comment automations don't answer it: their
-        # post scopes mean posts and Reels, and a Live's private reply works only while it is on
-        # air. GR-10 adds the Live scope.
-        await runtime.enqueue_for_comment(session, comment)
+    # A Live comment is answered only by automations on the Live scope (GR-10; the runtime
+    # checks), and only while the Live is on air.
+    await runtime.enqueue_for_comment(session, comment)
     views.queue_comment(
         session,
         comment.workspace_id,

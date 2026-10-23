@@ -44,6 +44,7 @@ ENDPOINT_UNREACHABLE = "endpoint_unreachable"
 
 # Run codes that are not API error codes (services/automations: runtime, results, queue).
 EXPIRED = "expired"
+LIVE_ENDED = "live_ended"  # GR-10
 READ_ONLY = "read_only"
 NOTHING_SENT = "nothing_sent"
 NOTHING_TO_SEND = "nothing_to_send"
@@ -91,6 +92,11 @@ def explain(
     if code == EXPIRED:
         return Reason(
             f"{name} only lets an account reply privately to a comment within 7 days.", code
+        )
+    if code == LIVE_ENDED:
+        return Reason(
+            f"{name} only lets an account reply privately to a Live comment while the Live is on.",
+            code,
         )
     if code == "reply_window_closed":
         return Reason(

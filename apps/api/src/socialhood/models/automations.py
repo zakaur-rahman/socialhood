@@ -42,6 +42,7 @@ class Trigger(StrEnum):
     STORY_MENTION = "story_mention"  # GR-07: someone mentioned the account in their story
     ENTRY_LINK = "entry_link"  # GR-08: a DM opened from one of the account's entry links
     AD_CLICK = "ad_click"  # GR-09: a DM opened from an ad (click to Instagram DM)
+    ICE_BREAKER = "ice_breaker"  # GR-11: someone tapped one of the account's conversation starters
 
 
 class MatchMode(StrEnum):
@@ -65,6 +66,14 @@ class PostScope(StrEnum):
     ALL = "all"
     SELECTED = "selected"
     NEXT_POST = "next_post"
+
+
+class CommentSurface(StrEnum):
+    """Where a comment trigger listens (GR-10): on posts and Reels, on Lives, or on both."""
+
+    POSTS = "posts"
+    LIVE = "live"
+    BOTH = "both"
 
 
 class RunResult(StrEnum):
@@ -129,6 +138,9 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     surge_order: Mapped[str] = mapped_column(Text, server_default=sql("'oldest_first'"))
     post_scope: Mapped[str] = mapped_column(Text, server_default=sql("'all'"))
+    # GR-10, comment triggers: posts (post_scope applies), the account's Lives, or both. Live
+    # comments ignore post_scope; a Live-only automation keeps post_scope "all".
+    comment_surface: Mapped[str] = mapped_column(Text, server_default=sql("'posts'"))
     cooldown_hours: Mapped[int] = mapped_column(SmallInteger, server_default=sql("24"))
     # Tap first (FR-AUT-21, comment triggers): the private reply is this opening text with a
     # quick-reply button; the message above follows their tap or reply.
@@ -173,6 +185,7 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(f"action IS NULL OR {_in('action', AutomationAction)}", name="action"),
         CheckConstraint(_in("surge_order", SurgeOrder), name="surge_order"),
         CheckConstraint(_in("post_scope", PostScope), name="post_scope"),
+        CheckConstraint(_in("comment_surface", CommentSurface), name="comment_surface"),
         CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
         CheckConstraint("cooldown_hours BETWEEN 0 AND 72", name="cooldown_hours"),
         CheckConstraint("cardinality(public_reply_texts) <= 5", name="public_reply_texts"),
@@ -302,7 +315,7 @@ class Comment(IdMixin, TimestampMixin, TenantScoped, Base):
     hidden: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     commented_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    # A comment on a live broadcast (GR-01); comment automations skip these until GR-10.
+    # A comment on a live broadcast (GR-01); answered by automations on the Live scope (GR-10).
     is_live: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     analysis_status: Mapped[str] = mapped_column(Text, server_default=sql("'pending'"))
     our_reply_platform_id: Mapped[str | None] = mapped_column(Text)
@@ -492,4 +505,35 @@ class EntryLink(IdMixin, TimestampMixin, TenantScoped, Base):
         ),
         CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
         CheckConstraint("code ~ '^[A-Za-z0-9_-]{3,40}$'", name="code_format"),
+    )
+
+
+class IceBreaker(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A conversation starter of an Instagram account (GR-11): up to 4 questions shown in a new
+    chat. A tap comes back as a postback whose payload is ``ib:{id}`` (the id never changes while
+    the position keeps its row, so starters already shown in people's apps keep working). It starts
+    ``automation_id`` (an automation on the ``ice_breaker`` trigger) or, with ``answer_with_ai``,
+    leaves the tap to the inbox AI. ``synced_at`` and ``sync_error`` say how the last push to
+    Instagram went (the same on every row of the account)."""
+
+    __tablename__ = "ice_breakers"
+
+    social_account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("social_accounts.id", ondelete="CASCADE")
+    )
+    position: Mapped[int] = mapped_column(SmallInteger)
+    question: Mapped[str] = mapped_column(Text)
+    automation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("automations.id", ondelete="SET NULL")
+    )
+    answer_with_ai: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sync_error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("social_account_id", "position"),
+        Index("ix_ice_breakers_automation_id", "automation_id"),
+        CheckConstraint("position BETWEEN 0 AND 3", name="position"),
+        CheckConstraint("char_length(question) BETWEEN 1 AND 80", name="question_length"),
+        CheckConstraint("automation_id IS NULL OR NOT answer_with_ai", name="one_target"),
     )

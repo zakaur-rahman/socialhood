@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, Link2, Megaphone, MessageCircle, MessagesSquare, Reply, Send } from "lucide-react";
+import { AtSign, Link2, ListChecks, Megaphone, MessageCircle, MessagesSquare, Reply, Send } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -22,6 +22,11 @@ const TRIGGERS: { value: TriggerName; icon: typeof Send; hint: string }[] = [
   { value: "story_mention", icon: AtSign, hint: "Someone mentions you in their story. Thank them or send a reward." },
   { value: "entry_link", icon: Link2, hint: "Someone opens a chat from one of your entry links or QR codes. Make the links on the Entry links page." },
   { value: "ad_click", icon: Megaphone, hint: "Someone opens a chat from an Instagram ad. Answer any ad, or only the ads you list." },
+  {
+    value: "ice_breaker",
+    icon: ListChecks,
+    hint: "Someone taps one of your conversation starters. Set the starters up under Conversation starters on the Automations page.",
+  },
 ];
 
 /** UX-SCR-03 When: the Instagram account and the trigger. */

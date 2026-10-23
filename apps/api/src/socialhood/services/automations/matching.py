@@ -12,10 +12,10 @@ lowest priority number, then the oldest. The first automation with a matching ke
 runtime then applies cooldowns, post scopes and run windows, which are not this module's concern.
 
 Triggers that match without a keyword (``matches_anything``): an any-comment automation, a story
-mention, and a story reply with no keywords ("any reply", GR-06). They run after the keyword
-automations. Entry link and ad click automations (GR-08, GR-09) also need no keyword, but they are
-chosen by how the conversation was entered, which the runtime checks; they run before the keyword
-ones, because a link or an ad is the more specific way in.
+mention, an ice breaker (GR-11) and a story reply with no keywords ("any reply", GR-06). They
+run after the keyword automations. Entry link and ad click automations (GR-08, GR-09) also need
+no keyword, but they are chosen by how the conversation was entered, which the runtime checks;
+they run before the keyword ones, because a link or an ad is the more specific way in.
 """
 
 from __future__ import annotations
@@ -36,6 +36,7 @@ TriggerName = Literal[
     "story_mention",
     "entry_link",
     "ad_click",
+    "ice_breaker",
 ]
 ENTRY_TRIGGERS = ("entry_link", "ad_click")
 
@@ -112,7 +113,7 @@ def matches_anything(candidate: Candidate) -> bool:
     """The candidate answers every event of its kind, whatever the text says."""
     if candidate.trigger == "story_reply":
         return not candidate.keywords
-    return candidate.trigger in ("comment_any", "story_mention", *ENTRY_TRIGGERS)
+    return candidate.trigger in ("comment_any", "story_mention", "ice_breaker", *ENTRY_TRIGGERS)
 
 
 def _rank(candidate: Candidate) -> int:

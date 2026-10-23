@@ -84,6 +84,10 @@ export type PostList = Schemas["PostList"];
 // GR-06, GR-07: live stories for the story picker, and the Mentions list.
 export type Story = Schemas["Story"];
 export type StoryList = Schemas["StoryList"];
+// conversation starters (GR-11)
+export type IceBreaker = Schemas["IceBreaker"];
+export type IceBreakerList = Schemas["IceBreakerList"];
+export type IceBreakersUpdate = Schemas["IceBreakersUpdate"];
 export type StoryMention = Schemas["StoryMention"];
 export type StoryMentionList = Schemas["StoryMentionList"];
 // GR-08: entry links (ig.me links with QR codes).
@@ -98,6 +102,8 @@ export type TriggerName = NonNullable<Automation["trigger"]>;
 export type ActionName = NonNullable<Automation["action"]>;
 export type MatchMode = Automation["match_mode"];
 export type PostScope = Automation["post_scope"];
+/** GR-10: where a comment trigger listens: posts, the account's Lives, or both. */
+export type CommentSurface = Automation["comment_surface"];
 export type SurgeOrder = Automation["surge_order"];
 export type RunResult = AutomationRun["result"];
 export type TemplateCategory = AutomationTemplate["category"];

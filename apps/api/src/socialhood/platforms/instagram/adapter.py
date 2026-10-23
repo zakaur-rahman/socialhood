@@ -12,6 +12,7 @@ from socialhood.platforms.base import (
     ContactProfile,
     ContainerMedia,
     ContainerStatus,
+    IceBreaker,
     MediaCounts,
     MediaDownload,
     MediaInsights,
@@ -203,6 +204,13 @@ class InstagramAdapter:
         from socialhood.platforms.instagram import reads
 
         return await reads.get_media(self.http, self._graph, self._token(acct), media_ref)
+
+    async def set_ice_breakers(
+        self, acct: SocialAccount, starters: Sequence[IceBreaker]
+    ) -> list[IceBreaker]:
+        from socialhood.platforms.instagram import profile
+
+        return await profile.set_ice_breakers(self.http, self._graph, self._token(acct), starters)
 
     async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
         from socialhood.platforms.instagram import reads

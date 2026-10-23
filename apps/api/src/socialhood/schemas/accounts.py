@@ -106,6 +106,9 @@ class SandboxInbound(RequestModel):
     ad_title: str | None = Field(default=None, max_length=200)
     # A story reply or a story like: the story it answers (the ids the sandbox lists as stories).
     story_id: str | None = Field(default=None, max_length=64)
+    # A comment or Live comment that is this many seconds old when it arrives (a late webhook):
+    # GR-10 uses it to show a Live comment arriving after the broadcast ended.
+    age_seconds: int | None = Field(default=None, ge=0, le=7 * 86400)
 
     @model_validator(mode="after")
     def _needs_text(self) -> SandboxInbound:

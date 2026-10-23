@@ -122,6 +122,7 @@ class Definition:
     surge_order: str = "oldest_first"
     story_ids: Sequence[str] = ()  # GR-06: a story reply's chosen stories
     ad_ids: Sequence[str] = ()  # GR-09: an ad click's chosen ads
+    comment_surface: str = "posts"  # GR-10: posts, live or both (comment triggers)
     has_image: bool = False
     confirm_first: bool = False
     opening_text: str | None = None
@@ -196,8 +197,8 @@ def _trigger_errors(d: Definition) -> list[FieldError]:
     errors: list[FieldError] = []
     if d.trigger in KEYWORD_TRIGGERS and not d.keywords:
         errors.append(FieldError("keywords", COPY["keywords_missing"]))
-    if d.trigger in COMMENT_TRIGGERS:
-        errors += _post_errors(d)
+    if d.trigger in COMMENT_TRIGGERS and d.comment_surface != "live":
+        errors += _post_errors(d)  # a Live-only automation has no post scope (GR-10)
     if d.trigger == "story_reply":
         errors += _story_errors(d)
     if d.trigger == "ad_click":

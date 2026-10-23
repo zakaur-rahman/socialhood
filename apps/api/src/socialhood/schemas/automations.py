@@ -22,10 +22,12 @@ TriggerName = Literal[
     "story_mention",
     "entry_link",
     "ad_click",
+    "ice_breaker",
 ]
 MatchModeName = Literal["word", "exact", "contains"]
 ActionName = Literal["send_message", "ai_reply"]
 PostScopeName = Literal["all", "selected", "next_post"]
+CommentSurfaceName = Literal["posts", "live", "both"]  # GR-10
 SurgeOrderName = Literal["oldest_first", "newest_first", "public_only"]
 StatusName = Literal["draft", "active", "paused"]
 # What the list and editor show: Scheduled before starts_at, Ended after ends_at (FR-AUT-17).
@@ -110,6 +112,9 @@ class Automation(ResponseModel):
     story_heart: bool = False
     # GR-09 (ad_click): with post_scope "selected", the ads it answers (typed ad ids).
     ad_ids: list[str] = Field(default_factory=list)
+    # GR-10 (comment triggers): posts, the account's Lives, or both. A Live-only automation keeps
+    # post_scope "all".
+    comment_surface: CommentSurfaceName = "posts"
     cooldown_hours: int
     starts_at: datetime | None = None
     ends_at: datetime | None = None
@@ -191,6 +196,8 @@ class AutomationDefinition(RequestModel):
     ad_ids: list[Annotated[str, Field(min_length=1, max_length=64)]] = Field(
         default_factory=list, max_length=20
     )
+    # GR-10: where a comment trigger listens. "live" ignores the post scope and posts.
+    comment_surface: CommentSurfaceName = "posts"
     cooldown_hours: int = Field(default=24, ge=0, le=72)
     starts_at: datetime | None = None
     ends_at: datetime | None = None

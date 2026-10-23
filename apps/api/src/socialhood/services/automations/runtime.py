@@ -21,6 +21,19 @@ Entry triggers (GR-08, GR-09): a DM that is the first message after an entry lin
 keyword ones: an entry link starts the automation its link points at, an ad click any ad or its
 chosen ads. A story mention is never an entry.
 
+Live comments (GR-10): a comment on a Live broadcast is answered by comment automations whose
+``comment_surface`` is ``live`` or ``both`` (posts-only ones pass it over, and Live comments
+ignore post scopes). A private reply works only while the Live is on air, and Instagram sends no
+"Live ended" event: a Live comment older than ``LIVE_REPLY_WINDOW`` when it is matched records a
+``skipped_expired`` run with the code ``live_ended`` and nothing is sent. The private-reply queue
+sends Live-only automations' runs ahead of everything else and expires the ones it could not send
+in time the same way (services/automations/queue).
+
+Conversation starters (GR-11): a postback whose payload is one of the account's ice breakers
+starts ice breaker automations only, and only the one its starter maps to (services/ice_breakers);
+it answers no waiting question. A starter set to answer with AI starts nothing here: the message
+is not marked handled, so the inbox AI answers it like any customer message.
+
 Tap first (FR-AUT-21): before keyword matching, a customer DM that answers a waiting opening
 releases that run's message and nothing else runs on it (services/automations/answers). The
 follow nudge (FR-AUT-22) is ``run_automation("nudge", run_id)``, enqueued once a run's message
@@ -70,6 +83,7 @@ from socialhood.models.automations import (
     AutomationAction,
     AutomationRun,
     Comment,
+    CommentSurface,
     PostScope,
     RunResult,
     SurgeOrder,
@@ -85,6 +99,7 @@ from socialhood.repositories import automation_runs as runs
 from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import inbox
 from socialhood.repositories import social_accounts as accounts
+from socialhood.services import ice_breakers
 from socialhood.services.automations import (
     actions,
     ai_reply,
@@ -102,6 +117,7 @@ Kind = Literal["dm", "comment", "nudge", "flow"]
 DM_TRIGGERS = ("dm_keyword",)
 STORY_REPLY_TRIGGERS = ("story_reply", "dm_keyword")
 STORY_MENTION_TRIGGERS = ("story_mention",)
+ICE_BREAKER_TRIGGERS = ("ice_breaker",)
 HEART = "\u2764\ufe0f"  # a story like arrives as the heart sticker, stored as its emoji
 COMMENT_TRIGGERS = ("comment_keyword", "comment_any")
 THREAD_REPLY_TRIGGERS = ("comment_keyword",)
@@ -111,6 +127,8 @@ NOT_FOUND_DELAY_S = 1.0
 REPLY_WINDOW = timedelta(hours=24)  # FR-AUT-16
 PRIVATE_REPLY_LIMIT = timedelta(days=7)  # FR-AUT-10
 EXPIRED = ("expired", "Instagram's 7-day limit passed")
+LIVE_ENDED = actions.LIVE_ENDED  # GR-10
+LIVE_REPLY_WINDOW = actions.LIVE_REPLY_WINDOW
 NO_MESSAGE = actions.NO_MESSAGE
 READ_ONLY = "read_only"  # a skipped_read_only run's error_code (FR-BIL-07)
 
@@ -143,6 +161,8 @@ def is_story_like(msg: Message) -> bool:
 
 def dm_triggers(msg: Message) -> tuple[str, ...]:
     """The triggers a customer DM can start, by what the message is."""
+    if ice_breakers.is_tap(msg.postback_payload):  # GR-11: a tapped conversation starter
+        return ICE_BREAKER_TRIGGERS
     if msg.kind == "story_mention":
         return STORY_MENTION_TRIGGERS
     if msg.kind == "story_reply":
@@ -157,6 +177,13 @@ def in_story_scope(automation: Automation, msg: Message) -> bool:
         return True
     story_id = story_id_of(msg)
     return story_id is not None and story_id in (automation.story_ids or [])
+
+
+def on_surface(automation: Automation, comment: Comment) -> bool:
+    """A comment automation listens on posts, on Lives, or on both (GR-10)."""
+    if comment.is_live:
+        return automation.comment_surface in (CommentSurface.LIVE, CommentSurface.BOTH)
+    return automation.comment_surface in (CommentSurface.POSTS, CommentSurface.BOTH)
 
 
 async def enqueue_for_message(
@@ -338,7 +365,8 @@ async def _run_dm(env: _Env, message_id: uuid.UUID) -> Outcome:
                 return Outcome.ALREADY_RAN
             # An answer to a waiting flow step (GR-03) or tap-first opening (FR-AUT-21) comes
             # before any keyword.
-            if msg.kind != "story_mention":  # a mention answers no question
+            # A mention answers no question, and neither does a tapped conversation starter.
+            if msg.kind != "story_mention" and not ice_breakers.is_tap(msg.postback_payload):
                 flow_answer = await engine.find_answer(session, msg, contact.id, now=env.now)
                 if flow_answer is None:
                     answer = await answers.find(session, msg, contact.id, now=env.now)
@@ -387,6 +415,13 @@ async def _match_dm(
         if came_from is not None:
             triggers = (*triggers, came_from.trigger)
     loaded = await runs.candidates(session, msg.social_account_id, triggers, now=env.now)
+    if ice_breakers.is_tap(msg.postback_payload):
+        # GR-11: only the automation the tapped starter maps to. A starter that answers with AI,
+        # or whose automation is gone, leaves the message to the inbox AI.
+        starter = await ice_breakers.tapped(session, msg.social_account_id, msg.postback_payload)
+        loaded = [
+            item for item in loaded if starter and item.automation.id == starter.automation_id
+        ]
     found = matching.matches(msg.text or "", [item.candidate for item in loaded])
     if not found:
         return Outcome.NO_MATCH
@@ -669,10 +704,15 @@ async def _first_passing(
 ) -> _Fired | Outcome | None:
     by_id = {item.automation.id: item.automation for item in loaded}
     expired = env.now - comment.commented_at >= PRIVATE_REPLY_LIMIT
+    live_late = comment.is_live and env.now - comment.commented_at > LIVE_REPLY_WINDOW
     for match in found:
         automation = by_id[match.automation_id]
-        if not await runs.in_scope(session, automation, comment.media_item_id):
+        if not on_surface(automation, comment):
             continue
+        if not comment.is_live and not await runs.in_scope(
+            session, automation, comment.media_item_id
+        ):
+            continue  # a Live has no post scope
         common: dict[str, Any] = {
             "contact_id": comment.contact_id,
             "now": env.now,
@@ -684,8 +724,8 @@ async def _first_passing(
                 _run_row(automation, match.keyword, result=RunResult.SKIPPED_COOLDOWN, **common),
             )
             continue
-        if expired:
-            code, reason = EXPIRED
+        if expired or live_late:
+            code, reason = LIVE_ENDED if live_late else EXPIRED
             await runs.insert_run(
                 session,
                 _run_row(

@@ -28,13 +28,13 @@ from collections import deque
 from dataclasses import dataclass
 from typing import Literal
 
-from socialhood.platforms.base import OutboundMessage
+from socialhood.platforms.base import IceBreaker, OutboundMessage
 from socialhood.platforms.errors import PlatformError
 
 DIRECTIVE = re.compile(r"\[sandbox:fail=([a-z_]+)\]")
 KEEP = 200
 
-SendKind = Literal["send", "private_reply", "comment_reply", "moderation"]
+SendKind = Literal["send", "private_reply", "comment_reply", "moderation", "ice_breakers"]
 ModerationAction = Literal["hide", "unhide", "delete"]
 
 
@@ -67,6 +67,7 @@ COMMENT_REPLIES: deque[SandboxCommentReply] = deque(maxlen=KEEP)
 MODERATION: deque[SandboxModeration] = deque(maxlen=KEEP)
 SEEN: deque[tuple[str, str]] = deque(maxlen=KEEP)  # (account_ref, recipient_ref) marked seen
 _FAILURES: deque[tuple[SendKind | None, PlatformError]] = deque()
+ICE_BREAKERS: dict[str, list[IceBreaker]] = {}  # account ref -> the starters last set (GR-11)
 FOLLOWS: dict[str, bool | None] = {}  # contact ref -> is_user_follow_business
 _REJECT_QUICK_REPLIES: list[bool] = [False]
 
@@ -119,6 +120,7 @@ def reset() -> None:
     SEEN.clear()
     _FAILURES.clear()
     FOLLOWS.clear()
+    ICE_BREAKERS.clear()
     _REJECT_QUICK_REPLIES[0] = False
     comments.SEEDED.clear()
     publishing.reset()

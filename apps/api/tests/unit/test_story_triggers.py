@@ -16,7 +16,10 @@ from socialhood.services.automations.runtime import HEART
 
 def message(kind: str = "text", text: str | None = "hi", **attachment: Any) -> Message:
     attachments = [{"id": "a1", "type": "story", **attachment}] if attachment else []
-    return cast(Message, SimpleNamespace(kind=kind, text=text, attachments=attachments))
+    return cast(
+        Message,
+        SimpleNamespace(kind=kind, text=text, attachments=attachments, postback_payload=None),
+    )
 
 
 def automation(

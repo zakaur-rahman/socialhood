@@ -70,6 +70,7 @@ const TRIGGERS: TriggerName[] = [
   "story_mention",
   "entry_link",
   "ad_click",
+  "ice_breaker",
 ];
 const ALL = "all";
 
@@ -352,6 +353,9 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
         <>
           <Button asChild variant="secondary" size="lg">
             <Link href={`/w/${workspace.slug}/automations/entry-links` as Route}>Entry links</Link>
+          </Button>
+          <Button asChild variant="secondary" size="lg">
+            <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
           </Button>
           <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
             <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
