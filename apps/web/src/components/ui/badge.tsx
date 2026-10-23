@@ -25,7 +25,7 @@ const badgeVariants = cva(
         count: "bg-brand-gradient text-on-brand tabular-nums",
         // Labels laid on a photo or video (a file type, "Cover", a position): white on the media
         // scrim, readable over any picture (RG-02).
-        media: "bg-media-scrim/70 text-on-brand",
+        media: "bg-media-chip text-on-brand",
       },
       size: {
         sm: "text-2xs",

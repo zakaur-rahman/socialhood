@@ -37,7 +37,7 @@ export function TopIntentsCard({
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
-                    <div className="bg-brand-gradient-decor h-full rounded-full" style={{ width: `${(item.count / most) * 100}%` }} />
+                    <div className="h-full rounded-full bg-chart-series-1" style={{ width: `${(item.count / most) * 100}%` }} />
                   </div>
                 </li>
               ))}

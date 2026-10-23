@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { HERO_TITLE } from "@/components/marketing/Hero";
-import { LogoMark } from "@/components/marketing/primitives";
+import { LogoMark, MARKETING_CARD } from "@/components/marketing/primitives";
 import { SHOTS } from "@/components/marketing/shots";
 import { cn } from "@/lib/utils";
 
@@ -104,7 +104,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
         <div className="relative mt-6 hidden min-h-0 flex-1 lg:block">
           <div className="absolute top-0 left-0 w-[118%] [mask-composite:intersect] [mask-image:linear-gradient(to_bottom,black_55%,transparent_96%),linear-gradient(to_right,black_45%,transparent_82%)]">
             <div className="w-[92%] [transform-origin:left_center] [transform:perspective(1600px)_rotateY(-9deg)_rotateX(3deg)]">
-              <div className="rounded-2xl border border-line-strong bg-panel p-1.5 shadow-2xl shadow-brand/15 xl:p-2">
+              <div className={cn(MARKETING_CARD, "p-1.5 shadow-glow xl:p-2")}>
                 <div className="overflow-hidden rounded-xl border border-line bg-canvas">
                   <Image
                     src={SHOTS.inbox.src}
@@ -130,7 +130,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
       <section aria-label="What Social Hood does" className="hidden px-8 pt-4 pb-12 md:block lg:hidden">
         <div className="mx-auto max-w-3xl">
           <BenefitList mode={mode} className="grid grid-cols-3 gap-6" />
-          <div className="mt-10 rounded-2xl border border-line-strong bg-panel p-2 shadow-2xl shadow-brand/15">
+          <div className={cn(MARKETING_CARD, "mt-10 p-2 shadow-glow")}>
             <div className="overflow-hidden rounded-xl border border-line bg-canvas">
               <Image
                 src={SHOTS.inbox.src}

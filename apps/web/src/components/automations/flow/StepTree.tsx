@@ -34,6 +34,7 @@ import {
   type SplitNode,
 } from "@/lib/automations/flow";
 import { cn } from "@/lib/utils";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 import { useFlowEnv } from "./FlowContext";
 import { KindMenu } from "./KindMenu";
@@ -259,7 +260,7 @@ function FlowStepCard({
           }
         }}
         className={cn(
-          "scroll-mt-24 bg-canvas/40 sm:[--card-padding:--spacing(4)]",
+          "scroll-mt-24 bg-canvas-veil sm:[--card-padding:--spacing(4)]",
           state === "error" && "border-danger",
           dragging && "opacity-60 ring-2 ring-brand",
         )}
@@ -275,7 +276,7 @@ function FlowStepCard({
           >
             <GripVertical className="size-4" aria-hidden />
           </button>
-          <h3 id={headId} className="flex min-w-24 flex-1 items-center gap-2 text-sm font-semibold">
+          <h3 id={headId} className={cn(ITEM_TITLE, "flex min-w-24 flex-1 items-center gap-2")}>
             <span className="tabular-nums text-fg-secondary">{number}</span>
             <span className="truncate">{title}</span>
             {badge ? (

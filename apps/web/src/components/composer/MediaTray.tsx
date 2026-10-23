@@ -46,7 +46,7 @@ type Drag = { from: number; pointerId: number; drop: number };
 function ProgressBar({ item, label }: { item: UploadItem; label: string }) {
   const percent = Math.round(item.progress * 100);
   return (
-    <div className="absolute inset-x-0 bottom-0 space-y-1 bg-media-scrim/80 p-1.5">
+    <div className="absolute inset-x-0 bottom-0 space-y-1 bg-media-heavy p-1.5">
       <Progress
         aria-label={`Uploading ${label}`}
         value={percent}
@@ -357,7 +357,7 @@ function UploadOverlay({
 }) {
   if (item.status === "failed") {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-media-scrim/85 p-2 text-center">
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-media-heavy p-2 text-center">
         <AlertCircle className="size-4 text-danger" aria-hidden />
         <p className="line-clamp-3 text-2xs text-danger-fg">{item.error ?? "The upload didn't finish."}</p>
         <div className="flex gap-1">

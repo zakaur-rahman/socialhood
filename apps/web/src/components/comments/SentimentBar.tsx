@@ -66,9 +66,9 @@ export function SentimentLegend({
   spam?: number;
 }) {
   const items = [
-    { label: "Positive", value: positive, dot: "bg-success" },
-    { label: "Neutral", value: neutral, dot: "bg-fg-secondary" },
-    { label: "Negative", value: negative, dot: "bg-danger" },
+    { label: "Positive", value: positive, dot: "bg-chart-positive" },
+    { label: "Neutral", value: neutral, dot: "bg-chart-neutral" },
+    { label: "Negative", value: negative, dot: "bg-chart-negative" },
     ...(spam !== undefined ? [{ label: "Spam", value: spam, dot: "bg-warning" }] : []),
   ];
   return (

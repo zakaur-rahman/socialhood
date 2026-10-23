@@ -208,7 +208,7 @@ function StoryTile({
         <ImageOff className="size-5 text-fg-secondary" aria-hidden />
       )}
       <span className="sr-only">Story, {left}</span>
-      <span aria-hidden className="absolute inset-x-0 bottom-0 bg-media-scrim/70 px-1.5 py-0.5 text-2xs text-on-brand">
+      <span aria-hidden className="absolute inset-x-0 bottom-0 bg-media-chip px-1.5 py-0.5 text-2xs text-on-brand">
         {left}
       </span>
       {selected ? (

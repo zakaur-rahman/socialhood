@@ -51,7 +51,7 @@ import { PLAN_NAME, billingCopy, limitText, planIncludes, pricePerMonth } from "
 import { toastError } from "@/lib/toast-error";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
-import { EYEBROW } from "@/styles/tokens";
+import { EYEBROW, PAGE_TITLE, SECTION_TITLE } from "@/styles/tokens";
 
 import {
   CONFIRM_POLL_MS,
@@ -167,7 +167,7 @@ export function BillingPage() {
         <Usage billing={state} />
         <section aria-labelledby="plans-title" className="space-y-4">
           <div className="space-y-1">
-            <h2 id="plans-title" className="text-lg font-semibold tracking-tight">
+            <h2 id="plans-title" className={SECTION_TITLE}>
               Compare plans
             </h2>
             <p className="text-sm text-fg-secondary">What each plan includes. Max is coming soon.</p>
@@ -262,7 +262,7 @@ function CurrentPlan({
           <div className="min-w-0 space-y-1">
             <p className={EYEBROW}>Current plan</p>
             <div className="flex flex-wrap items-center gap-2">
-              <h2 id="plan-title" className="text-2xl font-semibold tracking-tight">
+              <h2 id="plan-title" className={PAGE_TITLE}>
                 {status.plan}
               </h2>
               <Badge tone={status.badge.tone} size="md">

@@ -51,8 +51,8 @@ function Stage({ children, className, stagger = 0.18 }: { children: ReactNode; c
 
 const TONE = {
   brand: "bg-brand-soft text-brand-fg",
-  success: "bg-success/15 text-success",
-  warning: "bg-warning/15 text-warning",
+  success: "bg-success-soft text-success",
+  warning: "bg-warning-soft text-warning",
   neutral: "bg-raised text-fg-secondary",
 } as const;
 
@@ -157,7 +157,7 @@ export function AutomationIllustration() {
           {shown && !reduce ? (
             <span className="absolute inset-0 rounded-lg bg-brand motion-safe:animate-[sh-ping_2s_ease-out_infinite]" />
           ) : null}
-          <LogoMark className="relative size-12 shadow-lg shadow-brand/30" />
+          <LogoMark className="relative size-12 shadow-glow-button" />
         </span>
       </div>
 
@@ -198,7 +198,7 @@ export function InboxIllustration() {
           variants={RISE}
           className={cn(
             "flex items-center gap-2.5 rounded-xl border px-2.5 py-2",
-            row.needsYou ? "border-warning/40 bg-panel" : "border-line-subtle bg-panel/60",
+            row.needsYou ? "border-warning-line bg-panel" : "border-line-subtle bg-panel-glass",
           )}
         >
           <Avatar initial={row.name[0]} platform={row.platform} />

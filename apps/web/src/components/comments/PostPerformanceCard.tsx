@@ -29,7 +29,7 @@ import { accountLabel } from "@/lib/automations/accounts";
 import { errorMessage } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
-import { EYEBROW } from "@/styles/tokens";
+import { EYEBROW, ITEM_TITLE } from "@/styles/tokens";
 
 const TONE_TEXT = {
   up: "text-success",
@@ -245,7 +245,7 @@ export function PostPerformanceCard({
         </div>
 
         <div className="space-y-2 border-t border-line pt-4">
-          <h3 className="text-sm font-semibold">Compared with earlier posts</h3>
+          <h3 className={ITEM_TITLE}>Compared with earlier posts</h3>
           <div
             className={cn(comparison.isPlaceholderData && "text-fg-secondary")}
             aria-busy={comparison.isFetching || undefined}

@@ -26,6 +26,7 @@ import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { cn } from "@/lib/utils";
+import { ITEM_TITLE } from "@/styles/tokens";
 
 import { StageControl } from "./StageControl";
 
@@ -192,7 +193,7 @@ function StageColumn({
 
   return (
     <section aria-label={`${label} leads`} className={cn("min-w-0 space-y-3", visibleBelowLarge ? "block" : "hidden lg:block")}>
-      <h2 className="hidden items-center gap-2 text-sm font-medium lg:flex">
+      <h2 className={cn(ITEM_TITLE, "hidden items-center gap-2 lg:flex")}>
         {label}
         {count !== undefined ? <span className="text-xs text-fg-secondary tabular-nums">{count}</span> : null}
       </h2>

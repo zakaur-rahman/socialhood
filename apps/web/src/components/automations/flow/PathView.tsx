@@ -60,11 +60,11 @@ function StepBubbles({ step, image }: { step: FlowPreviewStep; image: boolean })
     return (
       <div className="space-y-1.5">
         <Mine>
-          {image ? <span className="block rounded-lg bg-on-brand/15 py-6 text-center text-xs">Image</span> : null}
+          {image ? <span className="block rounded-lg bg-on-brand-soft py-6 text-center text-xs">Image</span> : null}
           {step.text ? <p className="leading-relaxed break-words whitespace-pre-wrap">{step.text}</p> : null}
           {!step.text && buttons.length === 0 && !image ? <p className="opacity-80">Nothing written yet</p> : null}
           {buttons.map((button, index) => (
-            <span key={index} className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">
+            <span key={index} className="block rounded-lg bg-on-brand-soft py-1.5 text-center text-xs font-medium">
               {button}
             </span>
           ))}

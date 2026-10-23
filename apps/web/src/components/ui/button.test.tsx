@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 import { Button, buttonVariants } from "./button";
 
-const VARIANTS = ["default", "secondary", "outline", "ghost", "soft", "destructive", "destructive-ghost", "link"] as const;
+const VARIANTS = ["default", "secondary", "outline", "ghost", "soft", "destructive", "inverse", "destructive-ghost", "link"] as const;
 const SIZES = ["xs", "sm", "default", "lg", "xl", "icon-xs", "icon-sm", "icon", "icon-lg"] as const;
 
 const classes = (el: Element) => el.getAttribute("class")!.split(/\s+/);
@@ -26,7 +26,8 @@ describe("Button variants (DESIGN_SYSTEM §8.2, §8.3)", () => {
     ["outline", ["border-line-strong", "hover:bg-hover", "aria-expanded:bg-pressed"]],
     ["ghost", ["hover:bg-hover", "aria-expanded:bg-pressed"]],
     ["soft", ["bg-brand-soft", "text-brand-fg", "border-brand-line", "hover:bg-brand-soft-hover", "aria-expanded:bg-brand-soft-hover"]],
-    ["destructive", ["bg-danger-fill", "text-on-brand", "hover:bg-danger-fill/90"]],
+    ["destructive", ["bg-danger-fill", "text-on-brand", "hover:bg-danger-fill-hover"]],
+    ["inverse", ["bg-fg", "text-canvas", "hover:bg-fg-hover"]],
     ["destructive-ghost", ["text-danger-fg", "hover:bg-danger-soft"]],
     ["link", ["text-brand-fg", "hover:underline"]],
   ] as const)("%s uses the design-system tokens", (variant, expected) => {

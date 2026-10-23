@@ -33,7 +33,7 @@ export function SeriesChart({ label, unit, series, className }: Props) {
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="h-auto w-full overflow-visible text-chart-series-1"
       >
-        <line x1={0} x2={WIDTH} y1={HEIGHT - 4} y2={HEIGHT - 4} stroke="currentColor" strokeOpacity={0.2} strokeWidth={1} />
+        <line x1={0} x2={WIDTH} y1={HEIGHT - 4} y2={HEIGHT - 4} className="stroke-line-strong" strokeWidth={1} />
         {runs.map((run, index) =>
           run.length > 1 ? (
             <polyline

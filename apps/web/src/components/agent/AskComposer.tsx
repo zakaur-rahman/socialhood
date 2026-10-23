@@ -117,15 +117,16 @@ export function AskComposer({
           // coarse pointers, and the global focus outline.
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
                 type="button"
+                variant="inverse"
+                size="icon"
                 onClick={onStop}
                 disabled={stopping || !onStop}
                 aria-label="Stop"
-                className="grid size-8 shrink-0 place-items-center rounded-lg bg-fg text-canvas hover:bg-fg/90 disabled:opacity-50 motion-safe:transition-[background-color] pointer-coarse:size-10"
               >
                 <Square className="size-3 fill-current" aria-hidden />
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent>Stop this answer</TooltipContent>
           </Tooltip>

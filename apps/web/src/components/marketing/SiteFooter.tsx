@@ -4,10 +4,11 @@ import Link from "next/link";
 import { SUPPORT_EMAIL } from "@/lib/copy";
 import { LEGAL, operatorName } from "@/lib/legal";
 import { LEARN_LINKS, LEGAL_LINKS, NAV_LINKS, SIGN_IN_PATH, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { EYEBROW } from "@/styles/tokens";
 
 import { Container, Logo } from "./primitives";
 
-const LINK = "inline-flex min-h-10 min-w-10 items-center rounded text-sm text-fg-secondary transition-colors hover:text-fg sm:min-h-8 sm:min-w-0";
+const LINK = "inline-flex min-h-10 min-w-10 items-center rounded-sm text-sm text-fg-secondary transition-colors hover:text-fg sm:min-h-8 sm:min-w-0";
 
 /** Product and legal links, the support address, and the copyright line. */
 export function SiteFooter({ year = new Date().getFullYear() }: { year?: number }) {
@@ -32,7 +33,7 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           </p>
         </div>
         <nav aria-labelledby="footer-product">
-          <h2 id="footer-product" className="text-xs font-semibold tracking-[0.08em] text-fg uppercase">
+          <h2 id="footer-product" className={EYEBROW}>
             Product
           </h2>
           <ul className="mt-3 grid gap-1 sm:gap-1.5">

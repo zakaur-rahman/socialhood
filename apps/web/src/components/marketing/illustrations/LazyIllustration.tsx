@@ -34,7 +34,7 @@ export function LazyIllustration({ name, className }: { name: IllustrationName; 
       aria-hidden
       data-illustration={name}
       className={cn(
-        "relative h-56 overflow-hidden rounded-xl border border-line-subtle bg-canvas bg-[radial-gradient(120%_80%_at_50%_0%,var(--color-brand-soft),transparent_60%)]",
+        "relative h-56 overflow-hidden rounded-xl border border-line-subtle bg-canvas bg-glow-brand-top",
         className,
       )}
     >

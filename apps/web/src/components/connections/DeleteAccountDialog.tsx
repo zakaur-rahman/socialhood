@@ -136,7 +136,7 @@ export function DeleteAccountDialog({
             <div className="space-y-3">
               <p>{copy.lead(handle)}</p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <section aria-label="Deleted" className="rounded-lg border border-danger/30 p-3">
+                <section aria-label="Deleted" className="rounded-lg border border-danger-line p-3">
                   <p className="font-medium text-fg">Deleted</p>
                   <ul className="mt-1 list-disc space-y-1 pl-4">
                     {DELETED_FOR_ACCOUNT.map((item) => (

@@ -19,6 +19,7 @@ import { useWeeklyReport } from "@/lib/api/queries";
 import type { ReportAccountMetric, ReportMetric, WeeklyReport } from "@/lib/api/types";
 import { formatMetric, parseWeekParam, previousLine, reportTrend, weekLabel } from "@/lib/reports/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
+import { CARD_TITLE } from "@/styles/tokens";
 
 import { SeriesChart } from "./SeriesChart";
 
@@ -124,7 +125,7 @@ function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; s
       </p>
 
       <section aria-labelledby="report-counts" className="space-y-3">
-        <h2 id="report-counts" className="text-base font-semibold">
+        <h2 id="report-counts" className={CARD_TITLE}>
           Conversations and leads
         </h2>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -135,7 +136,7 @@ function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; s
       </section>
 
       <section aria-labelledby="report-account" className="space-y-3">
-        <h2 id="report-account" className="text-base font-semibold">
+        <h2 id="report-account" className={CARD_TITLE}>
           Your Instagram account
         </h2>
         <MetricComparison visual={data.account_comparison} />

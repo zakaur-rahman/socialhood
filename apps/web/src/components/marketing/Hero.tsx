@@ -37,11 +37,11 @@ export function Hero() {
           light one side of a centred layout. Both are brand-soft fading out, from the tokens. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[40rem] bg-[radial-gradient(50%_55%_at_50%_0%,var(--color-brand-soft),transparent_70%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[40rem] bg-glow-brand-top"
       />
       <Container className="relative pt-14 pb-10 sm:pt-20 lg:pt-24">
         <div className="mx-auto max-w-5xl text-center">
-          <p className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-line bg-panel/70 px-3 py-1.5 text-xs text-fg-secondary">
+          <p className="inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-line bg-panel-glass px-3 py-1.5 text-xs text-fg-secondary">
             <span className="flex items-center gap-1">
               <span className="grid size-5 place-items-center rounded-full bg-instagram">
                 <PlatformGlyph platform="instagram" className="size-3 text-on-brand" />

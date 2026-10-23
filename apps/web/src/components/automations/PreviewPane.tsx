@@ -182,7 +182,7 @@ export function PreviewPane({
                 </p>
               ) : null}
               {buttons.map((button, index) => (
-                <span key={index} className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">
+                <span key={index} className="block rounded-lg bg-on-brand-soft py-1.5 text-center text-xs font-medium">
                   {button.title}
                 </span>
               ))}
@@ -197,7 +197,7 @@ export function PreviewPane({
             <p className="text-2xs text-fg-secondary">Only to people who don&apos;t follow you</p>
             <Mine testId="preview-nudge">
               <p className="leading-relaxed break-words whitespace-pre-wrap">{nudge}</p>
-              <span className="block rounded-lg bg-on-brand/15 py-1.5 text-center text-xs font-medium">View profile</span>
+              <span className="block rounded-lg bg-on-brand-soft py-1.5 text-center text-xs font-medium">View profile</span>
             </Mine>
           </div>
         ) : null}

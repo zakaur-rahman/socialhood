@@ -9,7 +9,7 @@ import { PRO_SIGN_UP_PATH } from "@/lib/resolve";
 import { cn } from "@/lib/utils";
 
 import { MovingBorderFrame } from "./effects/moving-border";
-import { Container, CtaLink, SectionHeading } from "./primitives";
+import { Container, CtaLink, MARKETING_CARD_GLASS, SectionHeading } from "./primitives";
 
 const count = new Intl.NumberFormat("en-US");
 
@@ -46,12 +46,12 @@ function PlanCardView({ card, index }: { card: PlanCard; index: number }) {
     <li data-reveal style={{ "--reveal-delay": `${index * 100}ms` } as CSSProperties} className="relative flex flex-col">
       {featured ? (
         // C-068: Pro's edge carries a moving brand glow (still with reduced motion).
-        <MovingBorderFrame className="flex-1 shadow-2xl shadow-brand/15">{body}</MovingBorderFrame>
+        <MovingBorderFrame className="flex-1 shadow-glow">{body}</MovingBorderFrame>
       ) : (
         <div
           className={cn(
             "flex-1 rounded-2xl border bg-panel transition-colors duration-slow",
-            card.available ? "border-line hover:border-line-strong" : "border-dashed border-line bg-panel/50",
+            card.available ? "border-line hover:border-line-strong" : "border-dashed border-line bg-panel-glass",
           )}
         >
           {body}
@@ -154,7 +154,7 @@ export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; h
           which Meta charges directly to your business.
         </p>
 
-        <div data-reveal className="mx-auto mt-12 max-w-5xl rounded-2xl border border-line bg-panel/60 p-6 sm:p-8">
+        <div data-reveal className={cn(MARKETING_CARD_GLASS, "mx-auto mt-12 max-w-5xl p-6 sm:p-8")}>
           <div className="grid gap-8 lg:grid-cols-[1fr_1.2fr]">
             <div>
               <div className="flex items-center gap-3">

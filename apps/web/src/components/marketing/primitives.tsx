@@ -40,6 +40,15 @@ export function Logo({ className }: { className?: string }) {
   );
 }
 
+/**
+ * The marketing card surface (C-100): `rounded-2xl` (DESIGN_SYSTEM §4), a `line` edge and the
+ * `panel` fill. A card that reacts to hover adds `MARKETING_CARD_HOVER`; a card laid over the page
+ * glow wears the `panel-glass` fill instead. Add padding and layout at the call site.
+ */
+export const MARKETING_CARD = "rounded-2xl border border-line bg-panel";
+export const MARKETING_CARD_GLASS = "rounded-2xl border border-line bg-panel-glass";
+export const MARKETING_CARD_HOVER = "transition-colors duration-slow hover:border-line-strong";
+
 /** The Button variant behind each call to action. */
 const CTA_BUTTON = { primary: "default", secondary: "secondary", ghost: "ghost" } as const;
 
@@ -52,7 +61,7 @@ export type CtaVariant = keyof typeof CTA_BUTTON;
  * the nav links beside it.
  */
 const CTA_EXTRA: Record<CtaVariant, string> = {
-  primary: "shadow-lg shadow-brand/25",
+  primary: "shadow-glow-button",
   secondary: "",
   ghost: "text-fg-secondary",
 };

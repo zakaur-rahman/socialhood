@@ -36,7 +36,7 @@ const POINTS: { icon: LucideIcon; title: string; body: string }[] = [
 
 export function Trust() {
   return (
-    <section aria-labelledby="trust-title" className="border-t border-line-subtle bg-panel/30 py-20 sm:py-24">
+    <section aria-labelledby="trust-title" className="border-t border-line-subtle bg-panel-glass py-20 sm:py-24">
       <Container>
         <SectionHeading
           id="trust-title"

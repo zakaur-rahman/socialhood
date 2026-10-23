@@ -1,9 +1,10 @@
 import Image from "next/image";
 
 import { SECTION_IDS, SIGN_UP_PATH } from "@/lib/marketing/site";
+import { cn } from "@/lib/utils";
 
 import { Timeline } from "./effects/timeline";
-import { Container, CtaLink, SectionHeading } from "./primitives";
+import { Container, CtaLink, MARKETING_CARD, SectionHeading } from "./primitives";
 import { SHOTS, type Shot } from "./shots";
 
 const STEPS: { title: string; body: string; shot: Shot; maxWidth: string }[] = [
@@ -33,7 +34,7 @@ export function HowItWorks() {
     <section
       id={SECTION_IDS.howItWorks}
       aria-labelledby="how-title"
-      className="scroll-mt-24 border-t border-line-subtle bg-panel/30 py-20 sm:py-24"
+      className="scroll-mt-24 border-t border-line-subtle bg-panel-glass py-20 sm:py-24"
     >
       <Container>
         <SectionHeading id="how-title" eyebrow="How it works" title="Set up in three steps" intro="Screens from the app, with example data." />
@@ -44,7 +45,7 @@ export function HowItWorks() {
               content: (
                 <div data-reveal>
                   <p className="max-w-xl text-base leading-relaxed text-fg-secondary">{step.body}</p>
-                  <div className={`mt-6 overflow-hidden rounded-2xl border border-line bg-panel p-1.5 shadow-floating ${step.maxWidth}`}>
+                  <div className={cn(MARKETING_CARD, "mt-6 overflow-hidden p-1.5 shadow-floating", step.maxWidth)}>
                     <Image
                       src={step.shot.src}
                       width={step.shot.width}

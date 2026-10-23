@@ -1,6 +1,6 @@
 "use client";
 
-import { KPI } from "@/styles/tokens";
+import { KPI, SECTION_TITLE } from "@/styles/tokens";
 import { Check, RotateCw } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -74,7 +74,7 @@ export function PlanCards({
             tone={isCurrent ? "brand" : "default"}
             // A plan that isn't available yet dims its edge and fill, never its text (UI-ISS-007).
             // The current plan is marked by its brand edge alone: no ring, no glow (UI-ISS-094).
-            className={cn("relative flex flex-col", !isCurrent && !offer.available && "border-line-subtle bg-panel/50")}
+            className={cn("relative flex flex-col", !isCurrent && !offer.available && "border-line-subtle bg-panel-glass")}
           >
           <li aria-current={isCurrent ? "true" : undefined}>
             {isCurrent ? (
@@ -82,7 +82,7 @@ export function PlanCards({
               <span aria-hidden className="absolute inset-x-6 -top-px h-0.5 rounded-full bg-brand" />
             ) : null}
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-lg font-semibold">{PLAN_NAME[offer.plan]}</h3>
+              <h3 className={SECTION_TITLE}>{PLAN_NAME[offer.plan]}</h3>
               {isCurrent ? (
                 <Badge tone="brand" size="md">
                   Current plan
