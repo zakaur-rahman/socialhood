@@ -6,7 +6,7 @@
 Expand-only: a wider check; no column or row changes.
 
 Revision ID: 0025
-Revises: 0022
+Revises: 0024
 Create Date: 2026-10-25 09:00:00.000000+00:00
 """
 
@@ -17,7 +17,7 @@ from collections.abc import Sequence
 from alembic import op
 
 revision: str = "0025"
-down_revision: str | None = "0022"
+down_revision: str | None = "0024"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -28,6 +28,9 @@ OLD_TRIGGERS = (
     "comment_any",
     "story_reply",
     "story_mention",
+    "entry_link",
+    "ad_click",
+    "ice_breaker",
 )
 NEW_TRIGGERS = (*OLD_TRIGGERS, "first_message", "default_reply")
 

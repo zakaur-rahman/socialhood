@@ -21,7 +21,12 @@ from socialhood.services.automations import matching, runtime
 
 def tap(payload: str | None, **values: Any) -> Any:
     return SimpleNamespace(
-        kind="text", text="Hours?", attachments=[], postback_payload=payload, **values
+        kind="text",
+        text="Hours?",
+        attachments=[],
+        postback_payload=payload,
+        quick_reply_payload=None,
+        **values,
     )
 
 
@@ -36,7 +41,8 @@ def test_a_payload_names_a_starter_only_in_our_format() -> None:
 def test_a_tapped_starter_starts_ice_breaker_automations_only() -> None:
     assert runtime.dm_triggers(tap(f"ib:{uuid.uuid4()}")) == ("ice_breaker",)
     assert runtime.dm_triggers(tap("OTHER_BUTTON")) == ("dm_keyword",)
-    assert runtime.dm_triggers(tap(None)) == ("dm_keyword",)
+    # GR-12: an ordinary DM can also start the welcome and the default reply.
+    assert runtime.dm_triggers(tap(None)) == ("dm_keyword", "first_message", "default_reply")
 
 
 def test_an_ice_breaker_automation_answers_without_keywords() -> None:
