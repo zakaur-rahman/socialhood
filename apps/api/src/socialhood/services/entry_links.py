@@ -62,7 +62,8 @@ def _invalid(field: str, message: str) -> ApiError:
 async def _instagram_account(session: AsyncSession, account_id: uuid.UUID) -> SocialAccount:
     acct = await accounts.get(session, account_id)
     if acct is None:
-        raise _invalid("social_account_id", "That account wasn't found.")
+        # Another workspace's account looks the same as none at all (tests/tenancy).
+        raise ApiError("not_found", "That account wasn't found.")
     if acct.platform != "instagram":
         raise _invalid(
             "social_account_id", "Entry links open Instagram chats. Choose an Instagram account."

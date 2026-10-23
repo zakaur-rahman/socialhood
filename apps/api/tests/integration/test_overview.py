@@ -312,6 +312,16 @@ class Hand:
         )
         return int(row["n"])
 
+    async def entries(self, source: str) -> int:
+        """GR-08, GR-09: conversations that began in the range from an ad or an entry link."""
+        row = await self.one(
+            "SELECT count(*) AS n FROM conversations WHERE workspace_id = :w"
+            " AND entry_source = :source"
+            " AND (entry_at AT TIME ZONE :tz)::date BETWEEN :s AND :u",
+            source=source,
+        )
+        return int(row["n"])
+
     async def replies(self) -> tuple[int, int, int]:
         """Conversations with a customer message, those replied, those replied only by AI."""
         row = await self.one(
@@ -496,6 +506,8 @@ async def hand_period(hand: Hand) -> dict[str, Any]:
         "median_first_response_s": median,
         "comments_received": sum(int(row["comments"]) for row in by_post),
         "story_mentions": await hand.story_mentions(),
+        "conversations_from_ads": await hand.entries("ad"),
+        "conversations_from_links": await hand.entries("link"),
     }
 
 
@@ -572,6 +584,8 @@ async def test_the_seven_days_match_the_hand_written_sql_and_the_hand_counts(tea
         "median_first_response_s": 465,
         "comments_received": 4,  # the deleted one left out
         "story_mentions": 0,
+        "conversations_from_ads": 0,
+        "conversations_from_links": 0,
     }
     assert body["previous"] == {
         "since": "2026-09-17",
@@ -586,6 +600,8 @@ async def test_the_seven_days_match_the_hand_written_sql_and_the_hand_counts(tea
         "median_first_response_s": 3600,
         "comments_received": 3,
         "story_mentions": 0,
+        "conversations_from_ads": 0,
+        "conversations_from_links": 0,
     }
     assert body["messages_today"] == 2  # Zoya at 00:00:00 and Arjun
     assert body["top_intents"] == [
@@ -698,6 +714,8 @@ async def test_an_empty_workspace_has_zeros_and_nothing_to_divide(team: Team) ->
         "median_first_response_s": None,
         "comments_received": 0,
         "story_mentions": 0,
+        "conversations_from_ads": 0,
+        "conversations_from_links": 0,
     }
     assert {k: v for k, v in body["current"].items() if k not in ("since", "until")} == (
         empty_period
@@ -803,8 +821,10 @@ async def test_the_digests_week_gives_the_digests_numbers(team: Team) -> None:
     body = await overview(team, "7d", sunday_night)
 
     sent = expected_stats(*await post_ids(team))
-    # Story mentions (GR-07) are on Home only; the digest doesn't count them.
-    current = {k: v for k, v in body["current"].items() if k != "story_mentions"}
+    # Story mentions (GR-07) and entry counts (GR-08, GR-09) are on Home only; the digest
+    # doesn't count them.
+    home_only = ("story_mentions", "conversations_from_ads", "conversations_from_links")
+    current = {k: v for k, v in body["current"].items() if k not in home_only}
     assert current == {key: sent[key] for key in current}
     assert body["top_intents"] == sent["top_intents"]
     assert [p["id"] for p in body["top_posts"]] == [p["post_id"] for p in sent["top_posts"]]
