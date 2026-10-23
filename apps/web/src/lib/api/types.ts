@@ -269,3 +269,11 @@ export type WebhookEndpointCreate = Schemas["WebhookEndpointCreate"];
 export type WebhookEndpointPatch = Schemas["WebhookEndpointPatch"];
 export type WebhookDelivery = Schemas["WebhookDelivery"];
 export type WebhookDeliveryList = Schemas["WebhookDeliveryList"];
+
+// Activity (GR-05)
+export type ActivityItem = Schemas["ActivityItem"];
+export type ActivityList = Schemas["ActivityList"];
+export type ActivityAction = Schemas["ActivityAction"];
+export type ActivityRetry = Schemas["ActivityRetry"];
+export type ActivityKind = ActivityItem["kind"];
+export type ActivityOutcome = ActivityItem["outcome"];

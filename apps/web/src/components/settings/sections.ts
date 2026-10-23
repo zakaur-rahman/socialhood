@@ -18,6 +18,9 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "billing", label: "Billing and usage", roles: ["owner", "admin"] },
   // GR-04: outbound webhooks, for owners and admins like the API's integrations routes.
   { segment: "integrations", label: "Integrations", roles: ["owner", "admin"] },
+  // GR-05: what automations and sends did and what failed, for owners and admins (the API's
+  // activity route is admin-only, like the automations it reports on).
+  { segment: "activity", label: "Activity", roles: ["owner", "admin"] },
   // agent-architecture.html §12: Settings → Agent, with the run history (FR-AGT-07).
   { segment: "agent", label: "Ask Social Hood", roles: EVERYONE },
 ];

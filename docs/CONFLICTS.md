@@ -1728,3 +1728,71 @@ An addition from the growth plan: one event pipeline for Zapier, Make, Sheets an
   - Each endpoint's latest deliveries, with status, attempts, response and when, and "Send again"
     for a failed one. The log refreshes while a delivery is being tried.
 - **Migration 0021:** `webhook_endpoints` and `webhook_deliveries`. Expand-only.
+
+## C-081 · The Activity page (GR-05, feature/gr-05-activity)
+Automations used to fail silently from the customer's point of view. We already recorded the
+failures; now they can see them. A read model over existing tables: no migration.
+- **The feed** (`GET /v1/w/{wid}/activity`, `services/activity/feed.py`), newest first, keyset
+  cursor on (time, id). It merges:
+  - automation runs (`automation_runs`: result, error code and reason);
+  - failed flow steps (`automation_run_steps`), only when their run did not itself fail, so one
+    problem is one row;
+  - failed outbound sends by people and the AI (`messages`, status failed); an automation's
+    failed send is shown as its run, not twice;
+  - failed outbound webhook deliveries (GR-04), with the endpoint's name or host, never its URL
+    query or payload;
+  - accounts that need reconnecting or are in error, from `social_accounts` as they are now.
+- **Filters:** failures only (on by default), type, automation, account.
+  - An automation filter leaves out sends, webhooks and accounts; an account filter leaves out
+    webhooks.
+  - "Failures" are runs that failed, sent only half, or were skipped for the 7-day limit or a
+    read-only plan.
+- **Who sees it:** owners and admins, like the automations it reports on and Settings,
+  Integrations. Agents get 403 on the page and the Ask tool. They can still retry a failed
+  message from the inbox.
+- **No raw data:** no message text, no payloads, no platform responses. Each item carries only
+  a title, a reason, a code, and ids.
+- **Left out on purpose:**
+  - Failed inbound webhook events. They are not tenant-scoped, a failed one has no workspace
+    yet, and their errors are internal.
+  - Social account status history. There is none; an account shows once, at its last change.
+  - Broadcast failures arrive with GR-23.
+- **Reasons** (`services/activity/reasons.py`): one plain sentence and at most one action.
+  - The sentence reuses `sending.readable_error`, the copy of a Failed bubble, for the codes it
+    knows; a platform rejection keeps its stored reason; the rest are written there.
+  - A comment run that half worked keeps its stored "Public reply: ... DM: ..." text.
+  - Reconnect (`account_needs_reconnect`, `capability_unavailable`) goes to Settings,
+    Connections.
+  - Upgrade (`read_only`, `entitlement_required`, `quota_exceeded`) goes to Billing.
+  - Check the endpoint (`endpoint_off`, `endpoint_error`, `endpoint_unreachable`) goes to
+    Settings, Integrations. These webhook codes are derived from the delivery's error and
+    response code.
+  - Open the chat (`reply_window_closed`, `delivery_unknown`, `recipient_unavailable`,
+    `platform_rejected`) goes to the conversation, when there is one.
+  - Edit the automation (`nothing_to_send`, `nothing_sent`) and Open the automation (anything
+    unknown) go to the automation.
+  - No action: `expired` (Instagram's 7-day private reply limit), `platform_rate_limited`,
+    `platform_unavailable`. Nothing the member can fix; the second and third can be retried.
+- **Retry only where it is safe:**
+  - A failed message with `platform_rate_limited` or `platform_unavailable` goes through the
+    existing `POST /messages/{id}/retry` (one row, one client id, so it can't double-send).
+  - `delivery_unknown` is not retried from here: it may have arrived, so the reason says to
+    check the chat first.
+  - A failed webhook delivery goes through `POST /webhook-deliveries/{id}/replay`, only while
+    its endpoint is on.
+  - The item says `retryable` and where (`retry.kind`, `retry.target_id`); there is no new
+    write route.
+- **Alerts** (`check_automation_failures`, every 10 minutes):
+  - An automation with 5 or more failed or half-sent runs in the last hour notifies owners and
+    admins: in app, and push under the "Needs you" switch (new type `automation_failing`).
+  - It links to `/settings/activity?automation={id}`, which opens the page filtered to it.
+  - One per automation per 6 hours (dedupe key).
+  - Accounts needing reconnect already notify and email once per broken connection
+    (`mark_needs_reconnect`); not repeated. Disabled webhook endpoints already notify
+    (`webhook_disabled`).
+- **Ask Social Hood:** `list_recent_failures` (owners and admins), the latest 10 failures with
+  reasons, for "what's failing?".
+- **Web:** Settings, Activity (owners and admins): the filters, one row per item with its
+  title, badge, reason, time, and the one link or Retry button; "Show older" pages.
+- **Needs checking centrally:** `apps/api/openapi.json` and `packages/api-client` need
+  regenerating for `ActivityItem`, `ActivityList`, `ActivityAction` and `ActivityRetry`.
