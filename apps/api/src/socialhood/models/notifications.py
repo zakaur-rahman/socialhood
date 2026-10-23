@@ -72,6 +72,7 @@ class NotificationType(StrEnum):
     WINDOW_CLOSING = "window_closing"  # F-18
     AUTOMATION_ENDED = "automation_ended"  # FR-AUT-17
     WEBHOOK_DISABLED = "webhook_disabled"  # an endpoint failed too often (GR-04), in app only
+    AUTOMATION_FAILING = "automation_failing"  # failed 5+ times in an hour (GR-05)
     AUTOMATION_ALERT = "automation_alert"  # a flow's "notify the team" step (GR-03), in app only
     NEW_LEAD = "new_lead"  # lead score reaches 70 (FR-NOT-03; T8.6)
     PAYMENT_PROBLEM = "payment_problem"  # subscription on hold or a failed payment (FR-BIL-06)
@@ -91,6 +92,7 @@ class PushEvent(StrEnum):
 # Which notification types push, and under which switch (FR-NOT-03).
 PUSH_EVENT_OF_TYPE: dict[str, PushEvent] = {
     NotificationType.AI_ESCALATED: PushEvent.NEEDS_YOU,
+    NotificationType.AUTOMATION_FAILING: PushEvent.NEEDS_YOU,  # replies nobody got (GR-05)
     NotificationType.NEW_LEAD: PushEvent.NEW_LEAD,
     NotificationType.WINDOW_CLOSING: PushEvent.WINDOW_CLOSING,
     NotificationType.ACCOUNT_NEEDS_RECONNECT: PushEvent.ACCOUNT,

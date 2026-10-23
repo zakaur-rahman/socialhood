@@ -23,7 +23,7 @@ function tabs(role: Role) {
 }
 
 describe("Settings tabs (UX-SCR-07)", () => {
-  it("owners and admins see Notifications, Billing and Integrations", () => {
+  it("owners and admins see Notifications, Billing, Integrations and Activity", () => {
     expect(tabs("owner")).toEqual([
       "Connections",
       "AI rules and takeover",
@@ -31,6 +31,7 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "Notifications",
       "Billing and usage",
       "Integrations",
+      "Activity",
       "Ask Social Hood",
     ]);
   });

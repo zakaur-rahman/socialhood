@@ -1,4 +1,5 @@
 import type {
+  ActivityKind,
   AgeName,
   AgentRunStatus,
   AutomationSort,
@@ -29,6 +30,13 @@ export type AutomationFilters = {
   sort: AutomationSort;
 };
 
+export type ActivityFilters = {
+  failuresOnly: boolean;
+  kind: ActivityKind | null;
+  automationId: string | null;
+  accountId: string | null;
+};
+
 /** Query keys (TR-FE-03): everything workspace-scoped starts with ["w", workspaceId]. */
 export const keys = {
   me: ["me"] as const,
@@ -41,6 +49,9 @@ export const keys = {
   webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
   webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
+  /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
+  activityLists: (wid: string) => ["w", wid, "activity"] as const,
+  activity: (wid: string, filters: ActivityFilters) => ["w", wid, "activity", filters] as const,
   // inbox (P3)
   conversationLists: (wid: string) => ["w", wid, "conversations"] as const,
   conversations: (wid: string, filters: ConversationFilters) => ["w", wid, "conversations", filters] as const,

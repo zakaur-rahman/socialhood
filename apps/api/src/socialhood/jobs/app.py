@@ -37,6 +37,7 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.whatsapp",
     "socialhood.jobs.tasks.automations",
     "socialhood.jobs.tasks.automation_windows",
+    "socialhood.jobs.tasks.activity",
     "socialhood.jobs.tasks.analysis",
     "socialhood.jobs.tasks.suggestions",
     "socialhood.jobs.tasks.knowledge",

@@ -1,5 +1,5 @@
 /** Queries and mutations by area; everything workspace-scoped is keyed ["w", wid, …] (TR-FE-03). */
-export { keys, type AutomationFilters, type ConversationFilters } from "./keys";
+export { keys, type ActivityFilters, type AutomationFilters, type ConversationFilters } from "./keys";
 export { unwrap, expectOk } from "./unwrap";
 export * from "./core";
 export * from "./inbox";
@@ -16,3 +16,4 @@ export * from "./analytics";
 export * from "./calendar";
 export * from "./agent";
 export * from "./integrations";
+export * from "./activity";

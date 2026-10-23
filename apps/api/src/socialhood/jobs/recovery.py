@@ -66,6 +66,7 @@ RECOVERY: dict[str, Recovery] = {
     "dispatch_due": R,  # claims with FOR UPDATE SKIP LOCKED; claimed rows are the sweeper's
     "sweep_stuck_scheduled": R,
     "end_automation_windows": R,
+    "check_automation_failures": R,  # notifications dedupe on automation and six-hour bucket
     "check_closing_windows": R,  # one transaction: reminded conversations are no longer due
     "dispatch_comment_analysis": R,
     "dispatch_post_summaries": R,
