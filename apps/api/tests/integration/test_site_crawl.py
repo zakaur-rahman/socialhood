@@ -436,7 +436,7 @@ async def test_a_recrawl_reads_again_only_what_changed_and_removes_what_is_gone(
         content=article("Blog", "News from the bakery", ("/blog/first", "/blog/second")),
     )
     serve("/blog/second", article("Second post", "Our second blog post"))
-    respx.calls.reset()
+    respx.calls.clear()
 
     again = await ws.ok("POST", f"/knowledge-sources/{site['id']}/recrawl")
     assert (again["version"], again["status"], again["site"]["status"]) == (2, "pending", "queued")
@@ -551,7 +551,7 @@ async def test_a_removed_page_leaves_knowledge_and_is_not_added_back(
     assert (await pages(ws, site))["/returns"]["status"] == "removed"
     assert (await pages(ws, site, status="removed")).keys() == {"/returns"}
 
-    respx.calls.reset()
+    respx.calls.clear()
     await ws.ok("POST", f"/knowledge-sources/{site['id']}/recrawl")
     await run(maker, ws, site, version=2)
     assert "/returns" not in requested()
@@ -589,7 +589,7 @@ async def test_an_excluded_path_removes_its_pages_and_is_not_crawled(
     assert not {"/blog", "/blog/first"} & set(await chunk_sources(engine))
     assert excluded["site"]["pages_found"] == 4
 
-    respx.calls.reset()
+    respx.calls.clear()
     await ws.ok("POST", f"/knowledge-sources/{site['id']}/recrawl")
     await run(maker, ws, site, version=2)
     assert not {"/blog", "/blog/first"} & set(requested())

@@ -96,7 +96,8 @@ async def test_the_report_for_a_week_gives_the_numbers_the_digest_sent(team: Tea
 
 async def test_the_week_before_and_the_series_come_from_the_same_definitions(team: Team) -> None:
     seed = await seed_week(team)
-    # Four messages in the week before (14-20 September) and two the week before that.
+    # Four more messages in the week before (14-20 September; seed_week has one there) and two the
+    # week before that.
     earlier = await seed.conversation("Nadia")
     for day in (15, 16, 17, 19):
         await seed.message(earlier, ist(day, 11))
@@ -106,13 +107,13 @@ async def test_the_week_before_and_the_series_come_from_the_same_definitions(tea
     report = await report_for(team, REPORT_WEEK)
 
     messages = metric(report, "messages_received")
-    assert (messages.value, messages.previous) == (7, 4)
-    assert (messages.change_pct, messages.direction) == (75.0, "up")
+    assert (messages.value, messages.previous) == (7, 5)
+    assert (messages.change_pct, messages.direction) == (40.0, "up")
     assert len(messages.series) == reports.SERIES_WEEKS == report.series_weeks
     assert [p.week_start for p in messages.series] == [
         REPORT_WEEK - timedelta(weeks=i) for i in range(7, -1, -1)
     ]
-    assert [p.value for p in messages.series][-3:] == [2, 4, 7]
+    assert [p.value for p in messages.series][-3:] == [2, 5, 7]
     # A rate compares in points, not in percent.
     rate = metric(report, "reply_rate")
     assert (rate.value, rate.previous) == (60.0, 0.0)
@@ -134,8 +135,9 @@ async def test_weeks_before_the_workspace_existed_are_gaps_not_zeros(team: Team)
     series = [p.value for p in metric(report, "messages_received").series]
     # 3 August to 31 August ended before 10 September with nothing in them: not known.
     assert series[:5] == [None] * 5
-    # 7 and 14 September end after the workspace was created: real zeros.
-    assert series[5:7] == [0, 0]
+    # 7 and 14 September end after the workspace was created: real figures (seed_week has one
+    # message in the week of 14 September).
+    assert series[5:7] == [0, 1]
     assert series[7] == 7
     assert [p.value for p in metric(report, "reply_rate").series][:5] == [None] * 5
 
