@@ -2407,6 +2407,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/stories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Stories
+         * @description The account's live stories (the last 24 hours), newest first, for the story picker.
+         *     An account with no stories (WhatsApp) gets an empty list; 502 platform_error when Instagram
+         *     can't be reached.
+         */
+        get: operations["list_stories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/story-mentions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Story Mentions
+         * @description Who mentioned the account in their story, newest first. ``link_url`` is Instagram's address
+         *     of the story and is only given while the story is live (until ``link_expires_at``);
+         *     ``total_7d`` counts the last 7 days.
+         */
+        get: operations["list_story_mentions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/suggestions/{suggestion_id}/dismiss": {
         parameters: {
             query?: never;
@@ -3509,6 +3553,13 @@ export interface components {
              */
             status: "draft" | "active" | "paused";
             /**
+             * Story Heart
+             * @default false
+             */
+            story_heart: boolean;
+            /** Story Ids */
+            story_ids?: string[];
+            /**
              * Surge Order
              * @enum {string}
              */
@@ -3516,7 +3567,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
             /**
              * Updated At
              * Format: date-time
@@ -3601,13 +3652,20 @@ export interface components {
             /** Starts At */
             starts_at?: string | null;
             /**
+             * Story Heart
+             * @default false
+             */
+            story_heart: boolean;
+            /** Story Ids */
+            story_ids?: string[];
+            /**
              * Surge Order
              * @default oldest_first
              * @enum {string}
              */
             surge_order: "oldest_first" | "newest_first" | "public_only";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
         };
         /** AutomationDraftAction */
         AutomationDraftAction: {
@@ -3655,7 +3713,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
         };
         /** AutomationList */
         AutomationList: {
@@ -3800,7 +3858,7 @@ export interface components {
              * Trigger
              * @enum {string}
              */
-            trigger: "dm_keyword" | "comment_keyword" | "comment_any";
+            trigger: "dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention";
         };
         /** AutomationTemplateList */
         AutomationTemplateList: {
@@ -5427,7 +5485,7 @@ export interface components {
              */
             status: "draft" | "active" | "paused";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
         };
         /** MarkRead */
         MarkRead: {
@@ -5514,6 +5572,20 @@ export interface components {
             secure_url?: string | null;
             /** Width */
             width?: number | null;
+        };
+        /** MentionContact */
+        MentionContact: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /** Username */
+            username?: string | null;
         };
         /** Message */
         Message: {
@@ -5863,6 +5935,11 @@ export interface components {
              * Format: date
              */
             since: string;
+            /**
+             * Story Mentions
+             * @default 0
+             */
+            story_mentions: number;
             /**
              * Until
              * Format: date
@@ -6559,7 +6636,8 @@ export interface components {
          * SandboxInbound
          * @description A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
          *     link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
-         *     comment; a DM can carry an ad referral (its first message from an ad).
+         *     comment; a DM can carry an ad referral (its first message from an ad). GR-06 and GR-07 add a
+         *     story reply, a story like (the heart) and a story mention.
          */
         SandboxInbound: {
             /**
@@ -6579,7 +6657,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin";
+            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin" | "story_reply" | "story_like" | "story_mention";
             /** Postback Payload */
             postback_payload?: string | null;
             /** Quick Reply Payload */
@@ -6588,6 +6666,8 @@ export interface components {
             ref?: string | null;
             /** Referral Source */
             referral_source?: ("ad" | "link") | null;
+            /** Story Id */
+            story_id?: string | null;
             /** Text */
             text?: string | null;
         };
@@ -7092,6 +7172,74 @@ export interface components {
             external_ids: string[];
             /** Verified */
             verified: boolean;
+        };
+        /**
+         * Story
+         * @description One of the account's live stories, as Instagram lists it. ``id`` is what a story reply
+         *     automation is scoped to. ``expires_at`` is 24 hours after it was posted.
+         */
+        Story: {
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Id */
+            id: string;
+            /** Media Url */
+            media_url?: string | null;
+            /** Permalink */
+            permalink?: string | null;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+            /** Thumbnail Url */
+            thumbnail_url?: string | null;
+        };
+        /** StoryList */
+        StoryList: {
+            /** Items */
+            items: components["schemas"]["Story"][];
+        };
+        /**
+         * StoryMention
+         * @description Someone mentioned the account in their story. ``link_url`` is Instagram's address of the
+         *     story and is only given while the story is live (until ``link_expires_at``).
+         */
+        StoryMention: {
+            contact?: components["schemas"]["MentionContact"] | null;
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Link Expires At */
+            link_expires_at?: string | null;
+            /** Link Url */
+            link_url?: string | null;
+            /**
+             * Mentioned At
+             * Format: date-time
+             */
+            mentioned_at: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+        };
+        /** StoryMentionList */
+        StoryMentionList: {
+            /** Items */
+            items: components["schemas"]["StoryMention"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+            /** Total 7D */
+            total_7d: number;
         };
         /** Suggestion */
         Suggestion: {
@@ -8941,7 +9089,7 @@ export interface operations {
             query?: {
                 account_id?: string | null;
                 status?: ("draft" | "active" | "paused") | null;
-                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any") | null;
+                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
                 q?: string | null;
                 sort?: "recent_runs" | "name" | "created";
             };
@@ -13573,6 +13721,92 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WhatsAppTemplateList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_stories: {
+        parameters: {
+            query: {
+                account_id: string;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_story_mentions: {
+        parameters: {
+            query?: {
+                account_id?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoryMentionList"];
                 };
             };
             /** @description Validation error */
