@@ -9,7 +9,7 @@
 Expand-only: a column with a default and a check, a wider check and a new table.
 
 Revision ID: 0024
-Revises: 0022
+Revises: 0023
 Create Date: 2026-10-24 12:00:00.000000+00:00
 """
 
@@ -21,12 +21,20 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0024"
-down_revision: str | None = "0022"
+down_revision: str | None = "0023"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 TRIGGER_CHECK = "ck_automations_trigger"
-OLD_TRIGGERS = ("dm_keyword", "comment_keyword", "comment_any", "story_reply", "story_mention")
+OLD_TRIGGERS = (
+    "dm_keyword",
+    "comment_keyword",
+    "comment_any",
+    "story_reply",
+    "story_mention",
+    "entry_link",
+    "ad_click",
+)
 NEW_TRIGGERS = (*OLD_TRIGGERS, "ice_breaker")
 
 
@@ -47,9 +55,7 @@ def upgrade() -> None:
     )
 
     op.drop_constraint(op.f(TRIGGER_CHECK), "automations", type_="check")
-    op.create_check_constraint(
-        op.f(TRIGGER_CHECK), "automations", _trigger_condition(NEW_TRIGGERS)
-    )
+    op.create_check_constraint(op.f(TRIGGER_CHECK), "automations", _trigger_condition(NEW_TRIGGERS))
 
     op.create_table(
         "ice_breakers",
@@ -94,7 +100,7 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_ice_breakers")),
         sa.UniqueConstraint(
-            "social_account_id", "position", name=op.f("uq_ice_breakers_social_account_id")
+            "social_account_id", "position", name=op.f("uq_ice_breakers_social_account_id_position")
         ),
         sa.CheckConstraint("position BETWEEN 0 AND 3", name=op.f("ck_ice_breakers_position")),
         sa.CheckConstraint(
@@ -116,9 +122,7 @@ def downgrade() -> None:
         "UPDATE automations SET trigger = NULL, status = 'draft' WHERE trigger = 'ice_breaker'"
     )
     op.drop_constraint(op.f(TRIGGER_CHECK), "automations", type_="check")
-    op.create_check_constraint(
-        op.f(TRIGGER_CHECK), "automations", _trigger_condition(OLD_TRIGGERS)
-    )
+    op.create_check_constraint(op.f(TRIGGER_CHECK), "automations", _trigger_condition(OLD_TRIGGERS))
 
     # A Live-only automation would start answering posts once the column is gone: draft it.
     op.execute(
