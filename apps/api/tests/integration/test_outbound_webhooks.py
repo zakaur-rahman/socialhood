@@ -58,7 +58,7 @@ async def test_endpoints_over_the_api(ws: Ws, engine: AsyncEngine, queue: None) 
     listed = await ws.ok("GET", "/webhook-endpoints")
     assert [e["id"] for e in listed["items"]] == [made["id"]]
     assert "signing_secret" not in listed["items"][0]  # shown once
-    assert listed["limit"] == 1  # Free (proposed)
+    assert listed["limit"] == 1  # Free (C-080)
 
     over = await ws.call(
         "POST", "/webhook-endpoints", json={"url": HOOK, "events": ["lead.captured"]}

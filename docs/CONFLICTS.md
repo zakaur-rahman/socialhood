@@ -1575,7 +1575,8 @@ An addition from the growth plan. It is backend and API only; GR-17 builds the c
   - Values are stored by key on `contacts.fields` and validated by type; an unknown key is refused.
   - A key and type never change; deleting a field removes its values from every contact.
   - The number of fields is capped by a new entitlement, `contact_fields`: Free 5, Pro 50, Max
-    200, proposed pending the owner's plan decisions.
+    200. Decided 2026-10-23: the owner left it to us. A few fields free, room to grow on paid
+    plans.
   - **Contacts themselves are never metered (PD-2).**
 - **Email and phone** on the contact, each with where it came from and whether it was verified.
   An email is lower-cased and checked for shape. A phone is stored as E.164, with a ten-digit
@@ -1711,8 +1712,12 @@ An addition from the growth plan: one event pipeline for Zapier, Make, Sheets an
   - the signing secret (`whsec_…`) is shown once, on create and rotate, and stored encrypted
     like platform tokens (added to the key rotation);
   - pause, turn back on (which resets the failure count), test event, replay, delete.
-  - The new `webhook_endpoints` plan limit (Free 1, Pro 5, Max 20) is proposed pending the
-    owner's plan decisions.
+  - The new `webhook_endpoints` plan limit is Free 1, Pro 5, Max 20. Decided 2026-10-23: the
+    owner left it to us.
+    - Free gets one, because sending leads to a sheet or CRM is a core early reason to stay,
+      and a webhook costs almost nothing to run.
+    - The pressure to upgrade comes from AI credits, contacts and broadcasts.
+    - Pro covers a CRM, a sheet and a notifier; Max covers agencies.
   - `signing_secret` is allowed in responses by the schema security test for that reason.
 - **`WEBHOOKS_ALLOW_PRIVATE`** lets development and e2e post to a local receiver. Production
   refuses it.
