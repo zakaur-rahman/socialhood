@@ -278,6 +278,31 @@ async def draft_results(
     return found
 
 
+async def visual_results(
+    session: AsyncSession, run_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, list[Any]]:
+    """Each run's stored ``visual`` values, from its succeeded steps, in step order (GR-38). Only
+    the visual is read, not the step's whole result. A JSON null is skipped."""
+    if not run_ids:
+        return {}
+    visual = AgentStep.result["visual"]
+    rows = await session.execute(
+        select(AgentStep.run_id, visual)
+        .where(
+            AgentStep.run_id.in_(run_ids),
+            AgentStep.status == StepStatus.SUCCEEDED,
+            AgentStep.result.is_not(None),
+            visual.is_not(None),
+        )
+        .order_by(AgentStep.run_id, AgentStep.ordinal)
+    )
+    found: dict[uuid.UUID, list[Any]] = {}
+    for run_id, value in rows.all():
+        if value is not None:
+            found.setdefault(run_id, []).append(value)
+    return found
+
+
 def add_step(session: AsyncSession, run_id: uuid.UUID, ordinal: int, **values: Any) -> AgentStep:
     """A new step (flushed by the caller's commit); its idempotency key is ``{run_id}:{ordinal}``
     (TR-AGT-07)."""

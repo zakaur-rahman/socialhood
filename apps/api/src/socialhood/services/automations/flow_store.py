@@ -9,6 +9,8 @@ automation_flows). Saving:
 - changes the current version in place until a run has started on it, then makes the next one;
 - sets the automation's action from the flow (``ai_reply`` when it has an AI reply), so the AI
   entitlement and the private-reply queue see it as before.
+- keeps a flow within the plan's ``flow_steps`` (402 quota_exceeded, PD-5 pending); the same check
+  runs on activation, for a flow saved before a downgrade.
 Going back to the settings (DELETE) keeps the saved versions for the runs that follow them.
 """
 
@@ -22,6 +24,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import quota_error
+from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.automations import (
     Automation,
@@ -31,11 +35,30 @@ from socialhood.models.automations import (
 )
 from socialhood.models.contacts import ContactFieldDefinition, Tag
 from socialhood.models.media import ResourceType
+from socialhood.models.replies import SavedReply
 from socialhood.repositories import automations as repo
 from socialhood.schemas.flows import AiReplyStep, Flow, FlowDefinition, FlowSource, SendStep
 from socialhood.services.automations import definitions, flows, validation
 
 KEEP_COMPLETE_DETAIL = definitions.KEEP_COMPLETE_DETAIL
+
+
+def step_cap(plan: str) -> int | None:
+    """The most steps a flow may have on ``plan`` (None: no plan cap). PD-5, pending."""
+    limit = entitlement(plan, "flow_steps")
+    return None if limit is None else int(limit)
+
+
+def check_step_cap(definition: FlowDefinition, plan: str) -> None:
+    """Raise 402 quota_exceeded when the flow has more steps than the plan allows."""
+    limit = step_cap(plan)
+    if limit is not None and len(definition.steps) > limit:
+        raise quota_error(
+            "flow_steps",
+            limit,
+            f"Your plan includes {limit} steps in a flow, and this one has "
+            f"{len(definition.steps)}. Remove some, or upgrade to add more.",
+        )
 
 
 async def _context_parts(
@@ -49,12 +72,22 @@ async def _context_parts(
     return fields, tags
 
 
+async def _saved_replies(session: AsyncSession) -> dict[uuid.UUID, str]:
+    """GR-21: the workspace's saved replies, id to body."""
+    rows = await session.execute(select(SavedReply.id, SavedReply.body))
+    return {reply_id: body for reply_id, body in rows.all()}
+
+
 async def context(
     session: AsyncSession, automation: Automation, disclosure: str | None
 ) -> flows.Context:
     fields, tags = await _context_parts(session)
     return flows.Context(
-        trigger=automation.trigger, disclosure=disclosure, fields=fields, tag_ids=tags
+        trigger=automation.trigger,
+        disclosure=disclosure,
+        fields=fields,
+        tag_ids=tags,
+        saved_replies=await _saved_replies(session),
     )
 
 
@@ -112,6 +145,7 @@ async def save(
     definition: FlowDefinition,
     *,
     user_id: uuid.UUID,
+    plan: str,
     disclosure: str | None,
     now: datetime,
 ) -> Automation:
@@ -120,6 +154,7 @@ async def save(
         flows.graph(definition)
     except flows.FlowError as error:
         raise ApiError("validation_error", errors=error.errors) from error
+    check_step_cap(definition, plan)
     if errors := await _image_errors(session, definition):
         raise ApiError("validation_error", errors=errors)
     if automation.status == AutomationStatus.ACTIVE:
@@ -192,6 +227,7 @@ async def problems(
     flowing = [(a.id, a.flow_version) for a in automations if a.flow_version is not None]
     stored = await repo.flows_at(session, flowing)
     parts = await _context_parts(session) if flowing else ({}, frozenset())
+    replies = await _saved_replies(session) if flowing else {}
     out: dict[uuid.UUID, list[FieldError]] = {}
     for a in automations:
         d = (definitions_by_id or {}).get(a.id) or await definitions.stored_definition(session, a)
@@ -202,7 +238,11 @@ async def problems(
         row = stored.get(a.id)
         if uses_flow and row is not None:
             ctx = flows.Context(
-                trigger=a.trigger, disclosure=disclosure, fields=parts[0], tag_ids=parts[1]
+                trigger=a.trigger,
+                disclosure=disclosure,
+                fields=parts[0],
+                tag_ids=parts[1],
+                saved_replies=replies,
             )
             errors += flows.activation_errors(flows.parse(row.definition), ctx)
         out[a.id] = errors

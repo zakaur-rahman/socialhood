@@ -7,6 +7,49 @@ Entry points for ingest and comment intake, called in their transaction after th
   (DMs) when a tap-first opening waits for the contact's answer;
 - ``contact_replied`` records FR-AUT-16's reply within 24 h of an automation DM.
 
+Story triggers (GR-06, GR-07): a story reply and a story mention are DMs, so they take this path;
+``dm_triggers`` picks the automations a message can start by its kind. A story reply starts story
+reply and DM keyword automations together (keyword ones first, then those that answer anything,
+each by priority); a story reply automation scoped to chosen stories passes over replies to other
+stories. A reply that is only the heart (a story like) starts story reply automations never. A
+story mention starts story mention automations only, and never answers a waiting question. A story
+reply automation with the heart on sends Instagram's heart sticker ahead of its message (its
+failure never stops the DM).
+
+Entry triggers (GR-08, GR-09): a DM that is the first message after an entry link or an ad
+(services/automations/entry) also starts ``entry_link`` and ``ad_click`` automations, ahead of the
+keyword ones: an entry link starts the automation its link points at, an ad click any ad or its
+chosen ads. A story mention is never an entry.
+
+Live comments (GR-10): a comment on a Live broadcast is answered by comment automations whose
+``comment_surface`` is ``live`` or ``both`` (posts-only ones pass it over, and Live comments
+ignore post scopes). A private reply works only while the Live is on air, and Instagram sends no
+"Live ended" event: a Live comment older than ``LIVE_REPLY_WINDOW`` when it is matched records a
+``skipped_expired`` run with the code ``live_ended`` and nothing is sent. The private-reply queue
+sends Live-only automations' runs ahead of everything else and expires the ones it could not send
+in time the same way (services/automations/queue).
+
+Conversation starters (GR-11): a postback whose payload is one of the account's ice breakers
+starts ice breaker automations only, and only the one its starter maps to (services/ice_breakers);
+it answers no waiting question. A starter set to answer with AI starts nothing here: the message
+is not marked handled, so the inbox AI answers it like any customer message.
+
+Welcome and default reply (GR-12): an ordinary DM (not a story reply or mention, not a button,
+quick reply or ice breaker tap) can also start the two fallbacks, only when no keyword or other
+automation took it. A keyword that matched but was on cooldown still counts as having matched, so
+a repeated question gets no default reply. The welcome (``first_message``) needs the contact to
+have no earlier customer message to this account; the default reply needs AI off for the
+conversation (its override, else the account's mode). If both apply, the welcome answers and the
+default reply does not. Each obeys its own cooldown per contact.
+
+Business hours (GR-22): an automation may require ``inside`` or ``outside`` hours
+(``hours_condition``); one that doesn't hold passes over the message or comment like a scope
+mismatch does (an account with no hours is always inside). After the automations, a DM that none
+answered (no match, or every match skipped) gets the away message when the account is closed, once
+per closed window and never on top of an automation, a flow answer or an Auto-mode reply
+(services/business_hours). The order is: a waiting answer, then automations (keyword, welcome and
+default reply), then the away message, then nothing else.
+
 Tap first (FR-AUT-21): before keyword matching, a customer DM that answers a waiting opening
 releases that run's message and nothing else runs on it (services/automations/answers). The
 follow nudge (FR-AUT-22) is ``run_automation("nudge", run_id)``, enqueued once a run's message
@@ -56,6 +99,9 @@ from socialhood.models.automations import (
     AutomationAction,
     AutomationRun,
     Comment,
+    CommentSurface,
+    HoursCondition,
+    PostScope,
     RunResult,
     SurgeOrder,
 )
@@ -69,14 +115,30 @@ from socialhood.realtime import events
 from socialhood.repositories import automation_runs as runs
 from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import inbox
+from socialhood.repositories import ingest as ingest_rows
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, ai_reply, engine, flows, matching, results
+from socialhood.services import business_hours, ice_breakers
+from socialhood.services.automations import (
+    actions,
+    ai_reply,
+    engine,
+    entry,
+    flows,
+    links,
+    matching,
+    results,
+)
 
 log = get_logger(__name__)
 
 Kind = Literal["dm", "comment", "nudge", "flow"]
 
 DM_TRIGGERS = ("dm_keyword",)
+STORY_REPLY_TRIGGERS = ("story_reply", "dm_keyword")
+STORY_MENTION_TRIGGERS = ("story_mention",)
+ICE_BREAKER_TRIGGERS = ("ice_breaker",)
+FALLBACK_TRIGGERS = matching.FALLBACK_TRIGGERS  # GR-12
+HEART = "\u2764\ufe0f"  # a story like arrives as the heart sticker, stored as its emoji
 COMMENT_TRIGGERS = ("comment_keyword", "comment_any")
 THREAD_REPLY_TRIGGERS = ("comment_keyword",)
 START_DELAY_S = 1.0  # the caller commits after enqueueing; well before AI analysis (4 s)
@@ -85,6 +147,8 @@ NOT_FOUND_DELAY_S = 1.0
 REPLY_WINDOW = timedelta(hours=24)  # FR-AUT-16
 PRIVATE_REPLY_LIMIT = timedelta(days=7)  # FR-AUT-10
 EXPIRED = ("expired", "Instagram's 7-day limit passed")
+LIVE_ENDED = actions.LIVE_ENDED  # GR-10
+LIVE_REPLY_WINDOW = actions.LIVE_REPLY_WINDOW
 NO_MESSAGE = actions.NO_MESSAGE
 READ_ONLY = "read_only"  # a skipped_read_only run's error_code (FR-BIL-07)
 
@@ -102,6 +166,57 @@ class Outcome(StrEnum):
 # ---------------------------------------------------------------- entry points
 
 
+def story_id_of(msg: Message) -> str | None:
+    """The story a story reply answers (its attachment's platform id), when we kept it."""
+    for attachment in msg.attachments or []:
+        if attachment.get("type") == "story" and attachment.get("media_id"):
+            return str(attachment["media_id"])
+    return None
+
+
+def is_story_like(msg: Message) -> bool:
+    """A story reply that is just the heart: someone liked the story, which is no reply."""
+    return msg.kind == "story_reply" and (msg.text or "").strip() == HEART
+
+
+def is_ordinary_dm(msg: Message) -> bool:
+    """A message the welcome and default reply may answer: not a story reply or mention, and not
+    a tap on a button, quick reply or ice breaker (those answer something we sent)."""
+    return (
+        msg.kind not in ("story_mention", "story_reply")
+        and not msg.postback_payload
+        and not msg.quick_reply_payload
+    )
+
+
+def dm_triggers(msg: Message) -> tuple[str, ...]:
+    """The triggers a customer DM can start, by what the message is. The welcome and default
+    reply are listed for ordinary DMs; ``_match_dm`` keeps them only when they apply."""
+    if ice_breakers.is_tap(msg.postback_payload):  # GR-11: a tapped conversation starter
+        return ICE_BREAKER_TRIGGERS
+    if msg.kind == "story_mention":
+        return STORY_MENTION_TRIGGERS
+    if msg.kind == "story_reply":
+        return DM_TRIGGERS if is_story_like(msg) else STORY_REPLY_TRIGGERS
+    return (*DM_TRIGGERS, *FALLBACK_TRIGGERS) if is_ordinary_dm(msg) else DM_TRIGGERS
+
+
+def in_story_scope(automation: Automation, msg: Message) -> bool:
+    """A story reply automation answers any story, or only its chosen ones (GR-06). A reply whose
+    story we could not read matches only the any-story ones."""
+    if automation.trigger != "story_reply" or automation.post_scope != PostScope.SELECTED:
+        return True
+    story_id = story_id_of(msg)
+    return story_id is not None and story_id in (automation.story_ids or [])
+
+
+def on_surface(automation: Automation, comment: Comment) -> bool:
+    """A comment automation listens on posts, on Lives, or on both (GR-10)."""
+    if comment.is_live:
+        return automation.comment_surface in (CommentSurface.LIVE, CommentSurface.BOTH)
+    return automation.comment_surface in (CommentSurface.POSTS, CommentSurface.BOTH)
+
+
 async def enqueue_for_message(
     session: AsyncSession, message: Message, *, contact_id: uuid.UUID | None = None
 ) -> bool:
@@ -113,8 +228,14 @@ async def enqueue_for_message(
         await runs.has_awaiting(session, contact_id, since=since)
         or await runs.has_flow_waiting(session, contact_id, since=since)  # GR-03
     )
-    if not answers_opening and not await runs.has_active(
-        session, message.social_account_id, DM_TRIGGERS
+    triggers = dm_triggers(message)
+    if message.kind != "story_mention":
+        # Whether the message is an entry is checked in the run.
+        triggers = (*triggers, *matching.ENTRY_TRIGGERS)
+    if (
+        not answers_opening
+        and not await runs.has_active(session, message.social_account_id, triggers)
+        and not await business_hours.away_possible(session, message.social_account_id)  # GR-22
     ):
         return False
     return await enqueue_run("dm", message.id, message.workspace_id)
@@ -277,11 +398,16 @@ async def _run_dm(env: _Env, message_id: uuid.UUID) -> Outcome:
                 return Outcome.ALREADY_RAN
             # An answer to a waiting flow step (GR-03) or tap-first opening (FR-AUT-21) comes
             # before any keyword.
-            flow_answer = await engine.find_answer(session, msg, contact.id, now=env.now)
-            if flow_answer is None:
-                answer = await answers.find(session, msg, contact.id, now=env.now)
+            # A mention answers no question, and neither does a tapped conversation starter.
+            if msg.kind != "story_mention" and not ice_breakers.is_tap(msg.postback_payload):
+                flow_answer = await engine.find_answer(session, msg, contact.id, now=env.now)
+                if flow_answer is None:
+                    answer = await answers.find(session, msg, contact.id, now=env.now)
             if flow_answer is None and answer is None:
-                return await _match_dm(session, env, msg, conv, contact)
+                outcome = await _match_dm(session, env, msg, conv, contact)
+                if outcome in (Outcome.NO_MATCH, Outcome.SKIPPED):
+                    return await _away(session, env, msg, conv, contact, outcome)
+                return outcome
     if flow_answer is not None:
         await engine.answer(
             env.sessionmaker,
@@ -318,14 +444,38 @@ async def _match_dm(
     session: AsyncSession, env: _Env, msg: Message, conv: Conversation, contact: Contact
 ) -> Outcome:
     """DM keyword automations (F-11 runtime): the first match that passes sends its message."""
-    loaded = await runs.candidates(session, msg.social_account_id, DM_TRIGGERS, now=env.now)
+    triggers = dm_triggers(msg)
+    came_from = None
+    if msg.kind != "story_mention":
+        came_from = await entry.of_message(session, msg, conv)
+        if came_from is not None:
+            triggers = (*triggers, came_from.trigger)
+    loaded = await runs.candidates(session, msg.social_account_id, triggers, now=env.now)
+    if ice_breakers.is_tap(msg.postback_payload):
+        # GR-11: only the automation the tapped starter maps to. A starter that answers with AI,
+        # or whose automation is gone, leaves the message to the inbox AI.
+        starter = await ice_breakers.tapped(session, msg.social_account_id, msg.postback_payload)
+        loaded = [
+            item for item in loaded if starter and item.automation.id == starter.automation_id
+        ]
+    loaded = await _applicable(session, loaded, msg, conv, contact, env.now)
     found = matching.matches(msg.text or "", [item.candidate for item in loaded])
     if not found:
         return Outcome.NO_MATCH
     read_only = await _read_only_reason(session, await accounts.get(session, msg.social_account_id))
     by_id = {item.automation.id: item.automation for item in loaded}
+    others_matched = False  # a keyword or any-reply automation matched, whatever came of it
     for match in found:
         automation = by_id[match.automation_id]
+        if automation.trigger in FALLBACK_TRIGGERS:
+            if others_matched:
+                break  # a fallback answers only a DM nothing else matched
+        else:
+            others_matched = True
+        if not in_story_scope(automation, msg):
+            continue
+        if came_from is not None and not entry.in_scope(automation, came_from):
+            continue
         common: dict[str, Any] = {
             "contact_id": contact.id,
             "now": env.now,
@@ -362,6 +512,7 @@ async def _match_dm(
             await session.rollback()
             return Outcome.ALREADY_RAN
         automation.last_run_at = env.now
+        await _send_heart(session, env, automation, run, conv)
         if ai:
             return await _answer_with_ai(session, env, automation, run, msg)
         if engine.is_flow_run(run):
@@ -379,6 +530,119 @@ async def _match_dm(
         return Outcome.FIRED
     await session.commit()
     return Outcome.SKIPPED
+
+
+async def _away(
+    session: AsyncSession,
+    env: _Env,
+    msg: Message,
+    conv: Conversation,
+    contact: Contact,
+    outcome: Outcome,
+) -> Outcome:
+    """GR-22: nothing answered this DM, so the away message goes if the account is closed and it
+    hasn't been sent in this closed window. The conversation is locked while it is checked and
+    marked, so two messages in a row send it once."""
+    if not business_hours.away_applies(msg) or not await business_hours.away_possible(
+        session, msg.social_account_id
+    ):
+        return outcome
+    locked = await ingest_rows.lock_conversation(session, conv.id)
+    if locked is None:
+        return outcome
+    sent = await business_hours.send_away(
+        session,
+        env.deps,
+        locked,
+        contact,
+        msg,
+        ai_mode=await _ai_mode(session, locked),
+        now=env.now,
+    )
+    if not sent:
+        await session.rollback()
+        return outcome
+    await session.flush()
+    await events.commit_and_publish(session, env.redis)
+    log.info("away_message_sent", conversation_id=str(conv.id), message_id=str(msg.id))
+    return Outcome.FIRED
+
+
+async def _applicable(
+    session: AsyncSession,
+    loaded: list[runs.Loaded],
+    msg: Message,
+    conv: Conversation,
+    contact: Contact,
+    now: datetime,
+) -> list[runs.Loaded]:
+    """GR-12: drop the welcome unless this is the contact's first DM to the account, and the
+    default reply unless AI is off for the conversation. Looked up only when one is loaded.
+    GR-22: drop an automation whose hours condition doesn't hold."""
+    loaded = await _in_hours(session, loaded, msg.social_account_id, now)
+    welcome = any(item.automation.trigger == "first_message" for item in loaded)
+    default = any(item.automation.trigger == "default_reply" for item in loaded)
+    drop: set[str] = set()
+    if welcome and await inbox.has_earlier_inbound_dm(session, msg, contact.id):
+        drop.add("first_message")
+    if default and await _ai_mode(session, conv) != "off":
+        drop.add("default_reply")
+    return [item for item in loaded if item.automation.trigger not in drop]
+
+
+async def _in_hours(
+    session: AsyncSession, loaded: list[runs.Loaded], account_id: uuid.UUID, now: datetime
+) -> list[runs.Loaded]:
+    """GR-22: the automations whose hours condition holds right now (read only when one has a
+    condition)."""
+    if not any(item.automation.hours_condition for item in loaded):
+        return loaded
+    inside = await business_hours.is_open_now(session, account_id, now)
+    return [item for item in loaded if hours_hold(item.automation, inside)]
+
+
+def hours_hold(automation: Automation, inside: bool) -> bool:
+    """Whether the automation's "inside hours" / "outside hours" condition holds."""
+    condition = automation.hours_condition
+    return condition is None or (condition == HoursCondition.INSIDE) == inside
+
+
+async def _ai_mode(session: AsyncSession, conv: Conversation) -> str:
+    """The conversation's effective AI mode: its override, else the account's. A pause
+    (``ai_paused_until``) does not turn the AI off, so a paused conversation gets no default
+    reply: a person is handling it."""
+    if conv.ai_mode_override:
+        return conv.ai_mode_override
+    acct = await accounts.get(session, conv.social_account_id)
+    return acct.ai_mode if acct is not None else "off"
+
+
+async def _send_heart(
+    session: AsyncSession,
+    env: _Env,
+    automation: Automation,
+    run: AutomationRun,
+    conv: Conversation,
+) -> None:
+    """GR-06: the heart sticker for a story reply, queued ahead of the run's message. It is not
+    linked to the run, so its outcome never changes the run's result; a refusal (the account is
+    blocked, the window closed) only goes to the log."""
+    from socialhood.services import sending  # sending → … → ingest → this module
+
+    if automation.trigger != "story_reply" or not automation.story_heart:
+        return
+    try:
+        await sending.queue_outbound(
+            session,
+            conv,
+            source="automation",
+            client_id=actions.client_id_for(run.id, "heart"),
+            sticker="like_heart",
+            deps=env.deps,
+            now=env.now,
+        )
+    except ApiError as error:
+        log.info("automation_heart_skipped", run_id=str(run.id), reason=error.code)
 
 
 async def _answer_with_ai(
@@ -469,7 +733,15 @@ async def _send_dm(
             client_id=actions.client_id_for(run.id),
             text=text,
             attachment_asset_ids=[image] if image else (),
-            buttons=actions.buttons(automation),
+            buttons=await links.track_buttons(
+                session,
+                env.deps.settings,
+                automation,
+                run_id=run.id,
+                contact_id=contact.id,
+                step_id="message",
+                buttons=actions.buttons(automation),
+            ),
             automation_run_id=run.id,
             deps=env.deps,
             now=env.now,
@@ -532,6 +804,7 @@ async def _run_comment(env: _Env, comment_id: uuid.UUID) -> Outcome:
             return Outcome.ALREADY_RAN
         triggers = THREAD_REPLY_TRIGGERS if comment.parent_platform_comment_id else COMMENT_TRIGGERS
         loaded = await runs.candidates(session, acct.id, triggers, now=env.now)
+        loaded = await _in_hours(session, loaded, acct.id, env.now)  # GR-22
         found = matching.matches(comment.text, [item.candidate for item in loaded])
         if not found:
             return Outcome.NO_MATCH
@@ -568,10 +841,15 @@ async def _first_passing(
 ) -> _Fired | Outcome | None:
     by_id = {item.automation.id: item.automation for item in loaded}
     expired = env.now - comment.commented_at >= PRIVATE_REPLY_LIMIT
+    live_late = comment.is_live and env.now - comment.commented_at > LIVE_REPLY_WINDOW
     for match in found:
         automation = by_id[match.automation_id]
-        if not await runs.in_scope(session, automation, comment.media_item_id):
+        if not on_surface(automation, comment):
             continue
+        if not comment.is_live and not await runs.in_scope(
+            session, automation, comment.media_item_id
+        ):
+            continue  # a Live has no post scope
         common: dict[str, Any] = {
             "contact_id": comment.contact_id,
             "now": env.now,
@@ -583,8 +861,8 @@ async def _first_passing(
                 _run_row(automation, match.keyword, result=RunResult.SKIPPED_COOLDOWN, **common),
             )
             continue
-        if expired:
-            code, reason = EXPIRED
+        if expired or live_late:
+            code, reason = LIVE_ENDED if live_late else EXPIRED
             await runs.insert_run(
                 session,
                 _run_row(

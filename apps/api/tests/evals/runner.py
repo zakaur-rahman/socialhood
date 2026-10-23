@@ -58,7 +58,9 @@ from tests.evals.cases import CASES, Case
 RESULTS = Path(__file__).parent / "results"
 # TA.6 (agent-architecture.html §18): at least 90% correct tool choice, every number equal to the
 # database, no invented number.
-TARGETS = {"tool_choice": 90.0, "exact_numbers": 100.0, "grounding": 100.0}
+# GR-38 adds visuals: the expected ones shown, none for a concept, and every number in a visual one
+# a tool returned and, where the case computes it from the seed, the right one.
+TARGETS = {"tool_choice": 90.0, "exact_numbers": 100.0, "grounding": 100.0, "visuals": 100.0}
 RETRY_CODES = frozenset({"ai_unavailable"})
 BACKOFF_S = (20.0, 60.0, 120.0)
 # Bag-of-words similarities run lower than Gemini's embeddings; 0.35 keeps the FAQ a question
@@ -170,14 +172,28 @@ class RunRecord:
         ]
 
     @property
+    def visuals(self) -> list[dict[str, Any]]:
+        """What the member's screen shows: the run's visuals as the API lists them (agent_runs)."""
+        stored = [
+            s.result["visual"]
+            for s in self.steps
+            if s.kind == "tool"
+            and s.status == "succeeded"
+            and s.result is not None
+            and s.result.get("visual") is not None
+        ]
+        return [v.model_dump(mode="json") for v in agent_runs.shown_visuals(stored)]
+
+    @property
     def evidence(self) -> list[Any]:
-        """What the model was shown: each succeeded step's result, each failed step's reason."""
+        """What the model was shown: each succeeded step's result without its visual (the model
+        never sees one), each failed step's reason."""
         shown: list[Any] = []
         for s in self.steps:
             if s.kind != "tool":
                 continue
             if s.status == "succeeded" and s.result is not None:
-                shown.append(s.result)
+                shown.append({k: v for k, v in s.result.items() if k != "visual"})
             elif s.error_message:
                 shown.append(s.error_message)
         return shown
@@ -313,6 +329,7 @@ class CaseResult:
     citations: checks.Citations
     card_ok: bool
     text_missing: list[str]
+    visual: checks.VisualCheck | None = None
 
     @property
     def answered(self) -> bool:
@@ -335,6 +352,8 @@ class CaseResult:
             found.append("card")
         if self.text_missing:
             found.append("text")
+        if self.visual is not None and not self.visual.passed:
+            found.append("visual")
         return found
 
     @property
@@ -360,6 +379,17 @@ def evaluate(case: Case, record: RunRecord) -> CaseResult:
         citations=checks.citations(answer, record.answer_refs),
         card_ok=checks.card_kind(record.cards, case.expect_card),
         text_missing=checks.text_expectations(answer, case.expect_text),
+        visual=(
+            checks.visual_check(
+                record.visuals,
+                record.evidence,
+                expect_kinds=case.expect_visual,
+                expect_none=case.no_visual,
+                expect_numbers=case.expect_visual_numbers,
+            )
+            if case.expect_visual or case.no_visual
+            else None
+        ),
     )
 
 
@@ -381,6 +411,7 @@ class Summary:
     citations: float
     cards: float
     text: float
+    visuals: float
     avg_credits: float
     avg_latency_ms: float
     p95_latency_ms: float
@@ -399,6 +430,7 @@ def summarise(results: Sequence[CaseResult], *, label: str, model: str, started:
     with_numbers = [r for r in results if r.exact is not None]
     with_cards = [r for r in results if r.case.expect_card]
     with_text = [r for r in results if r.case.expect_text]
+    with_visuals = [r for r in results if r.visual is not None]
     latencies = sorted(r.record.latency_ms for r in results)
     credits = [r.record.credits or 0 for r in results]
     failures: dict[str, list[str]] = {}
@@ -422,6 +454,9 @@ def summarise(results: Sequence[CaseResult], *, label: str, model: str, started:
         citations=_pct(sum(1 for r in answered if r.citations.passed), len(answered)),
         cards=_pct(sum(1 for r in with_cards if r.card_ok), len(with_cards)),
         text=_pct(sum(1 for r in with_text if not r.text_missing), len(with_text)),
+        visuals=_pct(
+            sum(1 for r in with_visuals if r.visual and r.visual.passed), len(with_visuals)
+        ),
         avg_credits=round(sum(credits) / len(credits), 2) if credits else 0.0,
         avg_latency_ms=round(sum(latencies) / len(latencies)) if latencies else 0.0,
         p95_latency_ms=(
@@ -471,6 +506,11 @@ def _case_json(r: CaseResult) -> dict[str, Any]:
         "cards": [card.get("kind") for card in rec.cards],
         "expect_card": c.expect_card,
         "text_missing": r.text_missing,
+        "visuals": rec.visuals,
+        "visual_missing": r.visual.missing if r.visual else [],
+        "visual_unexpected": r.visual.unexpected if r.visual else [],
+        "visual_ungrounded": r.visual.ungrounded if r.visual else [],
+        "visual_missing_numbers": r.visual.missing_numbers if r.visual else [],
         "answer": rec.answer,
         "answer_refs": rec.answer_refs,
         "credits": rec.credits,
@@ -493,6 +533,8 @@ def _summary_lines(s: Summary) -> list[str]:
         f"- Citations valid: {s.citations}%",
         f"- Action cards: {s.cards}%",
         f"- Honest-answer text: {s.text}%",
+        f"- Visuals (right kinds, none for a concept, every figure a tool's): {s.visuals}% of "
+        f"cases with visual expectations (target 100%: {'met' if met['visuals'] else 'missed'})",
         f"- Credits per run: {s.avg_credits} on average",
         f"- Latency: {s.avg_latency_ms / 1000:.1f} s average, {s.p95_latency_ms / 1000:.1f} s p95",
     ]
@@ -546,6 +588,22 @@ def markdown(summary: Summary, results: Sequence[CaseResult]) -> str:
             )
         if r.text_missing:
             lines.append(f"- Missing text: {' | '.join(r.text_missing)}")
+        if r.visual is not None:
+            lines.append(
+                f"- Visuals: {', '.join(r.visual.kinds) or 'none'}"
+                + (f"; missing: {', '.join(r.visual.missing)}" if r.visual.missing else "")
+                + (f"; unexpected: {', '.join(r.visual.unexpected)}" if r.visual.unexpected else "")
+                + (
+                    f"; not from a tool: {', '.join(r.visual.ungrounded)}"
+                    if r.visual.ungrounded
+                    else ""
+                )
+                + (
+                    f"; missing figures: {', '.join(r.visual.missing_numbers)}"
+                    if r.visual.missing_numbers
+                    else ""
+                )
+            )
         if r.citations.invalid:
             lines.append(f"- Invalid citations: {r.citations.invalid}")
         if r.citations.stray:
@@ -612,7 +670,10 @@ async def run_eval(
             env = Env(
                 engine=engine,
                 redis=redis,
-                platform=deps_from(http, settings),
+                # GR-38: tools build visuals and the prompt says so only with this on.
+                platform=deps_from(
+                    http, settings.model_copy(update={"agent_visuals_enabled": True})
+                ),
                 provider=EvalProvider(settings),
                 seeded=seeded,
                 log=log,

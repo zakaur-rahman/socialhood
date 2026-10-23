@@ -73,20 +73,68 @@ export type AutomationTemplateList = Schemas["AutomationTemplateList"];
 export type AutomationRun = Schemas["AutomationRun"];
 export type AutomationRunList = Schemas["AutomationRunList"];
 export type AutomationStats = Schemas["AutomationStats"];
+// GR-15: the per-step funnel and a Split's results
+export type AutomationFunnel = Schemas["AutomationFunnel"];
+export type FunnelStep = Schemas["FunnelStep"];
+export type SplitResult = Schemas["SplitResult"];
+export type SplitBranch = Schemas["SplitBranch"];
 export type AutomationTest = Schemas["AutomationTest"];
 export type AutomationTestResult = Schemas["AutomationTestResult"];
 export type OverlapWarning = Schemas["OverlapWarning"];
 export type QueueInfo = Schemas["QueueInfo"];
 export type LinkButton = Schemas["LinkButtonIn"];
+
+// ---- flows (GR-03, the editor GR-13)
+
+export type Flow = Schemas["Flow"];
+export type FlowDefinition = Schemas["FlowDefinition"];
+export type FlowStep = FlowDefinition["steps"][number];
+export type FlowButton = Schemas["FlowButton"];
+export type FlowCondition = Schemas["BranchRule"]["when"];
+export type FlowAction = Schemas["ActionStep"]["action"];
+export type FlowPreviewStep = Schemas["FlowPreviewStep"];
+export type FlowFieldDefinition = Schemas["FieldDefinition"];
+export type FlowTag = Schemas["Tag"];
 export type PostRef = Schemas["PostRef"];
 export type PostSummary = Schemas["PostSummary"];
 export type PostList = Schemas["PostList"];
+// GR-06, GR-07: live stories for the story picker, and the Mentions list.
+export type Story = Schemas["Story"];
+export type StoryList = Schemas["StoryList"];
+// conversation starters (GR-11)
+export type IceBreaker = Schemas["IceBreaker"];
+export type IceBreakerList = Schemas["IceBreakerList"];
+export type IceBreakersUpdate = Schemas["IceBreakersUpdate"];
+export type StoryMention = Schemas["StoryMention"];
+export type StoryMentionList = Schemas["StoryMentionList"];
+// GR-21: saved replies (snippets typed after / in the composer).
+export type SavedReply = Schemas["SavedReply"];
+export type SavedReplyList = Schemas["SavedReplyList"];
+export type SavedReplyCreate = Schemas["SavedReplyCreate"];
+export type SavedReplyUpdate = Schemas["SavedReplyUpdate"];
+export type SavedReplyFilled = Schemas["SavedReplyFilled"];
+// GR-22: business hours and the away message.
+export type BusinessHours = Schemas["BusinessHours"];
+export type BusinessHoursUpdate = Schemas["BusinessHoursUpdate"];
+export type BusinessHoursOverview = Schemas["BusinessHoursOverview"];
+export type AccountBusinessHours = Schemas["AccountBusinessHours"];
+export type DaySchedule = Schemas["DaySchedule"];
+export type TimeRange = Schemas["TimeRange"];
+export type AutoModeName = BusinessHours["auto_mode"];
+// GR-08: entry links (ig.me links with QR codes).
+export type EntryLink = Schemas["EntryLink"];
+export type EntryLinkList = Schemas["EntryLinkList"];
+export type EntryLinkCreate = Schemas["EntryLinkCreate"];
+export type EntryLinkUpdate = Schemas["EntryLinkUpdate"];
+export type QrFormat = "svg" | "png";
 export type AutomationStatus = Automation["status"];
 export type DisplayStatus = Automation["display_status"];
 export type TriggerName = NonNullable<Automation["trigger"]>;
 export type ActionName = NonNullable<Automation["action"]>;
 export type MatchMode = Automation["match_mode"];
 export type PostScope = Automation["post_scope"];
+/** GR-10: where a comment trigger listens: posts, the account's Lives, or both. */
+export type CommentSurface = Automation["comment_surface"];
 export type SurgeOrder = Automation["surge_order"];
 export type RunResult = AutomationRun["result"];
 export type TemplateCategory = AutomationTemplate["category"];
@@ -234,6 +282,21 @@ export type CommentReplyPrefill = Schemas["CommentReplyPrefill"];
 export type AutomationDraftPrefill = Schemas["AutomationDraftPrefill"];
 
 /**
+ * A visual answer (GR-38): built by the API's tools from service numbers and listed in the run's
+ * `visuals`, in step order. A closed set: narrow on `kind`. Customer text in them (a caption, a
+ * topic) is text: render it as text.
+ */
+export type Visual = AgentRun["visuals"][number];
+export type VisualKind = Visual["kind"];
+export type MetricComparisonVisual = Schemas["MetricComparisonVisual"];
+export type RankedPostsVisual = Schemas["RankedPostsVisual"];
+export type SentimentSummaryVisual = Schemas["SentimentSummaryVisual"];
+export type MetricDelta = Schemas["MetricDelta"];
+export type RankedPostRow = Schemas["RankedPostRow"];
+export type VisualPeriod = Schemas["VisualPeriod"];
+export type VisualTopic = Schemas["VisualTopic"];
+
+/**
  * Real-time agent events aren't in the OpenAPI document; their fields are picks of AgentRun and
  * AgentStep (schemas/agent.py AgentRunEvent, AgentStepEvent). They carry ids, statuses and
  * plain-word steps only, never the request or the answer.
@@ -269,3 +332,48 @@ export type WebhookEndpointCreate = Schemas["WebhookEndpointCreate"];
 export type WebhookEndpointPatch = Schemas["WebhookEndpointPatch"];
 export type WebhookDelivery = Schemas["WebhookDelivery"];
 export type WebhookDeliveryList = Schemas["WebhookDeliveryList"];
+
+// Activity (GR-05)
+export type ActivityItem = Schemas["ActivityItem"];
+export type ActivityList = Schemas["ActivityList"];
+export type ActivityAction = Schemas["ActivityAction"];
+export type ActivityRetry = Schemas["ActivityRetry"];
+export type ActivityKind = ActivityItem["kind"];
+export type ActivityOutcome = ActivityItem["outcome"];
+
+// Contacts (GR-02, GR-17)
+export type ContactListItem = Schemas["ContactListItem"];
+export type ContactList = Schemas["ContactList"];
+export type ContactRecord = Schemas["ContactRecord"];
+export type ContactPatch = Schemas["ContactPatch"];
+export type ContactCount = Schemas["ContactCount"];
+export type ContactFilterSpec = Schemas["ContactFilterSpec"];
+export type ContactFilterOut = Schemas["ContactFilterOut"];
+export type ContactConsent = Schemas["Consent"];
+export type ConsentChannel = ContactConsent["channel"];
+export type ConsentCreate = Schemas["ConsentCreate"];
+export type ContactTag = Schemas["Tag"];
+export type TagList = Schemas["TagList"];
+export type TagRef = Schemas["TagRef"];
+export type TagCreate = Schemas["TagCreate"];
+export type FieldDefinition = Schemas["FieldDefinition"];
+export type FieldDefinitionList = Schemas["FieldDefinitionList"];
+export type FieldType = FieldDefinition["type"];
+export type BulkTagsUpdate = Schemas["BulkTagsUpdate"];
+export type BulkTagsResult = Schemas["BulkTagsResult"];
+export type ContactSegment = Schemas["Segment"];
+export type ContactSegmentList = Schemas["SegmentList"];
+export type ContactSegmentCreate = Schemas["SegmentCreate"];
+export type ContactSegmentPatch = Schemas["SegmentPatch"];
+export type TimelineItem = Schemas["TimelineItem"];
+export type TimelineList = Schemas["TimelineList"];
+export type TimelineKind = TimelineItem["kind"];
+
+// Leads (GR-18)
+export type LeadStage = ContactListItem["lead_stage"];
+export type LeadStageUpdate = Schemas["LeadStageUpdate"];
+export type LeadSummary = Schemas["LeadSummary"];
+export type LeadStageCount = Schemas["LeadStageCount"];
+export type LeadWeek = Schemas["LeadWeek"];
+export type LeadSettings = Schemas["LeadSettings"];
+export type LeadSettingsPatch = Schemas["LeadSettingsPatch"];

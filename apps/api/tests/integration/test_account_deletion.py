@@ -211,6 +211,19 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         a=automation,
         c=comment,
     )
+    await execute(  # GR-15: a tracked link on that run, and a click on it
+        engine,
+        "WITH l AS (INSERT INTO tracked_links (workspace_id, automation_id, run_id, contact_id,"
+        " step_id, button_index, code, title, url)"
+        " SELECT :w, :a, id, :ct, 'hello', 0, :code, 'Open', 'https://shop.example/x'"
+        " FROM automation_runs WHERE automation_id = :a RETURNING id, run_id)"
+        " INSERT INTO link_clicks (workspace_id, link_id, automation_id, run_id, contact_id,"
+        " step_id) SELECT :w, id, :a, run_id, :ct, 'hello' FROM l",
+        w=wid,
+        a=automation,
+        ct=thread.contact_id,
+        code=f"L{uuid.uuid4().hex}",
+    )
     await execute(  # GR-03: a saved flow
         engine,
         "INSERT INTO automation_flows (workspace_id, automation_id, version, definition)"
@@ -234,6 +247,43 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         " occurred_at) VALUES (:w, :c, 'instagram', 'granted', 'member', now())",
         w=wid,
         c=thread.contact_id,
+    )
+    await execute(  # GR-18: a lead stage move
+        engine,
+        "INSERT INTO lead_stage_changes (workspace_id, contact_id, from_stage, to_stage,"
+        " actor_kind, rule) VALUES (:w, :c, 'new', 'qualified', 'rule', 'lead_score')",
+        w=wid,
+        c=thread.contact_id,
+    )
+    await execute(  # GR-11: a conversation starter
+        engine,
+        "INSERT INTO ice_breakers (workspace_id, social_account_id, position, question,"
+        " answer_with_ai) VALUES (:w, :a, 0, 'Opening hours?', true)",
+        w=wid,
+        a=account_id,
+    )
+    await execute(  # GR-22: the account's own business hours
+        engine,
+        "INSERT INTO business_hours (workspace_id, social_account_id, enabled, schedule)"
+        " VALUES (:w, :a, true, CAST('[]' AS jsonb))",
+        w=wid,
+        a=account_id,
+    )
+    await execute(  # GR-07: a story mention
+        engine,
+        "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id, message_id,"
+        " mentioned_at) VALUES (:w, :a, :c, :m, now())",
+        w=wid,
+        a=account_id,
+        c=thread.contact_id,
+        m=thread.message_ids[0],
+    )
+    await execute(  # GR-08: an entry link
+        engine,
+        "INSERT INTO entry_links (workspace_id, social_account_id, code, name)"
+        " VALUES (:w, :a, 'spring', 'Spring')",
+        w=wid,
+        a=account_id,
     )
     return Seeded(
         conversation_id=thread.conversation_id,

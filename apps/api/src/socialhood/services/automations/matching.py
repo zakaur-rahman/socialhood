@@ -10,6 +10,14 @@ plain substring.
 Candidates are tried in runtime order: keyword automations before any-comment ones, then the
 lowest priority number, then the oldest. The first automation with a matching keyword wins; the
 runtime then applies cooldowns, post scopes and run windows, which are not this module's concern.
+
+Triggers that match without a keyword (``matches_anything``): an any-comment automation, a story
+mention, an ice breaker (GR-11) and a story reply with no keywords ("any reply", GR-06). They
+run after the keyword automations. Entry link and ad click automations (GR-08, GR-09) also need
+no keyword, but they are chosen by how the conversation was entered, which the runtime checks;
+they run before the keyword ones, because a link or an ad is the more specific way in.
+The two fallbacks (GR-12) come last of all: the welcome (a contact's first DM), then the
+default reply (a DM nothing answered); the runtime only offers them when they apply.
 """
 
 from __future__ import annotations
@@ -22,7 +30,21 @@ from datetime import datetime
 from typing import Literal
 
 MatchModeName = Literal["word", "exact", "contains"]
-TriggerName = Literal["dm_keyword", "comment_keyword", "comment_any"]
+TriggerName = Literal[
+    "dm_keyword",
+    "comment_keyword",
+    "comment_any",
+    "story_reply",
+    "story_mention",
+    "entry_link",
+    "ad_click",
+    "ice_breaker",
+    "first_message",
+    "default_reply",
+]
+ENTRY_TRIGGERS = ("entry_link", "ad_click")
+# GR-12: the welcome and the default reply answer a DM only when no other automation did.
+FALLBACK_TRIGGERS = ("first_message", "default_reply")
 
 _WORD_CATEGORIES = ("L", "M", "N")
 
@@ -93,18 +115,43 @@ class Match:
     keyword: str  # the normalised keyword that matched; "" for any-comment triggers
 
 
+def matches_anything(candidate: Candidate) -> bool:
+    """The candidate answers every event of its kind, whatever the text says."""
+    if candidate.trigger == "story_reply":
+        return not candidate.keywords
+    return candidate.trigger in (
+        "comment_any",
+        "story_mention",
+        "ice_breaker",
+        *ENTRY_TRIGGERS,
+        *FALLBACK_TRIGGERS,
+    )
+
+
+def _rank(candidate: Candidate) -> int:
+    """0: entered through a link or ad; 1: has keywords; 2: answers anything; 3: the welcome;
+    4: the default reply."""
+    if candidate.trigger in ENTRY_TRIGGERS:
+        return 0
+    if candidate.trigger in FALLBACK_TRIGGERS:
+        return 3 + FALLBACK_TRIGGERS.index(candidate.trigger)
+    return 2 if matches_anything(candidate) else 1
+
+
 def runtime_order(candidates: Iterable[Candidate]) -> list[Candidate]:
-    """Keyword automations first, then priority (lower wins), then the oldest (FR-AUT-15)."""
+    """Entry link and ad click automations first, then those with keywords, then those that match
+    anything, then the welcome and the default reply; within each, priority (lower wins) and then
+    the oldest (FR-AUT-15)."""
     return sorted(
         candidates,
-        key=lambda c: (c.trigger == "comment_any", c.priority, c.created_at, str(c.id)),
+        key=lambda c: (_rank(c), c.priority, c.created_at, str(c.id)),
     )
 
 
 def matching_keyword(text: str, candidate: Candidate) -> str | None:
     """The first of the candidate's keywords the (normalised) text matches, or None; "" for an
-    any-comment automation, which matches every comment."""
-    if candidate.trigger == "comment_any":
+    automation that matches anything (``matches_anything``)."""
+    if matches_anything(candidate):
         return ""
     for keyword in candidate.keywords:
         if keyword_matches(text, keyword, candidate.match_mode):

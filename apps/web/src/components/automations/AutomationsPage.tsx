@@ -2,6 +2,7 @@
 
 import { Pause, Plus, X } from "lucide-react";
 import type { Route } from "next";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -61,7 +62,18 @@ const STATUSES: { value: AutomationStatus; label: string }[] = [
   { value: "draft", label: "Draft" },
 ];
 
-const TRIGGERS: TriggerName[] = ["comment_keyword", "comment_any", "dm_keyword"];
+const TRIGGERS: TriggerName[] = [
+  "comment_keyword",
+  "comment_any",
+  "dm_keyword",
+  "story_reply",
+  "story_mention",
+  "entry_link",
+  "ad_click",
+  "ice_breaker",
+  "first_message",
+  "default_reply",
+];
 const ALL = "all";
 
 function byPriority(a: Automation, b: Automation): number {
@@ -340,9 +352,17 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
     <PageFrame
       title="Automations"
       actions={
-        <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
-          <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
-        </Button>
+        <>
+          <Button asChild variant="secondary" size="lg">
+            <Link href={`/w/${workspace.slug}/automations/entry-links` as Route}>Entry links</Link>
+          </Button>
+          <Button asChild variant="secondary" size="lg">
+            <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
+          </Button>
+          <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
+            <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
+          </Button>
+        </>
       }
     >
       <div className="space-y-5">

@@ -8,7 +8,7 @@ from __future__ import annotations
 import uuid
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -17,7 +17,7 @@ import time_machine
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from tests.support.analytics import make_comment_analysis
+from tests.support.analytics import make_account_day, make_comment_analysis
 from tests.support.api import Clerk
 from tests.support.automation_api import Ws, workspace
 from tests.support.automations import make_comment
@@ -560,6 +560,186 @@ async def test_members_of_other_workspaces_are_not_let_in(
         f"/posts/{post}/compare",
         "/sentiment",
         "/top-posts",
+        "/account-metrics",
     ):
         response = await client.get(f"/v1/w/{shop.wid}/analytics{path}", headers=outsider.headers)
         assert response.status_code == 404, path
+
+
+# ---------------------------------------------------------------- account metrics (GR-38)
+
+
+async def seed_days(
+    shop: Shop,
+    first: str,
+    last: str,
+    *,
+    account: str | None = None,
+    skip: tuple[str, ...] = (),
+    **metrics: int,
+) -> None:
+    """One account_daily_metrics row per day first..last (ISO dates) except ``skip``; followers
+    are 1000 plus the day of the month."""
+    day = date.fromisoformat(first)
+    while day <= date.fromisoformat(last):
+        if day.isoformat() not in skip:
+            await make_account_day(
+                shop.engine,
+                workspace_id=shop.wid,
+                account_id=account or shop.account,
+                day=day,
+                followers_count=1000 + day.day,
+                metrics=metrics,
+            )
+        day += timedelta(days=1)
+
+
+def figure_of(body: dict[str, Any], metric: str) -> dict[str, Any]:
+    return next(f for f in body["figures"] if f["metric"] == metric)
+
+
+async def test_account_figures_sum_the_days_and_say_how_many_days_they_have(shop: Shop) -> None:
+    ig = str(await make_instagram_account(shop.engine, shop.wid))
+    await seed_days(
+        shop, "2026-09-01", "2026-09-28", account=ig, skip=("2026-09-10", "2026-09-11"), reach=100
+    )
+    body = await shop.get(
+        "/account-metrics",
+        since="2026-09-01",
+        until="2026-09-28",
+        account_id=ig,
+        metric=["reach", "views", "followers", "interactions"],
+    )
+    assert body["period"] == {"since": "2026-09-01", "until": "2026-09-28", "days": 28}
+    assert body["previous_period"] is None
+    reach = figure_of(body, "reach")["current"]
+    assert (reach["value"], reach["days_known"], reach["days_total"]) == (2600, 26, 28)
+    # No day has views: None with the reason, not a zero.
+    views = figure_of(body, "views")["current"]
+    assert (views["value"], views["days_known"], views["unavailable"]) == (None, 0, "no_readings")
+    # Followers are the latest reading in the period, not a sum.
+    assert figure_of(body, "followers")["current"]["value"] == 1028
+    assert [f["metric"] for f in body["figures"]] == ["reach", "views", "followers", "interactions"]
+
+
+async def test_without_the_insights_scope_the_reason_is_insights_not_granted(shop: Shop) -> None:
+    ig = str(await make_instagram_account(shop.engine, shop.wid, insights=False))
+    await seed_days(shop, "2026-09-20", "2026-09-22", account=ig)
+    body = await shop.get(
+        "/account-metrics",
+        since="2026-09-20",
+        until="2026-09-22",
+        account_id=ig,
+        metric=["reach", "followers"],
+    )
+    reach = figure_of(body, "reach")["current"]
+    assert (reach["value"], reach["unavailable"]) == (None, "insights_not_granted")
+    # Followers come from the account fields: known without the scope.
+    assert figure_of(body, "followers")["current"]["value"] == 1022
+
+
+async def test_a_period_against_the_one_before_it_has_the_change_worked_out(shop: Shop) -> None:
+    ig = str(await make_instagram_account(shop.engine, shop.wid))
+    await seed_days(shop, "2026-09-01", "2026-09-14", account=ig, reach=100)
+    await seed_days(shop, "2026-09-15", "2026-09-28", account=ig, reach=118, follows=5)
+    body = await shop.get(
+        "/account-metrics",
+        since="2026-09-15",
+        until="2026-09-28",
+        account_id=ig,
+        compare="previous",
+        metric=["reach", "follows", "views"],
+    )
+    assert body["previous_period"] == {"since": "2026-09-01", "until": "2026-09-14", "days": 14}
+    assert body["comparable"] is True
+    reach = figure_of(body, "reach")
+    assert (reach["current"]["value"], reach["previous"]["value"]) == (1652, 1400)
+    assert (reach["change_pct"], reach["direction"]) == (18.0, "up")
+    # Nothing before: no percentage, and no direction either.
+    follows = figure_of(body, "follows")
+    assert follows["previous"]["value"] is None
+    assert (follows["change_pct"], follows["direction"]) == (None, None)
+    views = figure_of(body, "views")
+    assert (views["change_pct"], views["direction"]) == (None, None)
+
+
+async def test_a_previous_value_of_zero_has_no_percentage(shop: Shop) -> None:
+    ig = str(await make_instagram_account(shop.engine, shop.wid))
+    await seed_days(shop, "2026-09-01", "2026-09-14", account=ig, unfollows=0)
+    await seed_days(shop, "2026-09-15", "2026-09-28", account=ig, unfollows=2)
+    body = await shop.get(
+        "/account-metrics",
+        since="2026-09-15",
+        until="2026-09-28",
+        account_id=ig,
+        compare="previous",
+        metric=["unfollows"],
+    )
+    unfollows = figure_of(body, "unfollows")
+    assert (unfollows["previous"]["value"], unfollows["current"]["value"]) == (0, 28)
+    assert (unfollows["change_pct"], unfollows["direction"]) == (None, "up")
+
+
+async def test_comments_are_counted_over_the_local_days_of_the_workspace(
+    shop: Shop, engine: AsyncEngine
+) -> None:
+    await set_timezone(engine, shop.wid, "America/New_York")
+    post = await shop.post(timedelta(days=30))
+
+    async def comment_at(at: datetime) -> None:
+        await make_comment(
+            engine,
+            workspace_id=shop.wid,
+            account_id=shop.account,
+            media_item_id=uuid.UUID(post),
+            commented_at=at,
+        )
+
+    await comment_at(datetime(2026, 9, 10, 2, 0, tzinfo=UTC))  # 9 Sep 22:00 in New York
+    await comment_at(datetime(2026, 9, 10, 15, 0, tzinfo=UTC))  # 10 Sep
+    await comment_at(datetime(2026, 9, 20, 15, 0, tzinfo=UTC))
+    one = await shop.get(
+        "/account-metrics", since="2026-09-10", until="2026-09-10", metric=["comments"]
+    )
+    assert figure_of(one, "comments")["current"]["value"] == 1
+    both = await shop.get(
+        "/account-metrics", since="2026-09-09", until="2026-09-10", metric=["comments"]
+    )
+    comments = figure_of(both, "comments")["current"]
+    assert (comments["value"], comments["days_known"], comments["days_total"]) == (2, 2, 2)
+
+
+async def test_account_metrics_requests_are_checked(shop: Shop) -> None:
+    await shop.get("/account-metrics", 422, since="2026-09-10", until="2026-09-01")
+    await shop.get("/account-metrics", 422, since="2024-01-01", until="2026-09-01")
+    await shop.get("/account-metrics", 422, metric="impressions")
+    await shop.get("/account-metrics", 422, compare="next")
+    await shop.get("/account-metrics", 404, account_id=str(uuid.uuid4()))
+    default = await shop.get("/account-metrics")  # the last 30 days, every metric
+    assert default["period"]["days"] == 30
+    assert len(default["figures"]) == 10
+
+
+async def test_another_workspaces_account_and_figures_are_not_seen(
+    shop: Shop, engine: AsyncEngine, client: httpx.AsyncClient, clerk: Clerk
+) -> None:
+    other = await make_workspace(engine)
+    their_account = await make_account(engine, other)
+    await make_account_day(
+        engine,
+        workspace_id=other,
+        account_id=their_account,
+        day=date(2026, 9, 20),
+        metrics={"reach": 999999},
+    )
+    await shop.get("/account-metrics", 404, account_id=str(their_account))
+    mine = await shop.get(
+        "/account-metrics", since="2026-09-20", until="2026-09-20", metric=["reach", "followers"]
+    )
+    assert figure_of(mine, "reach")["current"]["value"] is None
+    assert figure_of(mine, "followers")["current"]["value"] is None
+    outsider = await workspace(client, clerk, email="outsider@example.com")
+    response = await client.get(
+        f"/v1/w/{shop.wid}/analytics/account-metrics", headers=outsider.headers
+    )
+    assert response.status_code == 404

@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AutomationDefinition } from "@/lib/api/types";
+import type { AutomationDefinition, FlowDefinition, FlowTag } from "@/lib/api/types";
 import { usesFollowNudge, usesTapFirst } from "@/lib/automations/definition";
 
 import { MatchTester } from "./MatchTester";
@@ -27,6 +27,8 @@ export function SidePanel({
   mediaUrl,
   timeZone,
   beforeTest,
+  flow = null,
+  tags = [],
 }: {
   wid: string;
   slug: string;
@@ -37,6 +39,9 @@ export function SidePanel({
   mediaUrl: string | null;
   timeZone: string;
   beforeTest: () => Promise<boolean>;
+  /** GR-13: the flow being edited, when the automation is saved as one. */
+  flow?: FlowDefinition | null;
+  tags?: FlowTag[];
 }) {
   const [tab, setTab] = useState<Tab>("preview");
   return (
@@ -48,7 +53,14 @@ export function SidePanel({
         <TabsTrigger value="stats">Stats</TabsTrigger>
       </TabsList>
       <TabsContent value="preview">
-        <PreviewPane draft={draft} accountUsername={accountUsername} disclosure={disclosure} mediaUrl={mediaUrl} />
+        <PreviewPane
+          draft={draft}
+          accountUsername={accountUsername}
+          disclosure={disclosure}
+          mediaUrl={mediaUrl}
+          flow={flow}
+          tags={tags}
+        />
       </TabsContent>
       <TabsContent value="test">
         <MatchTester
@@ -57,6 +69,7 @@ export function SidePanel({
           trigger={draft.trigger}
           openingButton={draft.opening_button}
           beforeTest={beforeTest}
+          isFlow={flow !== null}
         />
       </TabsContent>
       <TabsContent value="runs">

@@ -42,8 +42,11 @@ import {
   useAutomation,
   useDeleteAutomation,
   useDuplicateAutomation,
+  useFlowFields,
+  useFlowTags,
   usePauseAutomation,
   useSocialAccounts,
+  useStartFlow,
   useWorkspace,
 } from "@/lib/api/queries";
 import type { Automation, AutomationDefinition, DisplayStatus, QueueInfo, SurgeOrder } from "@/lib/api/types";
@@ -61,18 +64,25 @@ import {
   type StepId,
 } from "@/lib/automations/definition";
 import { instagramAccounts } from "@/lib/automations/accounts";
+import { flowComplete, placeErrors, type StepErrors } from "@/lib/automations/flow";
 import { queueBanner, shortDateTime, STATUS_LABEL, SURGE_LABEL } from "@/lib/automations/format";
 import { errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import type { Tone } from "@/lib/ui/tone";
+import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { focusFlowStep } from "./flow/StepTree";
+import { useFlowDraft } from "./flow/use-flow-draft";
 import { SidePanel } from "./SidePanel";
 import { focusStep, type StepState } from "./StepCard";
 import { KeywordsStep } from "./steps/KeywordsStep";
 import { PostsStep } from "./steps/PostsStep";
 import { SettingsStep } from "./steps/SettingsStep";
+import { AdsStep } from "./steps/AdsStep";
+import { StoriesStep } from "./steps/StoriesStep";
+import { ThenFlow } from "./steps/ThenFlow";
 import { ThenStep, type Uploader } from "./steps/ThenStep";
 import { WhenStep } from "./steps/WhenStep";
 import { editorHref } from "./TemplateGallery";
@@ -119,6 +129,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const wid = workspace.id;
   const slug = workspace.slug;
   const timeZone = workspace.timezone;
+  const now = useNow();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -129,8 +140,34 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const allAccounts = useSocialAccounts(wid);
   const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
 
-  const { draft, update, flush, discard, status, error } = useAutosave(wid, initial);
+  const { draft, update, flush: flushSettings, discard, status: settingsStatus, error } = useAutosave(wid, initial);
+  // GR-13: an automation saved as a flow edits its steps; one on its message settings shows its
+  // message as the first step, and the first step added turns it into a flow.
+  const flow = useFlowDraft(wid, server);
+  const flowMode = flow.phase !== "off";
+  const startFlow = useStartFlow(wid, server.id);
+  const flowTags = useFlowTags(wid, flowMode);
+  const flowFields = useFlowFields(wid, flowMode);
+  const flowFlush = flow.flush;
+  const flush = useCallback(async () => (await flushSettings()) && (await flowFlush()), [flushSettings, flowFlush]);
+  const status: SaveStatus =
+    settingsStatus === "error" || flow.status === "error"
+      ? "error"
+      : settingsStatus === "saving" || flow.status === "saving"
+        ? "saving"
+        : "saved";
   const [activationErrors, setActivationErrors] = useState<FieldErrors>({});
+  const [flowActivationErrors, setFlowActivationErrors] = useState<StepErrors>({});
+  const clearFlowActivationErrors = useCallback(
+    (id: string) =>
+      setFlowActivationErrors((current) => {
+        if (!(id in current)) return current;
+        const rest = { ...current };
+        delete rest[id];
+        return rest;
+      }),
+    [],
+  );
   const [mediaUrl, setMediaUrl] = useState<string | null>(initial.message_media_url ?? null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   // The confirmation opens from a menu item, which is gone when it closes: focus goes back to ⋯.
@@ -154,8 +191,19 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const errors: FieldErrors = { ...saveErrors, ...activationErrors };
   const errorSteps = stepsWithErrors(errors);
   const steps = visibleSteps(draft.trigger);
-  const stateOf = (step: StepId): StepState =>
-    errorSteps.has(step) ? "error" : stepComplete(step, draft, disclosure) ? "complete" : "incomplete";
+  const flowReady =
+    flow.phase === "ready" &&
+    flowComplete(flow.tree, {
+      disclosure,
+      fields: (flowFields.data ?? []).map((field) => ({ key: field.key, type: field.type })),
+      tagIds: new Set((flowTags.data ?? []).map((tag) => tag.id)),
+    });
+  const flowErrored = Object.keys(flow.saveErrors).length > 0 || Object.keys(flowActivationErrors).length > 0;
+  const stateOf = (step: StepId): StepState => {
+    if (errorSteps.has(step) || (step === "then" && flowErrored)) return "error";
+    if (step === "then" && flowMode) return flowReady ? "complete" : "incomplete";
+    return stepComplete(step, draft, disclosure) ? "complete" : "incomplete";
+  };
   const unplaced = Object.entries(errors).filter(([field]) => {
     const step = stepOfField(field);
     return !step || (step !== "name" && !steps.includes(step));
@@ -179,6 +227,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
     activate.mutate(server.id, {
       onSuccess: (result) => {
         setActivationErrors({});
+        setFlowActivationErrors({});
         toast.success(
           result.display_status === "scheduled" && result.starts_at
             ? `Scheduled. It starts ${shortDateTime(result.starts_at, timeZone)}.`
@@ -193,9 +242,16 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
         }
         const next = fieldErrors(apiError.errors);
         setActivationErrors(next);
+        const placed = placeErrors(
+          apiError.errors.filter((item) => item.field.startsWith("flow.")),
+          flow.ids,
+        );
+        setFlowActivationErrors(placed.byStep);
         const withErrors = stepsWithErrors(next);
         const first = steps.find((step) => withErrors.has(step));
-        if (first) requestAnimationFrame(() => focusStep(first, { field: false }));
+        const firstFlowStep = flow.ids.find((id) => id in placed.byStep);
+        if (first === "then" && firstFlowStep) requestAnimationFrame(() => focusFlowStep(firstFlowStep, { field: true }));
+        else if (first) requestAnimationFrame(() => focusStep(first, { field: false }));
         toast.error(
           apiError.errors.length === 1
             ? "One thing to finish before this can go live."
@@ -290,9 +346,11 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
           </DropdownMenuContent>
         </DropdownMenu>
       </header>
-      {status === "error" && error ? (
+      {status === "error" && (error ?? flow.error) ? (
         <Alert tone="danger" icon={<AlertCircle />} className="mt-3">
-          {error.code === "validation_error" ? "Some changes weren't saved. Fix the fields marked below." : errorMessage(error)}
+          {(error ?? flow.error)?.code === "validation_error"
+            ? "Some changes weren't saved. Fix the fields marked below."
+            : errorMessage(error ?? flow.error)}
         </Alert>
       ) : null}
 
@@ -329,6 +387,14 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
                       <WhenStep key={step} draft={draft} change={change} errors={errors} state={state} accounts={accounts} slug={slug} />
                     );
                   case "posts":
+                    if (draft.trigger === "story_reply") {
+                      return (
+                        <StoriesStep key={step} wid={wid} draft={draft} change={change} errors={errors} state={state} now={now} />
+                      );
+                    }
+                    if (draft.trigger === "ad_click") {
+                      return <AdsStep key={step} draft={draft} change={change} errors={errors} state={state} />;
+                    }
                     return (
                       <PostsStep
                         key={step}
@@ -346,7 +412,23 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
                       <KeywordsStep key={step} draft={draft} change={change} errors={errors} state={state} overlaps={server.overlaps} />
                     );
                   case "then":
-                    return (
+                    return flowMode ? (
+                      <ThenFlow
+                        key={step}
+                        wid={wid}
+                        automationId={server.id}
+                        draft={draft}
+                        change={change}
+                        errors={errors}
+                        state={state}
+                        plan={workspace.plan}
+                        disclosure={disclosure}
+                        upload={upload}
+                        flow={flow}
+                        activationErrors={flowActivationErrors}
+                        clearActivationErrors={clearFlowActivationErrors}
+                      />
+                    ) : (
                       <ThenStep
                         key={step}
                         wid={wid}
@@ -359,6 +441,22 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
                         mediaUrl={mediaUrl}
                         onMediaChange={setMediaUrl}
                         upload={upload}
+                        startFlow={{
+                          pending: startFlow.isPending,
+                          reason: active ? "Pause this automation to add steps." : null,
+                          onPick: (kind) => {
+                            void (async () => {
+                              if (!(await flushSettings())) {
+                                toast.error("Your latest changes aren't saved yet. Fix what's shown, then add a step.");
+                                return;
+                              }
+                              startFlow.mutate(kind, {
+                                onSuccess: ({ tree }) => flow.begin(tree),
+                                onError: (caught) => toastError(caught),
+                              });
+                            })();
+                          },
+                        }}
                       />
                     );
                   case "settings":
@@ -394,6 +492,8 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             mediaUrl={mediaUrl}
             timeZone={timeZone}
             beforeTest={flush}
+            flow={flowMode ? flow.definition : null}
+            tags={flowTags.data ?? []}
           />
         </aside>
         </Card>

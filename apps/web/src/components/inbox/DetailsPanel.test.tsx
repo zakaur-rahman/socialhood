@@ -77,7 +77,7 @@ describe("DetailsPanel: where the conversation started (GR-01)", () => {
     renderDetails(null, {
       entry: { source: "ad", ref: null, ad_id: "ad_42", ad_title: "Diwali hampers", at: null },
     });
-    expect(await screen.findByTestId("conversation-entry")).toHaveTextContent('Ad "Diwali hampers"');
+    expect(await screen.findByTestId("conversation-entry")).toHaveTextContent('From an ad: "Diwali hampers"');
   });
 
   it("says nothing for a conversation from before entries were recorded", async () => {

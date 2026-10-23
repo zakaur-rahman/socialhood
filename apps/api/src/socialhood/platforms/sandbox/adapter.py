@@ -15,6 +15,7 @@ from socialhood.platforms.base import (
     ContactProfile,
     ContainerMedia,
     ContainerStatus,
+    IceBreaker,
     MediaCounts,
     MediaDownload,
     MediaInsights,
@@ -97,10 +98,29 @@ class SandboxAdapter:
 
         return history.posts(acct, limit=limit)
 
+    async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
+        from socialhood.platforms.sandbox import history
+
+        return history.stories(acct)
+
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         from socialhood.platforms.sandbox import history
 
         return history.post(acct, media_ref)
+
+    async def set_ice_breakers(
+        self, acct: SocialAccount, starters: Sequence[IceBreaker]
+    ) -> list[IceBreaker]:
+        """Keeps what was set, per account, and returns it (``outbox.ICE_BREAKERS``). A question
+        with ``[sandbox:fail=<code>]`` fails with that code, to show a sync error."""
+        from socialhood.platforms.sandbox import outbox
+
+        for starter in starters:
+            failure = outbox.failure_for_text(starter.question, "ice_breakers")
+            if failure is not None:
+                raise failure
+        outbox.ICE_BREAKERS[acct.platform_account_id] = list(starters)
+        return list(starters)
 
     async def list_threads(self, acct: SocialAccount, *, limit: int = 20) -> list[PlatformThread]:
         from socialhood.platforms.sandbox import history

@@ -41,7 +41,7 @@ from socialhood.realtime import events
 from socialhood.repositories import automation_runs as runs
 from socialhood.repositories import inbox
 from socialhood.repositories import ingest as rows
-from socialhood.services.automations import actions, results
+from socialhood.services.automations import actions, links, results
 
 log = get_logger(__name__)
 
@@ -162,7 +162,15 @@ async def _send(
             client_id=actions.client_id_for(run.id, "message"),
             text=text,
             attachment_asset_ids=[image] if image else (),
-            buttons=actions.buttons(automation),
+            buttons=await links.track_buttons(
+                session,
+                deps.settings,
+                automation,
+                run_id=run.id,
+                contact_id=contact.id,
+                step_id="message",
+                buttons=actions.buttons(automation),
+            ),
             automation_run_id=run.id,
             deps=deps,
             now=now,

@@ -18,6 +18,7 @@ from socialhood.platforms.base import (
     ContactProfile,
     ContainerMedia,
     ContainerStatus,
+    IceBreaker,
     MediaCounts,
     MediaDownload,
     MediaInsights,
@@ -234,6 +235,16 @@ class WhatsAppAdapter:
 
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
         return []  # WhatsApp numbers have no posts
+
+    async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
+        return []  # WhatsApp numbers have no stories
+
+    async def set_ice_breakers(
+        self, acct: SocialAccount, starters: Sequence[IceBreaker]
+    ) -> list[IceBreaker]:
+        raise PlatformError(
+            "capability_unavailable", message="WhatsApp has no conversation starters"
+        )
 
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         return None  # no posts, so no comments on them

@@ -39,7 +39,7 @@ from socialhood.models.media import MediaItem
 from socialhood.platforms.instagram import oauth
 from socialhood.repositories import comment_analyses
 from tests.support.ai import make_gap, make_source
-from tests.support.analytics import make_comment_analysis, make_snapshot
+from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
 from tests.support.automations import make_automation, make_comment
 from tests.support.inbox import make_asset, make_scheduled
 from tests.support.post_metrics import make_post
@@ -1302,6 +1302,7 @@ async def seed(engine: AsyncEngine) -> Seeded:
     )
     await _schedules(engine, seeded)
     await _knowledge(engine, seeded)
+    await _account_days(engine, seeded)
     return seeded
 
 
@@ -1937,3 +1938,100 @@ def numbers_in(values: Iterable[float | int | None]) -> list[float]:
 
 def first(items: Sequence[tuple[Post, float]]) -> float:
     return items[0][1]
+
+
+# ---- account metrics (compare_periods, metric_trend; GR-38)
+
+# The 'ig' account has one account_daily_metrics row a day from 1 Aug to 29 Sep (yesterday: today's
+# row is written tomorrow morning), except the days in ACCOUNT_GAPS, which have no reading.
+ACCOUNT_FIRST = date(2026, 8, 1)
+ACCOUNT_LAST = TODAY - timedelta(days=1)
+ACCOUNT_GAPS = frozenset({date(2026, 9, 12), date(2026, 9, 13)})
+# Metric name (as the tools call it) -> the key stored in account_daily_metrics.metrics.
+ACCOUNT_KEYS = {
+    "reach": "reach",
+    "views": "views",
+    "accounts_engaged": "accounts_engaged",
+    "interactions": "total_interactions",
+    "follows": "follows",
+    "unfollows": "unfollows",
+    "profile_link_taps": "profile_links_taps",
+}
+
+
+def account_day(day: date) -> dict[str, int] | None:
+    """The 'ig' account's insights for a day, by formula; None for a day with no row."""
+    if day < ACCOUNT_FIRST or day > ACCOUNT_LAST or day in ACCOUNT_GAPS:
+        return None
+    n = (day - ACCOUNT_FIRST).days
+    return {
+        "reach": 300 + 7 * n,
+        "views": 700 + 15 * n,
+        "accounts_engaged": 90 + n % 11,
+        "total_interactions": 40 + day.day,
+        "follows": 3 + day.day % 4,
+        "unfollows": day.day % 3,
+        "profile_links_taps": 5 + day.day % 5,
+    }
+
+
+def account_followers(day: date) -> int | None:
+    return 2000 + 3 * (day - ACCOUNT_FIRST).days if account_day(day) is not None else None
+
+
+async def _account_days(engine: AsyncEngine, seeded: Seeded) -> None:
+    day = ACCOUNT_FIRST
+    while day <= ACCOUNT_LAST:
+        metrics = account_day(day)
+        if metrics is not None:
+            await make_account_day(
+                engine,
+                workspace_id=seeded.workspace_id,
+                account_id=seeded.accounts["ig"],
+                day=day,
+                followers_count=account_followers(day),
+                metrics=metrics,
+                captured_at=day_start(day + timedelta(days=1)) + timedelta(hours=2),
+            )
+        day += timedelta(days=1)
+
+
+def _span(since: date, until: date) -> list[date]:
+    return [since + timedelta(days=i) for i in range((until - since).days + 1)]
+
+
+def account_total(metric: str, since: date, until: date) -> float | None:
+    """Sum of the days that have a reading; None when none does (the tools' period sums)."""
+    values = [
+        d[ACCOUNT_KEYS[metric]]
+        for day in _span(since, until)
+        if (d := account_day(day)) is not None
+    ]
+    return float(sum(values)) if values else None
+
+
+def account_followers_at(since: date, until: date) -> float | None:
+    """The latest follower reading in the period (followers is a stock, not a sum)."""
+    known = [f for day in _span(since, until) if (f := account_followers(day)) is not None]
+    return float(known[-1]) if known else None
+
+
+def comments_total(since: date, until: date) -> float:
+    start, end = days(since, until)
+    return float(len(comments(start=start, end=end, spam=None)))
+
+
+def matched_months() -> tuple[tuple[date, date], tuple[date, date]]:
+    """This month so far against last month over the same days. Today has no row, so this month
+    ends yesterday (1-29 Sep) and last month is cut to its first 29 days (1-29 Aug)."""
+    first = TODAY.replace(day=1)
+    current = (first, ACCOUNT_LAST)
+    before = last_month()[0]
+    return current, (before, before + timedelta(days=(ACCOUNT_LAST - first).days))
+
+
+def change_pct(current: float | None, previous: float | None) -> float | None:
+    """The change in %, to one decimal (None against 0 or an unknown side)."""
+    if current is None or not previous:
+        return None
+    return round((current - previous) / previous * 100, 1)

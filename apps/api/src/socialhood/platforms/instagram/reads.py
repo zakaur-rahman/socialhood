@@ -38,6 +38,7 @@ MEDIA_FIELDS = (
     "id,caption,media_type,media_product_type,media_url,thumbnail_url,permalink,timestamp,"
     "like_count,comments_count"
 )
+STORY_FIELDS = "id,media_type,media_url,thumbnail_url,permalink,timestamp"
 THREAD_LIST_FIELDS = "participants,updated_time"
 THREAD_FIELDS = "messages{id,created_time,from,to,message,attachments}"
 CONVERSATIONS_PACE_S = 0.5  # TR-PL-09: the Conversations API allows 2 calls a second
@@ -126,6 +127,22 @@ async def list_media(
         params={"fields": MEDIA_FIELDS, "limit": limit},
     )
     return [m for m in map(parse.media_item, _items(body)) if m is not None][:limit]
+
+
+async def list_stories(
+    http: PlatformHttp, graph: Callable[[str], str], token: str
+) -> list[PlatformMedia]:
+    """The account's live stories (``GET /me/stories``, GR-06): the last 24 hours, newest first.
+    Their ids are what a story reply carries as ``reply_to.story.id`` (unverified until T0.9)."""
+    body = await http.request(
+        "GET",
+        graph("me/stories"),
+        endpoint="me.stories",
+        token=token,
+        params={"fields": STORY_FIELDS},
+    )
+    stories = [s for s in map(parse.story_item, _items(body)) if s is not None]
+    return sorted(stories, key=lambda s: s.posted_at, reverse=True)
 
 
 async def get_media(

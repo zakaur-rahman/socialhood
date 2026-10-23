@@ -257,6 +257,50 @@ async def test_finished_queue_jobs_are_kept_30_days(engine: AsyncEngine, queue: 
     assert [row["id"] for row in left] == [recent_done]
 
 
+async def test_an_expired_story_link_is_cleared_and_the_mention_kept(
+    engine: AsyncEngine, maker: async_sessionmaker[Any]
+) -> None:
+    """GR-07: Instagram's address of a mentioned story is useless once the story expires."""
+    wid = await make_workspace(engine)
+    account = await make_account(engine, wid)
+    thread = await make_thread(engine, workspace_id=wid, account_id=account, texts=("a", "b", "c"))
+    async with engine.begin() as conn:
+        for message_id, expires in zip(
+            thread.message_ids,
+            (NOW - timedelta(hours=1), NOW + timedelta(hours=1), None),
+            strict=True,
+        ):
+            await conn.execute(
+                text(
+                    "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id,"
+                    " message_id, mentioned_at, media_url, media_expires_at)"
+                    " VALUES (:w, :a, :c, :m, :at, 'https://cdn.example/s.jpg', :e)"
+                ),
+                {
+                    "w": wid,
+                    "a": account,
+                    "c": thread.contact_id,
+                    "m": message_id,
+                    "at": NOW - timedelta(days=1),
+                    "e": expires,
+                },
+            )
+
+    counts = await run(maker)
+
+    assert counts["story_mention_links"] == 1
+    async with engine.connect() as conn:
+        rows = (
+            await conn.execute(
+                text("SELECT message_id, media_url FROM story_mentions ORDER BY mentioned_at, id")
+            )
+        ).all()
+    by_message = {row.message_id: row.media_url for row in rows}
+    assert by_message[thread.message_ids[0]] is None
+    assert by_message[thread.message_ids[1]] == "https://cdn.example/s.jpg"
+    assert by_message[thread.message_ids[2]] == "https://cdn.example/s.jpg"  # no expiry known
+
+
 def test_months_before_keeps_the_day_or_the_months_last() -> None:
     assert months_before(NOW, 13) == datetime(2025, 8, 30, 4, 0, tzinfo=UTC)
     assert months_before(datetime(2026, 3, 31, tzinfo=UTC), 1) == datetime(2026, 2, 28, tzinfo=UTC)

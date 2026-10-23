@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import secrets
 import uuid
+from datetime import timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -42,6 +43,13 @@ NOT_A_MESSAGE = (
     "Only automations that send a message can wait for an answer.",
 )
 NO_MESSAGE = ("nothing_to_send", "The automation has no message to send.")
+
+# GR-10: a private reply to a Live comment works only while the Live is on air. Instagram sends no
+# "Live ended" event, so a Live comment is treated as late once it is older than this when we get
+# to it (a late webhook, or a wait in the private-reply queue). *Verify* with Meta (T0.9): the
+# window, and that the API refuses a private reply after the broadcast.
+LIVE_ENDED = ("live_ended", "The Live had ended")
+LIVE_REPLY_WINDOW = timedelta(minutes=10)
 
 
 def client_id_for(run_id: uuid.UUID, part: str | None = None) -> uuid.UUID:

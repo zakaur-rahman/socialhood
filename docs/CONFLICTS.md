@@ -1728,3 +1728,857 @@ An addition from the growth plan: one event pipeline for Zapier, Make, Sheets an
   - Each endpoint's latest deliveries, with status, attempts, response and when, and "Send again"
     for a failed one. The log refreshes while a delivery is being tried.
 - **Migration 0021:** `webhook_endpoints` and `webhook_deliveries`. Expand-only.
+
+## C-081 · The Activity page (GR-05, feature/gr-05-activity)
+Automations used to fail silently from the customer's point of view. We already recorded the
+failures; now they can see them. A read model over existing tables: no migration.
+- **The feed** (`GET /v1/w/{wid}/activity`, `services/activity/feed.py`), newest first, keyset
+  cursor on (time, id). It merges:
+  - automation runs (`automation_runs`: result, error code and reason);
+  - failed flow steps (`automation_run_steps`), only when their run did not itself fail, so one
+    problem is one row;
+  - failed outbound sends by people and the AI (`messages`, status failed); an automation's
+    failed send is shown as its run, not twice;
+  - failed outbound webhook deliveries (GR-04), with the endpoint's name or host, never its URL
+    query or payload;
+  - accounts that need reconnecting or are in error, from `social_accounts` as they are now.
+- **Filters:** failures only (on by default), type, automation, account.
+  - An automation filter leaves out sends, webhooks and accounts; an account filter leaves out
+    webhooks.
+  - "Failures" are runs that failed, sent only half, or were skipped for the 7-day limit or a
+    read-only plan.
+- **Who sees it:** owners and admins, like the automations it reports on and Settings,
+  Integrations. Agents get 403 on the page and the Ask tool. They can still retry a failed
+  message from the inbox.
+- **No raw data:** no message text, no payloads, no platform responses. Each item carries only
+  a title, a reason, a code, and ids.
+- **Left out on purpose:**
+  - Failed inbound webhook events. They are not tenant-scoped, a failed one has no workspace
+    yet, and their errors are internal.
+  - Social account status history. There is none; an account shows once, at its last change.
+  - Broadcast failures arrive with GR-23.
+- **Reasons** (`services/activity/reasons.py`): one plain sentence and at most one action.
+  - The sentence reuses `sending.readable_error`, the copy of a Failed bubble, for the codes it
+    knows; a platform rejection keeps its stored reason; the rest are written there.
+  - A comment run that half worked keeps its stored "Public reply: ... DM: ..." text.
+  - Reconnect (`account_needs_reconnect`, `capability_unavailable`) goes to Settings,
+    Connections.
+  - Upgrade (`read_only`, `entitlement_required`, `quota_exceeded`) goes to Billing.
+  - Check the endpoint (`endpoint_off`, `endpoint_error`, `endpoint_unreachable`) goes to
+    Settings, Integrations. These webhook codes are derived from the delivery's error and
+    response code.
+  - Open the chat (`reply_window_closed`, `delivery_unknown`, `recipient_unavailable`,
+    `platform_rejected`) goes to the conversation, when there is one.
+  - Edit the automation (`nothing_to_send`, `nothing_sent`) and Open the automation (anything
+    unknown) go to the automation.
+  - No action: `expired` (Instagram's 7-day private reply limit), `platform_rate_limited`,
+    `platform_unavailable`. Nothing the member can fix; the second and third can be retried.
+- **Retry only where it is safe:**
+  - A failed message with `platform_rate_limited` or `platform_unavailable` goes through the
+    existing `POST /messages/{id}/retry` (one row, one client id, so it can't double-send).
+  - `delivery_unknown` is not retried from here: it may have arrived, so the reason says to
+    check the chat first.
+  - A failed webhook delivery goes through `POST /webhook-deliveries/{id}/replay`, only while
+    its endpoint is on.
+  - The item says `retryable` and where (`retry.kind`, `retry.target_id`); there is no new
+    write route.
+- **Alerts** (`check_automation_failures`, every 10 minutes):
+  - An automation with 5 or more failed or half-sent runs in the last hour notifies owners and
+    admins: in app, and push under the "Needs you" switch (new type `automation_failing`).
+  - It links to `/settings/activity?automation={id}`, which opens the page filtered to it.
+  - One per automation per 6 hours (dedupe key).
+  - Accounts needing reconnect already notify and email once per broken connection
+    (`mark_needs_reconnect`); not repeated. Disabled webhook endpoints already notify
+    (`webhook_disabled`).
+- **Ask Social Hood:** `list_recent_failures` (owners and admins), the latest 10 failures with
+  reasons, for "what's failing?".
+- **Web:** Settings, Activity (owners and admins): the filters, one row per item with its
+  title, badge, reason, time, and the one link or Retry button; "Show older" pages.
+- **Needs checking centrally:** `apps/api/openapi.json` and `packages/api-client` need
+  regenerating for `ActivityItem`, `ActivityList`, `ActivityAction` and `ActivityRetry`.
+
+## C-082 · Story reply trigger (GR-06, feature/gr-06-07-stories)
+
+- **A story reply is a DM.** It arrives as a message with `reply_to.story`, opens the 24-hour
+  window and goes through the DM runtime. The parser keeps the story's `id` as the story
+  attachment's `media_id` (private, like the other platform ids), so an automation can be scoped
+  to one story. The story's address is never copied.
+- **Trigger `story_reply`** (the `ck_automations_trigger` check is re-created in migration 0022):
+  - the DM runtime picks the triggers a message can start by its kind (`runtime.dm_triggers`);
+  - a story reply starts story reply and DM keyword automations together, keyword ones first,
+    then those that answer anything, each by priority. *Deviation from the plan, which said the
+    trigger is chosen by the kind alone: an account's existing DM keyword automations kept
+    answering story replies before, and still do when no story reply automation takes the reply.*
+  - no keywords means any reply; keywords use the existing match modes.
+- **A story like does not trigger.** A like is the heart sticker on a reply to a story, which we
+  store as the text "heart". Such a reply never starts a story reply automation. A reaction event
+  was never a trigger.
+- **Scope** reuses `post_scope`: "all" answers any story, "selected" the stories in the new
+  `automations.story_ids` (text[], at most 20; not `automation_posts`, which points at synced
+  posts, and stories are never synced). "Next post" is refused for a story reply.
+  - *A story lasts 24 hours, so a chosen story stops matching once it expires. The automation stays
+    active and idle; the editor says so and shows a chosen story that has gone as expired, with
+    Remove. Nothing pauses it by itself.*
+- **The story picker** is `GET /stories?account_id=` (owners and admins): Instagram's
+  `/me/stories`, read on each request and not stored, newest first, with `expires_at` 24 hours
+  after posting. The adapter gets `list_stories` (the sandbox lists two per account, ids
+  `<account>_story_0` and `_1`; WhatsApp lists none).
+- **The heart** (`automations.story_heart`): Instagram's heart sticker is queued as its own
+  message just ahead of the run's message, through the send pipeline. It is not linked to the run,
+  so it never changes the run's result, and a refusal only goes to the log. *No message-reaction
+  call exists in the adapter; the sticker is what exists.*
+- **Flows (GR-03):** a story reply is a DM trigger for flows (`flows.Context.comment` stays false),
+  so a story reply automation can be saved as a flow.
+- **Template** "Reply to story, send the link" (`story_reply_link`).
+- **Sandbox:** `SandboxInbound` gains `story_reply`, `story_like` and `story_mention` and a
+  `story_id`; the e2e helper `inbound` passes them.
+- **Web:** the When step has "Instagram story reply"; its posts slot is "On these stories" (any or
+  chosen, thumbnails with time left, the heart switch); its keywords are optional.
+- **Unverified (T0.9):** that `reply_to.story.id` equals the id `/me/stories` lists, and the
+  `/me/stories` fields.
+- **Migration 0022** (shared with C-083): the trigger check, `story_ids` and `story_heart`.
+  Expand-only.
+
+## C-083 · Story mentions (GR-07, feature/gr-06-07-stories)
+
+- **A mention is a DM** with a `story_mention` attachment. Ingest keeps a record in the new
+  `story_mentions` table (who, when, the message, the story's address and when it expires).
+  - The address is Instagram's CDN link. It is never downloaded or copied, and no thumbnail is
+    stored: the policy question stays closed until someone asks for it.
+  - Its expiry is the link's `oe` parameter, else 24 hours after the mention. A mention that
+    arrives with an expired link keeps no address.
+  - `purge_expired` clears the address once it has expired (`story_mention_links`); the record
+    stays.
+- **Trigger `story_mention`** starts only story mention automations, which answer every mention
+  (no keywords). The message is a thank-you or a reward link, sent like any DM. A mention never
+  answers a waiting question (a tap-first opening or a flow step). Template `thank_story_mentions`.
+- **Mentions list:** `GET /story-mentions?account_id&cursor&limit` (any member), newest first,
+  cursor paged, with `total_7d`. `link_url` is only given while the story is live. Web: Comments
+  has a "Story mentions" button to `/comments/mentions` (who, when, View story, Open conversation).
+- **Analytics:** Home's overview periods carry `story_mentions`. The weekly digest is unchanged.
+- **Events:** no GR-04 event. The catalogue has none for mentions, and `message.received` already
+  fires for the mention's DM. Adding `story.mentioned` can wait for someone to ask.
+- **Ask Social Hood:** no new tool. `prepare_automation` accepts the story triggers.
+- **Tables:** `story_mentions` is in the account purge (it references the account), the workspace
+  deletion and the isolation seeds.
+- **Migration 0022** is shared with C-082.
+
+## C-084 · Entry links and QR codes (GR-08, feature/gr-08-09-entry)
+
+- **A link** is a row in the new `entry_links` table: account, code (unique per account, 3 to 40
+  letters, digits, `_` and `-`), name, and the automation it starts. The address is
+  `https://ig.me/m/<username>?ref=<code>` (the account's id when it has no username). The code is
+  made (8 characters, no look-alikes) unless typed, and never changes, so a printed QR code keeps
+  working. Deleting the automation sets the link's automation to null; the link and its counts stay.
+- **Trigger `entry_link`** (the `ck_automations_trigger` check is re-created in migration 0023):
+  the automation needs nothing but a message. It starts from the DM that is the first customer
+  message after a referral whose ref is one of the account's links, within one hour (GR-01's
+  referral window), and only for the automation the link points at.
+  - The run reads the conversation's `last_referral` (GR-01 stores a message's own referral, a
+    `messaging_referral` event, or the contact's recent referral there) in
+    `services/automations/entry`. A later message, an unknown ref or a referral older than an hour
+    starts nothing. Cooldown, read-only and flows work as for any DM trigger.
+  - Entry link and ad click automations run **before** keyword automations in the DM runtime
+    (`matching.runtime_order`: entry, then keywords, then answers-anything). *A link or an ad is the
+    more specific way in, so it wins over a keyword in the first message.*
+  - *A referral that Meta delivers after the first message (GR-01's five-minute upgrade) is not
+    seen: the run looks about a second after the message. Such a conversation is still marked as
+    from the link, but its automation does not start.*
+- **API** (owners and admins): `GET/POST /entry-links`, `GET/PUT/DELETE /entry-links/{id}` and
+  `GET /entry-links/{id}/qr?format=svg|png` (an attachment). A link's automation must be an entry
+  link automation of the same account. Stats per link: `opened_conversations` (conversations whose
+  `entry_source` is link and `entry_ref` is the code) and `runs` (runs of entry link automations on
+  those conversations).
+- **QR codes** use `segno` (new dependency, pure Python, no further dependencies; `uv.lock`
+  updated). Error correction M, 4-module quiet zone, 10 pixels per module.
+- **Web:** Automations has an "Entry links" button to `/automations/entry-links`: create, edit
+  (name and automation), delete, copy link, QR preview and SVG and PNG downloads, and the two
+  counts. The When step has "Instagram entry link"; it has no keywords step.
+- **WhatsApp:** *deviation from the plan, which said `wa.me/<number>?text=<keyword>`.* Automations
+  run on Instagram accounts only (validation refuses a WhatsApp account), so a WhatsApp link would
+  have no automation to start. Links are Instagram only; a WhatsApp prefilled link can come when
+  WhatsApp automations do. *Unverified:* that `ig.me/m/<id>` works for an account without a
+  username.
+- **Unverified (Meta):** that `messaging_referral` arrives for a user opening an `ig.me` link with
+  `?ref=` when a conversation already exists, and the shape of the referral for a first-time user
+  (it is delivered with the first message as `message.referral` in some cases). GR-01's parsing
+  covers both; only a real account settles which one Instagram sends.
+- **Tables:** `entry_links` is in the account purge (it references the account), the isolation
+  seeds (`link_id`, an example body for the write routes) and the account deletion seed.
+- **Migration 0023** (shared with C-085): the trigger check, `automations.ad_ids` and `entry_links`.
+  Expand-only.
+
+## C-085 · Ad clicks (GR-09, feature/gr-08-09-entry)
+
+- **Trigger `ad_click`** answers a DM that is the first customer message after an ad referral
+  (GR-01: an Instagram ad's `message.referral`, or a Click to WhatsApp ad's, recorded as
+  `entry_source` "ad" and `entry_ad_id`). Same timing rule, order and cooldown as C-084. No
+  keywords.
+- **Scope** reuses `post_scope`: "all" answers any ad, "selected" the ad ids in the new
+  `automations.ad_ids` (text[], at most 20, typed by hand in the editor; "next post" is refused).
+  The editor's posts slot reads "On these ads".
+- **Listing ads is not built.** It would need Meta's `ads_read` permission (optional, *unverified*),
+  which would add an App Review item; the plan marked it optional. Ad ids come from Ads Manager.
+- **Attribution:**
+  - the inbox details panel's "Started from" now reads `From an ad: "<title>"` (or "From an ad");
+  - the Home overview periods carry `conversations_from_ads` and `conversations_from_links`
+    (conversations that began in the period, by entry source). *The plan said "a filter in the
+    analytics"; the analytics routes are post-based and have no conversation to filter, so the
+    breakdown is on the overview, where conversations are counted.*
+- **`ctwa_clid`** was already kept by GR-01 in `contacts.last_referral` and
+  `conversations.last_referral` (the referral record), and survives the entry upgrade. Nothing is
+  sent to the Conversions API yet; a later task reads it from there.
+- **WhatsApp:** a Click to WhatsApp referral is stored and shows "From an ad", but WhatsApp has no
+  automations, so the trigger only runs for Instagram ads (click to Instagram DM). *Unverified:*
+  the 72-hour window in which follow-up marketing messages from a Click to WhatsApp conversation
+  are free. No pricing or sending logic depends on it.
+- **Sandbox:** a DM with `referral_source: "ad"`, `ad_id` and `ad_title` (already in GR-01's
+  injector) tests it end to end.
+- **Migration 0023** is shared with C-084.
+
+## C-086 · Live comments trigger (GR-10, feature/gr-10-11-live-icebreakers)
+
+- **The Live scope is a new column, not a post scope.** `automations.comment_surface` is `posts`
+  (default, today's behaviour), `live` or `both`; comment keyword and any comment triggers use it.
+  *Deviation from the plan's "a Live scope": `post_scope` has a check constraint and means which
+  posts, so a Live is not one of them.*
+  - A Live comment ignores `post_scope` and chosen posts; a Live-only automation is saved with
+    post scope "all" and no posts, and needs no post choice to activate (even "any comment").
+  - A posts-only automation passes over Live comments, and a Live-only one passes over posts.
+- **Intake** no longer skips Live comments (C-077): `enqueue_for_comment` queues the run for them
+  and the runtime checks the surface. Replies in a thread still start keyword automations only.
+- **When the Live ended.** Instagram sends no "Live ended" event.
+  - *A Live comment is "late" once it is more than 10 minutes old (`LIVE_REPLY_WINDOW`) when it is
+    matched, or when the queue gets to it. Unverified (T0.9): the window, and that Instagram refuses
+    a private reply after the broadcast.*
+  - A late comment records a `skipped_expired` run with the code `live_ended` and the reason "The
+    Live had ended". No new `RunResult`, so the result check is unchanged. Nothing is sent.
+- **Priority, not a second path.** Private replies still go only through the account's queue and its
+  750-an-hour bucket. Each pass takes Live-only automations first while they have runs waiting;
+  each drain also skips queued Live runs older than the window. An automation on "both" is ordered
+  like any other.
+- **Activity (GR-05):** the code `live_ended` reads "Instagram only lets an account reply privately
+  to a Live comment while the Live is on." with the title "... skipped a comment that came after
+  the Live ended". The runs list label for `skipped_expired` is now "Skipped: too late to reply".
+- **Flows and the AI** work as for other comment triggers (a private reply first).
+- **Sandbox:** `SandboxInbound.age_seconds` makes a comment or Live comment arrive that many
+  seconds old, to show a late Live comment.
+- **Web:** the posts step has Posts and Reels, Live, or both; Live hides the post scope.
+- **Migration 0024** (shared with C-087): `comment_surface` and its check. Expand-only; the
+  downgrade drafts Live-only automations first.
+
+## C-087 · Ice breakers (GR-11, feature/gr-10-11-live-icebreakers)
+
+- **A table, not JSON on the account.** `ice_breakers` holds up to 4 rows per Instagram account
+  (position 0 to 3, unique per account), each with the question (1 to 80 characters), the
+  automation it starts or `answer_with_ai` (never both), and how the last sync went (`synced_at`,
+  `sync_error`, the same on every row of the account). It is in the account purge, the workspace
+  deletion and the isolation seeds.
+- **Payload `ib:{id}`.** A position keeps its row, and so its id, when its question or mapping
+  changes, so a starter already shown in someone's app keeps working. A removed position's old
+  payload matches nothing.
+- **Trigger `ice_breaker`** (the trigger check is re-created in migration 0024). The automation has
+  no keywords; flows work as for any DM trigger. A postback whose payload is one of our starters
+  starts ice breaker automations only, and only the one its starter maps to; it answers no waiting
+  question (tap first or flow). `runtime.dm_triggers` picks this by the payload.
+- **Answer with AI:** no automation starts and the message is not marked handled, so the inbox AI
+  answers it as any customer message (the existing analysis and suggestion path). Nothing new to
+  build there.
+- **Entry source:** a conversation that begins with a tap records `ice_breaker` (C-077 had
+  reserved it) with the question as its ref, unless a referral came first.
+- **API** (owners and admins write, any member reads), under the account so isolation is by path:
+  - `GET /social-accounts/{id}/ice-breakers` gives the list, `synced_at`, `sync_error` and
+    `max_items`;
+  - `PUT` replaces the whole list in order and pushes it; `POST .../sync` pushes again;
+  - a push the platform refuses is not an HTTP error: the list is kept, `sync_error` is a plain
+    sentence (the usual platform error copy), and `synced_at` stays at the last good push.
+  - Validation is 422 per field: one target per starter, an automation of this account on the
+    `ice_breaker` trigger, 80 characters, no repeated question, at most 4. WhatsApp accounts are
+    refused.
+- **Adapter:** `set_ice_breakers(acct, starters)` replaces the list (an empty list clears it).
+  Instagram: `POST /me/messenger_profile?platform=instagram` with one default-locale
+  `ice_breakers` entry, `DELETE` of the `ice_breakers` field to clear, then a `GET` to read it
+  back. *Unverified (T0.9): the request shapes, that only a default locale is accepted, the
+  80-character limit, and that a re-set replaces the old list.* The sandbox keeps what was set
+  per account (`outbox.ICE_BREAKERS`); a question holding `[sandbox:fail=<code>]` fails the push.
+  WhatsApp raises `capability_unavailable`.
+- **Web:** Automations has a "Conversation starters" page (`/automations/starters`): up to four
+  rows (question, then an automation or "Answer with AI"), Save, and the sync line with the
+  reason and "Send to Instagram again". The When step offers "Instagram conversation starter".
+  The page says the starters don't show on desktop.
+- **Deviation from the plan:** the plan said "Settings or Automations"; it lives under
+  Automations, beside the automations it starts.
+- **Migration 0024** (shared with C-086).
+## C-088 · Welcome and default replies (GR-12, feature/gr-12-welcome-default)
+
+- **Two triggers, both DMs, no keywords:** `first_message` (a welcome) and `default_reply`. They
+  use the existing DM path: `runtime.dm_triggers` lists them for an ordinary DM, `_match_dm` keeps
+  them only when they apply, and `matching.runtime_order` puts them last. Flows, AI-reply actions,
+  cooldowns, the read-only account check and run records work as for any DM automation.
+- **First message means:** the contact has no earlier inbound customer message to this account
+  (`repositories/inbox.has_earlier_inbound_dm`: earlier by time, then id, across the contact's
+  conversations on the account).
+  - It reads true history, so contacts who existed before the feature shipped are not welcomed on
+    their next message.
+  - A contact who only commented has no DM yet, so their first DM is welcomed.
+  - Any earlier customer message counts, including a story reply or mention.
+- **Default reply means:** an ordinary DM that no automation matched, while the conversation's
+  effective AI mode is Off (`conversations.ai_mode_override`, else `social_accounts.ai_mode`, as
+  the suggestions code resolves it).
+  - `ai_paused_until` is not read: a pause means a person is handling it, and with Suggest or Auto
+    the mode is not Off anyway.
+  - *The plan's Auto is not checked against the plan's entitlement: an account on Auto without
+    the entitlement gets no default reply.*
+- **Order and precedence (decision):** keyword and any-reply automations go first. The welcome and
+  default reply answer only a DM that none of them matched.
+  - A keyword that matched but was on cooldown still counts as matched, so a repeated question
+    does not get "we did not understand".
+  - If both fallbacks apply (a first DM, AI off), the welcome answers and the default reply does
+    not. The next DM is not a first message, so the default reply answers it.
+  - Why: one automatic message per DM, and the specific answer beats the generic one.
+- **Never fire on:** a story reply or mention, a postback or ice breaker tap, a quick reply tap,
+  a message that answers a waiting flow step or tap-first opening, or one already handled. Our own
+  echoes never run automations.
+- **Loops:** each automation's `cooldown_hours` per contact applies (default 24; the default reply
+  template uses 12). A welcome fires once anyway, because only a first message qualifies.
+- **Web:** the When step has "First message (welcome)" and "Any other message (default reply)",
+  each with a one-line explanation (the default reply says it answers only while AI is Off). Both
+  hide the keywords and posts steps. Templates `welcome_new_contacts` and
+  `default_reply_when_ai_off`.
+- **Test tab:** treats the text as a DM for both triggers; it cannot know if the contact is new or
+  AI is off, so it reports a match.
+- **Ask Social Hood:** `prepare_automation` accepts both triggers; no new tool.
+- **Migration 0025** (parent 0022 until re-chained): the trigger check only. Downgrade turns these
+  automations into trigger-less drafts.
+- **Unverified:** nothing here depends on Meta rules. Welcome messages are ordinary DMs inside the
+  24-hour window opened by the customer's message.
+
+
+## C-091 · The contacts page (GR-17, feature/gr-17-contacts)
+
+GR-02 had already built the contacts list, its filters, the CSV export, tags, fields and consent
+in the API. GR-17 adds what the page needed on top, and the page itself. (The coordinator
+renumbers this entry if another branch took C-088.)
+
+- **List, filters and export: reused as built.** Filters are tag (every one chosen), search, email
+  or phone present, platform, account, marketing consent per channel, minimum lead score, activity
+  range and up to five custom fields (`key:value` equals, `key:*` has any value). Export stays
+  admin only and streams. "Tag = lead-magnet and has email" is `tag_id` plus `has_email=true`, and
+  the export of it has the same rows (an integration test checks both).
+- **Moving activity ranges (new).** `active_within_days` (active in the last N days) and
+  `inactive_for_days` (no activity for N days or more), 1 to 3650, beside the fixed
+  `active_after` and `active_before`. *A saved segment needs a range that moves; two fixed dates
+  would go stale.* The page uses only the moving ones (7, 30 or 90 days active; quiet for 30 or 90).
+- **Count.** `GET /contacts/count` takes the list's filters and says how many match. It feeds
+  "Select all 312 that match" and the bulk cap message.
+- **Saved segments (new table `contact_segments`, migration 0026).**
+  - A name (1 to 60, unique in any case per workspace) and the filter as JSON, the same keys as
+    the list. It stores the filter, never the people, so a segment is whoever matches now. At most
+    50 per workspace.
+  - `GET /contact-segments` (any member); `POST`, `PATCH /{id}` and `DELETE /{id}` for owners and
+    admins. *Decided: agents use segments but do not manage them, matching tags and fields (admins
+    manage, any member uses).*
+  - Saving checks the filter: a tag that is not there is 404, a custom field the workspace does
+    not have is 422. A tag or field deleted later does not break the segment; the list then
+    refuses the field with its plain message instead of quietly widening the match.
+  - The response filter is its own class, `ContactFilterOut`, so the API description keeps one
+    name per direction (a model used both ways with defaults is split in two by FastAPI).
+  - *Not built: a segment id on the list, count or export routes.* The page sends the segment's
+    filters. Broadcasts (GR-23) will read `contact_segments.filter` through
+    `services/contact_segments`.
+- **Bulk tag by filter.** `POST /contacts/bulk-tags` takes `contact_ids` (up to 500) **or**
+  `filter` (the same keys), not both. A filter applies to everyone it matches, up to **5,000**
+  (`BULK_FILTER_CAP`). A bigger match is a 422 on `filter` that says how many matched ("That
+  filter matches 7,200 contacts. Narrow it to 5,000 or fewer to tag them at once."), and nothing
+  is changed. Any member may bulk tag, as before.
+  - **Audit.** Every real change is still one `contact.tagged` event (GR-04, so webhooks and
+    Activity see it), and one log line (`contacts_bulk_tagged`) records who, how many contacts and
+    how many tags were added or removed, and whether a filter chose them. There is no audit table
+    yet; the team audit arrives with GR-19.
+  - `change_tags` now reads the existing pairs in one query instead of one per contact and tag, so
+    5,000 contacts is a few queries.
+- **Timeline.** `GET /contacts/{id}/timeline?cursor&limit` (any member, read-only, 30 per page by
+  default, 100 at most). Sources that exist today: the contact's conversation (with how it began),
+  comments, automation runs (the automation's name and a plain outcome, no error text), story
+  mentions, consent records and tags added. Each source is read newest first by (time, id) and
+  merged, so paging never repeats or skips an item. A comment shows its first 200 characters.
+  - *Left out because the data does not exist yet:* captured answers (GR-14 adds them; email and
+    phone have a source but no time) and broadcasts received (GR-23). Each adds a source in
+    `services/contact_timeline.py`.
+- **Consent filter and display.** `contact_consents` exists (GR-02), so the page filters by "agreed
+  on Instagram, WhatsApp or email", shows the current state per channel in the drawer and lets
+  admins record consent or withdrawal with a note.
+- **Web.**
+  - **Contacts** is in the main nav under Engage, for every role (it was Inbox and Comments). The
+    page fills the width (no fixed maximum), a list at 375 px (each row stacks) and a table-like
+    grid from 768 px. Search waits 250 ms, filters sit in a panel that is a full-screen sheet on a
+    phone, then a segment bar, the count, ticked rows with a Tag action, "Select all N that match"
+    when a page is ticked and more exist, and Export CSV (admins).
+  - **The contact drawer** is a sheet that is full screen below 768 px and 420 px wide from there.
+    It edits tags (add, remove, and admins create a tag), email, phone and custom fields (one
+    Save, only what changed, the API's messages beside the value it refuses), shows consent and
+    the timeline. It opens from a row, and from the inbox details panel's "View contact".
+  - Tags wear the identity palette colour stored on the tag (never a status colour).
+- **Tests.** Unit: filter parsing and limits (`test_contact_filters.py`); integration:
+  `test_contact_segments.py` (the done-when filter and export, count, field and activity filters,
+  segments CRUD and limits, bulk tag by filter and its cap, the timeline and its paging, roles,
+  another workspace); tenancy: the segment routes and table in `test_isolation.py`; vitest: the
+  filters and edit helpers, the page, the drawer; e2e `gr17-contacts.spec.ts`.
+- **Migration 0026** (down revision 0025): `contact_segments` only. Expand-only. It references
+  the workspace and users, not accounts, so the account purge is unchanged (workspace deletion
+  cascades).
+- **Unsure / for the coordinator:** the generated client has to be regenerated for the new routes
+  and models (`ContactFilterSpec`, `ContactFilterOut`, `Segment*`, `Timeline*`, `ContactCount`,
+  the changed `BulkTagsUpdate`); the web types are aliases waiting for it.
+
+
+## C-090 · The flow editor (GR-13, feature/gr-13-flow-editor)
+
+- **A tree on screen, a graph in the API.** The editor works on a vertical list; a step that forks
+  (quick replies, a question that can fail, a branch, a split) has indented groups of its own
+  ("arms"). `lib/automations/flow.ts` turns the tree into the stored graph (`compile`) and a stored
+  graph back into a tree (`decompile`).
+  - A list runs top to bottom: each step's next is the step below it.
+  - **An arm that runs out carries on with the step below the step that forks**, so branches meet
+    again (the engine allows it, C-079). An arm that should stop ends with an End step. An empty arm
+    with nothing below the fork ends the flow.
+  - A quick reply is an arm whose title is edited in the arm's header. The answer typed instead of
+    a tap can do nothing, copy an option, or have its own steps.
+  - A question that never gets an answer that fits can carry on or end the flow.
+  - Step ids are random (`s` and six letters or digits) and stay with the step across saves, so a
+    run's log keeps naming the same step.
+- **Reading a flow back.** `decompile` finds where the arms of a fork meet (the earliest step
+  that most of them reach). A path that stops where others carry on gets a lone End, which is
+  saved with the next edit. A shape the tree can't show (paths that share steps without one place
+  they meet, or steps nothing leads to; only possible through the API) is shown **read-only**
+  with "Start again from one message". It still runs as saved.
+- **How a non-flow automation opens (decision).** Automations and templates still create settings
+  automations (C-079's compiled flow); nothing about the gallery changed.
+  - The Then step shows the message as the first step, in today's fields (tap first, the follow
+    nudge, buttons, image), with a "More steps" card.
+  - **Adding a step turns it into a flow:** the compiled flow is read, the new step goes at the
+    end, and the whole thing is saved with `PUT …/flow`. Tap first and the nudge become steps.
+    Public replies stay on the automation.
+  - An active automation must be paused first (the empty new step would make it incomplete).
+  - "Back to one message" calls `DELETE …/flow` after a confirmation; runs underway finish.
+  - *Deviation from the plan's "rebuild Then on the step model": the single message keeps its
+    builder until a step is added, so nothing that works today changes. A later cleanup can make
+    every automation a flow (C-079).*
+- **Steps.** "Add step" offers Send, Ask, Branch, Action, Delay, Split (the engine's `randomize`)
+  and End. The AI reply stays the choice above the steps (a flow with one shows it as a card, and
+  it must be first). Each step reuses the builder's parts: the message field with insert-field and
+  the byte count, the image upload, the link buttons. A Send can also carry the profile button.
+  - Ask defaults to an email saved to the contact; text goes to a custom field. *The email check
+    itself is GR-14; here Ask uses what the engine does today.*
+  - Branch rules cover all six conditions (tag, field, email or phone known, follows, platform,
+    lead score). Actions cover the five the engine runs. Delay is minutes or hours, up to 23.
+  - Tags and fields come from `GET …/tags` and `GET …/contact-fields`.
+- **Reordering.** Drag the handle (pointer events, no new dependency), or press the arrow keys on
+  the focused handle, or use Move up and Move down. Order changes only within a list; to move a
+  step into another group, delete and add it there. A drop marker shows where a card lands.
+- **Checks on each step.** Fields show their problem once a step has been edited; a step is
+  "complete", "not finished" or "needs attention". The API's refusals (a refused save, a refused
+  activation: `flow.steps.N.field`) are placed on steps by index. A list at the top names each step
+  with a problem and "Go to step N" focuses it; a refused activation focuses the first.
+- **Preview and Test.** The Preview walks the draft one branch at a time with a picker at each
+  fork (a question counts as a fork: it can fail). The Test tab asks the API:
+  - `AutomationTest.choices` names the way at each fork (0 where none); the result's `flow_path`
+    lists the steps one run would take, with each fork's ways and the one taken
+    (`services/automations/flow_preview.py`, called from `dry_run`). Picking another way tests again.
+  - A settings automation has an empty `flow_path` and the old result.
+- **Step cap (pending PD-5).** The plan's recommended option: every plan can branch; Free is capped.
+  - New entitlement `flow_steps`: Free 5, Pro 50, Max 50 (`billing/plans.py`; a flow is at most 50
+    whatever the plan, the schema's limit). Lifting the cap is one edit.
+  - Every step counts, End included. "Comment, ask for an email, branch on a button, send A or B"
+    is four.
+  - `PUT …/flow` over the cap is 402 `quota_exceeded` (`flow_steps`, the limit, a plain sentence);
+    so is **activation** of a flow saved under a bigger plan. The editor disables Add step at the
+    cap, says why, and the 402 dialog has its copy.
+- **API.** No new routes or tables. `AutomationTest.choices`, `AutomationTestResult.flow_path`
+  (`FlowPreviewStep`), the 402 on `PUT …/flow`, and `flows.exit_labels` / `describe_condition`.
+- **Unverified:** dragging on a touch screen (the handle is `touch-action: none`; the buttons and
+  keys are the fallback), and the sandbox run of the e2e (`gr13-flow-editor.spec.ts`) is written
+  but was not run.
+
+## C-089 · Visual answers in Ask (GR-38, feature/gr-38-visual-answers)
+
+Option C of `docs/architecture/generative-ui/` (accepted 2026-10-24), backlog VIS-01 to VIS-06 and
+the small items VIS-X1, X3 and X4. No migration.
+
+- **Owner's defaults kept:** visuals in Ask only, English labels, no OpenUI, the model never writes
+  a number, label or layout. A question no tool with chartable data answers shows no visual.
+- **Account metrics** (VIS-01): `services/analytics/account_metrics.py`, read by
+  `GET /v1/w/{wid}/analytics/account-metrics` (any member) and by the agent.
+  - Query: `since`, `until` (default the last 30 days), `account_id`, `metric` (repeatable),
+    `compare=previous` (the period of the same length just before).
+  - Metrics: reach, views, accounts_engaged, interactions, followers, follows, unfollows,
+    profile_link_taps (from `account_daily_metrics`), comments and messages_received (counted from
+    their tables over the workspace's local days).
+  - Sums add the days that have a reading and say how many (`days_known` of `days_total`). A gap is
+    never a zero. With no reading the value is null and `unavailable` says why:
+    `insights_not_granted`, `no_readings` or `no_account`.
+  - Followers is the latest reading in the period, per account, then added. Not a sum.
+  - The change is `(current - previous) / previous x 100`, one decimal, worked out in the service.
+    Null against a previous 0 (the direction is still up or down) or an unknown side. Flat under
+    0.5%.
+  - *Reach, views and the other insight metrics are daily values added up, so a person reached on
+    two days counts twice. Instagram has no period total for these in the data we store. The
+    caveats and the web say so.*
+- **Same days, not same labels:**
+  - Today has no row (it is written the next morning), so the agent's periods stop yesterday and a
+    caveat says so. "This month" on 23 October is 1-22 October.
+  - A period still running is matched with the other one over the same number of days, cut from
+    its start: 1-22 October against 1-22 September. The note says how.
+  - Two finished periods of different length are `comparable: false`: totals are given, no change.
+  - *The doc 05 design had one comparable-days rule; this is that rule plus the "today" cut, which
+    the doc didn't foresee.*
+- **Tools** (VIS-02), both read, any member:
+  - `compare_periods(range, compare_to, metrics, account)`; without `compare_to` the period just
+    before. The tool description says it is the only tool that compares periods.
+  - `metric_trend(metric, range, account)`: a point a day up to 31 days, then a week. It returns
+    first, last, lowest and highest points and the change between first and last. *It builds no
+    visual yet: the trend chart is VIS-07.*
+  - Prompt `agent.v3`: points the model to `compare_periods`; with visuals on, says the screen shows
+    the figures so the answer needn't repeat them. Off, the prompt text is v2's apart from the
+    comparison line. *The eval was not run (no key here), so v3's rate against v2's is unmeasured.*
+- **Visuals** (VIS-03): `Visual` is a closed union in `schemas/agent.py`: `metric_comparison`,
+  `ranked_posts`, `sentiment_summary`. Pure builders in `agent/visuals.py`.
+  - Caps in the types: 8 metrics, 10 posts, 6 topics, strings clipped, a thumbnail an https URL
+    under 400 characters. Each visual at most 8 KB serialised (a test builds the worst cases).
+  - A build that fails or is too big drops only the visual (log `agent_visual_failed`, counter).
+  - *Shapes differ from doc 05 where a simpler one did the job: a `MetricDelta` is one flat card
+    (`current`, `previous`, `change_pct`, `tone`, coverage, `unavailable`) instead of two
+    `MetricValue`s; there is no `account_ref` (a label instead) and no `TrendVisual` or
+    `LeadListVisual` yet.*
+  - `top_posts`, `sentiment_distribution`, `comment_topics` and `compare_periods` carry the visual.
+    `comment_topics` runs the distribution too (one more query, only with visuals on and no
+    sentiment filter) and returns it as `split`, so the numbers on screen are ones a tool returned.
+  - Built only with `AGENT_VISUALS_ENABLED` on; nothing is stored with it off.
+- **The run** (VIS-04): `AgentRun.visuals`, from the succeeded steps' `visual`, in step order, at most
+  3, each re-checked against the current models on read (an invalid one is dropped and counted).
+  - A second sentiment summary of the same scope replaces the first (it has the topics); an
+    identical visual shows once.
+  - `agent/report.model_view` removes `visual` from what the model reads (also on a resumed run).
+    `step.result` in the run detail drops it too, so the payload isn't doubled.
+  - The list endpoint includes visuals (at most 3 x 8 KB a run, 20 runs a page). *Doc 05 left list
+    vs detail open; the thread view draws from the list, so it is in.* If the page weight bites,
+    cap or omit it there.
+- **The flag:** *a server setting `AGENT_VISUALS_ENABLED` (default off), not a per-workspace flag:
+  the app has no feature-flag table, and one would need a migration. Off: `visuals` is `[]`, tools
+  build none, the prompt doesn't mention them. Per-workspace rollout can come with a real flags
+  table.*
+- **Web** (VIS-05): `VisualView` (error boundary, Sentry tag `visual_kind`) in `RunView`'s finished
+  state, between the answer with its sources and the action cards.
+  - `MetricComparison` from `MetricTile`s in a container-query grid; `RankedPosts` from `Table` and
+    `PostThumb`, rows link to the post; `SentimentSummary` from `SentimentBar` and its legend.
+  - Customer text is text; a picture must be https; an unknown kind draws nothing.
+  - One series colour is not needed yet (no chart); the rule is in DESIGN_SYSTEM 1.8.
+- **Observability** (VIS-X3): log `agent_visual` (kind, bytes, build_ms), counter
+  `socialhood_agent_visuals_total{kind,outcome}` with built, dropped and dropped_stored. Web render
+  errors go to Sentry. A web-side counter isn't added.
+- **Tests:**
+  - Unit: the arithmetic and gaps, the builders and size, the projection, the prompt.
+  - Integration (written, not run): the route, the tools on seeded days, the run API with the flag
+    on and off, roles and other workspaces.
+  - Web (written, not run): states, malicious text, the boundary and unknown kinds, the panel.
+  - E2E `gr38-visual-answers.spec.ts`: the fake model calls no tools, so a seed route in the e2e API
+    (`POST /__e2e/workspaces/{wid}/agent-runs`) stores a finished run whose step holds the visual
+    the real service and builder make from seeded days. The launcher sets
+    `AGENT_VISUALS_ENABLED=true`.
+  - Eval: 9 cases (`period-compare-*`, `trend-reach-30`, `visual-*`) over a seeded `account_daily`
+    series with two gap days; each visual's figures must be ones a tool returned and, where the case
+    computes them from the seed, the right ones. A concept question must show none. New target:
+    `visuals` 100%.
+- **Checked centrally:** `apps/api/openapi.json` and `packages/api-client` (the account-metrics
+  route, `AgentRun.visuals`, `Visual` and its parts, `AccountMetrics` and friends), typecheck,
+  build, the integration and tenancy suites, the web tests.
+- **Left for later:** VIS-07 onwards (trend chart, lead list, table, progressive visuals, range
+  controls, the report page), the OpenUI spike VIS-14, VIS-X2 (quote account names in the prompt),
+  localised labels.
+
+## C-092 · Leads (GR-18, feature/gr-18-leads)
+
+A lead is a contact. This adds a stage to the contact, the rules that move it, a gone-cold job and a
+Leads view on top of GR-17's contacts list. (The coordinator renumbers this entry if another branch
+took C-092.)
+
+- **Where the stage lives.** *The roadmap (P2) put the stage on the conversation; the plan (GR-18)
+  puts it on the contact, with the conversation linking to it. Decided: the contact, as the plan
+  says.* A person who wrote in twice on one account still has one conversation (PD-10), and a
+  commenter with no conversation can be a lead too. Cards link to the conversation when there is one.
+  - Stages: `new`, `qualified`, `follow_up`, `won`, `lost`. New, qualified and follow up are open.
+  - *Not built from the roadmap: the optional lead value, and a backfill of `new` for conversations
+    with a score of 60 or more.* Every existing contact starts `new`, and the first analysis that
+    reaches the bar qualifies it. The migration rewrites nothing.
+- **Migration 0027** (down revision 0026), expand-only: `contacts.lead_stage` (default `new`),
+  `lead_stage_at`, `lead_stage_reason`, `lead_cold_at`, an index on (workspace, stage); the table
+  `lead_stage_changes`; `workspaces.lead_cold_days` (default 7, 1 to 90).
+- **History (`lead_stage_changes`, append only).** From, to, who or what moved it (`actor_kind`:
+  member, automation, rule, system), the member, the rule name (`lead_score`, `intent`,
+  `email_captured`, `gone_cold`) and a reason of up to 300 characters. It references the contact,
+  so an account purge removes it with the contact (the purge test snapshot lists it). Moving to the
+  stage a lead is already in records nothing.
+- **Rules (`services/leads.py`).**
+  - *A member* moves a lead to any stage at any time, with an optional note (any role, like tagging).
+    `POST /contacts/{id}/lead-stage`.
+  - *Automatic qualification* only ever moves a lead out of `new`, so a lead a member or an earlier
+    rule moved on is never pulled back. After each stored analysis: a lead score of 60 or more (the
+    inbox's Leads line), or a buying intent (pricing, purchase) with a score of 40 or more.
+    *Decided: 60, and 40 for a buying intent; both are constants, not settings.* The intent is the
+    member's correction when there is one.
+  - *A captured email qualifies* a new lead: `leads.on_capture(session, contact, kind)`, called by
+    the flow engine's question step today. **GR-14 calls the same function** when its lead capture
+    saves an email (`kind="email"`). A phone or a custom field does not qualify. An email a member
+    types into the drawer does not either: it is their own note, not a signal from the customer.
+  - *Gone cold* (`mark_cold_leads`, hourly at :10, bulk lane): a qualified or follow-up lead whose
+    customer has not written for the workspace's `lead_cold_days`, counted from their last message
+    or from the last stage change, whichever is later (so a lead a member just moved is not cold at
+    once). A qualified lead moves to follow up (rule `gone_cold`); a follow-up lead stays. Both get
+    `lead_cold_at`, and every member gets an in-app `lead_cold` notification with a link to the
+    conversation. *The plan says "notify the assignee"; there is no assignee until GR-20, so it is
+    every member for now.* A lead is cold while the flag is later than its last customer message, so
+    a new message ends it with no write, and any stage change clears it. It is idempotent (a flagged
+    lead is not selected again until it has written and gone quiet again), workspace-scoped (each
+    workspace's own days; rows locked with `FOR UPDATE SKIP LOCKED`), and RETRY in `RECOVERY`.
+  - *Won and lost* are never touched by a rule. Cold only looks at qualified and follow up.
+- **Setting.** `GET` and `PATCH /leads/settings` (`cold_after_days`, 1 to 90; admins change it).
+  *The plan asks for "N days (a workspace setting)" with no owner decision, so 7 is the default
+  and the Leads page offers 3, 5, 7, 14, 30 and 60 to admins.*
+- **API.** `GET /leads/summary` (any member): contacts per stage, open leads gone cold, and the last
+  8 weeks of leads that reached qualified and won (each contact once per week and stage, weeks start
+  on Monday UTC). *This is the roadmap's "conversion counts by week".* The lead list is
+  `GET /contacts?stage=` (repeat for any of them), the same filter everywhere: the list, count,
+  export, saved segments (`stages`) and bulk tagging. The contact list item and record gain
+  `lead_stage`, `lead_stage_at`, `lead_stage_reason` and `lead_cold`.
+- **History in the drawer.** A new timeline source in `services/contact_timeline.py`: "Lead stage:
+  Qualified", detail "From New. By Priya. Asked for a quote." (or "Automatically." for a rule).
+- **Flow condition.** `lead_stage` in the GR-03 branch conditions: `{"kind": "lead_stage",
+  "stages": ["qualified", "follow_up"]}` holds when the contact is in any of them, read when the step
+  runs. It needs no activation check. *The web has no list of condition options (the editor is
+  GR-13's), so `AutomationEditor` is untouched; GR-13 offers the new kind next to the others.*
+- **Event.** `lead.stage_changed` (version 1) in GR-04's catalogue, so the catalogue has nine events.
+  The payload has the contact, `from`, `to`, `changed_by` (`kind`, `user_id`, `rule`) and `reason`.
+  It is emitted by every real move.
+- **Web.**
+  - **Leads** is in the main nav under Engage, for every role. From 1024 px it is a board with a
+    column per stage; below that it is one stage at a time with a row of stage buttons above it, so
+    it works at 375 px. Each column is the contacts list filtered to its stage, so search and the
+    filter sheet are GR-17's (the sheet leaves the stage control out here; on Contacts it is a
+    "Lead stage" group, and each row wears its stage). A card shows the name, score, last activity,
+    why the lead is where it is, a "Gone cold" chip, up to three tags, a stage control and a link to
+    the conversation. Admins get "Gone cold after N days" in the page header.
+  - **The contact drawer** has a Lead stage section first (stage, since when, why, a control to move
+    it with an optional note); the history is in its timeline. It also opens from the inbox's
+    details panel.
+  - *Left for later:* a lead stage chip in the conversation header (the roadmap's step 5) and the
+    Ask tool `list_leads` (step 6). The drawer is one click from the details panel.
+- **Tests.** Unit: `test_leads.py` (stages, qualification rules, cold flag, history wording, request
+  limits, filter, flow condition, event, recovery class). Integration: `test_leads.py` (move, no-op,
+  roles, 404, history in the timeline, filter and count, segments, summary, setting, event),
+  `test_lead_rules.py` (analysis qualifies, buying intent, never pulls back, the cold job: selection,
+  idempotence, per-workspace days, a recent move), `test_lead_flow.py` (the branch, a captured email
+  qualifies once and fires the event, a phone does not). Tenancy: the new routes, body and table in
+  `test_isolation.py`; the account purge snapshot and seed. Vitest: the Leads page, the drawer's
+  stage section, the contacts page's stage badge and filter, `filters.test.ts`, the nav. E2E:
+  `gr18-leads.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (`LeadStageUpdate`, `LeadSummary`,
+  `LeadStageCount`, `LeadWeek`, `LeadSettings`, `LeadSettingsPatch`, the new fields on
+  `ContactListItem` and `ContactRecord`, `stages` on the filter models, `lead_stage` in
+  `TimelineKind`, `lead.stage_changed` in the event names); the web types are aliases waiting for it.
+  The hand-written web fixtures for the contact list item and record carry the new fields.
+
+## C-093 · Saved replies (GR-21, feature/gr-21-22-replies-hours)
+
+- **A table of snippets.** `saved_replies`: title (1 to 60), shortcut, body (1 to 1,000 characters,
+  the length of an Instagram DM). The shortcut is lower case letters, digits, `-` and `_` (up to 30),
+  unique per workspace; a typed `/Price` is stored and found as `price`. A workspace keeps up to 200.
+- **Who:** any member reads and uses them (agents work the inbox); owners and admins create, change
+  and delete (the plan said "agents read and use; admins and owners manage").
+- **API:** `GET/POST /saved-replies`, `PATCH/DELETE /saved-replies/{id}`, and `POST
+  /saved-replies/{id}/fill` with a `conversation_id`, which gives the text filled for that
+  conversation's contact. A duplicate shortcut is 409 `conflict`; a bad one is 422 on `shortcut`.
+  Another workspace's reply or conversation is 404.
+- **One filler, three users** (`services/saved_replies.fill`): the composer's fill route, a flow's send
+  step and the GR-22 away message all read a body the same way.
+  - Variables: `{first_name}`, `{name}`, `{username}`, `{email}`, `{phone}` and the key of any custom
+    field (`{city}`). `{first_name|there}` names a fallback, as in automations.
+  - A field with no value, or one that does not exist, is empty; no `{braces}` are left. `{first_name}`
+    with no name falls back to "there", as automations do. A custom field cannot shadow a built-in.
+  - *Deviation from "reuse any existing template-variable code":* `automations/render` only knows
+    `first_name` and `username` and a 40-character fallback; the saved-reply filler reuses its
+    `first_name_of` and fallback word and adds the other fields, rather than widening what every
+    automation message can say.
+- **Composer:** typing `/` after the start of the draft, a line or a space opens a listbox of matching
+  replies (exact shortcut first, then shortcuts that start with it, then title or shortcut contains);
+  arrow keys move, Enter or Tab or a click inserts the filled reply in place of the `/word`, Esc
+  closes. Nothing opens for a slash inside a link or a word. The list is fetched only once a slash is
+  typed. *Deviation: a new inline `SavedReplyPicker` rather than extending the `TemplatePicker` dialog
+  (that one is a dialog for WhatsApp templates with variables; a `/` picker has to stay under the
+  caret).*
+- **In flows:** a `send` step may name a saved reply (`saved_reply_id`). The step reads the reply's
+  current body when it runs and fills it for the contact (so an edit reaches flows already saved), with
+  the disclosure line.
+  - A saved-reply step goes alone: no image, buttons or quick replies (activation error).
+  - A comment flow cannot start with one (the first message is the private reply, built before the
+    run); it can use one later.
+  - A reply deleted after activation fails the step: the run ends with the code `saved_reply_missing`
+    and the reason "The saved reply this step sends was deleted. Choose another." Activity shows it
+    with "Edit the automation". A flow naming a deleted reply cannot be activated.
+  - **For the flow editor (GR-13):** the `send` step option is `saved_reply_id` (a uuid) instead of
+    `text`; the editor needs a picker of `GET /saved-replies` and should hide text, image, buttons and
+    quick replies while it is set. The server schema and runtime are done; no editor UI was touched.
+- **Web:** Settings has a "Saved replies" tab (everyone sees it; owners and admins get the add, edit
+  and delete controls).
+- **Migration 0028** (shared with C-094; parent 0025 until re-chained): `saved_replies` and
+  `uq_saved_replies_workspace_id_shortcut`.
+
+## C-094 · Business hours and away messages (GR-22, feature/gr-21-22-replies-hours)
+
+- **Where the hours live.** `business_hours`: one row for the workspace (`social_account_id` null)
+  and optionally one per account that replaces it. Each has `enabled`, the weekly `schedule`, the away
+  message (`away_enabled`, `away_message`) and `auto_mode`. An account row with `enabled` off means
+  "this account has no hours", so it is always open. No row, or a row that is off, means always open:
+  nothing changes for anyone who does not set hours.
+- **The week:** Monday is 0. Each day has any number of ranges ("09:00" to "17:00"; the closing time may
+  be "24:00"); a day with none is closed. Times are wall-clock in the workspace time zone
+  (`workspaces.timezone`), so 09:00 stays 09:00 across a daylight saving change. A range includes its
+  start and not its end. Ranges cannot overlap on a day (touching is fine) or cross midnight (open
+  until 02:00 is 18:00 to 24:00, then 00:00 to 02:00 the next day, and the two count as one stretch).
+  Hours switched on need at least one range.
+- **`is_open(hours, at)`** is pure and unit-tested at the edges: the opening minute, the closing
+  minute, midnight, a zone ahead of UTC, daylight saving. `closed_since(hours, at)` is when the current
+  closed window began (touching ranges merged), used for the once-per-window rule.
+- **Order (decision, as recommended):** a waiting answer (flow question, tap first) goes first, then
+  automations (keyword and any-reply, then the welcome and default reply of C-088), then the away
+  message if none answered, then nothing else.
+  - "None answered" is a DM with no match, or one whose matches were all skipped (cooldown, scope).
+  - Never on a story mention, a story like, a button, quick reply or conversation starter tap, or a
+    comment.
+  - **Auto mode and the away message (decision, easy to change):** a conversation whose effective AI
+    mode is Auto (and not paused for a takeover) gets no away message, because the AI answers or
+    escalates it; any other mode gets it. The message does not mark the customer's message handled, so
+    suggestions for a person still appear.
+- **Once per closed window:** `conversations.away_sent_at` is compared with `closed_since`: sent when
+  it is empty or older than the window's start. A second message the same night, or the next morning
+  before opening, gets nothing; the next night is a new window. The send uses a client id made from the
+  customer's message, so a retried job sends nothing twice, and the conversation is locked while it is
+  checked.
+- **Auto mode's hours (`auto_mode`):** `always` is today's behaviour. `out_of_hours` makes check 1 of
+  the auto-reply policy fail (`skipped`, `mode_not_auto`, value "auto, open hours") while the account
+  is open, so the suggestion waits for a person. *Kept in the existing check, not a 14th check, so
+  the 13 checks and every stored decision keep their numbers.* The setting is on the hours row (the
+  workspace's, or the account's own), not on the account's AI mode.
+- **Automations:** `automations.hours_condition` is `inside`, `outside` or null. An automation whose
+  condition does not hold passes over the message or comment, like a scope mismatch. It works for
+  message-settings automations and flows (it is checked before either runs) and for comment
+  triggers. An account with no hours is always inside, so an `outside` automation never runs there.
+  Web: a three-way control in the existing Settings step ("Any time", "Inside business hours",
+  "Outside business hours"), and the settings summary says it.
+- **API:** `GET /business-hours` (workspace schedule, time zone, each account's override, `open_now`),
+  `PUT /business-hours` (owners and admins), `PUT` and `DELETE /social-accounts/{id}/business-hours`
+  (an account's own schedule; delete returns it to the workspace's). 422 names the field
+  (`days.2.ranges.1.start`, `away_message`, `days`). Agents read.
+- **Ingest:** a new DM wakes the automation runtime when an away message could apply, even if the
+  account has no active automation (`business_hours.away_possible`).
+- **Web:** Settings has a "Business hours" tab: a switch, a week of ranges (add, remove, several per
+  day), the away message and Auto mode's hours; one card per account with "Set its own hours" and "Use
+  the workspace hours". A time input cannot show 24:00, so a closing time of 00:00 is saved as
+  midnight. The rows wrap at 375 px.
+- **Migration 0028:** `business_hours` (with `uq_business_hours_workspace_id_social_account_id` and a
+  partial unique index for the workspace's own row), `conversations.away_sent_at`,
+  `automations.hours_condition`. Expand-only; the account purge and workspace deletion pick the table
+  up from the schema.
+- **Not built:** holidays or one-off closures, an away message per language, and an away message for
+  comments (a public comment is not a conversation). All fit the same table later.
+
+## C-095 · Data capture and consent (GR-14, feature/gr-14-15-capture-clicks)
+GR-03's Ask step already checked an email or phone, retried, skipped and raised `lead.captured`
+(C-079, C-080). GR-14 finishes it: the free-text cap, the consent question, a confirmation, default
+copy and the editor's options. No migration, no new route.
+- **Answers** (`services/automations/capture.py`):
+  - An email is trimmed and lower-cased whole (GR-02's rule). A phone is E.164, a ten-digit Indian
+    mobile taken as +91. *The `phonenumbers` library is not a dependency, so the small normaliser
+    stays (+country code of 8 to 15 digits, Indian mobiles); other national formats without a
+    country code are asked again. Adding the library later is a one-function change.*
+  - Free text is trimmed and capped at 500 characters (the custom field text cap). Over the cap
+    counts as an answer that doesn't fit.
+- **Retry and skip (decision).** An answer that doesn't fit gets the step's retry prompt, or the
+  default copy for its kind, until `tries` run out: 1 to 3, default 2. Then the flow goes to the
+  step's `on_skip`. The editor's default is **carry on** to the step below; "end the flow" is the
+  other choice. Nothing is saved on a skip.
+- **Saved to** the contact's email or phone (source `flow`) or a custom field, as before, and
+  `lead.captured` is emitted then. *GR-18's `leads.on_capture` hook is not on this base and was not
+  created: the coordinator can call it from `_take` in `engine.py` after the webhook event.*
+- **Consent question (`consent` on the Ask step).** After a saved answer the step sends a Yes or
+  No question with two quick replies (default copy, or the step's `consent_text`) and waits.
+  - A tap, or typed words (yes, yeah, sure, haan; no, nope, no thanks), is recorded in
+    `contact_consents`: Yes as granted, No as revoked (an explicit refusal). Source `flow`, purpose
+    marketing, channel the conversation's (Instagram or WhatsApp).
+  - **Evidence:** the answer's message id and text, the question's message id and text, the
+    channel, the run, automation and step, and the time (`occurred_at`).
+  - Anything else is asked once more, then the flow goes on and nothing is recorded.
+  - The consent is for the channel they are chatting on. A captured email gives no email-channel
+    consent. Required before WhatsApp broadcasts (GR-23): not enforced here.
+- **Confirmation** (`confirm_text`): sent after the answer is saved (and the consent answered).
+  Blank sends nothing; the editor suggests "Thanks, I've got it."
+- **Default copy** lives in `capture.py` (retry per kind, the consent question, the "need a yes or a
+  no" prompt) and is mirrored as placeholders in the Ask card. The copy lint (`copy-lint.test.ts`)
+  only bans old variants; the copy follows its rules (sentence case, UK spelling).
+- **Step schema:** `consent`, `consent_text`, `confirm_text` added to `AskStep`, with defaults, so
+  stored flows are unchanged. Activation checks all three texts against Instagram's byte limit.
+- **Editor:** the Ask card has the type, the field to save to, the retry prompt, tries, the
+  confirmation and an "Ask for marketing consent" switch with its question.
+- **Done when:** a captured email lands on the contact, raises the webhook and shows in the CSV
+  export (`tests/integration/test_data_capture.py`; the export is GR-02's).
+- **Unverified:** the integration tests, vitest and `gr14-data-capture.spec.ts` are written but were
+  not run.
+
+## C-096 · Link click tracking and flow analytics (GR-15, feature/gr-14-15-capture-clicks)
+- **Tracked links.** A link button in an automation's message is sent as `{base}/l/{code}`; the
+  redirect records the click and answers 302 to the original address.
+  - **Which domain serves it: the API's.** `GET /l/{code}` is an API route (`webhooks/links.py`,
+    public, no sign-in, not in the OpenAPI schema), built on `LINK_BASE_URL` if set, else
+    `API_BASE_URL`. A short domain pointed at the API and set as `LINK_BASE_URL` shortens every
+    link with no code change. With neither set, buttons are sent as written. The web app's domain
+    doesn't serve it.
+  - **The code** is an opaque random token (96 bits, 16 characters), mapped in `tracked_links`.
+    The run, step and contact are only in our database, never in the URL. One link per run, step
+    and button, so a retried send reuses it.
+  - **Redirect rules:**
+    - the stored address must be http or https (`links.safe_target`), else 404 and no click;
+    - an unknown code is 404; the route is rate limited per IP like the other public routes (60 a
+      minute);
+    - the response is `no-store`, `no-referrer` and `noindex`.
+  - **Bots and previews (the rule, `links.is_bot`).** Not counted, but still redirected so a preview
+    shows the real page:
+    - a HEAD request, or no User-Agent;
+    - Meta's `facebookexternalhit` and `meta-external*` (Instagram and WhatsApp previews),
+      `WhatsApp/`, Slack, Telegram, Discord, X, LinkedIn, Google, Bing, Apple and other search
+      crawlers, curl, wget and common script clients;
+    - anything calling itself a bot, crawler, spider, scanner or preview.
+    - The in-app browsers of Instagram and Facebook are people. A second click on one link within 5
+      seconds counts once (a double tap or prefetch).
+    - *Unverified against real Instagram traffic; the list is one constant to extend.*
+  - **Where links are made:** the flow engine's sends, the legacy settings sends (DM, tap-first
+    release, and the comment queue's private reply, step `message`). The profile button ("View
+    profile") is never tracked. The inbox keeps showing what was actually sent, our address.
+  - **Opt-out:** `automations.track_links` (default on), a switch in Settings ("Track link
+    clicks"); off sends the raw link. Left out of a save, it keeps its value; a duplicate copies it.
+- **Funnel** (`GET …/automations/{id}/funnel?days=7|30|90`, admins; `services/automations/funnel.py`).
+  Nothing new on the send path: it reads what is recorded.
+  - Per step: reached (the step log), sent, delivered and read (the status of the step's message;
+    read only where the platform reports it), failed, quick reply taps, link clicks and the people
+    who clicked, answers saved by a question, answers that never fitted, and "yes" to the consent
+    question. Steps come in the order a walk meets them.
+  - Automations still on their message settings have no step log: their `message` step is built from
+    the runs' DMs and the clicks.
+  - **Split results:** per path, the runs that took it and, for the steps after it, delivered, read,
+    taps, link clicks and answers. A step shared by two paths counts for each run that went through.
+- **Where it shows:** the editor's Stats tab (a "By step" list and a table per Split) and the
+  Settings switch. The list refreshes every 30 seconds, so a click shows within a minute. *Not on the
+  Activity page: that is a feed of what failed, and a click isn't one.*
+- **Migration 0029:** `tracked_links`, `link_clicks` and `automations.track_links`. Expand-only.
+  Both tables hang off the automation, run and contact with cascading deletes, so an account's
+  purge removes them with its automations and contacts.
+- **Not done / pending:** per-quick-reply tap counts (taps are per step); a retention limit on
+  `link_clicks` (kept as long as the automation); the sandbox run of `gr15-link-clicks.spec.ts`.

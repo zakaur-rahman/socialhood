@@ -176,7 +176,7 @@ def test_link_buttons_need_https_links(url: str, ok: bool) -> None:
 # ---------------------------------------------------------------- templates (FR-AUT-12)
 
 
-def test_the_gallery_has_the_six_r1_templates() -> None:
+def test_the_gallery_has_the_r1_templates_and_the_story_ones() -> None:
     items = templates.gallery().items
     assert [(t.key, t.trigger, t.action, t.requires_paid_plan) for t in items] == [
         ("send_link", "comment_keyword", "send_message", False),
@@ -185,6 +185,10 @@ def test_the_gallery_has_the_six_r1_templates() -> None:
         ("catalogue_by_dm", "dm_keyword", "send_message", False),
         ("answer_faqs", "dm_keyword", "ai_reply", True),
         ("book_a_call", "dm_keyword", "send_message", False),
+        ("story_reply_link", "story_reply", "send_message", False),
+        ("thank_story_mentions", "story_mention", "send_message", False),
+        ("welcome_new_contacts", "first_message", "send_message", False),
+        ("default_reply_when_ai_off", "default_reply", "send_message", False),
     ]
     assert {t.category for t in items} == {"grow", "sell", "support"}
 
@@ -330,6 +334,10 @@ def test_comment_templates_start_with_tap_first() -> None:
         "catalogue_by_dm": (False, False),
         "answer_faqs": (False, False),
         "book_a_call": (False, False),
+        "story_reply_link": (False, False),
+        "thank_story_mentions": (False, False),
+        "welcome_new_contacts": (False, False),
+        "default_reply_when_ai_off": (False, False),
     }
     assert len(templates.OPENING_BUTTON) <= 20
     assert templates.OPENING_TEXT.endswith("\U0001f447")
@@ -342,3 +350,36 @@ def test_periods_are_the_workspaces_calendar_days() -> None:
     assert p.days[-1] == date(2026, 9, 30)
     assert p.since == datetime(2026, 9, 23, 18, 30, tzinfo=UTC)
     assert stats.period("Not/A zone'", 7, late).timezone == "UTC"
+
+
+# ---------------------------------------------------------------- story triggers (GR-06, GR-07)
+
+STORY_REPLY = replace(COMPLETE, trigger="story_reply", keywords=[], public_reply_texts=[])
+
+
+def test_a_story_reply_needs_no_keywords_and_any_story_is_enough() -> None:
+    assert fields(STORY_REPLY) == []
+    assert fields(replace(STORY_REPLY, keywords=["link"])) == []
+
+
+def test_a_story_reply_on_chosen_stories_needs_at_least_one() -> None:
+    assert fields(replace(STORY_REPLY, post_scope="selected")) == ["story_ids"]
+    assert (
+        fields(replace(STORY_REPLY, post_scope="selected", story_ids=["18200000000000001"])) == []
+    )
+
+
+def test_a_story_reply_cannot_wait_for_the_next_post() -> None:
+    assert fields(replace(STORY_REPLY, post_scope="next_post")) == ["post_scope"]
+
+
+def test_a_story_mention_needs_only_a_message() -> None:
+    mention = replace(STORY_REPLY, trigger="story_mention")
+    assert fields(mention) == []
+    assert fields(replace(mention, message_text="")) == ["message_text"]
+
+
+def test_a_story_trigger_may_send_an_image() -> None:
+    """Unlike a comment's private reply, a story reply or mention is a DM."""
+    assert fields(replace(STORY_REPLY, has_image=True)) == []
+    assert fields(replace(STORY_REPLY, trigger="story_mention", has_image=True)) == []

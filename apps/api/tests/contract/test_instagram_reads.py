@@ -69,6 +69,21 @@ async def test_list_media_asks_for_the_recent_posts(adapter: InstagramAdapter) -
 
 
 @respx.mock
+async def test_list_stories_reads_the_live_stories_newest_first(adapter: InstagramAdapter) -> None:
+    """GR-06: ``GET /me/stories``; its shape is Meta's documented one, not yet recorded."""
+    route = respx.get(f"{V}/me/stories").respond(200, json=fixture("stories_list.json"))
+    stories = await adapter.list_stories(account(adapter))
+    assert [(s.platform_media_id, s.media_type) for s in stories] == [
+        ("18200000000000002", "story"),
+        ("18200000000000001", "story"),
+    ]
+    assert stories[0].thumbnail_url is not None
+    request = route.calls.last.request
+    assert "timestamp" in request.url.params["fields"]
+    assert request.headers["authorization"] == "Bearer IGQVJlong"
+
+
+@respx.mock
 async def test_list_threads_reads_each_conversation(adapter: InstagramAdapter) -> None:
     listing = respx.get(f"{V}/me/conversations").respond(
         200, json=fixture("conversations_list.json")

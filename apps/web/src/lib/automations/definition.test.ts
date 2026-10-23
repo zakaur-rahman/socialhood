@@ -15,6 +15,7 @@ import {
   stepComplete,
   stepOfField,
   stepsWithErrors,
+  takesNoKeywords,
   tapFirstOn,
   toDefinition,
   toRequestBody,
@@ -32,6 +33,13 @@ describe("toDefinition", () => {
     );
     expect(def.media_item_ids).toEqual(["m1", "m2"]);
     expect(def.scheduled_post_ids).toEqual(["s1"]);
+  });
+
+  it("carries the business hours condition (GR-22)", () => {
+    expect(toDefinition(automation()).hours_condition).toBeNull();
+    const outside = toDefinition(automation({ hours_condition: "outside" }));
+    expect(outside.hours_condition).toBe("outside");
+    expect(toRequestBody(outside).hours_condition).toBe("outside");
   });
 });
 
@@ -272,5 +280,123 @@ describe("API field errors → steps", () => {
     expect(errors).toEqual({ keywords: "Add at least one keyword.", "message_buttons.0.url": "Use https." });
     expect([...stepsWithErrors(errors)].sort()).toEqual(["keywords", "then"]);
     expect(clearFieldErrors(errors, ["message_buttons"])).toEqual({ keywords: "Add at least one keyword." });
+  });
+});
+
+
+describe("welcome and default reply triggers (GR-12)", () => {
+  const base = toDefinition(automation({ trigger: "first_message", keywords: [] }));
+
+  it("shows no keywords or posts step, and is complete without keywords", () => {
+    for (const trigger of ["first_message", "default_reply"] as const) {
+      expect(visibleSteps(trigger)).toEqual(["when", "then", "settings"]);
+      expect(takesNoKeywords(trigger)).toBe(true);
+    }
+    expect(takesNoKeywords("dm_keyword")).toBe(false);
+  });
+
+  it("sends no keywords, posts or stories", () => {
+    const body = toRequestBody({ ...base, trigger: "default_reply", keywords: ["x"] });
+    expect(body).toMatchObject({ keywords: [], post_scope: "all", story_ids: [], media_item_ids: [] });
+  });
+});
+
+describe("story triggers (GR-06, GR-07)", () => {
+  const reply = { ...toDefinition(automation({ trigger: "story_reply", keywords: [] })) };
+
+  it("shows the steps each story trigger uses", () => {
+    expect(visibleSteps("story_reply")).toEqual(["when", "posts", "keywords", "then", "settings"]);
+    expect(visibleSteps("story_mention")).toEqual(["when", "then", "settings"]);
+  });
+
+  it("needs no keywords for a story reply, and a story only when stories are chosen", () => {
+    expect(stepComplete("keywords", reply)).toBe(true);
+    expect(stepComplete("posts", reply)).toBe(true);
+    expect(stepComplete("posts", { ...reply, post_scope: "selected", story_ids: [] })).toBe(false);
+    expect(stepComplete("posts", { ...reply, post_scope: "selected", story_ids: ["s1"] })).toBe(true);
+    const mention = { ...reply, trigger: "story_mention" as const };
+    expect(visibleSteps(mention.trigger).every((step) => stepComplete(step, mention))).toBe(true);
+  });
+
+  it("sends the chosen stories and the heart only for a story reply", () => {
+    const chosen = { ...reply, post_scope: "selected" as const, story_ids: ["s1", "s2"], story_heart: true };
+    const body = toRequestBody(chosen);
+    expect(body).toMatchObject({ post_scope: "selected", story_ids: ["s1", "s2"], story_heart: true, media_item_ids: [] });
+    expect(toRequestBody({ ...chosen, post_scope: "all" })).toMatchObject({ post_scope: "all", story_ids: [], story_heart: true });
+    const dm = toRequestBody({ ...chosen, trigger: "dm_keyword" });
+    expect(dm).toMatchObject({ post_scope: "all", story_ids: [], story_heart: false });
+  });
+
+  it("sends no keywords for a story mention", () => {
+    expect(toRequestBody({ ...reply, trigger: "story_mention", keywords: ["x"] }).keywords).toEqual([]);
+    expect(toRequestBody({ ...reply, keywords: ["link"] }).keywords).toEqual(["link"]);
+  });
+
+  it("keeps the story fields in the definition, and moves off the next post", () => {
+    const stored = toDefinition(automation({ trigger: "story_reply", story_ids: ["s1"], story_heart: true }));
+    expect(stored).toMatchObject({ story_ids: ["s1"], story_heart: true });
+    expect(triggerPatch({ ...stored, post_scope: "next_post" }, "story_reply")).toEqual({
+      trigger: "story_reply",
+      post_scope: "all",
+    });
+    expect(stepOfField("story_ids")).toBe("posts");
+  });
+});
+
+describe("entry triggers (GR-08, GR-09)", () => {
+  const link = { ...toDefinition(automation({ trigger: "entry_link", keywords: [] })) };
+  const ad = { ...toDefinition(automation({ trigger: "ad_click", keywords: [] })) };
+
+  it("shows the steps each entry trigger uses", () => {
+    expect(visibleSteps("entry_link")).toEqual(["when", "then", "settings"]);
+    expect(visibleSteps("ad_click")).toEqual(["when", "posts", "then", "settings"]);
+  });
+
+  it("needs no keywords, and an ad click needs an ad only when ads are chosen", () => {
+    expect(visibleSteps("entry_link").every((step) => stepComplete(step, { ...link, message_text: "Hi" }))).toBe(true);
+    expect(stepComplete("posts", ad)).toBe(true);
+    expect(stepComplete("posts", { ...ad, post_scope: "selected", ad_ids: [] })).toBe(false);
+    expect(stepComplete("posts", { ...ad, post_scope: "selected", ad_ids: ["123"] })).toBe(true);
+  });
+
+  it("sends the chosen ads only for an ad click, and no keywords for either trigger", () => {
+    const chosen = { ...ad, post_scope: "selected" as const, ad_ids: ["1", "2"], keywords: ["x"] };
+    expect(toRequestBody(chosen)).toMatchObject({ post_scope: "selected", ad_ids: ["1", "2"], keywords: [] });
+    expect(toRequestBody({ ...chosen, post_scope: "all" })).toMatchObject({ post_scope: "all", ad_ids: [] });
+    expect(toRequestBody({ ...chosen, trigger: "entry_link" })).toMatchObject({ post_scope: "all", ad_ids: [], keywords: [] });
+  });
+
+  it("keeps the ads in the definition and moves off the next post", () => {
+    const stored = toDefinition(automation({ trigger: "ad_click", post_scope: "selected", ad_ids: ["9"] }));
+    expect(stored.ad_ids).toEqual(["9"]);
+    expect(triggerPatch({ ...stored, post_scope: "next_post" }, "ad_click")).toEqual({
+      trigger: "ad_click",
+      post_scope: "all",
+    });
+    expect(stepOfField("ad_ids")).toBe("posts");
+  });
+});
+
+describe("Live comments and conversation starters (GR-10, GR-11)", () => {
+  const comment = { ...toDefinition(automation({ trigger: "comment_keyword", keywords: ["link"] })) };
+
+  it("a Live-only comment automation needs no posts and sends none", () => {
+    const live = { ...comment, comment_surface: "live" as const, post_scope: "selected" as const, media_item_ids: ["m1"] };
+    expect(stepComplete("posts", live)).toBe(true);
+    expect(toRequestBody(live)).toMatchObject({ comment_surface: "live", post_scope: "all", media_item_ids: [] });
+  });
+
+  it("keeps the post scope when the automation listens on both", () => {
+    const both = { ...comment, comment_surface: "both" as const, post_scope: "selected" as const, media_item_ids: ["m1"] };
+    expect(toRequestBody(both)).toMatchObject({ comment_surface: "both", post_scope: "selected", media_item_ids: ["m1"] });
+  });
+
+  it("other triggers always send the posts surface", () => {
+    expect(toRequestBody({ ...comment, trigger: "dm_keyword", comment_surface: "live" }).comment_surface).toBe("posts");
+  });
+
+  it("a conversation starter has no keywords or posts", () => {
+    expect(visibleSteps("ice_breaker")).toEqual(["when", "then", "settings"]);
+    expect(toRequestBody({ ...comment, trigger: "ice_breaker", keywords: ["x"] }).keywords).toEqual([]);
   });
 });

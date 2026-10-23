@@ -43,6 +43,10 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # metered (PD-2). Proposed values, pending the owner's plan decisions.
     "contact_fields": {"free": 5, "pro": 50, "max": 200},
     "webhook_endpoints": {"free": 1, "pro": 5, "max": 20},  # GR-04 (C-080)
+    # Steps in one automation flow (GR-13). Every plan can branch; Free is capped (PD-5, the
+    # plan's recommended option, pending the owner's decision: change the numbers here, or set
+    # free to Pro's to lift the cap). A flow is at most schemas.flows.MAX_STEPS whatever the plan.
+    "flow_steps": {"free": 5, "pro": 50, "max": 50},
 }
 
 

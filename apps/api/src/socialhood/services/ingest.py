@@ -30,6 +30,10 @@ FR-AUT-21). A tapped quick reply keeps its payload (``quick_reply_payload``). Wi
 for the account it queues ``analyze_conversation`` (4 s, one waiting job per conversation, so a
 burst is analysed once; TR-AI-05).
 
+Story triggers (GR-06, GR-07): a story reply and a story mention are customer DMs, so they start
+automations like any DM (services/automations/runtime picks the triggers by the message kind). A
+mention also leaves a ``story_mentions`` record for the Mentions list (services/story_mentions).
+
 Entry sources (GR-01):
 - a new conversation's entry is the referral its first message carries (an ad), else a referral
   the contact made within REFERRAL_WINDOW before it (an entry link opened, then a message), else
@@ -189,6 +193,17 @@ async def _webhook_events(
     await webhook_events.message_received(session, contact, msg, platform=acct.platform)
 
 
+async def _story_mention(
+    session: AsyncSession, acct: SocialAccount, contact: Contact, msg: Message, now: datetime
+) -> None:
+    """GR-07: a new story mention is kept as a record (who, when, the story link while it is
+    live); the story itself is never copied."""
+    from socialhood.services import story_mentions
+
+    if msg.kind == MessageKind.STORY_MENTION:
+        await story_mentions.record(session, acct, contact, msg, now=now)
+
+
 async def _automations(session: AsyncSession, contact: Contact, msg: Message) -> None:
     """A new customer DM: count it as a reply to recent automation DMs (FR-AUT-16) and let
     automations answer it (F-11 runtime, before the AI's analysis): a tap-first opening waiting
@@ -301,6 +316,7 @@ class _Ingest:
             self._inbound(conv, contact, msg, event)
             if not self.backfill:
                 await _webhook_events(self.session, self.acct, contact, msg, new_contact)
+                await _story_mention(self.session, self.acct, contact, msg, self.now)
                 await _automations(self.session, contact, msg)
                 await _supersede_suggestion(self.session, conv, msg)
                 if self.acct.ai_analysis_enabled:  # FR-PRV-02
@@ -349,8 +365,13 @@ class _Ingest:
             conv.last_referral = record
         if not new_conversation:
             return
+        from socialhood.services import ice_breakers
+
         referral = event.referral or self._recent_referral(contact, event.occurred_at)
-        if referral is None:
+        if referral is None and ice_breakers.is_tap(event.postback_payload):
+            conv.entry_source = EntrySource.ICE_BREAKER  # GR-11: began with a conversation starter
+            conv.entry_ref = event.text  # the question they tapped
+        elif referral is None:
             conv.entry_source = EntrySource.ORGANIC
         else:
             conv.entry_source = referral.source

@@ -22,6 +22,13 @@ export const TRIGGER_LABEL: Record<TriggerName, string> = {
   comment_keyword: "Comment keyword",
   comment_any: "Any comment",
   dm_keyword: "DM keyword",
+  story_reply: "Story reply",
+  story_mention: "Story mention",
+  entry_link: "Entry link",
+  ad_click: "Ad click",
+  ice_breaker: "Conversation starter",
+  first_message: "First message",
+  default_reply: "Default reply",
 };
 
 /** Where the trigger is named: the editor, the gallery and the list's filter say which network (UI-064). */
@@ -29,6 +36,13 @@ export const TRIGGER_LABEL_IG: Record<TriggerName, string> = {
   comment_keyword: "Instagram comment keyword",
   comment_any: "Any Instagram comment",
   dm_keyword: "Instagram DM keyword",
+  story_reply: "Instagram story reply",
+  story_mention: "Instagram story mention",
+  entry_link: "Instagram entry link",
+  ad_click: "Instagram ad click",
+  ice_breaker: "Instagram conversation starter",
+  first_message: "First message (welcome)",
+  default_reply: "Any other message (default reply)",
 };
 
 export const MATCH_LABEL: Record<MatchMode, string> = {
@@ -71,7 +85,7 @@ export const RESULT_LABEL: Record<RunResult, string> = {
   partial: "Partial",
   failed: "Failed",
   skipped_cooldown: "Skipped: cooldown",
-  skipped_expired: "Skipped: 7-day limit passed",
+  skipped_expired: "Skipped: too late to reply",
   escalated: "Handed to you",
   awaiting_reply: "Waiting for tap",
   skipped_read_only: "Skipped: account is read-only",
@@ -88,12 +102,30 @@ function plural(n: number, one: string, many: string): string {
   return `${formatCount(n)} ${n === 1 ? one : many}`;
 }
 
-/** The row's trigger label: "Comment on 3 posts", "Any comment on next post", "DM keyword". */
-export function triggerSummary(automation: Pick<Automation, "trigger" | "post_scope" | "posts">): string {
+/** The row's trigger label: "Comment on 3 posts", "Any comment on next post", "DM keyword", "Story reply to any story". */
+export function triggerSummary(
+  automation: Pick<Automation, "trigger" | "post_scope" | "posts"> &
+    Partial<Pick<Automation, "story_ids" | "ad_ids" | "comment_surface">>,
+): string {
   const { trigger, post_scope: scope, posts } = automation;
   if (!trigger) return "No trigger yet";
   if (trigger === "dm_keyword") return "DM keyword";
+  if (trigger === "story_mention") return "Story mention";
+  if (trigger === "entry_link") return "Entry link";
+  if (trigger === "ad_click") {
+    const ads = automation.ad_ids ?? [];
+    return scope === "selected" ? `Ad click on ${plural(ads.length, "ad", "ads")}` : "Ad click on any ad";
+  }
+  if (trigger === "ice_breaker") return "Conversation starter";
+  if (trigger === "first_message") return "First message (welcome)";
+  if (trigger === "default_reply") return "Default reply";
+  if (trigger === "story_reply") {
+    const stories = automation.story_ids ?? [];
+    return scope === "selected" ? `Story reply on ${plural(stories.length, "story", "stories")}` : "Story reply to any story";
+  }
   const lead = trigger === "comment_any" ? "Any comment" : "Comment";
+  if (automation.comment_surface === "live") return `${lead} on a Live`;
+  if (automation.comment_surface === "both") return `${lead} on posts and Lives`;
   if (scope === "next_post") return `${lead} on next post`;
   if (scope === "selected") return `${lead} on ${plural(posts.length, "post", "posts")}`;
   return `${lead} on any post`;
@@ -176,12 +208,17 @@ export function runWindowText(startsAt: string | null | undefined, endsAt: strin
 }
 
 /** Settings collapsed to one line (UX-SCR-03). */
+/** GR-22: an automation that runs only while the account is open, or only while it is closed. */
+export const HOURS_SUMMARY = { inside: "Inside business hours", outside: "Outside business hours" } as const;
+
 export function settingsSummary(
-  draft: Pick<AutomationDefinition, "cooldown_hours" | "surge_order" | "starts_at" | "ends_at" | "trigger">,
+  draft: Pick<AutomationDefinition, "cooldown_hours" | "surge_order" | "starts_at" | "ends_at" | "trigger"> &
+    Partial<Pick<AutomationDefinition, "hours_condition">>,
   timeZone: string,
   disclosure: string | null | undefined,
 ): string {
   const parts = [cooldownText(draft.cooldown_hours)];
+  if (draft.hours_condition) parts.push(HOURS_SUMMARY[draft.hours_condition]);
   if (draft.trigger === "comment_keyword" || draft.trigger === "comment_any") {
     parts.push(`${SURGE_LABEL[draft.surge_order]} when busy`);
   }

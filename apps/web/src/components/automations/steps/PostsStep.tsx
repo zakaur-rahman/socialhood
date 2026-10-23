@@ -9,7 +9,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { usePosts } from "@/lib/api/queries";
-import type { AutomationDefinition, PostRef, PostScope } from "@/lib/api/types";
+import type { AutomationDefinition, CommentSurface, PostRef, PostScope } from "@/lib/api/types";
 import { errorsFor, type FieldErrors } from "@/lib/automations/definition";
 import { shortDate } from "@/lib/automations/format";
 import { cn } from "@/lib/utils";
@@ -24,6 +24,16 @@ const SCOPES: { value: PostScope; label: string; hint: string }[] = [
     label: "Next post I publish",
     hint: "The next post you publish, from Social Hood or the Instagram app. It links itself when the post goes live.",
   },
+];
+
+const SURFACES: { value: CommentSurface; label: string; hint: string }[] = [
+  { value: "posts", label: "Posts and Reels", hint: "Comments on your posts and Reels." },
+  {
+    value: "live",
+    label: "Live",
+    hint: "Comments during your Instagram Lives. The private reply goes out while you are live; a comment that comes after the Live ends is skipped.",
+  },
+  { value: "both", label: "Posts and Live", hint: "Comments on your posts and Reels, and during your Lives." },
 ];
 
 const MEDIA_TYPE: Record<string, string> = {
@@ -89,10 +99,30 @@ export function PostsStep({
     errorsFor(errors, field),
   );
   const hint = SCOPES.find((scope) => scope.value === draft.post_scope)?.hint;
+  const surface = draft.comment_surface ?? "posts";
+  const surfaceHint = SURFACES.find((item) => item.value === surface)?.hint;
 
   return (
-    <StepCard id="posts" label="On these posts" state={state} errors={stepErrors}>
+    <StepCard id="posts" label={surface === "live" ? "On Lives" : "On these posts"} state={state} errors={stepErrors}>
       <div className="space-y-3">
+        <ToggleGroup
+          aria-label="Where comments count"
+          aria-describedby="automation-surface-hint"
+          value={surface}
+          onValueChange={(value) => value && change({ comment_surface: value as CommentSurface })}
+          className="flex-col sm:flex-row"
+        >
+          {SURFACES.map((item) => (
+            <ToggleGroupItem key={item.value} value={item.value}>
+              {item.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        <p id="automation-surface-hint" className="text-xs text-fg-secondary">
+          {surfaceHint}
+        </p>
+        {surface === "live" ? null : (
+        <>
         <ToggleGroup
           aria-label="Which posts"
           aria-describedby="automation-scope-hint"
@@ -126,6 +156,8 @@ export function PostsStep({
             <p className="text-sm text-fg-secondary">Choose the account in When to see its posts.</p>
           )
         ) : null}
+        </>
+        )}
       </div>
     </StepCard>
   );

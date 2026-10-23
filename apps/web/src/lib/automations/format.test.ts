@@ -29,6 +29,19 @@ describe("row labels (UX-SCR-02)", () => {
     expect(triggerSummary(automation({ trigger: null }))).toBe("No trigger yet");
   });
 
+  it("describes the story triggers (GR-06, GR-07)", () => {
+    expect(triggerSummary(automation({ trigger: "story_reply" }))).toBe("Story reply to any story");
+    expect(
+      triggerSummary(automation({ trigger: "story_reply", post_scope: "selected", story_ids: ["s1", "s2"] })),
+    ).toBe("Story reply on 2 stories");
+    expect(triggerSummary(automation({ trigger: "story_mention" }))).toBe("Story mention");
+    expect(triggerSummary(automation({ trigger: "entry_link" }))).toBe("Entry link");
+    expect(triggerSummary(automation({ trigger: "ad_click" }))).toBe("Ad click on any ad");
+    expect(triggerSummary(automation({ trigger: "ad_click", post_scope: "selected", ad_ids: ["1"] }))).toBe(
+      "Ad click on 1 ad",
+    );
+  });
+
   it("names the action", () => {
     expect(actionBadge(automation())).toBe("Message + link");
     expect(actionBadge(automation({ message_buttons: [] }))).toBe("Message");
@@ -70,6 +83,14 @@ describe("editor copy (UX-SCR-03)", () => {
     expect(
       settingsSummary({ cooldown_hours: 0, surge_order: "oldest_first", starts_at: null, ends_at: null, trigger: "dm_keyword" }, TZ, "Sent automatically"),
     ).toBe("Every time someone matches · No end date · Disclosure on");
+  });
+
+  it("says when an automation needs the account open or closed (GR-22)", () => {
+    const base = { cooldown_hours: 0, surge_order: "oldest_first" as const, starts_at: null, ends_at: null, trigger: "dm_keyword" as const };
+    expect(settingsSummary({ ...base, hours_condition: "inside" }, TZ, null)).toBe(
+      "Every time someone matches · Inside business hours · No end date · Disclosure off",
+    );
+    expect(settingsSummary({ ...base, hours_condition: "outside" }, TZ, null)).toContain("Outside business hours");
   });
 
   it("names the other automation in an overlap and which runs first (FR-AUT-15)", () => {

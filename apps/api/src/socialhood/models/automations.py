@@ -23,7 +23,7 @@ from sqlalchemy import text as sql
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from socialhood.db.base import Base, IdMixin, TimestampMixin
+from socialhood.db.base import Base, CreatedAtMixin, IdMixin, TimestampMixin
 from socialhood.db.tenancy import TenantScoped
 from socialhood.models.identity import _in
 
@@ -38,6 +38,18 @@ class Trigger(StrEnum):
     DM_KEYWORD = "dm_keyword"
     COMMENT_KEYWORD = "comment_keyword"
     COMMENT_ANY = "comment_any"
+    STORY_REPLY = "story_reply"  # GR-06: a DM that replies to one of the account's stories
+    STORY_MENTION = "story_mention"  # GR-07: someone mentioned the account in their story
+    ENTRY_LINK = "entry_link"  # GR-08: a DM opened from one of the account's entry links
+    AD_CLICK = "ad_click"  # GR-09: a DM opened from an ad (click to Instagram DM)
+    ICE_BREAKER = "ice_breaker"  # GR-11: someone tapped one of the account's conversation starters
+    FIRST_MESSAGE = "first_message"  # GR-12: a contact's first DM to the account (a welcome)
+    DEFAULT_REPLY = "default_reply"  # GR-12: a DM nothing else answered, while AI is off
+
+
+class HoursCondition(StrEnum):
+    INSIDE = "inside"  # GR-22: runs only while the account is open
+    OUTSIDE = "outside"  # GR-22: runs only while it is closed
 
 
 class MatchMode(StrEnum):
@@ -61,6 +73,14 @@ class PostScope(StrEnum):
     ALL = "all"
     SELECTED = "selected"
     NEXT_POST = "next_post"
+
+
+class CommentSurface(StrEnum):
+    """Where a comment trigger listens (GR-10): on posts and Reels, on Lives, or on both."""
+
+    POSTS = "posts"
+    LIVE = "live"
+    BOTH = "both"
 
 
 class RunResult(StrEnum):
@@ -125,7 +145,12 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     surge_order: Mapped[str] = mapped_column(Text, server_default=sql("'oldest_first'"))
     post_scope: Mapped[str] = mapped_column(Text, server_default=sql("'all'"))
+    # GR-10, comment triggers: posts (post_scope applies), the account's Lives, or both. Live
+    # comments ignore post_scope; a Live-only automation keeps post_scope "all".
+    comment_surface: Mapped[str] = mapped_column(Text, server_default=sql("'posts'"))
     cooldown_hours: Mapped[int] = mapped_column(SmallInteger, server_default=sql("24"))
+    # GR-22: run only inside or only outside the account's business hours (None: any time).
+    hours_condition: Mapped[str | None] = mapped_column(Text)
     # Tap first (FR-AUT-21, comment triggers): the private reply is this opening text with a
     # quick-reply button; the message above follows their tap or reply.
     confirm_first: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
@@ -136,6 +161,17 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     follow_nudge: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     follow_nudge_text: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[int] = mapped_column(Integer, server_default=sql("100"))
+    # GR-06, story_reply with post_scope "selected": the platform ids of the chosen stories (empty
+    # means any story). A story lasts 24 hours, so a chosen story stops matching once it expires.
+    story_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
+    # GR-09, ad_click with post_scope "selected": the ids of the chosen ads, typed by hand (empty
+    # means any ad). Listing the account's ads would need ads_read, which is not requested.
+    ad_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
+    # GR-15: send link buttons through our tracked redirect (/l/<code>) so clicks show on the
+    # step's funnel. Off: the raw link.
+    track_links: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
+    # GR-06: also send Instagram's heart sticker to the story reply, ahead of the message.
+    story_heart: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # GR-03: the automation_flows version it runs, when it was saved as a flow. None: its flow is
     # compiled from the message settings above (services/automations/flows.compile_legacy).
     flow_version: Mapped[int | None] = mapped_column(Integer)
@@ -161,9 +197,16 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(f"action IS NULL OR {_in('action', AutomationAction)}", name="action"),
         CheckConstraint(_in("surge_order", SurgeOrder), name="surge_order"),
         CheckConstraint(_in("post_scope", PostScope), name="post_scope"),
+        CheckConstraint(_in("comment_surface", CommentSurface), name="comment_surface"),
+        CheckConstraint(
+            f"hours_condition IS NULL OR {_in('hours_condition', HoursCondition)}",
+            name="hours_condition",
+        ),
         CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
         CheckConstraint("cooldown_hours BETWEEN 0 AND 72", name="cooldown_hours"),
         CheckConstraint("cardinality(public_reply_texts) <= 5", name="public_reply_texts"),
+        CheckConstraint("cardinality(story_ids) <= 20", name="story_ids"),
+        CheckConstraint("cardinality(ad_ids) <= 20", name="ad_ids"),
         CheckConstraint("jsonb_array_length(message_buttons) <= 3", name="message_buttons"),
         CheckConstraint(
             "ai_instructions IS NULL OR char_length(ai_instructions) <= 2000",
@@ -288,7 +331,7 @@ class Comment(IdMixin, TimestampMixin, TenantScoped, Base):
     hidden: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     commented_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    # A comment on a live broadcast (GR-01); comment automations skip these until GR-10.
+    # A comment on a live broadcast (GR-01); answered by automations on the Live scope (GR-10).
     is_live: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     analysis_status: Mapped[str] = mapped_column(Text, server_default=sql("'pending'"))
     our_reply_platform_id: Mapped[str | None] = mapped_column(Text)
@@ -418,4 +461,144 @@ class AutomationRunStep(IdMixin, TimestampMixin, TenantScoped, Base):
     __table_args__ = (
         UniqueConstraint("run_id", "step_id"),
         CheckConstraint(_in("status", StepStatus), name="status"),
+    )
+
+
+class StoryMention(IdMixin, TimestampMixin, TenantScoped, Base):
+    """Someone mentioned the account in their story (GR-07): who, when, and the story's media
+    link while it is live. The link is Instagram's CDN address, which expires with the story
+    (``media_expires_at``); it is never downloaded or copied, and is cleared once it has expired
+    (jobs purge_expired). One row per mention message."""
+
+    __tablename__ = "story_mentions"
+
+    social_account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("social_accounts.id", ondelete="CASCADE")
+    )
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"))
+    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"))
+    mentioned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    media_url: Mapped[str | None] = mapped_column(Text)
+    media_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("message_id"),
+        Index("ix_story_mentions_listing", "workspace_id", sql("mentioned_at DESC"), "id"),
+        Index("ix_story_mentions_account", "social_account_id", sql("mentioned_at DESC")),
+        Index("ix_story_mentions_contact_id", "contact_id"),
+        Index(
+            "ix_story_mentions_expiring",
+            "media_expires_at",
+            postgresql_where=sql("media_url IS NOT NULL"),
+        ),
+    )
+
+
+class EntryLink(IdMixin, TimestampMixin, TenantScoped, Base):
+    """An entry link (GR-08): ``ig.me/m/<username>?ref=<code>`` opens a DM with the account and
+    Instagram sends the code back as a referral. ``automation_id`` is the entry link automation
+    that starts when someone opens the DM from it (null once that automation is deleted, so the
+    link's counts stay). The code is unique per account and never changes."""
+
+    __tablename__ = "entry_links"
+
+    social_account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("social_accounts.id", ondelete="CASCADE")
+    )
+    automation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("automations.id", ondelete="SET NULL")
+    )
+    code: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("social_account_id", "code"),
+        Index("ix_entry_links_listing", "workspace_id", sql("created_at DESC"), "id"),
+        Index(
+            "ix_entry_links_automation_id",
+            "automation_id",
+            postgresql_where=sql("automation_id IS NOT NULL"),
+        ),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
+        CheckConstraint("code ~ '^[A-Za-z0-9_-]{3,40}$'", name="code_format"),
+    )
+
+
+class IceBreaker(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A conversation starter of an Instagram account (GR-11): up to 4 questions shown in a new
+    chat. A tap comes back as a postback whose payload is ``ib:{id}`` (the id never changes while
+    the position keeps its row, so starters already shown in people's apps keep working). It starts
+    ``automation_id`` (an automation on the ``ice_breaker`` trigger) or, with ``answer_with_ai``,
+    leaves the tap to the inbox AI. ``synced_at`` and ``sync_error`` say how the last push to
+    Instagram went (the same on every row of the account)."""
+
+    __tablename__ = "ice_breakers"
+
+    social_account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("social_accounts.id", ondelete="CASCADE")
+    )
+    position: Mapped[int] = mapped_column(SmallInteger)
+    question: Mapped[str] = mapped_column(Text)
+    automation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("automations.id", ondelete="SET NULL")
+    )
+    answer_with_ai: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sync_error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("social_account_id", "position"),
+        Index("ix_ice_breakers_automation_id", "automation_id"),
+        CheckConstraint("position BETWEEN 0 AND 3", name="position"),
+        CheckConstraint("char_length(question) BETWEEN 1 AND 80", name="question_length"),
+        CheckConstraint("automation_id IS NULL OR NOT answer_with_ai", name="one_target"),
+    )
+
+
+class TrackedLink(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A link button sent through our redirect (GR-15): ``/l/<code>`` answers 302 to ``url``.
+
+    The code is an opaque random token (services/automations/links.py) mapped here, so the run,
+    step and contact are never in the URL. One row per run, step and button: a retried send finds
+    its link instead of making another. ``url`` is the author's https address, checked again when
+    the link is followed."""
+
+    __tablename__ = "tracked_links"
+
+    automation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("automations.id", ondelete="CASCADE")
+    )
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("automation_runs.id", ondelete="CASCADE"))
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"))
+    step_id: Mapped[str] = mapped_column(Text)
+    button_index: Mapped[int] = mapped_column(SmallInteger)
+    code: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("code"),
+        UniqueConstraint("run_id", "step_id", "button_index"),
+        Index("ix_tracked_links_automation_id", "automation_id"),
+        CheckConstraint("char_length(code) BETWEEN 16 AND 64", name="code_length"),
+    )
+
+
+class LinkClick(IdMixin, CreatedAtMixin, TenantScoped, Base):
+    """One counted click on a tracked link (GR-15). ``created_at`` is the click. Link previews
+    and bots are not stored (links.is_bot). The automation and step are copied from the link so
+    the funnel reads this table alone."""
+
+    __tablename__ = "link_clicks"
+
+    link_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracked_links.id", ondelete="CASCADE"))
+    automation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("automations.id", ondelete="CASCADE")
+    )
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("automation_runs.id", ondelete="CASCADE"))
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"))
+    step_id: Mapped[str] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_link_clicks_automation_id_created_at", "automation_id", "created_at"),
     )

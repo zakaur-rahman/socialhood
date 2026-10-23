@@ -276,6 +276,12 @@ AI_TOKENS = Counter(
     "AI tokens by feature, model and direction (input, output).",
     ("feature", "model", "direction"),
 )
+AGENT_VISUALS = Counter(
+    "socialhood_agent_visuals_total",
+    "Ask Social Hood visuals by kind and outcome (built, dropped: failed to build or too large, "
+    "dropped_stored: invalid on read).",
+    ("kind", "outcome"),
+)
 
 STORED: tuple[Counter | Histogram, ...] = (
     HTTP_REQUESTS,
@@ -287,6 +293,7 @@ STORED: tuple[Counter | Histogram, ...] = (
     PLATFORM_CALLS,
     AI_CALLS,
     AI_TOKENS,
+    AGENT_VISUALS,
 )
 
 

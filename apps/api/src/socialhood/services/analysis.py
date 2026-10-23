@@ -63,6 +63,7 @@ from socialhood.repositories import ingest as ingest_rows
 from socialhood.schemas.ai import AnalysisCorrection, SentimentName
 from socialhood.schemas.inbox import EscalationReason, IntentName
 from socialhood.schemas.inbox import MessageAnalysis as MessageAnalysisOut
+from socialhood.services import leads
 from socialhood.services.inbox_views import ATTACHMENT_PREVIEW, human_agent_allowed
 from socialhood.services.notifications import notify_members
 from socialhood.settings import Settings
@@ -404,6 +405,9 @@ async def _store(
                 return AnalysisRun("already_analysed" if row is None else "not_found")
             previous_score = conv.lead_score
             _apply_signals(conv, row)
+            await leads.on_analysis(  # a good enough score or intent qualifies a new lead (GR-18)
+                session, conv, score=row.lead_score, intent=row.corrected_intent or row.intent
+            )
             await _announce_lead(session, conv, row, previous_score)
             conv.messages_since_summary = await analyses.messages_since(
                 session, conv.id, conv.summary_updated_at

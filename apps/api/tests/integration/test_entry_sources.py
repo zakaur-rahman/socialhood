@@ -217,15 +217,16 @@ async def any_comment_automation(engine: AsyncEngine, account: tuple[uuid.UUID, 
     )
 
 
-async def test_a_live_comment_is_stored_live_and_runs_no_automation(
+async def test_a_live_comment_is_stored_live_and_a_posts_automation_passes_it_over(
     engine: AsyncEngine, redis: Redis, account: tuple[uuid.UUID, uuid.UUID]
 ) -> None:
-    """GR-10 adds the Live scope; until then an "any comment" automation leaves Lives alone."""
+    """GR-10: the automation is on posts only, so the job it queues finds no match on the Live
+    (tests/integration/test_live_comments.py covers the Live scope)."""
     await any_comment_automation(engine, account)
     assert await deliver(sessions(engine), redis, "webhook_live_comment.json") == PROCESSED
     [comment] = await rows(engine, "SELECT platform_comment_id, text, is_live FROM comments")
     assert comment == {"platform_comment_id": "18030000000000009", "text": "PRICE", "is_live": True}
-    assert await jobs("run_automation") == []
+    assert len(await jobs("run_automation")) == 1
 
 
 async def test_a_post_comment_is_not_live_and_runs_the_automation(

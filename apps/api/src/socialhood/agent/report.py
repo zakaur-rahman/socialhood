@@ -63,10 +63,12 @@ class RefBook:
 
 
 def model_view(result: Mapping[str, Any], numbers: Sequence[int]) -> dict[str, Any]:
-    """A stored result as the model sees it: each ref carries the number to cite."""
+    """A stored result as the model sees it: each ref carries the number to cite, and the
+    ``visual`` (GR-38) is left out: it holds the same numbers in a shape for the screen, so the
+    model would read them twice and could copy a label or layout from it."""
     refs = list(result.get("refs") or [])
     numbered = [{"n": n, **ref} for n, ref in zip(numbers, refs, strict=False)]
-    return {**result, "refs": numbered}
+    return {**{k: v for k, v in result.items() if k != "visual"}, "refs": numbered}
 
 
 def cite(answer: str, book: RefBook) -> tuple[str, list[AnswerRef]]:

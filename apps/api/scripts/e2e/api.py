@@ -11,6 +11,11 @@ It is the normal app (``socialhood.main``) plus two things the suite needs:
     bearer), so every spec file starts clean (the API has no "new workspace" endpoint in R1);
   - ``POST /__e2e/workspaces/{wid}/media-assets``: an image in the media library without
     Cloudinary (F-13), as a finished signed upload would have registered it;
+  - ``POST /__e2e/workspaces/{wid}/agent-runs``: a finished Ask run of the signed-in owner
+    (GR-38), because the fake model calls no tools. With ``visual`` it also seeds account
+    metrics for the last ``days`` days and the ``days`` before them, and the run's
+    compare_periods step holds the visual the real service and builder make from them, so the
+    spec can check the cards against GET …/analytics/account-metrics;
   - ``DELETE /__e2e/users/{clerk_user_id}``: a signed-up user's workspaces (every tenant row
     cascades) and row (F-01). Other test data goes when the launcher drops the database.
 
@@ -23,20 +28,26 @@ import hmac
 import os
 import secrets
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel, Field
 from sqlalchemy import delete
 
+from socialhood.agent import visuals
 from socialhood.auth.deps import CurrentUser, Owner, Session
 from socialhood.billing.registry import _process_fake
 from socialhood.errors import ApiError
 from socialhood.main import create_app
+from socialhood.models.agent import AgentRun, AgentStep
+from socialhood.models.analytics import AccountDailyMetric
 from socialhood.models.identity import User, Workspace
 from socialhood.models.media import AssetPurpose, MediaAsset, ResourceType
-from socialhood.repositories import users, workspaces
+from socialhood.platforms.capabilities import Capability
+from socialhood.repositories import social_accounts, users, workspaces
+from socialhood.services.analytics import account_metrics
+from socialhood.services.analytics.common import View
 from socialhood.services.provisioning import slugify
 from socialhood.settings import get_settings
 
@@ -124,6 +135,114 @@ async def create_media_asset(body: AssetIn, ctx: Owner, session: Session) -> Ass
     session.add(asset)
     await session.commit()
     return AssetOut(id=asset.id, public_id=public_id, secure_url=secure_url)
+
+
+class AgentRunIn(BaseModel):
+    request: str = Field(min_length=1, max_length=500)
+    answer: str = Field(min_length=1, max_length=2000)
+    account_id: uuid.UUID | None = None
+    visual: bool = False  # seed account metrics and attach a metric_comparison visual
+    days: int = Field(default=14, ge=2, le=60)
+
+
+class AgentRunOut(BaseModel):
+    id: uuid.UUID
+    thread_id: uuid.UUID
+
+
+@router.post("/workspaces/{wid}/agent-runs", status_code=201)
+async def create_agent_run(body: AgentRunIn, ctx: Owner, session: Session) -> AgentRunOut:
+    now = datetime.now(UTC)
+    steps: list[dict[str, object]] = []
+    if body.visual:
+        if body.account_id is None:
+            raise ApiError("validation_error", "A visual needs an account_id.")
+        acct = await social_accounts.get(session, body.account_id)
+        if acct is None:
+            raise ApiError("not_found")
+        view = View(
+            timezone=ctx.workspace.timezone,
+            now=now,
+            capabilities=lambda _: frozenset({Capability.ACCOUNT_INSIGHTS}),
+        )
+        last = account_metrics.complete_until(view)
+        current = account_metrics.span_of(last - timedelta(days=body.days - 1), last)
+        previous = account_metrics.span_of(
+            current.since - timedelta(days=body.days), current.since - timedelta(days=1)
+        )
+        for span, reach, taps in ((previous, 80, 4), (current, 100, 5)):
+            for i in range(span.days):
+                day: date = span.since + timedelta(days=i)
+                session.add(
+                    AccountDailyMetric(
+                        social_account_id=acct.id,
+                        date=day,
+                        followers_count=1000 + (day - previous.since).days,
+                        metrics={"reach": reach, "total_interactions": 10, "unfollows": taps},
+                        captured_at=now,
+                    )
+                )
+        await session.flush()
+        figures = await account_metrics.account_metrics(
+            session,
+            view,
+            current=current,
+            previous=previous,
+            account_id=acct.id,
+            metrics=["reach", "interactions", "followers", "unfollows"],
+        )
+        visual = visuals.metric_comparison(
+            figures, account_label=f"@{acct.username}" if acct.username else None, note=None
+        )
+        steps.append(
+            {
+                "tool": "compare_periods",
+                "result": {
+                    "summary": "Compared two periods",
+                    "refs": [],
+                    "caveats": [],
+                    "visual": visual.model_dump(mode="json"),
+                },
+            }
+        )
+    run_id = uuid.uuid4()
+    run = AgentRun(
+        id=run_id,
+        thread_id=run_id,
+        requested_by_user_id=ctx.user.id,
+        request=body.request,
+        mode="read_only",
+        status="succeeded",
+        answer=body.answer,
+        answer_refs=[],
+        model="e2e",
+        prompt_version="agent.v3",
+        credits=1,
+        started_at=now - timedelta(seconds=3),
+        completed_at=now,
+    )
+    session.add(run)
+    await session.flush()
+    for ordinal, step in enumerate(steps):
+        session.add(
+            AgentStep(
+                run_id=run.id,
+                ordinal=ordinal,
+                idempotency_key=f"{run.id}:{ordinal}",
+                kind="tool",
+                tool=str(step["tool"]),
+                tier="read",
+                args={},
+                status="succeeded",
+                attempts=1,
+                latency_ms=40,
+                result=step["result"],
+                started_at=now - timedelta(seconds=2),
+                completed_at=now - timedelta(seconds=1),
+            )
+        )
+    await session.commit()
+    return AgentRunOut(id=run.id, thread_id=run.thread_id)
 
 
 @router.delete("/users/{clerk_user_id}", status_code=204)

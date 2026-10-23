@@ -20,7 +20,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.platforms.deps import PlatformDeps, deps_from
-from socialhood.platforms.events import InboundComment, InboundMessage
+from socialhood.platforms.events import (
+    InboundComment,
+    InboundMediaRef,
+    InboundMessage,
+    Referral,
+    ReferralInfo,
+)
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services import sending
 from socialhood.services.automations import comments, queue, runtime
@@ -104,8 +110,10 @@ class World:
         parent: str | None = None,
         at: datetime | None = None,
         account_id: uuid.UUID | None = None,
+        live: bool = False,
     ) -> uuid.UUID | None:
-        """A comment through the real intake (F-12); its id, or None when nothing was stored."""
+        """A comment through the real intake (F-12); its id, or None when nothing was stored.
+        ``live``: a comment on a Live broadcast (GR-10)."""
         event = InboundComment(
             account_ref="sandbox",
             occurred_at=at or datetime.now(UTC),
@@ -115,6 +123,7 @@ class World:
             author_ref=author or f"99{uuid.uuid4().int % 10**13:013d}",
             author_username=username,
             text=text_,
+            is_live=live,
         )
         with workspace_scope(self.wid):
             async with self.maker() as session:
@@ -132,9 +141,10 @@ class World:
         payload: str | None = None,
         mid: str | None = None,
         at: datetime | None = None,
+        referral: ReferralInfo | None = None,
     ) -> uuid.UUID | None:
-        """A customer DM (a tapped quick reply with ``payload``) through the real ingest; its
-        id, or None when nothing new was stored (a redelivery)."""
+        """A customer DM (a tapped quick reply with ``payload``; an ad's ``referral``) through
+        the real ingest; its id, or None when nothing new was stored (a redelivery)."""
         event = InboundMessage(
             account_ref="sandbox",
             occurred_at=at or datetime.now(UTC),
@@ -144,6 +154,57 @@ class World:
             kind="text",
             text=text_,
             quick_reply_payload=payload,
+            referral=referral,
+        )
+        with workspace_scope(self.wid):
+            async with self.maker() as session:
+                acct = await accounts.get(session, self.account_id)
+                assert acct is not None
+                result = await ingest(session, acct, [event])
+                await session.commit()
+        return result.created_message_ids[0] if result.created_message_ids else None
+
+    async def referral(self, contact_ref: str, *, ref: str, at: datetime | None = None) -> None:
+        """Someone opened an entry link (a ``messaging_referral``) through the real ingest."""
+        event = Referral(
+            account_ref="sandbox",
+            occurred_at=at or datetime.now(UTC),
+            contact_ref=contact_ref,
+            referral=ReferralInfo(source="link", ref=ref, platform_source="OPEN_THREAD"),
+        )
+        with workspace_scope(self.wid):
+            async with self.maker() as session:
+                acct = await accounts.get(session, self.account_id)
+                assert acct is not None
+                await ingest(session, acct, [event])
+                await session.commit()
+
+    async def story(
+        self,
+        contact_ref: str,
+        *,
+        kind: str = "story_reply",
+        text_: str | None = "Where is this from?",
+        story_id: str | None = "sandbox_story_0",
+        url: str = "https://lookaside.fbsbx.com/ig_messaging_cdn/?asset_id=1&signature=s",
+        at: datetime | None = None,
+    ) -> uuid.UUID | None:
+        """A story reply (``kind="story_reply"``; a story like is the heart as its text) or a
+        story mention (``kind="story_mention"``) through the real ingest; its id, or None when
+        nothing new was stored."""
+        event = InboundMessage(
+            account_ref="sandbox",
+            occurred_at=at or datetime.now(UTC),
+            contact_ref=contact_ref,
+            contact_name=None,
+            platform_message_id=f"mid_{uuid.uuid4().hex}",
+            kind=kind,
+            text=text_ if kind == "story_reply" else None,
+            attachments=(
+                InboundMediaRef(kind="story", url=url, media_id=story_id)
+                if kind == "story_reply"
+                else InboundMediaRef(kind="story", url=url),
+            ),
         )
         with workspace_scope(self.wid):
             async with self.maker() as session:

@@ -44,6 +44,14 @@ export const emptyStates = {
     title: "No automations match",
     body: "Try another search or clear the filters.",
   },
+  storyMentions: {
+    title: "No story mentions yet",
+    body: "When someone mentions you in their story, they show up here.",
+  },
+  entryLinks: {
+    title: "No entry links yet",
+    body: "Make a link or QR code that opens a chat with you and starts an automation. Put it in your bio, on a flyer or in a shop window.",
+  },
   automationRuns: {
     title: "No runs yet",
     body: "Each time this automation answers someone, it shows here.",
@@ -400,6 +408,11 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     limitTitle: "Webhook endpoint limit reached",
     includes: (n) => counted(n, "webhook endpoint", "webhook endpoints"),
     unlimited: "webhook endpoints",
+  },
+  flow_steps: {
+    limitTitle: "Flow step limit reached",
+    includes: (n) => `${counted(n, "step", "steps")} in a flow`,
+    unlimited: "steps in a flow",
   },
   members: {
     limitTitle: "Member limit reached",

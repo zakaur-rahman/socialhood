@@ -195,3 +195,55 @@ def test_card_and_text_expectations() -> None:
     assert checks.card_kind([], None)
     missing = checks.text_expectations("Rahul's window closes soon.", [r"rahul", r"refund"])
     assert missing == [r"refund"]
+
+
+# ---------------------------------------------------------------- visuals (GR-38)
+
+COMPARISON = {
+    "kind": "metric_comparison",
+    "version": 1,
+    "title": "@maple.bakery: 1-29 Sep 2026 against 1-29 Aug 2026",
+    "current": {"start": "2026-09-01", "end": "2026-09-29", "label": "1-29 Sep 2026", "days": 29},
+    "metrics": [{"key": "reach", "current": 12000, "previous": 10000, "change_pct": 20.0}],
+}
+RESULT = {
+    "summary": "Compared",
+    "current": {"days": 29},
+    "metrics": [{"metric": "reach", "current": 12000, "previous": 10000, "change_pct": 20.0}],
+}
+
+
+def test_a_visuals_numbers_leave_out_layout() -> None:
+    assert sorted(checks.visual_numbers(COMPARISON)) == [20, 10000, 12000]
+
+
+def test_a_visual_must_hold_the_expected_kind_and_figures() -> None:
+    ok = checks.visual_check(
+        [COMPARISON],
+        [RESULT],
+        expect_kinds=["metric_comparison"],
+        expect_numbers=[Expect(12000.0), Expect(20.0)],
+    )
+    assert ok.passed
+    assert ok.kinds == ["metric_comparison"]
+    bad = checks.visual_check(
+        [COMPARISON],
+        [RESULT],
+        expect_kinds=["ranked_posts"],
+        expect_numbers=[Expect(99999.0, label="reach")],
+    )
+    assert (bad.missing, bad.missing_numbers) == (["ranked_posts"], ["reach"])
+
+
+def test_a_figure_no_tool_returned_is_flagged() -> None:
+    invented = {**COMPARISON, "metrics": [{"key": "reach", "current": 12345, "previous": 10000}]}
+    check = checks.visual_check([invented], [RESULT])
+    assert check.ungrounded == ["12345"]
+    assert not check.passed
+
+
+def test_a_conceptual_question_shows_no_visual() -> None:
+    assert checks.visual_check([], [], expect_none=True).passed
+    shown = checks.visual_check([COMPARISON], [RESULT], expect_none=True)
+    assert shown.unexpected == ["metric_comparison"]
+    assert not shown.passed

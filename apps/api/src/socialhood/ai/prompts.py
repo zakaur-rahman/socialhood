@@ -25,8 +25,9 @@ CURRENT = {
     "hashtags": 1,
     # Ask Social Hood's planner and report (TR-AGT-02, TA.2). agent.v2: the TA.6 eval (the
     # member's role, answering the question asked, brackets only for citations, drafted text only
-    # from results; docs/ai-eval-log.md).
-    "agent": 2,
+    # from results; docs/ai-eval-log.md). agent.v3 (GR-38): compare_periods for period
+    # comparisons, and, with visuals on, a line that a visual shows the figures.
+    "agent": 3,
     # summary.v2: a concrete next step from the conversation and the knowledge the latest draft
     # used; polish.v1: the composer's AI Polish (C-063).
     "polish": 1,

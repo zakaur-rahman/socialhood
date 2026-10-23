@@ -1,6 +1,17 @@
 "use client";
 
-import { MessageCircle, MessagesSquare, Send } from "lucide-react";
+import {
+  AtSign,
+  Hand,
+  Link2,
+  ListChecks,
+  Megaphone,
+  MessageCircle,
+  MessagesSquare,
+  MessageSquareReply,
+  Reply,
+  Send,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -18,6 +29,25 @@ const TRIGGERS: { value: TriggerName; icon: typeof Send; hint: string }[] = [
   { value: "comment_keyword", icon: MessageCircle, hint: "Someone comments one of your keywords on a post." },
   { value: "comment_any", icon: MessagesSquare, hint: "Anyone comments on the posts you choose." },
   { value: "dm_keyword", icon: Send, hint: "Someone sends a DM with one of your keywords." },
+  { value: "story_reply", icon: Reply, hint: "Someone replies to one of your stories. Add keywords, or answer every reply." },
+  { value: "story_mention", icon: AtSign, hint: "Someone mentions you in their story. Thank them or send a reward." },
+  { value: "entry_link", icon: Link2, hint: "Someone opens a chat from one of your entry links or QR codes. Make the links on the Entry links page." },
+  { value: "ad_click", icon: Megaphone, hint: "Someone opens a chat from an Instagram ad. Answer any ad, or only the ads you list." },
+  {
+    value: "ice_breaker",
+    icon: ListChecks,
+    hint: "Someone taps one of your conversation starters. Set the starters up under Conversation starters on the Automations page.",
+  },
+  {
+    value: "first_message",
+    icon: Hand,
+    hint: "A welcome: it goes to someone the first time they DM this account, whatever they write. It runs only when no other automation answers that message.",
+  },
+  {
+    value: "default_reply",
+    icon: MessageSquareReply,
+    hint: "A catch-all: it answers a DM that no other automation matched, but only while AI replies are Off for the conversation. With AI on Suggest or Auto, the AI answers instead.",
+  },
 ];
 
 /** UX-SCR-03 When: the Instagram account and the trigger. */
@@ -63,8 +93,8 @@ export function WhenStep({
             <Select
               value={draft.social_account_id ?? ""}
               onValueChange={(value) =>
-                // Posts belong to one account, so a new account starts with none chosen.
-                change({ social_account_id: value, media_item_ids: [], scheduled_post_ids: [] })
+                // Posts and stories belong to one account, so a new account starts with none chosen.
+                change({ social_account_id: value, media_item_ids: [], scheduled_post_ids: [], story_ids: [] })
               }
             >
               <SelectTrigger
@@ -91,8 +121,9 @@ export function WhenStep({
           )}
         </div>
 
-        {/* A container: the three triggers sit in a row only when the step is wide enough for their
-            labels (about 640 px, "Instagram comment keyword" …); narrower, they stack. Measured from
+        {/* A container: the triggers sit in a row only when the step is wide enough for their
+            labels (about 640 px, "Instagram comment keyword" …); narrower, they stack, and five
+            wrap onto a second row. Measured from
             the step, not the window, because the editor's side panel and the sidebar take a share. */}
         <div className="@container space-y-2">
           <p id="automation-trigger-label" className="text-sm font-medium">
@@ -103,7 +134,7 @@ export function WhenStep({
             aria-describedby="automation-trigger-hint"
             value={draft.trigger ?? ""}
             onValueChange={(value) => setTrigger(value as TriggerName)}
-            className="flex-col @2xl:flex-row"
+            className="flex-col @2xl:flex-row @2xl:flex-wrap"
           >
             {TRIGGERS.map(({ value, icon: Icon }) => (
               <ToggleGroupItem key={value} value={value}>

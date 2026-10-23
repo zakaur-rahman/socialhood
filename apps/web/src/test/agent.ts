@@ -14,7 +14,11 @@ import type {
   AgentThread,
   AutomationDraftAction,
   CommentReplyAction,
+  MetricComparisonVisual,
+  MetricDelta,
+  RankedPostsVisual,
   ScheduleMessageAction,
+  SentimentSummaryVisual,
 } from "@/lib/api/types";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
 
@@ -30,6 +34,7 @@ export function agentRun(overrides: Partial<AgentRun> = {}): AgentRun {
     answer: null,
     answer_refs: [],
     action_cards: [],
+    visuals: [],
     credits: 0,
     error: null,
     created_at: "2026-09-29T10:00:00Z",
@@ -151,6 +156,84 @@ export function draftCard(overrides: Partial<AutomationDraftAction> = {}): Autom
       post_scope: "all",
       media_item_ids: [],
     },
+    ...overrides,
+  };
+}
+
+// ---- visuals (GR-38): shaped like the API's, with figures a person can check by eye
+
+export function metricDelta(overrides: Partial<MetricDelta> = {}): MetricDelta {
+  return {
+    key: "reach",
+    label: "Reach",
+    format: "count",
+    current: 11800,
+    previous: 10000,
+    change_pct: 18,
+    direction: "up",
+    tone: "good",
+    current_coverage: null,
+    previous_coverage: null,
+    unavailable: null,
+    ...overrides,
+  };
+}
+
+export function comparisonVisual(overrides: Partial<MetricComparisonVisual> = {}): MetricComparisonVisual {
+  return {
+    kind: "metric_comparison",
+    version: 1,
+    title: "@maple.bakery: 1-22 Oct 2026 against 1-22 Sep 2026",
+    current: { start: "2026-10-01", end: "2026-10-22", label: "1-22 Oct 2026", days: 22 },
+    previous: { start: "2026-09-01", end: "2026-09-22", label: "1-22 Sep 2026", days: 22 },
+    comparable: true,
+    note: "Compared over the same 22 days of each period.",
+    account_label: "@maple.bakery",
+    metrics: [
+      metricDelta(),
+      metricDelta({ key: "comments", label: "Comments received", current: 91, previous: 100, change_pct: -9, direction: "down", tone: "bad" }),
+      metricDelta({ key: "unfollows", label: "Unfollows", current: 30, previous: 20, change_pct: 50, direction: "up", tone: "bad" }),
+    ],
+    ...overrides,
+  };
+}
+
+export function rankedVisual(overrides: Partial<RankedPostsVisual> = {}): RankedPostsVisual {
+  return {
+    kind: "ranked_posts",
+    version: 1,
+    title: "Top posts by reach",
+    metric_key: "reach",
+    metric_label: "Reach",
+    format: "count",
+    period: { start: "2026-10-01", end: "2026-10-22", label: "1-22 Oct 2026", days: 22 },
+    age_label: "Latest figures",
+    considered: 7,
+    items: [
+      { post_id: "po1", label: "Reel of 12 Oct", format: "reel", caption: "Summer sale", thumbnail_url: "https://cdn.example/a.jpg", value: 4120 },
+      { post_id: "po2", label: "Post of 3 Oct", format: "feed", caption: null, thumbnail_url: null, value: 2900 },
+    ],
+    ...overrides,
+  };
+}
+
+export function sentimentVisual(overrides: Partial<SentimentSummaryVisual> = {}): SentimentSummaryVisual {
+  return {
+    kind: "sentiment_summary",
+    version: 1,
+    title: "Comment sentiment",
+    scope: "comments made 1-22 Oct 2026",
+    period: { start: "2026-10-01", end: "2026-10-22", label: "1-22 Oct 2026", days: 22 },
+    total: 120,
+    positive: 60,
+    neutral: 20,
+    negative: 10,
+    spam: 5,
+    not_analysed: 25,
+    topics: [
+      { label: "price", count: 12 },
+      { label: "colours", count: 1 },
+    ],
     ...overrides,
   };
 }

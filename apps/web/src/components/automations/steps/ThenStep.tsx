@@ -37,6 +37,7 @@ import {
   usesTapFirst,
   type FieldErrors,
 } from "@/lib/automations/definition";
+import type { StepKind } from "@/lib/automations/flow";
 import { formatCount } from "@/lib/automations/format";
 import {
   AI_INSTRUCTIONS_MAX,
@@ -61,6 +62,7 @@ import { ATTACHMENT_RULES, UploadError, uploadAsset } from "@/lib/media/upload";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { KindMenu } from "../flow/KindMenu";
 import { StepCard, type StepState } from "../StepCard";
 import { ProBadge } from "../TemplateGallery";
 
@@ -73,6 +75,33 @@ type Change = (patch: Partial<AutomationDefinition>) => void;
 
 /** Element ids for aria-describedby, skipping the ones that don't apply. */
 const ids = (...values: (string | false | null | undefined)[]) => values.filter(Boolean).join(" ");
+
+/**
+ * GR-13: a single message is the first step of a flow. Adding a step saves it as one, with the
+ * message (and tap first and the follow nudge, as steps) as it is now.
+ */
+function MoreSteps({
+  onPick,
+  pending,
+  reason,
+}: {
+  onPick: (kind: Exclude<StepKind, "ai">) => void;
+  pending: boolean;
+  reason: string | null;
+}) {
+  return (
+    <div className="space-y-2 border-t border-line pt-4" data-testid="more-steps">
+      <p className="text-sm font-medium">More steps</p>
+      <p className="text-xs text-fg-secondary">
+        Ask a question, branch on the answer, wait, tag the contact. This message becomes the first step.
+      </p>
+      <div className="flex items-center gap-3">
+        <KindMenu onPick={onPick} label="Add step" disabledReason={pending ? "Adding the step…" : reason} />
+        {reason ? <p className="text-xs text-fg-secondary">{reason}</p> : null}
+      </div>
+    </div>
+  );
+}
 
 /**
  * UX-SCR-03 Then: public reply variations for comment triggers (FR-AUT-14), then the DM
@@ -90,6 +119,7 @@ export function ThenStep({
   mediaUrl,
   onMediaChange,
   upload,
+  startFlow,
 }: {
   wid: string;
   draft: AutomationDefinition;
@@ -101,6 +131,8 @@ export function ThenStep({
   mediaUrl: string | null;
   onMediaChange: (url: string | null) => void;
   upload?: Uploader;
+  /** GR-13: adding a step turns this single message into the first step of a flow. */
+  startFlow?: { onPick: (kind: Exclude<StepKind, "ai">) => void; pending: boolean; reason: string | null };
 }) {
   const comment = isCommentTrigger(draft.trigger);
   const stepErrors = [
@@ -158,6 +190,7 @@ export function ThenStep({
               upload={upload}
             />
             <FollowNudge draft={draft} change={change} errors={errors} />
+            {startFlow ? <MoreSteps {...startFlow} /> : null}
           </>
         ) : null}
         {draft.action === "ai_reply" ? <AiReplyFields draft={draft} change={change} plan={plan} errors={errors} /> : null}
@@ -168,7 +201,7 @@ export function ThenStep({
 
 // ---- public reply variations (FR-AUT-14)
 
-function ReplyVariations({ texts, onChange }: { texts: string[]; onChange: (texts: string[]) => void }) {
+export function ReplyVariations({ texts, onChange }: { texts: string[]; onChange: (texts: string[]) => void }) {
   const focusNext = useRef<number | null>(null);
 
   const move = (from: number, to: number) => {
@@ -373,7 +406,7 @@ function DmBuilder({
 }
 
 /** "Insert field" for a text area: puts {first_name|there} or {username} at the cursor. */
-function InsertFieldMenu({
+export function InsertFieldMenu({
   target,
   text,
   onChange,
@@ -612,7 +645,7 @@ function FollowNudge({ draft, change, errors }: { draft: AutomationDefinition; c
 
 const IMAGE_ACCEPT = ".jpg,.jpeg,.png,.webp,.heic";
 
-function ImageAttach({
+export function ImageAttach({
   wid,
   assetId,
   url,
@@ -708,7 +741,7 @@ function ImageAttach({
   );
 }
 
-function LinkButtons({
+export function LinkButtons({
   buttons,
   onChange,
   errors,

@@ -15,6 +15,7 @@ EventName = Literal[
     "contact.updated",
     "contact.tagged",
     "lead.captured",
+    "lead.stage_changed",
     "message.received",
     "conversation.assigned",
     "automation.run.completed",

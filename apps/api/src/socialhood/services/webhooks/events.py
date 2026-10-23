@@ -57,6 +57,7 @@ EVENTS: tuple[EventType, ...] = (
     EventType("contact.updated", 1, "A contact's email, phone or custom fields changed."),
     EventType("contact.tagged", 1, "A tag was added to or removed from a contact."),
     EventType("lead.captured", 1, "An automation's question saved an email, phone or field."),
+    EventType("lead.stage_changed", 1, "A contact's lead stage changed."),
     EventType("message.received", 1, "A customer sent a direct message."),
     EventType("conversation.assigned", 1, "A conversation was assigned.", emitted=False),
     EventType("automation.run.completed", 1, "An automation run finished."),
@@ -256,6 +257,37 @@ async def lead_captured(
             "captured": {"kind": kind, "field_key": field_key, "value": value},
             "automation": {"id": str(automation_id), "name": automation_name},
             "run_id": str(run_id),
+        },
+    )
+
+
+async def lead_stage_changed(
+    session: AsyncSession,
+    contact: Contact,
+    *,
+    from_stage: str,
+    to_stage: str,
+    actor_kind: str,
+    actor_user_id: uuid.UUID | None,
+    rule: str | None,
+    reason: str | None,
+) -> None:
+    """A lead's stage moved (GR-18), by a member, an automation or a rule."""
+    if not await wanted(session, "lead.stage_changed"):
+        return
+    await emit(
+        session,
+        "lead.stage_changed",
+        {
+            "contact": contact_ref(contact, await _platform(session, contact)),
+            "from": from_stage,
+            "to": to_stage,
+            "changed_by": {
+                "kind": actor_kind,
+                "user_id": str(actor_user_id) if actor_user_id else None,
+                "rule": rule,
+            },
+            "reason": reason,
         },
     )
 

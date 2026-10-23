@@ -15,6 +15,10 @@ Rules:
   with the same field errors, and nothing is saved.
 - Keywords are stored as typed and normalised (matching.normalize), once per normalised form, in
   the order entered.
+- Stories (GR-06): a story reply automation with post_scope "selected" stores the chosen story ids
+  (up to 20) and its heart setting; any other trigger stores none, whatever the request says.
+- Ads (GR-09): an ad click automation with post_scope "selected" stores the typed ad ids (up to
+  20); any other trigger stores none.
 - Posts: "selected" stores the chosen media items and scheduled posts; "next_post" keeps the link
   the automation made to its post (services/automations/posts.py) while the account stays the
   same; "all" stores none.
@@ -111,6 +115,9 @@ def definition_of(
         keywords=[k.normalized for k in keywords],
         post_scope=automation.post_scope,
         posts=post_targets(posts),
+        story_ids=list(automation.story_ids or []),
+        ad_ids=list(automation.ad_ids or []),
+        comment_surface=automation.comment_surface,
         action=automation.action,
         message_text=automation.message_text,
         message_buttons=[
@@ -209,6 +216,7 @@ def _fill_from_template(automation: Automation, template: templates.Template) ->
     automation.cooldown_hours = template.cooldown_hours
     automation.confirm_first = template.confirm_first
     automation.follow_nudge = template.follow_nudge
+    automation.story_heart = template.story_heart
 
 
 def _keywords(typed: Iterable[str]) -> list[Keyword]:
@@ -316,6 +324,7 @@ async def update(
 ) -> Automation:
     """Replace the whole editable definition (autosave)."""
     automation = await get_or_404(session, automation_id, for_update=True)
+    body = _normalized(body)
     account, items, errors = await _check_references(session, body)
     keywords, keyword_errors = _typed_keywords(body.keywords)
     errors += keyword_errors
@@ -386,6 +395,9 @@ def _definition_from_body(
         keywords=[k.normalized for k in keywords],
         post_scope=body.post_scope,
         posts=posts,
+        story_ids=_story_ids(body),
+        ad_ids=_ad_ids(body),
+        comment_surface=_surface(body),
         action=body.action,
         message_text=body.message_text,
         message_buttons=[ButtonInfo(b.title, b.url) for b in body.message_buttons],
@@ -403,6 +415,35 @@ def _definition_from_body(
     )
 
 
+def _surface(body: AutomationDefinition) -> str:
+    """Where a comment trigger listens (GR-10); other triggers always read "posts"."""
+    return body.comment_surface if body.trigger in validation.COMMENT_TRIGGERS else "posts"
+
+
+def _normalized(body: AutomationDefinition) -> AutomationDefinition:
+    """A Live-only automation has no post scope: "all" and no posts, whatever was sent."""
+    surface = _surface(body)
+    if surface == "live" and (body.post_scope != "all" or body.media_item_ids):
+        return body.model_copy(
+            update={"comment_surface": surface, "post_scope": "all", "media_item_ids": []}
+        )
+    return body.model_copy(update={"comment_surface": surface})
+
+
+def _story_ids(body: AutomationDefinition) -> list[str]:
+    """The chosen stories, once each: only a story reply scoped to chosen stories keeps them."""
+    if body.trigger != "story_reply" or body.post_scope != "selected":
+        return []
+    return list(dict.fromkeys(body.story_ids))
+
+
+def _ad_ids(body: AutomationDefinition) -> list[str]:
+    """The chosen ads, once each: only an ad click scoped to chosen ads keeps them."""
+    if body.trigger != "ad_click" or body.post_scope != "selected":
+        return []
+    return list(dict.fromkeys(a.strip() for a in body.ad_ids if a.strip()))
+
+
 def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.name = body.name
     automation.social_account_id = body.social_account_id
@@ -416,7 +457,12 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.ai_instructions = body.ai_instructions or None
     automation.public_reply_texts = list(body.public_reply_texts)
     automation.post_scope = body.post_scope
+    automation.story_ids = _story_ids(body)
+    automation.ad_ids = _ad_ids(body)
+    automation.story_heart = body.story_heart and body.trigger == "story_reply"
+    automation.comment_surface = _surface(body)
     automation.cooldown_hours = body.cooldown_hours
+    automation.hours_condition = body.hours_condition
     automation.starts_at = body.starts_at
     automation.ends_at = body.ends_at
     automation.surge_order = body.surge_order
@@ -425,6 +471,8 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.opening_button = body.opening_button or None
     automation.follow_nudge = body.follow_nudge
     automation.follow_nudge_text = body.follow_nudge_text or None
+    if body.track_links is not None:
+        automation.track_links = body.track_links
 
 
 # ---------------------------------------------------------------- activate and pause
@@ -452,6 +500,8 @@ async def activate(
     ]
     if errors:
         raise ApiError("validation_error", ACTIVATE_DETAIL, errors=errors)
+    if automation.flow_version is not None:  # GR-13: a flow saved before a downgrade
+        flow_store.check_step_cap((await flow_store.current(session, automation))[0], plan)
     if automation.social_account_id is not None:  # FR-BIL-07: a read-only account can't send
         account = await social_accounts.get(session, automation.social_account_id)
         if account is not None:
@@ -570,12 +620,18 @@ async def duplicate(
         ends_at=source.ends_at,
         surge_order=source.surge_order,
         post_scope=source.post_scope,
+        story_ids=list(source.story_ids or []),
+        story_heart=source.story_heart,
+        ad_ids=list(source.ad_ids or []),
+        comment_surface=source.comment_surface,
         cooldown_hours=source.cooldown_hours,
+        hours_condition=source.hours_condition,
         confirm_first=source.confirm_first,
         opening_text=source.opening_text,
         opening_button=source.opening_button,
         follow_nudge=source.follow_nudge,
         follow_nudge_text=source.follow_nudge_text,
+        track_links=source.track_links,
         created_by_user_id=user_id,
     )
     session.add(copy)

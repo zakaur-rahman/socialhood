@@ -14,10 +14,23 @@ from pydantic import Field
 
 from socialhood.schemas.common import RequestModel, ResponseModel
 
-TriggerName = Literal["dm_keyword", "comment_keyword", "comment_any"]
+TriggerName = Literal[
+    "dm_keyword",
+    "comment_keyword",
+    "comment_any",
+    "story_reply",
+    "story_mention",
+    "entry_link",
+    "ad_click",
+    "ice_breaker",
+    "first_message",
+    "default_reply",
+]
 MatchModeName = Literal["word", "exact", "contains"]
 ActionName = Literal["send_message", "ai_reply"]
 PostScopeName = Literal["all", "selected", "next_post"]
+CommentSurfaceName = Literal["posts", "live", "both"]  # GR-10
+HoursConditionName = Literal["inside", "outside"]  # GR-22
 SurgeOrderName = Literal["oldest_first", "newest_first", "public_only"]
 StatusName = Literal["draft", "active", "paused"]
 # What the list and editor show: Scheduled before starts_at, Ended after ends_at (FR-AUT-17).
@@ -96,6 +109,17 @@ class Automation(ResponseModel):
     public_reply_texts: list[str]
     post_scope: PostScopeName
     posts: list[PostRef]
+    # GR-06 (story_reply): with post_scope "selected", the stories it answers (platform ids);
+    # story_heart also sends the heart sticker to the story reply.
+    story_ids: list[str] = Field(default_factory=list)
+    story_heart: bool = False
+    # GR-09 (ad_click): with post_scope "selected", the ads it answers (typed ad ids).
+    ad_ids: list[str] = Field(default_factory=list)
+    # GR-10 (comment triggers): posts, the account's Lives, or both. A Live-only automation keeps
+    # post_scope "all".
+    comment_surface: CommentSurfaceName = "posts"
+    # GR-22: run only while the account is open ("inside") or closed ("outside"); null: any time.
+    hours_condition: HoursConditionName | None = None
     cooldown_hours: int
     starts_at: datetime | None = None
     ends_at: datetime | None = None
@@ -106,6 +130,8 @@ class Automation(ResponseModel):
     opening_button: str | None = None
     follow_nudge: bool
     follow_nudge_text: str | None = None
+    # GR-15: link buttons are sent through the tracked redirect, so clicks show on the funnel.
+    track_links: bool = True
     priority: int
     template_key: str | None = None
     activated_at: datetime | None = None
@@ -168,6 +194,18 @@ class AutomationDefinition(RequestModel):
     post_scope: PostScopeName = "all"
     media_item_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
     scheduled_post_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
+    # GR-06: a story reply automation's chosen stories (post_scope "selected") and its heart.
+    story_ids: list[Annotated[str, Field(min_length=1, max_length=64)]] = Field(
+        default_factory=list, max_length=20
+    )
+    story_heart: bool = False
+    # GR-09: an ad click automation's chosen ads (post_scope "selected"), typed by hand.
+    ad_ids: list[Annotated[str, Field(min_length=1, max_length=64)]] = Field(
+        default_factory=list, max_length=20
+    )
+    # GR-10: where a comment trigger listens. "live" ignores the post scope and posts.
+    comment_surface: CommentSurfaceName = "posts"
+    hours_condition: HoursConditionName | None = None  # GR-22
     cooldown_hours: int = Field(default=24, ge=0, le=72)
     starts_at: datetime | None = None
     ends_at: datetime | None = None
@@ -180,6 +218,8 @@ class AutomationDefinition(RequestModel):
     # Follow nudge (FR-AUT-22): after the message, only to people who don't follow the account.
     follow_nudge: bool = False
     follow_nudge_text: str | None = Field(default=None, max_length=300)
+    # GR-15: false sends the raw link; left out keeps what is saved.
+    track_links: bool | None = None
 
 
 class PrioritiesUpdate(RequestModel):
@@ -278,6 +318,22 @@ class AutomationTest(RequestModel):
     media_item_id: uuid.UUID | None = None  # a comment on this post (post scope)
     first_name: str | None = Field(default=None, max_length=60)  # sample for the preview
     username: str | None = Field(default=None, max_length=60)
+    # A flow's dry run (GR-13): at each fork, the exit to follow (an index into the step's
+    # exits); 0 where none is given.
+    choices: list[Annotated[int, Field(ge=0, le=20)]] = Field(default_factory=list, max_length=50)
+
+
+class FlowPreviewStep(ResponseModel):
+    """One step of a flow's dry run, as the contact would meet it."""
+
+    step_id: str
+    kind: str  # send, ask, branch, action, delay, randomize, ai_reply or end
+    title: str  # a short line: "Message", "Ask for an email", "Wait 10 minutes"...
+    text: str | None = None  # the message or question, with the sample name and disclosure
+    buttons: list[str] = Field(default_factory=list)  # link buttons
+    quick_replies: list[str] = Field(default_factory=list)
+    exits: list[str] = Field(default_factory=list)  # a fork's ways on, in plain words
+    picked: int | None = None  # which exit this walk took (None: not a fork)
 
 
 class WinningAutomation(ResponseModel):
@@ -296,3 +352,5 @@ class AutomationTestResult(ResponseModel):
     rendered_public_reply: str | None = None
     rendered_opening: str | None = None  # tap first: the private reply before the message
     rendered_nudge: str | None = None  # the follow nudge, as a non-follower would get it
+    # A flow saved with the editor (GR-13): the steps one run would take (empty otherwise).
+    flow_path: list[FlowPreviewStep] = Field(default_factory=list)

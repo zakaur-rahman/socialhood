@@ -13,15 +13,24 @@ R1 (all read; any member, as the analytics routes):
 - sentiment_distribution(post_id | range, account): analysed against total, unanalysed reported.
 - comment_topics(post_id | range, sentiment, n): top topics with counts and example comments
   (TR-AI-11 labels; services/analytics/sentiment.comment_topics).
+- compare_periods(range, compare_to, metrics, account): an account's figures over a period against
+  another over the same number of days, with the change in % worked out by
+  services/analytics/account_metrics (GR-38). Reach, views, interactions and the other insight
+  figures come from the daily readings; a gap is reported ("21 of 22 days"), never a zero.
+- metric_trend(metric, range, account): one account metric by day (up to 31 days) or week, with
+  its first, last, lowest and highest points and the change between first and last.
+
+Visuals (GR-38): top_posts, sentiment_distribution, comment_topics and compare_periods put a
+``visual`` in their result, built by agent/visuals.py from the same numbers; the web draws it. The
+model never sees it (agent/report.model_view) and never writes one.
 
 Ages: the member's phrase ("after 24 hours", "at 7 days", "lifetime") goes through
 timeparse.resolve_age and is matched to the snapshot windows (1 h, 6 h, 24 h, 72 h, 7 d, 30 d):
 another age is compared at the nearest window, and the result says so. Ranges are calendar days
 in the workspace's zone (timeparse.calendar_days; default the last 30 days).
 
-Not built: above_average_posts, engagement_trend, account_metrics, sentiment_trend,
-compare_sentiment and lead_metrics have no query in services/analytics yet (account insights are
-only collected); they come with the analytics that read them.
+Not built: above_average_posts, sentiment_trend, compare_sentiment and lead_metrics have no
+query in services/analytics yet; they come with the analytics that read them.
 
 Without the insights permission a tool returns what it has and a caveat ("insights aren't
 granted"); a post younger than the requested age is compared at its current age, and says so.
@@ -31,12 +40,15 @@ from __future__ import annotations
 
 import math
 import uuid
-from datetime import date, datetime
+from collections.abc import Callable, Sequence
+from datetime import date, datetime, timedelta
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from socialhood.agent import visuals
 from socialhood.agent.registry import ToolContext, ToolResult
-from socialhood.agent.timeparse import TimeParseError, resolve_age, span_label
+from socialhood.agent.timeparse import ResolvedRange, TimeParseError, resolve_age, span_label
 from socialhood.agent.tools.common import (
     FACEBOOK_NOT_CONNECTED,
     Days,
@@ -62,15 +74,22 @@ from socialhood.models.analytics import LIVE_COUNT_WINDOWS, WINDOW_AGES, Snapsho
 from socialhood.models.connections import Platform, SocialAccount
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import social_accounts
+from socialhood.schemas.agent import SentimentSummaryVisual, Visual
 from socialhood.schemas.analytics import (
     MIN_COMPARABLE_POSTS,
+    AccountMetricFigure,
+    AccountMetricName,
     AgeName,
     BaselineKind,
+    ChangeDirection,
+    DaySpan,
     MetricName,
     PostPerformance,
+    SentimentDistribution,
 )
 from socialhood.schemas.posts import SentimentName
-from socialhood.services.analytics import queries, sentiment
+from socialhood.services.analytics import account_metrics, queries, sentiment
+from socialhood.services.analytics.account_metrics import SeriesPoint
 from socialhood.services.analytics.ages import PROVISIONAL_WINDOWS, format_of
 from socialhood.services.analytics.common import capabilities_from, load_post
 from socialhood.services.analytics.queries import BaselineQuery
@@ -157,6 +176,14 @@ class Metrics(BaseModel):
     shares: int | None = None
     saves: int | None = None
     engagement_rate: float | None = None  # % of reach, at the same age
+
+
+def _visual[V: Visual](ctx: ToolContext, kind: str, build: Callable[[], V]) -> V | None:
+    """The tool's visual (GR-38), or None with AGENT_VISUALS_ENABLED off or when it can't be
+    built (the result and the answer stand)."""
+    if not ctx.platform.settings.agent_visuals_enabled:
+        return None
+    return visuals.safe(kind, build)
 
 
 def _age_caveats(ctx: ToolContext, perf: PostPerformance, rule: str | None) -> list[str]:
@@ -435,6 +462,7 @@ class TopPostsResult(ToolResult):
     requested_age: AgeName | None = None
     considered: int  # posts in the range that have the metric: the sample size
     items: list[RankedPost]
+    visual: Visual | None = None  # GR-38: the ranking as a visual (agent/visuals.py)
 
 
 @tool(
@@ -473,10 +501,25 @@ async def top_posts(ctx: ToolContext, args: TopPostsInput) -> TopPostsResult:
     )
     items = []
     refs = []
+    rows = []
     for top in ranked.items:
         post = top.post
         fmt = format_of(post.media_type)
         label = post_label_of(post.media_type, post.posted_at, ctx)
+        # As the web's PostThumb: images have no thumbnail, their media is the picture.
+        picture = post.thumbnail_url or (
+            post.media_url if post.media_type.lower() in ("image", "carousel") else None
+        )
+        rows.append(
+            visuals.RankedInput(
+                post_id=post.id,
+                label=label,
+                format=fmt,
+                caption=post.caption,
+                thumbnail_url=picture,
+                value=top.value,
+            )
+        )
         items.append(
             RankedPost(
                 post_id=post.id,
@@ -500,6 +543,24 @@ async def top_posts(ctx: ToolContext, args: TopPostsInput) -> TopPostsResult:
     if not ranked.considered:
         caveats.append(f"No post published {covered.label} has {args.metric} at that age.")
     metric = args.metric.replace("_", " ")
+    shown_age = ranked.requested_age
+    ranking = (
+        _visual(
+            ctx,
+            "ranked_posts",
+            lambda: visuals.ranked_posts(
+                metric=args.metric,
+                period=visuals.period_of(covered.since, covered.until),
+                age_label="Latest figures"
+                if shown_age == "lifetime"
+                else f"Figures at {AGE_WORDS[shown_age]}",
+                considered=ranked.considered,
+                rows=rows,
+            ),
+        )
+        if rows
+        else None
+    )
     return TopPostsResult(
         summary=clip(f"Ranked {ranked.considered} posts published {covered.label} by {metric}", 300)
         or "Ranked posts",
@@ -508,6 +569,7 @@ async def top_posts(ctx: ToolContext, args: TopPostsInput) -> TopPostsResult:
         requested_age=ranked.requested_age,
         considered=ranked.considered,
         items=items,
+        visual=ranking,
         refs=refs,
         caveats=caveats,
     )
@@ -544,6 +606,7 @@ class SentimentResult(ToolResult):
     neutral_pct: float | None = None
     negative_pct: float | None = None
     positive_share: float | None = None  # positive_pct as 0..1, for plan conditions
+    visual: Visual | None = None
 
 
 async def _comment_scope(
@@ -559,6 +622,25 @@ async def _comment_scope(
     rules = [covered.rule[0].upper() + covered.rule[1:] + "."] if covered.rule else []
     where = f" on {handle(acct)}" if acct else ""
     return f"comments made {covered.label}{where}", covered, acct, rules
+
+
+def _sentiment_visual(
+    scope: str,
+    covered: Days | None,
+    dist: SentimentDistribution,
+    topics: Sequence[tuple[str, int]],
+) -> SentimentSummaryVisual:
+    return visuals.sentiment_summary(
+        scope=scope,
+        period=visuals.period_of(covered.since, covered.until) if covered else None,
+        total=dist.total,
+        positive=dist.positive,
+        neutral=dist.neutral,
+        negative=dist.negative,
+        spam=dist.spam,
+        not_analysed=dist.total - dist.analysed,
+        topics=topics,
+    )
 
 
 @tool(
@@ -611,6 +693,11 @@ async def sentiment_distribution(ctx: ToolContext, args: ScopeInput) -> Sentimen
             f": {dist.positive_pct:g}% positive, {dist.neutral_pct:g}% neutral, "
             f"{dist.negative_pct:g}% negative"
         )
+    split = (
+        _visual(ctx, "sentiment_summary", lambda: _sentiment_visual(scope, covered, dist, ()))
+        if dist.total
+        else None
+    )
     return SentimentResult(
         summary=clip(summary, 300) or "Measured sentiment",
         post_id=args.post_id,
@@ -629,6 +716,7 @@ async def sentiment_distribution(ctx: ToolContext, args: ScopeInput) -> Sentimen
         positive_share=(
             round(dist.positive_pct / 100, 3) if dist.positive_pct is not None else None
         ),
+        visual=split,
         refs=refs,
         caveats=caveats,
     )
@@ -659,6 +747,16 @@ class TopicOut(BaseModel):
     examples: list[TopicExampleOut]
 
 
+class SentimentCounts(BaseModel):
+    """The whole scope's split, when the topics are drawn with it (visuals on): the figures the
+    visual repeats, so every number on screen is one a tool returned."""
+
+    positive: int
+    neutral: int
+    negative: int
+    spam: int
+
+
 class TopicsResult(ToolResult):
     post_id: uuid.UUID | None = None
     scope: str
@@ -670,6 +768,8 @@ class TopicsResult(ToolResult):
     total: int  # every comment in scope
     pending: int
     skipped: int
+    split: SentimentCounts | None = None
+    visual: Visual | None = None
 
 
 @tool(
@@ -739,6 +839,25 @@ async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
             )
         )
         refs += [ref("comment", e.comment_id, quoted(e.text), e.post_id) for e in t.examples]
+    split: SentimentSummaryVisual | None = None
+    counts: SentimentCounts | None = None
+    if args.sentiment is None and found.analysed and ctx.platform.settings.agent_visuals_enabled:
+        # The split is the whole scope's, so a sentiment filter (a slice of it) draws none.
+        dist = await sentiment.sentiment_distribution(
+            ctx.session,
+            analytics_view(ctx),
+            post_id=args.post_id,
+            account_id=acct.id if acct else None,
+            since=covered.since if covered else None,
+            until=covered.until if covered else None,
+        )
+        shown = [(t.label, t.count) for t in found.topics]
+        counts = SentimentCounts(
+            positive=dist.positive, neutral=dist.neutral, negative=dist.negative, spam=dist.spam
+        )
+        split = _visual(
+            ctx, "sentiment_summary", lambda: _sentiment_visual(scope, covered, dist, shown)
+        )
     mood = f"{args.sentiment} " if args.sentiment else ""
     top = ", ".join(f"“{t.label}” {t.count}" for t in topics[:3])
     summary = f"{found.topic_count} topics in {found.analysed} analysed {mood}{scope}"
@@ -756,6 +875,350 @@ async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
         total=found.total,
         pending=found.pending,
         skipped=found.skipped,
+        split=counts,
+        visual=split,
         refs=refs,
+        caveats=caveats,
+    )
+
+
+# ---------------------------------------------------------------- compare_periods (GR-38)
+
+DEFAULT_COMPARE: tuple[AccountMetricName, ...] = (
+    "reach",
+    "views",
+    "interactions",
+    "followers",
+    "comments",
+    "messages_received",
+)
+SUMMED_NOTE = (
+    "Reach, views and the other insight figures are each day's figure added up over the period, "
+    "so a person reached on two days counts twice; followers is the latest reading."
+)
+TODAY_NOTE = "Today isn't included: a day's figures arrive the next morning."
+
+
+class ComparePeriodsInput(_Input):
+    range: str | None = Field(
+        default=None,
+        max_length=80,
+        description="The period to look at, as the member said it: “this month”, “last week”, "
+        "“the last 30 days”. Default: this month.",
+    )
+    compare_to: str | None = Field(
+        default=None,
+        max_length=80,
+        description="The period to compare it with: “last month”. Default: the period of the "
+        "same length just before.",
+    )
+    metrics: list[AccountMetricName] | None = Field(
+        default=None,
+        max_length=8,
+        description="Which figures: reach, views, accounts_engaged, interactions, followers, "
+        "follows, unfollows, profile_link_taps, comments, messages_received. Default: reach, "
+        "views, interactions, followers, comments, messages_received.",
+    )
+    account: str | None = Field(default=None, max_length=100)
+    platform: str | None = Field(default=None, max_length=20)
+
+
+class PeriodOut(BaseModel):
+    label: str  # "1-22 Oct"
+    since: date
+    until: date
+    days: int
+
+
+class MetricOut(BaseModel):
+    metric: AccountMetricName
+    label: str
+    current: float | None = None  # None: not available (``unavailable`` says why)
+    previous: float | None = None
+    change_pct: float | None = None  # worked out by the service; None against 0 or no data
+    direction: ChangeDirection | None = None
+    current_days: str | None = None  # "21 of 22 days" when some days have no reading
+    previous_days: str | None = None
+    unavailable: str | None = None
+
+
+class ComparePeriodsResult(ToolResult):
+    account: str | None = None  # the account asked for; None: every account
+    current: PeriodOut | None = None
+    previous: PeriodOut | None = None
+    comparable: bool = True  # False: the periods differ in length, so there is no change
+    note: str | None = None  # how the periods were matched
+    metrics: list[MetricOut]
+    visual: Visual | None = None
+
+
+def _period_out(span: DaySpan) -> PeriodOut:
+    return PeriodOut(
+        label=span_label(span.since, span.until),
+        since=span.since,
+        until=span.until,
+        days=span.days,
+    )
+
+
+def _sentence(text: str) -> str:
+    return text[0].upper() + text[1:] + ("" if text.endswith(".") else ".")
+
+
+def _days_words(known: int, total: int, value: float | None) -> str | None:
+    return f"{known} of {total} days" if value is not None and known < total else None
+
+
+def _metric_out(figure: AccountMetricFigure, who: str) -> MetricOut:
+    now, before = figure.current, figure.previous
+    assert before is not None
+    gap = now.unavailable or before.unavailable
+    return MetricOut(
+        metric=figure.metric,
+        label=visuals.metric_label(figure.metric),
+        current=now.value,
+        previous=before.value,
+        change_pct=figure.change_pct,
+        direction=figure.direction,
+        current_days=_days_words(now.days_known, now.days_total, now.value),
+        previous_days=_days_words(before.days_known, before.days_total, before.value),
+        unavailable=visuals.gap_words(gap, who) if gap else None,
+    )
+
+
+@tool(
+    name="compare_periods",
+    label="Comparing two periods",
+    description=(
+        "An account's figures for one period against another over the same number of days "
+        "(“this month against last month”): reach, views, interactions, followers, comments, "
+        "messages received and more, with the change in %. Gaps in the daily readings are "
+        "reported. The only tool that compares periods: never put two other results side by "
+        "side."
+    ),
+    input_model=ComparePeriodsInput,
+    result_model=ComparePeriodsResult,
+)
+async def compare_periods(ctx: ToolContext, args: ComparePeriodsInput) -> ComparePeriodsResult:
+    if facebook_asked(args.platform, args.account):
+        return ComparePeriodsResult(
+            summary="Facebook isn't connected, so there are no Facebook figures to compare",
+            metrics=[],
+            caveats=[FACEBOOK_NOT_CONNECTED],
+        )
+    acct = await find_account(ctx, args.account)
+    view = analytics_view(ctx)
+    wanted = tuple(args.metrics) if args.metrics else DEFAULT_COMPARE
+    asked = days(ctx, _resolved(period(ctx, args.range, default="this month")))
+    now = account_metrics.closed_span(view, asked.since, asked.until)
+    rules = [asked.rule] if asked.rule else []
+    cut = now.cut_today
+    if args.compare_to:
+        other = days(
+            ctx, _resolved(period(ctx, args.compare_to, default=None, argument="compare_to"))
+        )
+        before = account_metrics.closed_span(view, other.since, other.until)
+        rules += [other.rule] if other.rule else []
+        cut = cut or before.cut_today
+    else:
+        length = now.span.days
+        before = account_metrics.Closed(
+            account_metrics.span_of(
+                now.span.since - timedelta(days=length), now.span.since - timedelta(days=1)
+            ),
+            open=False,
+            cut_today=False,
+        )
+    matched = account_metrics.align(
+        now.span, before.span, current_open=now.open, previous_open=before.open
+    )
+    data = await account_metrics.account_metrics(
+        ctx.session,
+        view,
+        current=matched.current,
+        previous=matched.previous,
+        comparable=matched.comparable,
+        account_id=acct.id if acct else None,
+        metrics=wanted,
+    )
+    who = handle(acct) if acct else "your accounts"
+    metrics = [_metric_out(f, who) for f in data.figures]
+    caveats = [_sentence(rule) for rule in rules]
+    if cut:
+        caveats.append(TODAY_NOTE)
+    if matched.note:
+        caveats.append(matched.note)
+    gaps = {m.unavailable for m in metrics if m.unavailable}
+    caveats += sorted(gaps)
+    for m in metrics:
+        if m.current_days or m.previous_days:
+            caveats.append(
+                f"{m.label} has readings for {m.current_days or 'all days'} of the current period "
+                f"and {m.previous_days or 'all days'} of the previous one; the totals count only "
+                "those days."
+            )
+    if any(m in account_metrics.STORED_KEY for m in wanted):
+        caveats.append(SUMMED_NOTE)
+    changed = [
+        f"{m.label.lower()} {m.change_pct:+.1f}%" for m in metrics if m.change_pct is not None
+    ]
+    summary = (
+        f"Compared {span_label(matched.current.since, matched.current.until)} with "
+        f"{span_label(matched.previous.since, matched.previous.until)}"
+        + (f": {', '.join(changed[:3])}" if changed else "")
+    )
+    comparison = _visual(
+        ctx,
+        "metric_comparison",
+        lambda: visuals.metric_comparison(
+            data, account_label=handle(acct) if acct else None, note=matched.note
+        ),
+    )
+    return ComparePeriodsResult(
+        summary=clip(summary, 300) or "Compared two periods",
+        account=handle(acct) if acct else None,
+        current=_period_out(matched.current),
+        previous=_period_out(matched.previous),
+        comparable=matched.comparable,
+        note=matched.note,
+        metrics=metrics,
+        visual=comparison,
+        caveats=caveats,
+    )
+
+
+def _resolved(resolved: ResolvedRange | None) -> ResolvedRange:
+    """A range the tool gave a default for is never None."""
+    assert resolved is not None
+    return resolved
+
+
+# ---------------------------------------------------------------- metric_trend (GR-38)
+
+TrendMetric = Literal[
+    "reach",
+    "views",
+    "accounts_engaged",
+    "interactions",
+    "followers",
+    "follows",
+    "unfollows",
+    "profile_link_taps",
+]
+DAILY_POINTS = 31  # up to this many days a point is a day, else a week
+
+
+class MetricTrendInput(_Input):
+    metric: TrendMetric = "reach"
+    range: str | None = Field(
+        default=None,
+        max_length=80,
+        description="When to look at, e.g. “the last 30 days”, “this month”; default the last 30 "
+        "days.",
+    )
+    account: str | None = Field(default=None, max_length=100)
+    platform: str | None = Field(default=None, max_length=20)
+
+
+class TrendPointOut(BaseModel):
+    day: date  # the day, or the first day of the week
+    value: float | None = None  # None: no reading
+    days_known: int
+
+
+class MetricTrendResult(ToolResult):
+    account: str | None = None
+    metric: TrendMetric
+    label: str
+    period: PeriodOut | None = None
+    granularity: Literal["day", "week"] = "day"
+    points: list[TrendPointOut]
+    known_points: int = 0
+    first: TrendPointOut | None = None  # the earliest point with a value
+    last: TrendPointOut | None = None
+    lowest: TrendPointOut | None = None
+    highest: TrendPointOut | None = None
+    change_pct: float | None = None  # first to last
+    direction: ChangeDirection | None = None
+
+
+def _point(p: SeriesPoint | None) -> TrendPointOut | None:
+    return None if p is None else TrendPointOut(day=p.day, value=p.value, days_known=p.days_known)
+
+
+@tool(
+    name="metric_trend",
+    label="Tracing a trend",
+    description=(
+        "How one account figure (reach, views, accounts_engaged, interactions, followers, "
+        "follows, unfollows, profile_link_taps) moved over a period: a value per day (or per "
+        "week for periods over a month), with the first, last, lowest and highest points and the "
+        "change from first to last. Days without a reading are gaps, not zeros."
+    ),
+    input_model=MetricTrendInput,
+    result_model=MetricTrendResult,
+)
+async def metric_trend(ctx: ToolContext, args: MetricTrendInput) -> MetricTrendResult:
+    label = visuals.metric_label(args.metric)
+    if facebook_asked(args.platform, args.account):
+        return MetricTrendResult(
+            summary="Facebook isn't connected, so there are no Facebook figures to chart",
+            metric=args.metric,
+            label=label,
+            points=[],
+            caveats=[FACEBOOK_NOT_CONNECTED],
+        )
+    acct = await find_account(ctx, args.account)
+    view = analytics_view(ctx)
+    asked = days(ctx, _resolved(period(ctx, args.range, default="the last 30 days")))
+    closed = account_metrics.closed_span(view, asked.since, asked.until)
+    weekly = closed.span.days > DAILY_POINTS
+    series, gap = await account_metrics.metric_series(
+        ctx.session,
+        view,
+        metric=args.metric,
+        span=closed.span,
+        weekly=weekly,
+        account_id=acct.id if acct else None,
+    )
+    stats = account_metrics.summarize(series)
+    who = handle(acct) if acct else "your accounts"
+    caveats = [_sentence(asked.rule)] if asked.rule else []
+    if closed.cut_today:
+        caveats.append(TODAY_NOTE)
+    if gap:
+        caveats.append(visuals.gap_words(gap, who))
+    elif stats.known < len(series):
+        caveats.append(
+            f"{len(series) - stats.known} of {len(series)} "
+            f"{'weeks' if weekly else 'days'} have no reading; they are gaps, not zeros."
+        )
+    if args.metric in account_metrics.STORED_KEY:
+        caveats.append(SUMMED_NOTE)
+    summary = (
+        f"{label} by {'week' if weekly else 'day'}, "
+        f"{span_label(closed.span.since, closed.span.until)}"
+    )
+    if stats.first and stats.last and stats.first is not stats.last:
+        summary += f": {stats.first.value or 0:,.0f} to {stats.last.value or 0:,.0f}"
+        if stats.change_pct is not None:
+            summary += f" ({stats.change_pct:+.1f}%)"
+    elif not stats.known:
+        summary += ": no readings"
+    return MetricTrendResult(
+        summary=clip(summary, 300) or "Traced a trend",
+        account=handle(acct) if acct else None,
+        metric=args.metric,
+        label=label,
+        period=_period_out(closed.span),
+        granularity="week" if weekly else "day",
+        points=[TrendPointOut(day=p.day, value=p.value, days_known=p.days_known) for p in series],
+        known_points=stats.known,
+        first=_point(stats.first),
+        last=_point(stats.last),
+        lowest=_point(stats.low),
+        highest=_point(stats.high),
+        change_pct=stats.change_pct,
+        direction=stats.direction,
         caveats=caveats,
     )

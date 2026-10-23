@@ -18,6 +18,7 @@ from typing import Annotated, Literal
 from pydantic import Field, StringConstraints
 
 from socialhood.schemas.common import RequestModel, ResponseModel
+from socialhood.schemas.contacts import LeadStageName
 
 FLOW_SCHEMA_VERSION = 1
 MAX_STEPS = 50  # per flow; a plan cap may lower it (PD-5)
@@ -49,11 +50,16 @@ class QuickReply(RequestModel):
 
 class SendStep(RequestModel):
     """A message. With quick replies the flow waits for an answer: a tap goes to that option's
-    step, anything typed to ``on_text`` (quick replies don't show on desktop)."""
+    step, anything typed to ``on_text`` (quick replies don't show on desktop).
+
+    With ``saved_reply_id`` (GR-21) the text is that saved reply's body, read and filled for the
+    contact when the step runs, and ``text`` is ignored. A saved reply goes alone: no image,
+    buttons or quick replies. A deleted reply fails the step."""
 
     type: Literal["send"] = "send"
     id: StepId
     text: StepText = ""
+    saved_reply_id: uuid.UUID | None = None
     image_asset_id: uuid.UUID | None = None
     buttons: list[FlowButton] = Field(default_factory=list, max_length=3)
     quick_replies: list[QuickReply] = Field(default_factory=list, max_length=13)
@@ -67,7 +73,13 @@ class SendStep(RequestModel):
 class AskStep(RequestModel):
     """A question whose answer is checked and saved: free text to a custom field, an email or a
     phone to the contact (or a custom field of that type). An answer that doesn't fit gets
-    ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip``."""
+    ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip`` (GR-14: the editor
+    makes that the same step as ``next`` unless the author picks another).
+
+    ``consent`` adds a marketing question once the answer is saved: Yes or No quick replies (or
+    those words typed), recorded in contact_consents with the messages as evidence.
+    ``confirm_text`` is sent after the answer is saved (and the consent answered); blank sends
+    nothing. Blank ``retry_text`` and ``consent_text`` use the default copy in engine.py."""
 
     type: Literal["ask"] = "ask"
     id: StepId
@@ -76,6 +88,9 @@ class AskStep(RequestModel):
     field_key: FieldKey | None = None  # None: an email or phone goes to the contact's own
     retry_text: Annotated[str, StringConstraints(max_length=300)] = ""
     tries: int = Field(default=2, ge=1, le=3)
+    consent: bool = False
+    consent_text: Annotated[str, StringConstraints(max_length=300)] = ""
+    confirm_text: Annotated[str, StringConstraints(max_length=300)] = ""
     next: StepId | None = None
     on_skip: StepId | None = None
 
@@ -123,13 +138,21 @@ class LeadScoreCondition(RequestModel):
     at_least: int = Field(ge=0, le=100)
 
 
+class LeadStageCondition(RequestModel):
+    """Whether the contact's lead stage (GR-18) is any of ``stages``, read when the step runs."""
+
+    kind: Literal["lead_stage"] = "lead_stage"
+    stages: list[LeadStageName] = Field(min_length=1, max_length=5)
+
+
 Condition = Annotated[
     TagCondition
     | FieldCondition
     | ContactCondition
     | FollowsCondition
     | PlatformCondition
-    | LeadScoreCondition,
+    | LeadScoreCondition
+    | LeadStageCondition,
     Field(discriminator="kind"),
 ]
 

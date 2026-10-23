@@ -56,6 +56,10 @@ async def test_the_template_gallery(ws: Ws) -> None:
         "catalogue_by_dm",
         "answer_faqs",
         "book_a_call",
+        "story_reply_link",
+        "thank_story_mentions",
+        "welcome_new_contacts",
+        "default_reply_when_ai_off",
     ]
     first = body["items"][0]
     assert first == {

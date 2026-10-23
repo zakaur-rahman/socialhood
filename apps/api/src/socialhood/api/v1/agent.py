@@ -44,6 +44,11 @@ from socialhood.services import agent_runs
 router = APIRouter(prefix="/v1/w/{wid}", tags=["agent"])
 
 
+def _visuals_on(request: Request) -> bool:
+    """GR-38: runs carry their visuals only with AGENT_VISUALS_ENABLED."""
+    return bool(request.app.state.settings.agent_visuals_enabled)
+
+
 # ---------------------------------------------------------------- runs (TA.1)
 
 
@@ -60,7 +65,7 @@ async def create_agent_run(
     (nothing is stored)."""
     async with credits_gate(session):  # §2.15 "agent · credits": the 402 names the plan's limit
         row = await agent_runs.create(session, ctx, body)
-    [out] = await agent_runs.runs_out(session, [row])
+    [out] = await agent_runs.runs_out(session, [row], with_visuals=_visuals_on(request))
     await commit_and_publish(session, request.app.state.redis)
     await orchestrator.enqueue_run(row.id, row.workspace_id)  # after the commit
     return out
@@ -68,6 +73,7 @@ async def create_agent_run(
 
 @router.get("/agent/runs", operation_id="list_agent_runs")
 async def list_agent_runs(
+    request: Request,
     ctx: AnyMember,
     session: Session,
     thread_id: Annotated[uuid.UUID | None, Query()] = None,
@@ -89,15 +95,19 @@ async def list_agent_runs(
         limit=limit,
         statuses=status or (),
         q=q,
+        with_visuals=_visuals_on(request),
     )
 
 
 @router.get("/agent/runs/{run_id}", operation_id="get_agent_run")
-async def get_agent_run(run_id: uuid.UUID, ctx: AnyMember, session: Session) -> AgentRunDetail:
+async def get_agent_run(
+    request: Request, run_id: uuid.UUID, ctx: AnyMember, session: Session
+) -> AgentRunDetail:
     """One run with every step: the tool in plain words, arguments, status, result summary,
-    verification, latency; the run's credits, model and prompt version (TR-AGT-08)."""
+    verification, latency; the run's credits, model and prompt version (TR-AGT-08).
+    ``visuals``: see schemas/agent.py (empty unless the server has visuals on)."""
     row = await agent_runs.visible_run(session, ctx, run_id)
-    return await agent_runs.detail_out(session, row)
+    return await agent_runs.detail_out(session, row, with_visuals=_visuals_on(request))
 
 
 @router.post("/agent/runs/{run_id}/cancel", operation_id="cancel_agent_run")
@@ -108,7 +118,7 @@ async def cancel_agent_run(
     stops before its next step or model turn; a step already running finishes and is kept. A
     finished run is returned as it is. Only the member who asked, or an owner or admin."""
     row = await agent_runs.cancel(session, ctx, run_id)
-    [out] = await agent_runs.runs_out(session, [row])
+    [out] = await agent_runs.runs_out(session, [row], with_visuals=_visuals_on(request))
     await commit_and_publish(session, request.app.state.redis)
     return out
 

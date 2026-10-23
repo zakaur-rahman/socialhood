@@ -46,6 +46,7 @@ from socialhood.realtime import events
 from socialhood.repositories import inbox, social_accounts, usage
 from socialhood.repositories import ingest as ingest_rows
 from socialhood.repositories import suggestions as repo
+from socialhood.services import business_hours
 from socialhood.services.notifications import notify_admins
 from socialhood.services.reply_window import reply_window
 from socialhood.services.suggestions import drafting
@@ -198,6 +199,7 @@ async def policy_input(
         allowed_texts=allowed,
         min_confidence=settings.auto_min_confidence,
         min_similarity=settings.ai_retrieval_min_sim,
+        auto_hours_blocked=await business_hours.auto_blocked(session, acct.id, now),
     )
 
 

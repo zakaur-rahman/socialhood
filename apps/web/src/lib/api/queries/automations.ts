@@ -14,6 +14,7 @@ import type {
   Automation,
   AutomationCreate,
   AutomationDefinition,
+  AutomationFunnel,
   AutomationList,
   AutomationRunList,
   AutomationsSummary,
@@ -137,6 +138,23 @@ export function useAutomationStats(wid: string, id: string, days: 7 | 30, enable
     queryFn: () =>
       unwrap(
         api.GET("/v1/w/{wid}/automations/{automation_id}/stats", {
+          params: { path: { wid, automation_id: id }, query: { days } },
+        }),
+      ),
+  });
+}
+
+/** GR-15: per-step results and a Split's paths. Refreshed every 30 seconds while it is on screen,
+ *  so a link click shows within a minute. */
+export function useAutomationFunnel(wid: string, id: string, days: 7 | 30 | 90, enabled = true) {
+  const api = useApi();
+  return useQuery<AutomationFunnel>({
+    queryKey: keys.automationFunnel(wid, id, days),
+    enabled,
+    refetchInterval: 30_000,
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/w/{wid}/automations/{automation_id}/funnel", {
           params: { path: { wid, automation_id: id }, query: { days } },
         }),
       ),

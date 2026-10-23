@@ -56,6 +56,7 @@ from socialhood.models.automations import (
     AutomationRun,
     AutomationStatus,
     Comment,
+    CommentSurface,
     FlowState,
     RunResult,
     SurgeOrder,
@@ -88,8 +89,9 @@ from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import messages as messages_repo
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, engine, flows, results, stats
+from socialhood.services.automations import actions, engine, flows, links, results, stats
 from socialhood.services.inbox_views import conversation_touch
+from socialhood.settings import Settings
 
 log = get_logger(__name__)
 
@@ -202,6 +204,7 @@ class _Pass:
     acct: SocialAccount
     now: datetime
     disclosure: str | None
+    settings: Settings
     drafts: dict[uuid.UUID, str] = field(default_factory=dict)  # AI replies to send (T5.8)
     # Flow runs' graphs (GR-03), by (automation, version): a run follows the version it started on.
     graphs: dict[tuple[uuid.UUID, int], flows.Graph] = field(default_factory=dict)
@@ -247,6 +250,16 @@ async def drain(
             code=code,
             message=reason,
         )
+        # GR-10: a Live comment still waiting once the Live is over is skipped, never sent.
+        live_code, live_reason = actions.LIVE_ENDED
+        expired += await runs.expire_queued_live(
+            session,
+            acct.id,
+            [a.id for a in queued],
+            live_before=now - actions.LIVE_REPLY_WINDOW,
+            code=live_code,
+            message=live_reason,
+        )
         settled = 0
         for automation in queued:
             if automation.surge_order == SurgeOrder.PUBLIC_ONLY:
@@ -269,11 +282,17 @@ async def drain(
 
     tally = _Tally()
     if adapter is not None:
-        run = _Pass(sessionmaker, redis, TokenBuckets(redis), adapter, acct, now, disclosure)
+        run = _Pass(
+            sessionmaker, redis, TokenBuckets(redis), adapter, acct, now, disclosure, deps.settings
+        )
         while (sendable or ai) and _done(tally) < max_sends:
             limit = min(BATCH, max_sends - _done(tally))
             if sendable:
-                claimed = await _claim(run, sendable, limit, tally)
+                pool = _live_first(sendable)
+                waiting_pool = list(pool)
+                claimed = await _claim(run, pool, limit, tally)
+                if pool is not sendable:  # _claim drops the automations it found empty
+                    sendable[:] = [a for a in sendable if a not in waiting_pool or a in pool]
                 if claimed:
                     await _send_batch(run, claimed, tally)
             for automation in list(ai):
@@ -302,6 +321,15 @@ async def drain(
             progressed=_done(tally) > 0,
         ),
     )
+
+
+def _live_first(sendable: list[Automation]) -> list[Automation]:
+    """GR-10: Live-only automations go ahead of the rest while they have runs waiting: a Live's
+    private reply works only while it is on air. The same bucket (750 an hour) and the same send
+    path as every other private reply; only the order differs. Returns ``sendable`` itself when
+    no Live-only automation is waiting."""
+    live = [a for a in sendable if a.comment_surface == CommentSurface.LIVE]
+    return live or sendable
 
 
 def _done(tally: _Tally) -> int:
@@ -387,6 +415,7 @@ async def _claim(
                 automation,
                 acct.id,
                 commented_after=now - PRIVATE_REPLY_LIMIT,
+                live_after=now - actions.LIVE_REPLY_WINDOW,
                 limit=limit,
             )
             if batch:
@@ -475,6 +504,17 @@ async def _prepare(
         if outbound is None:
             tally.failed += _give_up(queued, actions.NO_MESSAGE)
             continue
+        if outbound.buttons:  # GR-15: link buttons go through the tracked redirect
+            tracked = await links.track_buttons(
+                session,
+                run.settings,
+                automation,
+                run_id=queued.id,
+                contact_id=contact.id,
+                step_id=queued.step_id or "message",
+                buttons=outbound.buttons,
+            )
+            outbound = replace(outbound, buttons=tracked)
         ready.append((queued, comment, contact, outbound, waits))
 
     conversations = {
@@ -612,6 +652,7 @@ async def _drain_ai(run: _Pass, automation: Automation, limit: int, tally: _Tall
             automation,
             run.acct.id,
             commented_after=run.now - PRIVATE_REPLY_LIMIT,
+            live_after=run.now - actions.LIVE_REPLY_WINDOW,
             limit=max(1, min(limit, MAX_AI_DRAFTS - tally.drafted)),
         )
         ids = [q.id for q in peeked]

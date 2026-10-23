@@ -14,6 +14,13 @@ The PA contract. Answers and their pieces:
   card opens an existing screen pre-filled; the member completes the action there, so every
   existing check applies. Nothing in R1 changes anything (FR-AGT-02).
 
+- Visuals (GR-38) come from the run's succeeded tool steps: a tool that has chartable data builds
+  one from the same service numbers it returns (agent/visuals.py), stores it in its result, and
+  ``visuals`` lists them in step order, at most MAX_VISUALS. The model never writes a figure, a
+  label or a layout in a visual, and doesn't see them. ``kind`` is a closed set the web draws
+  with its own components. Text that came from a customer (a caption) is text: render it as text.
+  Visuals are empty unless the ``agent_visuals_enabled`` setting is on.
+
 Runs belong to the member who asked: a member sees their own runs and threads, owners and admins
 see every run (FR-AGT-07). The real-time stream is shared by the workspace's members, so agent
 events carry no request or answer text; the requester's panel fetches the run on
@@ -23,12 +30,13 @@ events carry no request or answer text; the requester's panel fetches the run on
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import Field
+from pydantic import Field, TypeAdapter
 
 from socialhood.models.agent import REQUEST_MAX_CHARS
+from socialhood.schemas.analytics import ChangeDirection
 from socialhood.schemas.automations import ActionName, PostScopeName, TriggerName
 from socialhood.schemas.common import RequestModel, ResponseModel
 from socialhood.schemas.inbox import Actor, ErrorInfo
@@ -154,6 +162,134 @@ ActionCard = Annotated[
 ]
 
 
+# ---- visuals (GR-38)
+
+VISUAL_VERSION = 1
+MAX_VISUALS = 3  # per run
+MAX_VISUAL_BYTES = 8 * 1024  # serialised, per visual (test-enforced)
+MAX_METRICS = 8
+MAX_RANKED = 10
+MAX_TOPICS = 6
+MetricFormat = Literal["count", "percent"]
+# Account metrics (schemas/analytics.AccountMetricName) and post metrics (MetricName).
+VisualMetricKey = Literal[
+    "reach",
+    "views",
+    "accounts_engaged",
+    "interactions",
+    "followers",
+    "follows",
+    "unfollows",
+    "profile_link_taps",
+    "comments",
+    "messages_received",
+    "likes",
+    "shares",
+    "saves",
+    "engagement_rate",
+]
+Tone = Literal["good", "bad", "neutral"]
+
+
+class VisualPeriod(ResponseModel):
+    """Calendar days in the workspace's zone, both included, with the label the answer uses."""
+
+    start: date
+    end: date
+    label: str = Field(max_length=60)  # e.g. "1-22 Oct"
+    days: int = Field(ge=1, le=366)
+
+
+class MetricDelta(ResponseModel):
+    """One card of a comparison. Every figure and ``change_pct`` come from the analytics
+    service; ``tone`` is the metric's rule (more unfollows is bad), not the model's."""
+
+    key: VisualMetricKey
+    label: str = Field(max_length=60)  # "Reach, summed over the days"
+    format: MetricFormat
+    current: float | None = None  # None: not available, see ``unavailable``
+    previous: float | None = None
+    change_pct: float | None = None  # None against 0 or an unknown side, or periods that differ
+    direction: ChangeDirection | None = None
+    tone: Tone
+    current_coverage: str | None = Field(default=None, max_length=40)  # "21 of 22 days" if gaps
+    previous_coverage: str | None = Field(default=None, max_length=40)
+    unavailable: str | None = Field(default=None, max_length=200)  # the reason, in plain words
+
+
+# ``kind`` has no default so that it is required in the OpenAPI document (the web narrows on it).
+class MetricComparisonVisual(ResponseModel):
+    """The current period against another, a card per metric (compare_periods)."""
+
+    kind: Literal["metric_comparison"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    current: VisualPeriod
+    previous: VisualPeriod
+    comparable: bool  # False: the periods differ in length and no change is shown
+    note: str | None = Field(default=None, max_length=240)  # how the periods were matched
+    account_label: str | None = Field(default=None, max_length=60)  # "@maple.bakery"
+    metrics: list[MetricDelta] = Field(max_length=MAX_METRICS)
+
+
+class RankedPostRow(ResponseModel):
+    """One post of a ranking. ``label`` is server copy; ``caption`` is the customer's own text:
+    render it as text."""
+
+    post_id: uuid.UUID
+    label: str = Field(max_length=60)  # "Reel of 26 Sep"
+    format: str = Field(max_length=20)  # feed, reel or story
+    caption: str | None = Field(default=None, max_length=100)
+    thumbnail_url: str | None = Field(default=None, max_length=400)  # https only
+    value: float
+
+
+class RankedPostsVisual(ResponseModel):
+    """Posts ranked by one metric, best first (top_posts)."""
+
+    kind: Literal["ranked_posts"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    metric_key: VisualMetricKey
+    metric_label: str = Field(max_length=40)
+    format: MetricFormat
+    period: VisualPeriod | None = None
+    age_label: str | None = Field(default=None, max_length=60)  # the age the figures are at
+    considered: int = Field(ge=0)  # posts that had the metric: the sample size
+    items: list[RankedPostRow] = Field(max_length=MAX_RANKED)
+
+
+class VisualTopic(ResponseModel):
+    label: str = Field(max_length=40)  # customer-derived: render as text
+    count: int = Field(ge=0)
+
+
+class SentimentSummaryVisual(ResponseModel):
+    """Comment sentiment as one split, with the top topics when the run found them
+    (sentiment_distribution, comment_topics)."""
+
+    kind: Literal["sentiment_summary"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    scope: str = Field(max_length=120)  # "comments made 1-30 Sep 2026"
+    period: VisualPeriod | None = None  # None for one post
+    total: int = Field(ge=0)  # comments in scope
+    positive: int = Field(ge=0)
+    neutral: int = Field(ge=0)
+    negative: int = Field(ge=0)
+    spam: int = Field(ge=0)
+    not_analysed: int = Field(ge=0)
+    topics: list[VisualTopic] = Field(max_length=MAX_TOPICS)
+
+
+# GR-38 (docs/architecture/generative-ui/05): built by agent/visuals.py from service data.
+Visual = Annotated[
+    MetricComparisonVisual | RankedPostsVisual | SentimentSummaryVisual,
+    Field(discriminator="kind"),
+]
+VISUAL_ADAPTER: TypeAdapter[Visual] = TypeAdapter(Visual)
+
+
 # ---- runs and steps
 
 
@@ -203,6 +339,9 @@ class AgentRun(ResponseModel):
     answer: str | None = None  # markdown subset (module docstring); None until reported
     answer_refs: list[AnswerRef]
     action_cards: list[ActionCard]
+    visuals: list[Visual] = Field(
+        max_length=MAX_VISUALS
+    )  # GR-38: at most MAX_VISUALS, in step order; empty with the flag off
     credits: int  # AI credits the run used: its model turns and any AI-calling tools
     error: ErrorInfo | None = None  # failed runs: e.g. "The AI didn't respond"
     created_at: datetime

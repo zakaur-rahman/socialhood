@@ -262,11 +262,12 @@ def automation(template: templates.Template, **overrides: Any) -> Automation:
 def variants() -> list[tuple[str, Automation]]:
     found = []
     for template in templates.TEMPLATES:
-        triggers = (
-            ("dm_keyword", "comment_keyword")
-            if template.trigger != "comment_any"
-            else ("comment_any",)
-        )
+        if template.trigger == "comment_any":
+            triggers: tuple[str, ...] = ("comment_any",)
+        elif template.trigger in ("story_reply", "story_mention"):
+            triggers = (template.trigger, "dm_keyword")  # GR-06, GR-07: DM triggers
+        else:
+            triggers = ("dm_keyword", "comment_keyword")
         for trigger, tap, nudge in itertools.product(triggers, (True, False), (True, False)):
             name = f"{template.key}-{trigger}-tap{int(tap)}-nudge{int(nudge)}"
             found.append(
@@ -376,3 +377,15 @@ def test_a_flow_described_step_by_step() -> None:
         "wait: wait 10 minutes",
         "t: hand off",
     ]
+
+
+# ---------------------------------------------------------------- story triggers (GR-06, GR-07)
+
+
+@pytest.mark.parametrize("trigger", ["story_reply", "story_mention"])
+def test_a_story_trigger_is_a_dm_trigger_for_flows(trigger: str) -> None:
+    """A story reply or mention is a DM: the flow may start with a branch or a delay, which a
+    comment's flow may not, and it can be answered like any DM."""
+    assert ctx(trigger).comment is False
+    delayed = flow({"type": "delay", "id": "d", "seconds": 60, "next": "a"}, send("a"))
+    assert errors(delayed, ctx(trigger)) == {}

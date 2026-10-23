@@ -35,10 +35,12 @@ from socialhood.schemas.automations import (
     TriggerName,
 )
 from socialhood.schemas.flows import Flow, FlowDefinition
+from socialhood.schemas.funnel import AutomationFunnel
 from socialhood.services.automations import (
     definitions,
     dry_run,
     flow_store,
+    funnel,
     queries,
     queue,
     stats,
@@ -57,6 +59,7 @@ def _whole_number(value: object) -> object:
 
 
 StatsDays = Annotated[Literal[7, 30], BeforeValidator(_whole_number)]
+FunnelDays = Annotated[Literal[7, 30, 90], BeforeValidator(_whole_number)]
 
 
 def _view(ctx: WorkspaceContext, now: datetime) -> queries.View:
@@ -227,6 +230,19 @@ async def get_automation_stats(
     )
 
 
+@router.get("/automations/{automation_id}/funnel", operation_id="get_automation_funnel")
+async def get_automation_funnel(
+    automation_id: uuid.UUID,
+    ctx: Admin,
+    session: Session,
+    days: Annotated[FunnelDays, Query()] = 30,
+) -> AutomationFunnel:
+    """Per step: reached, sent, delivered, read, taps, link clicks and captures, and each Split
+    step's results per path, for the last 7, 30 or 90 days (GR-15)."""
+    automation = await definitions.get_or_404(session, automation_id)
+    return await funnel.automation_funnel(session, automation, days=days, now=datetime.now(UTC))
+
+
 @router.post("/automations/{automation_id}/test", operation_id="test_automation")
 async def test_automation(
     automation_id: uuid.UUID, body: AutomationTest, ctx: Admin, session: Session
@@ -262,11 +278,18 @@ async def update_automation_flow(
     automation_id: uuid.UUID, body: FlowDefinition, ctx: Admin, session: Session
 ) -> Flow:
     """Save the flow; from now on its steps replace the message settings. A broken graph is
-    refused (422 with each step's field); an active automation must stay complete."""
+    refused (422 with each step's field); an active automation must stay complete; more steps
+    than the plan allows is a 402 (``flow_steps``, pending PD-5)."""
     now = datetime.now(UTC)
     disclosure = ctx.workspace.automation_disclosure
     await flow_store.save(
-        session, automation_id, body, user_id=ctx.user.id, disclosure=disclosure, now=now
+        session,
+        automation_id,
+        body,
+        user_id=ctx.user.id,
+        plan=await current_plan(session),
+        disclosure=disclosure,
+        now=now,
     )
     await session.commit()
     return await flow_store.view(session, automation_id, disclosure=disclosure, now=now)

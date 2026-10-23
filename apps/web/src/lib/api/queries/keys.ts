@@ -1,4 +1,6 @@
+import type { ContactFilters } from "@/lib/contacts/filters";
 import type {
+  ActivityKind,
   AgeName,
   AgentRunStatus,
   AutomationSort,
@@ -29,6 +31,13 @@ export type AutomationFilters = {
   sort: AutomationSort;
 };
 
+export type ActivityFilters = {
+  failuresOnly: boolean;
+  kind: ActivityKind | null;
+  automationId: string | null;
+  accountId: string | null;
+};
+
 /** Query keys (TR-FE-03): everything workspace-scoped starts with ["w", workspaceId]. */
 export const keys = {
   me: ["me"] as const,
@@ -41,6 +50,21 @@ export const keys = {
   webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
   webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
+  /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
+  activityLists: (wid: string) => ["w", wid, "activity"] as const,
+  activity: (wid: string, filters: ActivityFilters) => ["w", wid, "activity", filters] as const,
+  // contacts (GR-17): `contactLists(wid)` is the prefix of every list, count, record and timeline
+  contactLists: (wid: string) => ["w", wid, "contacts"] as const,
+  contacts: (wid: string, filters: ContactFilters) => ["w", wid, "contacts", "list", filters] as const,
+  contactCount: (wid: string, filters: ContactFilters) => ["w", wid, "contacts", "count", filters] as const,
+  contact: (wid: string, id: string) => ["w", wid, "contacts", "one", id] as const,
+  contactTimeline: (wid: string, id: string) => ["w", wid, "contacts", "timeline", id] as const,
+  tags: (wid: string) => ["w", wid, "tags"] as const,
+  // leads (GR-18): moving a lead also refreshes `contactLists(wid)`, which holds its cards
+  leadSummary: (wid: string) => ["w", wid, "leads", "summary"] as const,
+  leadSettings: (wid: string) => ["w", wid, "leads", "settings"] as const,
+  contactFields: (wid: string) => ["w", wid, "contact-fields"] as const,
+  contactSegments: (wid: string) => ["w", wid, "contact-segments"] as const,
   // inbox (P3)
   conversationLists: (wid: string) => ["w", wid, "conversations"] as const,
   conversations: (wid: string, filters: ConversationFilters) => ["w", wid, "conversations", filters] as const,
@@ -58,9 +82,21 @@ export const keys = {
   automationsSummary: (wid: string) => ["w", wid, "automations", "summary"] as const,
   automationTemplates: (wid: string) => ["w", wid, "automation-templates"] as const,
   automation: (wid: string, id: string) => ["w", wid, "automation", id] as const,
+  automationFlow: (wid: string, id: string) => ["w", wid, "automation", id, "flow"] as const, // GR-13
+  flowTags: (wid: string) => ["w", wid, "flow-tags"] as const,
+  flowFields: (wid: string) => ["w", wid, "flow-fields"] as const,
+  entryLinks: (wid: string) => ["w", wid, "entry-links"] as const, // GR-08
+  savedReplies: (wid: string) => ["w", wid, "saved-replies"] as const, // GR-21
+  businessHours: (wid: string) => ["w", wid, "business-hours"] as const, // GR-22
+  // stories and mentions (GR-06, GR-07)
+  stories: (wid: string, accountId: string | null) => ["w", wid, "stories", accountId] as const,
+  iceBreakers: (wid: string, accountId: string) => ["w", wid, "ice-breakers", accountId] as const,
+  storyMentions: (wid: string, accountId: string | null) => ["w", wid, "story-mentions", accountId] as const,
   automationRuns: (wid: string, id: string, result: RunResult | null) =>
     ["w", wid, "automation", id, "runs", result] as const,
   automationStats: (wid: string, id: string, days: 7 | 30) => ["w", wid, "automation", id, "stats", days] as const,
+  automationFunnel: (wid: string, id: string, days: 7 | 30 | 90) =>
+    ["w", wid, "automation", id, "funnel", days] as const,
   // posts: the automation post picker (P4) and the Comments grid (P6) share these lists
   postLists: (wid: string) => ["w", wid, "posts"] as const,
   posts: (wid: string, accountId: string | null, q: string, sort: PostSort = "recent") =>

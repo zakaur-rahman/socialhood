@@ -26,12 +26,16 @@ EXPECTED = {
     "automation_run_steps",
     "automation_runs",
     "automations",
+    "business_hours",
     "comment_analyses",
     "comments",
     "contact_consents",
     "contact_tags",
     "contacts",
     "conversations",
+    "entry_links",
+    "ice_breakers",
+    "lead_stage_changes",
     "media_items",
     "message_analyses",
     "messages",
@@ -40,6 +44,9 @@ EXPECTED = {
     "reply_suggestions",
     "scheduled_messages",
     "scheduled_post_targets",
+    "story_mentions",
+    "tracked_links",
+    "link_clicks",
 }
 
 

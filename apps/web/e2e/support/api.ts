@@ -57,6 +57,24 @@ export class Api {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }
 
+  /**
+   * GR-38: a finished Ask run of the signed-in owner (the fake model calls no tools). With `visual`
+   * it seeds the account's metrics for the last `days` complete days and the `days` before them,
+   * and the run holds the metric_comparison the real service and builder make from them.
+   */
+  agentRun(
+    wid: string,
+    run: { request: string; answer: string; accountId?: string; visual?: boolean; days?: number },
+  ): Promise<{ id: string; thread_id: string }> {
+    return this.seed("POST", `/workspaces/${wid}/agent-runs`, {
+      request: run.request,
+      answer: run.answer,
+      account_id: run.accountId,
+      visual: run.visual ?? false,
+      days: run.days ?? 14,
+    });
+  }
+
   // ---------------------------------------------------------------- the app's own endpoints
 
   connectSandbox(wid: string): Promise<SandboxAccount> {
@@ -72,7 +90,18 @@ export class Api {
     wid: string,
     event: {
       accountId: string;
-      kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin";
+      kind:
+        | "dm"
+        | "comment"
+        | "live_comment"
+        | "referral"
+        | "postback"
+        | "optin"
+        | "story_reply"
+        | "story_like"
+        | "story_mention";
+      /** GR-10: how old a comment or Live comment is when it arrives, in seconds. */
+      ageSeconds?: number;
       text?: string;
       fromId?: string;
       fromUsername?: string;
@@ -82,6 +111,8 @@ export class Api {
       adTitle?: string;
       postbackPayload?: string;
       quickReplyPayload?: string;
+      /** GR-06: the story a story reply or like answers (the sandbox lists `<account>_story_0`, `_1`). */
+      storyId?: string;
     },
   ): Promise<{ stored: number }> {
     return this.call("POST", `/v1/w/${wid}/dev/sandbox/inbound`, {
@@ -96,7 +127,187 @@ export class Api {
       ad_title: event.adTitle,
       postback_payload: event.postbackPayload,
       quick_reply_payload: event.quickReplyPayload,
+      story_id: event.storyId,
+      age_seconds: event.ageSeconds,
     });
+  }
+
+  /** GR-06, GR-07: an active automation on a story trigger (no keywords answers every event). */
+  async storyAutomation(
+    wid: string,
+    accountId: string,
+    trigger: "story_reply" | "story_mention",
+    values: { keywords?: string[]; messageText: string; storyIds?: string[]; heart?: boolean },
+  ): Promise<{ id: string }> {
+    const name = `Story ${trigger} ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger,
+      keywords: values.keywords ?? [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: values.messageText,
+      post_scope: values.storyIds?.length ? "selected" : "all",
+      story_ids: values.storyIds ?? [],
+      story_heart: values.heart ?? false,
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-08, GR-09: an active entry link or ad click automation (no keywords; ``adIds`` limits the ads). */
+  async entryAutomation(
+    wid: string,
+    accountId: string,
+    trigger: "entry_link" | "ad_click",
+    values: { messageText: string; adIds?: string[] },
+  ): Promise<{ id: string }> {
+    const name = `Entry ${trigger} ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger,
+      keywords: [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: values.messageText,
+      post_scope: values.adIds?.length ? "selected" : "all",
+      ad_ids: values.adIds ?? [],
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-10: an active comment keyword automation on Lives (``surface`` "live"), no post scope. */
+  async liveAutomation(
+    wid: string,
+    accountId: string,
+    keyword: string,
+    messageText: string,
+  ): Promise<{ id: string }> {
+    const name = `Live ${keyword}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger: "comment_keyword",
+      keywords: [keyword],
+      match_mode: "word",
+      action: "send_message",
+      message_text: messageText,
+      comment_surface: "live",
+      post_scope: "all",
+      confirm_first: false,
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-08: an entry link on the account that starts ``automationId``. */
+  entryLink(
+    wid: string,
+    accountId: string,
+    values: { name: string; automationId?: string; code?: string },
+  ): Promise<{ id: string; code: string; url: string }> {
+    return this.call("POST", `/v1/w/${wid}/entry-links`, {
+      social_account_id: accountId,
+      name: values.name,
+      automation_id: values.automationId,
+      code: values.code,
+    });
+  }
+
+  /** GR-11: an active automation on the conversation starter trigger (a tap starts it). */
+  async iceBreakerAutomation(wid: string, accountId: string, messageText: string): Promise<{ id: string }> {
+    const name = `Starter ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger: "ice_breaker",
+      keywords: [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: messageText,
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-12: an active welcome (first_message) or default reply (default_reply) automation. */
+  async fallbackAutomation(
+    wid: string,
+    accountId: string,
+    trigger: "first_message" | "default_reply",
+    messageText: string,
+  ): Promise<{ id: string }> {
+    const name = `Fallback ${trigger} ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger,
+      keywords: [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: messageText,
+      post_scope: "all",
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-21: a saved reply (``shortcut`` is typed after / in the composer). */
+  savedReply(
+    wid: string,
+    values: { title: string; shortcut: string; body: string },
+  ): Promise<{ id: string; shortcut: string }> {
+    return this.call("POST", `/v1/w/${wid}/saved-replies`, values);
+  }
+
+  /** GR-22: the workspace's time zone, so the hours below mean the same wall clock as the test. */
+  async setTimezone(wid: string, timezone: string): Promise<void> {
+    await this.call("PATCH", `/v1/w/${wid}`, { timezone });
+  }
+
+  /**
+   * GR-22: the workspace's business hours. ``open`` is one range for every day ("00:00" to "24:00"
+   * is always open); ``away`` turns the away message on.
+   */
+  async setHours(
+    wid: string,
+    values: { open: { start: string; end: string }; away?: string; autoMode?: "always" | "out_of_hours" },
+  ): Promise<void> {
+    await this.call("PUT", `/v1/w/${wid}/business-hours`, {
+      enabled: true,
+      days: [0, 1, 2, 3, 4, 5, 6].map((day) => ({ day, ranges: [values.open] })),
+      away_enabled: Boolean(values.away),
+      away_message: values.away ?? null,
+      auto_mode: values.autoMode ?? "always",
+    });
+  }
+
+  /** GR-12: the account's AI mode (the default reply answers only while it is off). */
+  async setAiMode(wid: string, accountId: string, mode: "off" | "suggest" | "auto"): Promise<void> {
+    await this.call("PATCH", `/v1/w/${wid}/social-accounts/${accountId}`, { ai_mode: mode });
   }
 
   /** GR-03: an active DM keyword automation saved as ``flow`` (PUT …/flow). */

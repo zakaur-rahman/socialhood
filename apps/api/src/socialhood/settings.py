@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     app_env: AppEnv = AppEnv.LOCAL
     api_base_url: str | None = None
     web_base_url: str | None = None
+    # GR-15: the address tracked links (/l/<code>) are built on, if not the API's own, such as a
+    # short domain pointed at the API. Neither set: link buttons are sent as written.
+    link_base_url: str | None = None
     cors_allowed_origins: CommaList = Field(default_factory=list)
 
     database_url: str
@@ -121,6 +124,9 @@ class Settings(BaseSettings):
     # Ask Social Hood's planner and report (TR-AGT-02); unset: AI_MODEL_REPLY.
     ai_model_agent: str | None = None
     ai_embed_dim: int = 768
+    # GR-38: Ask Social Hood's runs expose typed visuals (cards, ranked posts, sentiment) beside
+    # the answer. Off: ``visuals`` is always empty and the prompt doesn't mention them.
+    agent_visuals_enabled: bool = False
     # Thinking level per model id, JSON (TR-AI-03); unset: "minimal" for Flash-Lite, else "low".
     ai_thinking_levels: dict[str, str] = Field(default_factory=dict)
     ai_daily_spend_limit_usd: float = 100.0

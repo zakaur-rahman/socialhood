@@ -75,14 +75,21 @@ PARAM_TO_SEED: dict[str, str] = {
     "field_id": "field_id",
     "endpoint_id": "endpoint_id",  # GR-04
     "delivery_id": "delivery_id",
+    "link_id": "link_id",  # GR-08
+    "segment_id": "segment_id",  # GR-17
+    "reply_id": "reply_id",  # GR-21
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
-PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}"})
+# "/l/{code}" (GR-15, the tracked link redirect) is public and not in the OpenAPI schema, so the
+# walk never sees it; it is tested in tests/integration/test_link_clicks.py.
+PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}", "/l/{code}"})
 
 # A valid body for each write route, so the call fails on tenancy, not validation.
 # A string "{param}" in a body is replaced by B's id for that parameter.
 EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
+    ("POST", "/v1/w/{wid}/entry-links"): {"social_account_id": "{account_id}", "name": "Into B"},
+    ("PUT", "/v1/w/{wid}/entry-links/{link_id}"): {"name": "Taken over"},
     ("PATCH", "/v1/w/{wid}"): {"name": "Taken over", "timezone": "UTC"},
     ("PATCH", "/v1/w/{wid}/social-accounts/{account_id}"): {"auto_hide_spam": True},
     ("POST", "/v1/w/{wid}/dev/sandbox/inbound"): {
@@ -127,6 +134,15 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "contact_ids": ["{contact_id}"],
         "add": ["{tag_id}"],
     },
+    # GR-17: saved segments (the filter names B's tag, which A cannot see) and bulk tagging.
+    ("POST", "/v1/w/{wid}/contact-segments"): {
+        "name": "Not yours",
+        "filter": {"tag_ids": ["{tag_id}"]},
+    },
+    ("PATCH", "/v1/w/{wid}/contact-segments/{segment_id}"): {"name": "Renamed"},
+    # GR-18: moving B's lead is 404 from A's workspace; the cold setting is the workspace's own.
+    ("POST", "/v1/w/{wid}/contacts/{contact_id}/lead-stage"): {"stage": "won"},
+    ("PATCH", "/v1/w/{wid}/leads/settings"): {"cold_after_days": 30},
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
@@ -136,7 +152,29 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "events": ["lead.captured"],
     },
     ("PATCH", "/v1/w/{wid}/webhook-endpoints/{endpoint_id}"): {"description": "Taken over"},
+    # GR-11: conversation starters of B's account.
+    ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers"): {
+        "items": [{"question": "Taken over", "answer_with_ai": True}]
+    },
 }
+
+# GR-21 saved replies and GR-22 business hours of B's workspace and account.
+HOURS_OFF = {"enabled": False, "days": [], "away_enabled": False, "auto_mode": "always"}
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/saved-replies"): {
+            "title": "Taken over",
+            "shortcut": "taken",
+            "body": "Hi {first_name}",
+        },
+        ("PATCH", "/v1/w/{wid}/saved-replies/{reply_id}"): {"title": "Taken over"},
+        ("POST", "/v1/w/{wid}/saved-replies/{reply_id}/fill"): {
+            "conversation_id": "{conversation_id}"
+        },
+        ("PUT", "/v1/w/{wid}/business-hours"): HOURS_OFF,
+        ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/business-hours"): HOURS_OFF,
+    }
+)
 
 EXAMPLE_BODIES.update(
     {
@@ -289,6 +327,15 @@ B_TABLES = (
     "automation_run_steps",
     "webhook_endpoints",
     "webhook_deliveries",
+    "story_mentions",
+    "tracked_links",
+    "link_clicks",
+    "entry_links",
+    "contact_segments",
+    "lead_stage_changes",
+    "ice_breakers",
+    "saved_replies",
+    "business_hours",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -342,6 +389,9 @@ class Seed:
     field_id: str = ""
     endpoint_id: str = ""
     delivery_id: str = ""
+    link_id: str = ""
+    segment_id: str = ""
+    reply_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -439,6 +489,12 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         headers=clerk.headers(owner_b),
     )
     assert field.status_code == 201, field.text
+    segment = await client.post(  # GR-17: a saved segment
+        f"/v1/w/{wid}/contact-segments",
+        json={"name": "VIPs", "filter": {"tag_ids": [tag.json()["id"]]}},
+        headers=clerk.headers(owner_b),
+    )
+    assert segment.status_code == 201, segment.text
     for path, body in (
         ("tags", {"add": [tag.json()["id"]]}),
         ("consents", {"channel": "instagram", "status": "granted", "note": "In the shop"}),
@@ -449,6 +505,12 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             headers=clerk.headers(owner_b),
         )
         assert done.status_code == 200, done.text
+    moved = await client.post(  # GR-18: a lead stage and its history
+        f"/v1/w/{wid}/contacts/{thread.contact_id}/lead-stage",
+        json={"stage": "qualified", "note": "Asked for a quote"},
+        headers=clerk.headers(owner_b),
+    )
+    assert moved.status_code == 200, moved.text
     hook = await client.post(  # GR-04: an endpoint and a delivery to it
         f"/v1/w/{wid}/webhook-endpoints",
         json={"url": "https://hooks.example.com/b", "events": ["lead.captured"]},
@@ -459,6 +521,49 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         f"/v1/w/{wid}/webhook-endpoints/{hook.json()['id']}/test", headers=clerk.headers(owner_b)
     )
     assert sent.status_code == 202, sent.text
+    async with engine.begin() as conn:  # GR-11: a conversation starter
+        await conn.execute(
+            text(
+                "INSERT INTO ice_breakers (workspace_id, social_account_id, position, question,"
+                " answer_with_ai) VALUES (:w, :a, 0, 'Opening hours?', true)"
+            ),
+            {"w": wid, "a": account_id},
+        )
+    async with engine.begin() as conn:  # GR-07: a story mention
+        await conn.execute(
+            text(
+                "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id,"
+                " message_id, mentioned_at, media_url, media_expires_at)"
+                " VALUES (:w, :a, :c, :m, now(), 'https://cdn.example/b.jpg',"
+                " now() + interval '1 hour')"
+            ),
+            {"w": wid, "a": account_id, "c": thread.contact_id, "m": thread.message_ids[0]},
+        )
+    link = await client.post(  # GR-08: an entry link
+        f"/v1/w/{wid}/entry-links",
+        json={"social_account_id": account_id, "name": "B link"},
+        headers=clerk.headers(owner_b),
+    )
+    assert link.status_code == 201, link.text
+    reply = await client.post(  # GR-21: a saved reply
+        f"/v1/w/{wid}/saved-replies",
+        json={"title": "Price", "shortcut": "price", "body": "Hi {first_name}, from 499."},
+        headers=clerk.headers(owner_b),
+    )
+    assert reply.status_code == 201, reply.text
+    for path in ("business-hours", f"social-accounts/{account_id}/business-hours"):  # GR-22
+        hours = await client.put(
+            f"/v1/w/{wid}/{path}",
+            json={
+                "enabled": True,
+                "days": [{"day": 0, "ranges": [{"start": "09:00", "end": "17:00"}]}],
+                "away_enabled": True,
+                "away_message": "Back at 9.",
+                "auto_mode": "out_of_hours",
+            },
+            headers=clerk.headers(owner_b),
+        )
+        assert hours.status_code == 200, hours.text
     scheduled = await make_scheduled(
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )
@@ -485,6 +590,22 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         engine, workspace_id=wid, account_id=account_id, media_item_id=post
     )
     await make_comment_analysis(engine, workspace_id=wid, comment_id=comment)
+    async with engine.begin() as conn:  # GR-15: a tracked link and a click on it, on a
+        # comment-triggered run (the workspace deletion test adds one triggered by the message)
+        await conn.execute(
+            text(
+                "WITH r AS (INSERT INTO automation_runs (workspace_id, automation_id,"
+                " trigger_comment_id, matched_keyword, result)"
+                " VALUES (:w, :a, :m, 'link', 'sent') RETURNING id),"
+                " l AS (INSERT INTO tracked_links (workspace_id, automation_id, run_id,"
+                " contact_id, step_id, button_index, code, title, url)"
+                " SELECT :w, :a, id, :c, 'hello', 0, 'bbbbbbbbbbbbbbbb', 'Open',"
+                " 'https://shop.example/b' FROM r RETURNING id, run_id)"
+                " INSERT INTO link_clicks (workspace_id, link_id, automation_id, run_id,"
+                " contact_id, step_id) SELECT :w, id, :a, run_id, :c, 'hello' FROM l"
+            ),
+            {"w": wid, "a": automation, "c": thread.contact_id, "m": comment},
+        )
     await make_snapshot(engine, workspace_id=wid, media_item_id=post)
     await make_account_day(engine, workspace_id=wid, account_id=account_id)
     scheduled_post = await make_scheduled_post(
@@ -552,6 +673,9 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         field_id=field.json()["id"],
         endpoint_id=hook.json()["id"],
         delivery_id=sent.json()["id"],
+        link_id=link.json()["id"],
+        segment_id=segment.json()["id"],
+        reply_id=reply.json()["id"],
     )
 
 

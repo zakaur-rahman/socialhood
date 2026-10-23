@@ -69,7 +69,24 @@ TRIGGER_WORDS = {
     "dm_keyword": "a DM with a keyword",
     "comment_keyword": "a comment with a keyword",
     "comment_any": "any comment",
+    "story_reply": "a reply to a story",
+    "story_mention": "a mention in someone's story",
+    "entry_link": "someone opening a chat from an entry link",
+    "ad_click": "someone opening a chat from an ad",
+    "first_message": "a contact's first message (a welcome)",
+    "default_reply": "any other message (a default reply)",
 }
+# Triggers that need no keywords: they answer every event of their kind (a story reply may also
+# take keywords).
+NO_KEYWORD_TRIGGERS = (
+    "comment_any",
+    "story_reply",
+    "story_mention",
+    "entry_link",
+    "ad_click",
+    "first_message",
+    "default_reply",
+)
 ACTION_WORDS = {"send_message": "sends a message", "ai_reply": "replies with AI"}
 # prepare_automation without a template, trigger or action: the first template whose words
 # appear in the request.
@@ -522,9 +539,11 @@ def _keywords(typed: list[str]) -> list[str]:
     label="Preparing an automation draft",
     description=(
         "Prepare a new automation from the request: fill the template, trigger (dm_keyword, "
-        "comment_keyword, comment_any), keywords, action (send_message or ai_reply), message and "
-        "posts you can tell from it. Returns a card that opens the automation editor filled in "
-        "and unsaved; the member saves and activates it there. Nothing is created."
+        "comment_keyword, comment_any, story_reply, story_mention, entry_link, ad_click, "
+        "first_message, default_reply), keywords, action (send_message or ai_reply), message "
+        "and posts you can tell from it. "
+        "Returns a card that opens the automation editor filled in and unsaved; "
+        "the member saves and activates it there. Nothing is created."
     ),
     input_model=PrepareAutomationInput,
     result_model=PrepareAutomationResult,
@@ -569,7 +588,11 @@ async def prepare_automation(
     if trigger not in COMMENT_TRIGGERS:
         public_replies = []
     scope = args.post_scope or (template.post_scope if template else "all")
-    post_ids = list(dict.fromkeys(args.post_ids))
+    # Stories, entry links and ads are picked in the editor, not here.
+    stories = trigger in ("story_reply", "story_mention", "entry_link", "ad_click")
+    if stories:
+        scope = "all"
+    post_ids = [] if stories else list(dict.fromkeys(args.post_ids))
     for post_id in post_ids:
         item = await comments_repo.get_media_item(ctx.session, post_id)
         if item is None or (acct is not None and item.social_account_id != acct.id):
@@ -588,7 +611,7 @@ async def prepare_automation(
         missing.append("an account")
     if trigger is None:
         missing.append("a trigger")
-    elif trigger != "comment_any" and not keywords:
+    elif trigger not in NO_KEYWORD_TRIGGERS and not keywords:
         missing.append("keywords")
     if action is None:
         missing.append("an action")

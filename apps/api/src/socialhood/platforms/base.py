@@ -90,6 +90,15 @@ class MediaDownload:
     mime_type: str | None
 
 
+@dataclass(frozen=True)
+class IceBreaker:
+    """A conversation starter (GR-11): the question shown in a new chat and the payload a tap
+    comes back with."""
+
+    question: str
+    payload: str
+
+
 @dataclass(frozen=True, kw_only=True)
 class PlatformMedia:
     platform_media_id: str
@@ -252,8 +261,21 @@ class PlatformAdapter(Protocol):
 
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]: ...
 
+    async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
+        """The account's live stories (the last 24 hours), newest first (GR-06). Empty where the
+        platform has no stories."""
+        ...
+
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         """One of the account's posts, for a comment on a post we have not synced (F-12)."""
+        ...
+
+    async def set_ice_breakers(
+        self, acct: SocialAccount, starters: Sequence[IceBreaker]
+    ) -> list[IceBreaker]:
+        """Replace the account's conversation starters (GR-11); none clears them. Returns what
+        the platform now shows. Instagram allows up to 4; WhatsApp has none
+        (``capability_unavailable``)."""
         ...
 
     async def list_threads(

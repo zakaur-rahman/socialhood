@@ -1,6 +1,9 @@
 """Writes for the metric snapshots (FR-ANL-01): post_metric_snapshots, account_daily_metrics and the
 live counts on media_items. Inserts never overwrite: each window and each day is captured once, so
-a re-run or a second worker writes nothing."""
+a re-run or a second worker writes nothing.
+
+Reads for the account metrics (GR-38): the daily rows of some accounts over a range of days, and
+the comments and inbound messages counted over a range of time."""
 
 from __future__ import annotations
 
@@ -8,11 +11,14 @@ import uuid
 from collections.abc import Collection, Mapping
 from datetime import date, datetime
 
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.analytics import AccountDailyMetric, PostMetricSnapshot
+from socialhood.models.automations import Comment
+from socialhood.models.inbox import Direction, Message, MessageSource
 from socialhood.models.media import MediaItem
 from socialhood.repositories.base import scoped_update
 
@@ -110,3 +116,58 @@ async def set_account_day_metrics(
             metrics=dict(metrics)
         )
     )
+
+
+async def account_daily_rows(
+    session: AsyncSession, account_ids: Collection[uuid.UUID], since: date, until: date
+) -> list[AccountDailyMetric]:
+    """The accounts' rows for the days ``since``..``until`` (both included), oldest first."""
+    if not account_ids:
+        return []
+    rows = await session.scalars(
+        select(AccountDailyMetric)
+        .where(
+            AccountDailyMetric.social_account_id.in_(account_ids),
+            AccountDailyMetric.date >= since,
+            AccountDailyMetric.date <= until,
+        )
+        .order_by(AccountDailyMetric.date, AccountDailyMetric.social_account_id)
+    )
+    return list(rows.all())
+
+
+async def count_comments(
+    session: AsyncSession,
+    *,
+    start: datetime,
+    end: datetime,
+    account_ids: Collection[uuid.UUID] | None,
+) -> int:
+    """Comments made from ``start`` up to ``end`` (exclusive) that weren't deleted, on the given
+    accounts' posts or, with None, on every account's."""
+    statement = select(func.count(Comment.id)).where(
+        Comment.commented_at >= start, Comment.commented_at < end, Comment.deleted_at.is_(None)
+    )
+    if account_ids is not None:
+        statement = statement.where(Comment.social_account_id.in_(account_ids))
+    return int((await session.execute(statement)).scalar_one())
+
+
+async def count_inbound_messages(
+    session: AsyncSession,
+    *,
+    start: datetime,
+    end: datetime,
+    account_ids: Collection[uuid.UUID] | None,
+) -> int:
+    """Messages customers sent (not system or automated ones) from ``start`` up to ``end``
+    (exclusive), to the given accounts or, with None, to every account."""
+    statement = select(func.count(Message.id)).where(
+        Message.direction == Direction.INBOUND,
+        Message.source == MessageSource.CUSTOMER,
+        Message.occurred_at >= start,
+        Message.occurred_at < end,
+    )
+    if account_ids is not None:
+        statement = statement.where(Message.social_account_id.in_(account_ids))
+    return int((await session.execute(statement)).scalar_one())

@@ -23,20 +23,31 @@ function tabs(role: Role) {
 }
 
 describe("Settings tabs (UX-SCR-07)", () => {
-  it("owners and admins see Notifications, Billing and Integrations", () => {
+  it("owners and admins see Notifications, Billing, Integrations and Activity", () => {
     expect(tabs("owner")).toEqual([
       "Connections",
       "AI rules and takeover",
       "Workspace",
+      "Saved replies",
+      "Business hours",
       "Notifications",
       "Billing and usage",
       "Integrations",
+      "Activity",
       "Ask Social Hood",
     ]);
   });
 
   it("agents see their own Notifications, not Billing", () => {
-    expect(tabs("agent")).toEqual(["Connections", "AI rules and takeover", "Workspace", "Notifications", "Ask Social Hood"]);
+    expect(tabs("agent")).toEqual([
+      "Connections",
+      "AI rules and takeover",
+      "Workspace",
+      "Saved replies",
+      "Business hours",
+      "Notifications",
+      "Ask Social Hood",
+    ]);
     expect(screen.getByRole("link", { name: "Notifications" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Connections" })).not.toHaveAttribute("aria-current");
   });

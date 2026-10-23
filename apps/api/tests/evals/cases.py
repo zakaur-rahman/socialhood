@@ -35,6 +35,11 @@ class Case:
     role: Role = "owner"
     lang: Lang = "en"
     area: str = ""
+    # GR-38: the visuals the run must show (kinds), the figures they must hold (computed from the
+    # seed), and "no visual at all" for a question no tool with chartable data answers.
+    expect_visual: tuple[str, ...] = ()
+    expect_visual_numbers: tuple[Expect, ...] = ()
+    no_visual: bool = False
 
 
 def tools(*names: str) -> frozenset[str]:
@@ -84,6 +89,18 @@ def _comments_in(span: tuple[S.date, S.date], **kw: object) -> int:
     return len(S.comments(start=start, end=end, **kw))  # type: ignore[arg-type]
 
 
+# Period comparisons over the account metrics (compare_periods): 1-29 Sep against 1-29 Aug.
+(CUR, PREV) = S.matched_months()
+REACH_CUR = S.account_total("reach", *CUR)
+REACH_PREV = S.account_total("reach", *PREV)
+VIEWS_CUR = S.account_total("views", *CUR)
+VIEWS_PREV = S.account_total("views", *PREV)
+FOLLOWERS_CUR = S.account_followers_at(*CUR)
+FOLLOWERS_PREV = S.account_followers_at(*PREV)
+COMMENTS_CUR = S.comments_total(*CUR)
+COMMENTS_PREV = S.comments_total(*PREV)
+REACH_FIRST = S.account_total("reach", CUR[0], CUR[0])
+REACH_LAST = S.account_total("reach", CUR[1], CUR[1])
 P1_24H = S.metrics_at(P1, "24h")
 P2_72H = S.metrics_at(P2, "72h")
 TOP_REACH_TM, _ = S.top_posts("reach", *TM, n=3)
@@ -1035,6 +1052,104 @@ CASES: tuple[Case, ...] = (
         "Which of my posts got the most comments this month?",
         tools("top_posts", "get_posts"),
         area="mixed",
+    ),
+    # ---- visual answers (GR-38): the tools' numbers on the screen, none for a concept
+    Case(
+        "period-compare-reach",
+        "Compare my Instagram reach this month with last month.",
+        tools("compare_periods"),
+        forbid_tools=tools("top_posts"),
+        expect_numbers=(
+            e(REACH_CUR, label="reach this month"),
+            e(REACH_PREV, label="reach last month"),
+            e(S.change_pct(REACH_CUR, REACH_PREV), label="reach change"),
+        ),
+        expect_visual=("metric_comparison",),
+        expect_visual_numbers=(
+            e(REACH_CUR, label="reach this month"),
+            e(REACH_PREV, label="reach last month"),
+            e(S.change_pct(REACH_CUR, REACH_PREV), label="reach change"),
+        ),
+        area="visuals",
+    ),
+    Case(
+        "period-compare-views-hinglish",
+        "Is mahine ke views pichhle mahine se kitne badle?",
+        tools("compare_periods"),
+        expect_numbers=(
+            e(VIEWS_CUR, label="views this month"),
+            e(VIEWS_PREV, label="views last month"),
+        ),
+        expect_visual=("metric_comparison",),
+        expect_visual_numbers=(e(S.change_pct(VIEWS_CUR, VIEWS_PREV), label="views change"),),
+        lang="hinglish",
+        area="visuals",
+    ),
+    Case(
+        "period-compare-followers",
+        "Did my Instagram followers grow this month compared with last month?",
+        tools("compare_periods"),
+        expect_numbers=(e(FOLLOWERS_CUR, label="followers now"),),
+        expect_visual=("metric_comparison",),
+        expect_visual_numbers=(
+            e(FOLLOWERS_CUR, label="followers now"),
+            e(FOLLOWERS_PREV, label="followers before"),
+        ),
+        area="visuals",
+    ),
+    Case(
+        "period-compare-comments",
+        "Are people commenting more this month than last month?",
+        tools("compare_periods"),
+        expect_numbers=(e(COMMENTS_CUR, label="comments this month"),),
+        expect_visual=("metric_comparison",),
+        expect_visual_numbers=(
+            e(COMMENTS_CUR, label="comments this month"),
+            e(COMMENTS_PREV, label="comments last month"),
+        ),
+        area="visuals",
+    ),
+    Case(
+        "period-compare-no-insights",
+        "Compare the reach of maple.cakes this month with last month.",
+        tools("compare_periods"),
+        expect_text=(NO_INSIGHTS,),
+        expect_visual=("metric_comparison",),
+        area="visuals",
+    ),
+    Case(
+        "trend-reach-30",
+        "How has my Instagram reach moved over the last 30 days?",
+        tools("metric_trend"),
+        expect_numbers=(e(REACH_FIRST, label="first day"), e(REACH_LAST, label="last day")),
+        area="visuals",
+    ),
+    Case(
+        "visual-ranked-posts",
+        "Show my best posts by reach this month.",
+        tools("top_posts"),
+        expect_numbers=tuple(e(v, label=p.key) for p, v in TOP_REACH_TM),
+        expect_visual=("ranked_posts",),
+        expect_visual_numbers=tuple(e(v, label=p.key) for p, v in TOP_REACH_TM),
+        area="visuals",
+    ),
+    Case(
+        "visual-sentiment",
+        "What is the sentiment of my comments this month?",
+        tools("sentiment_distribution", "comment_topics"),
+        expect_visual=("sentiment_summary",),
+        expect_visual_numbers=(
+            e(SPLIT_TM.positive, label="positive"),
+            e(SPLIT_TM.negative, label="negative"),
+        ),
+        area="visuals",
+    ),
+    Case(
+        "visual-none-concept",
+        "What is a good engagement rate for a home bakery on Instagram?",
+        tools(),
+        no_visual=True,
+        area="visuals",
     ),
 )
 

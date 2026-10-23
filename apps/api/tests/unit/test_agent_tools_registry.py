@@ -30,6 +30,8 @@ READ = {
     "top_posts",
     "sentiment_distribution",
     "comment_topics",
+    "compare_periods",
+    "metric_trend",
     "list_scheduled_messages",
     "list_scheduled_posts",
     "list_automations",
@@ -40,6 +42,7 @@ READ = {
     "answer_from_knowledge",
     "list_knowledge_gaps",
     "list_webhook_endpoints",
+    "list_recent_failures",
 }
 DRAFT = {"draft_reply", "prepare_comment_reply", "prepare_scheduled_message", "prepare_automation"}
 ADMIN = {
@@ -53,6 +56,7 @@ ADMIN = {
     "answer_from_knowledge",
     "list_knowledge_gaps",
     "list_webhook_endpoints",
+    "list_recent_failures",
 }
 
 

@@ -6,7 +6,7 @@ from __future__ import annotations
 import secrets
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
@@ -216,7 +216,7 @@ def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object
                 "id": "sandbox_live_1" if live else "sandbox_media_1",
                 "media_product_type": "LIVE" if live else "FEED",
             },
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": (datetime.now(UTC) - timedelta(seconds=body.age_seconds or 0)).isoformat(),
         }
         entry: dict[str, object] = {
             "id": account_ref,
@@ -235,6 +235,31 @@ def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object
         if body.referral_source:
             message["referral"] = _sandbox_referral(body)
         item["message"] = message
+    elif body.kind in ("story_reply", "story_like"):
+        # reply_to.story names the story (url and id); a like is the heart sticker with no text.
+        story = {
+            "url": f"https://lookaside.fbsbx.com/ig_messaging_cdn/?asset_id={secrets.token_hex(6)}",
+            "id": body.story_id or f"{account_ref}_story_0",
+        }
+        message = {"mid": f"sandbox_mid_{secrets.token_hex(8)}", "reply_to": {"story": story}}
+        if body.kind == "story_like":
+            message["attachments"] = [{"type": "like_heart"}]
+        else:
+            message["text"] = body.text
+        item["message"] = message
+    elif body.kind == "story_mention":
+        item["message"] = {
+            "mid": f"sandbox_mid_{secrets.token_hex(8)}",
+            "attachments": [
+                {
+                    "type": "story_mention",
+                    "payload": {
+                        "url": "https://lookaside.fbsbx.com/ig_messaging_cdn/"
+                        f"?asset_id={secrets.token_hex(6)}"
+                    },
+                }
+            ],
+        }
     elif body.kind == "postback":
         item["postback"] = {
             "mid": f"sandbox_mid_{secrets.token_hex(8)}",
