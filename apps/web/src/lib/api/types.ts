@@ -263,6 +263,21 @@ export type CommentReplyPrefill = Schemas["CommentReplyPrefill"];
 export type AutomationDraftPrefill = Schemas["AutomationDraftPrefill"];
 
 /**
+ * A visual answer (GR-38): built by the API's tools from service numbers and listed in the run's
+ * `visuals`, in step order. A closed set: narrow on `kind`. Customer text in them (a caption, a
+ * topic) is text: render it as text.
+ */
+export type Visual = AgentRun["visuals"][number];
+export type VisualKind = Visual["kind"];
+export type MetricComparisonVisual = Schemas["MetricComparisonVisual"];
+export type RankedPostsVisual = Schemas["RankedPostsVisual"];
+export type SentimentSummaryVisual = Schemas["SentimentSummaryVisual"];
+export type MetricDelta = Schemas["MetricDelta"];
+export type RankedPostRow = Schemas["RankedPostRow"];
+export type VisualPeriod = Schemas["VisualPeriod"];
+export type VisualTopic = Schemas["VisualTopic"];
+
+/**
  * Real-time agent events aren't in the OpenAPI document; their fields are picks of AgentRun and
  * AgentStep (schemas/agent.py AgentRunEvent, AgentStepEvent). They carry ids, statuses and
  * plain-word steps only, never the request or the answer.
