@@ -73,6 +73,9 @@ class Settings(BaseSettings):
     app_env: AppEnv = AppEnv.LOCAL
     api_base_url: str | None = None
     web_base_url: str | None = None
+    # GR-15: the address tracked links (/l/<code>) are built on, if not the API's own, such as a
+    # short domain pointed at the API. Neither set: link buttons are sent as written.
+    link_base_url: str | None = None
     cors_allowed_origins: CommaList = Field(default_factory=list)
 
     database_url: str

@@ -118,6 +118,7 @@ export function toDefinition(automation: Automation): AutomationDefinition {
     story_heart: automation.story_heart ?? false,
     ad_ids: [...(automation.ad_ids ?? [])],
     comment_surface: automation.comment_surface ?? "posts",
+    hours_condition: automation.hours_condition ?? null,
     cooldown_hours: automation.cooldown_hours,
     starts_at: automation.starts_at ?? null,
     ends_at: automation.ends_at ?? null,
@@ -127,6 +128,7 @@ export function toDefinition(automation: Automation): AutomationDefinition {
     opening_button: automation.opening_button ?? null,
     follow_nudge: automation.follow_nudge,
     follow_nudge_text: automation.follow_nudge_text ?? null,
+    track_links: automation.track_links ?? true,
   };
 }
 
@@ -326,6 +328,7 @@ const FIELD_STEP: Record<string, StepId | "name"> = {
   follow_nudge: "then",
   follow_nudge_text: "then",
   cooldown_hours: "settings",
+  hours_condition: "settings",
   starts_at: "settings",
   ends_at: "settings",
   surge_order: "settings",

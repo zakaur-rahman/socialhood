@@ -28,6 +28,8 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "Connections",
       "AI rules and takeover",
       "Workspace",
+      "Saved replies",
+      "Business hours",
       "Notifications",
       "Billing and usage",
       "Integrations",
@@ -37,7 +39,15 @@ describe("Settings tabs (UX-SCR-07)", () => {
   });
 
   it("agents see their own Notifications, not Billing", () => {
-    expect(tabs("agent")).toEqual(["Connections", "AI rules and takeover", "Workspace", "Notifications", "Ask Social Hood"]);
+    expect(tabs("agent")).toEqual([
+      "Connections",
+      "AI rules and takeover",
+      "Workspace",
+      "Saved replies",
+      "Business hours",
+      "Notifications",
+      "Ask Social Hood",
+    ]);
     expect(screen.getByRole("link", { name: "Notifications" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Connections" })).not.toHaveAttribute("aria-current");
   });

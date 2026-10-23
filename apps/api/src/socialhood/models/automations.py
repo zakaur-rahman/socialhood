@@ -23,7 +23,7 @@ from sqlalchemy import text as sql
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from socialhood.db.base import Base, IdMixin, TimestampMixin
+from socialhood.db.base import Base, CreatedAtMixin, IdMixin, TimestampMixin
 from socialhood.db.tenancy import TenantScoped
 from socialhood.models.identity import _in
 
@@ -45,6 +45,11 @@ class Trigger(StrEnum):
     ICE_BREAKER = "ice_breaker"  # GR-11: someone tapped one of the account's conversation starters
     FIRST_MESSAGE = "first_message"  # GR-12: a contact's first DM to the account (a welcome)
     DEFAULT_REPLY = "default_reply"  # GR-12: a DM nothing else answered, while AI is off
+
+
+class HoursCondition(StrEnum):
+    INSIDE = "inside"  # GR-22: runs only while the account is open
+    OUTSIDE = "outside"  # GR-22: runs only while it is closed
 
 
 class MatchMode(StrEnum):
@@ -144,6 +149,8 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     # comments ignore post_scope; a Live-only automation keeps post_scope "all".
     comment_surface: Mapped[str] = mapped_column(Text, server_default=sql("'posts'"))
     cooldown_hours: Mapped[int] = mapped_column(SmallInteger, server_default=sql("24"))
+    # GR-22: run only inside or only outside the account's business hours (None: any time).
+    hours_condition: Mapped[str | None] = mapped_column(Text)
     # Tap first (FR-AUT-21, comment triggers): the private reply is this opening text with a
     # quick-reply button; the message above follows their tap or reply.
     confirm_first: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
@@ -160,6 +167,9 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     # GR-09, ad_click with post_scope "selected": the ids of the chosen ads, typed by hand (empty
     # means any ad). Listing the account's ads would need ads_read, which is not requested.
     ad_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
+    # GR-15: send link buttons through our tracked redirect (/l/<code>) so clicks show on the
+    # step's funnel. Off: the raw link.
+    track_links: Mapped[bool] = mapped_column(Boolean, server_default=sql("true"))
     # GR-06: also send Instagram's heart sticker to the story reply, ahead of the message.
     story_heart: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # GR-03: the automation_flows version it runs, when it was saved as a flow. None: its flow is
@@ -188,6 +198,10 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(_in("surge_order", SurgeOrder), name="surge_order"),
         CheckConstraint(_in("post_scope", PostScope), name="post_scope"),
         CheckConstraint(_in("comment_surface", CommentSurface), name="comment_surface"),
+        CheckConstraint(
+            f"hours_condition IS NULL OR {_in('hours_condition', HoursCondition)}",
+            name="hours_condition",
+        ),
         CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
         CheckConstraint("cooldown_hours BETWEEN 0 AND 72", name="cooldown_hours"),
         CheckConstraint("cardinality(public_reply_texts) <= 5", name="public_reply_texts"),
@@ -538,4 +552,53 @@ class IceBreaker(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint("position BETWEEN 0 AND 3", name="position"),
         CheckConstraint("char_length(question) BETWEEN 1 AND 80", name="question_length"),
         CheckConstraint("automation_id IS NULL OR NOT answer_with_ai", name="one_target"),
+    )
+
+
+class TrackedLink(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A link button sent through our redirect (GR-15): ``/l/<code>`` answers 302 to ``url``.
+
+    The code is an opaque random token (services/automations/links.py) mapped here, so the run,
+    step and contact are never in the URL. One row per run, step and button: a retried send finds
+    its link instead of making another. ``url`` is the author's https address, checked again when
+    the link is followed."""
+
+    __tablename__ = "tracked_links"
+
+    automation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("automations.id", ondelete="CASCADE")
+    )
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("automation_runs.id", ondelete="CASCADE"))
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"))
+    step_id: Mapped[str] = mapped_column(Text)
+    button_index: Mapped[int] = mapped_column(SmallInteger)
+    code: Mapped[str] = mapped_column(Text)
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("code"),
+        UniqueConstraint("run_id", "step_id", "button_index"),
+        Index("ix_tracked_links_automation_id", "automation_id"),
+        CheckConstraint("char_length(code) BETWEEN 16 AND 64", name="code_length"),
+    )
+
+
+class LinkClick(IdMixin, CreatedAtMixin, TenantScoped, Base):
+    """One counted click on a tracked link (GR-15). ``created_at`` is the click. Link previews
+    and bots are not stored (links.is_bot). The automation and step are copied from the link so
+    the funnel reads this table alone."""
+
+    __tablename__ = "link_clicks"
+
+    link_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tracked_links.id", ondelete="CASCADE"))
+    automation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("automations.id", ondelete="CASCADE")
+    )
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("automation_runs.id", ondelete="CASCADE"))
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"))
+    step_id: Mapped[str] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_link_clicks_automation_id_created_at", "automation_id", "created_at"),
     )

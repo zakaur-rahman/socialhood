@@ -189,6 +189,9 @@ class Conversation(IdMixin, TimestampMixin, TenantScoped, Base):
     needs_human_reason: Mapped[str | None] = mapped_column(Text)
     ai_mode_override: Mapped[str | None] = mapped_column(Text)
     ai_paused_until: Mapped[datetime | None] = mapped_column(AwareDateTime())
+    # GR-22: when the away message was last sent here; once per closed window
+    # (services/business_hours.closed_since).
+    away_sent_at: Mapped[datetime | None] = mapped_column(AwareDateTime())
     last_intent: Mapped[str | None] = mapped_column(Text)
     last_sentiment: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[str | None] = mapped_column(Text)

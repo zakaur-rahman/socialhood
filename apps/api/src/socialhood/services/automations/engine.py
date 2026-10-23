@@ -20,7 +20,10 @@ A flow run keeps its flow version (``flow_version``), the step it's at (``step_i
   - typed text answers the contact's newest run waiting on this account for a question, or for a
     message whose typed answers go somewhere (``on_text``);
   - a question's answer is checked (an email, a phone, or what its field takes) and saved; one that
-    doesn't fit gets the retry prompt until the tries run out, then the flow goes to ``on_skip``.
+    doesn't fit gets the retry prompt until the tries run out, then the flow goes to ``on_skip``
+    (capture.py: what a question checks, says and records). A question with ``consent`` then asks
+    a Yes or No marketing question and records the answer in contact_consents; the step stays
+    waiting (``phase`` in its log) until that is answered, then sends its confirmation.
   The answering message is marked ``automation_handled``: no keyword automation or AI reply runs
   on it.
 - **The continue job** (``resume``, ``run_automation("flow", run_id)``) runs steps until the next
@@ -91,7 +94,7 @@ from socialhood.schemas.flows import (
     TagCondition,
 )
 from socialhood.services import leads
-from socialhood.services.automations import actions, flows, render, results
+from socialhood.services.automations import actions, capture, flows, links, render, results
 from socialhood.services.webhooks import events as webhook_events
 
 log = get_logger(__name__)
@@ -99,11 +102,6 @@ log = get_logger(__name__)
 PAYLOAD_PREFIX = "shf:"  # a flow quick reply's payload: "shf:{run_id}:{step_id}:{option}"
 ANSWER_WINDOW = timedelta(days=7)  # as tap first (services/automations/answers)
 MAX_STEPS = 60  # steps one pass may run (a flow has at most 50)
-RETRY_COPY = {
-    "email": "That doesn't look like an email address. Could you send it again?",
-    "phone": "That doesn't look like a phone number. Could you send it with the country code?",
-    "text": "Sorry, I didn't catch that. Could you send it again?",
-}
 FLOW_SOURCE = "flow"  # contacts.email_source and phone_source for an answer to a question
 HAND_OFF_BODY = "An automation handed this conversation to you."
 NOTIFY_BODY = "An automation flagged this conversation."
@@ -312,6 +310,7 @@ async def _send(
     now: datetime,
     text: str | None = None,
     part: str | None = None,
+    quick_replies: tuple[OutboundQuickReply, ...] = (),
 ) -> Message | None:
     """A step's message (or its retry prompt) through the send pipeline; None when refused
     (the step is then logged failed)."""
@@ -320,6 +319,17 @@ async def _send(
     run = scene.run
     body = text if text is not None else _text(step, scene.contact, None, scene.disclosure)
     send_step = step if isinstance(step, SendStep) and text is None else None
+    buttons = _buttons(send_step.buttons, scene.acct.username) if send_step else ()
+    if buttons:  # GR-15: link buttons go through the tracked redirect
+        buttons = await links.track_buttons(
+            session,
+            deps.settings,
+            scene.automation,
+            run_id=run.id,
+            contact_id=scene.contact.id,
+            step_id=step.id,
+            buttons=buttons,
+        )
     try:
         msg = await sending.queue_outbound(
             session,
@@ -330,8 +340,8 @@ async def _send(
             attachment_asset_ids=(
                 [send_step.image_asset_id] if send_step and send_step.image_asset_id else ()
             ),
-            buttons=_buttons(send_step.buttons, scene.acct.username) if send_step else (),
-            quick_replies=_quick_replies(send_step, run.id) if send_step else (),
+            buttons=buttons,
+            quick_replies=_quick_replies(send_step, run.id) if send_step else quick_replies,
             automation_run_id=run.id,
             deps=deps,
             now=now,
@@ -347,6 +357,21 @@ async def _send(
         )
         return None
     return msg
+
+
+async def _saved_reply_text(session: AsyncSession, scene: Scene, step: SendStep) -> str | None:
+    """GR-21: a saved-reply step's message, read when the step runs (so an edited reply is what
+    goes) and filled for the contact, with the disclosure line. None when the reply was
+    deleted: the step is logged failed with a plain reason (shown in Activity)."""
+    from socialhood.services import saved_replies
+
+    assert step.saved_reply_id is not None
+    body = await saved_replies.flow_text(session, step.saved_reply_id, scene.contact)
+    if body is None:
+        code, reason = saved_replies.MISSING
+        await _log(session, scene.run, step, StepStatus.FAILED, error_code=code, error=reason)
+        return None
+    return render.with_disclosure(body, scene.disclosure)
 
 
 # ---------------------------------------------------------------- conditions and actions
@@ -522,7 +547,13 @@ async def _advance(
             return "done"
         match step:
             case SendStep() | AskStep():
-                msg = await _send(session, deps, scene, step, now=now)
+                text = None
+                if isinstance(step, SendStep) and step.saved_reply_id is not None:
+                    text = await _saved_reply_text(session, scene, step)
+                    if text is None:  # the reply was deleted: the step fails, the run stops
+                        run.flow_state = FlowState.DONE
+                        return "done"
+                msg = await _send(session, deps, scene, step, now=now, text=text)
                 if msg is None:
                     run.flow_state = FlowState.DONE
                     return "done"
@@ -784,7 +815,7 @@ def _check(step: AskStep, text: str, spec: flows.FieldSpec | None) -> object:
         return normalize_email(text)
     if step.expect == "phone":
         return normalize_phone(text)
-    return text
+    return capture.check_text(text)
 
 
 async def answer(
@@ -857,7 +888,10 @@ async def _take(
     if not isinstance(step, AskStep):
         return None, True
     row = await _step_row(session, run.id, step.id)
-    tries = int((row.detail or {}).get("tries", 0)) + 1 if row else 1
+    detail = (row.detail or {}) if row else {}
+    if detail.get("phase") == "consent":
+        return await _take_consent(session, deps, scene, step, msg, option, detail, now=now)
+    tries = int(detail.get("tries", 0)) + 1
     spec = None
     if step.field_key is not None:
         definition = await session.scalar(
@@ -870,9 +904,7 @@ async def _take(
         value = _check(step, msg.text or "", spec)
     except ValueError:
         if tries < step.tries:
-            retry = render.with_disclosure(
-                step.retry_text.strip() or RETRY_COPY[step.expect], scene.disclosure
-            )
+            retry = render.with_disclosure(capture.retry_text(step), scene.disclosure)
             await _send(
                 session, deps, scene, step, now=now, text=retry, part=f"{step.id}:retry{tries}"
             )
@@ -881,7 +913,6 @@ async def _take(
         await _log(session, run, step, StepStatus.DONE, tries=tries, skipped=True)
         return step.on_skip, True
     _save_answer(scene.contact, step, value)
-    await _log(session, run, step, StepStatus.DONE, tries=tries, answer=value)
     kind = "field" if step.field_key else step.expect
     await leads.on_capture(session, scene.contact, kind)  # a captured email qualifies (GR-18)
     await webhook_events.lead_captured(
@@ -894,6 +925,115 @@ async def _take(
         automation_name=scene.automation.name,
         run_id=run.id,
     )
+    if step.consent and capture.consent_channel(scene.acct.platform):
+        question = render.with_disclosure(capture.consent_text(step), scene.disclosure)
+        sent = await _send(
+            session,
+            deps,
+            scene,
+            step,
+            now=now,
+            text=question,
+            part=f"{step.id}:consent1",
+            quick_replies=_consent_replies(run.id, step.id),
+        )
+        if sent is not None:
+            await _log(
+                session,
+                run,
+                step,
+                StepStatus.WAITING,
+                tries=tries,
+                answer=value,
+                phase="consent",
+                consent_tries=1,
+                consent_message_id=str(sent.id),
+                consent_question=capture.consent_text(step),
+            )
+            return step.id, False
+    await _log(session, run, step, StepStatus.DONE, tries=tries, answer=value)
+    await _confirm(session, deps, scene, step, now=now)
+    return step.next, True
+
+
+def _consent_replies(run_id: uuid.UUID, step_id: str) -> tuple[OutboundQuickReply, ...]:
+    return (
+        OutboundQuickReply(title=capture.CONSENT_YES, payload=payload(run_id, step_id, 0)),
+        OutboundQuickReply(title=capture.CONSENT_NO, payload=payload(run_id, step_id, 1)),
+    )
+
+
+async def _confirm(
+    session: AsyncSession, deps: PlatformDeps, scene: Scene, step: AskStep, *, now: datetime
+) -> None:
+    """The step's confirmation, when it has one."""
+    if step.confirm_text.strip():
+        text = render.with_disclosure(step.confirm_text.strip(), scene.disclosure)
+        await _send(session, deps, scene, step, now=now, text=text, part=f"{step.id}:confirm")
+
+
+async def _take_consent(
+    session: AsyncSession,
+    deps: PlatformDeps,
+    scene: Scene,
+    step: AskStep,
+    msg: Message,
+    option: int | None,
+    detail: dict[str, object],
+    *,
+    now: datetime,
+) -> tuple[str | None, bool]:
+    """The answer to a step's consent question: recorded, or asked once more, then let go."""
+    run = scene.run
+    said = capture.consent_answer(msg.text, option)
+    asked = int(str(detail.get("consent_tries", 1)))
+    if said is None and asked < capture.CONSENT_TRIES:
+        again = render.with_disclosure(capture.CONSENT_AGAIN_COPY, scene.disclosure)
+        sent = await _send(
+            session,
+            deps,
+            scene,
+            step,
+            now=now,
+            text=again,
+            part=f"{step.id}:consent{asked + 1}",
+            quick_replies=_consent_replies(run.id, step.id),
+        )
+        await _log(
+            session,
+            run,
+            step,
+            StepStatus.WAITING,
+            consent_tries=asked + 1,
+            consent_message_id=str(sent.id) if sent else detail.get("consent_message_id"),
+        )
+        return step.id, False
+    recorded = False
+    if said is not None:
+        question = detail.get("consent_message_id")
+        recorded = await capture.record(
+            session,
+            scene.contact.id,
+            platform=scene.acct.platform,
+            granted=said,
+            question_message_id=uuid.UUID(str(question)) if question else None,
+            question_text=str(detail.get("consent_question") or capture.CONSENT_COPY),
+            answer_message_id=msg.id,
+            answer_text=msg.text,
+            run_id=run.id,
+            automation_id=scene.automation.id,
+            step_id=step.id,
+            at=now,
+        )
+    await _log(
+        session,
+        run,
+        step,
+        StepStatus.DONE,
+        phase="done",
+        consent=("granted" if said else "declined") if recorded else "none",
+    )
+    await _confirm(session, deps, scene, step, now=now)
     return step.next, True
 
 

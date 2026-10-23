@@ -86,6 +86,8 @@ export const keys = {
   flowTags: (wid: string) => ["w", wid, "flow-tags"] as const,
   flowFields: (wid: string) => ["w", wid, "flow-fields"] as const,
   entryLinks: (wid: string) => ["w", wid, "entry-links"] as const, // GR-08
+  savedReplies: (wid: string) => ["w", wid, "saved-replies"] as const, // GR-21
+  businessHours: (wid: string) => ["w", wid, "business-hours"] as const, // GR-22
   // stories and mentions (GR-06, GR-07)
   stories: (wid: string, accountId: string | null) => ["w", wid, "stories", accountId] as const,
   iceBreakers: (wid: string, accountId: string) => ["w", wid, "ice-breakers", accountId] as const,
@@ -93,6 +95,8 @@ export const keys = {
   automationRuns: (wid: string, id: string, result: RunResult | null) =>
     ["w", wid, "automation", id, "runs", result] as const,
   automationStats: (wid: string, id: string, days: 7 | 30) => ["w", wid, "automation", id, "stats", days] as const,
+  automationFunnel: (wid: string, id: string, days: 7 | 30 | 90) =>
+    ["w", wid, "automation", id, "funnel", days] as const,
   // posts: the automation post picker (P4) and the Comments grid (P6) share these lists
   postLists: (wid: string) => ["w", wid, "posts"] as const,
   posts: (wid: string, accountId: string | null, q: string, sort: PostSort = "recent") =>

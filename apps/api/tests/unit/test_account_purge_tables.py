@@ -26,6 +26,7 @@ EXPECTED = {
     "automation_run_steps",
     "automation_runs",
     "automations",
+    "business_hours",
     "comment_analyses",
     "comments",
     "contact_consents",
@@ -44,6 +45,8 @@ EXPECTED = {
     "scheduled_messages",
     "scheduled_post_targets",
     "story_mentions",
+    "tracked_links",
+    "link_clicks",
 }
 
 

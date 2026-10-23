@@ -12,6 +12,8 @@ import { formatCount, repliedShare } from "@/lib/automations/format";
 import { cn } from "@/lib/utils";
 import { EYEBROW, KPI } from "@/styles/tokens";
 
+import { FunnelPanel } from "./FunnelPanel";
+
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const CHART_HEIGHT = 80;
@@ -63,6 +65,7 @@ export function StatsPane({
       ) : (
         <StatsView stats={stats.data} tapFirst={tapFirst} followNudge={followNudge} />
       )}
+      <FunnelPanel wid={wid} automationId={automationId} days={days} />
     </div>
   );
 }

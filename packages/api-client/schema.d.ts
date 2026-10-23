@@ -756,6 +756,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/automations/{automation_id}/funnel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Automation Funnel
+         * @description Per step: reached, sent, delivered, read, taps, link clicks and captures, and each Split
+         *     step's results per path, for the last 7, 30 or 90 days (GR-15).
+         */
+        get: operations["get_automation_funnel"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/automations/{automation_id}/pause": {
         parameters: {
             query?: never;
@@ -963,6 +984,31 @@ export interface paths {
          *     Dodo has already ended the plan.
          */
         post: operations["resume_billing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/business-hours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Business Hours
+         * @description The workspace's schedule (in its time zone), and each account's own when it differs.
+         */
+        get: operations["get_business_hours"];
+        /**
+         * Update Business Hours
+         * @description Replace the workspace's schedule. 422 names each field: an overlapping range, a closing
+         *     time before the opening one, an away message left empty, hours switched on with no range.
+         */
+        put: operations["update_business_hours"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2218,6 +2264,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/saved-replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Saved Replies
+         * @description Every saved reply by shortcut, with the workspace's limit.
+         */
+        get: operations["list_saved_replies"];
+        put?: never;
+        /**
+         * Create Saved Reply
+         * @description 409 when another reply has the shortcut; 422 names the field that doesn't fit.
+         */
+        post: operations["create_saved_reply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/saved-replies/{reply_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Saved Reply
+         * @description A flow step that sends this reply then fails with a plain reason in Activity.
+         */
+        delete: operations["delete_saved_reply"];
+        options?: never;
+        head?: never;
+        /** Update Saved Reply */
+        patch: operations["update_saved_reply"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/saved-replies/{reply_id}/fill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fill Saved Reply
+         * @description The reply with the conversation's contact filled in. Unknown fields are empty and no
+         *     ``{braces}`` are left; 404 for a reply or conversation of another workspace.
+         */
+        post: operations["fill_saved_reply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/scheduled-messages": {
         parameters: {
             query?: never;
@@ -2585,6 +2697,31 @@ export interface paths {
         head?: never;
         /** Update Social Account */
         patch: operations["update_social_account"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/{account_id}/business-hours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Account Hours
+         * @description Give the account its own schedule, which replaces the workspace's for it. Switched off, it
+         *     has no hours and is always open.
+         */
+        put: operations["update_account_hours"];
+        post?: never;
+        /**
+         * Delete Account Hours
+         * @description The account goes back to the workspace's schedule.
+         */
+        delete: operations["delete_account_hours"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers": {
@@ -2988,6 +3125,25 @@ export interface components {
             status: "needs_reconnect" | "error";
             /** Username */
             username: string | null;
+        };
+        /**
+         * AccountBusinessHours
+         * @description An account and its own schedule, when it has one (``override``); otherwise the
+         *     workspace's applies.
+         */
+        AccountBusinessHours: {
+            /** Display Name */
+            display_name?: string | null;
+            override?: components["schemas"]["BusinessHours"] | null;
+            /** Platform */
+            platform: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Username */
+            username?: string | null;
         };
         /**
          * AccountMetricFigure
@@ -3724,9 +3880,30 @@ export interface components {
          * AskStep
          * @description A question whose answer is checked and saved: free text to a custom field, an email or a
          *     phone to the contact (or a custom field of that type). An answer that doesn't fit gets
-         *     ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip``.
+         *     ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip`` (GR-14: the editor
+         *     makes that the same step as ``next`` unless the author picks another).
+         *
+         *     ``consent`` adds a marketing question once the answer is saved: Yes or No quick replies (or
+         *     those words typed), recorded in contact_consents with the messages as evidence.
+         *     ``confirm_text`` is sent after the answer is saved (and the consent answered); blank sends
+         *     nothing. Blank ``retry_text`` and ``consent_text`` use the default copy in engine.py.
          */
         AskStep: {
+            /**
+             * Confirm Text
+             * @default
+             */
+            confirm_text: string;
+            /**
+             * Consent
+             * @default false
+             */
+            consent: boolean;
+            /**
+             * Consent Text
+             * @default
+             */
+            consent_text: string;
             /**
              * Expect
              * @default text
@@ -3834,6 +4011,8 @@ export interface components {
             follow_nudge: boolean;
             /** Follow Nudge Text */
             follow_nudge_text?: string | null;
+            /** Hours Condition */
+            hours_condition?: ("inside" | "outside") | null;
             /**
              * Id
              * Format: uuid
@@ -3904,6 +4083,11 @@ export interface components {
             surge_order: "oldest_first" | "newest_first" | "public_only";
             /** Template Key */
             template_key?: string | null;
+            /**
+             * Track Links
+             * @default true
+             */
+            track_links: boolean;
             /** Trigger */
             trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
             /**
@@ -3961,6 +4145,8 @@ export interface components {
             follow_nudge: boolean;
             /** Follow Nudge Text */
             follow_nudge_text?: string | null;
+            /** Hours Condition */
+            hours_condition?: ("inside" | "outside") | null;
             /** Keywords */
             keywords?: string[];
             /**
@@ -4010,6 +4196,8 @@ export interface components {
              * @enum {string}
              */
             surge_order: "oldest_first" | "newest_first" | "public_only";
+            /** Track Links */
+            track_links?: boolean | null;
             /** Trigger */
             trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
         };
@@ -4060,6 +4248,22 @@ export interface components {
             template_key?: string | null;
             /** Trigger */
             trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
+        };
+        /** AutomationFunnel */
+        AutomationFunnel: {
+            /**
+             * Days
+             * @enum {integer}
+             */
+            days: 7 | 30 | 90;
+            /** Links Tracked */
+            links_tracked: boolean;
+            /** Runs */
+            runs: number;
+            /** Splits */
+            splits: components["schemas"]["SplitResult"][];
+            /** Steps */
+            steps: components["schemas"]["FunnelStep"][];
         };
         /** AutomationList */
         AutomationList: {
@@ -4423,6 +4627,65 @@ export interface components {
             filter?: components["schemas"]["ContactFilterSpec"] | null;
             /** Remove */
             remove?: string[];
+        };
+        /**
+         * BusinessHours
+         * @description A schedule with all seven days (a closed day has no ranges). ``configured`` is false until
+         *     one was saved. ``open_now`` is null while it is off.
+         */
+        BusinessHours: {
+            /**
+             * Auto Mode
+             * @enum {string}
+             */
+            auto_mode: "always" | "out_of_hours";
+            /** Away Enabled */
+            away_enabled: boolean;
+            /** Away Message */
+            away_message?: string | null;
+            /** Configured */
+            configured: boolean;
+            /** Days */
+            days: components["schemas"]["DaySchedule"][];
+            /** Enabled */
+            enabled: boolean;
+            /** Open Now */
+            open_now?: boolean | null;
+            /** Social Account Id */
+            social_account_id?: string | null;
+        };
+        /** BusinessHoursOverview */
+        BusinessHoursOverview: {
+            /** Accounts */
+            accounts: components["schemas"]["AccountBusinessHours"][];
+            /** Timezone */
+            timezone: string;
+            workspace: components["schemas"]["BusinessHours"];
+        };
+        /**
+         * BusinessHoursUpdate
+         * @description The whole schedule. ``enabled`` with no ranges is refused. ``away_message`` is sent once
+         *     per closed window when ``away_enabled`` (it may use ``{first_name}`` like a saved reply).
+         *     ``auto_mode``: Auto mode answers always (today's behaviour) or only while closed.
+         */
+        BusinessHoursUpdate: {
+            /**
+             * Auto Mode
+             * @default always
+             * @enum {string}
+             */
+            auto_mode: "always" | "out_of_hours";
+            /**
+             * Away Enabled
+             * @default false
+             */
+            away_enabled: boolean;
+            /** Away Message */
+            away_message?: string | null;
+            /** Days */
+            days?: components["schemas"]["DaySchedule"][];
+            /** Enabled */
+            enabled: boolean;
         };
         /**
          * Calendar
@@ -5384,6 +5647,17 @@ export interface components {
             status: "received" | "processing" | "completed" | "failed";
         };
         /**
+         * DaySchedule
+         * @description ``day`` is 0 (Monday) to 6 (Sunday). No ranges: closed all day. Ranges don't overlap; a
+         *     range doesn't cross midnight (open late: end at 24:00, then start the next day at 00:00).
+         */
+        DaySchedule: {
+            /** Day */
+            day: number;
+            /** Ranges */
+            ranges: components["schemas"]["TimeRange"][];
+        };
+        /**
          * DaySpan
          * @description Calendar days in the workspace's zone, both included.
          */
@@ -5720,6 +5994,58 @@ export interface components {
              * @enum {string}
              */
             kind: "follows_business";
+        };
+        /**
+         * FunnelStep
+         * @description What happened at one step over the period, from the runs that reached it.
+         *
+         *     ``delivered`` and ``read`` are what the platform reported for the step's message (a read
+         *     receipt only where the platform sends one); ``taps`` are quick replies tapped at a message;
+         *     ``link_clicks`` are counted clicks on its tracked link buttons, ``link_clickers`` the people;
+         *     ``captures`` are answers a question saved, ``skipped`` the ones that never fitted, and
+         *     ``consents`` the marketing "yes" answers.
+         */
+        FunnelStep: {
+            /** Captures */
+            captures: number;
+            /** Consents */
+            consents: number;
+            /** Delivered */
+            delivered: number;
+            /** Failed */
+            failed: number;
+            /** Kind */
+            kind: string;
+            /**
+             * Link Buttons
+             * @default 0
+             */
+            link_buttons: number;
+            /** Link Clickers */
+            link_clickers: number;
+            /** Link Clicks */
+            link_clicks: number;
+            /**
+             * Quick Replies
+             * @default 0
+             */
+            quick_replies: number;
+            /** Reached */
+            reached: number;
+            /** Read */
+            read: number;
+            /** Sent */
+            sent: number;
+            /** Skipped */
+            skipped: number;
+            /** Step Id */
+            step_id: string;
+            /** Taps */
+            taps: number;
+            /** Text */
+            text?: string | null;
+            /** Title */
+            title: string;
         };
         /**
          * HandOff
@@ -7523,6 +7849,76 @@ export interface components {
             /** Stored */
             stored: number;
         };
+        /** SavedReply */
+        SavedReply: {
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Shortcut */
+            shortcut: string;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * SavedReplyCreate
+         * @description The shortcut is what follows ``/`` in the composer: lower case letters, digits, ``-`` and
+         *     ``_``, unique in the workspace. The body may use ``{first_name}``, ``{username}``, ``{name}``,
+         *     ``{email}``, ``{phone}`` and a custom field's key; ``{first_name|there}`` names a fallback.
+         */
+        SavedReplyCreate: {
+            /** Body */
+            body: string;
+            /** Shortcut */
+            shortcut: string;
+            /** Title */
+            title: string;
+        };
+        /**
+         * SavedReplyFill
+         * @description The conversation whose contact the reply is filled for.
+         */
+        SavedReplyFill: {
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+        };
+        /** SavedReplyFilled */
+        SavedReplyFilled: {
+            /** Text */
+            text: string;
+        };
+        /** SavedReplyList */
+        SavedReplyList: {
+            /** Items */
+            items: components["schemas"]["SavedReply"][];
+            /** Max Items */
+            max_items: number;
+        };
+        /** SavedReplyUpdate */
+        SavedReplyUpdate: {
+            /** Body */
+            body?: string | null;
+            /** Shortcut */
+            shortcut?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** ScheduleMessageAction */
         ScheduleMessageAction: {
             /**
@@ -7848,6 +8244,10 @@ export interface components {
          * SendStep
          * @description A message. With quick replies the flow waits for an answer: a tap goes to that option's
          *     step, anything typed to ``on_text`` (quick replies don't show on desktop).
+         *
+         *     With ``saved_reply_id`` (GR-21) the text is that saved reply's body, read and filled for the
+         *     contact when the step runs, and ``text`` is ignored. A saved reply goes alone: no image,
+         *     buttons or quick replies. A deleted reply fails the step.
          */
         SendStep: {
             /** Buttons */
@@ -7862,6 +8262,8 @@ export interface components {
             on_text?: string | null;
             /** Quick Replies */
             quick_replies?: components["schemas"]["QuickReply"][];
+            /** Saved Reply Id */
+            saved_reply_id?: string | null;
             /**
              * Text
              * @default
@@ -8068,6 +8470,30 @@ export interface components {
             /** Display Name */
             display_name?: string | null;
         };
+        /**
+         * SplitBranch
+         * @description One path of a Split step: the runs that took it, and what happened on the steps after it.
+         */
+        SplitBranch: {
+            /** Captures */
+            captures: number;
+            /** Delivered */
+            delivered: number;
+            /** Label */
+            label: string;
+            /** Link Clicks */
+            link_clicks: number;
+            /** Path */
+            path: number;
+            /** Read */
+            read: number;
+            /** Runs */
+            runs: number;
+            /** Taps */
+            taps: number;
+            /** Weight */
+            weight: number;
+        };
         /** SplitPath */
         SplitPath: {
             /** Next */
@@ -8077,6 +8503,13 @@ export interface components {
              * @default 1
              */
             weight: number;
+        };
+        /** SplitResult */
+        SplitResult: {
+            /** Branches */
+            branches: components["schemas"]["SplitBranch"][];
+            /** Step Id */
+            step_id: string;
         };
         /**
          * StepVerification
@@ -8307,6 +8740,16 @@ export interface components {
             name: string;
             /** Params */
             params?: string[];
+        };
+        /**
+         * TimeRange
+         * @description Open from ``start`` until ``end`` (the end itself is closed), 24-hour clock.
+         */
+        TimeRange: {
+            /** End */
+            end: string;
+            /** Start */
+            start: string;
         };
         /** TimelineItem */
         TimelineItem: {
@@ -10653,6 +11096,49 @@ export interface operations {
             };
         };
     };
+    get_automation_funnel: {
+        parameters: {
+            query?: {
+                days?: 7 | 30 | 90;
+            };
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationFunnel"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     pause_automation: {
         parameters: {
             query?: never;
@@ -11052,6 +11538,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BillingState"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_business_hours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusinessHoursOverview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_business_hours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BusinessHoursUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusinessHours"];
                 };
             };
             /** @description Validation error */
@@ -14399,6 +14969,219 @@ export interface operations {
             };
         };
     };
+    list_saved_replies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedReplyList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_saved_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedReplyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedReply"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_saved_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reply_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_saved_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reply_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedReplyUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedReply"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    fill_saved_reply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reply_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavedReplyFill"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedReplyFilled"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_scheduled_messages: {
         parameters: {
             query?: {
@@ -15272,6 +16055,90 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
                 };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_account_hours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BusinessHoursUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BusinessHours"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_account_hours: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation error */
             422: {

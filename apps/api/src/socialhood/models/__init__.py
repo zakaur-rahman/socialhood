@@ -15,6 +15,7 @@ from socialhood.models import (
     notifications,
     platform,
     publishing,
+    replies,
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "notifications",
     "platform",
     "publishing",
+    "replies",
 ]

@@ -73,6 +73,11 @@ export type AutomationTemplateList = Schemas["AutomationTemplateList"];
 export type AutomationRun = Schemas["AutomationRun"];
 export type AutomationRunList = Schemas["AutomationRunList"];
 export type AutomationStats = Schemas["AutomationStats"];
+// GR-15: the per-step funnel and a Split's results
+export type AutomationFunnel = Schemas["AutomationFunnel"];
+export type FunnelStep = Schemas["FunnelStep"];
+export type SplitResult = Schemas["SplitResult"];
+export type SplitBranch = Schemas["SplitBranch"];
 export type AutomationTest = Schemas["AutomationTest"];
 export type AutomationTestResult = Schemas["AutomationTestResult"];
 export type OverlapWarning = Schemas["OverlapWarning"];
@@ -102,6 +107,20 @@ export type IceBreakerList = Schemas["IceBreakerList"];
 export type IceBreakersUpdate = Schemas["IceBreakersUpdate"];
 export type StoryMention = Schemas["StoryMention"];
 export type StoryMentionList = Schemas["StoryMentionList"];
+// GR-21: saved replies (snippets typed after / in the composer).
+export type SavedReply = Schemas["SavedReply"];
+export type SavedReplyList = Schemas["SavedReplyList"];
+export type SavedReplyCreate = Schemas["SavedReplyCreate"];
+export type SavedReplyUpdate = Schemas["SavedReplyUpdate"];
+export type SavedReplyFilled = Schemas["SavedReplyFilled"];
+// GR-22: business hours and the away message.
+export type BusinessHours = Schemas["BusinessHours"];
+export type BusinessHoursUpdate = Schemas["BusinessHoursUpdate"];
+export type BusinessHoursOverview = Schemas["BusinessHoursOverview"];
+export type AccountBusinessHours = Schemas["AccountBusinessHours"];
+export type DaySchedule = Schemas["DaySchedule"];
+export type TimeRange = Schemas["TimeRange"];
+export type AutoModeName = BusinessHours["auto_mode"];
 // GR-08: entry links (ig.me links with QR codes).
 export type EntryLink = Schemas["EntryLink"];
 export type EntryLinkList = Schemas["EntryLinkList"];

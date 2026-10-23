@@ -99,6 +99,15 @@ COPY = {
     "field_type": "This field can't hold that kind of answer. Choose a field of the same type.",
     "tag_missing": "That tag doesn't exist any more. Choose another.",
     "value_missing": "Write the value to compare with.",
+    "saved_reply_missing": "That saved reply doesn't exist any more. Choose another.",
+    "saved_reply_alone": (
+        "A saved reply goes on its own. Remove the image, buttons and quick replies, or write "
+        "the message here instead."
+    ),
+    "comment_saved_reply": (
+        "A comment's first message is written here, not a saved reply. Start with a message "
+        "step, then use the saved reply."
+    ),
 }
 
 
@@ -284,6 +293,9 @@ class Context:
     disclosure: str | None
     fields: Mapping[str, FieldSpec] = field(default_factory=dict)  # custom fields by key
     tag_ids: frozenset[uuid.UUID] = frozenset()
+    # GR-21: the workspace's saved replies, id to body (their length is checked now; a body
+    # edited later is checked by the send).
+    saved_replies: Mapping[uuid.UUID, str] = field(default_factory=dict)
 
     @property
     def comment(self) -> bool:
@@ -305,6 +317,8 @@ def activation_errors(definition: FlowDefinition, ctx: Context) -> list[FieldErr
     start = g.by_id[definition.start]
     if ctx.comment and not isinstance(start, SendStep | AskStep | AiReplyStep):
         errors.append(FieldError("flow.start", COPY["comment_start"]))
+    elif ctx.comment and isinstance(start, SendStep) and start.saved_reply_id is not None:
+        errors.append(FieldError("flow.start", COPY["comment_saved_reply"]))
     found = _path_errors(g, ctx)
     errors += [
         FieldError(path(g.index[s]), found[s]) for s in sorted(found, key=lambda s: g.index[s])
@@ -347,7 +361,19 @@ def _text_errors(where: str, text: str, ctx: Context, *, buttons: bool) -> list[
     return errors
 
 
+def _saved_reply_errors(i: int, step: SendStep, ctx: Context) -> list[FieldError]:
+    body = ctx.saved_replies.get(step.saved_reply_id) if step.saved_reply_id else None
+    if body is None:
+        return [FieldError(path(i, "saved_reply_id"), COPY["saved_reply_missing"])]
+    errors = _text_errors(path(i, "saved_reply_id"), body, ctx, buttons=False)
+    if step.buttons or step.quick_replies or step.image_asset_id is not None:
+        errors.append(FieldError(path(i, "saved_reply_id"), COPY["saved_reply_alone"]))
+    return errors
+
+
 def _send_errors(i: int, step: SendStep, ctx: Context) -> list[FieldError]:
+    if step.saved_reply_id is not None:
+        return _saved_reply_errors(i, step, ctx)
     errors: list[FieldError] = []
     if not step.text.strip():
         errors.append(FieldError(path(i, "text"), COPY["text_missing"]))
@@ -381,6 +407,10 @@ def _ask_errors(i: int, step: AskStep, ctx: Context) -> list[FieldError]:
         errors.append(FieldError(path(i, "text"), COPY["question_missing"]))
     else:
         errors += _text_errors(path(i, "text"), step.text, ctx, buttons=False)
+    for part in ("retry_text", "consent_text", "confirm_text"):
+        extra = getattr(step, part)
+        if extra.strip():
+            errors += _text_errors(path(i, part), extra, ctx, buttons=False)
     where = path(i, "field_key")
     if step.field_key is None:
         if step.expect == "text":
@@ -562,7 +592,11 @@ def describe(definition: FlowDefinition) -> list[str]:
         step = g.by_id[step_id]
         match step:
             case SendStep():
-                line = f"send “{_excerpt(step.text)}”"
+                line = (
+                    "send a saved reply"
+                    if step.saved_reply_id is not None
+                    else f"send “{_excerpt(step.text)}”"
+                )
                 if step.quick_replies:
                     line += " with quick replies " + ", ".join(q.title for q in step.quick_replies)
                 if step.buttons:

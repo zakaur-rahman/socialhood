@@ -243,7 +243,7 @@ describe("the flow editor (GR-13)", () => {
   it("an Ask step saves to a field of the right type, and says when none is chosen", async () => {
     const user = userEvent.setup();
     renderEditor({
-      initial: [{ kind: "ask", id: "q", text: "Where are you?", expect: "text", field_key: null, retry_text: "", tries: 2, skip: [] }],
+      initial: [{ kind: "ask", id: "q", text: "Where are you?", expect: "text", field_key: null, retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "", skip: [] }],
     });
     const save = screen.getByRole("combobox", { name: "Save the answer to" });
     // Text answers go to a text field: the email field isn't offered.
@@ -325,6 +325,28 @@ describe("the flow editor (GR-13)", () => {
     expect(within(first).queryByRole("button", { name: "Add an image" })).toBeNull();
     expect(within(first).getByText(/text and link buttons/)).toBeInTheDocument();
     expect(within(second).getByRole("button", { name: "Add an image" })).toBeInTheDocument();
+  });
+
+  it("an Ask step offers the retry prompt, a confirmation and a marketing consent question", async () => {
+    const user = userEvent.setup();
+    renderEditor({
+      initial: [{ kind: "ask", id: "q", text: "Your email?", expect: "email", field_key: null, retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "", skip: [] }],
+    });
+    // The retry prompt shows the default copy for the kind of answer.
+    expect(screen.getByPlaceholderText("That doesn't look like an email address. Could you send it again?")).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "They answer with" }), "phone");
+    expect(screen.getByPlaceholderText(/look like a phone number/)).toBeInTheDocument();
+    await user.selectOptions(screen.getByRole("combobox", { name: "Tries" }), "3");
+    expect(screen.getByRole("combobox", { name: "Tries" })).toHaveValue("3");
+
+    expect(screen.queryByRole("textbox", { name: "Consent question" })).toBeNull();
+    await user.click(screen.getByRole("switch", { name: "Ask for marketing consent" }));
+    const consent = screen.getByRole("textbox", { name: "Consent question" });
+    expect(consent).toHaveAttribute("placeholder", expect.stringContaining("Can we message you"));
+    await user.type(consent, "Want offers?");
+    expect(consent).toHaveValue("Want offers?");
+    await user.type(screen.getByRole("textbox", { name: "Then confirm with (optional)" }), "Thanks!");
+    expect(screen.getByRole("textbox", { name: "Then confirm with (optional)" })).toHaveValue("Thanks!");
   });
 
   it("asks before going back to one message", async () => {

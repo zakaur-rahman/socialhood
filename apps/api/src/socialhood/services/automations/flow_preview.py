@@ -57,7 +57,7 @@ def _delay_title(seconds: int) -> str:
     return f"Wait {minutes} minute{'' if minutes == 1 else 's'}"
 
 
-def _title(step: Step, tag_names: Mapping[uuid.UUID, str]) -> str:
+def title(step: Step, tag_names: Mapping[uuid.UUID, str]) -> str:
     match step:
         case SendStep():
             return "Message"
@@ -112,7 +112,7 @@ def preview(
             FlowPreviewStep(
                 step_id=step.id,
                 kind=step.type,
-                title=_title(step, names),
+                title=title(step, names),
                 text=text,
                 buttons=[b.title for b in step.buttons] if isinstance(step, SendStep) else [],
                 quick_replies=(

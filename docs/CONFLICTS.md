@@ -2386,3 +2386,199 @@ took C-092.)
   `ContactListItem` and `ContactRecord`, `stages` on the filter models, `lead_stage` in
   `TimelineKind`, `lead.stage_changed` in the event names); the web types are aliases waiting for it.
   The hand-written web fixtures for the contact list item and record carry the new fields.
+
+## C-093 · Saved replies (GR-21, feature/gr-21-22-replies-hours)
+
+- **A table of snippets.** `saved_replies`: title (1 to 60), shortcut, body (1 to 1,000 characters,
+  the length of an Instagram DM). The shortcut is lower case letters, digits, `-` and `_` (up to 30),
+  unique per workspace; a typed `/Price` is stored and found as `price`. A workspace keeps up to 200.
+- **Who:** any member reads and uses them (agents work the inbox); owners and admins create, change
+  and delete (the plan said "agents read and use; admins and owners manage").
+- **API:** `GET/POST /saved-replies`, `PATCH/DELETE /saved-replies/{id}`, and `POST
+  /saved-replies/{id}/fill` with a `conversation_id`, which gives the text filled for that
+  conversation's contact. A duplicate shortcut is 409 `conflict`; a bad one is 422 on `shortcut`.
+  Another workspace's reply or conversation is 404.
+- **One filler, three users** (`services/saved_replies.fill`): the composer's fill route, a flow's send
+  step and the GR-22 away message all read a body the same way.
+  - Variables: `{first_name}`, `{name}`, `{username}`, `{email}`, `{phone}` and the key of any custom
+    field (`{city}`). `{first_name|there}` names a fallback, as in automations.
+  - A field with no value, or one that does not exist, is empty; no `{braces}` are left. `{first_name}`
+    with no name falls back to "there", as automations do. A custom field cannot shadow a built-in.
+  - *Deviation from "reuse any existing template-variable code":* `automations/render` only knows
+    `first_name` and `username` and a 40-character fallback; the saved-reply filler reuses its
+    `first_name_of` and fallback word and adds the other fields, rather than widening what every
+    automation message can say.
+- **Composer:** typing `/` after the start of the draft, a line or a space opens a listbox of matching
+  replies (exact shortcut first, then shortcuts that start with it, then title or shortcut contains);
+  arrow keys move, Enter or Tab or a click inserts the filled reply in place of the `/word`, Esc
+  closes. Nothing opens for a slash inside a link or a word. The list is fetched only once a slash is
+  typed. *Deviation: a new inline `SavedReplyPicker` rather than extending the `TemplatePicker` dialog
+  (that one is a dialog for WhatsApp templates with variables; a `/` picker has to stay under the
+  caret).*
+- **In flows:** a `send` step may name a saved reply (`saved_reply_id`). The step reads the reply's
+  current body when it runs and fills it for the contact (so an edit reaches flows already saved), with
+  the disclosure line.
+  - A saved-reply step goes alone: no image, buttons or quick replies (activation error).
+  - A comment flow cannot start with one (the first message is the private reply, built before the
+    run); it can use one later.
+  - A reply deleted after activation fails the step: the run ends with the code `saved_reply_missing`
+    and the reason "The saved reply this step sends was deleted. Choose another." Activity shows it
+    with "Edit the automation". A flow naming a deleted reply cannot be activated.
+  - **For the flow editor (GR-13):** the `send` step option is `saved_reply_id` (a uuid) instead of
+    `text`; the editor needs a picker of `GET /saved-replies` and should hide text, image, buttons and
+    quick replies while it is set. The server schema and runtime are done; no editor UI was touched.
+- **Web:** Settings has a "Saved replies" tab (everyone sees it; owners and admins get the add, edit
+  and delete controls).
+- **Migration 0028** (shared with C-094; parent 0025 until re-chained): `saved_replies` and
+  `uq_saved_replies_workspace_id_shortcut`.
+
+## C-094 · Business hours and away messages (GR-22, feature/gr-21-22-replies-hours)
+
+- **Where the hours live.** `business_hours`: one row for the workspace (`social_account_id` null)
+  and optionally one per account that replaces it. Each has `enabled`, the weekly `schedule`, the away
+  message (`away_enabled`, `away_message`) and `auto_mode`. An account row with `enabled` off means
+  "this account has no hours", so it is always open. No row, or a row that is off, means always open:
+  nothing changes for anyone who does not set hours.
+- **The week:** Monday is 0. Each day has any number of ranges ("09:00" to "17:00"; the closing time may
+  be "24:00"); a day with none is closed. Times are wall-clock in the workspace time zone
+  (`workspaces.timezone`), so 09:00 stays 09:00 across a daylight saving change. A range includes its
+  start and not its end. Ranges cannot overlap on a day (touching is fine) or cross midnight (open
+  until 02:00 is 18:00 to 24:00, then 00:00 to 02:00 the next day, and the two count as one stretch).
+  Hours switched on need at least one range.
+- **`is_open(hours, at)`** is pure and unit-tested at the edges: the opening minute, the closing
+  minute, midnight, a zone ahead of UTC, daylight saving. `closed_since(hours, at)` is when the current
+  closed window began (touching ranges merged), used for the once-per-window rule.
+- **Order (decision, as recommended):** a waiting answer (flow question, tap first) goes first, then
+  automations (keyword and any-reply, then the welcome and default reply of C-088), then the away
+  message if none answered, then nothing else.
+  - "None answered" is a DM with no match, or one whose matches were all skipped (cooldown, scope).
+  - Never on a story mention, a story like, a button, quick reply or conversation starter tap, or a
+    comment.
+  - **Auto mode and the away message (decision, easy to change):** a conversation whose effective AI
+    mode is Auto (and not paused for a takeover) gets no away message, because the AI answers or
+    escalates it; any other mode gets it. The message does not mark the customer's message handled, so
+    suggestions for a person still appear.
+- **Once per closed window:** `conversations.away_sent_at` is compared with `closed_since`: sent when
+  it is empty or older than the window's start. A second message the same night, or the next morning
+  before opening, gets nothing; the next night is a new window. The send uses a client id made from the
+  customer's message, so a retried job sends nothing twice, and the conversation is locked while it is
+  checked.
+- **Auto mode's hours (`auto_mode`):** `always` is today's behaviour. `out_of_hours` makes check 1 of
+  the auto-reply policy fail (`skipped`, `mode_not_auto`, value "auto, open hours") while the account
+  is open, so the suggestion waits for a person. *Kept in the existing check, not a 14th check, so
+  the 13 checks and every stored decision keep their numbers.* The setting is on the hours row (the
+  workspace's, or the account's own), not on the account's AI mode.
+- **Automations:** `automations.hours_condition` is `inside`, `outside` or null. An automation whose
+  condition does not hold passes over the message or comment, like a scope mismatch. It works for
+  message-settings automations and flows (it is checked before either runs) and for comment
+  triggers. An account with no hours is always inside, so an `outside` automation never runs there.
+  Web: a three-way control in the existing Settings step ("Any time", "Inside business hours",
+  "Outside business hours"), and the settings summary says it.
+- **API:** `GET /business-hours` (workspace schedule, time zone, each account's override, `open_now`),
+  `PUT /business-hours` (owners and admins), `PUT` and `DELETE /social-accounts/{id}/business-hours`
+  (an account's own schedule; delete returns it to the workspace's). 422 names the field
+  (`days.2.ranges.1.start`, `away_message`, `days`). Agents read.
+- **Ingest:** a new DM wakes the automation runtime when an away message could apply, even if the
+  account has no active automation (`business_hours.away_possible`).
+- **Web:** Settings has a "Business hours" tab: a switch, a week of ranges (add, remove, several per
+  day), the away message and Auto mode's hours; one card per account with "Set its own hours" and "Use
+  the workspace hours". A time input cannot show 24:00, so a closing time of 00:00 is saved as
+  midnight. The rows wrap at 375 px.
+- **Migration 0028:** `business_hours` (with `uq_business_hours_workspace_id_social_account_id` and a
+  partial unique index for the workspace's own row), `conversations.away_sent_at`,
+  `automations.hours_condition`. Expand-only; the account purge and workspace deletion pick the table
+  up from the schema.
+- **Not built:** holidays or one-off closures, an away message per language, and an away message for
+  comments (a public comment is not a conversation). All fit the same table later.
+
+## C-095 · Data capture and consent (GR-14, feature/gr-14-15-capture-clicks)
+GR-03's Ask step already checked an email or phone, retried, skipped and raised `lead.captured`
+(C-079, C-080). GR-14 finishes it: the free-text cap, the consent question, a confirmation, default
+copy and the editor's options. No migration, no new route.
+- **Answers** (`services/automations/capture.py`):
+  - An email is trimmed and lower-cased whole (GR-02's rule). A phone is E.164, a ten-digit Indian
+    mobile taken as +91. *The `phonenumbers` library is not a dependency, so the small normaliser
+    stays (+country code of 8 to 15 digits, Indian mobiles); other national formats without a
+    country code are asked again. Adding the library later is a one-function change.*
+  - Free text is trimmed and capped at 500 characters (the custom field text cap). Over the cap
+    counts as an answer that doesn't fit.
+- **Retry and skip (decision).** An answer that doesn't fit gets the step's retry prompt, or the
+  default copy for its kind, until `tries` run out: 1 to 3, default 2. Then the flow goes to the
+  step's `on_skip`. The editor's default is **carry on** to the step below; "end the flow" is the
+  other choice. Nothing is saved on a skip.
+- **Saved to** the contact's email or phone (source `flow`) or a custom field, as before, and
+  `lead.captured` is emitted then. *GR-18's `leads.on_capture` hook is not on this base and was not
+  created: the coordinator can call it from `_take` in `engine.py` after the webhook event.*
+- **Consent question (`consent` on the Ask step).** After a saved answer the step sends a Yes or
+  No question with two quick replies (default copy, or the step's `consent_text`) and waits.
+  - A tap, or typed words (yes, yeah, sure, haan; no, nope, no thanks), is recorded in
+    `contact_consents`: Yes as granted, No as revoked (an explicit refusal). Source `flow`, purpose
+    marketing, channel the conversation's (Instagram or WhatsApp).
+  - **Evidence:** the answer's message id and text, the question's message id and text, the
+    channel, the run, automation and step, and the time (`occurred_at`).
+  - Anything else is asked once more, then the flow goes on and nothing is recorded.
+  - The consent is for the channel they are chatting on. A captured email gives no email-channel
+    consent. Required before WhatsApp broadcasts (GR-23): not enforced here.
+- **Confirmation** (`confirm_text`): sent after the answer is saved (and the consent answered).
+  Blank sends nothing; the editor suggests "Thanks, I've got it."
+- **Default copy** lives in `capture.py` (retry per kind, the consent question, the "need a yes or a
+  no" prompt) and is mirrored as placeholders in the Ask card. The copy lint (`copy-lint.test.ts`)
+  only bans old variants; the copy follows its rules (sentence case, UK spelling).
+- **Step schema:** `consent`, `consent_text`, `confirm_text` added to `AskStep`, with defaults, so
+  stored flows are unchanged. Activation checks all three texts against Instagram's byte limit.
+- **Editor:** the Ask card has the type, the field to save to, the retry prompt, tries, the
+  confirmation and an "Ask for marketing consent" switch with its question.
+- **Done when:** a captured email lands on the contact, raises the webhook and shows in the CSV
+  export (`tests/integration/test_data_capture.py`; the export is GR-02's).
+- **Unverified:** the integration tests, vitest and `gr14-data-capture.spec.ts` are written but were
+  not run.
+
+## C-096 · Link click tracking and flow analytics (GR-15, feature/gr-14-15-capture-clicks)
+- **Tracked links.** A link button in an automation's message is sent as `{base}/l/{code}`; the
+  redirect records the click and answers 302 to the original address.
+  - **Which domain serves it: the API's.** `GET /l/{code}` is an API route (`webhooks/links.py`,
+    public, no sign-in, not in the OpenAPI schema), built on `LINK_BASE_URL` if set, else
+    `API_BASE_URL`. A short domain pointed at the API and set as `LINK_BASE_URL` shortens every
+    link with no code change. With neither set, buttons are sent as written. The web app's domain
+    doesn't serve it.
+  - **The code** is an opaque random token (96 bits, 16 characters), mapped in `tracked_links`.
+    The run, step and contact are only in our database, never in the URL. One link per run, step
+    and button, so a retried send reuses it.
+  - **Redirect rules:**
+    - the stored address must be http or https (`links.safe_target`), else 404 and no click;
+    - an unknown code is 404; the route is rate limited per IP like the other public routes (60 a
+      minute);
+    - the response is `no-store`, `no-referrer` and `noindex`.
+  - **Bots and previews (the rule, `links.is_bot`).** Not counted, but still redirected so a preview
+    shows the real page:
+    - a HEAD request, or no User-Agent;
+    - Meta's `facebookexternalhit` and `meta-external*` (Instagram and WhatsApp previews),
+      `WhatsApp/`, Slack, Telegram, Discord, X, LinkedIn, Google, Bing, Apple and other search
+      crawlers, curl, wget and common script clients;
+    - anything calling itself a bot, crawler, spider, scanner or preview.
+    - The in-app browsers of Instagram and Facebook are people. A second click on one link within 5
+      seconds counts once (a double tap or prefetch).
+    - *Unverified against real Instagram traffic; the list is one constant to extend.*
+  - **Where links are made:** the flow engine's sends, the legacy settings sends (DM, tap-first
+    release, and the comment queue's private reply, step `message`). The profile button ("View
+    profile") is never tracked. The inbox keeps showing what was actually sent, our address.
+  - **Opt-out:** `automations.track_links` (default on), a switch in Settings ("Track link
+    clicks"); off sends the raw link. Left out of a save, it keeps its value; a duplicate copies it.
+- **Funnel** (`GET …/automations/{id}/funnel?days=7|30|90`, admins; `services/automations/funnel.py`).
+  Nothing new on the send path: it reads what is recorded.
+  - Per step: reached (the step log), sent, delivered and read (the status of the step's message;
+    read only where the platform reports it), failed, quick reply taps, link clicks and the people
+    who clicked, answers saved by a question, answers that never fitted, and "yes" to the consent
+    question. Steps come in the order a walk meets them.
+  - Automations still on their message settings have no step log: their `message` step is built from
+    the runs' DMs and the clicks.
+  - **Split results:** per path, the runs that took it and, for the steps after it, delivered, read,
+    taps, link clicks and answers. A step shared by two paths counts for each run that went through.
+- **Where it shows:** the editor's Stats tab (a "By step" list and a table per Split) and the
+  Settings switch. The list refreshes every 30 seconds, so a click shows within a minute. *Not on the
+  Activity page: that is a feed of what failed, and a click isn't one.*
+- **Migration 0029:** `tracked_links`, `link_clicks` and `automations.track_links`. Expand-only.
+  Both tables hang off the automation, run and contact with cascading deletes, so an account's
+  purge removes them with its automations and contacts.
+- **Not done / pending:** per-quick-reply tap counts (taps are per step); a retention limit on
+  `link_clicks` (kept as long as the automation); the sandbox run of `gr15-link-clicks.spec.ts`.

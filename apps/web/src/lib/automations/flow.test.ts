@@ -19,6 +19,7 @@ import {
   updateList,
   updateStep,
   walk,
+  type AskNode,
   type EditorStep,
   type FlowContext,
   type SendNode,
@@ -40,7 +41,7 @@ function send(id: string, text = "Hi", extra: Partial<SendNode> = {}): SendNode 
 /** comment -> ask email -> a message with two quick replies -> send A or B. */
 function guideOrPrices(): EditorStep[] {
   return [
-    { kind: "ask", id: "ask", text: "Email?", expect: "email", field_key: null, retry_text: "", tries: 2, skip: [] },
+    { kind: "ask", id: "ask", text: "Email?", expect: "email", field_key: null, retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "", skip: [] },
     send("pick", "Which one?", {
       replies: [
         { title: "Guide", steps: [send("a", "Here's the guide.")] },
@@ -120,7 +121,7 @@ describe("compile", () => {
 
   it("a question that never gets a fitting answer ends the flow, or carries on", () => {
     const ask = (skip: EditorStep[] | null): EditorStep[] => [
-      { kind: "ask", id: "q", text: "?", expect: "text", field_key: "city", retry_text: "", tries: 2, skip },
+      { kind: "ask", id: "q", text: "?", expect: "text", field_key: "city", retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "", skip },
       send("next"),
     ];
     expect(compile(ask(null)).definition.steps[0]).toMatchObject({ next: "next", on_skip: null });
@@ -195,7 +196,7 @@ describe("decompile", () => {
           ],
           on_text: "email",
         },
-        { type: "ask", id: "email", text: "Email?", expect: "email", retry_text: "", tries: 2, next: "catalogue" },
+        { type: "ask", id: "email", text: "Email?", expect: "email", retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "", next: "catalogue" },
         { type: "send", id: "catalogue", text: "Here it is." },
         { type: "send", id: "prices", text: "From 499." },
       ],
@@ -402,6 +403,9 @@ describe("checking a step", () => {
       field_key,
       retry_text: "",
       tries: 2,
+      consent: false,
+      consent_text: "",
+      confirm_text: "",
       skip: [],
     });
     expect(stepProblems(ask(null, "email"), CTX)).toEqual({});
@@ -493,5 +497,39 @@ describe("walking a flow", () => {
       { kind: "end", id: "e" },
     ]);
     expect(walk(mixed, { values, disclosure: null }).map((s) => s.title)).toEqual(["Wait 1 hour", "Notify the team", "End"]);
+  });
+});
+
+describe("an Ask step's capture options (GR-14)", () => {
+  const node = (patch: Partial<AskNode>): AskNode => ({
+    kind: "ask",
+    id: "q",
+    text: "Email?",
+    expect: "email",
+    field_key: null,
+    retry_text: "",
+    tries: 3,
+    consent: true,
+    consent_text: "Want offers?",
+    confirm_text: "Thanks!",
+    skip: [],
+    ...patch,
+  });
+
+  it("saves the consent question, the confirmation and the tries, and reads them back", () => {
+    const { definition } = compile([node({})]);
+    expect(definition.steps[0]).toMatchObject({
+      type: "ask",
+      tries: 3,
+      consent: true,
+      consent_text: "Want offers?",
+      confirm_text: "Thanks!",
+    });
+    expect(decompile(definition)).toMatchObject([{ kind: "ask", tries: 3, consent: true, consent_text: "Want offers?", confirm_text: "Thanks!" }]);
+  });
+
+  it("drops the consent question text when consent is off", () => {
+    const { definition } = compile([node({ consent: false })]);
+    expect(definition.steps[0]).toMatchObject({ consent: false, consent_text: "" });
   });
 });

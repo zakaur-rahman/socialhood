@@ -28,6 +28,8 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Connections",
       "AI rules and takeover",
       "Workspace",
+      "Saved replies",
+      "Business hours",
       "Notifications",
       "Billing and usage",
       "Integrations",
