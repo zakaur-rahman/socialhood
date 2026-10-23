@@ -12,7 +12,7 @@ Expand-only: two new tables and nullable columns; nothing is rewritten. The auto
 send step that names a saved reply is part of the flow JSON, not the schema.
 
 Revision ID: 0028
-Revises: 0025
+Revises: 0027
 Create Date: 2026-10-26 09:00:00.000000+00:00
 """
 
@@ -25,7 +25,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0028"
-down_revision: str | None = "0025"
+down_revision: str | None = "0027"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -80,7 +80,9 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_saved_replies")),
-        sa.UniqueConstraint("workspace_id", "shortcut", name=op.f("uq_saved_replies_workspace_id_shortcut")),
+        sa.UniqueConstraint(
+            "workspace_id", "shortcut", name=op.f("uq_saved_replies_workspace_id_shortcut")
+        ),
     )
     op.create_index(op.f("ix_saved_replies_workspace_id"), "saved_replies", ["workspace_id"])
 
