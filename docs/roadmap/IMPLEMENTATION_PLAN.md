@@ -369,6 +369,26 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - a coupon (from an entry link).
 - Update `services/automations/templates.py` and the gallery.
 
+#### GR-38 · Visual answers in Ask (generative UI) · M · needs GR-02 · decided 2026-10-24
+- **Why:** Ask Social Hood answers performance, ranking, sentiment and lead questions with long
+  paragraphs. Members should see KPI cards, charts and tables instead. The design, research and
+  decision are in `docs/architecture/generative-ui/` (the owner chose option C).
+- **Do** (backlog VIS-01 to VIS-06 in `docs/architecture/generative-ui/10-implementation-backlog.md`):
+  - **The missing data:** a read path for `account_daily_metrics` (period sums, comparable
+    days, gaps), plus agent tools `compare_periods` and `metric_trend`. Today nothing can answer
+    "this month vs last month".
+  - **Typed visuals:** tools build them from service data, so numbers never come from the model.
+    The run exposes `visuals` the way it exposes `action_cards`, behind an `agent_visuals` flag.
+    No migration.
+  - **The first three visuals,** drawn with our own components (`MetricTile`, `PostThumb`,
+    `SentimentBar`, `Table`): a period comparison, ranked posts and a sentiment summary.
+  - **Tests:** unit, integration, tenancy, roles, an e2e spec, and eval number checks.
+- **Later** (VIS-07 to VIS-13): trends, lead lists, tables, progressive visuals, range
+  controls, and the report page (with GR-34).
+- **Not now:** OpenUI. An offline spike (VIS-14) may follow, against the gate in doc 07.
+- **Done when:** "Compare my Instagram this month with last month" shows cards whose numbers
+  equal the service's, and conceptual questions show no visual.
+
 ### Wave 4: contacts, team, broadcasts
 
 #### GR-17 · The contacts page · M · needs GR-02
@@ -579,7 +599,7 @@ Owner:  O-1 → O-2 → O-3 ─────────────→ O-6 (App 
 Wave 0  GR-00 ────────────────────────────── (updated every wave)
 Wave 1  GR-01  GR-02  GR-03 (L)  GR-04  GR-05
 Wave 2  GR-06  GR-07  GR-12          GR-08 GR-09 GR-10 GR-11  (← GR-01)
-Wave 3  GR-13 (← GR-03)  GR-14 (← GR-02, GR-03)  GR-15 (← GR-03)  GR-16 (← waves 2–3)
+Wave 3  GR-38 (← GR-02)  GR-13 (← GR-03)  GR-14 (← GR-02, GR-03)  GR-15 (← GR-03)  GR-16 (← waves 2–3)
 Wave 4  GR-17 (← GR-02) → GR-18     GR-19 → GR-20     GR-21  GR-22     GR-23 (← GR-14, O-11) → GR-24
 Wave 5  GR-25 → GR-26    GR-27 (← GR-04, GR-14)    GR-28    GR-29 → GR-30
 Wave 6  GR-31 → GR-32, GR-33
@@ -598,7 +618,7 @@ Wave 7  GR-34  GR-35  GR-36 (← GR-03, GR-23)  GR-37
    - GR-03 continues.
 
    **Wave 2 is done here, so the App Review screencasts can be recorded (O-5).**
-3. **Batch 3:** GR-13, GR-14, GR-15 and GR-17.
+3. **Batch 3:** GR-38 (visual answers in Ask, first), then GR-13, GR-14, GR-15 and GR-17.
 4. **Batch 4:** GR-16, GR-18 to GR-22.
 5. **Batch 5:** GR-23 and GR-24, after O-11; GR-25 to GR-27.
 6. **Batch 6:** GR-28 to GR-30.
