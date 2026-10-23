@@ -70,6 +70,9 @@ PARAM_TO_SEED: dict[str, str] = {
     "run_id": "run_id",
     "approval_id": "approval_id",
     "thread_id": "thread_id",  # in bodies only: POST …/agent/runs continues a thread
+    "contact_id": "contact_id",  # GR-02
+    "tag_id": "tag_id",
+    "field_id": "field_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -110,6 +113,22 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "phone_number_id": "2",
     },
     ("POST", "/v1/w/{wid}/social-accounts/instagram/complete"): {"nonce": "not-yours"},
+    # GR-02: contacts, tags, custom fields, consent.
+    ("PATCH", "/v1/w/{wid}/contacts/{contact_id}"): {"email": "taken@example.com"},
+    ("POST", "/v1/w/{wid}/contacts/{contact_id}/tags"): {"add": ["{tag_id}"]},
+    ("POST", "/v1/w/{wid}/contacts/{contact_id}/consents"): {
+        "channel": "whatsapp",
+        "status": "granted",
+        "note": "Asked in the shop",
+    },
+    ("POST", "/v1/w/{wid}/contacts/bulk-tags"): {
+        "contact_ids": ["{contact_id}"],
+        "add": ["{tag_id}"],
+    },
+    ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
+    ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
+    ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
+    ("PATCH", "/v1/w/{wid}/contact-fields/{field_id}"): {"label": "Renamed"},
 }
 
 EXAMPLE_BODIES.update(
@@ -303,6 +322,9 @@ class Seed:
     run_id: str = ""
     approval_id: str = ""
     thread_id: str = ""
+    contact_id: str = ""
+    tag_id: str = ""
+    field_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -390,6 +412,26 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     assert account.status_code == 201, account.text
     account_id = account.json()["id"]
     thread = await make_thread(engine, workspace_id=wid, account_id=account_id)
+    tag = await client.post(
+        f"/v1/w/{wid}/tags", json={"name": "VIP"}, headers=clerk.headers(owner_b)
+    )
+    assert tag.status_code == 201, tag.text
+    field = await client.post(
+        f"/v1/w/{wid}/contact-fields",
+        json={"key": "city", "label": "City"},
+        headers=clerk.headers(owner_b),
+    )
+    assert field.status_code == 201, field.text
+    for path, body in (
+        ("tags", {"add": [tag.json()["id"]]}),
+        ("consents", {"channel": "instagram", "status": "granted", "note": "In the shop"}),
+    ):
+        done = await client.post(
+            f"/v1/w/{wid}/contacts/{thread.contact_id}/{path}",
+            json=body,
+            headers=clerk.headers(owner_b),
+        )
+        assert done.status_code == 200, done.text
     scheduled = await make_scheduled(
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )
@@ -472,6 +514,9 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         run_id=str(run.id),
         approval_id=str(approval),
         thread_id=str(run.thread_id),
+        contact_id=str(thread.contact_id),
+        tag_id=tag.json()["id"],
+        field_id=field.json()["id"],
     )
 
 

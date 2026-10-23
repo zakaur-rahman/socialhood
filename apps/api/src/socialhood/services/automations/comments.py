@@ -45,6 +45,7 @@ from socialhood.repositories import comments as repo
 from socialhood.repositories import ingest as rows
 from socialhood.services.automations import posts, runtime
 from socialhood.services.comments import views
+from socialhood.services.contacts import touch_activity
 
 log = get_logger(__name__)
 
@@ -91,6 +92,8 @@ async def intake(
     )
     if event.author_username and contact.username != event.author_username:
         contact.username = event.author_username  # the newest we know
+    if not backfill:
+        touch_activity(contact, event.occurred_at)  # GR-02: a comment is contact activity
     values: dict[str, Any] = {
         "social_account_id": acct.id,
         "media_item_id": item.id,

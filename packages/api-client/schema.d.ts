@@ -1043,6 +1043,174 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/contact-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Contact Fields
+         * @description In order, with the plan's contact_fields limit.
+         */
+        get: operations["list_contact_fields"];
+        put?: never;
+        /**
+         * Create Contact Field
+         * @description 402 quota_exceeded over the plan's contact_fields; 409 for a key in use.
+         */
+        post: operations["create_contact_field"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contact-fields/{field_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Contact Field
+         * @description The field goes, and its values from every contact.
+         */
+        delete: operations["delete_contact_field"];
+        options?: never;
+        head?: never;
+        /** Update Contact Field */
+        patch: operations["update_contact_field"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Contacts
+         * @description Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches
+         *     part of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose
+         *     current consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a
+         *     custom field's value ignoring case, ``city:*`` any value.
+         */
+        get: operations["list_contacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/bulk-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Tag Contacts
+         * @description Add and remove tags on up to 500 contacts at once; 404 for an unknown tag.
+         */
+        post: operations["bulk_tag_contacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Contacts
+         * @description The filtered contacts as CSV (the R2 data export), streamed: nothing is stored. A cell a
+         *     spreadsheet would read as a formula starts with a quote.
+         */
+        get: operations["export_contacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Contact */
+        get: operations["get_contact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Contact
+         * @description 422 lists each value that doesn't fit (an email's shape, a phone without a country code, a
+         *     field's type or an unknown field).
+         */
+        patch: operations["update_contact"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Contact Consent
+         * @description A member records consent given elsewhere, or its withdrawal; the note is the evidence.
+         */
+        post: operations["record_contact_consent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tag Contact */
+        post: operations["tag_contact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations": {
         parameters: {
             query?: never;
@@ -2207,6 +2375,51 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tags
+         * @description Every tag, by name, with how many contacts carry it.
+         */
+        get: operations["list_tags"];
+        put?: never;
+        /**
+         * Create Tag
+         * @description 409 when a tag with that name (any case) exists.
+         */
+        post: operations["create_tag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/tags/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Tag
+         * @description The tag goes from every contact too.
+         */
+        delete: operations["delete_tag"];
+        options?: never;
+        head?: never;
+        /** Update Tag */
+        patch: operations["update_tag"];
         trace?: never;
     };
     "/v1/workspaces": {
@@ -3395,6 +3608,20 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** BulkTagsResult */
+        BulkTagsResult: {
+            /** Updated */
+            updated: number;
+        };
+        /** BulkTagsUpdate */
+        BulkTagsUpdate: {
+            /** Add */
+            add?: string[];
+            /** Contact Ids */
+            contact_ids: string[];
+            /** Remove */
+            remove?: string[];
+        };
         /**
          * Calendar
          * @description GET …/calendar: the range's items, ``start`` to ``end`` (dates in the workspace time zone,
@@ -3789,6 +4016,58 @@ export interface components {
             /** Authorize Url */
             authorize_url: string;
         };
+        /**
+         * Consent
+         * @description The current state for one channel: the latest record.
+         */
+        Consent: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "instagram" | "whatsapp" | "email";
+            /** Note */
+            note?: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Purpose
+             * @constant
+             */
+            purpose: "marketing";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "platform_optin" | "flow" | "stop_reply" | "member" | "import";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "granted" | "revoked";
+        };
+        /**
+         * ConsentCreate
+         * @description A member records consent the customer gave elsewhere (a form, in person), or its
+         *     withdrawal. The note says how it was given; it's the evidence.
+         */
+        ConsentCreate: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "instagram" | "whatsapp" | "email";
+            /** Note */
+            note: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "granted" | "revoked";
+        };
         /** ContactDetail */
         ContactDetail: {
             /** Display Name */
@@ -3812,6 +4091,127 @@ export interface components {
             /** Username */
             username?: string | null;
         };
+        /** ContactList */
+        ContactList: {
+            /** Items */
+            items: components["schemas"]["ContactListItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** ContactListItem */
+        ContactListItem: {
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** First Seen At */
+            first_seen_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Activity At */
+            last_activity_at?: string | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Platform */
+            platform: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * ContactPatch
+         * @description Only what is sent changes. ``fields`` merges: a key set to null is removed. An email or
+         *     phone set here is marked as entered by a member and not verified.
+         */
+        ContactPatch: {
+            /**
+             * Clear Email
+             * @default false
+             */
+            clear_email: boolean;
+            /**
+             * Clear Phone
+             * @default false
+             */
+            clear_phone: boolean;
+            /** Email */
+            email?: string | null;
+            /** Fields */
+            fields?: {
+                [key: string]: unknown;
+            } | null;
+            /** Phone */
+            phone?: string | null;
+        };
+        /**
+         * ContactRecord
+         * @description One contact with what the business knows about them.
+         */
+        ContactRecord: {
+            /** Consents */
+            consents: components["schemas"]["Consent"][];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Email Source */
+            email_source?: string | null;
+            /** Email Verified */
+            email_verified: boolean;
+            /** Fields */
+            fields: {
+                [key: string]: unknown;
+            };
+            /** First Entry Source */
+            first_entry_source?: string | null;
+            /** First Seen At */
+            first_seen_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Activity At */
+            last_activity_at?: string | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Phone Source */
+            phone_source?: string | null;
+            /** Phone Verified */
+            phone_verified: boolean;
+            /** Platform */
+            platform: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
+            /** Username */
+            username?: string | null;
+        };
         /** ContactSummary */
         ContactSummary: {
             /** Display Name */
@@ -3825,6 +4225,13 @@ export interface components {
             profile_picture_url?: string | null;
             /** Username */
             username?: string | null;
+        };
+        /** ContactTagsUpdate */
+        ContactTagsUpdate: {
+            /** Add */
+            add?: string[];
+            /** Remove */
+            remove?: string[];
         };
         /** Conversation */
         Conversation: {
@@ -4086,6 +4493,61 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+        };
+        /** FieldDefinition */
+        FieldDefinition: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[];
+            /** Position */
+            position: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "email" | "phone" | "number" | "date" | "choice";
+        };
+        /** FieldDefinitionCreate */
+        FieldDefinitionCreate: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options?: string[];
+            /**
+             * Type
+             * @default text
+             * @enum {string}
+             */
+            type: "text" | "email" | "phone" | "number" | "date" | "choice";
+        };
+        /** FieldDefinitionList */
+        FieldDefinitionList: {
+            /** Items */
+            items: components["schemas"]["FieldDefinition"][];
+            /** Limit */
+            limit?: number | null;
+        };
+        /**
+         * FieldDefinitionPatch
+         * @description A field's key and type never change: values are stored by key and validated by type.
+         */
+        FieldDefinitionPatch: {
+            /** Label */
+            label?: string | null;
+            /** Options */
+            options?: string[] | null;
+            /** Position */
+            position?: number | null;
         };
         /**
          * FirstCommentResult
@@ -6014,6 +6476,57 @@ export interface components {
             id: string;
             /** Title */
             title: string;
+        };
+        /** Tag */
+        Tag: {
+            /** Color */
+            color: number;
+            /**
+             * Contact Count
+             * @default 0
+             */
+            contact_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** TagCreate */
+        TagCreate: {
+            /**
+             * Color
+             * @default 0
+             */
+            color: number;
+            /** Name */
+            name: string;
+        };
+        /** TagList */
+        TagList: {
+            /** Items */
+            items: components["schemas"]["Tag"][];
+        };
+        /** TagPatch */
+        TagPatch: {
+            /** Color */
+            color?: number | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** TagRef */
+        TagRef: {
+            /** Color */
+            color: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /**
          * TargetIn
@@ -8642,6 +9155,500 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Comment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_contact_fields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefinitionList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_contact_field: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldDefinitionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefinition"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_contact_field: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_contact_field: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldDefinitionPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefinition"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_contacts: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                tag_id?: string[] | null;
+                platform?: ("instagram" | "whatsapp") | null;
+                account_id?: string | null;
+                has_email?: boolean | null;
+                has_phone?: boolean | null;
+                marketing_consent?: ("instagram" | "whatsapp" | "email") | null;
+                min_lead_score?: number | null;
+                active_after?: string | null;
+                active_before?: string | null;
+                field?: string[] | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    bulk_tag_contacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTagsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTagsResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    export_contacts: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                tag_id?: string[] | null;
+                platform?: ("instagram" | "whatsapp") | null;
+                account_id?: string | null;
+                has_email?: boolean | null;
+                has_phone?: boolean | null;
+                marketing_consent?: ("instagram" | "whatsapp" | "email") | null;
+                min_lead_score?: number | null;
+                active_after?: string | null;
+                active_before?: string | null;
+                field?: string[] | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    record_contact_consent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    tag_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactTagsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
                 };
             };
             /** @description Validation error */
@@ -11579,6 +12586,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_tags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
                 };
             };
             /** @description Validation error */

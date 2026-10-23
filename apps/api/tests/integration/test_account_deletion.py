@@ -209,6 +209,22 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         c=comment,
     )
     await make_posting_slot(engine, workspace_id=wid, account_id=account_id)
+    # GR-02: a tag on the contact and their consent (the tag itself is the workspace's).
+    await execute(
+        engine,
+        "WITH t AS (INSERT INTO tags (workspace_id, name) VALUES (:w, :n) RETURNING id)"
+        " INSERT INTO contact_tags (workspace_id, contact_id, tag_id) SELECT :w, :c, id FROM t",
+        w=wid,
+        n=f"Tag {account_id}"[:40],
+        c=thread.contact_id,
+    )
+    await execute(
+        engine,
+        "INSERT INTO contact_consents (workspace_id, contact_id, channel, status, source,"
+        " occurred_at) VALUES (:w, :c, 'instagram', 'granted', 'member', now())",
+        w=wid,
+        c=thread.contact_id,
+    )
     return Seeded(
         conversation_id=thread.conversation_id,
         message_ids=thread.message_ids,

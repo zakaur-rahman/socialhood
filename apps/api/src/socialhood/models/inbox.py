@@ -130,6 +130,18 @@ class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
     # ctwa_clid, at}), applied to the conversation it starts; and how they first arrived.
     last_referral: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     first_entry_source: Mapped[str | None] = mapped_column(Text)
+    # GR-02: what a business knows about them. Custom field values by key (validated against
+    # contact_field_definitions); an email and a phone, each with where it came from and
+    # whether it was verified; their last activity outside the conversation (a comment). The
+    # contacts list's activity is the later of this and the conversation's last message.
+    fields: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sql("'{}'::jsonb"))
+    email: Mapped[str | None] = mapped_column(Text)
+    email_source: Mapped[str | None] = mapped_column(Text)
+    email_verified: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    phone: Mapped[str | None] = mapped_column(Text)  # E.164
+    phone_source: Mapped[str | None] = mapped_column(Text)
+    phone_verified: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "platform_user_id"),

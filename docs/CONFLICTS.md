@@ -1561,3 +1561,50 @@ An addition to the spec's platform layer (§1.5, TR-PL-12), from the growth plan
   - `comments.is_live`;
   - `messages.postback_payload`.
 - **The sandbox** injects every new kind, so dev and e2e go through the real webhook path.
+
+## C-078 · Contacts foundation: tags, custom fields, consent, export (GR-02, feature/gr-02-contacts)
+An addition from the growth plan. It is backend and API only; GR-17 builds the contacts page.
+- **One contact per channel identity, as before (PD-10).** No matching across Instagram and
+  WhatsApp.
+- **Tags:**
+  - A workspace's labels, unique by name in any case, with a colour from the identity palette, so
+    they never wear status colours.
+  - Any member tags contacts, one at a time or up to 500 at once; admins manage the tags.
+- **Custom fields:**
+  - Each has a key, a label and a type: text, email, phone, number, date or choice (with options).
+  - Values are stored by key on `contacts.fields` and validated by type; an unknown key is refused.
+  - A key and type never change; deleting a field removes its values from every contact.
+  - The number of fields is capped by a new entitlement, `contact_fields`: Free 5, Pro 50, Max
+    200, proposed pending the owner's plan decisions.
+  - **Contacts themselves are never metered (PD-2).**
+- **Email and phone** on the contact, each with where it came from and whether it was verified.
+  An email is lower-cased and checked for shape. A phone is stored as E.164, with a ten-digit
+  Indian mobile taken as +91.
+- **Consent** (`contact_consents`) is append-only: channel, purpose (marketing), granted or
+  revoked, source (platform opt-in, flow, STOP reply, member, import) and evidence. The latest
+  record per channel is current.
+  - Instagram's `messaging_optins`, parsed in GR-01, now records consent: granted, or revoked
+    when Meta reports a stop.
+  - Admins record consent given elsewhere with a note, which is the evidence.
+- **The list:**
+  - Newest activity first, with a keyset cursor. Activity is the latest of the conversation's last
+    message (every send path keeps it), the contact's own last comment (`last_activity_at`) and
+    when the contact was created.
+  - Filters: search on name, @username, email or phone; every chosen tag; platform; account;
+    email or phone present; current marketing consent per channel; minimum lead score; activity
+    range; up to five custom fields, each `key:value` (equal, ignoring case) or `key:*` (any
+    value). A filter on a field the workspace doesn't have is refused.
+- **Export (the R2 "data export"):** admins download the filtered contacts as CSV, streamed from
+  the API, so no file of personal data is ever stored. Custom fields follow the fixed columns, and
+  a cell a spreadsheet would read as a formula gets a leading quote. *Deviation from GR-02 as
+  planned, which said "a job that emails a link".*
+- **Ask Social Hood:** `get_customer` now includes tags, fields, whether an email and phone are
+  known, and marketing consent. A new `list_contacts` lists contacts by tag, email or phone
+  present, platform or minimum lead score.
+- **Moved to GR-14:** contact fields as message variables (`{field.key}`), where flows first
+  capture data.
+- **Migration 0019:**
+  - new tables `tags`, `contact_tags` (with an id, so an account's purge deletes them in batches
+    with their contacts), `contact_field_definitions` and `contact_consents`;
+  - on `contacts`: `fields`, `email`, `email_source`, `email_verified`, `phone`, `phone_source`,
+    `phone_verified` and `last_activity_at`, backfilled from comments.

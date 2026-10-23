@@ -391,6 +391,11 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     includes: (n) => `${counted(n, "scheduled message", "scheduled messages")} waiting to send`,
     unlimited: "scheduled messages",
   },
+  contact_fields: {
+    limitTitle: "Contact field limit reached",
+    includes: (n) => counted(n, "custom contact field", "custom contact fields"),
+    unlimited: "custom contact fields",
+  },
   members: {
     limitTitle: "Member limit reached",
     includes: (n) => counted(n, "member", "members"),
