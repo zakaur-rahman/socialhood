@@ -1592,7 +1592,8 @@ An addition from the growth plan. It is backend and API only; GR-17 builds the c
     when the contact was created.
   - Filters: search on name, @username, email or phone; every chosen tag; platform; account;
     email or phone present; current marketing consent per channel; minimum lead score; activity
-    range.
+    range; up to five custom fields, each `key:value` (equal, ignoring case) or `key:*` (any
+    value). A filter on a field the workspace doesn't have is refused.
 - **Export (the R2 "data export"):** admins download the filtered contacts as CSV, streamed from
   the API, so no file of personal data is ever stored. Custom fields follow the fixed columns, and
   a cell a spreadsheet would read as a formula gets a leading quote. *Deviation from GR-02 as

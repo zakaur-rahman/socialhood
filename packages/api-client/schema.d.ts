@@ -1099,7 +1099,8 @@ export interface paths {
          * List Contacts
          * @description Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches
          *     part of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose
-         *     current consent for that channel is granted.
+         *     current consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a
+         *     custom field's value ignoring case, ``city:*`` any value.
          */
         get: operations["list_contacts"];
         put?: never;
@@ -9357,6 +9358,7 @@ export interface operations {
                 min_lead_score?: number | null;
                 active_after?: string | null;
                 active_before?: string | null;
+                field?: string[] | null;
                 cursor?: string | null;
                 limit?: number;
             };
@@ -9454,6 +9456,7 @@ export interface operations {
                 min_lead_score?: number | null;
                 active_after?: string | null;
                 active_before?: string | null;
+                field?: string[] | null;
             };
             header?: never;
             path: {

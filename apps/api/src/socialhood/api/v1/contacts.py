@@ -17,6 +17,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Response
 from fastapi.responses import StreamingResponse
+from pydantic import StringConstraints
 
 from socialhood.auth.deps import Admin, AnyMember, Session
 from socialhood.schemas.contacts import (
@@ -41,6 +42,9 @@ from socialhood.services.contacts import ContactFilter
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["contacts"])
 
+# A custom field filter: ``key:value`` (equal, ignoring case) or ``key:*`` (has any value).
+FieldMatch = Annotated[str, StringConstraints(max_length=100, pattern=r"^[a-z][a-z0-9_]{0,39}:.")]
+
 
 def _filter(
     q: Annotated[str | None, Query(max_length=100)] = None,
@@ -53,6 +57,7 @@ def _filter(
     min_lead_score: Annotated[int | None, Query(ge=0, le=100)] = None,
     active_after: datetime | None = None,
     active_before: datetime | None = None,
+    field: list[str] | None = None,
 ) -> ContactFilter:
     return ContactFilter(
         q=q,
@@ -65,6 +70,10 @@ def _filter(
         min_lead_score=min_lead_score,
         active_after=active_after,
         active_before=active_before,
+        fields=tuple(
+            (key, None if value == "*" else value)
+            for key, value in (match.split(":", 1) for match in field or ())
+        ),
     )
 
 
@@ -82,16 +91,19 @@ async def list_contacts(
     min_lead_score: Annotated[int | None, Query(ge=0, le=100)] = None,
     active_after: datetime | None = None,
     active_before: datetime | None = None,
+    field: Annotated[list[FieldMatch] | None, Query(max_length=5)] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> ContactList:
     """Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches
     part of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose
-    current consent for that channel is granted."""
+    current consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a
+    custom field's value ignoring case, ``city:*`` any value."""
     filt = _filter(
         q, tag_id, platform, account_id, has_email, has_phone, marketing_consent,
-        min_lead_score, active_after, active_before,
+        min_lead_score, active_after, active_before, field,
     )  # fmt: skip
+    await service.check_filter(session, filt)
     return await service.list_contacts(session, filt, cursor=cursor, limit=limit)
 
 
@@ -114,13 +126,15 @@ async def export_contacts(
     min_lead_score: Annotated[int | None, Query(ge=0, le=100)] = None,
     active_after: datetime | None = None,
     active_before: datetime | None = None,
+    field: Annotated[list[FieldMatch] | None, Query(max_length=5)] = None,
 ) -> StreamingResponse:
     """The filtered contacts as CSV (the R2 data export), streamed: nothing is stored. A cell a
     spreadsheet would read as a formula starts with a quote."""
     filt = _filter(
         q, tag_id, platform, account_id, has_email, has_phone, marketing_consent,
-        min_lead_score, active_after, active_before,
+        min_lead_score, active_after, active_before, field,
     )  # fmt: skip
+    await service.check_filter(session, filt)
 
     async def body() -> AsyncIterator[str]:
         buffer = io.StringIO()

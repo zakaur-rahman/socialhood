@@ -154,6 +154,8 @@ class ContactFilter:
     min_lead_score: int | None = None
     active_after: datetime | None = None
     active_before: datetime | None = None
+    # Custom fields by key: a value to equal, ignoring case, or None for any value.
+    fields: tuple[tuple[str, str | None], ...] = ()
 
 
 # Postgres's greatest() skips nulls, so this is never null.
@@ -238,7 +240,29 @@ def _filtered(filt: ContactFilter) -> Select[Contact, Conversation, SocialAccoun
         query = query.where(_activity >= filt.active_after)
     if filt.active_before:
         query = query.where(_activity < filt.active_before)
+    for key, value in filt.fields:
+        query = query.where(
+            Contact.fields.has_key(key)
+            if value is None
+            else func.lower(Contact.fields[key].astext) == value.lower()
+        )
     return query
+
+
+async def check_filter(session: AsyncSession, filt: ContactFilter) -> None:
+    """Refuses a filter on a custom field the workspace doesn't have."""
+    if not filt.fields:
+        return
+    known = await _definitions(session)
+    unknown = sorted({key for key, _ in filt.fields} - known.keys())
+    if unknown:
+        raise ApiError(
+            "validation_error",
+            errors=[
+                FieldError(field="field", message=f"There's no field called “{key}”.")
+                for key in unknown
+            ],
+        )
 
 
 async def _tags_for(

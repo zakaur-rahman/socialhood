@@ -16720,7 +16720,7 @@
     },
     "/v1/w/{wid}/contacts": {
       "get": {
-        "description": "Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches\npart of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose\ncurrent consent for that channel is granted.",
+        "description": "Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches\npart of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose\ncurrent consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a\ncustom field's value ignoring case, ``city:*`` any value.",
         "operationId": "list_contacts",
         "parameters": [
           {
@@ -16911,6 +16911,28 @@
                 }
               ],
               "title": "Active Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 100,
+                    "pattern": "^[a-z][a-z0-9_]{0,39}:.",
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field"
             }
           },
           {
@@ -17238,6 +17260,28 @@
                 }
               ],
               "title": "Active Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 100,
+                    "pattern": "^[a-z][a-z0-9_]{0,39}:.",
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field"
             }
           }
         ],

@@ -146,6 +146,18 @@ async def test_custom_fields_validate_by_type_and_go_with_their_definition(
     removed = await ws.ok("PATCH", f"/contacts/{c}", json={"fields": {"city": None}})
     assert "city" not in removed["fields"]
 
+    other = await person(engine, ws, "d2", "Dev")
+    await ws.ok("PATCH", f"/contacts/{other}", json={"fields": {"city": "Mumbai"}})
+    # c's city was removed above; their size is M.
+    for match, expected in (("city:MUMBAI", [other]), ("city:*", [other]), ("size:m", [c])):
+        found = await ws.ok("GET", "/contacts", params={"field": match})
+        assert sorted(x["id"] for x in found["items"]) == sorted(map(str, expected)), match
+    both = await ws.ok("GET", "/contacts", params=[("field", "city:*"), ("field", "size:m")])
+    assert both["items"] == []
+    unknown = await ws.call("GET", "/contacts", params={"field": "shoe:9"})
+    assert (unknown.status_code, fields_of(unknown)) == (422, ["field"])
+    assert (await ws.call("GET", "/contacts", params={"field": "city"})).status_code == 422
+
     await ws.ok("DELETE", f"/contact-fields/{birthday['id']}", 204)
     assert "birthday" not in (await ws.ok("GET", f"/contacts/{c}"))["fields"]
     listed = await ws.ok("GET", "/contact-fields")
