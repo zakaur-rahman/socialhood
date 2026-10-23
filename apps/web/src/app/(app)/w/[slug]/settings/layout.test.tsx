@@ -29,6 +29,7 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "AI rules and takeover",
       "Workspace",
       "Saved replies",
+      "Business hours",
       "Notifications",
       "Billing and usage",
       "Integrations",
@@ -43,6 +44,7 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "AI rules and takeover",
       "Workspace",
       "Saved replies",
+      "Business hours",
       "Notifications",
       "Ask Social Hood",
     ]);

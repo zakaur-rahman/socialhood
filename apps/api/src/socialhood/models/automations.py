@@ -47,6 +47,11 @@ class Trigger(StrEnum):
     DEFAULT_REPLY = "default_reply"  # GR-12: a DM nothing else answered, while AI is off
 
 
+class HoursCondition(StrEnum):
+    INSIDE = "inside"  # GR-22: runs only while the account is open
+    OUTSIDE = "outside"  # GR-22: runs only while it is closed
+
+
 class MatchMode(StrEnum):
     WORD = "word"
     EXACT = "exact"
@@ -144,6 +149,8 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     # comments ignore post_scope; a Live-only automation keeps post_scope "all".
     comment_surface: Mapped[str] = mapped_column(Text, server_default=sql("'posts'"))
     cooldown_hours: Mapped[int] = mapped_column(SmallInteger, server_default=sql("24"))
+    # GR-22: run only inside or only outside the account's business hours (None: any time).
+    hours_condition: Mapped[str | None] = mapped_column(Text)
     # Tap first (FR-AUT-21, comment triggers): the private reply is this opening text with a
     # quick-reply button; the message above follows their tap or reply.
     confirm_first: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
@@ -188,6 +195,10 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(_in("surge_order", SurgeOrder), name="surge_order"),
         CheckConstraint(_in("post_scope", PostScope), name="post_scope"),
         CheckConstraint(_in("comment_surface", CommentSurface), name="comment_surface"),
+        CheckConstraint(
+            f"hours_condition IS NULL OR {_in('hours_condition', HoursCondition)}",
+            name="hours_condition",
+        ),
         CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
         CheckConstraint("cooldown_hours BETWEEN 0 AND 72", name="cooldown_hours"),
         CheckConstraint("cardinality(public_reply_texts) <= 5", name="public_reply_texts"),

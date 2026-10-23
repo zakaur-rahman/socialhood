@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition, SurgeOrder } from "@/lib/api/types";
 import { errorsFor, isCommentTrigger, runWindowProblem, type FieldErrors } from "@/lib/automations/definition";
-import { settingsSummary, SURGE_HINT, SURGE_LABEL } from "@/lib/automations/format";
+import { HOURS_SUMMARY, settingsSummary, SURGE_HINT, SURGE_LABEL } from "@/lib/automations/format";
 import { toZonedInputs, zonedToDate } from "@/lib/tz";
 
 import { StepCard, type StepState } from "../StepCard";
@@ -50,7 +50,7 @@ export function SettingsStep({
     if (state === "error") setOpen(true);
   }
   const expanded = open;
-  const stepErrors = ["cooldown_hours", "starts_at", "ends_at", "surge_order"].flatMap((field) => errorsFor(errors, field));
+  const stepErrors = ["cooldown_hours", "starts_at", "ends_at", "surge_order", "hours_condition"].flatMap((field) => errorsFor(errors, field));
   const windowProblem = runWindowProblem(draft);
 
   return (
@@ -101,6 +101,32 @@ export function SettingsStep({
             </div>
             {windowProblem ? <p className="text-xs text-danger-fg">{windowProblem}</p> : null}
           </fieldset>
+
+          <div className="space-y-2">
+            <p id="automation-hours-label" className="text-sm font-medium">
+              Business hours
+            </p>
+            <ToggleGroup
+              aria-labelledby="automation-hours-label"
+              aria-describedby="automation-hours-hint"
+              value={draft.hours_condition ?? "any"}
+              onValueChange={(value) => {
+                if (value) change({ hours_condition: value === "any" ? null : (value as "inside" | "outside") });
+              }}
+              className="flex-col sm:flex-row"
+            >
+              <ToggleGroupItem value="any">Any time</ToggleGroupItem>
+              <ToggleGroupItem value="inside">{HOURS_SUMMARY.inside}</ToggleGroupItem>
+              <ToggleGroupItem value="outside">{HOURS_SUMMARY.outside}</ToggleGroupItem>
+            </ToggleGroup>
+            <p id="automation-hours-hint" className="text-xs text-fg-secondary">
+              Set your hours in{" "}
+              <Link href={`/w/${slug}/settings/hours` as Route} className="text-brand-fg underline underline-offset-4">
+                Settings → Business hours
+              </Link>
+              . An account with no hours counts as always open.
+            </p>
+          </div>
 
           {isCommentTrigger(draft.trigger) ? (
             <div className="space-y-2">

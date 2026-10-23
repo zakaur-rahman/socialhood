@@ -14,6 +14,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "workspace", label: "Workspace", roles: EVERYONE },
   // GR-21: the snippets typed after / in a reply. Everyone reads and uses them; owners and admins edit.
   { segment: "replies", label: "Saved replies", roles: EVERYONE },
+  // GR-22: when the workspace is open, the away message and Auto mode's hours (agents read them).
+  { segment: "hours", label: "Business hours", roles: EVERYONE },
   // T8.6: every member's own digest and push settings.
   { segment: "notifications", label: "Notifications", roles: EVERYONE },
   // §3.1: billing is the owner's (admins see it read-only, C-048's Upgrade leads there).

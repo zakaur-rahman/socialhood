@@ -30,6 +30,7 @@ MatchModeName = Literal["word", "exact", "contains"]
 ActionName = Literal["send_message", "ai_reply"]
 PostScopeName = Literal["all", "selected", "next_post"]
 CommentSurfaceName = Literal["posts", "live", "both"]  # GR-10
+HoursConditionName = Literal["inside", "outside"]  # GR-22
 SurgeOrderName = Literal["oldest_first", "newest_first", "public_only"]
 StatusName = Literal["draft", "active", "paused"]
 # What the list and editor show: Scheduled before starts_at, Ended after ends_at (FR-AUT-17).
@@ -117,6 +118,8 @@ class Automation(ResponseModel):
     # GR-10 (comment triggers): posts, the account's Lives, or both. A Live-only automation keeps
     # post_scope "all".
     comment_surface: CommentSurfaceName = "posts"
+    # GR-22: run only while the account is open ("inside") or closed ("outside"); null: any time.
+    hours_condition: HoursConditionName | None = None
     cooldown_hours: int
     starts_at: datetime | None = None
     ends_at: datetime | None = None
@@ -200,6 +203,7 @@ class AutomationDefinition(RequestModel):
     )
     # GR-10: where a comment trigger listens. "live" ignores the post scope and posts.
     comment_surface: CommentSurfaceName = "posts"
+    hours_condition: HoursConditionName | None = None  # GR-22
     cooldown_hours: int = Field(default=24, ge=0, le=72)
     starts_at: datetime | None = None
     ends_at: datetime | None = None

@@ -249,6 +249,13 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         a=account_id,
     )
+    await execute(  # GR-22: the account's own business hours
+        engine,
+        "INSERT INTO business_hours (workspace_id, social_account_id, enabled, schedule)"
+        " VALUES (:w, :a, true, CAST('[]' AS jsonb))",
+        w=wid,
+        a=account_id,
+    )
     await execute(  # GR-07: a story mention
         engine,
         "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id, message_id,"

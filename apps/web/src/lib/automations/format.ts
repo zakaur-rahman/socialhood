@@ -208,12 +208,17 @@ export function runWindowText(startsAt: string | null | undefined, endsAt: strin
 }
 
 /** Settings collapsed to one line (UX-SCR-03). */
+/** GR-22: an automation that runs only while the account is open, or only while it is closed. */
+export const HOURS_SUMMARY = { inside: "Inside business hours", outside: "Outside business hours" } as const;
+
 export function settingsSummary(
-  draft: Pick<AutomationDefinition, "cooldown_hours" | "surge_order" | "starts_at" | "ends_at" | "trigger">,
+  draft: Pick<AutomationDefinition, "cooldown_hours" | "surge_order" | "starts_at" | "ends_at" | "trigger"> &
+    Partial<Pick<AutomationDefinition, "hours_condition">>,
   timeZone: string,
   disclosure: string | null | undefined,
 ): string {
   const parts = [cooldownText(draft.cooldown_hours)];
+  if (draft.hours_condition) parts.push(HOURS_SUMMARY[draft.hours_condition]);
   if (draft.trigger === "comment_keyword" || draft.trigger === "comment_any") {
     parts.push(`${SURGE_LABEL[draft.surge_order]} when busy`);
   }

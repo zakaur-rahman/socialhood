@@ -108,6 +108,14 @@ export type SavedReplyList = Schemas["SavedReplyList"];
 export type SavedReplyCreate = Schemas["SavedReplyCreate"];
 export type SavedReplyUpdate = Schemas["SavedReplyUpdate"];
 export type SavedReplyFilled = Schemas["SavedReplyFilled"];
+// GR-22: business hours and the away message.
+export type BusinessHours = Schemas["BusinessHours"];
+export type BusinessHoursUpdate = Schemas["BusinessHoursUpdate"];
+export type BusinessHoursOverview = Schemas["BusinessHoursOverview"];
+export type AccountBusinessHours = Schemas["AccountBusinessHours"];
+export type DaySchedule = Schemas["DaySchedule"];
+export type TimeRange = Schemas["TimeRange"];
+export type AutoModeName = BusinessHours["auto_mode"];
 // GR-08: entry links (ig.me links with QR codes).
 export type EntryLink = Schemas["EntryLink"];
 export type EntryLinkList = Schemas["EntryLinkList"];

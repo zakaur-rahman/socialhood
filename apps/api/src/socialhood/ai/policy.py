@@ -5,7 +5,8 @@
 decision popover can show all of them; the first failure decides the outcome:
 
  #  check                                                     fails as
- 1  the effective mode is auto                                skipped · mode_not_auto
+ 1  the effective mode is auto (and, if the account's hours   skipped · mode_not_auto
+    say Auto works only out of hours, it is closed now)
  2  the plan allows auto and credits are available            skipped · quota_exhausted
  3  not paused by a human takeover                            skipped · paused
  4  no automation handled the message                         skipped · automation_handled
@@ -109,6 +110,8 @@ class PolicyInput:
     escalation_phrases: Sequence[str] = ()
     min_confidence: float = 0.75  # AUTO_MIN_CONFIDENCE
     min_similarity: float = 0.60  # AI_RETRIEVAL_MIN_SIM
+    # GR-22: the account's hours say Auto works only while closed, and it is open now.
+    auto_hours_blocked: bool = False
 
 
 @dataclass(frozen=True)
@@ -157,7 +160,7 @@ def evaluate(p: PolicyInput) -> Decision:
     """Run every check in order; the first failure decides (see the module docstring)."""
     a = p.analysis
     checks: list[Check] = [
-        Check(1, "mode_is_auto", p.effective_mode == "auto", p.effective_mode, *SKIP_MODE),
+        _mode(p),
         _plan_and_credits(p),
         _not_paused(p),
         Check(4, "no_automation", not p.automation_handled, p.automation_handled, *SKIP_HANDLED),
@@ -181,6 +184,14 @@ SKIP_MODE: tuple[Outcome, str] = ("skipped", "mode_not_auto")
 SKIP_HANDLED: tuple[Outcome, str] = ("skipped", "automation_handled")
 ESC_WINDOW: tuple[Outcome, str] = ("escalated", "window_closed")
 ESC_KNOWLEDGE: tuple[Outcome, str] = ("escalated", "out_of_knowledge")
+
+
+def _mode(p: PolicyInput) -> Check:
+    """Check 1: Auto, and not asleep because the account is open and its Auto setting is "only
+    out of hours" (GR-22; recorded as the same ``mode_not_auto`` skip)."""
+    if p.effective_mode == "auto" and p.auto_hours_blocked:
+        return Check(1, "mode_is_auto", False, "auto, open hours", *SKIP_MODE)
+    return Check(1, "mode_is_auto", p.effective_mode == "auto", p.effective_mode, *SKIP_MODE)
 
 
 def _plan_and_credits(p: PolicyInput) -> Check:

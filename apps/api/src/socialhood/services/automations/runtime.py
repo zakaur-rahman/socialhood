@@ -42,6 +42,14 @@ have no earlier customer message to this account; the default reply needs AI off
 conversation (its override, else the account's mode). If both apply, the welcome answers and the
 default reply does not. Each obeys its own cooldown per contact.
 
+Business hours (GR-22): an automation may require ``inside`` or ``outside`` hours
+(``hours_condition``); one that doesn't hold passes over the message or comment like a scope
+mismatch does (an account with no hours is always inside). After the automations, a DM that none
+answered (no match, or every match skipped) gets the away message when the account is closed, once
+per closed window and never on top of an automation, a flow answer or an Auto-mode reply
+(services/business_hours). The order is: a waiting answer, then automations (keyword, welcome and
+default reply), then the away message, then nothing else.
+
 Tap first (FR-AUT-21): before keyword matching, a customer DM that answers a waiting opening
 releases that run's message and nothing else runs on it (services/automations/answers). The
 follow nudge (FR-AUT-22) is ``run_automation("nudge", run_id)``, enqueued once a run's message
@@ -92,6 +100,7 @@ from socialhood.models.automations import (
     AutomationRun,
     Comment,
     CommentSurface,
+    HoursCondition,
     PostScope,
     RunResult,
     SurgeOrder,
@@ -106,8 +115,9 @@ from socialhood.realtime import events
 from socialhood.repositories import automation_runs as runs
 from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import inbox
+from socialhood.repositories import ingest as ingest_rows
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services import ice_breakers
+from socialhood.services import business_hours, ice_breakers
 from socialhood.services.automations import (
     actions,
     ai_reply,
@@ -221,8 +231,10 @@ async def enqueue_for_message(
     if message.kind != "story_mention":
         # Whether the message is an entry is checked in the run.
         triggers = (*triggers, *matching.ENTRY_TRIGGERS)
-    if not answers_opening and not await runs.has_active(
-        session, message.social_account_id, triggers
+    if (
+        not answers_opening
+        and not await runs.has_active(session, message.social_account_id, triggers)
+        and not await business_hours.away_possible(session, message.social_account_id)  # GR-22
     ):
         return False
     return await enqueue_run("dm", message.id, message.workspace_id)
@@ -391,7 +403,10 @@ async def _run_dm(env: _Env, message_id: uuid.UUID) -> Outcome:
                 if flow_answer is None:
                     answer = await answers.find(session, msg, contact.id, now=env.now)
             if flow_answer is None and answer is None:
-                return await _match_dm(session, env, msg, conv, contact)
+                outcome = await _match_dm(session, env, msg, conv, contact)
+                if outcome in (Outcome.NO_MATCH, Outcome.SKIPPED):
+                    return await _away(session, env, msg, conv, contact, outcome)
+                return outcome
     if flow_answer is not None:
         await engine.answer(
             env.sessionmaker,
@@ -442,7 +457,7 @@ async def _match_dm(
         loaded = [
             item for item in loaded if starter and item.automation.id == starter.automation_id
         ]
-    loaded = await _applicable(session, loaded, msg, conv, contact)
+    loaded = await _applicable(session, loaded, msg, conv, contact, env.now)
     found = matching.matches(msg.text or "", [item.candidate for item in loaded])
     if not found:
         return Outcome.NO_MATCH
@@ -516,15 +531,54 @@ async def _match_dm(
     return Outcome.SKIPPED
 
 
+async def _away(
+    session: AsyncSession,
+    env: _Env,
+    msg: Message,
+    conv: Conversation,
+    contact: Contact,
+    outcome: Outcome,
+) -> Outcome:
+    """GR-22: nothing answered this DM, so the away message goes if the account is closed and it
+    hasn't been sent in this closed window. The conversation is locked while it is checked and
+    marked, so two messages in a row send it once."""
+    if not business_hours.away_applies(msg) or not await business_hours.away_possible(
+        session, msg.social_account_id
+    ):
+        return outcome
+    locked = await ingest_rows.lock_conversation(session, conv.id)
+    if locked is None:
+        return outcome
+    sent = await business_hours.send_away(
+        session,
+        env.deps,
+        locked,
+        contact,
+        msg,
+        ai_mode=await _ai_mode(session, locked),
+        now=env.now,
+    )
+    if not sent:
+        await session.rollback()
+        return outcome
+    await session.flush()
+    await events.commit_and_publish(session, env.redis)
+    log.info("away_message_sent", conversation_id=str(conv.id), message_id=str(msg.id))
+    return Outcome.FIRED
+
+
 async def _applicable(
     session: AsyncSession,
     loaded: list[runs.Loaded],
     msg: Message,
     conv: Conversation,
     contact: Contact,
+    now: datetime,
 ) -> list[runs.Loaded]:
     """GR-12: drop the welcome unless this is the contact's first DM to the account, and the
-    default reply unless AI is off for the conversation. Looked up only when one is loaded."""
+    default reply unless AI is off for the conversation. Looked up only when one is loaded.
+    GR-22: drop an automation whose hours condition doesn't hold."""
+    loaded = await _in_hours(session, loaded, msg.social_account_id, now)
     welcome = any(item.automation.trigger == "first_message" for item in loaded)
     default = any(item.automation.trigger == "default_reply" for item in loaded)
     drop: set[str] = set()
@@ -533,6 +587,23 @@ async def _applicable(
     if default and await _ai_mode(session, conv) != "off":
         drop.add("default_reply")
     return [item for item in loaded if item.automation.trigger not in drop]
+
+
+async def _in_hours(
+    session: AsyncSession, loaded: list[runs.Loaded], account_id: uuid.UUID, now: datetime
+) -> list[runs.Loaded]:
+    """GR-22: the automations whose hours condition holds right now (read only when one has a
+    condition)."""
+    if not any(item.automation.hours_condition for item in loaded):
+        return loaded
+    inside = await business_hours.is_open_now(session, account_id, now)
+    return [item for item in loaded if hours_hold(item.automation, inside)]
+
+
+def hours_hold(automation: Automation, inside: bool) -> bool:
+    """Whether the automation's "inside hours" / "outside hours" condition holds."""
+    condition = automation.hours_condition
+    return condition is None or (condition == HoursCondition.INSIDE) == inside
 
 
 async def _ai_mode(session: AsyncSession, conv: Conversation) -> str:
@@ -724,6 +795,7 @@ async def _run_comment(env: _Env, comment_id: uuid.UUID) -> Outcome:
             return Outcome.ALREADY_RAN
         triggers = THREAD_REPLY_TRIGGERS if comment.parent_platform_comment_id else COMMENT_TRIGGERS
         loaded = await runs.candidates(session, acct.id, triggers, now=env.now)
+        loaded = await _in_hours(session, loaded, acct.id, env.now)  # GR-22
         found = matching.matches(comment.text, [item.candidate for item in loaded])
         if not found:
             return Outcome.NO_MATCH

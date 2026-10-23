@@ -85,6 +85,14 @@ describe("editor copy (UX-SCR-03)", () => {
     ).toBe("Every time someone matches · No end date · Disclosure on");
   });
 
+  it("says when an automation needs the account open or closed (GR-22)", () => {
+    const base = { cooldown_hours: 0, surge_order: "oldest_first" as const, starts_at: null, ends_at: null, trigger: "dm_keyword" as const };
+    expect(settingsSummary({ ...base, hours_condition: "inside" }, TZ, null)).toBe(
+      "Every time someone matches · Inside business hours · No end date · Disclosure off",
+    );
+    expect(settingsSummary({ ...base, hours_condition: "outside" }, TZ, null)).toContain("Outside business hours");
+  });
+
   it("names the other automation in an overlap and which runs first (FR-AUT-15)", () => {
     const other = overlapText({ keyword: "price", automation_id: "x", automation_name: "Price list DM", this_runs_first: false });
     expect(`${other.before}${other.name}${other.after}`).toBe("“price” is also used by Price list DM, which runs first.");

@@ -34,6 +34,13 @@ describe("toDefinition", () => {
     expect(def.media_item_ids).toEqual(["m1", "m2"]);
     expect(def.scheduled_post_ids).toEqual(["s1"]);
   });
+
+  it("carries the business hours condition (GR-22)", () => {
+    expect(toDefinition(automation()).hours_condition).toBeNull();
+    const outside = toDefinition(automation({ hours_condition: "outside" }));
+    expect(outside.hours_condition).toBe("outside");
+    expect(toRequestBody(outside).hours_condition).toBe("outside");
+  });
 });
 
 describe("toRequestBody", () => {

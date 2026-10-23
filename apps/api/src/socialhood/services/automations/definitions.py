@@ -462,6 +462,7 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.story_heart = body.story_heart and body.trigger == "story_reply"
     automation.comment_surface = _surface(body)
     automation.cooldown_hours = body.cooldown_hours
+    automation.hours_condition = body.hours_condition
     automation.starts_at = body.starts_at
     automation.ends_at = body.ends_at
     automation.surge_order = body.surge_order
@@ -622,6 +623,7 @@ async def duplicate(
         ad_ids=list(source.ad_ids or []),
         comment_surface=source.comment_surface,
         cooldown_hours=source.cooldown_hours,
+        hours_condition=source.hours_condition,
         confirm_first=source.confirm_first,
         opening_text=source.opening_text,
         opening_button=source.opening_button,

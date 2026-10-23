@@ -2431,3 +2431,62 @@ took C-092.)
   and delete controls).
 - **Migration 0028** (shared with C-094; parent 0025 until re-chained): `saved_replies` and
   `uq_saved_replies_workspace_id_shortcut`.
+
+## C-094 · Business hours and away messages (GR-22, feature/gr-21-22-replies-hours)
+
+- **Where the hours live.** `business_hours`: one row for the workspace (`social_account_id` null)
+  and optionally one per account that replaces it. Each has `enabled`, the weekly `schedule`, the away
+  message (`away_enabled`, `away_message`) and `auto_mode`. An account row with `enabled` off means
+  "this account has no hours", so it is always open. No row, or a row that is off, means always open:
+  nothing changes for anyone who does not set hours.
+- **The week:** Monday is 0. Each day has any number of ranges ("09:00" to "17:00"; the closing time may
+  be "24:00"); a day with none is closed. Times are wall-clock in the workspace time zone
+  (`workspaces.timezone`), so 09:00 stays 09:00 across a daylight saving change. A range includes its
+  start and not its end. Ranges cannot overlap on a day (touching is fine) or cross midnight (open
+  until 02:00 is 18:00 to 24:00, then 00:00 to 02:00 the next day, and the two count as one stretch).
+  Hours switched on need at least one range.
+- **`is_open(hours, at)`** is pure and unit-tested at the edges: the opening minute, the closing
+  minute, midnight, a zone ahead of UTC, daylight saving. `closed_since(hours, at)` is when the current
+  closed window began (touching ranges merged), used for the once-per-window rule.
+- **Order (decision, as recommended):** a waiting answer (flow question, tap first) goes first, then
+  automations (keyword and any-reply, then the welcome and default reply of C-088), then the away
+  message if none answered, then nothing else.
+  - "None answered" is a DM with no match, or one whose matches were all skipped (cooldown, scope).
+  - Never on a story mention, a story like, a button, quick reply or conversation starter tap, or a
+    comment.
+  - **Auto mode and the away message (decision, easy to change):** a conversation whose effective AI
+    mode is Auto (and not paused for a takeover) gets no away message, because the AI answers or
+    escalates it; any other mode gets it. The message does not mark the customer's message handled, so
+    suggestions for a person still appear.
+- **Once per closed window:** `conversations.away_sent_at` is compared with `closed_since`: sent when
+  it is empty or older than the window's start. A second message the same night, or the next morning
+  before opening, gets nothing; the next night is a new window. The send uses a client id made from the
+  customer's message, so a retried job sends nothing twice, and the conversation is locked while it is
+  checked.
+- **Auto mode's hours (`auto_mode`):** `always` is today's behaviour. `out_of_hours` makes check 1 of
+  the auto-reply policy fail (`skipped`, `mode_not_auto`, value "auto, open hours") while the account
+  is open, so the suggestion waits for a person. *Kept in the existing check, not a 14th check, so
+  the 13 checks and every stored decision keep their numbers.* The setting is on the hours row (the
+  workspace's, or the account's own), not on the account's AI mode.
+- **Automations:** `automations.hours_condition` is `inside`, `outside` or null. An automation whose
+  condition does not hold passes over the message or comment, like a scope mismatch. It works for
+  message-settings automations and flows (it is checked before either runs) and for comment
+  triggers. An account with no hours is always inside, so an `outside` automation never runs there.
+  Web: a three-way control in the existing Settings step ("Any time", "Inside business hours",
+  "Outside business hours"), and the settings summary says it.
+- **API:** `GET /business-hours` (workspace schedule, time zone, each account's override, `open_now`),
+  `PUT /business-hours` (owners and admins), `PUT` and `DELETE /social-accounts/{id}/business-hours`
+  (an account's own schedule; delete returns it to the workspace's). 422 names the field
+  (`days.2.ranges.1.start`, `away_message`, `days`). Agents read.
+- **Ingest:** a new DM wakes the automation runtime when an away message could apply, even if the
+  account has no active automation (`business_hours.away_possible`).
+- **Web:** Settings has a "Business hours" tab: a switch, a week of ranges (add, remove, several per
+  day), the away message and Auto mode's hours; one card per account with "Set its own hours" and "Use
+  the workspace hours". A time input cannot show 24:00, so a closing time of 00:00 is saved as
+  midnight. The rows wrap at 375 px.
+- **Migration 0028:** `business_hours` (with `uq_business_hours_workspace_id_social_account_id` and a
+  partial unique index for the workspace's own row), `conversations.away_sent_at`,
+  `automations.hours_condition`. Expand-only; the account purge and workspace deletion pick the table
+  up from the schema.
+- **Not built:** holidays or one-off closures, an away message per language, and an away message for
+  comments (a public comment is not a conversation). All fit the same table later.

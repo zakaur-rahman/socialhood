@@ -156,7 +156,8 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     },
 }
 
-# GR-21 saved replies of B's workspace.
+# GR-21 saved replies and GR-22 business hours of B's workspace and account.
+HOURS_OFF = {"enabled": False, "days": [], "away_enabled": False, "auto_mode": "always"}
 EXAMPLE_BODIES.update(
     {
         ("POST", "/v1/w/{wid}/saved-replies"): {
@@ -168,6 +169,8 @@ EXAMPLE_BODIES.update(
         ("POST", "/v1/w/{wid}/saved-replies/{reply_id}/fill"): {
             "conversation_id": "{conversation_id}"
         },
+        ("PUT", "/v1/w/{wid}/business-hours"): HOURS_OFF,
+        ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/business-hours"): HOURS_OFF,
     }
 )
 
@@ -328,6 +331,7 @@ B_TABLES = (
     "lead_stage_changes",
     "ice_breakers",
     "saved_replies",
+    "business_hours",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -543,6 +547,19 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         headers=clerk.headers(owner_b),
     )
     assert reply.status_code == 201, reply.text
+    for path in ("business-hours", f"social-accounts/{account_id}/business-hours"):  # GR-22
+        hours = await client.put(
+            f"/v1/w/{wid}/{path}",
+            json={
+                "enabled": True,
+                "days": [{"day": 0, "ranges": [{"start": "09:00", "end": "17:00"}]}],
+                "away_enabled": True,
+                "away_message": "Back at 9.",
+                "auto_mode": "out_of_hours",
+            },
+            headers=clerk.headers(owner_b),
+        )
+        assert hours.status_code == 200, hours.text
     scheduled = await make_scheduled(
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )

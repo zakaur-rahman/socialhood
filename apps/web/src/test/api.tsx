@@ -399,6 +399,7 @@ export function automation(overrides: Partial<Automation> = {}): Automation {
     story_heart: false,
     ad_ids: [],
     comment_surface: "posts",
+    hours_condition: null,
     cooldown_hours: 24,
     starts_at: null,
     ends_at: null,
