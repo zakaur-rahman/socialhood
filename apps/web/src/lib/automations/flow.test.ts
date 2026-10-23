@@ -196,7 +196,7 @@ describe("decompile", () => {
           ],
           on_text: "email",
         },
-        { type: "ask", id: "email", text: "Email?", expect: "email", retry_text: "", tries: 2, next: "catalogue" },
+        { type: "ask", id: "email", text: "Email?", expect: "email", retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "", next: "catalogue" },
         { type: "send", id: "catalogue", text: "Here it is." },
         { type: "send", id: "prices", text: "From 499." },
       ],

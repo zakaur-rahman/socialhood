@@ -32,9 +32,9 @@ describe("toForm and toBody (GR-22)", () => {
 
   it("the request has all seven days in order and no empty message", () => {
     const body = toBody({ ...toForm(saved), away_message: "   " });
-    expect(body.days.map((d) => d.day)).toEqual([0, 1, 2, 3, 4, 5, 6]);
+    expect((body.days ?? []).map((d) => d.day)).toEqual([0, 1, 2, 3, 4, 5, 6]);
     expect(body.away_message).toBeNull();
-    expect(body.days[2].ranges).toEqual([{ start: "10:00", end: "24:00" }]);
+    expect(body.days?.[2]?.ranges).toEqual([{ start: "10:00", end: "24:00" }]);
   });
 });
 
