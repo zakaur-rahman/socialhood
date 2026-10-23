@@ -7,7 +7,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Query, Request, Response
 
 from socialhood.auth.deps import Admin, Session
 from socialhood.schemas.integrations import (
@@ -23,17 +23,22 @@ from socialhood.schemas.integrations import (
 )
 from socialhood.security.crypto import TokenCipher, cipher_for
 from socialhood.services.webhooks import endpoints as service
-from socialhood.settings import get_settings
+from socialhood.settings import Settings
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["integrations"])
 
 
-def _cipher() -> TokenCipher:
-    return cipher_for(tuple(get_settings().token_encryption_keys))
+def _settings(request: Request) -> Settings:
+    settings: Settings = request.app.state.settings
+    return settings
 
 
-def _allow_private() -> bool:
-    return get_settings().webhooks_allow_private
+def _cipher(request: Request) -> TokenCipher:
+    return cipher_for(tuple(_settings(request).token_encryption_keys))
+
+
+def _allow_private(request: Request) -> bool:
+    return _settings(request).webhooks_allow_private
 
 
 def _with_secret(endpoint: object, secret: str) -> WebhookEndpointWithSecret:
@@ -54,11 +59,15 @@ async def list_webhook_endpoints(ctx: Admin, session: Session) -> WebhookEndpoin
 
 @router.post("/webhook-endpoints", status_code=201, operation_id="create_webhook_endpoint")
 async def create_webhook_endpoint(
-    body: WebhookEndpointCreate, ctx: Admin, session: Session
+    body: WebhookEndpointCreate, request: Request, ctx: Admin, session: Session
 ) -> WebhookEndpointWithSecret:
     """Add an endpoint; its signing secret is in this response only."""
     endpoint, secret = await service.create(
-        session, body, cipher=_cipher(), user_id=ctx.user.id, allow_private=_allow_private()
+        session,
+        body,
+        cipher=_cipher(request),
+        user_id=ctx.user.id,
+        allow_private=_allow_private(request),
     )
     out = _with_secret(endpoint, secret)
     await session.commit()
@@ -74,10 +83,14 @@ async def get_webhook_endpoint(
 
 @router.patch("/webhook-endpoints/{endpoint_id}", operation_id="update_webhook_endpoint")
 async def update_webhook_endpoint(
-    endpoint_id: uuid.UUID, body: WebhookEndpointPatch, ctx: Admin, session: Session
+    endpoint_id: uuid.UUID,
+    body: WebhookEndpointPatch,
+    request: Request,
+    ctx: Admin,
+    session: Session,
 ) -> WebhookEndpoint:
     endpoint = await service.update(
-        session, endpoint_id, body, allow_private=_allow_private(), now=datetime.now(UTC)
+        session, endpoint_id, body, allow_private=_allow_private(request), now=datetime.now(UTC)
     )
     out = service.endpoint_out(endpoint)
     await session.commit()
@@ -95,10 +108,10 @@ async def delete_webhook_endpoint(endpoint_id: uuid.UUID, ctx: Admin, session: S
 
 @router.post("/webhook-endpoints/{endpoint_id}/rotate-secret", operation_id="rotate_webhook_secret")
 async def rotate_webhook_secret(
-    endpoint_id: uuid.UUID, ctx: Admin, session: Session
+    endpoint_id: uuid.UUID, request: Request, ctx: Admin, session: Session
 ) -> WebhookEndpointWithSecret:
     """A new signing secret, in this response only; the old one stops working at once."""
-    endpoint, secret = await service.rotate(session, endpoint_id, cipher=_cipher())
+    endpoint, secret = await service.rotate(session, endpoint_id, cipher=_cipher(request))
     out = _with_secret(endpoint, secret)
     await session.commit()
     return out

@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ApiError } from "@/lib/api/errors";
 import {
   useCreateWebhookEndpoint,
   useDeleteWebhookEndpoint,
@@ -341,9 +342,7 @@ function AddEndpointDialog({
           onCreated(made.signing_secret);
         },
         onError: (error) => {
-          const field = (error as { errors?: { field: string; message: string }[] }).errors?.find(
-            (e) => e.field === "url",
-          );
+          const field = error instanceof ApiError ? error.errors.find((e) => e.field === "url") : undefined;
           if (field) setUrlError(field.message);
           else toastError(error);
         },

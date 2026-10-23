@@ -28,6 +28,7 @@ from tests.support.api import Clerk
 from tests.support.automation_api import Ws, set_plan, workspace
 from tests.support.automations import make_automation
 from tests.support.ingest import jobs
+from tests.support.notify_team import make_user
 from tests.support.runtime import World, make_world, platform_deps
 from tests.support.sending import clean_outbox
 
@@ -42,7 +43,7 @@ async def ws(client: httpx.AsyncClient, clerk: Clerk) -> Ws:
     return await workspace(client, clerk)
 
 
-async def test_endpoints_over_the_api(ws: Ws, engine: AsyncEngine) -> None:
+async def test_endpoints_over_the_api(ws: Ws, engine: AsyncEngine, queue: None) -> None:
     catalogue = await ws.ok("GET", "/webhook-events")
     assert "lead.captured" in [e["type"] for e in catalogue["items"]]
 
@@ -208,6 +209,15 @@ async def test_a_new_dm_raises_contact_created_and_message_received(world: World
 
 async def test_a_failing_endpoint_shows_its_retries_then_is_turned_off(world: World) -> None:
     await add_endpoint(world, ["message.received"])
+    owner = await make_user(world.engine)  # someone to tell
+    async with world.engine.begin() as conn:
+        await conn.execute(
+            text(
+                "INSERT INTO workspace_members (workspace_id, user_id, role)"
+                " VALUES (:w, :u, 'owner')"
+            ),
+            {"w": world.wid, "u": owner},
+        )
     failing = Receiver(500)
     now = datetime.now(UTC)
     for n in range(delivery.DISABLE_AFTER):
