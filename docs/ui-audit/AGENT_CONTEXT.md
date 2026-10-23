@@ -202,7 +202,7 @@ Table, Skeleton, Avatar (+ AvatarBadge via ContactAvatar), EmptyState / ErrorSta
 - [ ] raw `<input>`, `<textarea>`, `<select>` (native date and time go through Input)
 - [ ] `text-white`, `bg-white/*`, `bg-black/*` (media uses `bg-media-scrim/N`), `bg-{status}/10|15`
 - [ ] `text-[…]` sizes, local eyebrow strings, `tracking-[0.12em]`
-- [ ] shadcn alias names in app code (`border-input`, `ring-ring`, `text-destructive`)
+- [ ] shadcn alias names anywhere in `src` (`border-input`, `ring-ring`, `text-destructive`), an opacity modifier on a token, an undefined colour class (`bg-surface`): the lint names them (C-100; docs/ui-audit/THEME.md)
 - [ ] `transition-all`, unguarded animation, hover-only controls for touch users
 - [ ] (B tasks) hand-rolled badges, cards, callouts, meters, progress bars, label-hint-error stacks,
   search fields, tables, inline empty or error states
@@ -290,7 +290,8 @@ per-site overlay patches.
 - No `shadow-raised`, RadioGroup, Calendar, Command or info tokens for now. Charts use the four
   `chart-*` aliases (C-075).
 - **The lock (C-075):** Tailwind's default palette is off; `colorValue()` in `tokens.ts` feeds the
-  hex mirrors (Clerk, OG image, manifest). Pages fill the width (C-074); four panes resize (UI-078).
+  values for what can't read variables (Clerk, OG image, manifest); `globals.css` is the only place
+  a value is written (`pnpm tokens`, C-100). Pages fill the width (C-074); four panes resize (UI-078).
 - **Primitive follow-ups (C-073):** Button `soft` (AI actions, a pressed toggle) with the
   `brand-soft-hover` token (brand 25%); ToggleGroup and Tabs `xl` (40 px segments at 14 px, 8 px
   minimum side padding), named `xl` because `lg` is 36 px on every other control; native date and

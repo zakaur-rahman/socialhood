@@ -184,7 +184,12 @@ showcase, the lazy illustrations and the moving border (DS-13). App screens use 
 
 ### 1.10 shadcn alias map
 
-Aliases stay inside `components/ui`; app code uses the tokens.
+Since C-100 nothing hand-written uses the alias class names, the primitives in `components/ui`
+included: they wear the tokens (`bg-overlay`, `text-fg-secondary`, `border-line-control`,
+`outline-brand` …). The aliases stay in `globals.css` only so that `shadcn add` output, which is
+written in those names, still compiles onto the tokens; the design lint refuses them in source.
+The table is the map, and it is the history of how each one was chosen (the "Today" column is the
+state before C-071).
 
 | Alias | Today | Target | Why |
 |---|---|---|---|
@@ -195,7 +200,7 @@ Aliases stay inside `components/ui`; app code uses the tokens.
 | `--input` | `line` | `line-control` | **Owner D-01**, applied (C-071) |
 | `--card-foreground`, `--popover-foreground`, `--secondary-foreground`, `--accent-foreground` | not mapped in `@theme inline` | mapped | Their utilities generate no CSS today (COL-009) |
 | `--background`, `--foreground`, `--card`, `--secondary`, `--muted`, `--muted-foreground`, `--destructive`, `--border`, `--ring` | unchanged | unchanged | |
-| `--radius` | `0.5rem`, read by nothing | unchanged, commented as inert | It is in UX-TOK-01's file; Tailwind's defaults are the radius scale |
+| `--radius` | `0.5rem`, read by nothing | removed (C-100) | Inert; the radius scale is now `--radius-sm` … `--radius-2xl` in `@theme` |
 
 `tokens.test.ts` asserts that every alias in `:root` has a `--color-*` mapping.
 
@@ -232,9 +237,12 @@ text.
 4. Gradient stops are `var()`.
 5. No `dark:` variants in app code or in restyled primitives: the theme lives in the token values.
    (The `dark` custom variant from C-002 stays for library code that needs it.)
-6. Allowed literals: `media-scrim` overlays on media; the hex mirrors that consumers can't read as
-   variables (Clerk, the OG image, the manifest), which must read from `styles/tokens.ts` or be
-   tested against it (COL-019).
+6. Allowed literals: `media-scrim` overlays on media; the values that consumers can't read as
+   variables (Clerk, the OG image, the manifest), which read them from `colorValue()` in
+   `styles/tokens.ts` (COL-019). Since C-100 every intentional literal is listed, with a reason, in
+   `styles/colour-exceptions.ts`, and the lint fails on one that isn't listed and on an entry that
+   no longer exists. The architecture, the exception policy and the light-theme prerequisites are
+   in [THEME.md](THEME.md).
 
 A light theme would then be one block that redefines the `--color-*` values under a theme selector,
 with no component edits. It is not planned for R1.
@@ -248,6 +256,12 @@ CSS variables (Clerk, the OG image, the manifest, the viewport) take values from
 `tokens.ts`, and `tokens.test.ts` rejects literals there.
 
 ### 1.13 Token changes in one place
+
+**Historical (C-100).** `src/styles/globals.css` is the only place a theme value is written, and
+the values in the blocks below are copies from when the tokens were introduced; some have grown
+since (the named shades, the glow shadows, the radius scale, the gradient variables). Read the
+current values in `globals.css`, or in [THEME.md](THEME.md), and do not edit this section to
+change one. It stays as the record of what each step added.
 
 The non-blocking additions (UI-001):
 

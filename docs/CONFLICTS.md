@@ -5120,3 +5120,100 @@ GR-20 added the flow action `assign`; `propose_flow` could not draft it. Now it 
   Integration (`test_agent_actions.py`): a member is saved as an assign step in a draft, a stranger is
   refused before anything is stored, the round-robin notes with the setting off and nobody available.
 - *Not changed:* the web proposal card shows the summary lines as they are; nothing there lists actions.
+
+
+## C-100 · Theme single source and exception list (feature/theme-single-source)
+
+Implements the theme audit (F-01 to F-17, exceptions E-01 to E-12). Visual consistency only: no
+logic, API, routing, data or auth change. The guide is `docs/ui-audit/THEME.md`.
+
+- **One source.** `styles/globals.css` is the only place a theme value is written. New
+  `scripts/gen-tokens.mjs` (no dependencies; `pnpm tokens`, also `predev` and `prebuild`) parses it
+  and writes `styles/tokens.generated.ts` and `.json`, both committed. `tokens.ts` keeps only the
+  descriptions (name, use, swatch) and the type-role constants and reads the values from the
+  generated file; `colorValue()` reads them too, and a chart alias resolves to its token. New
+  `radiusValue()`. `tokens.test.ts` regenerates in memory and fails on drift, requires a `use` entry
+  for every `--color-*` and none for a token that is gone, and forbids a theme literal in
+  `tokens.ts`. `scripts/generate-icons.mjs` reads shell-1, shell-2 and fg from the JSON (the icons
+  come out byte-identical). The brand gradient is `--gradient-brand` in `:root`, used by
+  `bg-brand-gradient` and by Clerk's primary button (`var(--gradient-brand)`); the other gradients
+  are variables too. Clerk's radii read `radiusValue("lg")` and `var(--radius-xl)`; the global error
+  page reads `radiusValue("lg")`. DESIGN_SYSTEM §1.13 points to globals.css and is marked
+  historical; §1.10 and §1.12 are updated.
+- **Light mode is not built.** Dark only, as decided; THEME.md §1 lists the prerequisites.
+- **Semantic names everywhere (F-03, F-04).** Hand-written code, `components/ui` included, uses the
+  tokens: `bg-popover` to `bg-overlay`, `text-muted-foreground` to `text-fg-secondary`,
+  `border-input` to `border-line-control`, `bg-primary` to `bg-brand-strong`, `border-border` to
+  `border-line`, `bg-border` to `bg-line`, `ring-background` to `ring-canvas`, `text-foreground` to
+  `text-fg`, `outline-ring`/`border-ring`/`ring-ring` to `outline-brand`/`border-brand`/`ring-brand`.
+  Every mapping is the alias's own target, so no pixel moves. The `:root` aliases and `@theme inline`
+  stay for `shadcn add` output, with a comment and a manifest entry; the lint bans the class names
+  in all of `src`. The inert `--radius` is removed. `SavedReplyPicker` uses `FLOATING_SURFACE`.
+- **F-01.** `bg-surface` (undefined, transparent) was in ActivityPage, ContactsPage, LeadsPage,
+  SegmentBar and TagChip. The three cards and the table wrapper use `cardVariants()` (`panel`,
+  `line` edge); the two chips use `bg-hover` (the neutral chip fill). This is a visible fix: those
+  surfaces were transparent on `canvas` and are now `panel`.
+- **Named shades instead of opacity modifiers (F-05).** 58 modifiers to 0. New tokens, all derived
+  with `color-mix` from their base so they follow it: `media-wash` 20%, `media-chip` 70%,
+  `media-heavy` 85% (media scrim: /20 to wash, /50 /60 /70 to chip, /80 /85 and `from-canvas/90` to
+  heavy); `panel-glass` 50% (panel /30 /40 /50 /60 /70) and `panel-veil` 85% (the floating nav);
+  `canvas-veil` 30% (canvas /20 /30 /40); `on-brand-soft` 15%, `on-brand-line` 30%,
+  `on-brand-line-strong` 60%; `danger-line` 30%, `warning-line` 40%; `danger-fill-hover`;
+  `fg-hover`. Exact duplicates use existing tokens: `success-soft`, `warning-soft`; `brand-soft/20`
+  to `brand-soft`; `bg-raised/60` to `bg-hover`; the dialog footers' `bg-muted/50` to `bg-field`.
+- **Gradients (F-06).** New `bg-glow-brand-top` (50% 55% at the top, as the hero had) used by Hero
+  and LazyIllustration. AutomationShowcase's circular glow, the moving border, the lamp and the
+  spotlight stay as listed marketing-effect exceptions.
+- **Charts (F-07).** Legends use the `chart-*` tokens their bars use; data bars are
+  `bg-chart-series-1` (TopIntentsCard was the gradient); gradients stay for meters and progress. The
+  series chart axis is `stroke-line-strong` with no stroke opacity.
+- **Cards (F-08).** App cards use `cardVariants` (SuggestionCard keeps its `rounded-lg` and padding).
+  Marketing cards use `MARKETING_CARD`, `MARKETING_CARD_GLASS` and `MARKETING_CARD_HOVER` in
+  `marketing/primitives.tsx`, static edges `line` (hover `line-strong`). Left: the PostComposer sticky
+  bar (a bar that is a card only from `md`), the app chrome frames (sidebar, shell, inbox), the
+  mock-UI cards inside `Illustrations.tsx`, and the Languages and Trust cards (a `canvas` fill).
+- **States (F-09).** Hover on SuggestionCard's and EmojiPicker's small buttons and on the
+  TemplatePicker option is `hover:bg-hover`; `disabled:opacity-30` is 50. `hover:bg-pressed` stays
+  on three elements that already sit on a `hover` or tinted fill, where `hover` would be invisible:
+  the Ask source chip and suggestion rows (AnswerText, AskConversation) and the download button on a
+  file card inside a bubble (AttachmentView). The empty send buttons keep `disabled:opacity-100`
+  (listed).
+- **Inverse button (F-11).** New Button variant `inverse` (`bg-fg text-canvas hover:bg-fg-hover`)
+  for Ask's stop button and the carousel arrows in PostPreview.
+- **Type (F-12).** `tracking-eyebrow` and `leading-display` are theme tokens, so no arbitrary
+  tracking or leading remains. SiteFooter headings use `EYEBROW`. Headings use the roles:
+  `ITEM_TITLE`, `CARD_TITLE`, `SECTION_TITLE`, `PAGE_TITLE`.
+- **Radius and shadow (F-13, F-14).** SiteFooter `rounded` to `rounded-sm`. The radius scale is
+  written in `@theme`. New `--shadow-glow`, `-hover` and `-button` replace the 2xl, xl and lg shadows
+  tinted with `shadow-brand/N`. Stale comments in `ui/floating.ts` and `lib/utils.ts` updated;
+  tailwind-merge knows the new names.
+- **Left as is.** F-10 (marketing border colours are now consistent through the shared constants;
+  the implicit-colour borders are fine), F-15 (arbitrary sizes, not colour), F-16 (test literals, now
+  listed), F-17 (emails: out of the web app and email clients can't use CSS variables; listed with
+  the reason, not changed).
+- **Lint and manifest.** `styles/colour-exceptions.ts` lists every intentional literal, allowed
+  shade, runtime channel, token group, the shadcn layer, dark-only choice and static asset with a
+  reason. `design-lint.test.ts` now also checks undefined colour tokens (built from globals.css),
+  arbitrary colour/shadow/gradient values, colour literals and inline colour styles (ts, tsx, other
+  css, `scripts/*.mjs`), shadcn alias class names anywhere in `src`, opacity modifiers on tokens,
+  the focus names, disabled opacity, arbitrary tracking and leading, a bare `rounded` and `dark:`,
+  with positive and negative self-tests, and it fails on a listed entry that is gone.
+- *Deviation: the audit said a file that uses `colorValue()` may hold literals. It may not: the five
+  such files are held to none by `tokens.test.ts`, and the one literal among them (the OG glow's
+  `rgba(0,0,0,0)`) is a manifest entry.*
+- *Deviation: the audit suggested `hover:bg-pressed` become `hover:bg-hover` everywhere; three stay,
+  for the reason above.*
+- *Deviation: shades are `color-mix` of a base token, not repeated rgb literals, so a base change
+  carries to them. `colorValue()` therefore returns a `color-mix(...)` string for those tokens; none
+  of its consumers uses one.*
+- **On-screen changes** (for screenshots): the five F-01 surfaces; marketing: `panel` cards at 30, 40
+  and 60 or 70% are now 50%, the sticky nav veil unchanged, static framed shots (hero, auth, the
+  automation showcase) have a `line` edge, not `line-strong`, the footer headings are 11 px,
+  secondary-coloured; the Hero glow is as before and the illustration cards' glow is narrower; calendar
+  cells outside the month (30%) and closed hours (20% to 30%); media chips and captions at 70% where
+  they were 50 or 60% (attachment tray) and 85% where 80 (media tray); the carousel arrows are solid
+  white at rest; the Stop button is now a Button (a disabled Button ignores the pointer, so its tooltip does not show while it is disabled); the
+  chart axis is white 20% (it was the brand colour at 20%); the Top topics bars are solid brand; the
+  dialog footers are `field` (it was `field` at 50%); the sentiment card and metric comparison
+  titles are semibold where they were medium; the plans heading on the billing page loses
+  `tracking-tight` at 18 px.
