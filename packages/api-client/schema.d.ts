@@ -158,6 +158,27 @@ export interface paths {
         patch: operations["update_workspace"];
         trace?: never;
     };
+    "/v1/w/{wid}/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Activity
+         * @description Automation runs, failed sends, failed webhook deliveries and accounts that need
+         *     attention, newest first. ``failures_only`` (the default) leaves out runs that worked.
+         */
+        get: operations["list_activity"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/agent/approvals": {
         parameters: {
             query?: never;
@@ -2646,6 +2667,86 @@ export interface components {
              * @enum {string}
              */
             type: "action";
+        };
+        /**
+         * ActivityAction
+         * @description The one thing to do about it: a link inside the workspace ("/settings/connections").
+         */
+        ActivityAction: {
+            /** Href */
+            href: string;
+            /** Label */
+            label: string;
+        };
+        /** ActivityItem */
+        ActivityItem: {
+            /** Account Label */
+            account_label?: string | null;
+            action?: components["schemas"]["ActivityAction"] | null;
+            /** Automation Id */
+            automation_id?: string | null;
+            /** Automation Name */
+            automation_name?: string | null;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "automation_run" | "flow_step" | "message" | "webhook_delivery" | "account";
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "ok" | "failed" | "partial" | "skipped" | "attention";
+            /** Platform */
+            platform?: string | null;
+            /** Reason */
+            reason?: string | null;
+            retry?: components["schemas"]["ActivityRetry"] | null;
+            /**
+             * Retryable
+             * @default false
+             */
+            retryable: boolean;
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Title */
+            title: string;
+        };
+        /** ActivityList */
+        ActivityList: {
+            /** Items */
+            items: components["schemas"]["ActivityItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /**
+         * ActivityRetry
+         * @description Where a safe retry goes: the web posts to the message's retry route, or the webhook
+         *     delivery's replay route, with ``target_id``.
+         */
+        ActivityRetry: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "message" | "webhook_delivery";
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
         };
         /** Actor */
         Actor: {
@@ -7897,6 +7998,53 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WorkspaceOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_activity: {
+        parameters: {
+            query?: {
+                failures_only?: boolean;
+                kind?: ("automation_run" | "flow_step" | "message" | "webhook_delivery" | "account") | null;
+                automation_id?: string | null;
+                account_id?: string | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivityList"];
                 };
             };
             /** @description Validation error */

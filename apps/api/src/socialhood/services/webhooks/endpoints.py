@@ -185,11 +185,12 @@ async def _queue(
     event_type: str,
     payload: dict[str, object],
     now: datetime,
+    event_id: uuid.UUID | None = None,
     replay_of: uuid.UUID | None = None,
 ) -> WebhookDelivery:
     delivery = WebhookDelivery(
         endpoint_id=endpoint.id,
-        event_id=uuid.UUID(str(payload["id"])),
+        event_id=event_id or uuid.UUID(str(payload["id"])),
         event_type=event_type,
         payload=payload,
         status=DeliveryStatus.PENDING,
@@ -226,6 +227,7 @@ async def replay(session: AsyncSession, delivery_id: uuid.UUID, *, now: datetime
         event_type=original.event_type,
         payload=dict(original.payload),
         now=now,
+        event_id=original.event_id,  # the same webhook-id: the receiver's idempotency key
         replay_of=original.id,
     )
     return DeliveryOut.model_validate(delivery)

@@ -208,7 +208,7 @@ async def test_every_kind_is_merged_newest_first_with_its_action(
     run_item, message_item, hook_item, account_item = got["items"]
     assert run_item["outcome"] == "skipped"
     assert "7 days" in run_item["reason"]
-    assert run_item["action"]["href"] == f"/automations/{automation}"
+    assert run_item["action"] is None  # nothing fixes Instagram's 7-day limit
     assert message_item["error_code"] == "platform_unavailable"
     assert hook_item["error_code"] == "endpoint_error"
     assert hook_item["action"] == {"label": "Check the endpoint", "href": "/settings/integrations"}

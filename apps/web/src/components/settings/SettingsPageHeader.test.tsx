@@ -31,6 +31,7 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Notifications",
       "Billing and usage",
       "Integrations",
+      "Activity",
       "Ask Social Hood",
     ]);
   });

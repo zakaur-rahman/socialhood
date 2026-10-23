@@ -1,6 +1,6 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { ActivityItem } from "@/lib/api/types";
 import { account, automation, json, renderWithApi } from "@/test/api";
@@ -48,6 +48,13 @@ function setup(pages: { items: ActivityItem[]; next_cursor: string | null }[]) {
     },
   });
 }
+
+// Radix Select's pointer APIs, which jsdom lacks (as in components/ui/select.test.tsx).
+beforeAll(() => {
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
+  Element.prototype.scrollIntoView ??= () => {};
+});
 
 describe("Settings, Activity (GR-05)", () => {
   it("shows a failed run with its reason and the reconnect link", async () => {
