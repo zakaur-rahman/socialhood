@@ -45,6 +45,7 @@ import {
   useFlowFields,
   useFlowTags,
   usePauseAutomation,
+  useSavedReplies,
   useSocialAccounts,
   useStartFlow,
   useWorkspace,
@@ -55,6 +56,7 @@ import {
   DEFAULT_NAME,
   fieldErrors,
   firstIncompleteStep,
+  isCommentTrigger,
   stepComplete,
   stepOfField,
   stepsWithErrors,
@@ -148,6 +150,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const startFlow = useStartFlow(wid, server.id);
   const flowTags = useFlowTags(wid, flowMode);
   const flowFields = useFlowFields(wid, flowMode);
+  const flowSavedReplies = useSavedReplies(wid, flowMode);
   const flowFlush = flow.flush;
   const flush = useCallback(async () => (await flushSettings()) && (await flowFlush()), [flushSettings, flowFlush]);
   const status: SaveStatus =
@@ -197,6 +200,8 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
       disclosure,
       fields: (flowFields.data ?? []).map((field) => ({ key: field.key, type: field.type })),
       tagIds: new Set((flowTags.data ?? []).map((tag) => tag.id)),
+      savedReplyIds: flowSavedReplies.data ? new Set(flowSavedReplies.data.items.map((reply) => reply.id)) : undefined,
+      commentFirstId: isCommentTrigger(draft.trigger) ? (flow.tree[0]?.id ?? null) : undefined,
     });
   const flowErrored = Object.keys(flow.saveErrors).length > 0 || Object.keys(flowActivationErrors).length > 0;
   const stateOf = (step: StepId): StepState => {
@@ -494,6 +499,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
             beforeTest={flush}
             flow={flowMode ? flow.definition : null}
             tags={flowTags.data ?? []}
+            savedReplies={flowSavedReplies.data?.items}
           />
         </aside>
         </Card>

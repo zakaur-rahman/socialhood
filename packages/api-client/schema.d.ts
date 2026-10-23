@@ -1888,6 +1888,8 @@ export interface paths {
          *     (file_asset_id). 422 lists missing or foreign fields; 402 quota_exceeded over
          *     knowledge_characters; 415 for a file that isn't PDF, DOCX, TXT or MD up to 10 MB; 404 for a
          *     gap_id that isn't this workspace's. Ingestion runs in the background (status pending).
+         *     GR-35: a website (type site: url, optional title and recrawl, weekly or off) is crawled in the
+         *     background, up to the plan's crawl_pages; its pages are read through ``…/pages``.
          */
         post: operations["create_knowledge_source"];
         delete?: never;
@@ -1916,6 +1918,88 @@ export interface paths {
          * @description Any change (or ``reingest``) adds 1 to the version and ingests the source again.
          */
         patch: operations["update_knowledge_source"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/excluded-paths": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exclude Site Path
+         * @description Pages at this path or below it (``/blog`` holds ``/blog/a``) are removed now and left out
+         *     of later crawls. 422 for a path that is only "/" and past 50 excluded paths.
+         */
+        post: operations["exclude_site_path"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Site Pages
+         * @description The addresses of a website source's crawl, shallowest first (404 for any other source).
+         */
+        get: operations["list_site_pages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/pages/{page_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Site Page
+         * @description The page's knowledge is deleted and later crawls leave the address out.
+         */
+        delete: operations["remove_site_page"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/knowledge-sources/{source_id}/recrawl": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Recrawl Site
+         * @description Crawl the site again now. One crawl runs at a time: while one is queued or running this
+         *     changes nothing and returns the site as it is. 404 for any other source.
+         */
+        post: operations["recrawl_site"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/knowledge/test": {
@@ -2258,6 +2342,29 @@ export interface paths {
          *     off for its account.
          */
         post: operations["refresh_post_summary"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/reports/weekly": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Weekly Report
+         * @description A finished week against the week before, and the last 8 weeks of each count. ``week`` is
+         *     the Monday it starts (default: the latest finished week); a day that is not a Monday, a week
+         *     still running or one over a year back is 422. Gaps are null with the days they cover, never
+         *     zeros.
+         */
+        get: operations["get_weekly_report"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4404,6 +4511,8 @@ export interface components {
             outcome: string;
             /** Requires Paid Plan */
             requires_paid_plan: boolean;
+            /** Steps */
+            steps: number;
             /**
              * Trigger
              * @enum {string}
@@ -5811,6 +5920,14 @@ export interface components {
             message: string;
         };
         /**
+         * ExcludePath
+         * @description POST …/excluded-paths: pages at this path or below it are removed and not crawled again.
+         */
+        ExcludePath: {
+            /** Path */
+            path: string;
+        };
+        /**
          * FieldCondition
          * @description ``equals`` ignores case; ``set`` is any value.
          */
@@ -6294,6 +6411,7 @@ export interface components {
             last_ingested_at?: string | null;
             /** Question */
             question?: string | null;
+            site?: components["schemas"]["SiteCrawlInfo"] | null;
             /**
              * Status
              * @enum {string}
@@ -6305,7 +6423,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "faq" | "text" | "url" | "file";
+            type: "faq" | "text" | "url" | "file" | "site" | "page";
             /**
              * Updated At
              * Format: date-time
@@ -6331,13 +6449,15 @@ export interface components {
             gap_id?: string | null;
             /** Question */
             question?: string | null;
+            /** Recrawl */
+            recrawl?: ("weekly" | "off") | null;
             /** Title */
             title?: string | null;
             /**
              * Type
              * @enum {string}
              */
-            type: "faq" | "text" | "url" | "file";
+            type: "faq" | "text" | "url" | "file" | "site";
             /** Url */
             url?: string | null;
         };
@@ -6354,8 +6474,12 @@ export interface components {
         KnowledgeSourcePatch: {
             /** Body */
             body?: string | null;
+            /** Excluded Paths */
+            excluded_paths?: string[] | null;
             /** Question */
             question?: string | null;
+            /** Recrawl */
+            recrawl?: ("weekly" | "off") | null;
             /**
              * Reingest
              * @default false
@@ -7782,6 +7906,105 @@ export interface components {
              */
             state: "open" | "human_agent" | "template_only" | "closed";
         };
+        /**
+         * ReportAccountMetric
+         * @description An account insight (GR-38's service) for the week against the week before, with a weekly
+         *     series. ``figure`` carries the gap reason and days covered.
+         */
+        ReportAccountMetric: {
+            figure: components["schemas"]["AccountMetricFigure"];
+            /** Label */
+            label: string;
+            /** Series */
+            series: components["schemas"]["ReportPoint"][];
+        };
+        /** ReportIntent */
+        ReportIntent: {
+            /** Count */
+            count: number;
+            /** Intent */
+            intent: string;
+        };
+        /**
+         * ReportMetric
+         * @description A count or rate for the week, the week before, and the weeks leading up to it (oldest
+         *     first, the last point is the week). ``change_pct`` is relative for counts and times; for a
+         *     percentage ``change_points`` is the difference in percentage points instead.
+         */
+        ReportMetric: {
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Change Points */
+            change_points?: number | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "messages_received" | "conversations" | "reply_rate" | "median_first_response_s" | "handled_by_ai_rate" | "comments_received" | "story_mentions" | "conversations_from_links" | "conversations_from_ads" | "leads_qualified" | "leads_won";
+            /** Label */
+            label: string;
+            /**
+             * Lower Is Better
+             * @default false
+             */
+            lower_is_better: boolean;
+            /** Previous */
+            previous?: number | null;
+            /** Series */
+            series: components["schemas"]["ReportPoint"][];
+            /**
+             * Unit
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "seconds";
+            /** Value */
+            value?: number | null;
+        };
+        /**
+         * ReportPoint
+         * @description One week of a series: the Monday it starts, and its value (None is a gap).
+         */
+        ReportPoint: {
+            /** Days Known */
+            days_known?: number | null;
+            /** Days Total */
+            days_total?: number | null;
+            /** Value */
+            value?: number | null;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+        };
+        /** ReportPost */
+        ReportPost: {
+            /** Caption */
+            caption?: string | null;
+            /** Comments */
+            comments: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Permalink */
+            permalink?: string | null;
+            /**
+             * Posted At
+             * Format: date-time
+             */
+            posted_at: string;
+        };
+        /** ReportQuestion */
+        ReportQuestion: {
+            /** Asked */
+            asked: number;
+            /** Topic */
+            topic: string;
+        };
         /** RunContact */
         RunContact: {
             /** Display Name */
@@ -8384,6 +8607,85 @@ export interface components {
             kind: "set_field";
             /** Value */
             value: string;
+        };
+        /**
+         * SiteCrawlInfo
+         * @description GR-35: where a site source's crawl is. Counts are of this site's pages.
+         */
+        SiteCrawlInfo: {
+            /** Char Count */
+            char_count: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /** Error */
+            error?: string | null;
+            /** Excluded Paths */
+            excluded_paths: string[];
+            /** Finished At */
+            finished_at?: string | null;
+            /** Next Crawl At */
+            next_crawl_at?: string | null;
+            /** Page Cap */
+            page_cap: number;
+            /** Pages Done */
+            pages_done: number;
+            /** Pages Failed */
+            pages_failed: number;
+            /** Pages Found */
+            pages_found: number;
+            /** Pages Skipped */
+            pages_skipped: number;
+            /**
+             * Recrawl
+             * @enum {string}
+             */
+            recrawl: "weekly" | "off";
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "idle" | "queued" | "running" | "done" | "failed";
+            /** Truncated */
+            truncated: boolean;
+        };
+        /**
+         * SitePage
+         * @description GR-35: one address of a site crawl.
+         */
+        SitePage: {
+            /** Char Count */
+            char_count: number;
+            /** Chunk Count */
+            chunk_count: number;
+            /** Error */
+            error?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Ingest Status */
+            ingest_status?: ("pending" | "processing" | "ready" | "failed") | null;
+            /** Last Crawled At */
+            last_crawled_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "done" | "failed" | "skipped" | "gone" | "excluded" | "removed";
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url: string;
+        };
+        /** SitePageList */
+        SitePageList: {
+            /** Items */
+            items: components["schemas"]["SitePage"][];
+            /** Total */
+            total: number;
         };
         /** SkippedCounts */
         SkippedCounts: {
@@ -9059,6 +9361,44 @@ export interface components {
         WebhookEventTypeList: {
             /** Items */
             items: components["schemas"]["WebhookEventType"][];
+        };
+        /**
+         * WeeklyReport
+         * @description GET …/reports/weekly: the report for one finished week. ``week_start`` is its Monday in
+         *     the workspace's time zone; ``weeks`` lists the Mondays that can be asked for, newest first.
+         *     The digest email of that Monday carries the same numbers.
+         */
+        WeeklyReport: {
+            account_comparison: components["schemas"]["MetricComparisonVisual"];
+            /** Account Metrics */
+            account_metrics: components["schemas"]["ReportAccountMetric"][];
+            /** Metrics */
+            metrics: components["schemas"]["ReportMetric"][];
+            /** Needs You */
+            needs_you: number;
+            /** Notes */
+            notes: "captures_not_built"[];
+            /** Open Questions */
+            open_questions: number;
+            previous_week: components["schemas"]["DaySpan"];
+            /** Series Weeks */
+            series_weeks: number;
+            /** Timezone */
+            timezone: string;
+            /** Top Intents */
+            top_intents: components["schemas"]["ReportIntent"][];
+            /** Top Posts */
+            top_posts: components["schemas"]["ReportPost"][];
+            /** Top Questions */
+            top_questions: components["schemas"]["ReportQuestion"][];
+            week: components["schemas"]["DaySpan"];
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /** Weeks */
+            weeks: string[];
         };
         /** WhatsAppTemplate */
         WhatsAppTemplate: {
@@ -14154,6 +14494,177 @@ export interface operations {
             };
         };
     };
+    exclude_site_path: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExcludePath"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_site_pages: {
+        parameters: {
+            query?: {
+                status?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SitePageList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    remove_site_page: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                page_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    recrawl_site: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                source_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSource"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     test_knowledge: {
         parameters: {
             query?: never;
@@ -14947,6 +15458,48 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_weekly_report: {
+        parameters: {
+            query?: {
+                week?: string | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReport"];
                 };
             };
             /** @description Validation error */

@@ -63,6 +63,8 @@ export const keys = {
   // leads (GR-18): moving a lead also refreshes `contactLists(wid)`, which holds its cards
   leadSummary: (wid: string) => ["w", wid, "leads", "summary"] as const,
   leadSettings: (wid: string) => ["w", wid, "leads", "settings"] as const,
+  // the weekly report (GR-34); `week` is the Monday, or "latest"
+  weeklyReport: (wid: string, week: string) => ["w", wid, "reports", "weekly", week] as const,
   contactFields: (wid: string) => ["w", wid, "contact-fields"] as const,
   contactSegments: (wid: string) => ["w", wid, "contact-segments"] as const,
   // inbox (P3)
@@ -116,6 +118,8 @@ export const keys = {
   aiDecision: (wid: string, messageId: string) => ["w", wid, "ai-decision", messageId] as const,
   knowledgeSources: (wid: string) => ["w", wid, "knowledge-sources"] as const,
   knowledgeGaps: (wid: string) => ["w", wid, "knowledge-gaps"] as const,
+  // GR-35: under the sources' key, so refreshing the sources refreshes the open site's pages too
+  sitePages: (wid: string, siteId: string) => ["w", wid, "knowledge-sources", siteId, "pages"] as const,
   billing: (wid: string) => ["w", wid, "billing"] as const,
   billingPayments: (wid: string) => ["w", wid, "billing", "payments"] as const,
   // P8: public plans, and the member's own notification settings and push

@@ -815,17 +815,25 @@ async def test_local_days_across_a_daylight_saving_change(
 async def test_the_digests_week_gives_the_digests_numbers(team: Team) -> None:
     """T8.7's "numbers match the overview endpoint": seen late on Sunday 27 September, the 7
     days are the digest's week (21-27 September) and the overview shows what it sent."""
-    await seed_week(team)
+    seed = await seed_week(team)
+    # A conversation that began from an entry link in the week (GR-08): in the digest too.
+    from_link = await seed.conversation("Chetan")
+    await team.execute(
+        "UPDATE conversations SET entry_source = 'link', entry_at = :at WHERE id = :c",
+        at=ist(23, 9),
+        c=from_link,
+    )
     sunday_night = datetime(2026, 9, 27, 23, 0, tzinfo=ZoneInfo(KOLKATA))
 
     body = await overview(team, "7d", sunday_night)
 
-    sent = expected_stats(*await post_ids(team))
-    # Story mentions (GR-07) and entry counts (GR-08, GR-09) are on Home only; the digest
-    # doesn't count them.
-    home_only = ("story_mentions", "conversations_from_ads", "conversations_from_links")
-    current = {k: v for k, v in body["current"].items() if k not in home_only}
+    sent = {**expected_stats(*await post_ids(team)), "conversations_from_links": 1}
+    # Story mentions, entry counts and the leads are in the digest too (GR-34). Home's period
+    # has no leads yet, so those two are not in the comparison.
+    current = body["current"]
     assert current == {key: sent[key] for key in current}
+    assert {"story_mentions", "conversations_from_ads", "conversations_from_links"} <= set(current)
+    assert current["conversations_from_links"] == 1
     assert body["top_intents"] == sent["top_intents"]
     assert [p["id"] for p in body["top_posts"]] == [p["post_id"] for p in sent["top_posts"]]
     assert body["needs_you"] == sent["needs_you"]

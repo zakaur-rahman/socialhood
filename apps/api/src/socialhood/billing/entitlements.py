@@ -69,6 +69,7 @@ THINGS = {
     "contact_fields": "custom contact fields",
     "webhook_endpoints": "webhook endpoints",
     "flow_steps": "steps in a flow",
+    "crawl_pages": "pages in a website crawl",
 }
 
 

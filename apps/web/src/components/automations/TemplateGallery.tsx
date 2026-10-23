@@ -222,6 +222,7 @@ export function TemplateCard({
           {template.action === "ai_reply" ? <Sparkles aria-hidden /> : null}
           {ACTION_TAG[template.action]}
         </Badge>
+        {template.steps > 0 ? <Badge>{template.steps === 1 ? "1 step" : `${template.steps} steps`}</Badge> : null}
       </div>
       <Button variant="secondary" className="mt-3 self-start" disabled={disabled} loading={pending} onClick={onUse} aria-label={`Use template: ${template.name}`}>
         Use template

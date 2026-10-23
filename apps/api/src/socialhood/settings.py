@@ -161,6 +161,9 @@ class Settings(BaseSettings):
     # GR-04: outbound webhooks may go to private and local addresses (development and e2e, which
     # receive them locally); refused in production (security/ssrf.py).
     webhooks_allow_private: bool = False
+    # GR-35: a website crawl may read private and local addresses (development and e2e, which crawl
+    # a local fixture site); refused in production (security/ssrf.py).
+    crawl_allow_private: bool = False
 
     # TR-API-07 (security/ratelimit.py). Off only for local load or end-to-end runs; refused in
     # production. CLIENT_IP_HEADER names the header that carries the caller's address; required
@@ -211,6 +214,8 @@ class Settings(BaseSettings):
             unsafe.append("SANDBOX_PLATFORM_ENABLED must be false in production")
         if self.webhooks_allow_private:
             unsafe.append("WEBHOOKS_ALLOW_PRIVATE must be false in production")
+        if self.crawl_allow_private:
+            unsafe.append("CRAWL_ALLOW_PRIVATE must be false in production")
         if self.log_level == "DEBUG":
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
         if not self.rate_limits_enabled:

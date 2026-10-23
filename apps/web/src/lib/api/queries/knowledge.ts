@@ -11,6 +11,7 @@ import type {
   KnowledgeSourceList,
   KnowledgeSourcePatch,
   KnowledgeTestResult,
+  SitePageList,
 } from "../types";
 import { keys } from "./keys";
 import { expectOk, unwrap } from "./unwrap";
@@ -94,6 +95,87 @@ export function useDeleteKnowledgeSource(wid: string) {
       expectOk(api.DELETE("/v1/w/{wid}/knowledge-sources/{source_id}", { params: { path: { wid, source_id: id } } })),
     onSuccess: async (_, id) => {
       patchSources(queryClient, wid, (items) => items.filter((item) => item.id !== id));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.knowledgeSources(wid) }),
+        queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] }),
+      ]);
+    },
+  });
+}
+
+// ---- website sources (GR-35): a site's pages, crawl now, remove a page, exclude a path
+
+/** Whether a site's pages are still being read or built into knowledge. */
+export function sitePagesBusy(list: SitePageList | undefined): boolean {
+  return Boolean(
+    list?.items.some((page) => page.status === "queued" || page.ingest_status === "pending" || page.ingest_status === "processing"),
+  );
+}
+
+/** The addresses of a site's crawl (the first 200); polled while the crawl or the build runs. */
+export function useSitePages(wid: string, siteId: string, enabled: boolean, crawling: boolean) {
+  const api = useApi();
+  return useQuery<SitePageList>({
+    queryKey: keys.sitePages(wid, siteId),
+    enabled,
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/w/{wid}/knowledge-sources/{source_id}/pages", {
+          params: { path: { wid, source_id: siteId }, query: { limit: 200 } },
+        }),
+      ),
+    refetchInterval: (query) => (crawling || sitePagesBusy(query.state.data) ? PROCESSING_POLL_MS : false),
+  });
+}
+
+/** Crawl the site again now. One crawl runs at a time: while one is queued or running nothing changes. */
+export function useRecrawlSite(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<KnowledgeSource, Error, string>({
+    mutationFn: (siteId) =>
+      unwrap(api.POST("/v1/w/{wid}/knowledge-sources/{source_id}/recrawl", { params: { path: { wid, source_id: siteId } } })),
+    onSuccess: (source) => {
+      patchSources(queryClient, wid, (items) => items.map((item) => (item.id === source.id ? source : item)));
+      void queryClient.invalidateQueries({ queryKey: keys.knowledgeSources(wid) });
+    },
+  });
+}
+
+/** Pages at the path or below it are removed now and left out of later crawls. */
+export function useExcludeSitePath(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<KnowledgeSource, Error, { siteId: string; path: string }>({
+    mutationFn: ({ siteId, path }) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/knowledge-sources/{source_id}/excluded-paths", {
+          params: { path: { wid, source_id: siteId } },
+          body: { path },
+        }),
+      ),
+    onSuccess: async (source) => {
+      patchSources(queryClient, wid, (items) => items.map((item) => (item.id === source.id ? source : item)));
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: keys.knowledgeSources(wid) }),
+        queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] }),
+      ]);
+    },
+  });
+}
+
+/** The page's knowledge is deleted and later crawls leave the address out. */
+export function useRemoveSitePage(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, { siteId: string; pageId: string }>({
+    mutationFn: ({ siteId, pageId }) =>
+      expectOk(
+        api.DELETE("/v1/w/{wid}/knowledge-sources/{source_id}/pages/{page_id}", {
+          params: { path: { wid, source_id: siteId, page_id: pageId } },
+        }),
+      ),
+    onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: keys.knowledgeSources(wid) }),
         queryClient.invalidateQueries({ queryKey: ["w", wid, "overview"] }),

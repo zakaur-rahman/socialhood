@@ -30,6 +30,7 @@ from tests.support.ai import (
     make_analysis,
     make_decision,
     make_gap,
+    make_site,
     make_source,
     make_suggestion,
 )
@@ -78,6 +79,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "link_id": "link_id",  # GR-08
     "segment_id": "segment_id",  # GR-17
     "reply_id": "reply_id",  # GR-21
+    "page_id": "page_id",  # GR-35
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -214,6 +216,9 @@ EXAMPLE_BODIES.update(
             "gap_id": "{gap_id}",
         },
         ("POST", "/v1/w/{wid}/knowledge/test"): {"question": "Do you ship to Dubai?"},
+        # GR-35: excluding a path on B's source from A's workspace is 404 (the site tests also
+        # run it against B's real site).
+        ("POST", "/v1/w/{wid}/knowledge-sources/{source_id}/excluded-paths"): {"path": "/blog"},
     }
 )
 
@@ -342,6 +347,8 @@ B_TABLES = (
     "knowledge_sources",
     "knowledge_chunks",
     "knowledge_gaps",
+    "site_crawls",  # GR-35
+    "site_pages",
     "ai_decisions",
     "ai_usage_events",
     "media_items",
@@ -392,6 +399,7 @@ class Seed:
     link_id: str = ""
     segment_id: str = ""
     reply_id: str = ""
+    page_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -584,6 +592,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     suggestion = await make_suggestion(engine, **on)
     decision = await make_decision(engine, **on)
     source = await make_source(engine, workspace_id=wid)
+    _, site_page = await make_site(engine, workspace_id=wid)  # GR-35
     gap = await make_gap(engine, workspace_id=wid)
     post = await make_media_item(engine, workspace_id=wid, account_id=account_id)
     comment = await make_comment(
@@ -676,6 +685,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         link_id=link.json()["id"],
         segment_id=segment.json()["id"],
         reply_id=reply.json()["id"],
+        page_id=str(site_page),
     )
 
 

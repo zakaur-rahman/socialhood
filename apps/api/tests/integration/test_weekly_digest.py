@@ -244,7 +244,20 @@ def expected_stats(cakes_id: str, bread_id: str) -> dict[str, Any]:
             {"topic": "Do you ship to Dubai?", "asked": 5},
             {"topic": "Eggless options", "asked": 2},
         ],
+        "story_mentions": 0,
+        "conversations_from_ads": 0,
+        "conversations_from_links": 0,
+        "leads_qualified": 0,
+        "leads_won": 0,
     }
+
+
+REPORT_KEYS = ("trends", "account")  # the weekly report's part of the numbers (GR-34)
+
+
+def overview_part(stats: dict[str, Any]) -> dict[str, Any]:
+    """The digest's numbers without the weekly report's trends and account metrics."""
+    return {k: v for k, v in stats.items() if k not in REPORT_KEYS}
 
 
 @pytest.fixture
@@ -295,7 +308,12 @@ async def test_monday_nine_sends_the_weeks_numbers_to_members_who_want_them(team
     [row] = await digests(team)
     assert (row["week_start"], row["status"], row["recipients"]) == (WEEK, "sent", 2)
     assert row["sent_at"] == NINE_IST
-    assert row["stats"] == expected
+    assert overview_part(row["stats"]) == expected
+    trends = {t["key"]: t for t in row["stats"]["trends"]}
+    assert trends["messages_received"]["value"] == 7
+    assert trends["reply_rate"]["unit"] == "percent"
+    # No Instagram insights were recorded: gaps, never zeros.
+    assert {a["metric"]: a["value"] for a in row["stats"]["account"]}["reach"] is None
     deliveries = await team.deliveries()
     assert {d["user_id"] for d in deliveries} == {team.owner, team.agent}
     for delivery in deliveries:
@@ -305,7 +323,7 @@ async def test_monday_nine_sends_the_weeks_numbers_to_members_who_want_them(team
         assert delivery["data"] == {
             "workspace_name": "Maple Bakery",
             "workspace_slug": team.slug,
-            "stats": expected,
+            "stats": row["stats"],
         }
 
 
@@ -323,7 +341,7 @@ async def test_the_digest_numbers_are_the_overviews(team: Team) -> None:
             )
             overview = await overview_stats.compute(session, span=last_week, now=NINE_IST)
 
-    assert overview.to_json() == row["stats"]
+    assert overview.to_json() == overview_part(row["stats"])
 
 
 # ---------------------------------------------------------------- once a week

@@ -2582,3 +2582,283 @@ copy and the editor's options. No migration, no new route.
   purge removes them with its automations and contacts.
 - **Not done / pending:** per-quick-reply tap counts (taps are per step); a retention limit on
   `link_clicks` (kept as long as the automation); the sandbox run of `gr15-link-clicks.spec.ts`.
+
+## C-099 · Template gallery, version 2 (GR-16, feature/gr-16-templates-v2)
+Five new templates on the new triggers and steps, and a saved-reply choice in the flow editor.
+
+### Templates that carry a flow
+- **Before:** a template only filled the message settings (text, link buttons, public replies),
+  so it could not make a question or a quick reply. *Deviation from the plan, which only said to
+  add templates: a template may now carry a flow, minimally.*
+  - `Template.flow` is an optional `FlowDefinition` (`services/automations/templates.py`).
+  - `definitions.create` saves it as version 1 in `automation_flows` and sets `flow_version`, so
+    the draft opens as a flow (`flow_source: flow`) and the settings are not used. No migration.
+  - Everything else (trigger, keywords, public replies, post scope) fills as before.
+  - The older templates stay single messages and compile from their settings.
+- **The gallery:** `AutomationTemplate.steps` is the number of steps a template starts with (0 for
+  a single message). The card shows "2 steps" next to its trigger and action.
+- **The five** (category, trigger, steps):
+  - *Story giveaway* (grow, story mention, 2): thanks them and says they are in the draw, then
+    when winners are announced.
+  - *Lead magnet* (grow, comment keyword GUIDE, 2): the private reply asks for their email (saved
+    to the contact), then sends the PDF with a link button. Public replies are on.
+  - *Price by option* (sell, comment keyword PRICE, 4): the private reply has quick replies for
+    Small, Medium and Large, each leading to its own price message.
+  - *Call requests* (sell, DM keyword CALL, 2): asks for a phone number (saved to the contact,
+    with a thank-you), then "Notify the team". *No new action was needed: `notify_team` already
+    exists (C-079).*
+  - *Coupon from a link* (sell, entry link, 1): sends the code with a link button. Entry links
+    (GR-08) are made on their own page.
+- **Names:** the older *Giveaway replies* and *Book a call* stay (comment-on-a-post giveaway and a
+  booking link by DM). The new ones have their own keys (`story_giveaway`, `lead_magnet`,
+  `price_by_option`, `call_request`, `entry_link_coupon`). The plan's "price please" is named
+  *Price by option*: no "please" in our copy.
+- **Placeholders and activation:**
+  - The link is left as `https://`, so activation asks for it, as for the other templates.
+  - Prices and the code are written as `[price]` and `[code]` in the message. *The activation
+    rules cannot tell that a bracket is unfilled, so they do not stop activation; the copy makes
+    it plain. A later check could flag square brackets.*
+  - Questions are an email or a phone answer saved to the contact, so no custom field has to exist.
+  - Tap first is off for these: a flow's first message is the opening itself.
+- **PD-5 (pending):** every template fits the Free plan's cap of 5 steps (the largest has 4); a
+  unit test reads the `flow_steps` entitlement, so it follows the decision.
+- **Ask Social Hood:** `prepare_automation` no longer reports "the message" missing for a template
+  that carries a flow. The tool still prefills the settings only; the draft it opens is the
+  template's.
+- **Tests:** `tests/unit/test_template_flows.py` (each flow validates, builds, needs only its link,
+  stays in the cap, has plain copy), `tests/integration/test_template_flows_api.py` (each creates a
+  flow draft that activates once filled, on Free and Pro), the gallery snapshot tests, vitest for
+  the card, and `apps/web/e2e/gr16-templates-v2.spec.ts`.
+- **Needs checking centrally:** `apps/api/openapi.json` and `packages/api-client` for
+  `AutomationTemplate.steps`.
+
+### The saved-reply step in the flow editor (from GR-21, C-093)
+- A Send step has a choice, "Write a message" or "Send a saved reply".
+  - Choosing a saved reply shows a picker over `GET /saved-replies` (titles, with the body below)
+    and a link to Settings, Saved replies. The text, image, buttons and quick replies are hidden.
+  - Switching to a saved reply drops the image and link buttons the message had. It is disabled
+    while the message has quick replies, which would orphan their branches.
+  - Switching back keeps the (now empty) text; nothing is stored for the reply.
+- **Editor model:** `SendNode.saved` and `saved_reply_id`, both optional. `compile` writes a send
+  with `saved_reply_id` and no text; `decompile` reads it back. A chosen source with no reply
+  picked yet saves as an empty send, so it opens as "Write a message" after a reload; the step
+  check still says "Choose a saved reply" while it is chosen.
+- **Checks per step:** a reply must be chosen; a deleted reply is flagged; and not on a comment
+  flow's first step (the API's rule, `flow.start`, now shown on the step). The API still checks
+  the reply's length and "alone" on activation.
+- **Preview path:** the step shows "Saved reply: <title>" instead of the text, and is titled
+  "Saved reply".
+
+## C-097 · Trends and a weekly report (GR-34, feature/gr-34-trends-report)
+
+Roadmap P3. No migration.
+
+- **One service, three readers.** `services/reports.py` builds the report; the report page, the
+  digest email and the Home link all read it. Every number comes from `overview_stats` (Home and the
+  digest) or from GR-38's account metrics. No model writes, rounds or ranks a figure.
+- **Finished weeks only.** A week is Monday to Sunday in the workspace's zone and can be asked for
+  once Sunday is over; every comparison is seven days against seven (DST makes a span an hour longer
+  or shorter, as everywhere else). The latest week is the one before the current Monday. *Decided: no
+  "this week so far". A part-week against a whole one would mislead, and GR-38's rule for a running
+  period (cut the other one to the same days) would make the report's numbers differ from the
+  digest's.*
+- **Digest extended, not replaced.** `OverviewStats` gains story mentions, conversations from ads and
+  from links, and leads qualified and won (`lead_stage_changes`, each contact once per stage). Home
+  reads the first three from the same object, so the overview and the digest still agree (the test in
+  `test_overview.py` now compares them, with a link conversation seeded). Home's period has no
+  leads fields yet. `weekly_digests.stats` and the email's data also carry `trends` (each metric's
+  week, week before and change) and `account` (reach, views, accounts engaged, interactions,
+  followers, follows, unfollows, with days covered and the reason when missing). Old rows lack both
+  and the template leaves the sections out.
+- **Email.** Two new tables ("Against the week before", "Your Instagram account") and the button
+  "See the full report" to `/w/{slug}/reports?week={Monday}`. *The old "Open Social Hood" button is
+  gone; the text version still lists Home and the inbox.* Copy: "Up 18.3% on the week before (was
+  120)", "Down 2.6 points ...", "Up from 0 the week before", "No data for the week before",
+  "Counts 5 of 7 days".
+- **Trends.** Week against the week before, and 8 weeks ending with it (oldest first). The change is
+  GR-38's `change` (percent, one decimal, flat under 0.5%, a direction but no percent against 0). *A
+  rate (reply rate, handled by AI) changes in percentage points, not percent of a percent.* A faster
+  median first response is good news (`lower_is_better`).
+- **Gaps, the same as GR-38.** A rate with nothing to divide is null. A week that ended before the
+  workspace was created *and has nothing recorded* is null for every count (a workspace's earlier
+  weeks aren't zeros); if rows exist (an import) the real numbers show. Account figures sum the days
+  that have a reading and say how many; none gives null and the reason; followers is the latest
+  reading. The report week's account figures lack Sunday if the daily job hasn't written it yet (the
+  digest at 09:00 Monday often will): shown as "Counts 6 of 7 days", not as a drop.
+- **Account metrics in the digest job** need the platform capabilities (insights granted or not):
+  the task passes the real ones. Callers without adapters (tests) assume insights are granted, so a
+  missing reading reads "no readings", not "not allowed".
+- **Route.** `GET /v1/w/{wid}/reports/weekly?week=YYYY-MM-DD` (any member). `week` is a Monday that
+  has finished, at most 52 weeks back; anything else is 422 on `week`. Without it, the latest week.
+  The response has the week, the week before, the picker's 12 Mondays (newest first), each metric
+  with its series, the account metrics (figure plus series), `account_comparison` (a GR-38
+  `MetricComparisonVisual` built by the same builder, so tone, gap wording and day coverage match
+  Ask), top intents, top posts, "Open right now" counts and `notes`.
+- **Captures (GR-14) are not in the report.** Nothing counts them on this base; `notes` carries
+  `captures_not_built` and the page says so in one line. The slot is one more `MetricDef` once a
+  source exists (and a line in the digest follows from it).
+- **Page** `/w/{slug}/reports?week=`: tiles (`MetricTile`) with the change and a hand-built SVG
+  line under each (`SeriesChart`: one series colour `chart-series-1`, scale from 0, or 0 to 100 for
+  a share, a gap breaks the line and is counted under the chart, a dot on the latest week, the
+  picture labelled with every value in words). The account part is Ask's `MetricComparison` plus a
+  small chart per metric. Week picker: a select of the 12 weeks and Earlier/Later buttons; the week
+  is in the address. One column to 639 px, two from 640, three from 1280, no sideways scroll at 375.
+- **"Shareable".** *Decided: a stable address for members of the workspace. There is no public link
+  and no unsigned URL; someone outside the workspace gets the usual 404 from the API and the app's
+  sign-in. A public or expiring link would be a new surface and an owner's call.*
+- **Where it is linked.** The digest email, and a "Weekly report" button in Home's header. *Not in
+  the main nav (the sidebar lists are snapshotted and the report is a weekly read, not a daily
+  tool).* Not yet from Ask answers (VIS-13's "linked from answers"): that needs the agent session's
+  code, which is another branch's.
+- **Left from roadmap P3:** notable-change detection with thresholds (step 2), Home's "This week"
+  strip (step 3), the Ask `get_trends` tool (step 5), and trends for sentiment share, top topics and
+  post engagement at equal age (step 1 lists them). This task did the counts, rates, leads and
+  account figures the plan names. The series is 8 weeks; `SERIES_WEEKS` is a constant.
+- **Tests.** Unit: `test_reports.py` (week maths, DST, the 422 rules, changes in percent and points,
+  gaps stay gaps, the digest extras, the comparison reuse), `test_email_templates.py` (the new
+  tables and link, an old digest without them). Integration (written, not run): `test_weekly_report.py`
+  (the digest and the report give the same numbers, the week before and the series, weeks before the
+  workspace are gaps, story mentions/links/ads/leads in their week, account days and gaps, insights
+  not granted, no account, the route, 422s, roles, other workspaces and zones),
+  `test_weekly_digest.py` and `test_overview.py` updated. Vitest: `format.test.ts`,
+  `SeriesChart.test.tsx`, `WeeklyReportPage.test.tsx`, the Home link. E2E:
+  `gr34-weekly-report.spec.ts` (a finished week can't be seeded through the API, so it checks the
+  page against the API for the same week).
+- **For the coordinator:** regenerate the client (`get_weekly_report`, `WeeklyReport`, `ReportMetric`,
+  `ReportAccountMetric`, `ReportPoint`, `ReportIntent`, `ReportQuestion`, `ReportPost`); the web types
+  are aliases waiting for it. `test_isolation.py` needed nothing (no table, no path id). The route's
+  `week` parameter is a plain date. Nothing was added to the tenancy or purge lists.
+
+## C-098 · Website crawl into knowledge (GR-35, feature/gr-35-site-crawl)
+
+A whole website becomes knowledge: a crawl from a start address, a weekly re-crawl that only
+re-reads what changed, and each page listed under its site. It builds on the single-page web source
+(T5.3) and reuses its fetch, its extractor and its ingest job.
+
+- **A site is a source; each page is a source.** *The plan says "per-page sources in the knowledge
+  list". Decided: a new type `site` (the address, the settings) whose crawled pages are sources of
+  type `page` with `parent_source_id` pointing at it.* So the existing pipeline does the rest: the
+  same `ingest_knowledge_source` job chunks and embeds a page, retrieval and the test box find it,
+  `knowledge_characters` counts it, and deleting a site deletes its pages and chunks (ON DELETE
+  CASCADE). Pages are not in the main list (`GET /knowledge-sources` leaves out anything with a
+  parent) and cannot be reached as sources (404 on get, edit and delete); they live under
+  `…/pages`. A page's text is stored in its source's `body` (at most 20,000 characters, the column's
+  limit), and ingestion of a `page` takes it from there instead of fetching again, so the crawl is
+  the only thing that touches the site.
+- **Migration 0030** (after 0029), expand-only: the `type` check widened to `site` and
+  `page`; `knowledge_sources.parent_source_id`; the tables `site_crawls` (one row per site: re-crawl
+  setting, excluded paths, status, whether it is seeded, whether it hit the cap, the cap of that
+  crawl, error, start and finish times, `next_crawl_at`) and `site_pages` (one row per address:
+  status, depth, order found, title, content hash, ETag, Last-Modified, last crawled, and the page's
+  source). `uq_site_pages_site_source_id_url`. Both tables are workspace-level, so an account purge
+  leaves them (the purge test's kept list names them) and they are in the tenancy test's table list.
+- **The crawl (`services/knowledge/crawl.py`, rules in `crawl_rules.py`).**
+  - *Order.* robots.txt of the start address's site, then the sitemap addresses (the `Sitemap:`
+    lines and `/sitemap.xml`; a sitemap index is followed; at most 20 files), then the start page,
+    then breadth first: the shallowest queued page, then in the order found. One page at a time,
+    1 s apart, or the site's `Crawl-delay` up to 10 s.
+  - *What counts as the same site.* The same host, ignoring a leading `www.`; other hosts and
+    sub-domains are other sites and are not followed. *The plan says "same registrable host". There
+    is no public-suffix list in the stack and guessing one risks following a different business, so
+    this is the stricter rule.* A redirect that ends on another site is skipped.
+  - *Addresses.* Fragments, **all query strings**, default ports, a trailing slash and double slashes
+    are dropped, and the host is lowercased. *The plan says "query-duplicates". Dropping the query
+    is the simple rule that cannot fall into sort-order, filter and tracking-parameter traps; the
+    cost is that a site whose pages differ only by `?id=` is read as one page.* Links to files that
+    aren't pages (PDF, images, scripts, documents) are not followed; `rel="nofollow"` links and
+    pages with a robots meta of `nofollow` are not followed; `noindex` pages are skipped and not
+    stored. Depth is capped at 6 links from the start page.
+  - *robots.txt.* Our group (`SocialHoodBot`) wins over `*`; the longest matching rule decides and
+    Allow wins a tie; `*` and a closing `$` work. A missing file (any 4xx) allows everything; one
+    that errors (5xx, timeout) or can't be reached fails the crawl with a message, as does a site
+    whose robots.txt disallows the start page. *The crawl never reads a page robots.txt disallows,
+    including pages found in a sitemap.*
+  - *Limits.* Pages 2 MB and 15 s (the single-page fetch's), robots.txt 512 KB, a sitemap file
+    5 MB, text kept per page 20,000 characters. A failed page is tried twice, then marked failed;
+    the crawl goes on. The sitemap is read by pattern, not by an XML parser (nothing to expand).
+- **Plan cap.** New entitlement `crawl_pages`: **Free 25, Pro 250, Max 1,000** pages for one site.
+  *Proposed values, pending the owner's plan decisions (one line in `billing/plans.py`; the same
+  note as `contact_fields`).* The cap is taken when a crawl is requested and stored on the crawl
+  (`page_cap`); pages found past it are left out and the site says "Stopped at N pages". Pages the
+  owner removed or excluded do not count; `knowledge_characters` still applies on top.
+- **SSRF.** `security/ssrf.py` gains `fetch_document` (`fetch_html` is now a call to it): the same
+  rules (address checks with DNS, the connection pinned to the checked address, redirects by hand and
+  checked, size and time limits) for other content types, extra request headers and a 304 answer.
+  *Every address the crawl touches goes through it: the start page, robots.txt, each sitemap file
+  (including ones robots.txt names on another host), each page, each redirect.* A start address that
+  is a private literal is refused when adding (422 on `url`); one that resolves to a private
+  address fails the crawl with the usual message. Links and sitemap entries to other hosts are
+  filtered out before they are ever requested. `FetchError` gains `status`.
+  **`CRAWL_ALLOW_PRIVATE`** (default off, refused in production like `WEBHOOKS_ALLOW_PRIVATE`; on in
+  `.env.example` and the e2e stack) lets development and e2e crawl a local fixture site.
+- **Jobs.** `crawl_site(id, version)` (bulk lane, queueing lock `crawl:{id}:{version}`, run lock
+  `crawl:{id}`, 3 tries, RETRY in `RECOVERY`) and `dispatch_site_recrawls` (hourly at :20, RETRY).
+  - *One crawl at a time.* The site source's `version` numbers its crawls; asking for a crawl while
+    one is queued or running changes nothing. A job for an older number, a finished crawl or a
+    deleted site stops ("stale").
+  - *Resumable and idempotent.* The queue is the `site_pages` rows, so a job that dies carries on
+    where it stopped (a stalled one is re-run by recovery). A job reads pages for four minutes, then
+    queues itself again for the rest, so no crawl holds a worker for long. A page is committed with
+    its result in one transaction, and a page the owner removed meanwhile is left alone. The seed
+    runs once per crawl.
+  - *Re-crawl.* `dispatch_site_recrawls` starts a crawl for each weekly site whose `next_crawl_at`
+    has come (50 at a time, workspace-scoped), and queues again a crawl that has not moved for 30
+    minutes (a lost job). The setting is `weekly` (default) or `off`; `next_crawl_at` is a week after
+    the last crawl finished. *The plan says "e.g. weekly, per source setting"; weekly and off are
+    the two settings.*
+  - *Change detection.* A page we hold is asked for with `If-None-Match` and `If-Modified-Since` when
+    it has an ETag or Last-Modified (a 304 leaves it alone); otherwise its text is read and hashed
+    (whitespace-insensitive), and an equal hash leaves it alone. New or changed text gives its page
+    source the next version and queues the ingest job, which swaps the chunks. Unchanged pages keep
+    their chunks and cost no embedding. An unchanged page whose ingest never ran, or failed (the
+    knowledge limit, say), is queued again.
+  - *Gone pages.* A 404 or 410 removes the page's source and chunks and keeps the row as `gone`
+    (a gone page that is listed or linked again in a later crawl is read again; not twice in the
+    same crawl). A page that now answers with `noindex`, a disallow, another type or another site is
+    removed from knowledge the same way and shown as `skipped` with the reason.
+  - *Result.* The site is `ready` (`failed` with the reason when no page could be read or the crawl
+    could not start); the crawl is `done` or `failed`.
+- **API** (admins only, like the rest of knowledge).
+  - `POST /knowledge-sources` with `type: "site"`, `url`, optional `title`, `recrawl`
+    (`weekly`/`off`); `PATCH` takes `title`, `recrawl`, `excluded_paths` (the whole list, at most 50
+    paths) and `reingest` (crawl now). The address of a site can't be edited (a different site is
+    a new source). A site counts no characters itself; its pages do.
+  - `GET …/{id}/pages?status=&limit=&offset=` (shallowest first; default 200, at most 500);
+    `DELETE …/{id}/pages/{page_id}` (the page's knowledge goes, the row stays as `removed`, and later
+    crawls leave the address out); `POST …/{id}/excluded-paths` `{path}` (a path or a full address;
+    pages at the path or below it go now as `excluded`, and are not requested again; taking a path
+    off with `PATCH` lets the next crawl read it); `POST …/{id}/recrawl` (404 for anything that is
+    not a site).
+  - `KnowledgeSource` gains `site` (`SiteCrawlInfo`: status, recrawl, excluded paths, pages found,
+    done, failed and skipped, the characters and chunks of the ready pages, the cap, whether it was
+    cut at the cap, the error, started, finished, next crawl). `KnowledgeSourceCreate.type` gains
+    `site` (not `page`).
+- **Web.** The Knowledge page's Add menu gains **Website** (address, optional title, "Check for
+  changes every week" on). A site is a row in Sources with a chevron that opens its pages under it:
+  a summary of the crawl (found, read, failed, stopped at the cap, the next check), **Crawl now**,
+  the excluded paths (add one, or take one off), and the pages as stacked rows (title, path, status,
+  when it was read, the reason it failed or was skipped) with a menu per page: Remove page (asks
+  first) and Exclude that path. Stacked rows and a one-column panel, so it works at 375 px. The list
+  polls while the site is crawling or its pages are being built. Deleting a site says its pages go
+  too.
+- **Not built.** A way to bring back a removed page except deleting the site (excluding a path can be
+  undone; removing a page cannot); `.xml.gz` sitemaps; JavaScript-rendered pages (only the HTML the
+  server sends is read, as for a single page); a per-site page cap the owner picks below the plan's;
+  a crawl history.
+- **Tests.** Unit: `test_crawl_rules.py` (robots groups, longest match, wildcards, sitemap and index
+  parsing, an entity bomb, address normalisation, same-site, excluded paths, links and robots meta,
+  the hash), `test_crawl_fetch.py` (`fetch_document`, SSRF for robots, sitemap, link, redirect and
+  start addresses, the sitemap file and cap limits, one page's outcomes, `allow_private`),
+  `test_settings.py`. Integration: `test_site_crawl.py` (end to end on a fixture site, the cap,
+  a better plan, resume, stale jobs, breadth first, robots/noindex/other sites, failing pages, a
+  disallowed site, www redirects, re-crawl by ETag and hash, gone and returning pages, one crawl at
+  a time, remove a page, exclude a path, the scheduled re-crawl and a lost job, SSRF, roles,
+  tenancy, deletion, the knowledge limit). Tenancy: the new routes, body, param and tables in
+  `test_isolation.py`; the account deletion test seeds a site. Vitest: `SitePages.test.tsx`. E2E:
+  `gr35-site-crawl.spec.ts` (a local fixture site; `CRAWL_ALLOW_PRIVATE` in the e2e stack).
+- **Unsure / for the coordinator:** regenerate the client (`SiteCrawlInfo`, `SitePage`,
+  `SitePageList`, `ExcludePath`, `site`, `recrawl` and `excluded_paths` on the source models, `site`
+  and `page` in the type literals, the four new operations); the web types are aliases waiting for
+  it (`KnowledgeCreateType` is `KnowledgeSourceCreate["type"]`). The web calls the new paths through
+  the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
+  config.

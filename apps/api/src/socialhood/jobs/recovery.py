@@ -91,6 +91,8 @@ RECOVERY: dict[str, Recovery] = {
     "backfill_comments": R,
     "snapshot_account_posts": R,  # each window is captured once
     "snapshot_account_day": R,  # one row per account and day
+    "crawl_site": R,  # resumable: the queue is in site_pages, a stale version is dropped
+    "dispatch_site_recrawls": R,  # a started crawl is queued, so a re-run leaves it alone
     "ingest_knowledge_source": R,  # re-ingests the version; retried on any error already
     "analyze_conversation": R,  # "already_analysed" when the message has its analysis
     "summarize_conversation": R,

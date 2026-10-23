@@ -321,6 +321,12 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
     expect(screen.getByTestId("channels-pill")).toHaveTextContent("2 channels connected");
   });
 
+  it("links to the weekly report (GR-34)", async () => {
+    setup();
+    const link = await screen.findByRole("link", { name: "Weekly report" });
+    expect(link).toHaveAttribute("href", "/w/maple/reports");
+  });
+
   it("one channel, or none", async () => {
     const { unmount } = setup({ overview: busy({ accounts_connected: 1, platforms_connected: ["whatsapp"] }) });
     expect(await screen.findByTestId("channels-pill")).toHaveTextContent("1 channel connected");

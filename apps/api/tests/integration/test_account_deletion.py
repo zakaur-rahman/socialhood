@@ -36,7 +36,7 @@ from socialhood.security.signatures import sign_request
 from socialhood.services import account_deletion as deletion
 from socialhood.services.connections import BEING_DELETED
 from socialhood.services.scheduled_posts import views as scheduled_post_views
-from tests.support.ai import make_analysis, make_decision, make_source, make_suggestion
+from tests.support.ai import make_analysis, make_decision, make_site, make_source, make_suggestion
 from tests.support.analytics import make_account_day, make_comment_analysis, make_snapshot
 from tests.support.api import IG_APP_SECRET, Clerk, sign_in
 from tests.support.automations import make_automation, make_comment, make_media_item
@@ -321,6 +321,7 @@ async def test_the_purge_leaves_nothing_of_the_account_and_spares_everything_els
     x = await seed_account(engine, wid, doomed)
     y = await seed_account(engine, wid, kept)
     await make_source(engine, workspace_id=wid)
+    await make_site(engine, workspace_id=wid)  # GR-35: workspace-level, kept with the workspace
 
     # Posts: one to both accounts, one published only to the doomed one, one scheduled for it.
     both = await make_scheduled_post(

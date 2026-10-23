@@ -58,6 +58,13 @@ def test_production_refuses_private_webhook_addresses() -> None:
         make(**values)
 
 
+def test_production_refuses_private_crawl_addresses() -> None:
+    values = complete_production()
+    values["crawl_allow_private"] = True
+    with pytest.raises(ConfigurationError, match="CRAWL_ALLOW_PRIVATE"):
+        make(**values)
+
+
 def test_production_refuses_debug_logging() -> None:
     values = complete_production()
     values["log_level"] = "debug"

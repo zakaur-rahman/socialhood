@@ -60,6 +60,11 @@ async def test_the_template_gallery(ws: Ws) -> None:
         "thank_story_mentions",
         "welcome_new_contacts",
         "default_reply_when_ai_off",
+        "story_giveaway",
+        "lead_magnet",
+        "price_by_option",
+        "call_request",
+        "entry_link_coupon",
     ]
     first = body["items"][0]
     assert first == {
@@ -71,6 +76,7 @@ async def test_the_template_gallery(ws: Ws) -> None:
         "trigger": "comment_keyword",
         "action": "send_message",
         "requires_paid_plan": False,
+        "steps": 0,
     }
 
 

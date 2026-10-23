@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { AutomationDefinition, FlowDefinition, FlowTag } from "@/lib/api/types";
+import type { AutomationDefinition, FlowDefinition, FlowTag, SavedReply } from "@/lib/api/types";
 import { usesFollowNudge, usesTapFirst } from "@/lib/automations/definition";
 
 import { MatchTester } from "./MatchTester";
@@ -29,6 +29,7 @@ export function SidePanel({
   beforeTest,
   flow = null,
   tags = [],
+  savedReplies = [],
 }: {
   wid: string;
   slug: string;
@@ -42,6 +43,8 @@ export function SidePanel({
   /** GR-13: the flow being edited, when the automation is saved as one. */
   flow?: FlowDefinition | null;
   tags?: FlowTag[];
+  /** GR-21: their titles show in the Preview path. */
+  savedReplies?: SavedReply[];
 }) {
   const [tab, setTab] = useState<Tab>("preview");
   return (
@@ -60,6 +63,7 @@ export function SidePanel({
           mediaUrl={mediaUrl}
           flow={flow}
           tags={tags}
+          savedReplies={savedReplies}
         />
       </TabsContent>
       <TabsContent value="test">
