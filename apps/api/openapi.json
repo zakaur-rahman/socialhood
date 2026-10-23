@@ -3940,6 +3940,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_live": {
+            "default": false,
+            "title": "Is Live",
+            "type": "boolean"
+          },
           "like_count": {
             "title": "Like Count",
             "type": "integer"
@@ -4445,6 +4450,16 @@
           "contact": {
             "$ref": "#/components/schemas/ContactDetail"
           },
+          "entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -4784,6 +4799,72 @@
           "effective_mode"
         ],
         "title": "ConversationAi",
+        "type": "object"
+      },
+      "ConversationEntry": {
+        "description": "How the conversation began (GR-01): organic, an entry link (its ref), an ad (its id and,\nwhen Meta gave it, title), an ice breaker (GR-11) or another referral.",
+        "properties": {
+          "ad_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Id"
+          },
+          "ad_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Title"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "source": {
+            "enum": [
+              "organic",
+              "link",
+              "ad",
+              "ice_breaker",
+              "other"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "ConversationEntry",
         "type": "object"
       },
       "ConversationList": {
@@ -9177,11 +9258,36 @@
       },
       "SandboxInbound": {
         "additionalProperties": false,
+        "description": "A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry\nlink opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live\ncomment; a DM can carry an ad referral (its first message from an ad).",
         "properties": {
           "account_id": {
             "format": "uuid",
             "title": "Account Id",
             "type": "string"
+          },
+          "ad_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Id"
+          },
+          "ad_title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Title"
           },
           "from_id": {
             "anyOf": [
@@ -9210,10 +9316,26 @@
           "kind": {
             "enum": [
               "dm",
-              "comment"
+              "comment",
+              "live_comment",
+              "referral",
+              "postback",
+              "optin"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "postback_payload": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postback Payload"
           },
           "quick_reply_payload": {
             "anyOf": [
@@ -9227,17 +9349,50 @@
             ],
             "title": "Quick Reply Payload"
           },
+          "ref": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "referral_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ad",
+                  "link"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Source"
+          },
           "text": {
-            "maxLength": 1000,
-            "minLength": 1,
-            "title": "Text",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
           }
         },
         "required": [
           "account_id",
-          "kind",
-          "text"
+          "kind"
         ],
         "title": "SandboxInbound",
         "type": "object"

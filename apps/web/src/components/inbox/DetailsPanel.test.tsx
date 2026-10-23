@@ -64,3 +64,25 @@ describe("DetailsPanel surfaces", () => {
     expect(open).toHaveAttribute("data-size", "xs");
   });
 });
+
+describe("DetailsPanel: where the conversation started (GR-01)", () => {
+  it("names the entry link the customer came from", async () => {
+    renderDetails(null, { entry: { source: "link", ref: "bio", ad_id: null, ad_title: null, at: null } });
+    const entry = await screen.findByTestId("conversation-entry");
+    expect(entry).toHaveTextContent("Started from");
+    expect(entry).toHaveTextContent('Entry link "bio"');
+  });
+
+  it("names an ad by its title", async () => {
+    renderDetails(null, {
+      entry: { source: "ad", ref: null, ad_id: "ad_42", ad_title: "Diwali hampers", at: null },
+    });
+    expect(await screen.findByTestId("conversation-entry")).toHaveTextContent('Ad "Diwali hampers"');
+  });
+
+  it("says nothing for a conversation from before entries were recorded", async () => {
+    renderDetails(null, { entry: null });
+    expect(await screen.findByText("Priya Nair")).toBeInTheDocument();
+    expect(screen.queryByTestId("conversation-entry")).toBeNull();
+  });
+});

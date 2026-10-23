@@ -132,6 +132,14 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
     expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Photo from yesterday");
   });
 
+  it("marks a comment on a live broadcast Live (GR-01)", async () => {
+    setup({ comments: [{ ...priya, is_live: true }, kabir] });
+    const live = await screen.findByText("Live");
+    expect(live).toHaveAttribute("data-slot", "badge");
+    expect(live).toHaveAttribute("data-tone", "brand");
+    expect(screen.getAllByText("Live")).toHaveLength(1);
+  });
+
   it("shows the summary and the topics with counts and a small sentiment bar", async () => {
     setup();
     const summary = await screen.findByRole("region", { name: "Summary" });

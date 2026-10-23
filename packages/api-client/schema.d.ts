@@ -3614,6 +3614,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Live
+             * @default false
+             */
+            is_live: boolean;
             /** Like Count */
             like_count: number;
             /** Parent Platform Comment Id */
@@ -3829,6 +3834,7 @@ export interface components {
             /** Awaiting Reply */
             awaiting_reply: boolean;
             contact: components["schemas"]["ContactDetail"];
+            entry?: components["schemas"]["ConversationEntry"] | null;
             /**
              * Id
              * Format: uuid
@@ -3906,6 +3912,26 @@ export interface components {
             override?: ("off" | "suggest" | "auto") | null;
             /** Paused Until */
             paused_until?: string | null;
+        };
+        /**
+         * ConversationEntry
+         * @description How the conversation began (GR-01): organic, an entry link (its ref), an ad (its id and,
+         *     when Meta gave it, title), an ice breaker (GR-11) or another referral.
+         */
+        ConversationEntry: {
+            /** Ad Id */
+            ad_id?: string | null;
+            /** Ad Title */
+            ad_title?: string | null;
+            /** At */
+            at?: string | null;
+            /** Ref */
+            ref?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "organic" | "link" | "ad" | "ice_breaker" | "other";
         };
         /** ConversationList */
         ConversationList: {
@@ -5452,13 +5478,22 @@ export interface components {
             /** Message */
             message: string;
         };
-        /** SandboxInbound */
+        /**
+         * SandboxInbound
+         * @description A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
+         *     link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
+         *     comment; a DM can carry an ad referral (its first message from an ad).
+         */
         SandboxInbound: {
             /**
              * Account Id
              * Format: uuid
              */
             account_id: string;
+            /** Ad Id */
+            ad_id?: string | null;
+            /** Ad Title */
+            ad_title?: string | null;
             /** From Id */
             from_id?: string | null;
             /** From Username */
@@ -5467,11 +5502,17 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "dm" | "comment";
+            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin";
+            /** Postback Payload */
+            postback_payload?: string | null;
             /** Quick Reply Payload */
             quick_reply_payload?: string | null;
+            /** Ref */
+            ref?: string | null;
+            /** Referral Source */
+            referral_source?: ("ad" | "link") | null;
             /** Text */
-            text: string;
+            text?: string | null;
         };
         /** SandboxInboundResult */
         SandboxInboundResult: {

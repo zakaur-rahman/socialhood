@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.models.platform import WebhookStatus
 from socialhood.platforms.instagram.parse import epoch_time
-from tests.support.automations import make_automation
+from tests.support.automations import make_automation, make_media_item
 from tests.support.inbox import make_account, make_workspace
 from tests.support.ingest import ACCOUNT_REF, CUSTOMER, deliver, jobs, rows, sessions
 from tests.support.instagram import fixture
@@ -181,7 +181,13 @@ async def test_an_opt_in_is_kept_for_consent_and_changes_nothing_yet(
 
 
 async def any_comment_automation(engine: AsyncEngine, account: tuple[uuid.UUID, uuid.UUID]) -> None:
+    """An active "any comment" automation on all posts, with the fixtures' posts already stored
+    (so intake doesn't fetch them from Instagram)."""
     wid, account_id = account
+    for media_id in ("18100000000000001", "18020000000000005"):  # the post's, the Live's
+        await make_media_item(
+            engine, workspace_id=wid, account_id=account_id, platform_media_id=media_id
+        )
     await make_automation(
         engine,
         workspace_id=wid,

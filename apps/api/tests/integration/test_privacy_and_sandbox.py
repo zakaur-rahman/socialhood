@@ -252,3 +252,84 @@ async def test_only_sandbox_accounts_take_injected_events(
         headers=clerk.headers(clerk_id),
     )
     assert response.status_code == 409
+
+
+async def test_the_sandbox_injects_referrals_postbacks_opt_ins_and_live_comments(
+    app: FastAPI,
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    engine: AsyncEngine,
+    queue: None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """GR-01: each new kind goes through the real webhook path; a conversation shows its entry."""
+    clerk_id, me = await sign_in(client, clerk)
+    wid = me["workspaces"][0]["id"]
+    headers = clerk.headers(clerk_id)
+    acct = (await client.post(f"/v1/w/{wid}/dev/sandbox/accounts", headers=headers)).json()
+    deps = deps_from(app.state.http, app.state.settings)  # the Live comment's post is fetched
+    monkeypatch.setattr(instagram_handler, "platform_deps", lambda: deps)
+
+    async def inject(**body: object) -> None:
+        response = await client.post(
+            f"/v1/w/{wid}/dev/sandbox/inbound",
+            json={"account_id": acct["id"], **body},
+            headers=headers,
+        )
+        assert response.json() == {"stored": 1}, response.text
+        async with engine.connect() as conn:
+            [event_id] = (
+                await conn.execute(text("SELECT id FROM webhook_events WHERE status = 'received'"))
+            ).scalars()
+        await process_event(app.state.sessionmaker, event_id)
+
+    await inject(kind="referral", from_id="u_link", referral_source="link", ref="bio")
+    await inject(kind="dm", from_id="u_link", text="Hi from your bio")
+    await inject(
+        kind="dm",
+        from_id="u_ad",
+        text="Saw your ad",
+        referral_source="ad",
+        ad_id="ad_42",
+        ad_title="Diwali hampers",
+    )
+    await inject(kind="postback", from_id="u_ice", text="Opening hours?", postback_payload="HOURS")
+    await inject(kind="live_comment", from_id="u_live", text="PRICE")
+    await inject(kind="optin", from_id="u_opt")
+
+    listed = (await client.get(f"/v1/w/{wid}/conversations", headers=headers)).json()["items"]
+    entries = {}
+    for item in listed:
+        detail = (
+            await client.get(f"/v1/w/{wid}/conversations/{item['id']}", headers=headers)
+        ).json()
+        entries[detail["contact"]["platform_user_id"]] = detail["entry"]
+    assert entries["u_link"]["source"] == "link"
+    assert entries["u_link"]["ref"] == "bio"
+    assert (entries["u_ad"]["source"], entries["u_ad"]["ad_id"], entries["u_ad"]["ad_title"]) == (
+        "ad",
+        "ad_42",
+        "Diwali hampers",
+    )
+    assert entries["u_ice"]["source"] == "organic"  # GR-11 marks ice breakers
+    assert set(entries) == {"u_link", "u_ad", "u_ice"}  # the opt-in started no conversation
+    assert await one(
+        engine, "SELECT postback_payload FROM messages WHERE text = 'Opening hours?'"
+    ) == {"postback_payload": "HOURS"}
+    assert await one(engine, "SELECT text, is_live FROM comments") == {
+        "text": "PRICE",
+        "is_live": True,
+    }
+
+    refused = await client.post(
+        f"/v1/w/{wid}/dev/sandbox/inbound",
+        json={"account_id": acct["id"], "kind": "referral"},
+        headers=headers,
+    )
+    assert refused.status_code == 422  # a referral needs its source
+    refused = await client.post(
+        f"/v1/w/{wid}/dev/sandbox/inbound",
+        json={"account_id": acct["id"], "kind": "dm"},
+        headers=headers,
+    )
+    assert refused.status_code == 422  # a DM needs text

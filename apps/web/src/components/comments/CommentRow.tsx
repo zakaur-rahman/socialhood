@@ -209,6 +209,8 @@ export function CommentRow({
             </>
           ) : null}
           {analysis?.is_spam ? <Badge tone="warning">Spam</Badge> : null}
+          {/* GR-01: a comment on a live broadcast. */}
+          {comment.is_live ? <Badge tone="brand">Live</Badge> : null}
           {comment.hidden ? (
             <Badge>
               <EyeOff aria-hidden /> Hidden

@@ -482,6 +482,7 @@ export function comment(overrides: Partial<PostComment> = {}): PostComment {
     text: "What sizes do you have?",
     like_count: 0,
     hidden: false,
+    is_live: false,
     commented_at: "2026-09-28T11:00:00Z",
     deleted_at: null,
     analysis_status: "done",
