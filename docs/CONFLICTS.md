@@ -2052,3 +2052,81 @@ failures; now they can see them. A read model over existing tables: no migration
   automations into trigger-less drafts.
 - **Unverified:** nothing here depends on Meta rules. Welcome messages are ordinary DMs inside the
   24-hour window opened by the customer's message.
+
+
+## C-091 · The contacts page (GR-17, feature/gr-17-contacts)
+
+GR-02 had already built the contacts list, its filters, the CSV export, tags, fields and consent
+in the API. GR-17 adds what the page needed on top, and the page itself. (The coordinator
+renumbers this entry if another branch took C-088.)
+
+- **List, filters and export: reused as built.** Filters are tag (every one chosen), search, email
+  or phone present, platform, account, marketing consent per channel, minimum lead score, activity
+  range and up to five custom fields (`key:value` equals, `key:*` has any value). Export stays
+  admin only and streams. "Tag = lead-magnet and has email" is `tag_id` plus `has_email=true`, and
+  the export of it has the same rows (an integration test checks both).
+- **Moving activity ranges (new).** `active_within_days` (active in the last N days) and
+  `inactive_for_days` (no activity for N days or more), 1 to 3650, beside the fixed
+  `active_after` and `active_before`. *A saved segment needs a range that moves; two fixed dates
+  would go stale.* The page uses only the moving ones (7, 30 or 90 days active; quiet for 30 or 90).
+- **Count.** `GET /contacts/count` takes the list's filters and says how many match. It feeds
+  "Select all 312 that match" and the bulk cap message.
+- **Saved segments (new table `contact_segments`, migration 0026).**
+  - A name (1 to 60, unique in any case per workspace) and the filter as JSON, the same keys as
+    the list. It stores the filter, never the people, so a segment is whoever matches now. At most
+    50 per workspace.
+  - `GET /contact-segments` (any member); `POST`, `PATCH /{id}` and `DELETE /{id}` for owners and
+    admins. *Decided: agents use segments but do not manage them, matching tags and fields (admins
+    manage, any member uses).*
+  - Saving checks the filter: a tag that is not there is 404, a custom field the workspace does
+    not have is 422. A tag or field deleted later does not break the segment; the list then
+    refuses the field with its plain message instead of quietly widening the match.
+  - The response filter is its own class, `ContactFilterOut`, so the API description keeps one
+    name per direction (a model used both ways with defaults is split in two by FastAPI).
+  - *Not built: a segment id on the list, count or export routes.* The page sends the segment's
+    filters. Broadcasts (GR-23) will read `contact_segments.filter` through
+    `services/contact_segments`.
+- **Bulk tag by filter.** `POST /contacts/bulk-tags` takes `contact_ids` (up to 500) **or**
+  `filter` (the same keys), not both. A filter applies to everyone it matches, up to **5,000**
+  (`BULK_FILTER_CAP`). A bigger match is a 422 on `filter` that says how many matched ("That
+  filter matches 7,200 contacts. Narrow it to 5,000 or fewer to tag them at once."), and nothing
+  is changed. Any member may bulk tag, as before.
+  - **Audit.** Every real change is still one `contact.tagged` event (GR-04, so webhooks and
+    Activity see it), and one log line (`contacts_bulk_tagged`) records who, how many contacts and
+    how many tags were added or removed, and whether a filter chose them. There is no audit table
+    yet; the team audit arrives with GR-19.
+  - `change_tags` now reads the existing pairs in one query instead of one per contact and tag, so
+    5,000 contacts is a few queries.
+- **Timeline.** `GET /contacts/{id}/timeline?cursor&limit` (any member, read-only, 30 per page by
+  default, 100 at most). Sources that exist today: the contact's conversation (with how it began),
+  comments, automation runs (the automation's name and a plain outcome, no error text), story
+  mentions, consent records and tags added. Each source is read newest first by (time, id) and
+  merged, so paging never repeats or skips an item. A comment shows its first 200 characters.
+  - *Left out because the data does not exist yet:* captured answers (GR-14 adds them; email and
+    phone have a source but no time) and broadcasts received (GR-23). Each adds a source in
+    `services/contact_timeline.py`.
+- **Consent filter and display.** `contact_consents` exists (GR-02), so the page filters by "agreed
+  on Instagram, WhatsApp or email", shows the current state per channel in the drawer and lets
+  admins record consent or withdrawal with a note.
+- **Web.**
+  - **Contacts** is in the main nav under Engage, for every role (it was Inbox and Comments). The
+    page fills the width (no fixed maximum), a list at 375 px (each row stacks) and a table-like
+    grid from 768 px. Search waits 250 ms, filters sit in a panel that is a full-screen sheet on a
+    phone, then a segment bar, the count, ticked rows with a Tag action, "Select all N that match"
+    when a page is ticked and more exist, and Export CSV (admins).
+  - **The contact drawer** is a sheet that is full screen below 768 px and 420 px wide from there.
+    It edits tags (add, remove, and admins create a tag), email, phone and custom fields (one
+    Save, only what changed, the API's messages beside the value it refuses), shows consent and
+    the timeline. It opens from a row, and from the inbox details panel's "View contact".
+  - Tags wear the identity palette colour stored on the tag (never a status colour).
+- **Tests.** Unit: filter parsing and limits (`test_contact_filters.py`); integration:
+  `test_contact_segments.py` (the done-when filter and export, count, field and activity filters,
+  segments CRUD and limits, bulk tag by filter and its cap, the timeline and its paging, roles,
+  another workspace); tenancy: the segment routes and table in `test_isolation.py`; vitest: the
+  filters and edit helpers, the page, the drawer; e2e `gr17-contacts.spec.ts`.
+- **Migration 0026** (down revision 0025): `contact_segments` only. Expand-only. It references
+  the workspace and users, not accounts, so the account purge is unchanged (workspace deletion
+  cascades).
+- **Unsure / for the coordinator:** the generated client has to be regenerated for the new routes
+  and models (`ContactFilterSpec`, `ContactFilterOut`, `Segment*`, `Timeline*`, `ContactCount`,
+  the changed `BulkTagsUpdate`); the web types are aliases waiting for it.

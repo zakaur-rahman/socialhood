@@ -76,6 +76,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "endpoint_id": "endpoint_id",  # GR-04
     "delivery_id": "delivery_id",
     "link_id": "link_id",  # GR-08
+    "segment_id": "segment_id",  # GR-17
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -130,6 +131,12 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "contact_ids": ["{contact_id}"],
         "add": ["{tag_id}"],
     },
+    # GR-17: saved segments (the filter names B's tag, which A cannot see) and bulk tagging.
+    ("POST", "/v1/w/{wid}/contact-segments"): {
+        "name": "Not yours",
+        "filter": {"tag_ids": ["{tag_id}"]},
+    },
+    ("PATCH", "/v1/w/{wid}/contact-segments/{segment_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
@@ -298,6 +305,7 @@ B_TABLES = (
     "webhook_deliveries",
     "story_mentions",
     "entry_links",
+    "contact_segments",
     "ice_breakers",
     "comments",
     "message_analyses",
@@ -353,6 +361,7 @@ class Seed:
     endpoint_id: str = ""
     delivery_id: str = ""
     link_id: str = ""
+    segment_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -450,6 +459,12 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         headers=clerk.headers(owner_b),
     )
     assert field.status_code == 201, field.text
+    segment = await client.post(  # GR-17: a saved segment
+        f"/v1/w/{wid}/contact-segments",
+        json={"name": "VIPs", "filter": {"tag_ids": [tag.json()["id"]]}},
+        headers=clerk.headers(owner_b),
+    )
+    assert segment.status_code == 201, segment.text
     for path, body in (
         ("tags", {"add": [tag.json()["id"]]}),
         ("consents", {"channel": "instagram", "status": "granted", "note": "In the shop"}),
@@ -588,6 +603,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         endpoint_id=hook.json()["id"],
         delivery_id=sent.json()["id"],
         link_id=link.json()["id"],
+        segment_id=segment.json()["id"],
     )
 
 

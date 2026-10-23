@@ -9,7 +9,9 @@ PD-10). These tables add:
 - ``contact_consents``: an append-only history of marketing consent per channel. The latest row
   for (contact, channel, purpose) is the current state. Each row says where it came from (a
   platform opt-in, a flow question, a STOP reply, a member) with its evidence, so a broadcast
-  (GR-23) can prove it was allowed.
+  (GR-23) can prove it was allowed;
+- ``contact_segments`` (GR-17): a named, saved contact filter. It stores the filter, not the
+  contacts, so a segment is always the people who match it now.
 """
 
 from __future__ import annotations
@@ -142,4 +144,24 @@ class ContactConsent(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(_in("purpose", ConsentPurpose), name="purpose"),
         CheckConstraint(_in("status", ConsentStatus), name="status"),
         CheckConstraint(_in("source", ConsentSource), name="source"),
+    )
+
+
+class ContactSegment(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A saved filter on the contacts page (and, from GR-23, a broadcast's audience). ``filter``
+    holds the same keys as the list's query (schemas.contacts.ContactFilterSpec)."""
+
+    __tablename__ = "contact_segments"
+
+    name: Mapped[str] = mapped_column(Text)
+    filter: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sql("'{}'::jsonb"))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_contact_segments_workspace_name", "workspace_id", sql("lower(name)"), unique=True
+        ),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 60", name="name_length"),
     )
