@@ -12,8 +12,9 @@ from socialhood.models.notifications import PUSH_EVENT_OF_TYPE, NotificationType
 from socialhood.services.activity import alerts, feed, reasons
 from socialhood.services.sending import readable_error
 
-CONV = uuid.uuid4()
-AUTO = uuid.uuid4()
+# Fixed ids: they appear in the parametrized test ids, which every xdist worker must collect alike.
+CONV = uuid.UUID("00000000-0000-4000-8000-00000000c0f1")
+AUTO = uuid.UUID("00000000-0000-4000-8000-0000000a0701")
 
 
 @pytest.mark.parametrize(
