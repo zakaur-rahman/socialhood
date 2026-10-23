@@ -24,20 +24,31 @@ const FLOW = {
   ],
 };
 
-type Run = { id: string; result: string; contact: { id: string } | null };
+type Run = { id: string; result: string; conversation_id: string | null };
 
-/** Reload until the open conversation shows ``text`` (the worker sends each step in turn). */
-async function shows(page: import("@playwright/test").Page, text: string) {
-  const log = page.getByRole("log", { name: /^Messages with / });
+type Page = import("@playwright/test").Page;
+type Locator = import("@playwright/test").Locator;
+
+/** Reload until ``target`` shows: the worker sends each step in turn, and a reload has to finish
+ * loading before it can be found. */
+async function appears(page: Page, target: Locator) {
   await expect
     .poll(
       async () => {
         await page.reload();
-        return log.getByText(text).count();
+        return target.first().waitFor({ timeout: 5_000 }).then(
+          () => true,
+          () => false,
+        );
       },
-      { timeout: 30_000, intervals: [1_000, 2_000] },
+      { timeout: 45_000, intervals: [500] },
     )
-    .toBeGreaterThan(0);
+    .toBe(true);
+}
+
+/** The open conversation shows ``text``. */
+async function shows(page: Page, text: string) {
+  await appears(page, page.getByRole("log", { name: /^Messages with / }).getByText(text));
 }
 
 test.describe("GR-03 a flow with a question and two branches", () => {
@@ -61,18 +72,7 @@ test.describe("GR-03 a flow with a question and two branches", () => {
       fromId: asker,
       quickReplyPayload: `shf:${run.id}:hello:0`,
     });
-    await page.goto(`/w/${workspace.slug}/inbox`);
-    const row = page.getByRole("list", { name: "Conversations" }).getByRole("link").filter({ hasText: "Catalogue or prices?" });
-    await expect
-      .poll(
-        async () => {
-          await page.reload();
-          return row.count();
-        },
-        { timeout: 30_000, intervals: [1_000, 2_000] },
-      )
-      .toBeGreaterThan(0);
-    await row.first().click();
+    await page.goto(`/w/${workspace.slug}/inbox/${run.conversation_id}`);
     await shows(page, "What's your email?");
 
     // A wrong answer, then the email: the branch's message follows.
