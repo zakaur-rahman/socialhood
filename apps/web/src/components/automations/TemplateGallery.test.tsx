@@ -24,6 +24,9 @@ const templates = [
     icon: "tag",
   }),
   template({ key: "faqs", name: "Answer FAQs", category: "support", trigger: "dm_keyword", action: "ai_reply" }),
+  // GR-16: templates that start as a flow say how many steps it has.
+  template({ key: "lead_magnet", name: "Lead magnet", category: "grow", steps: 2, icon: "book-open" }),
+  template({ key: "entry_link_coupon", name: "Coupon from a link", category: "sell", trigger: "entry_link", steps: 1 }),
 ];
 
 function renderGallery(accounts: SocialAccount[], plan: "free" | "pro" = "pro") {
@@ -61,7 +64,7 @@ describe("TemplateGallery (UX-SCR-11)", () => {
     const user = userEvent.setup();
     renderGallery([account()]);
     const dialog = screen.getByRole("dialog", { name: "New automation" });
-    expect(cardNames()).toEqual(["Send a link to commenters", "Giveaway replies", "Price on request", "Answer FAQs"]);
+    expect(cardNames()).toEqual(["Send a link to commenters", "Giveaway replies", "Price on request", "Answer FAQs", "Lead magnet", "Coupon from a link"]);
     const items = within(dialog).getAllByRole("listitem");
     expect(items[items.length - 1]).toHaveTextContent("Start from blank");
 
@@ -71,7 +74,7 @@ describe("TemplateGallery (UX-SCR-11)", () => {
     await user.click(within(categories).getByRole("radio", { name: "Sell" }));
     expect(within(categories).getByRole("radio", { name: "Sell" })).toBeChecked();
     expect(within(categories).getByRole("radio", { name: "All" })).not.toBeChecked();
-    expect(cardNames()).toEqual(["Price on request"]);
+    expect(cardNames()).toEqual(["Price on request", "Coupon from a link"]);
     expect(within(dialog).getByRole("button", { name: "Start from blank" })).toBeInTheDocument();
   });
 
@@ -87,6 +90,20 @@ describe("TemplateGallery (UX-SCR-11)", () => {
     // UI-063: a Pro template says on Free that it can be set up and runs on Pro; the others don't.
     expect(within(card).getByText("Set it up on Free. It runs on Pro.")).toBeInTheDocument();
     expect(screen.getAllByText("Set it up on Free. It runs on Pro.")).toHaveLength(1);
+  });
+
+  it("shows the steps of a template that starts as a flow", () => {
+    renderGallery([account()]);
+    expect(screen.getByRole("article", { name: "Lead magnet" })).toHaveTextContent("2 steps");
+    expect(screen.getByRole("article", { name: "Coupon from a link" })).toHaveTextContent("1 step");
+    expect(screen.getByRole("article", { name: "Giveaway replies" })).not.toHaveTextContent(/step/);
+  });
+
+  it("starts a flow template like any other", async () => {
+    const user = userEvent.setup();
+    const { bodies } = renderGallery([account({ id: "a1" })]);
+    await user.click(screen.getByRole("button", { name: "Use template: Lead magnet" }));
+    await waitFor(() => expect(bodies).toEqual([{ template_key: "lead_magnet", social_account_id: "a1" }]));
   });
 
   it("with one account: creates the draft from the template and opens the editor on the first incomplete step", async () => {

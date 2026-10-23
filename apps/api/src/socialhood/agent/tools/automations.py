@@ -615,7 +615,7 @@ async def prepare_automation(
         missing.append("keywords")
     if action is None:
         missing.append("an action")
-    elif action == "send_message" and not message_text:
+    elif action == "send_message" and not message_text and not (template and template.flow):
         missing.append("the message")
     if scope == "selected" and not post_ids:
         missing.append("the posts")

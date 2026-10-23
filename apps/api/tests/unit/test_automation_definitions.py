@@ -189,11 +189,18 @@ def test_the_gallery_has_the_r1_templates_and_the_story_ones() -> None:
         ("thank_story_mentions", "story_mention", "send_message", False),
         ("welcome_new_contacts", "first_message", "send_message", False),
         ("default_reply_when_ai_off", "default_reply", "send_message", False),
+        ("story_giveaway", "story_mention", "send_message", False),
+        ("lead_magnet", "comment_keyword", "send_message", False),
+        ("price_by_option", "comment_keyword", "send_message", False),
+        ("call_request", "dm_keyword", "send_message", False),
+        ("entry_link_coupon", "entry_link", "send_message", False),
     ]
     assert {t.category for t in items} == {"grow", "sell", "support"}
 
 
-@pytest.mark.parametrize("template", templates.TEMPLATES, ids=lambda t: t.key)
+@pytest.mark.parametrize(
+    "template", [t for t in templates.TEMPLATES if t.flow is None], ids=lambda t: t.key
+)
 def test_each_template_needs_only_what_the_user_must_supply(
     template: templates.Template,
 ) -> None:
@@ -338,6 +345,11 @@ def test_comment_templates_start_with_tap_first() -> None:
         "thank_story_mentions": (False, False),
         "welcome_new_contacts": (False, False),
         "default_reply_when_ai_off": (False, False),
+        "story_giveaway": (False, False),
+        "lead_magnet": (False, False),
+        "price_by_option": (False, False),
+        "call_request": (False, False),
+        "entry_link_coupon": (False, False),
     }
     assert len(templates.OPENING_BUTTON) <= 20
     assert templates.OPENING_TEXT.endswith("\U0001f447")

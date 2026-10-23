@@ -2582,3 +2582,69 @@ copy and the editor's options. No migration, no new route.
   purge removes them with its automations and contacts.
 - **Not done / pending:** per-quick-reply tap counts (taps are per step); a retention limit on
   `link_clicks` (kept as long as the automation); the sandbox run of `gr15-link-clicks.spec.ts`.
+
+## C-099 · Template gallery, version 2 (GR-16, feature/gr-16-templates-v2)
+Five new templates on the new triggers and steps, and a saved-reply choice in the flow editor.
+
+### Templates that carry a flow
+- **Before:** a template only filled the message settings (text, link buttons, public replies),
+  so it could not make a question or a quick reply. *Deviation from the plan, which only said to
+  add templates: a template may now carry a flow, minimally.*
+  - `Template.flow` is an optional `FlowDefinition` (`services/automations/templates.py`).
+  - `definitions.create` saves it as version 1 in `automation_flows` and sets `flow_version`, so
+    the draft opens as a flow (`flow_source: flow`) and the settings are not used. No migration.
+  - Everything else (trigger, keywords, public replies, post scope) fills as before.
+  - The older templates stay single messages and compile from their settings.
+- **The gallery:** `AutomationTemplate.steps` is the number of steps a template starts with (0 for
+  a single message). The card shows "2 steps" next to its trigger and action.
+- **The five** (category, trigger, steps):
+  - *Story giveaway* (grow, story mention, 2): thanks them and says they are in the draw, then
+    when winners are announced.
+  - *Lead magnet* (grow, comment keyword GUIDE, 2): the private reply asks for their email (saved
+    to the contact), then sends the PDF with a link button. Public replies are on.
+  - *Price by option* (sell, comment keyword PRICE, 4): the private reply has quick replies for
+    Small, Medium and Large, each leading to its own price message.
+  - *Call requests* (sell, DM keyword CALL, 2): asks for a phone number (saved to the contact,
+    with a thank-you), then "Notify the team". *No new action was needed: `notify_team` already
+    exists (C-079).*
+  - *Coupon from a link* (sell, entry link, 1): sends the code with a link button. Entry links
+    (GR-08) are made on their own page.
+- **Names:** the older *Giveaway replies* and *Book a call* stay (comment-on-a-post giveaway and a
+  booking link by DM). The new ones have their own keys (`story_giveaway`, `lead_magnet`,
+  `price_by_option`, `call_request`, `entry_link_coupon`). The plan's "price please" is named
+  *Price by option*: no "please" in our copy.
+- **Placeholders and activation:**
+  - The link is left as `https://`, so activation asks for it, as for the other templates.
+  - Prices and the code are written as `[price]` and `[code]` in the message. *The activation
+    rules cannot tell that a bracket is unfilled, so they do not stop activation; the copy makes
+    it plain. A later check could flag square brackets.*
+  - Questions are an email or a phone answer saved to the contact, so no custom field has to exist.
+  - Tap first is off for these: a flow's first message is the opening itself.
+- **PD-5 (pending):** every template fits the Free plan's cap of 5 steps (the largest has 4); a
+  unit test reads the `flow_steps` entitlement, so it follows the decision.
+- **Ask Social Hood:** `prepare_automation` no longer reports "the message" missing for a template
+  that carries a flow. The tool still prefills the settings only; the draft it opens is the
+  template's.
+- **Tests:** `tests/unit/test_template_flows.py` (each flow validates, builds, needs only its link,
+  stays in the cap, has plain copy), `tests/integration/test_template_flows_api.py` (each creates a
+  flow draft that activates once filled, on Free and Pro), the gallery snapshot tests, vitest for
+  the card, and `apps/web/e2e/gr16-templates-v2.spec.ts`.
+- **Needs checking centrally:** `apps/api/openapi.json` and `packages/api-client` for
+  `AutomationTemplate.steps`.
+
+### The saved-reply step in the flow editor (from GR-21, C-093)
+- A Send step has a choice, "Write a message" or "Send a saved reply".
+  - Choosing a saved reply shows a picker over `GET /saved-replies` (titles, with the body below)
+    and a link to Settings, Saved replies. The text, image, buttons and quick replies are hidden.
+  - Switching to a saved reply drops the image and link buttons the message had. It is disabled
+    while the message has quick replies, which would orphan their branches.
+  - Switching back keeps the (now empty) text; nothing is stored for the reply.
+- **Editor model:** `SendNode.saved` and `saved_reply_id`, both optional. `compile` writes a send
+  with `saved_reply_id` and no text; `decompile` reads it back. A chosen source with no reply
+  picked yet saves as an empty send, so it opens as "Write a message" after a reload; the step
+  check still says "Choose a saved reply" while it is chosen.
+- **Checks per step:** a reply must be chosen; a deleted reply is flagged; and not on a comment
+  flow's first step (the API's rule, `flow.start`, now shown on the step). The API still checks
+  the reply's length and "alone" on activation.
+- **Preview path:** the step shows "Saved reply: <title>" instead of the text, and is titled
+  "Saved reply".

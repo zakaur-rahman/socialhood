@@ -436,6 +436,7 @@ export function template(overrides: Partial<AutomationTemplate> = {}): Automatio
     trigger: "comment_keyword",
     action: "send_message",
     requires_paid_plan: false,
+    steps: 0,
     ...overrides,
   };
 }

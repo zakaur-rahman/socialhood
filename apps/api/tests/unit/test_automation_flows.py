@@ -262,6 +262,8 @@ def automation(template: templates.Template, **overrides: Any) -> Automation:
 def variants() -> list[tuple[str, Automation]]:
     found = []
     for template in templates.TEMPLATES:
+        if template.flow is not None:  # GR-16: saved as a flow, not compiled from settings
+            continue
         if template.trigger == "comment_any":
             triggers: tuple[str, ...] = ("comment_any",)
         elif template.trigger in ("story_reply", "story_mention"):
