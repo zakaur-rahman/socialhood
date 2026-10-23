@@ -23,6 +23,8 @@ TriggerName = Literal[
     "entry_link",
     "ad_click",
     "ice_breaker",
+    "first_message",
+    "default_reply",
 ]
 MatchModeName = Literal["word", "exact", "contains"]
 ActionName = Literal["send_message", "ai_reply"]

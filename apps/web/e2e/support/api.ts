@@ -231,6 +231,37 @@ export class Api {
     return draft;
   }
 
+  /** GR-12: an active welcome (first_message) or default reply (default_reply) automation. */
+  async fallbackAutomation(
+    wid: string,
+    accountId: string,
+    trigger: "first_message" | "default_reply",
+    messageText: string,
+  ): Promise<{ id: string }> {
+    const name = `Fallback ${trigger} ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger,
+      keywords: [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: messageText,
+      post_scope: "all",
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-12: the account's AI mode (the default reply answers only while it is off). */
+  async setAiMode(wid: string, accountId: string, mode: "off" | "suggest" | "auto"): Promise<void> {
+    await this.call("PATCH", `/v1/w/${wid}/social-accounts/${accountId}`, { ai_mode: mode });
+  }
+
   /** GR-03: an active DM keyword automation saved as ``flow`` (PUT …/flow). */
   async flowAutomation(wid: string, accountId: string, keyword: string, flow: unknown): Promise<{ id: string }> {
     const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {

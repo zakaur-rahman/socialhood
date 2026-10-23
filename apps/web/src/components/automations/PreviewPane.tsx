@@ -5,7 +5,13 @@ import { useState, type ReactNode } from "react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition } from "@/lib/api/types";
-import { DEFAULT_OPENING_BUTTON, isCommentTrigger, usesFollowNudge, usesTapFirst } from "@/lib/automations/definition";
+import {
+  DEFAULT_OPENING_BUTTON,
+  isCommentTrigger,
+  takesNoKeywords,
+  usesFollowNudge,
+  usesTapFirst,
+} from "@/lib/automations/definition";
 import { renderFields, withDisclosure, type FieldValues } from "@/lib/automations/render";
 import { IDENTITY_FILL, identityAt, type Identity } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
@@ -39,14 +45,7 @@ export function PreviewPane({
   const [sample, setSample] = useState<Sample>("known");
   const values = SAMPLES[sample];
   const comment = isCommentTrigger(draft.trigger);
-  const keyword =
-    draft.trigger === "comment_any" ||
-    draft.trigger === "story_mention" ||
-    draft.trigger === "entry_link" ||
-    draft.trigger === "ad_click" ||
-    draft.trigger === "ice_breaker"
-      ? null
-      : (draft.keywords?.[0] ?? null);
+  const keyword = takesNoKeywords(draft.trigger) ? null : (draft.keywords?.[0] ?? null);
   const fallback = comment ? "Love this!" : draft.trigger === "story_reply" ? "Love this story!" : "Hi";
   // A mention has no words of its own: the conversation shows it as a line.
   const incoming =

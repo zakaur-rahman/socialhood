@@ -34,6 +34,14 @@ starts ice breaker automations only, and only the one its starter maps to (servi
 it answers no waiting question. A starter set to answer with AI starts nothing here: the message
 is not marked handled, so the inbox AI answers it like any customer message.
 
+Welcome and default reply (GR-12): an ordinary DM (not a story reply or mention, not a button,
+quick reply or ice breaker tap) can also start the two fallbacks, only when no keyword or other
+automation took it. A keyword that matched but was on cooldown still counts as having matched, so
+a repeated question gets no default reply. The welcome (``first_message``) needs the contact to
+have no earlier customer message to this account; the default reply needs AI off for the
+conversation (its override, else the account's mode). If both apply, the welcome answers and the
+default reply does not. Each obeys its own cooldown per contact.
+
 Tap first (FR-AUT-21): before keyword matching, a customer DM that answers a waiting opening
 releases that run's message and nothing else runs on it (services/automations/answers). The
 follow nudge (FR-AUT-22) is ``run_automation("nudge", run_id)``, enqueued once a run's message
@@ -118,6 +126,7 @@ DM_TRIGGERS = ("dm_keyword",)
 STORY_REPLY_TRIGGERS = ("story_reply", "dm_keyword")
 STORY_MENTION_TRIGGERS = ("story_mention",)
 ICE_BREAKER_TRIGGERS = ("ice_breaker",)
+FALLBACK_TRIGGERS = matching.FALLBACK_TRIGGERS  # GR-12
 HEART = "\u2764\ufe0f"  # a story like arrives as the heart sticker, stored as its emoji
 COMMENT_TRIGGERS = ("comment_keyword", "comment_any")
 THREAD_REPLY_TRIGGERS = ("comment_keyword",)
@@ -159,15 +168,26 @@ def is_story_like(msg: Message) -> bool:
     return msg.kind == "story_reply" and (msg.text or "").strip() == HEART
 
 
+def is_ordinary_dm(msg: Message) -> bool:
+    """A message the welcome and default reply may answer: not a story reply or mention, and not
+    a tap on a button, quick reply or ice breaker (those answer something we sent)."""
+    return (
+        msg.kind not in ("story_mention", "story_reply")
+        and not msg.postback_payload
+        and not msg.quick_reply_payload
+    )
+
+
 def dm_triggers(msg: Message) -> tuple[str, ...]:
-    """The triggers a customer DM can start, by what the message is."""
+    """The triggers a customer DM can start, by what the message is. The welcome and default
+    reply are listed for ordinary DMs; ``_match_dm`` keeps them only when they apply."""
     if ice_breakers.is_tap(msg.postback_payload):  # GR-11: a tapped conversation starter
         return ICE_BREAKER_TRIGGERS
     if msg.kind == "story_mention":
         return STORY_MENTION_TRIGGERS
     if msg.kind == "story_reply":
         return DM_TRIGGERS if is_story_like(msg) else STORY_REPLY_TRIGGERS
-    return DM_TRIGGERS
+    return (*DM_TRIGGERS, *FALLBACK_TRIGGERS) if is_ordinary_dm(msg) else DM_TRIGGERS
 
 
 def in_story_scope(automation: Automation, msg: Message) -> bool:
@@ -422,13 +442,20 @@ async def _match_dm(
         loaded = [
             item for item in loaded if starter and item.automation.id == starter.automation_id
         ]
+    loaded = await _applicable(session, loaded, msg, conv, contact)
     found = matching.matches(msg.text or "", [item.candidate for item in loaded])
     if not found:
         return Outcome.NO_MATCH
     read_only = await _read_only_reason(session, await accounts.get(session, msg.social_account_id))
     by_id = {item.automation.id: item.automation for item in loaded}
+    others_matched = False  # a keyword or any-reply automation matched, whatever came of it
     for match in found:
         automation = by_id[match.automation_id]
+        if automation.trigger in FALLBACK_TRIGGERS:
+            if others_matched:
+                break  # a fallback answers only a DM nothing else matched
+        else:
+            others_matched = True
         if not in_story_scope(automation, msg):
             continue
         if came_from is not None and not entry.in_scope(automation, came_from):
@@ -487,6 +514,35 @@ async def _match_dm(
         return Outcome.FIRED
     await session.commit()
     return Outcome.SKIPPED
+
+
+async def _applicable(
+    session: AsyncSession,
+    loaded: list[runs.Loaded],
+    msg: Message,
+    conv: Conversation,
+    contact: Contact,
+) -> list[runs.Loaded]:
+    """GR-12: drop the welcome unless this is the contact's first DM to the account, and the
+    default reply unless AI is off for the conversation. Looked up only when one is loaded."""
+    welcome = any(item.automation.trigger == "first_message" for item in loaded)
+    default = any(item.automation.trigger == "default_reply" for item in loaded)
+    drop: set[str] = set()
+    if welcome and await inbox.has_earlier_inbound_dm(session, msg, contact.id):
+        drop.add("first_message")
+    if default and await _ai_mode(session, conv) != "off":
+        drop.add("default_reply")
+    return [item for item in loaded if item.automation.trigger not in drop]
+
+
+async def _ai_mode(session: AsyncSession, conv: Conversation) -> str:
+    """The conversation's effective AI mode: its override, else the account's. A pause
+    (``ai_paused_until``) does not turn the AI off, so a paused conversation gets no default
+    reply: a person is handling it."""
+    if conv.ai_mode_override:
+        return conv.ai_mode_override
+    acct = await accounts.get(session, conv.social_account_id)
+    return acct.ai_mode if acct is not None else "off"
 
 
 async def _send_heart(

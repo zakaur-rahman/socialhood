@@ -2009,3 +2009,46 @@ failures; now they can see them. A read model over existing tables: no migration
 - **Deviation from the plan:** the plan said "Settings or Automations"; it lives under
   Automations, beside the automations it starts.
 - **Migration 0024** (shared with C-086).
+## C-088 · Welcome and default replies (GR-12, feature/gr-12-welcome-default)
+
+- **Two triggers, both DMs, no keywords:** `first_message` (a welcome) and `default_reply`. They
+  use the existing DM path: `runtime.dm_triggers` lists them for an ordinary DM, `_match_dm` keeps
+  them only when they apply, and `matching.runtime_order` puts them last. Flows, AI-reply actions,
+  cooldowns, the read-only account check and run records work as for any DM automation.
+- **First message means:** the contact has no earlier inbound customer message to this account
+  (`repositories/inbox.has_earlier_inbound_dm`: earlier by time, then id, across the contact's
+  conversations on the account).
+  - It reads true history, so contacts who existed before the feature shipped are not welcomed on
+    their next message.
+  - A contact who only commented has no DM yet, so their first DM is welcomed.
+  - Any earlier customer message counts, including a story reply or mention.
+- **Default reply means:** an ordinary DM that no automation matched, while the conversation's
+  effective AI mode is Off (`conversations.ai_mode_override`, else `social_accounts.ai_mode`, as
+  the suggestions code resolves it).
+  - `ai_paused_until` is not read: a pause means a person is handling it, and with Suggest or Auto
+    the mode is not Off anyway.
+  - *The plan's Auto is not checked against the plan's entitlement: an account on Auto without
+    the entitlement gets no default reply.*
+- **Order and precedence (decision):** keyword and any-reply automations go first. The welcome and
+  default reply answer only a DM that none of them matched.
+  - A keyword that matched but was on cooldown still counts as matched, so a repeated question
+    does not get "we did not understand".
+  - If both fallbacks apply (a first DM, AI off), the welcome answers and the default reply does
+    not. The next DM is not a first message, so the default reply answers it.
+  - Why: one automatic message per DM, and the specific answer beats the generic one.
+- **Never fire on:** a story reply or mention, a postback or ice breaker tap, a quick reply tap,
+  a message that answers a waiting flow step or tap-first opening, or one already handled. Our own
+  echoes never run automations.
+- **Loops:** each automation's `cooldown_hours` per contact applies (default 24; the default reply
+  template uses 12). A welcome fires once anyway, because only a first message qualifies.
+- **Web:** the When step has "First message (welcome)" and "Any other message (default reply)",
+  each with a one-line explanation (the default reply says it answers only while AI is Off). Both
+  hide the keywords and posts steps. Templates `welcome_new_contacts` and
+  `default_reply_when_ai_off`.
+- **Test tab:** treats the text as a DM for both triggers; it cannot know if the contact is new or
+  AI is off, so it reports a match.
+- **Ask Social Hood:** `prepare_automation` accepts both triggers; no new tool.
+- **Migration 0025** (parent 0022 until re-chained): the trigger check only. Downgrade turns these
+  automations into trigger-less drafts.
+- **Unverified:** nothing here depends on Meta rules. Welcome messages are ordinary DMs inside the
+  24-hour window opened by the customer's message.

@@ -71,6 +71,8 @@ const TRIGGERS: TriggerName[] = [
   "entry_link",
   "ad_click",
   "ice_breaker",
+  "first_message",
+  "default_reply",
 ];
 const ALL = "all";
 

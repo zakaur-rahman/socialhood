@@ -15,6 +15,7 @@ import {
   stepComplete,
   stepOfField,
   stepsWithErrors,
+  takesNoKeywords,
   tapFirstOn,
   toDefinition,
   toRequestBody,
@@ -275,6 +276,23 @@ describe("API field errors → steps", () => {
   });
 });
 
+
+describe("welcome and default reply triggers (GR-12)", () => {
+  const base = toDefinition(automation({ trigger: "first_message", keywords: [] }));
+
+  it("shows no keywords or posts step, and is complete without keywords", () => {
+    for (const trigger of ["first_message", "default_reply"] as const) {
+      expect(visibleSteps(trigger)).toEqual(["when", "then", "settings"]);
+      expect(takesNoKeywords(trigger)).toBe(true);
+    }
+    expect(takesNoKeywords("dm_keyword")).toBe(false);
+  });
+
+  it("sends no keywords, posts or stories", () => {
+    const body = toRequestBody({ ...base, trigger: "default_reply", keywords: ["x"] });
+    expect(body).toMatchObject({ keywords: [], post_scope: "all", story_ids: [], media_item_ids: [] });
+  });
+});
 
 describe("story triggers (GR-06, GR-07)", () => {
   const reply = { ...toDefinition(automation({ trigger: "story_reply", keywords: [] })) };

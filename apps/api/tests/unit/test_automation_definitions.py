@@ -187,6 +187,8 @@ def test_the_gallery_has_the_r1_templates_and_the_story_ones() -> None:
         ("book_a_call", "dm_keyword", "send_message", False),
         ("story_reply_link", "story_reply", "send_message", False),
         ("thank_story_mentions", "story_mention", "send_message", False),
+        ("welcome_new_contacts", "first_message", "send_message", False),
+        ("default_reply_when_ai_off", "default_reply", "send_message", False),
     ]
     assert {t.category for t in items} == {"grow", "sell", "support"}
 
@@ -334,6 +336,8 @@ def test_comment_templates_start_with_tap_first() -> None:
         "book_a_call": (False, False),
         "story_reply_link": (False, False),
         "thank_story_mentions": (False, False),
+        "welcome_new_contacts": (False, False),
+        "default_reply_when_ai_off": (False, False),
     }
     assert len(templates.OPENING_BUTTON) <= 20
     assert templates.OPENING_TEXT.endswith("\U0001f447")

@@ -41,7 +41,7 @@ SAMPLE_USERNAME = "priya.shah"
 # A story reply and a story mention arrive as DMs (GR-06, GR-07). The test cannot tell a plain DM
 # from a story reply, so it treats the text as a story reply for those triggers.
 TRIGGERS_FOR = {
-    "dm": ("dm_keyword", "story_reply", "story_mention"),
+    "dm": ("dm_keyword", "story_reply", "story_mention", "first_message", "default_reply"),
     "comment": ("comment_keyword", "comment_any"),
 }
 

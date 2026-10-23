@@ -18,7 +18,13 @@ def message(kind: str = "text", text: str | None = "hi", **attachment: Any) -> M
     attachments = [{"id": "a1", "type": "story", **attachment}] if attachment else []
     return cast(
         Message,
-        SimpleNamespace(kind=kind, text=text, attachments=attachments, postback_payload=None),
+        SimpleNamespace(
+            kind=kind,
+            text=text,
+            attachments=attachments,
+            postback_payload=None,
+            quick_reply_payload=None,
+        ),
     )
 
 
@@ -28,8 +34,8 @@ def automation(
     return SimpleNamespace(trigger=trigger, post_scope=scope, story_ids=list(stories))
 
 
-def test_a_plain_dm_starts_dm_keyword_automations() -> None:
-    assert runtime.dm_triggers(message()) == ("dm_keyword",)
+def test_a_plain_dm_starts_dm_keyword_automations_and_the_fallbacks() -> None:
+    assert runtime.dm_triggers(message()) == ("dm_keyword", "first_message", "default_reply")
 
 
 def test_a_story_reply_starts_story_reply_and_dm_keyword_automations() -> None:
@@ -42,7 +48,7 @@ def test_a_story_reply_starts_story_reply_and_dm_keyword_automations() -> None:
 def test_a_story_like_starts_no_story_reply_automation() -> None:
     like = message("story_reply", HEART, media_id="s1")
     assert runtime.is_story_like(like)
-    assert runtime.dm_triggers(like) == ("dm_keyword",)
+    assert runtime.dm_triggers(like) == ("dm_keyword",)  # no welcome or default reply on a like
     assert not runtime.is_story_like(message("story_reply", "love it", media_id="s1"))
     assert not runtime.is_story_like(message("text", HEART))  # a heart in a plain DM is a DM
 
