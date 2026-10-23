@@ -526,3 +526,65 @@ def text_expectations(answer: str, patterns: Sequence[str]) -> list[str]:
 
 def as_json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, default=str)
+
+
+# ---------------------------------------------------------------- visuals (GR-38)
+
+# The numbers a visual repeats are the tool results' own; these keys are layout, not figures.
+VISUAL_LAYOUT_KEYS = frozenset({"version", "days"})
+
+
+def visual_numbers(node: Any, *, key: str = "") -> list[Decimal]:
+    """Every number in a visual (a stored ``visual`` as JSON), leaving out layout: its version and
+    the length of a period in days. Dates and text are strings and aren't read."""
+    if isinstance(node, bool) or node is None or key in VISUAL_LAYOUT_KEYS:
+        return []
+    if isinstance(node, int | float):
+        return [Decimal(str(node))]
+    if isinstance(node, Mapping):
+        return [n for k, v in node.items() for n in visual_numbers(v, key=str(k))]
+    if isinstance(node, Sequence) and not isinstance(node, str):
+        return [n for v in node for n in visual_numbers(v)]
+    return []
+
+
+@dataclass(frozen=True)
+class VisualCheck:
+    kinds: list[str]  # the visuals the run showed, in order
+    missing: list[str]  # expected kinds that weren't shown
+    unexpected: list[str]  # kinds shown when none was expected
+    ungrounded: list[str]  # numbers in a visual that no tool result of the run holds
+    missing_numbers: list[str]  # expected figures that are in none of the visuals
+
+    @property
+    def passed(self) -> bool:
+        return not (self.missing or self.unexpected or self.ungrounded or self.missing_numbers)
+
+
+def visual_check(
+    visuals: Sequence[Mapping[str, Any]],
+    results: Iterable[Any],
+    *,
+    expect_kinds: Iterable[str] = (),
+    expect_none: bool = False,
+    expect_numbers: Sequence[Expect] = (),
+) -> VisualCheck:
+    """The run's visuals against what the case expects (a conceptual question: none) and against
+    the run's own tool results: a figure in a visual must be one a tool returned (the model never
+    writes one), and each expected figure (computed from the seed) must be in some visual."""
+    kinds = [str(v.get("kind")) for v in visuals]
+    pool = pool_of(results)
+    shown = [n for v in visuals for n in visual_numbers(v)]
+    ungrounded = _dedupe(f"{n:g}" for n in shown if abs(n) not in pool.values)
+    missing_numbers = [
+        e.label or f"{e.value:g}"
+        for e in expect_numbers
+        if not any(abs(float(n) - v) <= 0.05 for n in shown for v in e.values)
+    ]
+    return VisualCheck(
+        kinds=kinds,
+        missing=[k for k in expect_kinds if k not in kinds],
+        unexpected=kinds if expect_none else [],
+        ungrounded=ungrounded,
+        missing_numbers=missing_numbers,
+    )

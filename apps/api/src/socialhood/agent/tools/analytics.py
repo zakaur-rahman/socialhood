@@ -551,9 +551,9 @@ async def top_posts(ctx: ToolContext, args: TopPostsInput) -> TopPostsResult:
             lambda: visuals.ranked_posts(
                 metric=args.metric,
                 period=visuals.period_of(covered.since, covered.until),
-                age_label="latest figures"
+                age_label="Latest figures"
                 if shown_age == "lifetime"
-                else f"at {AGE_WORDS[shown_age]}",
+                else f"Figures at {AGE_WORDS[shown_age]}",
                 considered=ranked.considered,
                 rows=rows,
             ),
@@ -747,6 +747,16 @@ class TopicOut(BaseModel):
     examples: list[TopicExampleOut]
 
 
+class SentimentCounts(BaseModel):
+    """The whole scope's split, when the topics are drawn with it (visuals on): the figures the
+    visual repeats, so every number on screen is one a tool returned."""
+
+    positive: int
+    neutral: int
+    negative: int
+    spam: int
+
+
 class TopicsResult(ToolResult):
     post_id: uuid.UUID | None = None
     scope: str
@@ -758,6 +768,7 @@ class TopicsResult(ToolResult):
     total: int  # every comment in scope
     pending: int
     skipped: int
+    split: SentimentCounts | None = None
     visual: Visual | None = None
 
 
@@ -828,8 +839,9 @@ async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
             )
         )
         refs += [ref("comment", e.comment_id, quoted(e.text), e.post_id) for e in t.examples]
-    split = None
-    if args.sentiment is None and found.analysed:
+    split: SentimentSummaryVisual | None = None
+    counts: SentimentCounts | None = None
+    if args.sentiment is None and found.analysed and ctx.platform.settings.agent_visuals_enabled:
         # The split is the whole scope's, so a sentiment filter (a slice of it) draws none.
         dist = await sentiment.sentiment_distribution(
             ctx.session,
@@ -840,6 +852,9 @@ async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
             until=covered.until if covered else None,
         )
         shown = [(t.label, t.count) for t in found.topics]
+        counts = SentimentCounts(
+            positive=dist.positive, neutral=dist.neutral, negative=dist.negative, spam=dist.spam
+        )
         split = _visual(
             ctx, "sentiment_summary", lambda: _sentiment_visual(scope, covered, dist, shown)
         )
@@ -860,6 +875,7 @@ async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
         total=found.total,
         pending=found.pending,
         skipped=found.skipped,
+        split=counts,
         visual=split,
         refs=refs,
         caveats=caveats,

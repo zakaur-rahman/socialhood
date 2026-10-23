@@ -176,7 +176,7 @@ def ranked(count: int = 3, **over: Any) -> RankedPostsVisual:
     args: dict[str, Any] = {
         "metric": "reach",
         "period": visuals.period_of(date(2026, 10, 1), date(2026, 10, 22)),
-        "age_label": "latest figures",
+        "age_label": "Latest figures",
         "considered": count,
         "rows": rows,
     }

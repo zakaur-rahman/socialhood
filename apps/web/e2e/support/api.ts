@@ -57,6 +57,24 @@ export class Api {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }
 
+  /**
+   * GR-38: a finished Ask run of the signed-in owner (the fake model calls no tools). With `visual`
+   * it seeds the account's metrics for the last `days` complete days and the `days` before them,
+   * and the run holds the metric_comparison the real service and builder make from them.
+   */
+  agentRun(
+    wid: string,
+    run: { request: string; answer: string; accountId?: string; visual?: boolean; days?: number },
+  ): Promise<{ id: string; thread_id: string }> {
+    return this.seed("POST", `/workspaces/${wid}/agent-runs`, {
+      request: run.request,
+      answer: run.answer,
+      account_id: run.accountId,
+      visual: run.visual ?? false,
+      days: run.days ?? 14,
+    });
+  }
+
   // ---------------------------------------------------------------- the app's own endpoints
 
   connectSandbox(wid: string): Promise<SandboxAccount> {

@@ -344,7 +344,11 @@ async def test_top_posts_draws_the_ranking_it_returns(shop: Shop) -> None:
     assert [(i.post_id, i.value) for i in visual.items] == [
         (i.post_id, i.value) for i in result.items
     ]
-    assert (visual.metric_key, visual.considered, visual.age_label) == ("reach", 2, "at 24 hours")
+    assert (visual.metric_key, visual.considered, visual.age_label) == (
+        "reach",
+        2,
+        "Figures at 24 hours",
+    )
     assert visual.items[0].caption is not None
     assert visual.items[0].caption.startswith("<img")  # customer text kept as text, never HTML
     assert visual.items[0].thumbnail_url == "https://scontent.cdninstagram.com/v/post.jpg"
@@ -390,6 +394,9 @@ async def test_sentiment_and_topics_draw_the_split_with_the_topics(shop: Shop) -
     assert isinstance(full, SentimentSummaryVisual)
     assert (full.total, full.positive, full.negative) == (5, 1, 2)
     assert (full.topics[0].label, full.topics[0].count) == ("price", 2)
+    # The split on screen is one a tool returned (the eval checks every figure the same way).
+    assert topics.split is not None
+    assert (topics.split.positive, topics.split.neutral, topics.split.negative) == (1, 1, 2)
     assert full.scope == plain.scope  # the run shows the one with topics (agent_runs._visuals)
 
     # A sentiment filter is a slice of the split: no visual.
