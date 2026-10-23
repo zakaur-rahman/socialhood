@@ -35,6 +35,7 @@ from socialhood.models.automations import (
 )
 from socialhood.models.contacts import ContactFieldDefinition, Tag
 from socialhood.models.media import ResourceType
+from socialhood.models.replies import SavedReply
 from socialhood.repositories import automations as repo
 from socialhood.schemas.flows import AiReplyStep, Flow, FlowDefinition, FlowSource, SendStep
 from socialhood.services.automations import definitions, flows, validation
@@ -71,12 +72,22 @@ async def _context_parts(
     return fields, tags
 
 
+async def _saved_replies(session: AsyncSession) -> dict[uuid.UUID, str]:
+    """GR-21: the workspace's saved replies, id to body."""
+    rows = await session.execute(select(SavedReply.id, SavedReply.body))
+    return {reply_id: body for reply_id, body in rows.all()}
+
+
 async def context(
     session: AsyncSession, automation: Automation, disclosure: str | None
 ) -> flows.Context:
     fields, tags = await _context_parts(session)
     return flows.Context(
-        trigger=automation.trigger, disclosure=disclosure, fields=fields, tag_ids=tags
+        trigger=automation.trigger,
+        disclosure=disclosure,
+        fields=fields,
+        tag_ids=tags,
+        saved_replies=await _saved_replies(session),
     )
 
 
@@ -216,6 +227,7 @@ async def problems(
     flowing = [(a.id, a.flow_version) for a in automations if a.flow_version is not None]
     stored = await repo.flows_at(session, flowing)
     parts = await _context_parts(session) if flowing else ({}, frozenset())
+    replies = await _saved_replies(session) if flowing else {}
     out: dict[uuid.UUID, list[FieldError]] = {}
     for a in automations:
         d = (definitions_by_id or {}).get(a.id) or await definitions.stored_definition(session, a)
@@ -226,7 +238,11 @@ async def problems(
         row = stored.get(a.id)
         if uses_flow and row is not None:
             ctx = flows.Context(
-                trigger=a.trigger, disclosure=disclosure, fields=parts[0], tag_ids=parts[1]
+                trigger=a.trigger,
+                disclosure=disclosure,
+                fields=parts[0],
+                tag_ids=parts[1],
+                saved_replies=replies,
             )
             errors += flows.activation_errors(flows.parse(row.definition), ctx)
         out[a.id] = errors

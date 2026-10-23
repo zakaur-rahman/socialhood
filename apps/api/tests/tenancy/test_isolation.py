@@ -77,6 +77,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "delivery_id": "delivery_id",
     "link_id": "link_id",  # GR-08
     "segment_id": "segment_id",  # GR-17
+    "reply_id": "reply_id",  # GR-21
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -154,6 +155,21 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "items": [{"question": "Taken over", "answer_with_ai": True}]
     },
 }
+
+# GR-21 saved replies of B's workspace.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/saved-replies"): {
+            "title": "Taken over",
+            "shortcut": "taken",
+            "body": "Hi {first_name}",
+        },
+        ("PATCH", "/v1/w/{wid}/saved-replies/{reply_id}"): {"title": "Taken over"},
+        ("POST", "/v1/w/{wid}/saved-replies/{reply_id}/fill"): {
+            "conversation_id": "{conversation_id}"
+        },
+    }
+)
 
 EXAMPLE_BODIES.update(
     {
@@ -311,6 +327,7 @@ B_TABLES = (
     "contact_segments",
     "lead_stage_changes",
     "ice_breakers",
+    "saved_replies",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -366,6 +383,7 @@ class Seed:
     delivery_id: str = ""
     link_id: str = ""
     segment_id: str = ""
+    reply_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -519,6 +537,12 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         headers=clerk.headers(owner_b),
     )
     assert link.status_code == 201, link.text
+    reply = await client.post(  # GR-21: a saved reply
+        f"/v1/w/{wid}/saved-replies",
+        json={"title": "Price", "shortcut": "price", "body": "Hi {first_name}, from 499."},
+        headers=clerk.headers(owner_b),
+    )
+    assert reply.status_code == 201, reply.text
     scheduled = await make_scheduled(
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )
@@ -614,6 +638,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         delivery_id=sent.json()["id"],
         link_id=link.json()["id"],
         segment_id=segment.json()["id"],
+        reply_id=reply.json()["id"],
     )
 
 

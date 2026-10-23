@@ -48,6 +48,7 @@ LIVE_ENDED = "live_ended"  # GR-10
 READ_ONLY = "read_only"
 NOTHING_SENT = "nothing_sent"
 NOTHING_TO_SEND = "nothing_to_send"
+SAVED_REPLY_MISSING = "saved_reply_missing"  # GR-21: a flow step names a deleted saved reply
 
 PLAN_CODES = frozenset({READ_ONLY, "entitlement_required", "quota_exceeded"})
 RECONNECT_CODES = frozenset({"account_needs_reconnect", "capability_unavailable"})
@@ -119,9 +120,14 @@ def explain(
         )
     if code in ("platform_rate_limited", "platform_unavailable"):
         return Reason(_readable(code, platform, username), code)
-    if code in (NOTHING_SENT, NOTHING_TO_SEND):
+    if code in (NOTHING_SENT, NOTHING_TO_SEND, SAVED_REPLY_MISSING):
         return Reason(
-            stored or "The automation has no message to send.",
+            stored
+            or (
+                "A step sends a saved reply that was deleted."
+                if code == SAVED_REPLY_MISSING
+                else "The automation has no message to send."
+            ),
             code,
             "Edit the automation" if has_automation else None,
             "automation" if has_automation else None,

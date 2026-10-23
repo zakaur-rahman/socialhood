@@ -275,6 +275,14 @@ export class Api {
     return draft;
   }
 
+  /** GR-21: a saved reply (``shortcut`` is typed after / in the composer). */
+  savedReply(
+    wid: string,
+    values: { title: string; shortcut: string; body: string },
+  ): Promise<{ id: string; shortcut: string }> {
+    return this.call("POST", `/v1/w/${wid}/saved-replies`, values);
+  }
+
   /** GR-12: the account's AI mode (the default reply answers only while it is off). */
   async setAiMode(wid: string, accountId: string, mode: "off" | "suggest" | "auto"): Promise<void> {
     await this.call("PATCH", `/v1/w/${wid}/social-accounts/${accountId}`, { ai_mode: mode });

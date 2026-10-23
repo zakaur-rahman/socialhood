@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, Paperclip, SendHorizontal, Smile, Sparkles, Stick
 import type { Route } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { toast } from "sonner";
 
 import { UpgradeAction } from "@/components/billing/UpgradeAction";
@@ -15,11 +15,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useApi } from "@/lib/api/provider";
-import { useCreateScheduled, usePolishReply, type ReplyInput } from "@/lib/api/queries";
-import type { Conversation, MediaAsset } from "@/lib/api/types";
+import { useCreateScheduled, useFillSavedReply, usePolishReply, useSavedReplies, type ReplyInput } from "@/lib/api/queries";
+import type { Conversation, MediaAsset, SavedReply } from "@/lib/api/types";
 import { composerCopy, errorMessage } from "@/lib/copy";
 import { contactName, firstName, timeLeft } from "@/lib/inbox/format";
 import { clearSearchOnEscape } from "@/lib/inbox/search-escape";
+import { insertReply, matchReplies, slashToken } from "@/lib/inbox/saved-replies";
 import { useInboxStore } from "@/lib/inbox/store";
 import { ATTACHMENT_RULES, STICKER_RULE, UploadError, uploadAsset } from "@/lib/media/upload";
 import { relativeTime } from "@/lib/time";
@@ -29,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/uuid";
 
 import { AttachmentTray, type TrayItem } from "./AttachmentTray";
+import { SAVED_REPLY_LIST_ID, SavedReplyPicker, savedReplyOptionId } from "./SavedReplyPicker";
 import {
   checkSchedule,
   defaultSchedule,
@@ -149,6 +151,50 @@ export function Composer({
     if (textRef.current?.value) resize();
   }, [resize]);
 
+  // ---- Saved replies (GR-21): "/pri" lists them, Enter or a click inserts the one chosen, filled in
+  // by the server for this conversation's contact.
+  const [caret, setCaret] = useState(0);
+  const [dismissed, setDismissed] = useState<string | null>(null);
+  const [highlight, setHighlight] = useState({ key: "", index: 0 });
+  const token = mode === "reply" ? slashToken(draft, caret) : null;
+  const tokenKey = token ? `${conversationId}:${token.start}:${token.query}` : "";
+  const savedReplies = useSavedReplies(wid, token !== null);
+  const options = useMemo(
+    () => (token ? matchReplies(savedReplies.data?.items ?? [], token.query) : []),
+    [token, savedReplies.data],
+  );
+  const pickerOpen = options.length > 0 && dismissed !== tokenKey;
+  const activeIndex = highlight.key === tokenKey ? Math.min(highlight.index, options.length - 1) : 0;
+  const fillReply = useFillSavedReply(wid);
+
+  const pickReply = (reply: SavedReply) => {
+    if (!token || fillReply.isPending) return;
+    fillReply.mutate(
+      { id: reply.id, conversationId },
+      {
+        onSuccess: ({ text }) => {
+          const current = useInboxStore.getState().drafts[conversationId] ?? "";
+          // Typed on while it was filled in: keep what they wrote.
+          if (current.slice(token.start, token.start + 1 + token.query.length) !== `/${token.query}`) {
+            toast("Your reply changed while the saved reply was filled in, so it wasn't inserted.");
+            return;
+          }
+          const next = insertReply(current, token, text);
+          setDraft(conversationId, next.draft);
+          setCaret(next.caret);
+          requestAnimationFrame(() => {
+            const el = textRef.current;
+            if (!el) return;
+            el.focus();
+            el.setSelectionRange(next.caret, next.caret);
+            resize();
+          });
+        },
+        onError: (error) => toastError(error),
+      },
+    );
+  };
+
   const ready = tray.items.filter((item) => item.status === "done");
   const uploading = tray.items.some((item) => item.status === "uploading");
   const canSend = mode === "reply" && !uploading && (draft.trim() !== "" || ready.length > 0);
@@ -224,6 +270,24 @@ export function Composer({
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (pickerOpen && !event.nativeEvent.isComposing) {
+      const move = (step: number) => {
+        event.preventDefault();
+        setHighlight({ key: tokenKey, index: (activeIndex + step + options.length) % options.length });
+      };
+      if (event.key === "ArrowDown") return move(1);
+      if (event.key === "ArrowUp") return move(-1);
+      if ((event.key === "Enter" && !event.shiftKey) || event.key === "Tab") {
+        event.preventDefault();
+        pickReply(options[activeIndex]);
+        return;
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDismissed(tokenKey);
+        return;
+      }
+    }
     if (suggestionKeys && draft.trim() === "" && !event.nativeEvent.isComposing) {
       if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
@@ -308,7 +372,10 @@ export function Composer({
     <div className="shrink-0 border-t border-line bg-panel px-4 py-3" data-mode={mode}>
       <AttachmentTray items={tray.items} onRemove={tray.remove} onRetry={tray.retry} />
       {/* The textarea draws no outline of its own; this wrapper shows the focus outline (DESIGN_SYSTEM §8.3). */}
-      <div className="rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
+      <div className="relative rounded-xl border border-line bg-field focus-within:border-line-strong focus-within:bg-raised has-[textarea:focus-visible]:outline-2 has-[textarea:focus-visible]:outline-offset-2 has-[textarea:focus-visible]:outline-brand">
+        {pickerOpen ? (
+          <SavedReplyPicker replies={options} activeIndex={activeIndex} busy={fillReply.isPending} onPick={pickReply} />
+        ) : null}
         <label htmlFor={`composer-${conversationId}`} className="sr-only">
           Reply to {name}
         </label>
@@ -319,9 +386,14 @@ export function Composer({
           value={draft}
           onChange={(event) => {
             setDraft(conversationId, event.target.value);
+            setCaret(event.target.selectionStart);
             resize();
           }}
+          onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
           onKeyDown={onKeyDown}
+          aria-autocomplete={pickerOpen ? "list" : undefined}
+          aria-controls={pickerOpen ? SAVED_REPLY_LIST_ID : undefined}
+          aria-activedescendant={pickerOpen ? savedReplyOptionId(options[activeIndex]) : undefined}
           placeholder={`Reply to ${firstName(name)}…`}
           maxLength={4096}
           aria-busy={polish.isPending}

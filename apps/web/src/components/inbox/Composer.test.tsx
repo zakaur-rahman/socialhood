@@ -462,3 +462,110 @@ describe("AI polish (C-063)", () => {
     expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   });
 });
+
+describe("Saved replies (GR-21)", () => {
+  const price = { id: "r1", shortcut: "price", title: "Prices", body: "Hi {first_name}, from 499.", created_at: "", updated_at: "" };
+  const hours = { id: "r2", shortcut: "hours", title: "Opening hours", body: "9 to 5.", created_at: "", updated_at: "" };
+
+  function renderWithReplies(items = [price, hours]) {
+    return renderWithApi(
+      <Composer
+        wid="w1"
+        slug="maple"
+        timeZone="Asia/Kolkata"
+        conversation={conversation()}
+        lastInboundAt="2026-09-28T11:55:00Z"
+        now={now}
+        onSend={vi.fn()}
+        scheduleOpen={false}
+        onScheduleOpenChange={() => {}}
+        onChooseTemplate={() => {}}
+        canAttach
+      />,
+      {
+        handlers: {
+          "GET /v1/w/:wid/saved-replies": () => json({ items, max_items: 200 }),
+          "POST /v1/w/:wid/saved-replies/:id/fill": (_call, params) =>
+            json({ text: params.id === "r1" ? "Hi Priya, from 499." : "9 to 5." }),
+        },
+      },
+    );
+  }
+
+  it("typing /price inserts the filled reply, with Enter", async () => {
+    const user = userEvent.setup();
+    const { calls } = renderWithReplies();
+    await user.type(textbox(), "/price");
+    expect(await screen.findByRole("listbox", { name: "Saved replies" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /\/price/ })).toHaveAttribute("aria-selected", "true");
+
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(textbox()).toHaveValue("Hi Priya, from 499."));
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(calls.find((c) => c.path.endsWith("/saved-replies/r1/fill"))?.body).toEqual({ conversation_id: "c1" });
+  });
+
+  it("filters as you type, moves with the arrow keys and inserts the chosen one", async () => {
+    const user = userEvent.setup();
+    renderWithReplies();
+    await user.type(textbox(), "Thanks! /");
+    expect(await screen.findAllByRole("option")).toHaveLength(2);
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("option", { name: /\/price/ })).toHaveAttribute("aria-selected", "true");
+
+    await user.type(textbox(), "ho");
+    expect(screen.getAllByRole("option")).toHaveLength(1);
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(textbox()).toHaveValue("Thanks! 9 to 5."));
+  });
+
+  it("a click inserts it too, and Enter does not send while the list is open", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    renderWithApi(
+      <Composer
+        wid="w1"
+        slug="maple"
+        timeZone="Asia/Kolkata"
+        conversation={conversation()}
+        lastInboundAt="2026-09-28T11:55:00Z"
+        now={now}
+        onSend={onSend}
+        scheduleOpen={false}
+        onScheduleOpenChange={() => {}}
+        onChooseTemplate={() => {}}
+        canAttach
+      />,
+      {
+        handlers: {
+          "GET /v1/w/:wid/saved-replies": () => json({ items: [price], max_items: 200 }),
+          "POST /v1/w/:wid/saved-replies/:id/fill": () => json({ text: "Hi Priya, from 499." }),
+        },
+      },
+    );
+    await user.type(textbox(), "/pri");
+    await user.click(await screen.findByRole("option", { name: /\/price/ }));
+    await waitFor(() => expect(textbox()).toHaveValue("Hi Priya, from 499."));
+    expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("Escape closes the list and the slash stays as typed", async () => {
+    const user = userEvent.setup();
+    renderWithReplies();
+    await user.type(textbox(), "/pr");
+    await screen.findByRole("listbox");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(textbox()).toHaveValue("/pr");
+  });
+
+  it("shows nothing for a slash in a link or when no reply matches", async () => {
+    const user = userEvent.setup();
+    renderWithReplies();
+    await user.type(textbox(), "see https://shop.example/pri");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    await user.clear(textbox());
+    await user.type(textbox(), "/zzz");
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+  });
+});

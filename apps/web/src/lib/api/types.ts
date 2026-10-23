@@ -102,6 +102,12 @@ export type IceBreakerList = Schemas["IceBreakerList"];
 export type IceBreakersUpdate = Schemas["IceBreakersUpdate"];
 export type StoryMention = Schemas["StoryMention"];
 export type StoryMentionList = Schemas["StoryMentionList"];
+// GR-21: saved replies (snippets typed after / in the composer).
+export type SavedReply = Schemas["SavedReply"];
+export type SavedReplyList = Schemas["SavedReplyList"];
+export type SavedReplyCreate = Schemas["SavedReplyCreate"];
+export type SavedReplyUpdate = Schemas["SavedReplyUpdate"];
+export type SavedReplyFilled = Schemas["SavedReplyFilled"];
 // GR-08: entry links (ig.me links with QR codes).
 export type EntryLink = Schemas["EntryLink"];
 export type EntryLinkList = Schemas["EntryLinkList"];

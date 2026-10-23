@@ -2386,3 +2386,48 @@ took C-092.)
   `ContactListItem` and `ContactRecord`, `stages` on the filter models, `lead_stage` in
   `TimelineKind`, `lead.stage_changed` in the event names); the web types are aliases waiting for it.
   The hand-written web fixtures for the contact list item and record carry the new fields.
+
+## C-093 · Saved replies (GR-21, feature/gr-21-22-replies-hours)
+
+- **A table of snippets.** `saved_replies`: title (1 to 60), shortcut, body (1 to 1,000 characters,
+  the length of an Instagram DM). The shortcut is lower case letters, digits, `-` and `_` (up to 30),
+  unique per workspace; a typed `/Price` is stored and found as `price`. A workspace keeps up to 200.
+- **Who:** any member reads and uses them (agents work the inbox); owners and admins create, change
+  and delete (the plan said "agents read and use; admins and owners manage").
+- **API:** `GET/POST /saved-replies`, `PATCH/DELETE /saved-replies/{id}`, and `POST
+  /saved-replies/{id}/fill` with a `conversation_id`, which gives the text filled for that
+  conversation's contact. A duplicate shortcut is 409 `conflict`; a bad one is 422 on `shortcut`.
+  Another workspace's reply or conversation is 404.
+- **One filler, three users** (`services/saved_replies.fill`): the composer's fill route, a flow's send
+  step and the GR-22 away message all read a body the same way.
+  - Variables: `{first_name}`, `{name}`, `{username}`, `{email}`, `{phone}` and the key of any custom
+    field (`{city}`). `{first_name|there}` names a fallback, as in automations.
+  - A field with no value, or one that does not exist, is empty; no `{braces}` are left. `{first_name}`
+    with no name falls back to "there", as automations do. A custom field cannot shadow a built-in.
+  - *Deviation from "reuse any existing template-variable code":* `automations/render` only knows
+    `first_name` and `username` and a 40-character fallback; the saved-reply filler reuses its
+    `first_name_of` and fallback word and adds the other fields, rather than widening what every
+    automation message can say.
+- **Composer:** typing `/` after the start of the draft, a line or a space opens a listbox of matching
+  replies (exact shortcut first, then shortcuts that start with it, then title or shortcut contains);
+  arrow keys move, Enter or Tab or a click inserts the filled reply in place of the `/word`, Esc
+  closes. Nothing opens for a slash inside a link or a word. The list is fetched only once a slash is
+  typed. *Deviation: a new inline `SavedReplyPicker` rather than extending the `TemplatePicker` dialog
+  (that one is a dialog for WhatsApp templates with variables; a `/` picker has to stay under the
+  caret).*
+- **In flows:** a `send` step may name a saved reply (`saved_reply_id`). The step reads the reply's
+  current body when it runs and fills it for the contact (so an edit reaches flows already saved), with
+  the disclosure line.
+  - A saved-reply step goes alone: no image, buttons or quick replies (activation error).
+  - A comment flow cannot start with one (the first message is the private reply, built before the
+    run); it can use one later.
+  - A reply deleted after activation fails the step: the run ends with the code `saved_reply_missing`
+    and the reason "The saved reply this step sends was deleted. Choose another." Activity shows it
+    with "Edit the automation". A flow naming a deleted reply cannot be activated.
+  - **For the flow editor (GR-13):** the `send` step option is `saved_reply_id` (a uuid) instead of
+    `text`; the editor needs a picker of `GET /saved-replies` and should hide text, image, buttons and
+    quick replies while it is set. The server schema and runtime are done; no editor UI was touched.
+- **Web:** Settings has a "Saved replies" tab (everyone sees it; owners and admins get the add, edit
+  and delete controls).
+- **Migration 0028** (shared with C-094; parent 0025 until re-chained): `saved_replies` and
+  `uq_saved_replies_workspace_id_shortcut`.

@@ -86,6 +86,7 @@ export const keys = {
   flowTags: (wid: string) => ["w", wid, "flow-tags"] as const,
   flowFields: (wid: string) => ["w", wid, "flow-fields"] as const,
   entryLinks: (wid: string) => ["w", wid, "entry-links"] as const, // GR-08
+  savedReplies: (wid: string) => ["w", wid, "saved-replies"] as const, // GR-21
   // stories and mentions (GR-06, GR-07)
   stories: (wid: string, accountId: string | null) => ["w", wid, "stories", accountId] as const,
   iceBreakers: (wid: string, accountId: string) => ["w", wid, "ice-breakers", accountId] as const,

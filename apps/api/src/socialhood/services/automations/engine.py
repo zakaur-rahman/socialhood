@@ -349,6 +349,21 @@ async def _send(
     return msg
 
 
+async def _saved_reply_text(session: AsyncSession, scene: Scene, step: SendStep) -> str | None:
+    """GR-21: a saved-reply step's message, read when the step runs (so an edited reply is what
+    goes) and filled for the contact, with the disclosure line. None when the reply was
+    deleted: the step is logged failed with a plain reason (shown in Activity)."""
+    from socialhood.services import saved_replies
+
+    assert step.saved_reply_id is not None
+    body = await saved_replies.flow_text(session, step.saved_reply_id, scene.contact)
+    if body is None:
+        code, reason = saved_replies.MISSING
+        await _log(session, scene.run, step, StepStatus.FAILED, error_code=code, error=reason)
+        return None
+    return render.with_disclosure(body, scene.disclosure)
+
+
 # ---------------------------------------------------------------- conditions and actions
 
 
@@ -522,7 +537,13 @@ async def _advance(
             return "done"
         match step:
             case SendStep() | AskStep():
-                msg = await _send(session, deps, scene, step, now=now)
+                text = None
+                if isinstance(step, SendStep) and step.saved_reply_id is not None:
+                    text = await _saved_reply_text(session, scene, step)
+                    if text is None:  # the reply was deleted: the step fails, the run stops
+                        run.flow_state = FlowState.DONE
+                        return "done"
+                msg = await _send(session, deps, scene, step, now=now, text=text)
                 if msg is None:
                     run.flow_state = FlowState.DONE
                     return "done"

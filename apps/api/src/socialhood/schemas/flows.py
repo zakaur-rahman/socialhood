@@ -50,11 +50,16 @@ class QuickReply(RequestModel):
 
 class SendStep(RequestModel):
     """A message. With quick replies the flow waits for an answer: a tap goes to that option's
-    step, anything typed to ``on_text`` (quick replies don't show on desktop)."""
+    step, anything typed to ``on_text`` (quick replies don't show on desktop).
+
+    With ``saved_reply_id`` (GR-21) the text is that saved reply's body, read and filled for the
+    contact when the step runs, and ``text`` is ignored. A saved reply goes alone: no image,
+    buttons or quick replies. A deleted reply fails the step."""
 
     type: Literal["send"] = "send"
     id: StepId
     text: StepText = ""
+    saved_reply_id: uuid.UUID | None = None
     image_asset_id: uuid.UUID | None = None
     buttons: list[FlowButton] = Field(default_factory=list, max_length=3)
     quick_replies: list[QuickReply] = Field(default_factory=list, max_length=13)

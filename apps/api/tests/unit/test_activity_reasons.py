@@ -32,6 +32,7 @@ AUTO = uuid.UUID("00000000-0000-4000-8000-0000000a0701")
         ("delivery_unknown", "Open the chat", f"/inbox/{CONV}"),
         ("platform_rejected", "Open the chat", f"/inbox/{CONV}"),
         ("nothing_to_send", "Edit the automation", f"/automations/{AUTO}"),
+        ("saved_reply_missing", "Edit the automation", f"/automations/{AUTO}"),
         ("something_new", "Open the automation", f"/automations/{AUTO}"),
     ],
 )
