@@ -23,7 +23,9 @@ async def ws(client: httpx.AsyncClient, clerk: Clerk) -> Ws:
 
 
 def story_definition(ws: Ws, **values: Any) -> dict[str, Any]:
-    return ws.definition(trigger="story_reply", keywords=[], message_buttons=[], **values)
+    return ws.definition(
+        **{"trigger": "story_reply", "keywords": [], "message_buttons": [], **values}
+    )
 
 
 # ---------------------------------------------------------------- the story picker

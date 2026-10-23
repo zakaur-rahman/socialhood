@@ -123,8 +123,10 @@ async def test_a_chosen_story_answers_replies_to_that_story_only(world: World) -
     assert unreadable is not None
     assert chosen is not None
 
-    assert await world.run("dm", elsewhere) is Outcome.NO_MATCH
-    assert await world.run("dm", unreadable) is Outcome.NO_MATCH
+    assert (
+        await world.run("dm", elsewhere) is Outcome.SKIPPED
+    )  # passed over, as a comment on another post is
+    assert await world.run("dm", unreadable) is Outcome.SKIPPED
     assert await world.run("dm", chosen) is Outcome.FIRED
     assert [r["trigger_message_id"] for r in await world.rows("SELECT * FROM automation_runs")] == [
         chosen
