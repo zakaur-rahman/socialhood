@@ -39,9 +39,7 @@ def _trigger_condition(values: Sequence[str]) -> str:
 
 def upgrade() -> None:
     op.drop_constraint(op.f(TRIGGER_CHECK), "automations", type_="check")
-    op.create_check_constraint(
-        op.f(TRIGGER_CHECK), "automations", _trigger_condition(NEW_TRIGGERS)
-    )
+    op.create_check_constraint(op.f(TRIGGER_CHECK), "automations", _trigger_condition(NEW_TRIGGERS))
     op.add_column(
         "automations",
         sa.Column(
@@ -140,6 +138,4 @@ def downgrade() -> None:
         " WHERE trigger IN ('story_reply', 'story_mention')"
     )
     op.drop_constraint(op.f(TRIGGER_CHECK), "automations", type_="check")
-    op.create_check_constraint(
-        op.f(TRIGGER_CHECK), "automations", _trigger_condition(OLD_TRIGGERS)
-    )
+    op.create_check_constraint(op.f(TRIGGER_CHECK), "automations", _trigger_condition(OLD_TRIGGERS))
