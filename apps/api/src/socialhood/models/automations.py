@@ -38,6 +38,8 @@ class Trigger(StrEnum):
     DM_KEYWORD = "dm_keyword"
     COMMENT_KEYWORD = "comment_keyword"
     COMMENT_ANY = "comment_any"
+    STORY_REPLY = "story_reply"  # GR-06: a DM that replies to one of the account's stories
+    STORY_MENTION = "story_mention"  # GR-07: someone mentioned the account in their story
 
 
 class MatchMode(StrEnum):
@@ -136,6 +138,11 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     follow_nudge: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     follow_nudge_text: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[int] = mapped_column(Integer, server_default=sql("100"))
+    # GR-06, story_reply with post_scope "selected": the platform ids of the chosen stories (empty
+    # means any story). A story lasts 24 hours, so a chosen story stops matching once it expires.
+    story_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
+    # GR-06: also send Instagram's heart sticker to the story reply, ahead of the message.
+    story_heart: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # GR-03: the automation_flows version it runs, when it was saved as a flow. None: its flow is
     # compiled from the message settings above (services/automations/flows.compile_legacy).
     flow_version: Mapped[int | None] = mapped_column(Integer)
@@ -164,6 +171,7 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
         CheckConstraint("cooldown_hours BETWEEN 0 AND 72", name="cooldown_hours"),
         CheckConstraint("cardinality(public_reply_texts) <= 5", name="public_reply_texts"),
+        CheckConstraint("cardinality(story_ids) <= 20", name="story_ids"),
         CheckConstraint("jsonb_array_length(message_buttons) <= 3", name="message_buttons"),
         CheckConstraint(
             "ai_instructions IS NULL OR char_length(ai_instructions) <= 2000",
@@ -418,4 +426,34 @@ class AutomationRunStep(IdMixin, TimestampMixin, TenantScoped, Base):
     __table_args__ = (
         UniqueConstraint("run_id", "step_id"),
         CheckConstraint(_in("status", StepStatus), name="status"),
+    )
+
+
+class StoryMention(IdMixin, TimestampMixin, TenantScoped, Base):
+    """Someone mentioned the account in their story (GR-07): who, when, and the story's media
+    link while it is live. The link is Instagram's CDN address, which expires with the story
+    (``media_expires_at``); it is never downloaded or copied, and is cleared once it has expired
+    (jobs purge_expired). One row per mention message."""
+
+    __tablename__ = "story_mentions"
+
+    social_account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("social_accounts.id", ondelete="CASCADE")
+    )
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"))
+    message_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("messages.id", ondelete="CASCADE"))
+    mentioned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    media_url: Mapped[str | None] = mapped_column(Text)
+    media_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("message_id"),
+        Index("ix_story_mentions_listing", "workspace_id", sql("mentioned_at DESC"), "id"),
+        Index("ix_story_mentions_account", "social_account_id", sql("mentioned_at DESC")),
+        Index("ix_story_mentions_contact_id", "contact_id"),
+        Index(
+            "ix_story_mentions_expiring",
+            "media_expires_at",
+            postgresql_where=sql("media_url IS NOT NULL"),
+        ),
     )

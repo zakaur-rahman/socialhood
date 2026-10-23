@@ -28,14 +28,24 @@ export function KeywordsStep({
   /** From the last save: keywords another automation of the account also uses. */
   overlaps: OverlapWarning[];
 }) {
+  // A story reply answers every reply when it has no keywords (GR-06).
+  const optional = draft.trigger === "story_reply";
   const keywordError = errorsFor(errors, "keywords")[0] ?? null;
   const modeErrors = errorsFor(errors, "match_mode");
   const current = new Set((draft.keywords ?? []).map((keyword) => keyword.toLowerCase()));
   const shown = overlaps.filter((overlap) => current.has(overlap.keyword.toLowerCase()));
 
   return (
-    <StepCard id="keywords" label="Keywords" state={state} errors={[...(keywordError ? [keywordError] : []), ...modeErrors]}>
+    <StepCard
+      id="keywords"
+      label={optional ? "Keywords (optional)" : "Keywords"}
+      state={state}
+      errors={[...(keywordError ? [keywordError] : []), ...modeErrors]}
+    >
       <div className="space-y-5">
+        {optional ? (
+          <p className="text-sm text-fg-secondary">Leave this empty to answer every reply to your story.</p>
+        ) : null}
         <KeywordInput
           id="automation-keywords"
           keywords={draft.keywords ?? []}

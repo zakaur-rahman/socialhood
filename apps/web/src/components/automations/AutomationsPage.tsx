@@ -61,7 +61,7 @@ const STATUSES: { value: AutomationStatus; label: string }[] = [
   { value: "draft", label: "Draft" },
 ];
 
-const TRIGGERS: TriggerName[] = ["comment_keyword", "comment_any", "dm_keyword"];
+const TRIGGERS: TriggerName[] = ["comment_keyword", "comment_any", "dm_keyword", "story_reply", "story_mention"];
 const ALL = "all";
 
 function byPriority(a: Automation, b: Automation): number {

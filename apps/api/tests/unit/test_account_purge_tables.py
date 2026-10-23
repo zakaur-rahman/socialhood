@@ -40,6 +40,7 @@ EXPECTED = {
     "reply_suggestions",
     "scheduled_messages",
     "scheduled_post_targets",
+    "story_mentions",
 }
 
 

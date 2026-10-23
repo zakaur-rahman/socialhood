@@ -3,6 +3,7 @@
 import {
   ArrowDown,
   ArrowUp,
+  AtSign,
   Clock,
   Copy,
   EllipsisVertical,
@@ -11,6 +12,7 @@ import {
   MessagesSquare,
   Pause,
   Play,
+  Reply,
   Send,
   Sparkles,
   Trash2,
@@ -59,6 +61,8 @@ const TRIGGER_ICON: Record<TriggerName, typeof Send> = {
   comment_keyword: MessageCircle,
   comment_any: MessagesSquare,
   dm_keyword: Send,
+  story_reply: Reply,
+  story_mention: AtSign,
 };
 
 const MAX_CHIPS = 3;

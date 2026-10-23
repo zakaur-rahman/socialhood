@@ -14,7 +14,9 @@ from pydantic import Field
 
 from socialhood.schemas.common import RequestModel, ResponseModel
 
-TriggerName = Literal["dm_keyword", "comment_keyword", "comment_any"]
+TriggerName = Literal[
+    "dm_keyword", "comment_keyword", "comment_any", "story_reply", "story_mention"
+]
 MatchModeName = Literal["word", "exact", "contains"]
 ActionName = Literal["send_message", "ai_reply"]
 PostScopeName = Literal["all", "selected", "next_post"]
@@ -96,6 +98,10 @@ class Automation(ResponseModel):
     public_reply_texts: list[str]
     post_scope: PostScopeName
     posts: list[PostRef]
+    # GR-06 (story_reply): with post_scope "selected", the stories it answers (platform ids);
+    # story_heart also sends the heart sticker to the story reply.
+    story_ids: list[str] = Field(default_factory=list)
+    story_heart: bool = False
     cooldown_hours: int
     starts_at: datetime | None = None
     ends_at: datetime | None = None
@@ -168,6 +174,11 @@ class AutomationDefinition(RequestModel):
     post_scope: PostScopeName = "all"
     media_item_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
     scheduled_post_ids: list[uuid.UUID] = Field(default_factory=list, max_length=100)
+    # GR-06: a story reply automation's chosen stories (post_scope "selected") and its heart.
+    story_ids: list[Annotated[str, Field(min_length=1, max_length=64)]] = Field(
+        default_factory=list, max_length=20
+    )
+    story_heart: bool = False
     cooldown_hours: int = Field(default=24, ge=0, le=72)
     starts_at: datetime | None = None
     ends_at: datetime | None = None

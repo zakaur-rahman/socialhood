@@ -1796,3 +1796,69 @@ failures; now they can see them. A read model over existing tables: no migration
   title, badge, reason, time, and the one link or Retry button; "Show older" pages.
 - **Needs checking centrally:** `apps/api/openapi.json` and `packages/api-client` need
   regenerating for `ActivityItem`, `ActivityList`, `ActivityAction` and `ActivityRetry`.
+
+## C-082 · Story reply trigger (GR-06, feature/gr-06-07-stories)
+
+- **A story reply is a DM.** It arrives as a message with `reply_to.story`, opens the 24-hour
+  window and goes through the DM runtime. The parser keeps the story's `id` as the story
+  attachment's `media_id` (private, like the other platform ids), so an automation can be scoped
+  to one story. The story's address is never copied.
+- **Trigger `story_reply`** (the `ck_automations_trigger` check is re-created in migration 0022):
+  - the DM runtime picks the triggers a message can start by its kind (`runtime.dm_triggers`);
+  - a story reply starts story reply and DM keyword automations together, keyword ones first,
+    then those that answer anything, each by priority. *Deviation from the plan, which said the
+    trigger is chosen by the kind alone: an account's existing DM keyword automations kept
+    answering story replies before, and still do when no story reply automation takes the reply.*
+  - no keywords means any reply; keywords use the existing match modes.
+- **A story like does not trigger.** A like is the heart sticker on a reply to a story, which we
+  store as the text "heart". Such a reply never starts a story reply automation. A reaction event
+  was never a trigger.
+- **Scope** reuses `post_scope`: "all" answers any story, "selected" the stories in the new
+  `automations.story_ids` (text[], at most 20; not `automation_posts`, which points at synced
+  posts, and stories are never synced). "Next post" is refused for a story reply.
+  - *A story lasts 24 hours, so a chosen story stops matching once it expires. The automation stays
+    active and idle; the editor says so and shows a chosen story that has gone as expired, with
+    Remove. Nothing pauses it by itself.*
+- **The story picker** is `GET /stories?account_id=` (owners and admins): Instagram's
+  `/me/stories`, read on each request and not stored, newest first, with `expires_at` 24 hours
+  after posting. The adapter gets `list_stories` (the sandbox lists two per account, ids
+  `<account>_story_0` and `_1`; WhatsApp lists none).
+- **The heart** (`automations.story_heart`): Instagram's heart sticker is queued as its own
+  message just ahead of the run's message, through the send pipeline. It is not linked to the run,
+  so it never changes the run's result, and a refusal only goes to the log. *No message-reaction
+  call exists in the adapter; the sticker is what exists.*
+- **Flows (GR-03):** a story reply is a DM trigger for flows (`flows.Context.comment` stays false),
+  so a story reply automation can be saved as a flow.
+- **Template** "Reply to story, send the link" (`story_reply_link`).
+- **Sandbox:** `SandboxInbound` gains `story_reply`, `story_like` and `story_mention` and a
+  `story_id`; the e2e helper `inbound` passes them.
+- **Web:** the When step has "Instagram story reply"; its posts slot is "On these stories" (any or
+  chosen, thumbnails with time left, the heart switch); its keywords are optional.
+- **Unverified (T0.9):** that `reply_to.story.id` equals the id `/me/stories` lists, and the
+  `/me/stories` fields.
+- **Migration 0022** (shared with C-083): the trigger check, `story_ids` and `story_heart`.
+  Expand-only.
+
+## C-083 · Story mentions (GR-07, feature/gr-06-07-stories)
+
+- **A mention is a DM** with a `story_mention` attachment. Ingest keeps a record in the new
+  `story_mentions` table (who, when, the message, the story's address and when it expires).
+  - The address is Instagram's CDN link. It is never downloaded or copied, and no thumbnail is
+    stored: the policy question stays closed until someone asks for it.
+  - Its expiry is the link's `oe` parameter, else 24 hours after the mention. A mention that
+    arrives with an expired link keeps no address.
+  - `purge_expired` clears the address once it has expired (`story_mention_links`); the record
+    stays.
+- **Trigger `story_mention`** starts only story mention automations, which answer every mention
+  (no keywords). The message is a thank-you or a reward link, sent like any DM. A mention never
+  answers a waiting question (a tap-first opening or a flow step). Template `thank_story_mentions`.
+- **Mentions list:** `GET /story-mentions?account_id&cursor&limit` (any member), newest first,
+  cursor paged, with `total_7d`. `link_url` is only given while the story is live. Web: Comments
+  has a "Story mentions" button to `/comments/mentions` (who, when, View story, Open conversation).
+- **Analytics:** Home's overview periods carry `story_mentions`. The weekly digest is unchanged.
+- **Events:** no GR-04 event. The catalogue has none for mentions, and `message.received` already
+  fires for the mention's DM. Adding `story.mentioned` can wait for someone to ask.
+- **Ask Social Hood:** no new tool. `prepare_automation` accepts the story triggers.
+- **Tables:** `story_mentions` is in the account purge (it references the account), the workspace
+  deletion and the isolation seeds.
+- **Migration 0022** is shared with C-082.

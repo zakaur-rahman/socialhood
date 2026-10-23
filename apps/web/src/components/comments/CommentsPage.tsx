@@ -146,7 +146,11 @@ export function CommentsPage() {
     <PageFrame
       title="Comments"
       actions={
-        accounts.length > 1 ? (
+        <>
+          <Button asChild variant="secondary" size="lg">
+            <Link href={`/w/${workspace.slug}/comments/mentions` as Route}>Story mentions</Link>
+          </Button>
+          {accounts.length > 1 ? (
           <Select value={accountId ?? ALL} onValueChange={(value) => setAccountId(value === ALL ? null : value)}>
             <SelectTrigger aria-label="Account" size="lg" className="max-w-48">
               <SelectValue />
@@ -160,7 +164,8 @@ export function CommentsPage() {
               ))}
             </SelectContent>
           </Select>
-        ) : null
+          ) : null}
+        </>
       }
     >
       {content}

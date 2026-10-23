@@ -56,6 +56,7 @@ class Template:
     cooldown_hours: int = 24
     confirm_first: bool = False  # FR-AUT-21
     follow_nudge: bool = False  # FR-AUT-22
+    story_heart: bool = False  # GR-06
 
     @property
     def requires_paid_plan(self) -> bool:
@@ -170,6 +171,32 @@ TEMPLATES: tuple[Template, ...] = (
         keywords=("book",),
         message_text="Hi {first_name|there}! Pick a time that suits you and we'll call you.",
         message_buttons=(Button("Book a call"),),
+    ),
+    Template(
+        key="story_reply_link",
+        name="Reply to story, send the link",
+        outcome="Send your link to anyone who replies LINK to your story",
+        category="grow",
+        icon="message-circle",
+        trigger="story_reply",
+        action="send_message",
+        keywords=("link",),
+        message_text="Hi {first_name|there}! Thanks for replying. Here's the link you asked for.",
+        message_buttons=(Button("Open link"),),
+    ),
+    Template(
+        key="thank_story_mentions",
+        name="Thank story mentions",
+        outcome="Thank everyone who mentions you in their story",
+        category="grow",
+        icon="at-sign",
+        trigger="story_mention",
+        action="send_message",
+        message_text=(
+            "Thanks for the mention, {first_name|friend}! It made our day. "
+            "Here's a little something for you."
+        ),
+        message_buttons=(Button("Claim your reward"),),
     ),
 )
 

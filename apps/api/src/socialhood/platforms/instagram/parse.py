@@ -13,6 +13,12 @@ GR-01 adds what the new webhook fields carry: ``messaging_referral`` (an ig.me l
 the payload of a tapped postback (an ice breaker), ``messaging_optins``, and ``live_comments``
 (whose comment id is ``comment_id``, Meta's webhook examples, 2026).
 
+GR-06 and GR-07: a story reply is a message with ``reply_to.story`` (its ``id`` is kept as the
+story attachment's media id, so an automation can be scoped to a story; a reply that is only the
+heart is a story like) and a story mention a message with a ``story_mention`` attachment, whose
+``payload.url`` is Instagram's CDN address of the story, which expires with it
+(``media_url_expiry``). Neither story is ever copied.
+
 Graph reads for sync and backfill live here too: ``/me/media`` items, Conversations API threads
 and a post's comments (T6.1). Their shapes are unverified until T0.9 item 7. So do the content
 publishing answers (T7.2): created ids, the publishing quota and container status.
@@ -23,6 +29,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from datetime import UTC, datetime
 from typing import Any, Literal
+from urllib.parse import parse_qs, urlsplit
 
 from socialhood.platforms.base import (
     CommentPage,
@@ -99,6 +106,18 @@ def graph_time(value: object) -> datetime | None:
     except ValueError:
         return None
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+def media_url_expiry(url: str | None) -> datetime | None:
+    """When a Facebook or Instagram CDN address stops working: its ``oe`` parameter is the expiry
+    as hexadecimal epoch seconds. None when the address has none."""
+    if not url:
+        return None
+    try:
+        values = parse_qs(urlsplit(url).query).get("oe")
+        return datetime.fromtimestamp(int(values[0], 16), UTC) if values else None
+    except (ValueError, OverflowError, OSError):
+        return None
 
 
 def _dict(value: object) -> dict[str, Any]:
@@ -242,7 +261,12 @@ def _message(
     elif isinstance(story, dict):
         # A reply to one of the account's stories; like a mention, the story is never copied.
         kind = "story_reply"
-        refs.insert(0, InboundMediaRef(kind="story", url=_str(story.get("url"))))
+        refs.insert(
+            0,
+            InboundMediaRef(
+                kind="story", url=_str(story.get("url")), media_id=_str(story.get("id"))
+            ),
+        )
     elif kinds:
         kind = kinds[0]  # an attachment-only message takes the attachment's kind (F-06)
     else:
@@ -404,6 +428,12 @@ def media_item(raw: Mapping[str, Any]) -> PlatformMedia | None:
         like_count=_count(raw.get("like_count")),
         comments_count=_count(raw.get("comments_count")),
     )
+
+
+def story_item(raw: Mapping[str, Any]) -> PlatformMedia | None:
+    """One ``/me/stories`` item: a media item that is always a story (the edge does not say
+    ``media_product_type``)."""
+    return media_item({**raw, "media_product_type": "STORY"})
 
 
 def _count(value: object) -> int | None:

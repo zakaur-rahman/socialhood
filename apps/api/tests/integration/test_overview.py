@@ -304,6 +304,14 @@ class Hand:
         )
         return int(row["n"])
 
+    async def story_mentions(self) -> int:
+        """GR-07: story mentions in the range."""
+        row = await self.one(
+            "SELECT count(*) AS n FROM story_mentions WHERE workspace_id = :w"
+            " AND (mentioned_at AT TIME ZONE :tz)::date BETWEEN :s AND :u"
+        )
+        return int(row["n"])
+
     async def replies(self) -> tuple[int, int, int]:
         """Conversations with a customer message, those replied, those replied only by AI."""
         row = await self.one(
@@ -487,6 +495,7 @@ async def hand_period(hand: Hand) -> dict[str, Any]:
         "first_responses": answered,
         "median_first_response_s": median,
         "comments_received": sum(int(row["comments"]) for row in by_post),
+        "story_mentions": await hand.story_mentions(),
     }
 
 
@@ -562,6 +571,7 @@ async def test_the_seven_days_match_the_hand_written_sql_and_the_hand_counts(tea
         "first_responses": 4,  # 5 s, 300 s, 630 s, 1,800 s (Zoya's turn began on the 23rd)
         "median_first_response_s": 465,
         "comments_received": 4,  # the deleted one left out
+        "story_mentions": 0,
     }
     assert body["previous"] == {
         "since": "2026-09-17",
@@ -575,6 +585,7 @@ async def test_the_seven_days_match_the_hand_written_sql_and_the_hand_counts(tea
         "first_responses": 1,
         "median_first_response_s": 3600,
         "comments_received": 3,
+        "story_mentions": 0,
     }
     assert body["messages_today"] == 2  # Zoya at 00:00:00 and Arjun
     assert body["top_intents"] == [
@@ -686,6 +697,7 @@ async def test_an_empty_workspace_has_zeros_and_nothing_to_divide(team: Team) ->
         "first_responses": 0,
         "median_first_response_s": None,
         "comments_received": 0,
+        "story_mentions": 0,
     }
     assert {k: v for k, v in body["current"].items() if k not in ("since", "until")} == (
         empty_period
@@ -791,7 +803,9 @@ async def test_the_digests_week_gives_the_digests_numbers(team: Team) -> None:
     body = await overview(team, "7d", sunday_night)
 
     sent = expected_stats(*await post_ids(team))
-    assert body["current"] == {key: sent[key] for key in body["current"]}
+    # Story mentions (GR-07) are on Home only; the digest doesn't count them.
+    current = {k: v for k, v in body["current"].items() if k != "story_mentions"}
+    assert current == {key: sent[key] for key in current}
     assert body["top_intents"] == sent["top_intents"]
     assert [p["id"] for p in body["top_posts"]] == [p["post_id"] for p in sent["top_posts"]]
     assert body["needs_you"] == sent["needs_you"]

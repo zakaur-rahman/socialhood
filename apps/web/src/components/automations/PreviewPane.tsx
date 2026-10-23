@@ -39,8 +39,11 @@ export function PreviewPane({
   const [sample, setSample] = useState<Sample>("known");
   const values = SAMPLES[sample];
   const comment = isCommentTrigger(draft.trigger);
-  const keyword = draft.trigger === "comment_any" ? null : (draft.keywords?.[0] ?? null);
-  const incoming = keyword ? keyword.toUpperCase() : comment ? "Love this!" : "Hi";
+  const keyword =
+    draft.trigger === "comment_any" || draft.trigger === "story_mention" ? null : (draft.keywords?.[0] ?? null);
+  const fallback = comment ? "Love this!" : draft.trigger === "story_reply" ? "Love this story!" : "Hi";
+  // A mention has no words of its own: the conversation shows it as a line.
+  const incoming = draft.trigger === "story_mention" ? "Mentioned you in a story" : keyword ? keyword.toUpperCase() : fallback;
   const replies = (draft.public_reply_texts ?? []).map((text) => text.trim()).filter(Boolean);
   const reply = replies[0] ? renderFields(replies[0], values) : null;
   const text = draft.message_text?.trim() ? renderFields(draft.message_text, values) : "";

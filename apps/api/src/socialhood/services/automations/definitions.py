@@ -15,6 +15,8 @@ Rules:
   with the same field errors, and nothing is saved.
 - Keywords are stored as typed and normalised (matching.normalize), once per normalised form, in
   the order entered.
+- Stories (GR-06): a story reply automation with post_scope "selected" stores the chosen story ids
+  (up to 20) and its heart setting; any other trigger stores none, whatever the request says.
 - Posts: "selected" stores the chosen media items and scheduled posts; "next_post" keeps the link
   the automation made to its post (services/automations/posts.py) while the account stays the
   same; "all" stores none.
@@ -111,6 +113,7 @@ def definition_of(
         keywords=[k.normalized for k in keywords],
         post_scope=automation.post_scope,
         posts=post_targets(posts),
+        story_ids=list(automation.story_ids or []),
         action=automation.action,
         message_text=automation.message_text,
         message_buttons=[
@@ -209,6 +212,7 @@ def _fill_from_template(automation: Automation, template: templates.Template) ->
     automation.cooldown_hours = template.cooldown_hours
     automation.confirm_first = template.confirm_first
     automation.follow_nudge = template.follow_nudge
+    automation.story_heart = template.story_heart
 
 
 def _keywords(typed: Iterable[str]) -> list[Keyword]:
@@ -386,6 +390,7 @@ def _definition_from_body(
         keywords=[k.normalized for k in keywords],
         post_scope=body.post_scope,
         posts=posts,
+        story_ids=_story_ids(body),
         action=body.action,
         message_text=body.message_text,
         message_buttons=[ButtonInfo(b.title, b.url) for b in body.message_buttons],
@@ -403,6 +408,13 @@ def _definition_from_body(
     )
 
 
+def _story_ids(body: AutomationDefinition) -> list[str]:
+    """The chosen stories, once each: only a story reply scoped to chosen stories keeps them."""
+    if body.trigger != "story_reply" or body.post_scope != "selected":
+        return []
+    return list(dict.fromkeys(body.story_ids))
+
+
 def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.name = body.name
     automation.social_account_id = body.social_account_id
@@ -416,6 +428,8 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.ai_instructions = body.ai_instructions or None
     automation.public_reply_texts = list(body.public_reply_texts)
     automation.post_scope = body.post_scope
+    automation.story_ids = _story_ids(body)
+    automation.story_heart = body.story_heart and body.trigger == "story_reply"
     automation.cooldown_hours = body.cooldown_hours
     automation.starts_at = body.starts_at
     automation.ends_at = body.ends_at
@@ -570,6 +584,8 @@ async def duplicate(
         ends_at=source.ends_at,
         surge_order=source.surge_order,
         post_scope=source.post_scope,
+        story_ids=list(source.story_ids or []),
+        story_heart=source.story_heart,
         cooldown_hours=source.cooldown_hours,
         confirm_first=source.confirm_first,
         opening_text=source.opening_text,

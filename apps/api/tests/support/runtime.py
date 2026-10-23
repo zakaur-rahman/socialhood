@@ -20,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from socialhood.db.engine import make_sessionmaker
 from socialhood.db.tenancy import workspace_scope
 from socialhood.platforms.deps import PlatformDeps, deps_from
-from socialhood.platforms.events import InboundComment, InboundMessage
+from socialhood.platforms.events import InboundComment, InboundMediaRef, InboundMessage
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services import sending
 from socialhood.services.automations import comments, queue, runtime
@@ -144,6 +144,41 @@ class World:
             kind="text",
             text=text_,
             quick_reply_payload=payload,
+        )
+        with workspace_scope(self.wid):
+            async with self.maker() as session:
+                acct = await accounts.get(session, self.account_id)
+                assert acct is not None
+                result = await ingest(session, acct, [event])
+                await session.commit()
+        return result.created_message_ids[0] if result.created_message_ids else None
+
+    async def story(
+        self,
+        contact_ref: str,
+        *,
+        kind: str = "story_reply",
+        text_: str | None = "Where is this from?",
+        story_id: str | None = "sandbox_story_0",
+        url: str = "https://lookaside.fbsbx.com/ig_messaging_cdn/?asset_id=1&signature=s",
+        at: datetime | None = None,
+    ) -> uuid.UUID | None:
+        """A story reply (``kind="story_reply"``; a story like is the heart as its text) or a
+        story mention (``kind="story_mention"``) through the real ingest; its id, or None when
+        nothing new was stored."""
+        event = InboundMessage(
+            account_ref="sandbox",
+            occurred_at=at or datetime.now(UTC),
+            contact_ref=contact_ref,
+            contact_name=None,
+            platform_message_id=f"mid_{uuid.uuid4().hex}",
+            kind=kind,
+            text=text_ if kind == "story_reply" else None,
+            attachments=(
+                InboundMediaRef(kind="story", url=url, media_id=story_id)
+                if kind == "story_reply"
+                else InboundMediaRef(kind="story", url=url),
+            ),
         )
         with workspace_scope(self.wid):
             async with self.maker() as session:

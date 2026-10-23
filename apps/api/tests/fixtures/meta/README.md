@@ -11,6 +11,12 @@ account (docs/verification.md); tests that use a file must keep passing when it 
   documents for unsent messages but no real payload has shown yet.
   `webhook_message_quick_reply.json` is a tapped quick reply (`message.quick_reply.payload`,
   T4.8) in the shape Meta documents; no real tap has been recorded yet.
+- GR-06 and GR-07: `webhook_story_reply.json` carries `reply_to.story` with its `url` and `id`,
+  `webhook_story_like.json` is the same with only the heart sticker (a story like), and
+  `webhook_story_mention.json` is a `story_mention` attachment whose `payload.url` is the story's
+  CDN address, which expires with the story. All in the shapes Meta documents, none recorded yet;
+  whether the story `id` equals the id `GET /me/stories` lists is unverified (T0.9).
+  `stories_list.json` is `GET /me/stories` (the account's live stories).
 - GR-01, in the shapes of Meta's Instagram webhook examples (2026), none recorded yet:
   `webhook_referral_link.json` (`messaging_referral`: an ig.me link with `ref` opened),
   `webhook_message_from_ad.json` (a message whose `referral` is an ad: `source: "ADS"`, `ad_id`,

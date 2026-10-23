@@ -38,7 +38,12 @@ from socialhood.services.automations.validation import COMMENT_TRIGGERS
 
 SAMPLE_FIRST_NAME = "Priya"
 SAMPLE_USERNAME = "priya.shah"
-TRIGGERS_FOR = {"dm": ("dm_keyword",), "comment": ("comment_keyword", "comment_any")}
+# A story reply and a story mention arrive as DMs (GR-06, GR-07). The test cannot tell a plain DM
+# from a story reply, so it treats the text as a story reply for those triggers.
+TRIGGERS_FOR = {
+    "dm": ("dm_keyword", "story_reply", "story_mention"),
+    "comment": ("comment_keyword", "comment_any"),
+}
 
 
 def _sample(body: AutomationTest) -> tuple[str | None, str | None]:
@@ -188,8 +193,9 @@ async def run(
         return result("This post isn't one of the automation's posts.", winner=winner)
     if winner is not None and winner.id != automation.id:
         why = (
-            "keyword automations run before any-comment ones"
-            if winner.trigger != "comment_any" and trigger == "comment_any"
+            "keyword automations run before ones that answer everything"
+            if not matching.matches_anything(candidate(winner, keywords[winner.id]))
+            and matching.matches_anything(this)
             else "it's higher in the list"
         )
         return result(

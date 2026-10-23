@@ -81,6 +81,11 @@ export type LinkButton = Schemas["LinkButtonIn"];
 export type PostRef = Schemas["PostRef"];
 export type PostSummary = Schemas["PostSummary"];
 export type PostList = Schemas["PostList"];
+// GR-06, GR-07: live stories for the story picker, and the Mentions list.
+export type Story = Schemas["Story"];
+export type StoryList = Schemas["StoryList"];
+export type StoryMention = Schemas["StoryMention"];
+export type StoryMentionList = Schemas["StoryMentionList"];
 export type AutomationStatus = Automation["status"];
 export type DisplayStatus = Automation["display_status"];
 export type TriggerName = NonNullable<Automation["trigger"]>;

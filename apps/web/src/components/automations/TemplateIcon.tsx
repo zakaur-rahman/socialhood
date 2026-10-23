@@ -1,5 +1,6 @@
 import { createElement } from "react";
 import {
+  AtSign,
   BookOpen,
   CalendarCheck,
   CircleHelp,
@@ -16,6 +17,7 @@ import {
 
 // Templates name a lucide icon (FR-AUT-12); only these are bundled, anything else shows the zap.
 const ICONS: Record<string, LucideIcon> = {
+  atsign: AtSign,
   bookopen: BookOpen,
   calendar: CalendarCheck,
   calendarcheck: CalendarCheck,

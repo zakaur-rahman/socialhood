@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useTestAutomation } from "@/lib/api/queries";
 import type { AutomationTestResult, TriggerName } from "@/lib/api/types";
+import { isCommentTrigger } from "@/lib/automations/definition";
 import { errorMessage } from "@/lib/copy";
 import { EYEBROW } from "@/styles/tokens";
 
@@ -39,7 +40,7 @@ export function MatchTester({
   /** Save pending edits; false when saving failed. */
   beforeTest: () => Promise<boolean>;
 }) {
-  const [kind, setKind] = useState<Kind>(trigger === "dm_keyword" ? "dm" : "comment");
+  const [kind, setKind] = useState<Kind>(isCommentTrigger(trigger) || !trigger ? "comment" : "dm");
   const [text, setText] = useState("");
   const [saveFailed, setSaveFailed] = useState(false);
   const test = useTestAutomation(wid, automationId);

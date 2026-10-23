@@ -235,6 +235,9 @@ class WhatsAppAdapter:
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
         return []  # WhatsApp numbers have no posts
 
+    async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
+        return []  # WhatsApp numbers have no stories
+
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         return None  # no posts, so no comments on them
 

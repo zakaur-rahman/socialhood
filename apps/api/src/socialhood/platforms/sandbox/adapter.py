@@ -97,6 +97,11 @@ class SandboxAdapter:
 
         return history.posts(acct, limit=limit)
 
+    async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
+        from socialhood.platforms.sandbox import history
+
+        return history.stories(acct)
+
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         from socialhood.platforms.sandbox import history
 

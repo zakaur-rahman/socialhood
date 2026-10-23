@@ -65,6 +65,7 @@ import { queueBanner, shortDateTime, STATUS_LABEL, SURGE_LABEL } from "@/lib/aut
 import { errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import type { Tone } from "@/lib/ui/tone";
+import { useNow } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -73,6 +74,7 @@ import { focusStep, type StepState } from "./StepCard";
 import { KeywordsStep } from "./steps/KeywordsStep";
 import { PostsStep } from "./steps/PostsStep";
 import { SettingsStep } from "./steps/SettingsStep";
+import { StoriesStep } from "./steps/StoriesStep";
 import { ThenStep, type Uploader } from "./steps/ThenStep";
 import { WhenStep } from "./steps/WhenStep";
 import { editorHref } from "./TemplateGallery";
@@ -119,6 +121,7 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
   const wid = workspace.id;
   const slug = workspace.slug;
   const timeZone = workspace.timezone;
+  const now = useNow();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -329,6 +332,11 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
                       <WhenStep key={step} draft={draft} change={change} errors={errors} state={state} accounts={accounts} slug={slug} />
                     );
                   case "posts":
+                    if (draft.trigger === "story_reply") {
+                      return (
+                        <StoriesStep key={step} wid={wid} draft={draft} change={change} errors={errors} state={state} now={now} />
+                      );
+                    }
                     return (
                       <PostsStep
                         key={step}

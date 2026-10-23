@@ -274,3 +274,46 @@ describe("API field errors → steps", () => {
     expect(clearFieldErrors(errors, ["message_buttons"])).toEqual({ keywords: "Add at least one keyword." });
   });
 });
+
+
+describe("story triggers (GR-06, GR-07)", () => {
+  const reply = { ...toDefinition(automation({ trigger: "story_reply", keywords: [] })) };
+
+  it("shows the steps each story trigger uses", () => {
+    expect(visibleSteps("story_reply")).toEqual(["when", "posts", "keywords", "then", "settings"]);
+    expect(visibleSteps("story_mention")).toEqual(["when", "then", "settings"]);
+  });
+
+  it("needs no keywords for a story reply, and a story only when stories are chosen", () => {
+    expect(stepComplete("keywords", reply)).toBe(true);
+    expect(stepComplete("posts", reply)).toBe(true);
+    expect(stepComplete("posts", { ...reply, post_scope: "selected", story_ids: [] })).toBe(false);
+    expect(stepComplete("posts", { ...reply, post_scope: "selected", story_ids: ["s1"] })).toBe(true);
+    const mention = { ...reply, trigger: "story_mention" as const };
+    expect(visibleSteps(mention.trigger).every((step) => stepComplete(step, mention))).toBe(true);
+  });
+
+  it("sends the chosen stories and the heart only for a story reply", () => {
+    const chosen = { ...reply, post_scope: "selected" as const, story_ids: ["s1", "s2"], story_heart: true };
+    const body = toRequestBody(chosen);
+    expect(body).toMatchObject({ post_scope: "selected", story_ids: ["s1", "s2"], story_heart: true, media_item_ids: [] });
+    expect(toRequestBody({ ...chosen, post_scope: "all" })).toMatchObject({ post_scope: "all", story_ids: [], story_heart: true });
+    const dm = toRequestBody({ ...chosen, trigger: "dm_keyword" });
+    expect(dm).toMatchObject({ post_scope: "all", story_ids: [], story_heart: false });
+  });
+
+  it("sends no keywords for a story mention", () => {
+    expect(toRequestBody({ ...reply, trigger: "story_mention", keywords: ["x"] }).keywords).toEqual([]);
+    expect(toRequestBody({ ...reply, keywords: ["link"] }).keywords).toEqual(["link"]);
+  });
+
+  it("keeps the story fields in the definition, and moves off the next post", () => {
+    const stored = toDefinition(automation({ trigger: "story_reply", story_ids: ["s1"], story_heart: true }));
+    expect(stored).toMatchObject({ story_ids: ["s1"], story_heart: true });
+    expect(triggerPatch({ ...stored, post_scope: "next_post" }, "story_reply")).toEqual({
+      trigger: "story_reply",
+      post_scope: "all",
+    });
+    expect(stepOfField("story_ids")).toBe("posts");
+  });
+});

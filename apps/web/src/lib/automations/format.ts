@@ -22,6 +22,8 @@ export const TRIGGER_LABEL: Record<TriggerName, string> = {
   comment_keyword: "Comment keyword",
   comment_any: "Any comment",
   dm_keyword: "DM keyword",
+  story_reply: "Story reply",
+  story_mention: "Story mention",
 };
 
 /** Where the trigger is named: the editor, the gallery and the list's filter say which network (UI-064). */
@@ -29,6 +31,8 @@ export const TRIGGER_LABEL_IG: Record<TriggerName, string> = {
   comment_keyword: "Instagram comment keyword",
   comment_any: "Any Instagram comment",
   dm_keyword: "Instagram DM keyword",
+  story_reply: "Instagram story reply",
+  story_mention: "Instagram story mention",
 };
 
 export const MATCH_LABEL: Record<MatchMode, string> = {
@@ -88,11 +92,18 @@ function plural(n: number, one: string, many: string): string {
   return `${formatCount(n)} ${n === 1 ? one : many}`;
 }
 
-/** The row's trigger label: "Comment on 3 posts", "Any comment on next post", "DM keyword". */
-export function triggerSummary(automation: Pick<Automation, "trigger" | "post_scope" | "posts">): string {
+/** The row's trigger label: "Comment on 3 posts", "Any comment on next post", "DM keyword", "Story reply to any story". */
+export function triggerSummary(
+  automation: Pick<Automation, "trigger" | "post_scope" | "posts"> & Partial<Pick<Automation, "story_ids">>,
+): string {
   const { trigger, post_scope: scope, posts } = automation;
   if (!trigger) return "No trigger yet";
   if (trigger === "dm_keyword") return "DM keyword";
+  if (trigger === "story_mention") return "Story mention";
+  if (trigger === "story_reply") {
+    const stories = automation.story_ids ?? [];
+    return scope === "selected" ? `Story reply on ${plural(stories.length, "story", "stories")}` : "Story reply to any story";
+  }
   const lead = trigger === "comment_any" ? "Any comment" : "Comment";
   if (scope === "next_post") return `${lead} on next post`;
   if (scope === "selected") return `${lead} on ${plural(posts.length, "post", "posts")}`;

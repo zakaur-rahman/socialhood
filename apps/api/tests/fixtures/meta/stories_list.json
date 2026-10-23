@@ -1,0 +1,19 @@
+{
+  "data": [
+    {
+      "id": "18200000000000001",
+      "media_type": "IMAGE",
+      "media_url": "https://scontent.cdninstagram.com/v/t51/story1.jpg",
+      "permalink": "https://www.instagram.com/stories/maple.bakery/18200000000000001/",
+      "timestamp": "2026-10-24T06:00:00+0000"
+    },
+    {
+      "id": "18200000000000002",
+      "media_type": "VIDEO",
+      "media_url": "https://scontent.cdninstagram.com/v/t50/story2.mp4",
+      "thumbnail_url": "https://scontent.cdninstagram.com/v/t51/story2.jpg",
+      "permalink": "https://www.instagram.com/stories/maple.bakery/18200000000000002/",
+      "timestamp": "2026-10-24T09:00:00+0000"
+    }
+  ]
+}

@@ -150,3 +150,35 @@ def test_the_worst_case_uses_the_longer_of_the_sample_and_the_fallback() -> None
     long_fallback = "wonderful person who follows us"  # 31 bytes
     assert longest_render(f"Hi {{first_name|{long_fallback}}}") == f"Hi {long_fallback}"
     assert longest_render("@{username}") == f"@{sample}"
+
+
+# ---------------------------------------------------------------- story triggers (GR-06, GR-07)
+
+
+def test_a_story_reply_without_keywords_answers_any_reply() -> None:
+    anything = candidate(trigger="story_reply")
+    found = matches("Where is this cake from?", [anything])
+    assert [(m.automation_id, m.keyword) for m in found] == [(anything.id, "")]
+
+
+def test_a_story_reply_with_keywords_needs_one() -> None:
+    keyword = candidate("link", trigger="story_reply")
+    assert matches("LINK please", [keyword])[0].keyword == "link"
+    assert matches("Where is this cake from?", [keyword]) == []
+
+
+def test_a_story_mention_matches_every_mention() -> None:
+    mention = candidate(trigger="story_mention")
+    assert [m.keyword for m in matches("", [mention])] == [""]
+
+
+def test_automations_that_answer_anything_run_after_keyword_ones() -> None:
+    """A keyword automation beats an any-reply one even when the any-reply one is older and has
+    the better priority number, as for comments."""
+    anything = candidate(trigger="story_reply", priority=1, age_days=9)
+    keyword = candidate("link", trigger="dm_keyword", priority=50)
+    assert [m.automation_id for m in matches("link", [anything, keyword])] == [
+        keyword.id,
+        anything.id,
+    ]
+    assert [m.automation_id for m in matches("hello", [anything, keyword])] == [anything.id]

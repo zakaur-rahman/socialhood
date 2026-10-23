@@ -72,7 +72,16 @@ export class Api {
     wid: string,
     event: {
       accountId: string;
-      kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin";
+      kind:
+        | "dm"
+        | "comment"
+        | "live_comment"
+        | "referral"
+        | "postback"
+        | "optin"
+        | "story_reply"
+        | "story_like"
+        | "story_mention";
       text?: string;
       fromId?: string;
       fromUsername?: string;
@@ -82,6 +91,8 @@ export class Api {
       adTitle?: string;
       postbackPayload?: string;
       quickReplyPayload?: string;
+      /** GR-06: the story a story reply or like answers (the sandbox lists `<account>_story_0`, `_1`). */
+      storyId?: string;
     },
   ): Promise<{ stored: number }> {
     return this.call("POST", `/v1/w/${wid}/dev/sandbox/inbound`, {
@@ -96,7 +107,36 @@ export class Api {
       ad_title: event.adTitle,
       postback_payload: event.postbackPayload,
       quick_reply_payload: event.quickReplyPayload,
+      story_id: event.storyId,
     });
+  }
+
+  /** GR-06, GR-07: an active automation on a story trigger (no keywords answers every event). */
+  async storyAutomation(
+    wid: string,
+    accountId: string,
+    trigger: "story_reply" | "story_mention",
+    values: { keywords?: string[]; messageText: string; storyIds?: string[]; heart?: boolean },
+  ): Promise<{ id: string }> {
+    const name = `Story ${trigger} ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger,
+      keywords: values.keywords ?? [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: values.messageText,
+      post_scope: values.storyIds?.length ? "selected" : "all",
+      story_ids: values.storyIds ?? [],
+      story_heart: values.heart ?? false,
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
   }
 
   /** GR-03: an active DM keyword automation saved as ``flow`` (PUT …/flow). */

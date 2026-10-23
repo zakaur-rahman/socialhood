@@ -11,6 +11,9 @@ buttons the text is Instagram's button template, at most 640 characters in its l
 A comment automation's DM is a private reply, which Instagram sends as text (and buttons) only,
 so it cannot carry an image; one set to public reply only needs a public reply.
 
+Story triggers (GR-06, GR-07) are DM triggers. A story reply takes keywords or none (any reply), and
+its scope is any story or at least one chosen story; a story mention needs nothing but a message.
+
 Tap first (FR-AUT-21, comment triggers sending a message): the private reply is the opening, so
 it needs its text (1,000 bytes at most in its longest rendering with the disclosure line) and a
 button title of 1 to 20 characters; the message follows their answer as a normal DM, so it may
@@ -40,7 +43,7 @@ BUTTON_TEXT_CHARS = 640  # the button template's text (services/sending.BUTTON_T
 KEYWORD_CHARS = 100  # automation_keywords.keyword
 NUDGE_CHARS = 300  # FR-AUT-22, automations.follow_nudge_text
 COMMENT_TRIGGERS = frozenset({"comment_keyword", "comment_any"})
-KEYWORD_TRIGGERS = frozenset({"dm_keyword", "comment_keyword"})
+KEYWORD_TRIGGERS = frozenset({"dm_keyword", "comment_keyword"})  # story_reply's are optional
 
 COPY = {
     "account_missing": "Choose the account this automation runs on.",
@@ -50,6 +53,8 @@ COPY = {
     "keywords_missing": "Add at least one keyword.",
     "scope_all_any_comment": "Choose the posts to answer, or the next post you publish.",
     "posts_missing": "Choose at least one post.",
+    "stories_missing": "Choose at least one story, or answer any story.",
+    "story_scope": "A story reply answers any story or the stories you choose.",
     "posts_other_account": "Choose posts from this automation's account.",
     "action_missing": "Choose what the automation does.",
     "ai_instructions_missing": "Tell the AI how to reply, for example what to offer or link to.",
@@ -109,6 +114,7 @@ class Definition:
     starts_at: datetime | None
     ends_at: datetime | None
     surge_order: str = "oldest_first"
+    story_ids: Sequence[str] = ()  # GR-06: a story reply's chosen stories
     has_image: bool = False
     confirm_first: bool = False
     opening_text: str | None = None
@@ -185,7 +191,17 @@ def _trigger_errors(d: Definition) -> list[FieldError]:
         errors.append(FieldError("keywords", COPY["keywords_missing"]))
     if d.trigger in COMMENT_TRIGGERS:
         errors += _post_errors(d)
+    if d.trigger == "story_reply":
+        errors += _story_errors(d)
     return errors
+
+
+def _story_errors(d: Definition) -> list[FieldError]:
+    if d.post_scope == "next_post":
+        return [FieldError("post_scope", COPY["story_scope"])]
+    if d.post_scope == "selected" and not d.story_ids:
+        return [FieldError("story_ids", COPY["stories_missing"])]
+    return []
 
 
 def _post_errors(d: Definition) -> list[FieldError]:
