@@ -86,6 +86,12 @@ export type Story = Schemas["Story"];
 export type StoryList = Schemas["StoryList"];
 export type StoryMention = Schemas["StoryMention"];
 export type StoryMentionList = Schemas["StoryMentionList"];
+// GR-08: entry links (ig.me links with QR codes).
+export type EntryLink = Schemas["EntryLink"];
+export type EntryLinkList = Schemas["EntryLinkList"];
+export type EntryLinkCreate = Schemas["EntryLinkCreate"];
+export type EntryLinkUpdate = Schemas["EntryLinkUpdate"];
+export type QrFormat = "svg" | "png";
 export type AutomationStatus = Automation["status"];
 export type DisplayStatus = Automation["display_status"];
 export type TriggerName = NonNullable<Automation["trigger"]>;

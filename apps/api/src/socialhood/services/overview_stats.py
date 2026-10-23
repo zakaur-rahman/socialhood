@@ -445,6 +445,22 @@ async def comments_received(session: AsyncSession, span: DateRange) -> int:
     )
 
 
+async def conversations_by_entry(session: AsyncSession, span: DateRange) -> dict[str, int]:
+    """GR-08, GR-09: conversations that began in the range, by how they began (``ad`` and
+    ``link``; conversations from before GR-01 have no entry and are not counted)."""
+    rows = await session.execute(
+        select(Conversation.entry_source, func.count())
+        .where(
+            Conversation.workspace_id == require_workspace(),
+            Conversation.entry_at >= span.start,
+            Conversation.entry_at < span.end,
+            Conversation.entry_source.in_(("ad", "link")),
+        )
+        .group_by(Conversation.entry_source)
+    )
+    return {str(source): int(count) for source, count in rows.all()}
+
+
 async def story_mentions_received(session: AsyncSession, span: DateRange) -> int:
     """GR-07: story mentions in the range."""
     from socialhood.repositories import story_mentions

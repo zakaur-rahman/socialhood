@@ -74,6 +74,7 @@ import { focusStep, type StepState } from "./StepCard";
 import { KeywordsStep } from "./steps/KeywordsStep";
 import { PostsStep } from "./steps/PostsStep";
 import { SettingsStep } from "./steps/SettingsStep";
+import { AdsStep } from "./steps/AdsStep";
 import { StoriesStep } from "./steps/StoriesStep";
 import { ThenStep, type Uploader } from "./steps/ThenStep";
 import { WhenStep } from "./steps/WhenStep";
@@ -336,6 +337,9 @@ function Editor({ initial, upload }: { initial: Automation; upload?: Uploader })
                       return (
                         <StoriesStep key={step} wid={wid} draft={draft} change={change} errors={errors} state={state} now={now} />
                       );
+                    }
+                    if (draft.trigger === "ad_click") {
+                      return <AdsStep key={step} draft={draft} change={change} errors={errors} state={state} />;
                     }
                     return (
                       <PostsStep

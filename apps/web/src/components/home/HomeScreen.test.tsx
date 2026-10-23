@@ -42,6 +42,8 @@ const quietPeriod = (since: string, until: string) => ({
   median_first_response_s: null,
   comments_received: 0,
   story_mentions: 0,
+  conversations_from_ads: 0,
+  conversations_from_links: 0,
 });
 
 /** Whole minutes before now, as Home's clock (useNow, to the minute) sees them. */
@@ -156,6 +158,8 @@ function busy(overrides: Partial<Overview> = {}): Overview {
       median_first_response_s: 465,
       comments_received: 4,
       story_mentions: 0,
+      conversations_from_ads: 0,
+      conversations_from_links: 0,
     },
     previous: {
       since: "2026-09-17",
@@ -170,6 +174,8 @@ function busy(overrides: Partial<Overview> = {}): Overview {
       median_first_response_s: 3600,
       comments_received: 3,
       story_mentions: 0,
+      conversations_from_ads: 0,
+      conversations_from_links: 0,
     },
     top_intents: [
       { intent: "pricing", count: 3 },

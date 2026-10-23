@@ -35,6 +35,11 @@ describe("row labels (UX-SCR-02)", () => {
       triggerSummary(automation({ trigger: "story_reply", post_scope: "selected", story_ids: ["s1", "s2"] })),
     ).toBe("Story reply on 2 stories");
     expect(triggerSummary(automation({ trigger: "story_mention" }))).toBe("Story mention");
+    expect(triggerSummary(automation({ trigger: "entry_link" }))).toBe("Entry link");
+    expect(triggerSummary(automation({ trigger: "ad_click" }))).toBe("Ad click on any ad");
+    expect(triggerSummary(automation({ trigger: "ad_click", post_scope: "selected", ad_ids: ["1"] }))).toBe(
+      "Ad click on 1 ad",
+    );
   });
 
   it("names the action", () => {

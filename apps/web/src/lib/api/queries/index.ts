@@ -13,6 +13,7 @@ export * from "./billing";
 export * from "./notifications";
 export * from "./posts";
 export * from "./stories";
+export * from "./entryLinks";
 export * from "./analytics";
 export * from "./calendar";
 export * from "./agent";

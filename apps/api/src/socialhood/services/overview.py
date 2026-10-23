@@ -80,7 +80,11 @@ def custom_span(timezone: str, now: datetime, since: date | None, until: date | 
 
 
 def _period(
-    span: DateRange, inbox: stats.InboxStats, comments: int, story_mentions: int
+    span: DateRange,
+    inbox: stats.InboxStats,
+    comments: int,
+    story_mentions: int,
+    entries: dict[str, int],
 ) -> OverviewPeriod:
     return OverviewPeriod(
         since=span.since,
@@ -95,6 +99,8 @@ def _period(
         median_first_response_s=inbox.median_first_response_s,
         comments_received=comments,
         story_mentions=story_mentions,
+        conversations_from_ads=entries.get("ad", 0),
+        conversations_from_links=entries.get("link", 0),
     )
 
 
@@ -184,6 +190,8 @@ async def overview(
     previous_comments = await stats.comments_received(session, before)
     mentions = await stats.story_mentions_received(session, span)
     previous_mentions = await stats.story_mentions_received(session, before)
+    entries = await stats.conversations_by_entry(session, span)
+    previous_entries = await stats.conversations_by_entry(session, before)
     counts = await inbox_counts(session)
     connected, platforms = await stats.accounts_connected(session)
     rates = await stats.engagement_rates(session, [p.post_id for p in current.top_posts], span)
@@ -225,8 +233,10 @@ async def overview(
                 session, now=now, human_agent=human_agent
             ),
             "messages_today": await stats.messages_received(session, today),
-            "current": _period(span, current.inbox, current.comments_received, mentions),
-            "previous": _period(before, previous_inbox, previous_comments, previous_mentions),
+            "current": _period(span, current.inbox, current.comments_received, mentions, entries),
+            "previous": _period(
+                before, previous_inbox, previous_comments, previous_mentions, previous_entries
+            ),
             "top_intents": [
                 IntentCount.model_validate({"intent": item.intent, "count": item.count})
                 for item in current.top_intents

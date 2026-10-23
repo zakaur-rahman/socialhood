@@ -397,6 +397,7 @@ export function automation(overrides: Partial<Automation> = {}): Automation {
     posts: [],
     story_ids: [],
     story_heart: false,
+    ad_ids: [],
     cooldown_hours: 24,
     starts_at: null,
     ends_at: null,

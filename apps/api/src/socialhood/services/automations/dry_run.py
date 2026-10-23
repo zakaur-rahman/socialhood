@@ -155,6 +155,12 @@ async def run(
     kinds = TRIGGERS_FOR[body.kind]
     if account_id is None or trigger is None:
         return result("Choose an account and a trigger first.")
+    if trigger in matching.ENTRY_TRIGGERS:  # GR-08, GR-09
+        what = "an entry link" if trigger == "entry_link" else "an ad"
+        return result(
+            f"This automation starts when someone opens a chat from {what}, not from a "
+            "message you can type here. Try it with the sandbox."
+        )
     if trigger not in kinds:
         other = "comments" if body.kind == "dm" else "DMs"
         return result(f"This automation answers {other}, not {_plural(body.kind)}.")

@@ -16,6 +16,11 @@ story mention starts story mention automations only, and never answers a waiting
 reply automation with the heart on sends Instagram's heart sticker ahead of its message (its
 failure never stops the DM).
 
+Entry triggers (GR-08, GR-09): a DM that is the first message after an entry link or an ad
+(services/automations/entry) also starts ``entry_link`` and ``ad_click`` automations, ahead of the
+keyword ones: an entry link starts the automation its link points at, an ad click any ad or its
+chosen ads. A story mention is never an entry.
+
 Tap first (FR-AUT-21): before keyword matching, a customer DM that answers a waiting opening
 releases that run's message and nothing else runs on it (services/automations/answers). The
 follow nudge (FR-AUT-22) is ``run_automation("nudge", run_id)``, enqueued once a run's message
@@ -80,7 +85,15 @@ from socialhood.repositories import automation_runs as runs
 from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import inbox
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, ai_reply, engine, flows, matching, results
+from socialhood.services.automations import (
+    actions,
+    ai_reply,
+    engine,
+    entry,
+    flows,
+    matching,
+    results,
+)
 
 log = get_logger(__name__)
 
@@ -157,8 +170,12 @@ async def enqueue_for_message(
         await runs.has_awaiting(session, contact_id, since=since)
         or await runs.has_flow_waiting(session, contact_id, since=since)  # GR-03
     )
+    triggers = dm_triggers(message)
+    if message.kind != "story_mention":
+        # Whether the message is an entry is checked in the run.
+        triggers = (*triggers, *matching.ENTRY_TRIGGERS)
     if not answers_opening and not await runs.has_active(
-        session, message.social_account_id, dm_triggers(message)
+        session, message.social_account_id, triggers
     ):
         return False
     return await enqueue_run("dm", message.id, message.workspace_id)
@@ -363,7 +380,13 @@ async def _match_dm(
     session: AsyncSession, env: _Env, msg: Message, conv: Conversation, contact: Contact
 ) -> Outcome:
     """DM keyword automations (F-11 runtime): the first match that passes sends its message."""
-    loaded = await runs.candidates(session, msg.social_account_id, dm_triggers(msg), now=env.now)
+    triggers = dm_triggers(msg)
+    came_from = None
+    if msg.kind != "story_mention":
+        came_from = await entry.of_message(session, msg, conv)
+        if came_from is not None:
+            triggers = (*triggers, came_from.trigger)
+    loaded = await runs.candidates(session, msg.social_account_id, triggers, now=env.now)
     found = matching.matches(msg.text or "", [item.candidate for item in loaded])
     if not found:
         return Outcome.NO_MATCH
@@ -372,6 +395,8 @@ async def _match_dm(
     for match in found:
         automation = by_id[match.automation_id]
         if not in_story_scope(automation, msg):
+            continue
+        if came_from is not None and not entry.in_scope(automation, came_from):
             continue
         common: dict[str, Any] = {
             "contact_id": contact.id,

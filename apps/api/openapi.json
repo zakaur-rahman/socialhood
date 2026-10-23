@@ -2192,6 +2192,13 @@
             ],
             "title": "Activated At"
           },
+          "ad_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ad Ids",
+            "type": "array"
+          },
           "ai_instructions": {
             "anyOf": [
               {
@@ -2495,7 +2502,9 @@
                   "comment_keyword",
                   "comment_any",
                   "story_reply",
-                  "story_mention"
+                  "story_mention",
+                  "entry_link",
+                  "ad_click"
                 ],
                 "type": "string"
               },
@@ -2600,6 +2609,16 @@
               }
             ],
             "title": "Action"
+          },
+          "ad_ids": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Ad Ids",
+            "type": "array"
           },
           "ai_instructions": {
             "anyOf": [
@@ -2829,7 +2848,9 @@
                   "comment_keyword",
                   "comment_any",
                   "story_reply",
-                  "story_mention"
+                  "story_mention",
+                  "entry_link",
+                  "ad_click"
                 ],
                 "type": "string"
               },
@@ -2992,7 +3013,9 @@
                   "comment_keyword",
                   "comment_any",
                   "story_reply",
-                  "story_mention"
+                  "story_mention",
+                  "entry_link",
+                  "ad_click"
                 ],
                 "type": "string"
               },
@@ -3398,7 +3421,9 @@
               "comment_keyword",
               "comment_any",
               "story_reply",
-              "story_mention"
+              "story_mention",
+              "entry_link",
+              "ad_click"
             ],
             "title": "Trigger",
             "type": "string"
@@ -6599,6 +6624,184 @@
         "title": "EntitlementValue",
         "type": "object"
       },
+      "EntryLink": {
+        "description": "``url`` is the link to share (and what the QR code holds). ``opened_conversations`` counts\nconversations that began from the link, ``runs`` the automation runs they led to.",
+        "properties": {
+          "account_username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Username"
+          },
+          "automation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Id"
+          },
+          "automation_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Name"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "opened_conversations": {
+            "title": "Opened Conversations",
+            "type": "integer"
+          },
+          "runs": {
+            "title": "Runs",
+            "type": "integer"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "social_account_id",
+          "name",
+          "code",
+          "url",
+          "opened_conversations",
+          "runs",
+          "created_at"
+        ],
+        "title": "EntryLink",
+        "type": "object"
+      },
+      "EntryLinkCreate": {
+        "additionalProperties": false,
+        "description": "``code`` is the ?ref= value; leave it out and one is made. It can't be changed later, so\nprinted QR codes keep working.",
+        "properties": {
+          "automation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Id"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[A-Za-z0-9_-]{3,40}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "social_account_id",
+          "name"
+        ],
+        "title": "EntryLinkCreate",
+        "type": "object"
+      },
+      "EntryLinkList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EntryLink"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "EntryLinkList",
+        "type": "object"
+      },
+      "EntryLinkUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "automation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Id"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "EntryLinkUpdate",
+        "type": "object"
+      },
       "ErrorInfo": {
         "properties": {
           "code": {
@@ -7909,7 +8112,9 @@
                   "comment_keyword",
                   "comment_any",
                   "story_reply",
-                  "story_mention"
+                  "story_mention",
+                  "entry_link",
+                  "ad_click"
                 ],
                 "type": "string"
               },
@@ -9176,6 +9381,16 @@
           },
           "conversations": {
             "title": "Conversations",
+            "type": "integer"
+          },
+          "conversations_from_ads": {
+            "default": 0,
+            "title": "Conversations From Ads",
+            "type": "integer"
+          },
+          "conversations_from_links": {
+            "default": 0,
+            "title": "Conversations From Links",
             "type": "integer"
           },
           "conversations_replied": {
@@ -16800,7 +17015,9 @@
                     "comment_keyword",
                     "comment_any",
                     "story_reply",
-                    "story_mention"
+                    "story_mention",
+                    "entry_link",
+                    "ad_click"
                   ],
                   "type": "string"
                 },
@@ -21077,6 +21294,404 @@
         "summary": "Sandbox Inbound",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/entry-links": {
+      "get": {
+        "description": "The links, newest first, with the conversations and automation runs each has led to.",
+        "operationId": "list_entry_links",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryLinkList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Entry Links",
+        "tags": [
+          "entry-links"
+        ]
+      },
+      "post": {
+        "description": "A link on an Instagram account. Leave ``code`` out and one is made; it can't change later.",
+        "operationId": "create_entry_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryLinkCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Entry Link",
+        "tags": [
+          "entry-links"
+        ]
+      }
+    },
+    "/v1/w/{wid}/entry-links/{link_id}": {
+      "delete": {
+        "description": "Deleting a link stops its automation starting from it. Conversations it opened keep\ntheir entry.",
+        "operationId": "delete_entry_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Entry Link",
+        "tags": [
+          "entry-links"
+        ]
+      },
+      "get": {
+        "operationId": "get_entry_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Entry Link",
+        "tags": [
+          "entry-links"
+        ]
+      },
+      "put": {
+        "description": "Rename the link or change the automation it starts. The account and code stay.",
+        "operationId": "update_entry_link",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EntryLinkUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryLink"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Entry Link",
+        "tags": [
+          "entry-links"
+        ]
+      }
+    },
+    "/v1/w/{wid}/entry-links/{link_id}/qr": {
+      "get": {
+        "description": "The link's QR code as an image to download.",
+        "operationId": "download_entry_link_qr",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "svg",
+              "enum": [
+                "svg",
+                "png"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/png": {},
+              "image/svg+xml": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Download Entry Link Qr",
+        "tags": [
+          "entry-links"
         ]
       }
     },

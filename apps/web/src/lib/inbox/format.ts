@@ -184,7 +184,7 @@ export function entryLabel(entry: ConversationEntry): string {
     case "link":
       return entry.ref ? `Entry link "${entry.ref}"` : "An entry link";
     case "ad":
-      return entry.ad_title ? `Ad "${entry.ad_title}"` : "An ad";
+      return entry.ad_title ? `From an ad: "${entry.ad_title}"` : "From an ad";
     case "ice_breaker":
       return "A conversation starter";
     case "other":

@@ -71,10 +71,18 @@ TRIGGER_WORDS = {
     "comment_any": "any comment",
     "story_reply": "a reply to a story",
     "story_mention": "a mention in someone's story",
+    "entry_link": "someone opening a chat from an entry link",
+    "ad_click": "someone opening a chat from an ad",
 }
 # Triggers that need no keywords: they answer every event of their kind (a story reply may also
 # take keywords).
-NO_KEYWORD_TRIGGERS = ("comment_any", "story_reply", "story_mention")
+NO_KEYWORD_TRIGGERS = (
+    "comment_any",
+    "story_reply",
+    "story_mention",
+    "entry_link",
+    "ad_click",
+)
 ACTION_WORDS = {"send_message": "sends a message", "ai_reply": "replies with AI"}
 # prepare_automation without a template, trigger or action: the first template whose words
 # appear in the request.
@@ -527,8 +535,8 @@ def _keywords(typed: list[str]) -> list[str]:
     label="Preparing an automation draft",
     description=(
         "Prepare a new automation from the request: fill the template, trigger (dm_keyword, "
-        "comment_keyword, comment_any, story_reply, story_mention), keywords, action "
-        "(send_message or ai_reply), message and posts you can tell from it. "
+        "comment_keyword, comment_any, story_reply, story_mention, entry_link, ad_click), "
+        "keywords, action (send_message or ai_reply), message and posts you can tell from it. "
         "Returns a card that opens the automation editor filled in and unsaved; "
         "the member saves and activates it there. Nothing is created."
     ),
@@ -575,7 +583,8 @@ async def prepare_automation(
     if trigger not in COMMENT_TRIGGERS:
         public_replies = []
     scope = args.post_scope or (template.post_scope if template else "all")
-    stories = trigger in ("story_reply", "story_mention")  # picked in the editor, not here
+    # Stories, entry links and ads are picked in the editor, not here.
+    stories = trigger in ("story_reply", "story_mention", "entry_link", "ad_click")
     if stories:
         scope = "all"
     post_ids = [] if stories else list(dict.fromkeys(args.post_ids))

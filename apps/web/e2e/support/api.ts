@@ -139,6 +139,47 @@ export class Api {
     return draft;
   }
 
+  /** GR-08, GR-09: an active entry link or ad click automation (no keywords; ``adIds`` limits the ads). */
+  async entryAutomation(
+    wid: string,
+    accountId: string,
+    trigger: "entry_link" | "ad_click",
+    values: { messageText: string; adIds?: string[] },
+  ): Promise<{ id: string }> {
+    const name = `Entry ${trigger} ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger,
+      keywords: [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: values.messageText,
+      post_scope: values.adIds?.length ? "selected" : "all",
+      ad_ids: values.adIds ?? [],
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-08: an entry link on the account that starts ``automationId``. */
+  entryLink(
+    wid: string,
+    accountId: string,
+    values: { name: string; automationId?: string; code?: string },
+  ): Promise<{ id: string; code: string; url: string }> {
+    return this.call("POST", `/v1/w/${wid}/entry-links`, {
+      social_account_id: accountId,
+      name: values.name,
+      automation_id: values.automationId,
+      code: values.code,
+    });
+  }
+
   /** GR-03: an active DM keyword automation saved as ``flow`` (PUT …/flow). */
   async flowAutomation(wid: string, accountId: string, keyword: string, flow: unknown): Promise<{ id: string }> {
     const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {

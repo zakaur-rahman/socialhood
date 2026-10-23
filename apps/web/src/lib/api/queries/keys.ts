@@ -69,6 +69,7 @@ export const keys = {
   automationsSummary: (wid: string) => ["w", wid, "automations", "summary"] as const,
   automationTemplates: (wid: string) => ["w", wid, "automation-templates"] as const,
   automation: (wid: string, id: string) => ["w", wid, "automation", id] as const,
+  entryLinks: (wid: string) => ["w", wid, "entry-links"] as const, // GR-08
   // stories and mentions (GR-06, GR-07)
   stories: (wid: string, accountId: string | null) => ["w", wid, "stories", accountId] as const,
   storyMentions: (wid: string, accountId: string | null) => ["w", wid, "story-mentions", accountId] as const,

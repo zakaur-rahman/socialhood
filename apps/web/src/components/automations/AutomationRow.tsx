@@ -4,6 +4,8 @@ import {
   ArrowDown,
   ArrowUp,
   AtSign,
+  Link2,
+  Megaphone,
   Clock,
   Copy,
   EllipsisVertical,
@@ -63,6 +65,8 @@ const TRIGGER_ICON: Record<TriggerName, typeof Send> = {
   dm_keyword: Send,
   story_reply: Reply,
   story_mention: AtSign,
+  entry_link: Link2,
+  ad_click: Megaphone,
 };
 
 const MAX_CHIPS = 3;
