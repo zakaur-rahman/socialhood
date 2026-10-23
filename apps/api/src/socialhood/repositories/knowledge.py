@@ -34,6 +34,7 @@ async def list_sources(session: AsyncSession) -> list[tuple[KnowledgeSource, Med
     rows = await session.execute(
         select(KnowledgeSource, MediaAsset)
         .outerjoin(MediaAsset, MediaAsset.id == KnowledgeSource.file_asset_id)
+        .where(KnowledgeSource.parent_source_id.is_(None))  # a site's pages are listed under it
         .order_by(KnowledgeSource.created_at.desc(), KnowledgeSource.id.desc())
     )
     return [(source, asset) for source, asset in rows]

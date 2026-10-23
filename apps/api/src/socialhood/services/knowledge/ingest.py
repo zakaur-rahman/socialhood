@@ -1,7 +1,8 @@
 """The ingest_knowledge_source job's work (T5.3; TR-AI-08, FR-KB-02, SEC-09).
 
 For one version of one source: mark it ``processing``; get its text (an FAQ's question and answer,
-a note as written, a web page fetched under SEC-09 with its main text by trafilatura, a file
+a note as written, a web page fetched under SEC-09 with its main text by trafilatura, a page
+of a crawled site (GR-35) as the crawl stored it in ``body``, a file
 downloaded from storage and read by pypdf, python-docx or as text); split it into chunks
 (services/knowledge/chunking.py); embed them as documents in batches of 100; then, in one
 transaction, replace the source's chunks and mark it ``ready`` with its character and chunk
@@ -156,7 +157,9 @@ async def _prepare(
     if work.kind is KnowledgeType.TEXT:
         text = work.body or ""
         return _prepared(title, text, len(text))
-    if work.kind is KnowledgeType.URL:
+    if work.kind is KnowledgeType.PAGE:
+        text = work.body or ""  # read by the crawl (services/knowledge/crawl.py)
+    elif work.kind is KnowledgeType.URL:
         page = await _fetch(work.url or "")
         web = await _extract(extract.web_page, page.content, page.url)
         if web.title and work.url and title == url_title(httpx.URL(work.url)):
@@ -311,7 +314,7 @@ async def _fail(
         source.status = KnowledgeStatus.FAILED
         source.error = reason
         source.chunk_count = 0
-        if work.kind in (KnowledgeType.URL, KnowledgeType.FILE):
+        if work.kind in (KnowledgeType.URL, KnowledgeType.FILE, KnowledgeType.PAGE):
             source.char_count = 0
         await session.commit()
     log.info("knowledge_ingest_failed", source_id=str(source_id), version=version, reason=reason)

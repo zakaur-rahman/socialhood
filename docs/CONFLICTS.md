@@ -2728,3 +2728,137 @@ Roadmap P3. No migration.
   `ReportAccountMetric`, `ReportPoint`, `ReportIntent`, `ReportQuestion`, `ReportPost`); the web types
   are aliases waiting for it. `test_isolation.py` needed nothing (no table, no path id). The route's
   `week` parameter is a plain date. Nothing was added to the tenancy or purge lists.
+
+## C-098 · Website crawl into knowledge (GR-35, feature/gr-35-site-crawl)
+
+A whole website becomes knowledge: a crawl from a start address, a weekly re-crawl that only
+re-reads what changed, and each page listed under its site. It builds on the single-page web source
+(T5.3) and reuses its fetch, its extractor and its ingest job.
+
+- **A site is a source; each page is a source.** *The plan says "per-page sources in the knowledge
+  list". Decided: a new type `site` (the address, the settings) whose crawled pages are sources of
+  type `page` with `parent_source_id` pointing at it.* So the existing pipeline does the rest: the
+  same `ingest_knowledge_source` job chunks and embeds a page, retrieval and the test box find it,
+  `knowledge_characters` counts it, and deleting a site deletes its pages and chunks (ON DELETE
+  CASCADE). Pages are not in the main list (`GET /knowledge-sources` leaves out anything with a
+  parent) and cannot be reached as sources (404 on get, edit and delete); they live under
+  `…/pages`. A page's text is stored in its source's `body` (at most 20,000 characters, the column's
+  limit), and ingestion of a `page` takes it from there instead of fetching again, so the crawl is
+  the only thing that touches the site.
+- **Migration 0031** (down revision 0027), expand-only: the `type` check widened to `site` and
+  `page`; `knowledge_sources.parent_source_id`; the tables `site_crawls` (one row per site: re-crawl
+  setting, excluded paths, status, whether it is seeded, whether it hit the cap, the cap of that
+  crawl, error, start and finish times, `next_crawl_at`) and `site_pages` (one row per address:
+  status, depth, order found, title, content hash, ETag, Last-Modified, last crawled, and the page's
+  source). `uq_site_pages_site_source_id_url`. Both tables are workspace-level, so an account purge
+  leaves them (the purge test's kept list names them) and they are in the tenancy test's table list.
+- **The crawl (`services/knowledge/crawl.py`, rules in `crawl_rules.py`).**
+  - *Order.* robots.txt of the start address's site, then the sitemap addresses (the `Sitemap:`
+    lines and `/sitemap.xml`; a sitemap index is followed; at most 20 files), then the start page,
+    then breadth first: the shallowest queued page, then in the order found. One page at a time,
+    1 s apart, or the site's `Crawl-delay` up to 10 s.
+  - *What counts as the same site.* The same host, ignoring a leading `www.`; other hosts and
+    sub-domains are other sites and are not followed. *The plan says "same registrable host". There
+    is no public-suffix list in the stack and guessing one risks following a different business, so
+    this is the stricter rule.* A redirect that ends on another site is skipped.
+  - *Addresses.* Fragments, **all query strings**, default ports, a trailing slash and double slashes
+    are dropped, and the host is lowercased. *The plan says "query-duplicates". Dropping the query
+    is the simple rule that cannot fall into sort-order, filter and tracking-parameter traps; the
+    cost is that a site whose pages differ only by `?id=` is read as one page.* Links to files that
+    aren't pages (PDF, images, scripts, documents) are not followed; `rel="nofollow"` links and
+    pages with a robots meta of `nofollow` are not followed; `noindex` pages are skipped and not
+    stored. Depth is capped at 6 links from the start page.
+  - *robots.txt.* Our group (`SocialHoodBot`) wins over `*`; the longest matching rule decides and
+    Allow wins a tie; `*` and a closing `$` work. A missing file (any 4xx) allows everything; one
+    that errors (5xx, timeout) or can't be reached fails the crawl with a message, as does a site
+    whose robots.txt disallows the start page. *The crawl never reads a page robots.txt disallows,
+    including pages found in a sitemap.*
+  - *Limits.* Pages 2 MB and 15 s (the single-page fetch's), robots.txt 512 KB, a sitemap file
+    5 MB, text kept per page 20,000 characters. A failed page is tried twice, then marked failed;
+    the crawl goes on. The sitemap is read by pattern, not by an XML parser (nothing to expand).
+- **Plan cap.** New entitlement `crawl_pages`: **Free 25, Pro 250, Max 1,000** pages for one site.
+  *Proposed values, pending the owner's plan decisions (one line in `billing/plans.py`; the same
+  note as `contact_fields`).* The cap is taken when a crawl is requested and stored on the crawl
+  (`page_cap`); pages found past it are left out and the site says "Stopped at N pages". Pages the
+  owner removed or excluded do not count; `knowledge_characters` still applies on top.
+- **SSRF.** `security/ssrf.py` gains `fetch_document` (`fetch_html` is now a call to it): the same
+  rules (address checks with DNS, the connection pinned to the checked address, redirects by hand and
+  checked, size and time limits) for other content types, extra request headers and a 304 answer.
+  *Every address the crawl touches goes through it: the start page, robots.txt, each sitemap file
+  (including ones robots.txt names on another host), each page, each redirect.* A start address that
+  is a private literal is refused when adding (422 on `url`); one that resolves to a private
+  address fails the crawl with the usual message. Links and sitemap entries to other hosts are
+  filtered out before they are ever requested. `FetchError` gains `status`.
+  **`CRAWL_ALLOW_PRIVATE`** (default off, refused in production like `WEBHOOKS_ALLOW_PRIVATE`; on in
+  `.env.example` and the e2e stack) lets development and e2e crawl a local fixture site.
+- **Jobs.** `crawl_site(id, version)` (bulk lane, queueing lock `crawl:{id}:{version}`, run lock
+  `crawl:{id}`, 3 tries, RETRY in `RECOVERY`) and `dispatch_site_recrawls` (hourly at :20, RETRY).
+  - *One crawl at a time.* The site source's `version` numbers its crawls; asking for a crawl while
+    one is queued or running changes nothing. A job for an older number, a finished crawl or a
+    deleted site stops ("stale").
+  - *Resumable and idempotent.* The queue is the `site_pages` rows, so a job that dies carries on
+    where it stopped (a stalled one is re-run by recovery). A job reads pages for four minutes, then
+    queues itself again for the rest, so no crawl holds a worker for long. A page is committed with
+    its result in one transaction, and a page the owner removed meanwhile is left alone. The seed
+    runs once per crawl.
+  - *Re-crawl.* `dispatch_site_recrawls` starts a crawl for each weekly site whose `next_crawl_at`
+    has come (50 at a time, workspace-scoped), and queues again a crawl that has not moved for 30
+    minutes (a lost job). The setting is `weekly` (default) or `off`; `next_crawl_at` is a week after
+    the last crawl finished. *The plan says "e.g. weekly, per source setting"; weekly and off are
+    the two settings.*
+  - *Change detection.* A page we hold is asked for with `If-None-Match` and `If-Modified-Since` when
+    it has an ETag or Last-Modified (a 304 leaves it alone); otherwise its text is read and hashed
+    (whitespace-insensitive), and an equal hash leaves it alone. New or changed text gives its page
+    source the next version and queues the ingest job, which swaps the chunks. Unchanged pages keep
+    their chunks and cost no embedding. An unchanged page whose ingest never ran, or failed (the
+    knowledge limit, say), is queued again.
+  - *Gone pages.* A 404 or 410 removes the page's source and chunks and keeps the row as `gone`
+    (a gone page that is listed or linked again in a later crawl is read again; not twice in the
+    same crawl). A page that now answers with `noindex`, a disallow, another type or another site is
+    removed from knowledge the same way and shown as `skipped` with the reason.
+  - *Result.* The site is `ready` (`failed` with the reason when no page could be read or the crawl
+    could not start); the crawl is `done` or `failed`.
+- **API** (admins only, like the rest of knowledge).
+  - `POST /knowledge-sources` with `type: "site"`, `url`, optional `title`, `recrawl`
+    (`weekly`/`off`); `PATCH` takes `title`, `recrawl`, `excluded_paths` (the whole list, at most 50
+    paths) and `reingest` (crawl now). The address of a site can't be edited (a different site is
+    a new source). A site counts no characters itself; its pages do.
+  - `GET …/{id}/pages?status=&limit=&offset=` (shallowest first; default 200, at most 500);
+    `DELETE …/{id}/pages/{page_id}` (the page's knowledge goes, the row stays as `removed`, and later
+    crawls leave the address out); `POST …/{id}/excluded-paths` `{path}` (a path or a full address;
+    pages at the path or below it go now as `excluded`, and are not requested again; taking a path
+    off with `PATCH` lets the next crawl read it); `POST …/{id}/recrawl` (404 for anything that is
+    not a site).
+  - `KnowledgeSource` gains `site` (`SiteCrawlInfo`: status, recrawl, excluded paths, pages found,
+    done, failed and skipped, the characters and chunks of the ready pages, the cap, whether it was
+    cut at the cap, the error, started, finished, next crawl). `KnowledgeSourceCreate.type` gains
+    `site` (not `page`).
+- **Web.** The Knowledge page's Add menu gains **Website** (address, optional title, "Check for
+  changes every week" on). A site is a row in Sources with a chevron that opens its pages under it:
+  a summary of the crawl (found, read, failed, stopped at the cap, the next check), **Crawl now**,
+  the excluded paths (add one, or take one off), and the pages as stacked rows (title, path, status,
+  when it was read, the reason it failed or was skipped) with a menu per page: Remove page (asks
+  first) and Exclude that path. Stacked rows and a one-column panel, so it works at 375 px. The list
+  polls while the site is crawling or its pages are being built. Deleting a site says its pages go
+  too.
+- **Not built.** A way to bring back a removed page except deleting the site (excluding a path can be
+  undone; removing a page cannot); `.xml.gz` sitemaps; JavaScript-rendered pages (only the HTML the
+  server sends is read, as for a single page); a per-site page cap the owner picks below the plan's;
+  a crawl history.
+- **Tests.** Unit: `test_crawl_rules.py` (robots groups, longest match, wildcards, sitemap and index
+  parsing, an entity bomb, address normalisation, same-site, excluded paths, links and robots meta,
+  the hash), `test_crawl_fetch.py` (`fetch_document`, SSRF for robots, sitemap, link, redirect and
+  start addresses, the sitemap file and cap limits, one page's outcomes, `allow_private`),
+  `test_settings.py`. Integration: `test_site_crawl.py` (end to end on a fixture site, the cap,
+  a better plan, resume, stale jobs, breadth first, robots/noindex/other sites, failing pages, a
+  disallowed site, www redirects, re-crawl by ETag and hash, gone and returning pages, one crawl at
+  a time, remove a page, exclude a path, the scheduled re-crawl and a lost job, SSRF, roles,
+  tenancy, deletion, the knowledge limit). Tenancy: the new routes, body, param and tables in
+  `test_isolation.py`; the account deletion test seeds a site. Vitest: `SitePages.test.tsx`. E2E:
+  `gr35-site-crawl.spec.ts` (a local fixture site; `CRAWL_ALLOW_PRIVATE` in the e2e stack).
+- **Unsure / for the coordinator:** regenerate the client (`SiteCrawlInfo`, `SitePage`,
+  `SitePageList`, `ExcludePath`, `site`, `recrawl` and `excluded_paths` on the source models, `site`
+  and `page` in the type literals, the four new operations); the web types are aliases waiting for
+  it (`KnowledgeCreateType` is `KnowledgeSourceCreate["type"]`). The web calls the new paths through
+  the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
+  config. Migration 0031 chains from 0027; re-chain it after 0028 and 0029.

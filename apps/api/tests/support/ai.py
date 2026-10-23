@@ -22,6 +22,8 @@ from socialhood.models.ai import (
     KnowledgeSource,
     MessageAnalysis,
     ReplySuggestion,
+    SiteCrawl,
+    SitePage,
 )
 
 
@@ -41,6 +43,60 @@ async def _add(engine: AsyncEngine, workspace_id: uuid.UUID | str, *rows: Any) -
         async with AsyncSession(engine, expire_on_commit=False) as session:
             session.add_all(rows)
             await session.commit()
+
+
+async def make_site(
+    engine: AsyncEngine,
+    *,
+    workspace_id: uuid.UUID | str,
+    url: str = "https://maple.example/",
+    **values: Any,
+) -> tuple[uuid.UUID, uuid.UUID]:
+    """A crawled website (GR-35) with one read page and that page's own ready source with a
+    chunk; returns the site's and the page row's ids."""
+    defaults: dict[str, Any] = {
+        "type": "site",
+        "title": "maple.example",
+        "url": url,
+        "status": "ready",
+        "last_ingested_at": datetime.now(UTC),
+    }
+    site = KnowledgeSource(**{**defaults, **values})
+    await _add(engine, workspace_id, site)
+    body = "We ship across India in 3-5 days."
+    child = KnowledgeSource(
+        type="page",
+        parent_source_id=site.id,
+        title="Shipping",
+        url=f"{url}shipping",
+        body=body,
+        status="ready",
+        char_count=len(body),
+        chunk_count=1,
+        last_ingested_at=datetime.now(UTC),
+    )
+    await _add(engine, workspace_id, child)
+    content = f"[Shipping] {body}"
+    chunk = KnowledgeChunk(
+        source_id=child.id,
+        source_version=1,
+        ordinal=0,
+        char_count=len(content),
+        content=content,
+        embedding=bag_of_words(content),
+    )
+    crawl = SiteCrawl(source_id=site.id, status="done", page_cap=25, seeded=True)
+    page = SitePage(
+        site_source_id=site.id,
+        source_id=child.id,
+        url=f"{url}shipping",
+        ordinal=1,
+        depth=1,
+        status="done",
+        title="Shipping",
+    )
+    await _add(engine, workspace_id, chunk, crawl, page)
+    return site.id, page.id
 
 
 async def make_analysis(

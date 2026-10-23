@@ -118,6 +118,8 @@ export const keys = {
   aiDecision: (wid: string, messageId: string) => ["w", wid, "ai-decision", messageId] as const,
   knowledgeSources: (wid: string) => ["w", wid, "knowledge-sources"] as const,
   knowledgeGaps: (wid: string) => ["w", wid, "knowledge-gaps"] as const,
+  // GR-35: under the sources' key, so refreshing the sources refreshes the open site's pages too
+  sitePages: (wid: string, siteId: string) => ["w", wid, "knowledge-sources", siteId, "pages"] as const,
   billing: (wid: string) => ["w", wid, "billing"] as const,
   billingPayments: (wid: string) => ["w", wid, "billing", "payments"] as const,
   // P8: public plans, and the member's own notification settings and push

@@ -1,7 +1,18 @@
 "use client";
 
-import { FileText, Globe, HelpCircle, Pencil, Plus, StickyNote, Trash2, type LucideIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import {
+  ChevronRight,
+  FileText,
+  Globe,
+  HelpCircle,
+  Network,
+  Pencil,
+  Plus,
+  StickyNote,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
+import { Fragment, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { useReturnFocus } from "@/components/agent/use-return-focus";
@@ -31,12 +42,13 @@ import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { isProcessing, useDeleteKnowledgeSource } from "@/lib/api/queries";
-import type { KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
+import type { KnowledgeCreateType, KnowledgeSource, KnowledgeSourceList, KnowledgeType } from "@/lib/api/types";
 import { emptyStates, knowledgeLimitReached } from "@/lib/copy";
 import { relativeTime } from "@/lib/time";
 import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
+import { SitePages } from "./SitePages";
 import { SOURCE_TYPE_LABEL } from "./SourceSheet";
 
 const TYPE_ICON: Record<KnowledgeType, LucideIcon> = {
@@ -44,19 +56,21 @@ const TYPE_ICON: Record<KnowledgeType, LucideIcon> = {
   text: StickyNote,
   url: Globe,
   file: FileText,
+  site: Network,
+  page: Globe,
 };
 
-const ADD_ORDER: KnowledgeType[] = ["faq", "text", "url", "file"];
+const ADD_ORDER: KnowledgeCreateType[] = ["faq", "text", "url", "site", "file"];
 const count = new Intl.NumberFormat("en-US");
 
-/** UX-SCR-06 "Add knowledge": FAQ, Note, Web page or File, each opening its form in a sheet. */
+/** UX-SCR-06 "Add knowledge": FAQ, Note, Web page, Website or File, each opening its form in a sheet. */
 export function AddKnowledgeMenu({
   onChoose,
   label = "Add knowledge",
   size,
   variant,
 }: {
-  onChoose: (type: KnowledgeType) => void;
+  onChoose: (type: KnowledgeCreateType) => void;
   label?: string;
   /** `sm` in a compact empty state. */
   size?: "sm";
@@ -66,7 +80,7 @@ export function AddKnowledgeMenu({
   // The sheet opens once the menu has closed and handed focus back to this button, so the sheet
   // remembers the button and returns focus to it (UX-A11Y-02). Opened from the item itself, it
   // remembered nothing (the item was gone) and focus fell to <body> on close.
-  const chosen = useRef<KnowledgeType | null>(null);
+  const chosen = useRef<KnowledgeCreateType | null>(null);
   return (
     // Not modal (the menu's default), so the sheet can open from it.
     <DropdownMenu>
@@ -120,7 +134,7 @@ export function StatusChip({ source, className }: { source: KnowledgeSource; cla
 }
 
 function detail(source: KnowledgeSource): string | null {
-  if (source.type === "url") return source.url ?? null;
+  if (source.type === "url" || source.type === "site") return source.url ?? null;
   if (source.type === "file") return source.file_name ?? null;
   return null;
 }
@@ -134,13 +148,15 @@ export function SourcesCard({
 }: {
   data: KnowledgeSourceList;
   now: Date;
-  onAdd: (type: KnowledgeType) => void;
+  onAdd: (type: KnowledgeCreateType) => void;
   onEdit: (source: KnowledgeSource) => void;
 }) {
   const workspace = useCurrentWorkspace();
   const remove = useDeleteKnowledgeSource(workspace.id);
   const upgradeDialog = useUpgradeDialog();
   const [deleting, setDeleting] = useState<KnowledgeSource | null>(null);
+  // GR-35: the websites whose pages are open under their row.
+  const [open, setOpen] = useState<Record<string, boolean>>({});
   // The confirmation opens from a row's Delete without a Radix trigger: Cancel or Esc returns focus there.
   const returnFocus = useReturnFocus();
   // A confirmed delete removes the row focus was returned to; the heading takes focus then.
@@ -205,20 +221,45 @@ export function SourcesCard({
                 {items.map((source) => {
                   const Icon = TYPE_ICON[source.type];
                   const sub = detail(source);
+                  const isSite = source.type === "site";
+                  const pagesOpen = isSite && open[source.id] === true;
+                  const characters = isSite ? (source.site?.char_count ?? 0) : source.char_count;
+                  const chunks = isSite ? (source.site?.chunk_count ?? 0) : source.chunk_count;
                   return (
-                    <TableRow key={source.id} data-status={source.status}>
+                    <Fragment key={source.id}>
+                    <TableRow data-status={source.status}>
                       {/* The name takes the room the other columns leave, and truncates in it. Below 512 px of table the
                       status sits under the name, so the name keeps the Status column's 75 px (at 320 px it
                       had about 35 px beside the status and two 40 px buttons). */}
                       <TableCell className="w-full max-w-0">
                         <div className="flex items-start gap-3">
-                          <Icon className="mt-0.5 size-4 shrink-0 text-fg-secondary" aria-hidden />
+                          {isSite ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="-my-1 -ml-2 size-8 shrink-0"
+                              aria-label={`${pagesOpen ? "Hide" : "Show"} pages of ${source.title}`}
+                              aria-expanded={pagesOpen}
+                              aria-controls={`site-pages-${source.id}`}
+                              onClick={() => setOpen((current) => ({ ...current, [source.id]: !pagesOpen }))}
+                            >
+                              <ChevronRight className={pagesOpen ? "rotate-90 transition-transform" : "transition-transform"} aria-hidden />
+                            </Button>
+                          ) : (
+                            <Icon className="mt-0.5 size-4 shrink-0 text-fg-secondary" aria-hidden />
+                          )}
                           <div className="min-w-0">
                             <p className="truncate font-medium">
                               <span className="sr-only">{SOURCE_TYPE_LABEL[source.type]}: </span>
                               {source.title}
                             </p>
                             {sub ? <p className="truncate text-xs text-fg-secondary">{sub}</p> : null}
+                            {isSite && source.site ? (
+                              <p className="text-xs text-fg-secondary">
+                                {source.site.pages_found} {source.site.pages_found === 1 ? "page" : "pages"}
+                                {source.site.pages_failed > 0 ? `, ${source.site.pages_failed} failed` : ""}
+                              </p>
+                            ) : null}
                             <StatusChip source={source} className="mt-1 @lg:hidden" />
                             {source.status === "failed" && source.error ? (
                               <p className="text-xs text-danger-fg">{source.error}</p>
@@ -232,9 +273,9 @@ export function SourcesCard({
                       <TableCell className="hidden text-right @xl:table-cell">
                         {source.status === "ready" ? (
                           <>
-                            {count.format(source.char_count)}
+                            {count.format(characters)}
                             <span className="block text-xs text-fg-secondary">
-                              {source.chunk_count} {source.chunk_count === 1 ? "chunk" : "chunks"}
+                              {chunks} {chunks === 1 ? "chunk" : "chunks"}
                             </span>
                           </>
                         ) : (
@@ -266,6 +307,14 @@ export function SourcesCard({
                         </div>
                       </TableCell>
                     </TableRow>
+                    {pagesOpen ? (
+                      <TableRow data-site-pages={source.id}>
+                        <TableCell colSpan={5} className="p-0 whitespace-normal">
+                          <SitePages site={source} now={now} />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                    </Fragment>
                   );
                 })}
               </TableBody>
@@ -288,7 +337,9 @@ export function SourcesCard({
             <AlertDialogHeader>
               <AlertDialogTitle>Delete “{deleting?.title}”?</AlertDialogTitle>
               <AlertDialogDescription>
-                The AI stops using it right away. This can&apos;t be undone.
+                {deleting?.type === "site"
+                  ? "The AI stops using the site and all its pages right away. This can't be undone."
+                  : "The AI stops using it right away. This can't be undone."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

@@ -14,9 +14,16 @@
 
 Every refusal is a ``FetchError`` with a plain-language message the Knowledge page can show.
 
+``fetch_document`` is ``fetch_html`` for other readable files (a site's robots.txt and sitemaps,
+GR-35) and for conditional requests: the same address rules, with the content types, the extra
+request headers and the size limit chosen by the caller, and a 304 answer returned as such when
+asked for. Every URL a site crawl touches, redirects and sitemap addresses included, goes through
+it.
+
 ``post_json`` sends an outbound webhook (GR-04) under the same address rules: the checked address,
 no redirects followed (a redirect is a failed delivery), a short timeout, and only the status read
-back. ``allow_private`` lets development and e2e post to a local receiver.
+back. ``allow_private`` lets development and e2e post to a local receiver; the same flag on
+``fetch_document`` lets them crawl a local fixture site (settings: crawl_allow_private).
 """
 
 from __future__ import annotations
@@ -33,6 +40,7 @@ MAX_REDIRECTS = 3
 TIMEOUT_S = 15.0
 MAX_BYTES = 2 * 1024 * 1024
 HTML_TYPES = frozenset({"text/html", "application/xhtml+xml"})
+HTML_ACCEPT = "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1"
 REDIRECTS = frozenset({301, 302, 303, 307, 308})
 USER_AGENT = "SocialHoodBot/1.0 (+https://socialhood.com/bot)"
 
@@ -53,11 +61,14 @@ class FetchError(Exception):
     """The page could not be fetched; ``message`` is shown to the user. ``retryable`` failures
     (timeouts, connection errors, 5xx) may succeed on a later attempt."""
 
-    def __init__(self, code: str, message: str, *, retryable: bool = False) -> None:
+    def __init__(
+        self, code: str, message: str, *, retryable: bool = False, status: int | None = None
+    ) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.retryable = retryable
+        self.status = status  # the HTTP status of an error answer
 
 
 @dataclass(frozen=True)
@@ -65,6 +76,9 @@ class Page:
     url: str  # the final address, after redirects
     content: bytes
     content_type: str
+    status: int = 200  # 304 only for a conditional request (``fetch_document(not_modified=True)``)
+    etag: str | None = None
+    last_modified: str | None = None
 
 
 def is_blocked(address: IPAddress) -> bool:
@@ -102,6 +116,16 @@ def check_url(raw: str) -> httpx.URL:
     if literal is not None and is_blocked(literal):
         raise FetchError("blocked", BLOCKED)
     return url
+
+
+def check_url_or_local(raw: str, allow_private: bool) -> httpx.URL:
+    """``check_url``, except that a private address passes where ``allow_private`` is on."""
+    try:
+        return check_url(raw)
+    except FetchError as error:
+        if not (allow_private and error.code == "blocked"):
+            raise
+        return httpx.URL(raw.strip())
 
 
 async def system_resolve(host: str, port: int) -> list[str]:
@@ -143,7 +167,44 @@ async def fetch_html(
     max_redirects: int = MAX_REDIRECTS,
 ) -> Page:
     """Fetch one HTML page under the SEC-09 rules above."""
-    url = check_url(raw_url)
+    return await fetch_document(
+        raw_url,
+        resolve=resolve,
+        timeout_s=timeout_s,
+        max_bytes=max_bytes,
+        max_redirects=max_redirects,
+    )
+
+
+@dataclass(frozen=True)
+class _Request:
+    types: frozenset[str]
+    accept: str
+    headers: dict[str, str]
+    not_modified: bool
+    max_bytes: int
+    allow_private: bool = False
+
+
+async def fetch_document(
+    raw_url: str,
+    *,
+    types: frozenset[str] = HTML_TYPES,
+    accept: str = HTML_ACCEPT,
+    headers: dict[str, str] | None = None,
+    not_modified: bool = False,
+    allow_private: bool = False,
+    resolve: Resolver | None = None,
+    timeout_s: float = TIMEOUT_S,
+    max_bytes: int = MAX_BYTES,
+    max_redirects: int = MAX_REDIRECTS,
+) -> Page:
+    """Fetch one document whose content type is in ``types`` under the SEC-09 rules above.
+    ``headers`` are added to the request (If-None-Match and If-Modified-Since); with
+    ``not_modified`` a 304 answer comes back as a ``Page`` with status 304 and no content.
+    ``allow_private`` (development and e2e only) skips the address checks."""
+    url = check_url_or_local(raw_url, allow_private)
+    request = _Request(types, accept, headers or {}, not_modified, max_bytes, allow_private)
     # A fresh client per fetch: no proxies from the environment (they would bypass the address
     # check), no redirects followed for us, and no connection reused across host names.
     async with httpx.AsyncClient(
@@ -154,7 +215,7 @@ async def fetch_html(
     ) as client:
         try:
             async with asyncio.timeout(timeout_s):
-                return await _fetch(client, url, resolve, max_bytes, max_redirects)
+                return await _fetch(client, url, resolve, request, max_redirects)
         except TimeoutError as error:
             raise FetchError(
                 "timeout", "The page took too long to respond.", retryable=True
@@ -165,12 +226,12 @@ async def _fetch(
     client: httpx.AsyncClient,
     url: httpx.URL,
     resolve: Resolver | None,
-    max_bytes: int,
+    request: _Request,
     max_redirects: int,
 ) -> Page:
     for hop in range(max_redirects + 1):
-        addresses = await public_addresses(url, resolve)
-        response = await _connect(client, url, addresses)
+        addresses = [url.host] if request.allow_private else await public_addresses(url, resolve)
+        response = await _connect(client, url, addresses, request)
         try:
             if response.status_code in REDIRECTS:
                 location = response.headers.get("location")
@@ -179,27 +240,28 @@ async def _fetch(
                 if hop == max_redirects:
                     raise FetchError("redirects", "The page redirects too many times.")
                 try:
-                    url = check_url(str(url.join(location)))
+                    url = check_url_or_local(str(url.join(location)), request.allow_private)
                 except FetchError as error:
                     raise FetchError(
                         error.code, "The page redirects to an address that can't be used."
                     ) from error
                 continue
-            return await _read(response, url, max_bytes)
+            return await _read(response, url, request)
         finally:
             await response.aclose()
     raise FetchError("redirects", "The page redirects too many times.")  # pragma: no cover
 
 
 async def _connect(
-    client: httpx.AsyncClient, url: httpx.URL, addresses: list[str]
+    client: httpx.AsyncClient, url: httpx.URL, addresses: list[str], fetch: _Request
 ) -> httpx.Response:
     """Send the request to a checked address, naming the real host in Host and TLS SNI."""
     host = url.raw_host.decode("ascii")
     headers = {
+        **fetch.headers,
         "Host": url.netloc.decode("ascii"),
         "User-Agent": USER_AGENT,
-        "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1",
+        "Accept": fetch.accept,
     }
     extensions = {"sni_hostname": host} if url.scheme == "https" else {}
     last: httpx.TransportError | None = None
@@ -222,21 +284,25 @@ async def _connect(
     raise FetchError("connect", "Couldn't connect to this website.", retryable=True) from last
 
 
-async def _read(response: httpx.Response, url: httpx.URL, max_bytes: int) -> Page:
+async def _read(response: httpx.Response, url: httpx.URL, fetch: _Request) -> Page:
     status = response.status_code
+    max_bytes = fetch.max_bytes
+    if status == 304 and fetch.not_modified:
+        return Page(url=str(url), content=b"", content_type="", status=304)
     if status >= 400:
         raise FetchError(
             "http_error",
             f"The page returned an error ({status}).",
             retryable=status >= 500 or status == 429,
+            status=status,
         )
     content_type = response.headers.get("content-type", "").split(";", 1)[0].strip().lower()
-    if content_type not in HTML_TYPES:
+    if content_type not in fetch.types:
         raise FetchError(
             "not_html",
             "This address isn't a web page. Add documents as a File source instead.",
         )
-    too_large = FetchError("too_large", f"The page is larger than {max_bytes // (1024 * 1024)} MB.")
+    too_large = FetchError("too_large", f"The page is larger than {_megabytes(max_bytes)}.")
     declared = response.headers.get("content-length", "")
     if declared.isdigit() and int(declared) > max_bytes:
         raise too_large
@@ -250,7 +316,17 @@ async def _read(response: httpx.Response, url: httpx.URL, max_bytes: int) -> Pag
         raise FetchError("timeout", "The page took too long to respond.", retryable=True) from error
     except httpx.TransportError as error:
         raise FetchError("connect", "The page stopped loading.", retryable=True) from error
-    return Page(url=str(url), content=bytes(body), content_type=content_type)
+    return Page(
+        url=str(url),
+        content=bytes(body),
+        content_type=content_type,
+        etag=response.headers.get("etag"),
+        last_modified=response.headers.get("last-modified"),
+    )
+
+
+def _megabytes(size: int) -> str:
+    return f"{size // (1024 * 1024)} MB" if size >= 1024 * 1024 else f"{max(size // 1024, 1)} KB"
 
 
 @dataclass(frozen=True)

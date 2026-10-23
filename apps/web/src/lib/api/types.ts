@@ -170,6 +170,12 @@ export type KnowledgeSourceList = Schemas["KnowledgeSourceList"];
 export type KnowledgeSourceCreate = Schemas["KnowledgeSourceCreate"];
 export type KnowledgeSourcePatch = Schemas["KnowledgeSourcePatch"];
 export type KnowledgeType = KnowledgeSource["type"];
+/** What can be added: a page of a website is made by a crawl (GR-35). */
+export type KnowledgeCreateType = KnowledgeSourceCreate["type"];
+export type SiteCrawlInfo = Schemas["SiteCrawlInfo"];
+export type SitePage = Schemas["SitePage"];
+export type SitePageList = Schemas["SitePageList"];
+export type SitePageStatus = SitePage["status"];
 export type KnowledgeStatus = KnowledgeSource["status"];
 export type KnowledgeUsage = Schemas["KnowledgeUsage"];
 export type KnowledgeTestResult = Schemas["KnowledgeTestResult"];

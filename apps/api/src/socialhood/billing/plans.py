@@ -47,6 +47,9 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # plan's recommended option, pending the owner's decision: change the numbers here, or set
     # free to Pro's to lift the cap). A flow is at most schemas.flows.MAX_STEPS whatever the plan.
     "flow_steps": {"free": 5, "pro": 50, "max": 50},
+    # Pages one site crawl reads (GR-35): the plan's cap on a site source's pages. Proposed values,
+    # pending the owner's plan decisions; the characters of knowledge limit still applies on top.
+    "crawl_pages": {"free": 25, "pro": 250, "max": 1000},
 }
 
 

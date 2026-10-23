@@ -116,6 +116,8 @@ def test_workspace_level_data_is_never_an_account_table() -> None:
         "knowledge_sources",
         "knowledge_chunks",
         "knowledge_gaps",
+        "site_crawls",
+        "site_pages",
         "media_assets",
         "scheduled_posts",
         "scheduled_post_assets",
