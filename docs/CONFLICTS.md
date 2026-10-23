@@ -2130,3 +2130,72 @@ renumbers this entry if another branch took C-088.)
 - **Unsure / for the coordinator:** the generated client has to be regenerated for the new routes
   and models (`ContactFilterSpec`, `ContactFilterOut`, `Segment*`, `Timeline*`, `ContactCount`,
   the changed `BulkTagsUpdate`); the web types are aliases waiting for it.
+
+
+## C-090 · The flow editor (GR-13, feature/gr-13-flow-editor)
+
+- **A tree on screen, a graph in the API.** The editor works on a vertical list; a step that forks
+  (quick replies, a question that can fail, a branch, a split) has indented groups of its own
+  ("arms"). `lib/automations/flow.ts` turns the tree into the stored graph (`compile`) and a stored
+  graph back into a tree (`decompile`).
+  - A list runs top to bottom: each step's next is the step below it.
+  - **An arm that runs out carries on with the step below the step that forks**, so branches meet
+    again (the engine allows it, C-079). An arm that should stop ends with an End step. An empty arm
+    with nothing below the fork ends the flow.
+  - A quick reply is an arm whose title is edited in the arm's header. The answer typed instead of
+    a tap can do nothing, copy an option, or have its own steps.
+  - A question that never gets an answer that fits can carry on or end the flow.
+  - Step ids are random (`s` and six letters or digits) and stay with the step across saves, so a
+    run's log keeps naming the same step.
+- **Reading a flow back.** `decompile` finds where the arms of a fork meet (the earliest step
+  that most of them reach). A path that stops where others carry on gets a lone End, which is
+  saved with the next edit. A shape the tree can't show (paths that share steps without one place
+  they meet, or steps nothing leads to; only possible through the API) is shown **read-only**
+  with "Start again from one message". It still runs as saved.
+- **How a non-flow automation opens (decision).** Automations and templates still create settings
+  automations (C-079's compiled flow); nothing about the gallery changed.
+  - The Then step shows the message as the first step, in today's fields (tap first, the follow
+    nudge, buttons, image), with a "More steps" card.
+  - **Adding a step turns it into a flow:** the compiled flow is read, the new step goes at the
+    end, and the whole thing is saved with `PUT …/flow`. Tap first and the nudge become steps.
+    Public replies stay on the automation.
+  - An active automation must be paused first (the empty new step would make it incomplete).
+  - "Back to one message" calls `DELETE …/flow` after a confirmation; runs underway finish.
+  - *Deviation from the plan's "rebuild Then on the step model": the single message keeps its
+    builder until a step is added, so nothing that works today changes. A later cleanup can make
+    every automation a flow (C-079).*
+- **Steps.** "Add step" offers Send, Ask, Branch, Action, Delay, Split (the engine's `randomize`)
+  and End. The AI reply stays the choice above the steps (a flow with one shows it as a card, and
+  it must be first). Each step reuses the builder's parts: the message field with insert-field and
+  the byte count, the image upload, the link buttons. A Send can also carry the profile button.
+  - Ask defaults to an email saved to the contact; text goes to a custom field. *The email check
+    itself is GR-14; here Ask uses what the engine does today.*
+  - Branch rules cover all six conditions (tag, field, email or phone known, follows, platform,
+    lead score). Actions cover the five the engine runs. Delay is minutes or hours, up to 23.
+  - Tags and fields come from `GET …/tags` and `GET …/contact-fields`.
+- **Reordering.** Drag the handle (pointer events, no new dependency), or press the arrow keys on
+  the focused handle, or use Move up and Move down. Order changes only within a list; to move a
+  step into another group, delete and add it there. A drop marker shows where a card lands.
+- **Checks on each step.** Fields show their problem once a step has been edited; a step is
+  "complete", "not finished" or "needs attention". The API's refusals (a refused save, a refused
+  activation: `flow.steps.N.field`) are placed on steps by index. A list at the top names each step
+  with a problem and "Go to step N" focuses it; a refused activation focuses the first.
+- **Preview and Test.** The Preview walks the draft one branch at a time with a picker at each
+  fork (a question counts as a fork: it can fail). The Test tab asks the API:
+  - `AutomationTest.choices` names the way at each fork (0 where none); the result's `flow_path`
+    lists the steps one run would take, with each fork's ways and the one taken
+    (`services/automations/flow_preview.py`, called from `dry_run`). Picking another way tests again.
+  - A settings automation has an empty `flow_path` and the old result.
+- **Step cap (pending PD-5).** The plan's recommended option: every plan can branch; Free is capped.
+  - New entitlement `flow_steps`: Free 5, Pro 50, Max 50 (`billing/plans.py`; a flow is at most 50
+    whatever the plan, the schema's limit). Lifting the cap is one edit.
+  - Every step counts, End included. "Comment, ask for an email, branch on a button, send A or B"
+    is four.
+  - `PUT …/flow` over the cap is 402 `quota_exceeded` (`flow_steps`, the limit, a plain sentence);
+    so is **activation** of a flow saved under a bigger plan. The editor disables Add step at the
+    cap, says why, and the 402 dialog has its copy.
+- **API.** No new routes or tables. `AutomationTest.choices`, `AutomationTestResult.flow_path`
+  (`FlowPreviewStep`), the 402 on `PUT …/flow`, and `flows.exit_labels` / `describe_condition`.
+- **Unverified:** dragging on a touch screen (the handle is `touch-action: none`; the buttons and
+  keys are the fallback), and the sandbox run of the e2e (`gr13-flow-editor.spec.ts`) is written
+  but was not run.

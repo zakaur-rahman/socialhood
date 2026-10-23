@@ -15,6 +15,7 @@ import { isCommentTrigger } from "@/lib/automations/definition";
 import { errorMessage } from "@/lib/copy";
 import { EYEBROW } from "@/styles/tokens";
 
+import { PathView } from "./flow/PathView";
 import { SAMPLE_CONTACT } from "./PreviewPane";
 
 type Kind = "comment" | "dm";
@@ -31,6 +32,7 @@ export function MatchTester({
   trigger,
   openingButton = null,
   beforeTest,
+  isFlow = false,
 }: {
   wid: string;
   automationId: string;
@@ -39,11 +41,24 @@ export function MatchTester({
   openingButton?: string | null;
   /** Save pending edits; false when saving failed. */
   beforeTest: () => Promise<boolean>;
+  /** GR-13: the automation is saved as a flow, so the test walks it (one branch at a time). */
+  isFlow?: boolean;
 }) {
   const [kind, setKind] = useState<Kind>(isCommentTrigger(trigger) || !trigger ? "comment" : "dm");
   const [text, setText] = useState("");
   const [saveFailed, setSaveFailed] = useState(false);
   const test = useTestAutomation(wid, automationId);
+  // The way chosen at each fork of a flow, in order; picking one tests the same text again.
+  const [choices, setChoices] = useState<number[]>([]);
+
+  const send = (picked: number[]) =>
+    test.mutate({
+      kind,
+      text,
+      first_name: SAMPLE_CONTACT.first_name,
+      username: SAMPLE_CONTACT.username,
+      ...(isFlow ? { choices: picked } : {}),
+    });
 
   const run = async () => {
     if (!text.trim()) return;
@@ -52,7 +67,14 @@ export function MatchTester({
       setSaveFailed(true);
       return;
     }
-    test.mutate({ kind, text, first_name: SAMPLE_CONTACT.first_name, username: SAMPLE_CONTACT.username });
+    setChoices([]);
+    send([]);
+  };
+
+  const choose = (fork: number, exit: number) => {
+    const next = [...choices.slice(0, fork), exit];
+    setChoices(next);
+    send(next);
   };
 
   return (
@@ -93,7 +115,7 @@ export function MatchTester({
         ) : test.isError ? (
           <Alert tone="danger">{errorMessage(test.error)}</Alert>
         ) : test.data ? (
-          <TestResult result={test.data} automationId={automationId} openingButton={openingButton} />
+          <TestResult result={test.data} automationId={automationId} openingButton={openingButton} onChoose={choose} />
         ) : null}
       </div>
     </div>
@@ -104,9 +126,12 @@ export function TestResult({
   result,
   automationId,
   openingButton,
+  onChoose,
 }: {
   result: AutomationTestResult;
   automationId: string;
+  /** A flow's walk: the nth fork now goes the way chosen. */
+  onChoose?: (fork: number, exit: number) => void;
   /** Tap first's button, shown under the rendered opening (the result carries only its text). */
   openingButton?: string | null;
 }) {
@@ -148,12 +173,17 @@ export function TestResult({
           ) : null}
         </Rendered>
       ) : null}
-      {result.rendered_message ? (
+      {result.flow_path?.length ? (
+        <Rendered label="The flow, one branch at a time" testId="test-flow">
+          <PathView steps={result.flow_path} onChoose={(fork, exit) => onChoose?.(fork, exit)} />
+        </Rendered>
+      ) : null}
+      {result.rendered_message && !result.flow_path?.length ? (
         <Rendered label={result.rendered_opening ? "DM after they tap or reply" : "DM"} testId="test-message">
           <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_message}</p>
         </Rendered>
       ) : null}
-      {result.rendered_nudge ? (
+      {result.rendered_nudge && !result.flow_path?.length ? (
         <Rendered label="Follow nudge · only if they don't follow you" testId="test-nudge">
           <p className="rounded-lg bg-field px-3 py-2 break-words whitespace-pre-wrap">{result.rendered_nudge}</p>
         </Rendered>

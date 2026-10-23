@@ -409,6 +409,11 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     includes: (n) => counted(n, "webhook endpoint", "webhook endpoints"),
     unlimited: "webhook endpoints",
   },
+  flow_steps: {
+    limitTitle: "Flow step limit reached",
+    includes: (n) => `${counted(n, "step", "steps")} in a flow`,
+    unlimited: "steps in a flow",
+  },
   members: {
     limitTitle: "Member limit reached",
     includes: (n) => counted(n, "member", "members"),

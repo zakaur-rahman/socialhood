@@ -329,6 +329,7 @@ const FIELD_STEP: Record<string, StepId | "name"> = {
   starts_at: "settings",
   ends_at: "settings",
   surge_order: "settings",
+  flow: "then", // GR-13: flow.steps.2.text
 };
 
 /** "message_buttons.0.url" belongs to Then; unknown fields to none. */

@@ -78,6 +78,18 @@ export type AutomationTestResult = Schemas["AutomationTestResult"];
 export type OverlapWarning = Schemas["OverlapWarning"];
 export type QueueInfo = Schemas["QueueInfo"];
 export type LinkButton = Schemas["LinkButtonIn"];
+
+// ---- flows (GR-03, the editor GR-13)
+
+export type Flow = Schemas["Flow"];
+export type FlowDefinition = Schemas["FlowDefinition"];
+export type FlowStep = FlowDefinition["steps"][number];
+export type FlowButton = Schemas["FlowButton"];
+export type FlowCondition = Schemas["BranchRule"]["when"];
+export type FlowAction = Schemas["ActionStep"]["action"];
+export type FlowPreviewStep = Schemas["FlowPreviewStep"];
+export type FlowFieldDefinition = Schemas["FieldDefinition"];
+export type FlowTag = Schemas["Tag"];
 export type PostRef = Schemas["PostRef"];
 export type PostSummary = Schemas["PostSummary"];
 export type PostList = Schemas["PostList"];
