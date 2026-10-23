@@ -2490,3 +2490,45 @@ took C-092.)
   up from the schema.
 - **Not built:** holidays or one-off closures, an away message per language, and an away message for
   comments (a public comment is not a conversation). All fit the same table later.
+
+## C-095 · Data capture and consent (GR-14, feature/gr-14-15-capture-clicks)
+GR-03's Ask step already checked an email or phone, retried, skipped and raised `lead.captured`
+(C-079, C-080). GR-14 finishes it: the free-text cap, the consent question, a confirmation, default
+copy and the editor's options. No migration, no new route.
+- **Answers** (`services/automations/capture.py`):
+  - An email is trimmed and lower-cased whole (GR-02's rule). A phone is E.164, a ten-digit Indian
+    mobile taken as +91. *The `phonenumbers` library is not a dependency, so the small normaliser
+    stays (+country code of 8 to 15 digits, Indian mobiles); other national formats without a
+    country code are asked again. Adding the library later is a one-function change.*
+  - Free text is trimmed and capped at 500 characters (the custom field text cap). Over the cap
+    counts as an answer that doesn't fit.
+- **Retry and skip (decision).** An answer that doesn't fit gets the step's retry prompt, or the
+  default copy for its kind, until `tries` run out: 1 to 3, default 2. Then the flow goes to the
+  step's `on_skip`. The editor's default is **carry on** to the step below; "end the flow" is the
+  other choice. Nothing is saved on a skip.
+- **Saved to** the contact's email or phone (source `flow`) or a custom field, as before, and
+  `lead.captured` is emitted then. *GR-18's `leads.on_capture` hook is not on this base and was not
+  created: the coordinator can call it from `_take` in `engine.py` after the webhook event.*
+- **Consent question (`consent` on the Ask step).** After a saved answer the step sends a Yes or
+  No question with two quick replies (default copy, or the step's `consent_text`) and waits.
+  - A tap, or typed words (yes, yeah, sure, haan; no, nope, no thanks), is recorded in
+    `contact_consents`: Yes as granted, No as revoked (an explicit refusal). Source `flow`, purpose
+    marketing, channel the conversation's (Instagram or WhatsApp).
+  - **Evidence:** the answer's message id and text, the question's message id and text, the
+    channel, the run, automation and step, and the time (`occurred_at`).
+  - Anything else is asked once more, then the flow goes on and nothing is recorded.
+  - The consent is for the channel they are chatting on. A captured email gives no email-channel
+    consent. Required before WhatsApp broadcasts (GR-23): not enforced here.
+- **Confirmation** (`confirm_text`): sent after the answer is saved (and the consent answered).
+  Blank sends nothing; the editor suggests "Thanks, I've got it."
+- **Default copy** lives in `capture.py` (retry per kind, the consent question, the "need a yes or a
+  no" prompt) and is mirrored as placeholders in the Ask card. The copy lint (`copy-lint.test.ts`)
+  only bans old variants; the copy follows its rules (sentence case, UK spelling).
+- **Step schema:** `consent`, `consent_text`, `confirm_text` added to `AskStep`, with defaults, so
+  stored flows are unchanged. Activation checks all three texts against Instagram's byte limit.
+- **Editor:** the Ask card has the type, the field to save to, the retry prompt, tries, the
+  confirmation and an "Ask for marketing consent" switch with its question.
+- **Done when:** a captured email lands on the contact, raises the webhook and shows in the CSV
+  export (`tests/integration/test_data_capture.py`; the export is GR-02's).
+- **Unverified:** the integration tests, vitest and `gr14-data-capture.spec.ts` are written but were
+  not run.

@@ -4,6 +4,8 @@ import { useRef } from "react";
 
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { AskNode } from "@/lib/automations/flow";
 import { formatCount } from "@/lib/automations/format";
@@ -26,6 +28,15 @@ const HOLDS: Record<AskNode["expect"], string[]> = {
   email: ["email"],
   phone: ["phone"],
 };
+
+/** The default prompts the API uses when these are left blank (services/automations/capture.py). */
+const RETRY_DEFAULT: Record<AskNode["expect"], string> = {
+  email: "That doesn't look like an email address. Could you send it again?",
+  phone: "That doesn't look like a phone number. Could you send it with the country code?",
+  text: "Sorry, I didn't catch that. Could you send it again?",
+};
+const CONSENT_DEFAULT = "Can we message you with offers and updates here? You can say no, and you can stop any time.";
+const CONFIRM_SUGGESTION = "Thanks, I've got it.";
 
 const OWN_FIELD: Record<AskNode["expect"], string> = {
   text: "Choose a field",
@@ -129,7 +140,7 @@ export function AskFields({ node }: { node: AskNode }) {
             value={node.retry_text}
             maxLength={300}
             onChange={(event) => set({ retry_text: event.target.value })}
-            placeholder="That doesn't look right. Could you send it again?"
+            placeholder={RETRY_DEFAULT[node.expect]}
             size="lg"
           />
         </Field>
@@ -140,6 +151,54 @@ export function AskFields({ node }: { node: AskNode }) {
             </option>
           ))}
         </NativeSelect>
+      </div>
+
+      <Field id={`${textId}-confirm`}>
+        <FieldLabel>Then confirm with (optional)</FieldLabel>
+        <Input
+          id={`${textId}-confirm`}
+          value={node.confirm_text}
+          maxLength={300}
+          onChange={(event) => set({ confirm_text: event.target.value })}
+          placeholder={CONFIRM_SUGGESTION}
+          size="lg"
+          aria-invalid={problems.confirm_text ? true : undefined}
+        />
+        {problems.confirm_text ? <p className="text-xs text-danger-fg">{problems.confirm_text.message}</p> : null}
+      </Field>
+
+      <div className="space-y-3 rounded-lg border border-line p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="space-y-0.5">
+            <Label htmlFor={`${textId}-consent`}>Ask for marketing consent</Label>
+            <p id={`${textId}-consent-hint`} className="text-xs text-fg-secondary">
+              After the answer is saved, ask a Yes or No question. Their answer is recorded on the contact with the messages
+              as proof. WhatsApp broadcasts need it.
+            </p>
+          </div>
+          <Switch
+            id={`${textId}-consent`}
+            checked={node.consent}
+            onCheckedChange={(consent) => set({ consent })}
+            aria-describedby={`${textId}-consent-hint`}
+            className="mt-0.5"
+          />
+        </div>
+        {node.consent ? (
+          <Field id={`${textId}-consent-text`}>
+            <FieldLabel>Consent question</FieldLabel>
+            <Textarea
+              id={`${textId}-consent-text`}
+              value={node.consent_text}
+              maxLength={300}
+              rows={2}
+              onChange={(event) => set({ consent_text: event.target.value })}
+              placeholder={CONSENT_DEFAULT}
+              aria-invalid={problems.consent_text ? true : undefined}
+            />
+            {problems.consent_text ? <p className="text-xs text-danger-fg">{problems.consent_text.message}</p> : null}
+          </Field>
+        ) : null}
       </div>
     </div>
   );

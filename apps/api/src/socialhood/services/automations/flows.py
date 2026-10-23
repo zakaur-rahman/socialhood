@@ -407,6 +407,10 @@ def _ask_errors(i: int, step: AskStep, ctx: Context) -> list[FieldError]:
         errors.append(FieldError(path(i, "text"), COPY["question_missing"]))
     else:
         errors += _text_errors(path(i, "text"), step.text, ctx, buttons=False)
+    for part in ("retry_text", "consent_text", "confirm_text"):
+        extra = getattr(step, part)
+        if extra.strip():
+            errors += _text_errors(path(i, part), extra, ctx, buttons=False)
     where = path(i, "field_key")
     if step.field_key is None:
         if step.expect == "text":

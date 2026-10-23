@@ -60,6 +60,11 @@ export type AskNode = {
   field_key: string | null;
   retry_text: string;
   tries: number;
+  /** Ask a marketing consent question after the answer is saved (recorded with the messages as evidence). */
+  consent: boolean;
+  consent_text: string;
+  /** Sent once the answer is saved; blank sends nothing. */
+  confirm_text: string;
   /** Null ends the flow when the answer never fits; steps (possibly none) go on from there. */
   skip: EditorStep[] | null;
 };
@@ -122,7 +127,15 @@ export function makeStep(kind: StepKind, taken: ReadonlySet<string> = new Set())
     case "send":
       return { kind, id, text: "", image_asset_id: null, buttons: [], replies: [], typed: { mode: "none" } };
     case "ask":
-      return { kind, id, text: "", expect: "email", field_key: null, retry_text: "", tries: 2, skip: [] };
+      return { kind, id, text: "", expect: "email",
+        field_key: null,
+        retry_text: "",
+        tries: 2,
+        consent: false,
+        consent_text: "",
+        confirm_text: "",
+        skip: [],
+      };
     case "branch":
       return { kind, id, rules: [{ when: { kind: "contact", has: "email", known: true }, steps: [] }], otherwise: [] };
     case "action":
@@ -353,6 +366,9 @@ export function compile(tree: EditorStep[]): Compiled {
             field_key: node.field_key,
             retry_text: node.retry_text,
             tries: node.tries,
+            consent: node.consent,
+            consent_text: node.consent ? node.consent_text : "",
+            confirm_text: node.confirm_text,
             next,
             on_skip: node.skip === null ? null : first(node.skip),
           });
@@ -504,6 +520,9 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
             field_key: step.field_key ?? null,
             retry_text: step.retry_text,
             tries: step.tries,
+            consent: step.consent ?? false,
+            consent_text: step.consent_text ?? "",
+            confirm_text: step.confirm_text ?? "",
             skip,
           });
           current = next;
@@ -747,6 +766,12 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
     }
     case "ask": {
       textProblems(node.text, false, "question to ask");
+      for (const part of ["retry_text", "consent_text", "confirm_text"] as const) {
+        if (part === "consent_text" && !node.consent) continue;
+        if (node[part].trim() && worstCaseBytes(node[part], ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
+          out[part] = `Instagram allows ${MESSAGE_LIMIT_BYTES.toLocaleString("en-US")} bytes in a DM. Shorten it.`;
+        }
+      }
       if (node.field_key === null) {
         if (node.expect === "text") out.field_key = "Choose the field to save the answer to.";
       } else {

@@ -202,7 +202,7 @@ const STATE_BADGE = {
 /** The fields the card shows itself; a problem on any other field is listed at the top of the card. */
 const SHOWN: Record<EditorStep["kind"], RegExp> = {
   send: /^(text|image_asset_id|buttons\..*|quick_replies(\..*)?)$/,
-  ask: /^(text|field_key)$/,
+  ask: /^(text|field_key|retry_text|consent_text|confirm_text)$/,
   branch: /^rules\.\d+\.when$/,
   action: /^action(\.value)?$/,
   delay: /^$/,

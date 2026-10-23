@@ -73,7 +73,13 @@ class SendStep(RequestModel):
 class AskStep(RequestModel):
     """A question whose answer is checked and saved: free text to a custom field, an email or a
     phone to the contact (or a custom field of that type). An answer that doesn't fit gets
-    ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip``."""
+    ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip`` (GR-14: the editor
+    makes that the same step as ``next`` unless the author picks another).
+
+    ``consent`` adds a marketing question once the answer is saved: Yes or No quick replies (or
+    those words typed), recorded in contact_consents with the messages as evidence.
+    ``confirm_text`` is sent after the answer is saved (and the consent answered); blank sends
+    nothing. Blank ``retry_text`` and ``consent_text`` use the default copy in engine.py."""
 
     type: Literal["ask"] = "ask"
     id: StepId
@@ -82,6 +88,9 @@ class AskStep(RequestModel):
     field_key: FieldKey | None = None  # None: an email or phone goes to the contact's own
     retry_text: Annotated[str, StringConstraints(max_length=300)] = ""
     tries: int = Field(default=2, ge=1, le=3)
+    consent: bool = False
+    consent_text: Annotated[str, StringConstraints(max_length=300)] = ""
+    confirm_text: Annotated[str, StringConstraints(max_length=300)] = ""
     next: StepId | None = None
     on_skip: StepId | None = None
 
