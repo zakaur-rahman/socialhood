@@ -439,8 +439,8 @@ describe("the API's problems on steps", () => {
       [
         { field: "flow.steps.1.text", message: "Write the message to send." },
         { field: "flow.steps.1.buttons.0.url", message: "Use https." },
-        { field: "flow.steps.0", message: "Nothing leads to this step." },
         { field: "flow.start", message: "Choose the first step." },
+        { field: "flow.steps.0", message: "Nothing leads to this step." },
         { field: "name", message: "Not ours." },
       ],
       ["ask", "pick"],

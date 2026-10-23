@@ -305,7 +305,7 @@ async def test_the_timeline_lists_what_happened_newest_first_and_pages(
     other = await person(engine, ws, "b", "Bina")
     now = datetime.now(UTC)
     media = await make_media_item(engine, workspace_id=ws.wid, account_id=ws.account_id)
-    await make_comment(
+    asked = await make_comment(
         engine,
         workspace_id=ws.wid,
         account_id=ws.account_id,
@@ -329,6 +329,7 @@ async def test_the_timeline_lists_what_happened_newest_first_and_pages(
         workspace_id=ws.wid,
         automation_id=automation,
         created_at=now - timedelta(hours=2),
+        trigger_comment_id=asked,
         contact_id=contact,
     )
     tag = await ws.ok("POST", "/tags", 201, json={"name": "vip"})

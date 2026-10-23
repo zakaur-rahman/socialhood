@@ -7,6 +7,9 @@ import { json, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
 import { ContactsPage } from "./ContactsPage";
 
+const toast = vi.hoisted(() => Object.assign(vi.fn(), { success: vi.fn(), error: vi.fn() }));
+vi.mock("sonner", () => ({ toast }));
+
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   useParams: () => ({ slug: "maple" }),
@@ -200,7 +203,7 @@ describe("ContactsPage (GR-17)", () => {
     await user.click(await screen.findByRole("button", { name: "Select all 7,200 contacts" }));
     await chooseTag(user, "vip");
     await user.click(screen.getByRole("button", { name: "Add tag" }));
-    expect(await screen.findByText(/matches 7,200 contacts/)).toBeInTheDocument();
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/matches 7,200 contacts/)));
   });
 
   it("applies a saved segment's filters, and saves the current ones as a segment", async () => {

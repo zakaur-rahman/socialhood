@@ -57,11 +57,12 @@ const timeline: TimelineItem[] = [
 
 function setup(options: { role?: "owner" | "agent"; next?: string | null; cold?: boolean; patch?: (call: Call) => Response } = {}) {
   let served = 0;
+  let stage = record.lead_stage;
   const onClose = vi.fn();
   const view = renderWithApi(<ContactDrawer contactId="p1" onClose={onClose} />, {
     ws: { ...workspace, role: options.role ?? "owner" },
     handlers: {
-      "GET /v1/w/:wid/contacts/:id": () => json({ ...record, lead_cold: options.cold ?? false }),
+      "GET /v1/w/:wid/contacts/:id": () => json({ ...record, lead_stage: stage, lead_cold: options.cold ?? false }),
       "GET /v1/w/:wid/contacts/:id/timeline": () => {
         served += 1;
         return json(served === 1 ? { items: timeline, next_cursor: options.next ?? null } : { items: [{ ...timeline[2], id: "i4", title: "Tagged vip", kind: "tag", detail: null }], next_cursor: null });
@@ -79,7 +80,10 @@ function setup(options: { role?: "owner" | "agent"; next?: string | null; cold?:
       "PATCH /v1/w/:wid/contacts/:id": options.patch ?? ((call) => json({ ...record, ...(call.body as object) })),
       "POST /v1/w/:wid/contacts/:id/tags": () => json({ ...record, tags: [...record.tags, { id: "t2", name: "vip", color: 0 }] }),
       "POST /v1/w/:wid/contacts/:id/consents": () => json(record),
-      "POST /v1/w/:wid/contacts/:id/lead-stage": (call) => json({ ...record, lead_stage: (call.body as { stage: ContactRecord["lead_stage"] }).stage }),
+      "POST /v1/w/:wid/contacts/:id/lead-stage": (call) => {
+        stage = (call.body as { stage: ContactRecord["lead_stage"] }).stage;
+        return json({ ...record, lead_stage: stage });
+      },
     },
   });
   return { ...view, onClose };
@@ -91,7 +95,7 @@ describe("ContactDrawer (GR-17)", () => {
     const drawer = await screen.findByRole("dialog");
     expect(await within(drawer).findByText("Priya Nair")).toBeInTheDocument();
     expect(within(drawer).getByRole("list", { name: "Tags on this contact" })).toHaveTextContent("lead-magnet");
-    expect(within(drawer).getByLabelText("Email")).toHaveValue("priya@example.com");
+    expect(await within(drawer).findByLabelText("Email")).toHaveValue("priya@example.com");
     expect(await within(drawer).findByLabelText("City")).toHaveValue("Pune");
     expect(within(drawer).getByTestId("consent-row")).toHaveTextContent("Instagram: Agreed");
     const items = await within(drawer).findAllByTestId("timeline-item");
@@ -143,7 +147,7 @@ describe("ContactDrawer (GR-17)", () => {
     await user.click(save);
     await waitFor(() => {
       const patch = calls.find((c) => c.method === "PATCH");
-      expect(patch?.body).toEqual({ clear_email: true, phone: "98765 43210", fields: { city: null } });
+      expect(patch?.body).toEqual({ clear_email: true, clear_phone: false, phone: "98765 43210", fields: { city: null } });
     });
   });
 

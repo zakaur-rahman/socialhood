@@ -156,8 +156,8 @@ describe("PreviewPane with tap first and the follow nudge (FR-AUT-21, FR-AUT-22)
       expect(preview).toHaveTextContent("Sent automatically");
       expect(preview).toHaveTextContent("Here's the guide, Priya.");
       expect(preview).not.toHaveTextContent("Prices start at 499.");
-      // The flow replaces the message settings' own bubbles.
-      expect(screen.queryByTestId("preview-message")).toBeNull();
+      // The flow replaces the message settings' own bubbles (kept in the DOM, hidden).
+      expect(screen.getByTestId("preview-message").closest(".hidden")).not.toBeNull();
     });
 
     it("the branch picker follows another way, and the sample name still applies", async () => {

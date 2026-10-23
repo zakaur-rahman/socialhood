@@ -114,7 +114,8 @@ function DrawerBody({ record }: { record: ContactRecord }) {
   const fields = useContactFields(wid);
   const definitions = fields.data?.items ?? [];
   const admin = role !== "agent";
-  // Remount the form when the saved values change, so it starts from them.
+  // Remount the form when the saved values change, so it starts from them. It waits for the field
+  // definitions, which give it its fields.
   const formKey = JSON.stringify([record.email, record.phone, record.fields]);
   return (
     <>
@@ -145,7 +146,11 @@ function DrawerBody({ record }: { record: ContactRecord }) {
           <TagsEditor record={record} admin={admin} />
         </Section>
         <Section id="contact-details" title="Details">
-          <DetailsForm key={formKey} record={record} definitions={definitions} />
+          {fields.isPending ? (
+            <Skeleton className="h-40 w-full" aria-label="Loading the contact's details" />
+          ) : (
+            <DetailsForm key={formKey} record={record} definitions={definitions} />
+          )}
         </Section>
         <Section id="contact-consent" title="Marketing consent">
           <ConsentList record={record} admin={admin} timezone={timezone} />
@@ -270,7 +275,7 @@ function DetailsForm({ record, definitions }: { record: ContactRecord; definitio
   }
 
   return (
-    <form onSubmit={submit} className="space-y-4" aria-label="Contact details">
+    <form onSubmit={submit} noValidate className="space-y-4" aria-label="Contact details">
       <Field invalid={Boolean(errors.email)}>
         <FieldLabel>Email</FieldLabel>
         <Input type="email" maxLength={254} value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} />
