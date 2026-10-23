@@ -29,6 +29,14 @@ describe("row labels (UX-SCR-02)", () => {
     expect(triggerSummary(automation({ trigger: null }))).toBe("No trigger yet");
   });
 
+  it("describes the story triggers (GR-06, GR-07)", () => {
+    expect(triggerSummary(automation({ trigger: "story_reply" }))).toBe("Story reply to any story");
+    expect(
+      triggerSummary(automation({ trigger: "story_reply", post_scope: "selected", story_ids: ["s1", "s2"] })),
+    ).toBe("Story reply on 2 stories");
+    expect(triggerSummary(automation({ trigger: "story_mention" }))).toBe("Story mention");
+  });
+
   it("names the action", () => {
     expect(actionBadge(automation())).toBe("Message + link");
     expect(actionBadge(automation({ message_buttons: [] }))).toBe("Message");

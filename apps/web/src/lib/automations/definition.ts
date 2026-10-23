@@ -30,6 +30,11 @@ export function isCommentTrigger(trigger: TriggerName | null | undefined): boole
   return trigger === "comment_keyword" || trigger === "comment_any";
 }
 
+/** A story reply or a story mention: a DM that comes from someone's story (GR-06, GR-07). */
+export function isStoryTrigger(trigger: TriggerName | null | undefined): boolean {
+  return trigger === "story_reply" || trigger === "story_mention";
+}
+
 type TapFirstFields = Pick<AutomationDefinition, "trigger" | "action" | "confirm_first">;
 
 /** Tap first applies to comment triggers that send a message (FR-AUT-21). */
@@ -56,10 +61,12 @@ export function tapFirstOn(
 /**
  * A trigger change. Any comment needs chosen posts or the next post (FR-AUT-02), so it starts on
  * chosen posts. An automation that becomes a comment automation for the first time (it has never
- * had an opening) starts with tap first on, as new comment automations do (FR-AUT-21).
+ * had an opening) starts with tap first on, as new comment automations do (FR-AUT-21). A story
+ * reply answers any story or chosen ones, never "the next post".
  */
 export function triggerPatch(draft: AutomationDefinition, trigger: TriggerName): Partial<AutomationDefinition> {
   const patch: Partial<AutomationDefinition> = { trigger };
+  if (isStoryTrigger(trigger) && draft.post_scope === "next_post") patch.post_scope = "all";
   if (trigger === "comment_any" && draft.post_scope === "all") patch.post_scope = "selected";
   const firstComment = isCommentTrigger(trigger) && !isCommentTrigger(draft.trigger);
   const neverOpened = draft.opening_text == null && draft.opening_button == null;
@@ -86,6 +93,8 @@ export function toDefinition(automation: Automation): AutomationDefinition {
     scheduled_post_ids: automation.posts.flatMap((post) =>
       !post.media_item_id && post.scheduled_post_id ? [post.scheduled_post_id] : [],
     ),
+    story_ids: [...(automation.story_ids ?? [])],
+    story_heart: automation.story_heart ?? false,
     cooldown_hours: automation.cooldown_hours,
     starts_at: automation.starts_at ?? null,
     ends_at: automation.ends_at ?? null,
@@ -100,13 +109,14 @@ export function toDefinition(automation: Automation): AutomationDefinition {
 
 /**
  * What the autosave sends. The editor keeps everything the user typed, but the request carries
- * only what the trigger uses (no keywords for Any comment, no posts, public replies or tap first
- * for DMs), and leaves out blank reply variations and link buttons until they have a title and a
+ * only what the trigger uses (no keywords for Any comment or a story mention, no posts, public
+ * replies or tap first for DMs, stories and the heart only for a story reply), and leaves out blank reply variations and link buttons until they have a title and a
  * URL. Tap first and the follow nudge go with a message: Reply with AI turns them off, while an
  * automation with no action yet keeps the API's defaults.
  */
 export function toRequestBody(draft: AutomationDefinition): AutomationDefinition {
   const comment = isCommentTrigger(draft.trigger);
+  const storyReply = draft.trigger === "story_reply";
   const ai = draft.action === "ai_reply";
   const buttons = (draft.message_buttons ?? [])
     .map((button) => ({ title: button.title.trim().slice(0, BUTTON_TITLE_MAX), url: button.url.trim() }))
@@ -115,12 +125,15 @@ export function toRequestBody(draft: AutomationDefinition): AutomationDefinition
   return {
     ...draft,
     name: draft.name.trim() || DEFAULT_NAME,
-    keywords: draft.trigger === "comment_any" ? [] : (draft.keywords ?? []),
+    keywords:
+      draft.trigger === "comment_any" || draft.trigger === "story_mention" ? [] : (draft.keywords ?? []),
     message_buttons: buttons,
     public_reply_texts: comment ? (draft.public_reply_texts ?? []).map((text) => text.trim()).filter(Boolean) : [],
-    post_scope: comment ? draft.post_scope : "all",
+    post_scope: comment || (storyReply && draft.post_scope === "selected") ? draft.post_scope : "all",
     media_item_ids: comment && draft.post_scope === "selected" ? (draft.media_item_ids ?? []) : [],
     scheduled_post_ids: comment && draft.post_scope === "selected" ? (draft.scheduled_post_ids ?? []) : [],
+    story_ids: storyReply && draft.post_scope === "selected" ? (draft.story_ids ?? []) : [],
+    story_heart: storyReply ? (draft.story_heart ?? false) : false,
     confirm_first: comment && !ai ? draft.confirm_first : false,
     opening_text: comment ? draft.opening_text || null : null,
     opening_button: comment ? openingButton || null : null,
@@ -129,13 +142,20 @@ export function toRequestBody(draft: AutomationDefinition): AutomationDefinition
   };
 }
 
-/** The steps a trigger uses, in order. Before a trigger is chosen the DM shape shows. */
+/**
+ * The steps a trigger uses, in order. Before a trigger is chosen the DM shape shows. A story reply
+ * reuses the posts step for its stories, and its keywords are optional (none answers any reply).
+ */
 export function visibleSteps(trigger: TriggerName | null | undefined): StepId[] {
   switch (trigger) {
     case "comment_keyword":
       return ["when", "posts", "keywords", "then", "settings"];
     case "comment_any":
       return ["when", "posts", "then", "settings"];
+    case "story_reply":
+      return ["when", "posts", "keywords", "then", "settings"];
+    case "story_mention":
+      return ["when", "then", "settings"];
     default:
       return ["when", "keywords", "then", "settings"];
   }
@@ -204,13 +224,16 @@ export function stepComplete(step: StepId, draft: AutomationDefinition, disclosu
     case "when":
       return Boolean(draft.social_account_id && draft.trigger);
     case "posts":
+      if (draft.trigger === "story_reply") {
+        return draft.post_scope !== "selected" || (draft.story_ids?.length ?? 0) > 0;
+      }
       if (draft.post_scope === "selected") {
         return (draft.media_item_ids?.length ?? 0) + (draft.scheduled_post_ids?.length ?? 0) > 0;
       }
       if (draft.post_scope === "all") return draft.trigger !== "comment_any";
       return true;
     case "keywords":
-      return (draft.keywords?.length ?? 0) > 0;
+      return draft.trigger === "story_reply" || (draft.keywords?.length ?? 0) > 0;
     case "then": {
       if (draft.action === "ai_reply") return Boolean(draft.ai_instructions?.trim());
       if (draft.action !== "send_message") return false;
@@ -244,6 +267,8 @@ const FIELD_STEP: Record<string, StepId | "name"> = {
   posts: "posts",
   media_item_ids: "posts",
   scheduled_post_ids: "posts",
+  story_ids: "posts",
+  story_heart: "posts",
   keywords: "keywords",
   match_mode: "keywords",
   action: "then",

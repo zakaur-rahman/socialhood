@@ -211,6 +211,8 @@ def _automation_out(
         public_reply_texts=list(a.public_reply_texts or []),
         post_scope=cast(PostScopeName, a.post_scope),
         posts=[_post_ref(r) for r in posts],
+        story_ids=list(a.story_ids or []),
+        story_heart=a.story_heart,
         cooldown_hours=a.cooldown_hours,
         starts_at=a.starts_at,
         ends_at=a.ends_at,

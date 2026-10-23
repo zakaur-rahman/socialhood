@@ -98,6 +98,7 @@ class OverviewPeriod(ResponseModel):
     first_responses: int  # customer turns answered in the period
     median_first_response_s: int | None
     comments_received: int
+    story_mentions: int = 0  # people who mentioned the account in a story (GR-07)
 
 
 class SentimentSplit(ResponseModel):

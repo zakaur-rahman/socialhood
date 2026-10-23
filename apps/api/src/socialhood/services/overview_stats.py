@@ -30,6 +30,8 @@ Ranges are local calendar days in the workspace's time zone (services/analytics/
 - **Needs you**: open conversations marked "Needs you" now.
 - **Unanswered questions**: knowledge gaps open now, asked in the last 30 days, most asked first
   (the Knowledge page's list, FR-KB-06).
+- **Story mentions** (GR-07): people who mentioned the account in a story in the range (Home
+  only; the digest doesn't read it).
 - **Comments** and **top posts**: comments made in the range and not deleted; posts ranked by
   them, most first, then the newest post.
 - **Message sentiment**: customer messages received in the range, by their analysis's sentiment
@@ -441,6 +443,13 @@ async def comments_received(session: AsyncSession, span: DateRange) -> int:
         )
         or 0
     )
+
+
+async def story_mentions_received(session: AsyncSession, span: DateRange) -> int:
+    """GR-07: story mentions in the range."""
+    from socialhood.repositories import story_mentions
+
+    return await story_mentions.count_between(session, span.start, span.end)
 
 
 async def comments(

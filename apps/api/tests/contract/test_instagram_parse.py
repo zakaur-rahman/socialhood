@@ -24,7 +24,16 @@ from socialhood.platforms.events import (
     ReferralInfo,
     Unsupported,
 )
-from socialhood.platforms.instagram.parse import epoch_time, graph_time, media_item, parse, thread
+from socialhood.platforms.instagram.parse import (
+    HEART,
+    epoch_time,
+    graph_time,
+    media_item,
+    media_url_expiry,
+    parse,
+    story_item,
+    thread,
+)
 from socialhood.platforms.instagram.webhooks import split_payload
 from tests.support.instagram import fixture
 
@@ -393,3 +402,54 @@ def test_referral_sources(
     )
     assert isinstance(event, Referral), event
     assert (event.referral.source, event.referral.ref, event.referral.ad_id) == expected
+
+
+# ---------------------------------------------------------------- GR-06, GR-07: stories
+
+
+def test_a_story_reply_keeps_the_story_it_answers() -> None:
+    event = message("webhook_story_reply.json")
+    assert (event.kind, event.text) == ("story_reply", "Where is this cake from?")
+    [story] = event.attachments
+    assert (story.kind, story.media_id) == ("story", "18200000000000001")
+    assert story.url is not None
+
+
+def test_a_story_like_is_a_story_reply_that_is_only_the_heart() -> None:
+    event = message("webhook_story_like.json")
+    assert event.kind == "story_reply"
+    assert event.text == HEART
+    assert [a.media_id for a in event.attachments] == ["18200000000000001"]
+
+
+def test_a_story_mention_has_the_story_address_and_no_story_id() -> None:
+    event = message("webhook_story_mention.json")
+    assert (event.kind, event.text) == ("story_mention", None)
+    [story] = event.attachments
+    assert story.kind == "story"
+    assert story.media_id is None
+    assert story.url == (
+        "https://lookaside.fbsbx.com/ig_messaging_cdn/?asset_id=18000000000006&signature=s6"
+    )
+
+
+def test_a_cdn_address_says_when_it_expires() -> None:
+    url = "https://scontent.cdninstagram.com/v/story.jpg?oe=6720B3D0&oh=abc"
+    assert media_url_expiry(url) == datetime(2024, 10, 29, 10, 7, 12, tzinfo=UTC)
+    assert media_url_expiry("https://lookaside.fbsbx.com/x?asset_id=1&signature=s") is None
+    assert media_url_expiry("https://scontent.cdninstagram.com/v/a.jpg?oe=zzz") is None
+    assert media_url_expiry(None) is None
+
+
+def test_the_graph_stories_edge_lists_stories() -> None:
+    raw = {
+        "id": "18200000000000009",
+        "media_type": "IMAGE",
+        "media_url": "https://scontent.cdninstagram.com/v/s.jpg",
+        "permalink": "https://www.instagram.com/stories/maple/18200000000000009/",
+        "timestamp": "2026-10-24T08:00:00+0000",
+    }
+    story = story_item(raw)
+    assert story is not None
+    assert (story.platform_media_id, story.media_type) == ("18200000000000009", "story")
+    assert story_item({"id": "1"}) is None  # no timestamp

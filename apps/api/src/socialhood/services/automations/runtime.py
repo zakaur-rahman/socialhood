@@ -7,6 +7,15 @@ Entry points for ingest and comment intake, called in their transaction after th
   (DMs) when a tap-first opening waits for the contact's answer;
 - ``contact_replied`` records FR-AUT-16's reply within 24 h of an automation DM.
 
+Story triggers (GR-06, GR-07): a story reply and a story mention are DMs, so they take this path;
+``dm_triggers`` picks the automations a message can start by its kind. A story reply starts story
+reply and DM keyword automations together (keyword ones first, then those that answer anything,
+each by priority); a story reply automation scoped to chosen stories passes over replies to other
+stories. A reply that is only the heart (a story like) starts story reply automations never. A
+story mention starts story mention automations only, and never answers a waiting question. A story
+reply automation with the heart on sends Instagram's heart sticker ahead of its message (its
+failure never stops the DM).
+
 Tap first (FR-AUT-21): before keyword matching, a customer DM that answers a waiting opening
 releases that run's message and nothing else runs on it (services/automations/answers). The
 follow nudge (FR-AUT-22) is ``run_automation("nudge", run_id)``, enqueued once a run's message
@@ -56,6 +65,7 @@ from socialhood.models.automations import (
     AutomationAction,
     AutomationRun,
     Comment,
+    PostScope,
     RunResult,
     SurgeOrder,
 )
@@ -77,6 +87,9 @@ log = get_logger(__name__)
 Kind = Literal["dm", "comment", "nudge", "flow"]
 
 DM_TRIGGERS = ("dm_keyword",)
+STORY_REPLY_TRIGGERS = ("story_reply", "dm_keyword")
+STORY_MENTION_TRIGGERS = ("story_mention",)
+HEART = "\u2764\ufe0f"  # a story like arrives as the heart sticker, stored as its emoji
 COMMENT_TRIGGERS = ("comment_keyword", "comment_any")
 THREAD_REPLY_TRIGGERS = ("comment_keyword",)
 START_DELAY_S = 1.0  # the caller commits after enqueueing; well before AI analysis (4 s)
@@ -102,6 +115,37 @@ class Outcome(StrEnum):
 # ---------------------------------------------------------------- entry points
 
 
+def story_id_of(msg: Message) -> str | None:
+    """The story a story reply answers (its attachment's platform id), when we kept it."""
+    for attachment in msg.attachments or []:
+        if attachment.get("type") == "story" and attachment.get("media_id"):
+            return str(attachment["media_id"])
+    return None
+
+
+def is_story_like(msg: Message) -> bool:
+    """A story reply that is just the heart: someone liked the story, which is no reply."""
+    return msg.kind == "story_reply" and (msg.text or "").strip() == HEART
+
+
+def dm_triggers(msg: Message) -> tuple[str, ...]:
+    """The triggers a customer DM can start, by what the message is."""
+    if msg.kind == "story_mention":
+        return STORY_MENTION_TRIGGERS
+    if msg.kind == "story_reply":
+        return DM_TRIGGERS if is_story_like(msg) else STORY_REPLY_TRIGGERS
+    return DM_TRIGGERS
+
+
+def in_story_scope(automation: Automation, msg: Message) -> bool:
+    """A story reply automation answers any story, or only its chosen ones (GR-06). A reply whose
+    story we could not read matches only the any-story ones."""
+    if automation.trigger != "story_reply" or automation.post_scope != PostScope.SELECTED:
+        return True
+    story_id = story_id_of(msg)
+    return story_id is not None and story_id in (automation.story_ids or [])
+
+
 async def enqueue_for_message(
     session: AsyncSession, message: Message, *, contact_id: uuid.UUID | None = None
 ) -> bool:
@@ -114,7 +158,7 @@ async def enqueue_for_message(
         or await runs.has_flow_waiting(session, contact_id, since=since)  # GR-03
     )
     if not answers_opening and not await runs.has_active(
-        session, message.social_account_id, DM_TRIGGERS
+        session, message.social_account_id, dm_triggers(message)
     ):
         return False
     return await enqueue_run("dm", message.id, message.workspace_id)
@@ -277,9 +321,10 @@ async def _run_dm(env: _Env, message_id: uuid.UUID) -> Outcome:
                 return Outcome.ALREADY_RAN
             # An answer to a waiting flow step (GR-03) or tap-first opening (FR-AUT-21) comes
             # before any keyword.
-            flow_answer = await engine.find_answer(session, msg, contact.id, now=env.now)
-            if flow_answer is None:
-                answer = await answers.find(session, msg, contact.id, now=env.now)
+            if msg.kind != "story_mention":  # a mention answers no question
+                flow_answer = await engine.find_answer(session, msg, contact.id, now=env.now)
+                if flow_answer is None:
+                    answer = await answers.find(session, msg, contact.id, now=env.now)
             if flow_answer is None and answer is None:
                 return await _match_dm(session, env, msg, conv, contact)
     if flow_answer is not None:
@@ -318,7 +363,7 @@ async def _match_dm(
     session: AsyncSession, env: _Env, msg: Message, conv: Conversation, contact: Contact
 ) -> Outcome:
     """DM keyword automations (F-11 runtime): the first match that passes sends its message."""
-    loaded = await runs.candidates(session, msg.social_account_id, DM_TRIGGERS, now=env.now)
+    loaded = await runs.candidates(session, msg.social_account_id, dm_triggers(msg), now=env.now)
     found = matching.matches(msg.text or "", [item.candidate for item in loaded])
     if not found:
         return Outcome.NO_MATCH
@@ -326,6 +371,8 @@ async def _match_dm(
     by_id = {item.automation.id: item.automation for item in loaded}
     for match in found:
         automation = by_id[match.automation_id]
+        if not in_story_scope(automation, msg):
+            continue
         common: dict[str, Any] = {
             "contact_id": contact.id,
             "now": env.now,
@@ -362,6 +409,7 @@ async def _match_dm(
             await session.rollback()
             return Outcome.ALREADY_RAN
         automation.last_run_at = env.now
+        await _send_heart(session, env, automation, run, conv)
         if ai:
             return await _answer_with_ai(session, env, automation, run, msg)
         if engine.is_flow_run(run):
@@ -379,6 +427,34 @@ async def _match_dm(
         return Outcome.FIRED
     await session.commit()
     return Outcome.SKIPPED
+
+
+async def _send_heart(
+    session: AsyncSession,
+    env: _Env,
+    automation: Automation,
+    run: AutomationRun,
+    conv: Conversation,
+) -> None:
+    """GR-06: the heart sticker for a story reply, queued ahead of the run's message. It is not
+    linked to the run, so its outcome never changes the run's result; a refusal (the account is
+    blocked, the window closed) only goes to the log."""
+    from socialhood.services import sending  # sending → … → ingest → this module
+
+    if automation.trigger != "story_reply" or not automation.story_heart:
+        return
+    try:
+        await sending.queue_outbound(
+            session,
+            conv,
+            source="automation",
+            client_id=actions.client_id_for(run.id, "heart"),
+            sticker="like_heart",
+            deps=env.deps,
+            now=env.now,
+        )
+    except ApiError as error:
+        log.info("automation_heart_skipped", run_id=str(run.id), reason=error.code)
 
 
 async def _answer_with_ai(

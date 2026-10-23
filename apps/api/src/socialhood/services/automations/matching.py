@@ -10,6 +10,10 @@ plain substring.
 Candidates are tried in runtime order: keyword automations before any-comment ones, then the
 lowest priority number, then the oldest. The first automation with a matching keyword wins; the
 runtime then applies cooldowns, post scopes and run windows, which are not this module's concern.
+
+Triggers that match without a keyword (``matches_anything``): an any-comment automation, a story
+mention, and a story reply with no keywords ("any reply", GR-06). They run after the keyword
+automations.
 """
 
 from __future__ import annotations
@@ -22,7 +26,9 @@ from datetime import datetime
 from typing import Literal
 
 MatchModeName = Literal["word", "exact", "contains"]
-TriggerName = Literal["dm_keyword", "comment_keyword", "comment_any"]
+TriggerName = Literal[
+    "dm_keyword", "comment_keyword", "comment_any", "story_reply", "story_mention"
+]
 
 _WORD_CATEGORIES = ("L", "M", "N")
 
@@ -93,18 +99,26 @@ class Match:
     keyword: str  # the normalised keyword that matched; "" for any-comment triggers
 
 
+def matches_anything(candidate: Candidate) -> bool:
+    """The candidate answers every event of its kind, whatever the text says."""
+    if candidate.trigger == "story_reply":
+        return not candidate.keywords
+    return candidate.trigger in ("comment_any", "story_mention")
+
+
 def runtime_order(candidates: Iterable[Candidate]) -> list[Candidate]:
-    """Keyword automations first, then priority (lower wins), then the oldest (FR-AUT-15)."""
+    """Automations with keywords first, then those that match anything; within each, priority
+    (lower wins) and then the oldest (FR-AUT-15)."""
     return sorted(
         candidates,
-        key=lambda c: (c.trigger == "comment_any", c.priority, c.created_at, str(c.id)),
+        key=lambda c: (matches_anything(c), c.priority, c.created_at, str(c.id)),
     )
 
 
 def matching_keyword(text: str, candidate: Candidate) -> str | None:
     """The first of the candidate's keywords the (normalised) text matches, or None; "" for an
-    any-comment automation, which matches every comment."""
-    if candidate.trigger == "comment_any":
+    automation that matches anything (``matches_anything``)."""
+    if matches_anything(candidate):
         return ""
     for keyword in candidate.keywords:
         if keyword_matches(text, keyword, candidate.match_mode):

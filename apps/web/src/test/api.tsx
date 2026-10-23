@@ -395,6 +395,8 @@ export function automation(overrides: Partial<Automation> = {}): Automation {
     public_reply_texts: ["Sent you a DM!"],
     post_scope: "all",
     posts: [],
+    story_ids: [],
+    story_heart: false,
     cooldown_hours: 24,
     starts_at: null,
     ends_at: null,

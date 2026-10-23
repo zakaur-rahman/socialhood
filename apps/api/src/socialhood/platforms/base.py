@@ -252,6 +252,11 @@ class PlatformAdapter(Protocol):
 
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]: ...
 
+    async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
+        """The account's live stories (the last 24 hours), newest first (GR-06). Empty where the
+        platform has no stories."""
+        ...
+
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         """One of the account's posts, for a comment on a post we have not synced (F-12)."""
         ...

@@ -62,6 +62,25 @@ def posts(acct: SocialAccount, *, limit: int, now: datetime | None = None) -> li
     return items
 
 
+def stories(acct: SocialAccount, *, now: datetime | None = None) -> list[PlatformMedia]:
+    """Two live stories, newest first (GR-06). Their ids are fixed per account, so an automation
+    scoped to one keeps matching; the sandbox inbound injector replies to them by id."""
+    now = now or datetime.now(UTC)
+    ref = acct.platform_account_id
+    return [
+        PlatformMedia(
+            platform_media_id=f"{ref}_story_{i}",
+            media_type="story",
+            caption=None,
+            media_url=f"https://picsum.photos/seed/{ref}story{i}/1080/1920",
+            thumbnail_url=None,
+            permalink=None,
+            posted_at=now - timedelta(hours=3 * (i + 1)),
+        )
+        for i in range(2)
+    ]
+
+
 def post(acct: SocialAccount, media_ref: str, *, now: datetime | None = None) -> PlatformMedia:
     """One post by id: a post published through sandbox publishing, a known sandbox post, or (for
     an injected comment on any other id) a post that has just been published."""

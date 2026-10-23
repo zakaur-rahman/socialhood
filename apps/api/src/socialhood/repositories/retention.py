@@ -12,11 +12,12 @@ from collections.abc import Collection
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import ColumnElement, delete, exists, func, select
+from sqlalchemy import ColumnElement, delete, exists, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import InstrumentedAttribute
 
 from socialhood.models.agent import FINAL_RUN_STATUSES, AgentRun
+from socialhood.models.automations import StoryMention
 from socialhood.models.billing import AiUsageEvent, Subscription
 from socialhood.models.identity import Workspace, WorkspaceStatus
 from socialhood.models.inbox import Conversation, Message
@@ -52,6 +53,24 @@ async def webhook_deliveries_before(session: AsyncSession, cutoff: datetime, *, 
         WebhookDelivery.created_at < cutoff,
         WebhookDelivery.status != DeliveryStatus.PENDING,
     )
+
+
+async def clear_expired_mention_links(session: AsyncSession, now: datetime, *, limit: int) -> int:
+    """GR-07: a story mention keeps Instagram's address of the story only while it is live; once
+    it has expired the address is useless, so it goes and the mention record stays."""
+    batch = (
+        select(StoryMention.id)
+        .where(StoryMention.media_url.is_not(None), StoryMention.media_expires_at <= now)
+        .limit(limit)
+    )
+    statement = (
+        update(StoryMention)
+        .where(StoryMention.id.in_(batch))
+        .values(media_url=None)
+        .returning(StoryMention.id)
+        .execution_options(synchronize_session=False)
+    )
+    return len((await session.execute(statement)).all())
 
 
 async def notifications_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:

@@ -79,7 +79,9 @@ def custom_span(timezone: str, now: datetime, since: date | None, until: date | 
     return date_range(timezone, now, since, until)
 
 
-def _period(span: DateRange, inbox: stats.InboxStats, comments: int) -> OverviewPeriod:
+def _period(
+    span: DateRange, inbox: stats.InboxStats, comments: int, story_mentions: int
+) -> OverviewPeriod:
     return OverviewPeriod(
         since=span.since,
         until=span.until,
@@ -92,6 +94,7 @@ def _period(span: DateRange, inbox: stats.InboxStats, comments: int) -> Overview
         first_responses=inbox.first_responses,
         median_first_response_s=inbox.median_first_response_s,
         comments_received=comments,
+        story_mentions=story_mentions,
     )
 
 
@@ -179,6 +182,8 @@ async def overview(
     current = await stats.compute(session, span=span, now=now)
     previous_inbox = await stats.inbox_stats(session, before)
     previous_comments = await stats.comments_received(session, before)
+    mentions = await stats.story_mentions_received(session, span)
+    previous_mentions = await stats.story_mentions_received(session, before)
     counts = await inbox_counts(session)
     connected, platforms = await stats.accounts_connected(session)
     rates = await stats.engagement_rates(session, [p.post_id for p in current.top_posts], span)
@@ -220,8 +225,8 @@ async def overview(
                 session, now=now, human_agent=human_agent
             ),
             "messages_today": await stats.messages_received(session, today),
-            "current": _period(span, current.inbox, current.comments_received),
-            "previous": _period(before, previous_inbox, previous_comments),
+            "current": _period(span, current.inbox, current.comments_received, mentions),
+            "previous": _period(before, previous_inbox, previous_comments, previous_mentions),
             "top_intents": [
                 IntentCount.model_validate({"intent": item.intent, "count": item.count})
                 for item in current.top_intents

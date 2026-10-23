@@ -289,6 +289,7 @@ B_TABLES = (
     "automation_run_steps",
     "webhook_endpoints",
     "webhook_deliveries",
+    "story_mentions",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -459,6 +460,16 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         f"/v1/w/{wid}/webhook-endpoints/{hook.json()['id']}/test", headers=clerk.headers(owner_b)
     )
     assert sent.status_code == 202, sent.text
+    async with engine.begin() as conn:  # GR-07: a story mention
+        await conn.execute(
+            text(
+                "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id,"
+                " message_id, mentioned_at, media_url, media_expires_at)"
+                " VALUES (:w, :a, :c, :m, now(), 'https://cdn.example/b.jpg',"
+                " now() + interval '1 hour')"
+            ),
+            {"w": wid, "a": account_id, "c": thread.contact_id, "m": thread.message_ids[0]},
+        )
     scheduled = await make_scheduled(
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )

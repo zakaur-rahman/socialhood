@@ -75,11 +75,23 @@ class InstagramConnectComplete(RequestModel):
 class SandboxInbound(RequestModel):
     """A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
     link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
-    comment; a DM can carry an ad referral (its first message from an ad)."""
+    comment; a DM can carry an ad referral (its first message from an ad). GR-06 and GR-07 add a
+    story reply, a story like (the heart) and a story mention."""
 
     account_id: uuid.UUID
-    kind: Literal["dm", "comment", "live_comment", "referral", "postback", "optin"]
-    # The message, comment or postback title. A referral or an opt-in has none.
+    kind: Literal[
+        "dm",
+        "comment",
+        "live_comment",
+        "referral",
+        "postback",
+        "optin",
+        "story_reply",
+        "story_like",
+        "story_mention",
+    ]
+    # The message, comment, story reply or postback title. A referral, an opt-in, a story like and
+    # a story mention have none.
     text: str | None = Field(default=None, min_length=1, max_length=1000)
     from_id: str | None = Field(default=None, max_length=64)
     from_username: str | None = Field(default=None, max_length=64)
@@ -92,11 +104,16 @@ class SandboxInbound(RequestModel):
     ref: str | None = Field(default=None, max_length=200)
     ad_id: str | None = Field(default=None, max_length=64)
     ad_title: str | None = Field(default=None, max_length=200)
+    # A story reply or a story like: the story it answers (the ids the sandbox lists as stories).
+    story_id: str | None = Field(default=None, max_length=64)
 
     @model_validator(mode="after")
     def _needs_text(self) -> SandboxInbound:
-        if self.kind in ("dm", "comment", "live_comment", "postback") and not self.text:
-            raise ValueError("text is required for a DM, a comment or a postback")
+        if (
+            self.kind in ("dm", "comment", "live_comment", "postback", "story_reply")
+            and not self.text
+        ):
+            raise ValueError("text is required for a DM, a comment, a story reply or a postback")
         if self.kind == "referral" and self.referral_source is None:
             raise ValueError("referral_source is required for a referral")
         return self

@@ -194,6 +194,11 @@ class InstagramAdapter:
 
         return await reads.list_media(self.http, self._graph, self._token(acct), limit=limit)
 
+    async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
+        from socialhood.platforms.instagram import reads
+
+        return await reads.list_stories(self.http, self._graph, self._token(acct))
+
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         from socialhood.platforms.instagram import reads
 

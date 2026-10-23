@@ -14,7 +14,7 @@ import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, cast
 
 from sqlalchemy import (
     ColumnElement,
@@ -145,8 +145,8 @@ async def candidates(
 
 
 def _trigger(value: str | None) -> TriggerName:
-    if value == "comment_any":
-        return "comment_any"
+    if value in ("comment_any", "story_reply", "story_mention"):
+        return cast(TriggerName, value)
     return "comment_keyword" if value == "comment_keyword" else "dm_keyword"
 
 
