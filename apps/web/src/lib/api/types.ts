@@ -257,3 +257,15 @@ export type AgentStepEvent = {
 export type InboxView = NonNullable<
   NonNullable<operations["list_conversations"]["parameters"]["query"]>["view"]
 >;
+
+// ---- outbound webhooks (GR-04)
+
+export type WebhookEventType = Schemas["WebhookEventType"];
+export type WebhookEventName = WebhookEventType["type"];
+export type WebhookEndpoint = Schemas["WebhookEndpoint"];
+export type WebhookEndpointWithSecret = Schemas["WebhookEndpointWithSecret"];
+export type WebhookEndpointList = Schemas["WebhookEndpointList"];
+export type WebhookEndpointCreate = Schemas["WebhookEndpointCreate"];
+export type WebhookEndpointPatch = Schemas["WebhookEndpointPatch"];
+export type WebhookDelivery = Schemas["WebhookDelivery"];
+export type WebhookDeliveryList = Schemas["WebhookDeliveryList"];

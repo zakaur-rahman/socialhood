@@ -416,7 +416,10 @@ async def _definitions(session: AsyncSession) -> dict[str, ContactFieldDefinitio
 
 
 async def update_contact(session: AsyncSession, contact_id: uuid.UUID, body: ContactPatch) -> None:
+    from socialhood.services.webhooks import events
+
     contact, _, _, _ = await _row(session, contact_id)
+    before = (contact.email, contact.phone, dict(contact.fields or {}))
     errors: list[FieldError] = []
     if body.clear_email:
         contact.email, contact.email_source, contact.email_verified = None, None, False
@@ -452,6 +455,22 @@ async def update_contact(session: AsyncSession, contact_id: uuid.UUID, body: Con
     if errors:
         raise ApiError("validation_error", errors=errors)
     await session.flush()
+    await events.contact_updated(session, contact, changes(before, contact))
+
+
+def changes(before: tuple[str | None, str | None, dict[str, Any]], contact: Contact) -> list[str]:
+    """What changed on a contact since ``before`` (email, phone, fields): contact.updated."""
+    email, phone, fields = before
+    changed = [
+        name
+        for name, old, new in (("email", email, contact.email), ("phone", phone, contact.phone))
+        if old != new
+    ]
+    now = contact.fields or {}
+    changed += [
+        f"fields.{key}" for key in sorted(set(fields) | set(now)) if fields.get(key) != now.get(key)
+    ]
+    return changed
 
 
 # ---------------------------------------------------------------- tags
@@ -528,7 +547,10 @@ async def change_tags(
     remove: Sequence[uuid.UUID],
     user_id: uuid.UUID | None,
 ) -> int:
-    """Add and remove tags on contacts; returns how many contacts exist among those named."""
+    """Add and remove tags on contacts; returns how many contacts exist among those named. Each
+    tag that's actually added or removed is a contact.tagged event (GR-04)."""
+    from socialhood.services.webhooks import events
+
     wanted = set(add) | set(remove)
     if wanted:
         found = set((await session.scalars(select(Tag.id).where(Tag.id.in_(wanted)))).all())
@@ -536,7 +558,18 @@ async def change_tags(
         if missing:
             raise ApiError("not_found", "One of those tags wasn't found.")
     ids = list((await session.scalars(select(Contact.id).where(Contact.id.in_(contact_ids)))).all())
+    changed: list[tuple[uuid.UUID, uuid.UUID, bool]] = []
     if remove and ids:
+        changed += [
+            (contact_id, tag_id, False)
+            for contact_id, tag_id in (
+                await session.execute(
+                    select(ContactTag.contact_id, ContactTag.tag_id).where(
+                        ContactTag.contact_id.in_(ids), ContactTag.tag_id.in_(remove)
+                    )
+                )
+            ).all()
+        ]
         await session.execute(
             scoped_delete(ContactTag).where(
                 ContactTag.contact_id.in_(ids), ContactTag.tag_id.in_(remove)
@@ -553,7 +586,28 @@ async def change_tags(
                 session.add(
                     ContactTag(contact_id=contact_id, tag_id=tag_id, added_by_user_id=user_id)
                 )
+                changed.append((contact_id, tag_id, True))
     await session.flush()
+    if changed and await events.wanted(session, "contact.tagged"):
+        people = {
+            c.id: c
+            for c in (
+                await session.scalars(
+                    select(Contact).where(Contact.id.in_({c for c, _, _ in changed}))
+                )
+            ).all()
+        }
+        names = dict(
+            (await session.execute(select(Tag.id, Tag.name).where(Tag.id.in_(wanted)))).all()
+        )
+        await events.contacts_tagged(
+            session,
+            [
+                events.TagChange(people[c], t, names.get(t, ""), added)
+                for c, t, added in changed
+                if c in people
+            ],
+        )
     return len(ids)
 
 

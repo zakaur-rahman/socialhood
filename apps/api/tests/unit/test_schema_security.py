@@ -10,7 +10,12 @@ from socialhood.main import create_app
 from socialhood.observability.logging import QUIET_LOGGERS, configure_logging
 
 FORBIDDEN = re.compile(r"token|secret|password|_enc$", re.IGNORECASE)
-ALLOWED = {"token_expires_at"}  # when the connection lapses, not a credential
+ALLOWED = {
+    "token_expires_at",  # when the connection lapses, not a credential
+    # GR-04: an outbound webhook's signing secret, by design in the create and rotate responses
+    # only (shown once to the admin who made it, like any webhook provider's).
+    "signing_secret",
+}
 
 
 def _property_names(schema: Any) -> list[str]:

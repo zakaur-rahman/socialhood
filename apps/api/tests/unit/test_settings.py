@@ -51,6 +51,13 @@ def test_production_refuses_the_sandbox() -> None:
         make(**values)
 
 
+def test_production_refuses_private_webhook_addresses() -> None:
+    values = complete_production()
+    values["webhooks_allow_private"] = True
+    with pytest.raises(ConfigurationError, match="WEBHOOKS_ALLOW_PRIVATE"):
+        make(**values)
+
+
 def test_production_refuses_debug_logging() -> None:
     values = complete_production()
     values["log_level"] = "debug"

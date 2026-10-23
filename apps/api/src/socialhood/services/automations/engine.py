@@ -90,6 +90,7 @@ from socialhood.schemas.flows import (
     TagCondition,
 )
 from socialhood.services.automations import actions, flows, render, results
+from socialhood.services.webhooks import events as webhook_events
 
 log = get_logger(__name__)
 
@@ -401,13 +402,16 @@ async def _act(
                 return {"skipped": "tag_missing"}
             if not await _has_tag(session, contact.id, tag_id):
                 session.add(ContactTag(contact_id=contact.id, tag_id=tag_id))
+                await _tagged(session, contact, tag_id, added=True)
             return {}
         case RemoveTag(tag_id=tag_id):
-            await session.execute(
-                scoped_delete(ContactTag).where(
-                    ContactTag.contact_id == contact.id, ContactTag.tag_id == tag_id
+            if await _has_tag(session, contact.id, tag_id):
+                await session.execute(
+                    scoped_delete(ContactTag).where(
+                        ContactTag.contact_id == contact.id, ContactTag.tag_id == tag_id
+                    )
                 )
-            )
+                await _tagged(session, contact, tag_id, added=False)
             return {}
         case SetField(key=key, value=raw):
             definition = await session.scalar(
@@ -454,6 +458,32 @@ async def _act(
             )
             return {}
     return {}
+
+
+async def _tagged(
+    session: AsyncSession, contact: Contact, tag_id: uuid.UUID, *, added: bool
+) -> None:
+    name = await session.scalar(select(Tag.name).where(Tag.id == tag_id))
+    await webhook_events.contacts_tagged(
+        session, [webhook_events.TagChange(contact, tag_id, name or "", added)]
+    )
+
+
+async def _completed(session: AsyncSession, run: AutomationRun, before: str | None) -> None:
+    """automation.run.completed (GR-04) when this call ended the run."""
+    if before == FlowState.DONE or run.flow_state != FlowState.DONE:
+        return
+    automation = await runs.get_automation(session, run.automation_id)
+    contact = await inbox.get_contact(session, run.contact_id) if run.contact_id else None
+    await webhook_events.run_completed(
+        session,
+        run_id=run.id,
+        result=run.result,
+        trigger="comment" if run.trigger_comment_id else "dm",
+        automation_id=run.automation_id,
+        automation_name=automation.name if automation else "",
+        contact=contact,
+    )
 
 
 def _who(contact: Contact) -> str:
@@ -580,6 +610,7 @@ async def start_dm(
         else:
             run.error_code, run.error_message = actions.NO_MESSAGE
     await _after_stop(stop, run, now=now)
+    await _completed(session, run, FlowState.NEXT)
 
 
 # ---------------------------------------------------------------- after a message
@@ -587,6 +618,13 @@ async def start_dm(
 
 async def after_message(session: AsyncSession, run: AutomationRun, msg: Message) -> None:
     """A flow run's message was sent or failed (the run is locked)."""
+    before = run.flow_state
+    await _after_message(session, run, msg)
+    if is_flow_run(run):
+        await _completed(session, run, before)
+
+
+async def _after_message(session: AsyncSession, run: AutomationRun, msg: Message) -> None:
     if not is_flow_run(run) or run.flow_state != FlowState.SENDING or run.step_id is None:
         return
     row = await _step_row(session, run.id, run.step_id)
@@ -680,6 +718,7 @@ async def resume(
                 await session.commit()  # the steps before the branch are done
             else:
                 await _after_stop(stop, run, now=now)
+                await _completed(session, run, FlowState.NEXT)
                 await session.flush()
                 await events.commit_and_publish(session, redis)
                 return "done" if stop == "done" else "advanced"
@@ -785,6 +824,7 @@ async def answer(
             run.flow_state = FlowState.NEXT if target else FlowState.DONE
             if target:
                 await enqueue_run("flow", run.id, run.workspace_id)
+            await _completed(session, run, FlowState.REPLYING)
         await session.flush()
         await events.commit_and_publish(session, redis)
         log.info("flow_answered", run_id=str(run.id), step_id=step.id, moved=moved)
@@ -838,6 +878,16 @@ async def _take(
         return step.on_skip, True
     _save_answer(scene.contact, step, value)
     await _log(session, run, step, StepStatus.DONE, tries=tries, answer=value)
+    await webhook_events.lead_captured(
+        session,
+        scene.contact,
+        kind="field" if step.field_key else step.expect,
+        value=value,
+        field_key=step.field_key,
+        automation_id=scene.automation.id,
+        automation_name=scene.automation.name,
+        run_id=run.id,
+    )
     return step.next, True
 
 

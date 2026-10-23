@@ -38,6 +38,9 @@ export const keys = {
   overview: (wid: string, range: string) => ["w", wid, "overview", range] as const,
   accounts: (wid: string) => ["w", wid, "social-accounts"] as const,
   notifications: (wid: string) => ["w", wid, "notifications"] as const,
+  webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
+  webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
+  webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
   // inbox (P3)
   conversationLists: (wid: string) => ["w", wid, "conversations"] as const,
   conversations: (wid: string, filters: ConversationFilters) => ["w", wid, "conversations", filters] as const,

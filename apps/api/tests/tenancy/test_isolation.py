@@ -73,6 +73,8 @@ PARAM_TO_SEED: dict[str, str] = {
     "contact_id": "contact_id",  # GR-02
     "tag_id": "tag_id",
     "field_id": "field_id",
+    "endpoint_id": "endpoint_id",  # GR-04
+    "delivery_id": "delivery_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -129,6 +131,11 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
     ("PATCH", "/v1/w/{wid}/contact-fields/{field_id}"): {"label": "Renamed"},
+    ("POST", "/v1/w/{wid}/webhook-endpoints"): {
+        "url": "https://hooks.example.com/not-yours",
+        "events": ["lead.captured"],
+    },
+    ("PATCH", "/v1/w/{wid}/webhook-endpoints/{endpoint_id}"): {"description": "Taken over"},
 }
 
 EXAMPLE_BODIES.update(
@@ -280,6 +287,8 @@ B_TABLES = (
     "automation_runs",
     "automation_flows",
     "automation_run_steps",
+    "webhook_endpoints",
+    "webhook_deliveries",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -331,6 +340,8 @@ class Seed:
     contact_id: str = ""
     tag_id: str = ""
     field_id: str = ""
+    endpoint_id: str = ""
+    delivery_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -438,6 +449,16 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             headers=clerk.headers(owner_b),
         )
         assert done.status_code == 200, done.text
+    hook = await client.post(  # GR-04: an endpoint and a delivery to it
+        f"/v1/w/{wid}/webhook-endpoints",
+        json={"url": "https://hooks.example.com/b", "events": ["lead.captured"]},
+        headers=clerk.headers(owner_b),
+    )
+    assert hook.status_code == 201, hook.text
+    sent = await client.post(
+        f"/v1/w/{wid}/webhook-endpoints/{hook.json()['id']}/test", headers=clerk.headers(owner_b)
+    )
+    assert sent.status_code == 202, sent.text
     scheduled = await make_scheduled(
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )
@@ -529,6 +550,8 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         contact_id=str(thread.contact_id),
         tag_id=tag.json()["id"],
         field_id=field.json()["id"],
+        endpoint_id=hook.json()["id"],
+        delivery_id=sent.json()["id"],
     )
 
 

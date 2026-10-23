@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from socialhood.ai.fake import FakeProvider
 from socialhood.errors import ApiError
@@ -128,6 +128,35 @@ async def test_get_automation_reads_a_saved_flow(shop: Shop) -> None:
         "q: ask for email: “Your email?”",
     ]
     assert got.caveats == ["It runs a saved flow: flow_steps lists its steps."]
+
+
+async def test_list_webhook_endpoints_says_which_are_off(shop: Shop) -> None:
+    """GR-04: the endpoints with their state; never the signing secret."""
+    from socialhood.db.tenancy import workspace_scope
+    from socialhood.schemas.integrations import WebhookEndpointCreate
+    from socialhood.services.webhooks import endpoints
+
+    with workspace_scope(shop.wid):
+        async with AsyncSession(shop.engine, expire_on_commit=False) as session:
+            made, _ = await endpoints.create(
+                session,
+                WebhookEndpointCreate(
+                    url="https://hooks.example.com/in",
+                    description="Zapier",
+                    events=["lead.captured"],
+                ),
+                cipher=shop.deps.cipher,
+                user_id=shop.owner_id,
+                allow_private=False,
+            )
+            made.status = "disabled"
+            await session.commit()
+    listed = await shop.call("list_webhook_endpoints", {})
+    assert listed.summary == "1 webhook endpoint, 1 turned off"
+    [line] = listed.endpoints
+    assert (line.name, line.status, line.events) == ("Zapier", "disabled", ["lead.captured"])
+    assert listed.caveats == ["“Zapier” was turned off after repeated failures."]
+    assert "secret" not in line.model_dump_json()
 
 
 async def test_test_automation_sends_nothing(shop: Shop) -> None:
@@ -305,6 +334,7 @@ ADMIN_TOOLS: dict[str, dict[str, Any]] = {
     "search_knowledge": {"q": "shipping"},
     "answer_from_knowledge": {"question": "How much is shipping?"},
     "list_knowledge_gaps": {},
+    "list_webhook_endpoints": {},
 }
 
 

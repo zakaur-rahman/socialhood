@@ -1677,3 +1677,49 @@ steps; the trigger, keywords, posts, public replies and run settings stay on the
   - `automations.flow_version`;
   - on `automation_runs`: `flow_version`, `step_id`, `flow_state` and `wait_until`.
   - Expand-only; nothing is rewritten.
+
+## C-080 · Outbound events and webhooks (GR-04, feature/gr-04-outbound-webhooks)
+An addition from the growth plan: one event pipeline for Zapier, Make, Sheets and CRMs to sit on.
+- **The events** (`services/webhooks/events.py`, each with a version):
+  - `contact.created`: a new person wrote, commented or opened an entry link;
+  - `contact.updated`: email, phone or custom fields changed;
+  - `contact.tagged`: a tag added or removed, only when it really changed;
+  - `lead.captured`: a flow's question saved an email, phone or field (GR-03; GR-14 extends it);
+  - `message.received`;
+  - `automation.run.completed`: a flow run finished, or a run on its settings had its message
+    sent or failed; once per run.
+  - `conversation.assigned` (GR-20) and `broadcast.finished` (GR-23) are in the catalogue so
+    endpoints can subscribe now, and are emitted once those exist.
+  - Backfilled history emits nothing.
+- **The envelope:** `{id, type, version, created_at, workspace_id, data}`.
+  - A contact is its id, platform, @username and name.
+  - An email or phone appears only in `lead.captured` and in `contact.updated` when it changed.
+  - No access tokens.
+- **Delivery** (`services/webhooks/delivery.py`, job `deliver_webhook`):
+  - Signed per Standard Webhooks: `webhook-id` is the event id, the same on every attempt and
+    replay, so it's the receiver's idempotency key; plus `webhook-timestamp` and
+    `webhook-signature`.
+  - Posted under the SSRF rules (the checked address, no redirects, 10 seconds).
+  - A 2xx delivers it. Anything else is retried after 1 minute, 5 minutes, 30 minutes, 2 hours,
+    6 hours and 12 hours: 7 attempts in about 21 hours.
+  - The log keeps each delivery's last attempt: status code, duration and reason.
+  - After 5 deliveries in a row run out of attempts, the endpoint is disabled and owners and
+    admins get an in-app notification, `webhook_disabled`.
+  - Finished deliveries are kept 30 days.
+- **Endpoints** (`/webhook-endpoints`, owners and admins):
+  - https only, checked against private addresses;
+  - the signing secret (`whsec_…`) is shown once, on create and rotate, and stored encrypted
+    like platform tokens (added to the key rotation);
+  - pause, turn back on (which resets the failure count), test event, replay, delete.
+  - The new `webhook_endpoints` plan limit (Free 1, Pro 5, Max 20) is proposed pending the
+    owner's plan decisions.
+  - `signing_secret` is allowed in responses by the schema security test for that reason.
+- **`WEBHOOKS_ALLOW_PRIVATE`** lets development and e2e post to a local receiver. Production
+  refuses it.
+- **Web:** Settings › Integrations (owners and admins).
+  - Add an endpoint with its events.
+  - See the secret once, with a copy button.
+  - Turn it on or off, send a test event, get a new secret, delete it.
+  - Each endpoint's latest deliveries, with status, attempts, response and when, and "Send again"
+    for a failed one. The log refreshes while a delivery is being tried.
+- **Migration 0021:** `webhook_endpoints` and `webhook_deliveries`. Expand-only.

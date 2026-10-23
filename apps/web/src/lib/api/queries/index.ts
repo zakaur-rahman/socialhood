@@ -15,3 +15,4 @@ export * from "./posts";
 export * from "./analytics";
 export * from "./calendar";
 export * from "./agent";
+export * from "./integrations";
