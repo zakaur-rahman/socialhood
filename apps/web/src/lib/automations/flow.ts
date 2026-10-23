@@ -51,6 +51,12 @@ export type SendNode = {
   buttons: FlowButton[];
   replies: Reply[];
   typed: TypedAnswer;
+  /**
+   * GR-21: send a saved reply instead of writing the message. ``saved`` is the choice, so it holds
+   * before a reply is picked; the reply goes alone (no text, image, buttons or quick replies).
+   */
+  saved?: boolean;
+  saved_reply_id?: string | null;
 };
 export type AskNode = {
   kind: "ask";
@@ -345,6 +351,10 @@ export function compile(tree: EditorStep[]): Compiled {
             if (node.typed.mode === "own") on_text = first(node.typed.steps);
             else if (node.typed.mode === "same") on_text = quick_replies[node.typed.index]?.next ?? null;
           }
+          if (node.saved) {
+            steps.push({ type: "send", id: node.id, text: "", saved_reply_id: node.saved_reply_id ?? null, next });
+            break;
+          }
           steps.push({
             type: "send",
             id: node.id,
@@ -536,6 +546,7 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
             text: step.text,
             image_asset_id: step.image_asset_id ?? null,
             buttons: step.buttons ?? [],
+            ...(step.saved_reply_id ? { saved: true, saved_reply_id: step.saved_reply_id } : {}),
           };
           if (replies.length === 0) {
             list.push({ ...base, replies: [], typed: { mode: "none" } });
@@ -683,7 +694,7 @@ export function describeDelay(seconds: number): string {
 export function stepTitle(node: EditorStep, tagName?: (id: string) => string | undefined): string {
   switch (node.kind) {
     case "send":
-      return "Message";
+      return node.saved ? "Saved reply" : "Message";
     case "ask":
       return node.expect === "email" ? "Ask for an email" : node.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":
@@ -709,6 +720,10 @@ export type FlowContext = {
   /** Custom contact fields by key, with their type. */
   fields: { key: string; type: string }[];
   tagIds: ReadonlySet<string>;
+  /** GR-21: the ids of the workspace's saved replies (undefined: not loaded, so not checked). */
+  savedReplyIds?: ReadonlySet<string>;
+  /** The id of a comment flow's first step, which can't be a saved reply (undefined: not a comment flow). */
+  commentFirstId?: string | null;
 };
 
 /** Which field types hold which kind of answer (the same table as the API's). */
@@ -745,6 +760,16 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
   };
   switch (node.kind) {
     case "send": {
+      if (node.saved) {
+        // A saved reply goes alone, so only the choice is checked here (the API checks its length).
+        if (!node.saved_reply_id) out.saved_reply_id = "Choose a saved reply.";
+        else if (ctx.savedReplyIds && !ctx.savedReplyIds.has(node.saved_reply_id)) {
+          out.saved_reply_id = "That saved reply was deleted. Choose another.";
+        } else if (ctx.commentFirstId === node.id) {
+          out.saved_reply_id = "A reply to a comment can't be a saved reply. Write it, or use a saved reply in a later step.";
+        }
+        return out;
+      }
       if (!node.text.trim() && !node.image_asset_id) out.text = "Write the message to send.";
       else if (node.text.trim()) textProblems(node.text, node.buttons.length > 0, "message to send");
       node.buttons.forEach((button, index) => {
@@ -884,6 +909,8 @@ export function walk(
     values: FieldValues;
     disclosure: string | null;
     tagName?: (id: string) => string | undefined;
+    /** GR-21: a saved reply's title, shown in place of its text. */
+    savedReplyTitle?: (id: string) => string | undefined;
   },
 ): PathStep[] {
   const byId = new Map(definition.steps.map((step) => [step.id, step]));
@@ -899,10 +926,13 @@ export function walk(
     const forks = targets.length > 1;
     const picked = forks ? Math.min(remaining.shift() ?? 0, targets.length - 1) : null;
     const following: string | null = forks ? targets[picked as number] : (targets[0] ?? null);
+    const savedTitle = step.type === "send" && step.saved_reply_id ? options.savedReplyTitle?.(step.saved_reply_id) : undefined;
     const text =
-      (step.type === "send" || step.type === "ask") && step.text.trim()
-        ? withDisclosure(renderFields(step.text, options.values), options.disclosure)
-        : null;
+      step.type === "send" && step.saved_reply_id
+        ? `Saved reply: ${savedTitle ?? "(not found)"}`
+        : (step.type === "send" || step.type === "ask") && step.text.trim()
+          ? withDisclosure(renderFields(step.text, options.values), options.disclosure)
+          : null;
     out.push({
       step_id: step.id,
       kind: step.type,
@@ -921,7 +951,7 @@ export function walk(
 function wireTitle(step: FlowStep, tagName?: (id: string) => string | undefined): string {
   switch (step.type) {
     case "send":
-      return "Message";
+      return step.saved_reply_id ? "Saved reply" : "Message";
     case "ask":
       return step.expect === "email" ? "Ask for an email" : step.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":

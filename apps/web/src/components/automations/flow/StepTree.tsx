@@ -201,7 +201,7 @@ const STATE_BADGE = {
 
 /** The fields the card shows itself; a problem on any other field is listed at the top of the card. */
 const SHOWN: Record<EditorStep["kind"], RegExp> = {
-  send: /^(text|image_asset_id|buttons\..*|quick_replies(\..*)?)$/,
+  send: /^(text|saved_reply_id|image_asset_id|buttons\..*|quick_replies(\..*)?)$/,
   ask: /^(text|field_key|retry_text|consent_text|confirm_text)$/,
   branch: /^rules\.\d+\.when$/,
   action: /^action(\.value)?$/,
@@ -344,6 +344,7 @@ function FlowStepCard({
 }
 
 function summary(node: EditorStep): string {
+  if (node.kind === "send" && node.saved) return "A saved reply";
   if (node.kind === "send" || node.kind === "ask") return node.text.trim() || "Nothing written yet";
   if (node.kind === "ai") return node.instructions.trim() || "No instructions yet";
   if (node.kind === "branch") return node.rules.map((rule) => describeCondition(rule.when)).join(", ");
@@ -416,6 +417,11 @@ function Arms({ node, follower }: { node: EditorStep; follower: boolean }) {
 }
 
 function SendArms({ node, follower }: { node: SendNode; follower: boolean }) {
+  if (node.saved) return null; // a saved reply goes alone: no quick replies
+  return <SendReplies node={node} follower={follower} />;
+}
+
+function SendReplies({ node, follower }: { node: SendNode; follower: boolean }) {
   const env = useFlowEnv();
   const problems = env.problemsOf(node.id);
   const set = (change: (current: SendNode) => SendNode) =>

@@ -4,7 +4,7 @@ import { Sparkles } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { AutomationDefinition, FlowDefinition, FlowTag } from "@/lib/api/types";
+import type { AutomationDefinition, FlowDefinition, FlowTag, SavedReply } from "@/lib/api/types";
 import { walk } from "@/lib/automations/flow";
 import {
   DEFAULT_OPENING_BUTTON,
@@ -41,6 +41,7 @@ export function PreviewPane({
   mediaUrl,
   flow = null,
   tags = [],
+  savedReplies = [],
 }: {
   draft: AutomationDefinition;
   accountUsername: string | null;
@@ -49,6 +50,7 @@ export function PreviewPane({
   /** GR-13: the flow being edited. The DM part then walks it one branch at a time. */
   flow?: FlowDefinition | null;
   tags?: FlowTag[];
+  savedReplies?: SavedReply[];
 }) {
   const [sample, setSample] = useState<Sample>("known");
   // The way chosen at each fork of the walk, in order (0: the first way).
@@ -57,9 +59,15 @@ export function PreviewPane({
   const path = useMemo(
     () =>
       flow
-        ? walk(flow, { choices, values, disclosure, tagName: (id) => tags.find((tag) => tag.id === id)?.name })
+        ? walk(flow, {
+            choices,
+            values,
+            disclosure,
+            tagName: (id) => tags.find((tag) => tag.id === id)?.name,
+            savedReplyTitle: (id) => savedReplies.find((reply) => reply.id === id)?.title,
+          })
         : [],
-    [flow, choices, values, disclosure, tags],
+    [flow, choices, values, disclosure, tags, savedReplies],
   );
   const withImage = useMemo(
     () => new Set((flow?.steps ?? []).flatMap((step) => (step.type === "send" && step.image_asset_id ? [step.id] : []))),

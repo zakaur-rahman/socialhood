@@ -16,6 +16,7 @@ import {
   placeErrors,
   removeStep,
   stepProblems,
+  stepTitle,
   updateList,
   updateStep,
   walk,
@@ -531,5 +532,57 @@ describe("an Ask step's capture options (GR-14)", () => {
   it("drops the consent question text when consent is off", () => {
     const { definition } = compile([node({ consent: false })]);
     expect(definition.steps[0]).toMatchObject({ consent: false, consent_text: "" });
+  });
+});
+
+describe("a Send step that sends a saved reply (GR-21)", () => {
+  const reply = "7c1f0c1e-7d6a-4a7e-9f2b-3f6d2d1f9a10";
+  const savedSend = (extra: Partial<SendNode> = {}) => send("s", "", { saved: true, saved_reply_id: reply, ...extra });
+
+  it("compiles to a send with the reply and nothing else", () => {
+    const { definition } = compile([savedSend({ text: "ignored", buttons: [{ title: "Open", url: "https://example.com" }] }), send("after")]);
+    expect(definition.steps[0]).toEqual({ type: "send", id: "s", text: "", saved_reply_id: reply, next: "after" });
+  });
+
+  it("keeps a chosen source with no reply picked yet as an empty saved reply", () => {
+    const { definition } = compile([savedSend({ saved_reply_id: null })]);
+    expect(definition.steps[0]).toMatchObject({ type: "send", saved_reply_id: null, next: null });
+  });
+
+  it("reads the reply back, and the tree compiles to the same graph", () => {
+    const { definition } = compile([savedSend(), send("after")]);
+    const tree = decompile(definition) as EditorStep[];
+    expect(tree[0]).toMatchObject({ kind: "send", saved: true, saved_reply_id: reply });
+    expect(compile(tree).definition).toEqual(definition);
+    // A written message has no saved reply to read.
+    expect((decompile(compile([send("w", "Hello")]).definition) as EditorStep[])[0]).not.toHaveProperty("saved");
+  });
+
+  it("needs a reply that exists, and not on a comment flow's first step", () => {
+    expect(stepProblems(savedSend({ saved_reply_id: null }), CTX)).toEqual({ saved_reply_id: "Choose a saved reply." });
+    expect(stepProblems(savedSend(), CTX)).toEqual({});
+    const known = { ...CTX, savedReplyIds: new Set([reply]) };
+    expect(stepProblems(savedSend(), known)).toEqual({});
+    expect(stepProblems(savedSend({ saved_reply_id: "gone" }), known)).toEqual({
+      saved_reply_id: "That saved reply was deleted. Choose another.",
+    });
+    expect(stepProblems(savedSend(), { ...known, commentFirstId: "s" }).saved_reply_id).toMatch(/can't be a saved reply/);
+    // Later steps of a comment flow are fine, and so is the first step of a DM flow.
+    expect(stepProblems(savedSend(), { ...known, commentFirstId: "other" })).toEqual({});
+    // A saved reply is not checked for text.
+    expect(stepProblems(savedSend({ text: "" }), known)).not.toHaveProperty("text");
+  });
+
+  it("shows the reply's title in the walk", () => {
+    const { definition } = compile([savedSend()]);
+    const values = { first_name: "Priya", username: "priya" };
+    const path = walk(definition, { values, disclosure: null, savedReplyTitle: (id) => (id === reply ? "Shipping times" : undefined) });
+    expect(path[0]).toMatchObject({ title: "Saved reply", text: "Saved reply: Shipping times" });
+    expect(walk(definition, { values, disclosure: null })[0].text).toBe("Saved reply: (not found)");
+  });
+
+  it("is titled Saved reply in the editor", () => {
+    expect(stepTitle(savedSend())).toBe("Saved reply");
+    expect(stepTitle(send("w"))).toBe("Message");
   });
 });
