@@ -43,9 +43,7 @@ def _trigger_condition(values: Sequence[str]) -> str:
 
 def upgrade() -> None:
     op.drop_constraint(op.f(TRIGGER_CHECK), "automations", type_="check")
-    op.create_check_constraint(
-        op.f(TRIGGER_CHECK), "automations", _trigger_condition(NEW_TRIGGERS)
-    )
+    op.create_check_constraint(op.f(TRIGGER_CHECK), "automations", _trigger_condition(NEW_TRIGGERS))
     op.add_column(
         "automations",
         sa.Column(
@@ -104,7 +102,9 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_entry_links")),
-        sa.UniqueConstraint("social_account_id", "code", name=op.f("uq_entry_links_social_account_id_code")),
+        sa.UniqueConstraint(
+            "social_account_id", "code", name=op.f("uq_entry_links_social_account_id_code")
+        ),
     )
     op.create_index(op.f("ix_entry_links_workspace_id"), "entry_links", ["workspace_id"])
     op.create_index(
@@ -131,6 +131,4 @@ def downgrade() -> None:
         " WHERE trigger IN ('entry_link', 'ad_click')"
     )
     op.drop_constraint(op.f(TRIGGER_CHECK), "automations", type_="check")
-    op.create_check_constraint(
-        op.f(TRIGGER_CHECK), "automations", _trigger_condition(OLD_TRIGGERS)
-    )
+    op.create_check_constraint(op.f(TRIGGER_CHECK), "automations", _trigger_condition(OLD_TRIGGERS))
