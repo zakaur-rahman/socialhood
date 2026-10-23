@@ -202,8 +202,11 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
     )
     await execute(
         engine,
-        "INSERT INTO automation_runs (workspace_id, automation_id, trigger_comment_id,"
-        " matched_keyword, result) VALUES (:w, :a, :c, 'link', 'queued')",
+        "WITH r AS (INSERT INTO automation_runs (workspace_id, automation_id, trigger_comment_id,"
+        " matched_keyword, result) VALUES (:w, :a, :c, 'link', 'queued') RETURNING id)"
+        # GR-03: a flow run's step log
+        " INSERT INTO automation_run_steps (workspace_id, run_id, step_id, kind, status)"
+        " SELECT :w, id, 'hello', 'send', 'sent' FROM r",
         w=wid,
         a=automation,
         c=comment,

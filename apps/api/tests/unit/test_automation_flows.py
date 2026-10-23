@@ -191,9 +191,7 @@ def test_a_private_reply_takes_no_image_and_no_delay() -> None:
         "flow.steps.0": flows.COPY["image_in_private_reply"]
     }
     delayed = flow({"type": "delay", "id": "d", "seconds": 60, "next": "a"}, send("a"))
-    assert errors(delayed, ctx("comment_keyword")) == {
-        "flow.steps.0": flows.COPY["delay_before_private_reply"]
-    }
+    assert errors(delayed, ctx("comment_keyword")) == {"flow.start": flows.COPY["comment_start"]}
     assert errors(delayed, ctx("dm_keyword")) == {}
 
 
@@ -205,7 +203,8 @@ def test_following_is_known_once_they_have_written() -> None:
     }
     early = flow(check, send("n"))
     assert errors(early, ctx("comment_keyword")) == {
-        "flow.steps.0": flows.COPY["follows_too_early"]
+        "flow.start": flows.COPY["comment_start"],
+        "flow.steps.0": flows.COPY["follows_too_early"],
     }
     assert errors(early, ctx("dm_keyword")) == {}
 
@@ -222,8 +221,9 @@ def test_an_ai_reply_comes_first() -> None:
         },
         {"type": "ai_reply", "id": "ai", "instructions": ""},
     )
-    assert errors(tagged_first, ctx("comment_any")) == {
-        "flow.steps.1.instructions": flows.COPY["ai_instructions"]
+    assert errors(tagged_first, ctx("dm_keyword")) == {
+        "flow.steps.1.instructions": flows.COPY["ai_instructions"],
+        "flow.steps.1": flows.COPY["ai_not_first"],
     }
 
 
@@ -359,3 +359,20 @@ def test_step_types_parse_from_json() -> None:
     assert isinstance(parsed.steps[0], AskStep)
     assert isinstance(parsed.steps[1], ActionStep)
     assert flows.try_parse({"start": "x", "steps": [{"type": "nope", "id": "x"}]}) is None
+
+
+def test_a_flow_described_step_by_step() -> None:
+    described = flows.describe(
+        flow(
+            send("hello", "Hi!", quick_replies=[{"title": "Yes", "next": "q"}]),
+            {"type": "ask", "id": "q", "text": "City?", "field_key": "city", "next": "wait"},
+            {"type": "delay", "id": "wait", "seconds": 600, "next": "t"},
+            {"type": "action", "id": "t", "action": {"kind": "hand_off"}},
+        )
+    )
+    assert described == [
+        "hello: send “Hi!” with quick replies Yes",
+        "q: ask for text: “City?”, saved to city",
+        "wait: wait 10 minutes",
+        "t: hand off",
+    ]

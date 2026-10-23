@@ -54,7 +54,15 @@ from socialhood.schemas.automations import (
     StatusName,
     TriggerName,
 )
-from socialhood.services.automations import definitions, dry_run, queries, stats, templates
+from socialhood.services.automations import (
+    definitions,
+    dry_run,
+    flow_store,
+    flows,
+    queries,
+    stats,
+    templates,
+)
 from socialhood.services.automations.validation import COMMENT_TRIGGERS
 
 TRIGGER_WORDS = {
@@ -224,6 +232,8 @@ class AutomationResult(ToolResult):
     queued: int
     missing_for_activation: list[str]
     overlaps: list[Overlap]
+    # GR-03: an automation saved as a flow runs these steps; the message fields above don't apply.
+    flow_steps: list[str] = Field(default_factory=list)
 
 
 @tool(
@@ -249,6 +259,12 @@ async def get_automation(ctx: ToolContext, args: GetAutomationInput) -> Automati
             "Before it can be activated it needs: " + ", ".join(a.missing_for_activation) + "."
         )
     what = f"{TRIGGER_WORDS.get(a.trigger or '', 'no trigger yet')}"
+    steps: list[str] = []
+    if a.flow_source == "flow":
+        stored = await definitions.get_or_404(ctx.session, a.id)
+        definition, _, _ = await flow_store.current(ctx.session, stored)
+        steps = flows.describe(definition)
+        caveats.append("It runs a saved flow: flow_steps lists its steps.")
     return AutomationResult(
         summary=clip(
             f"“{a.name}” is {a.display_status}: on {what}, {a.stats.runs_7d} runs in 7 days", 300
@@ -283,6 +299,7 @@ async def get_automation(ctx: ToolContext, args: GetAutomationInput) -> Automati
             Overlap(keyword=o.keyword, other=o.automation_name, this_runs_first=o.this_runs_first)
             for o in a.overlaps
         ],
+        flow_steps=steps,
         refs=[ref("automation", a.id, a.name)],
         caveats=caveats,
     )

@@ -414,6 +414,7 @@ export function automation(overrides: Partial<Automation> = {}): Automation {
     stats: { runs_7d: 0, daily_7d: [0, 0, 0, 0, 0, 0, 0], last_run_at: null },
     queue: { waiting: 0, eta_minutes: null, order: "oldest_first" },
     missing_for_activation: [],
+    flow_source: "legacy",
     overlaps: [],
     ...overrides,
   };

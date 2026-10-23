@@ -278,6 +278,8 @@ B_TABLES = (
     "automation_keywords",
     "automation_posts",
     "automation_runs",
+    "automation_flows",
+    "automation_run_steps",
     "comments",
     "message_analyses",
     "reply_suggestions",

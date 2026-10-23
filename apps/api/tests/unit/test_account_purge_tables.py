@@ -23,6 +23,7 @@ EXPECTED = {
     "automation_flows",
     "automation_keywords",
     "automation_posts",
+    "automation_run_steps",
     "automation_runs",
     "automations",
     "comment_analyses",

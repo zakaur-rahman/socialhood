@@ -17,11 +17,11 @@ Structure, checked on every save (a broken graph is never stored):
 - an AI reply has its instructions.
 
 And what Instagram allows along every path from the start (``_path_errors``):
-- a comment's first message is a private reply: text and buttons only, no image, no delay before
-  it. Until the person answers (a quick reply, or a question), nothing more can be sent;
+- a comment's flow starts with its first message, a private reply: text and buttons only, no
+  image. Until the person answers (a quick reply, or a question), nothing more can be sent;
 - whether someone follows the account can be read only once they've written (a DM trigger, or an
   answer);
-- an AI reply is the first message on its path, and ends the flow.
+- an AI reply is the first step, and ends the flow.
 
 ``compile_legacy`` turns an automation's message settings (the current editor) into the
 equivalent flow: the message as a ``send``; tap first as an opening ``send`` whose quick reply (or
@@ -82,12 +82,12 @@ COPY = {
         "Instagram allows one reply to a comment until the person answers. Add quick replies or "
         "a question before this step."
     ),
-    "delay_before_private_reply": "A comment's first reply can't wait. Remove this delay.",
+    "comment_start": "A comment's flow starts with its first message, its reply to the comment.",
     "follows_too_early": (
         "Whether someone follows you can be checked once they've written to you. Move this "
         "after a quick reply or a question."
     ),
-    "ai_not_first": "An AI reply has to be the first message.",
+    "ai_not_first": "An AI reply has to be the first step.",
     "ai_instructions": validation.COPY["ai_instructions_missing"],
     "answer_field": "Choose the field to save the answer to.",
     "field_missing": "That field doesn't exist any more. Choose another.",
@@ -254,6 +254,9 @@ def activation_errors(definition: FlowDefinition, ctx: Context) -> list[FieldErr
             errors.append(FieldError(path(i), COPY["unreachable"]))
             continue
         errors += _step_errors(i, step, ctx)
+    start = g.by_id[definition.start]
+    if ctx.comment and not isinstance(start, SendStep | AskStep | AiReplyStep):
+        errors.append(FieldError("flow.start", COPY["comment_start"]))
     found = _path_errors(g, ctx)
     errors += [
         FieldError(path(g.index[s]), found[s]) for s in sorted(found, key=lambda s: g.index[s])
@@ -386,14 +389,14 @@ def _path_errors(g: Graph, ctx: Context) -> dict[str, str]:
             continue
         seen.add((step_id, window))
         step = g.by_id[step_id]
-        problem, after = _allowed(step, window, ctx)
+        problem, after = _allowed(step, window, ctx, g.definition.start)
         if problem is not None:
             errors.setdefault(step_id, COPY[problem])
         stack.extend((t, after) for t in successors(step) if t is not None)
     return errors
 
 
-def _allowed(step: Step, window: Window, ctx: Context) -> tuple[str | None, Window]:
+def _allowed(step: Step, window: Window, ctx: Context, start: str) -> tuple[str | None, Window]:
     """(the problem with ``step`` here or None, the window after it)."""
     match step:
         case SendStep() | AskStep():
@@ -403,10 +406,8 @@ def _allowed(step: Step, window: Window, ctx: Context) -> tuple[str | None, Wind
             if private and isinstance(step, SendStep) and step.image_asset_id is not None:
                 return "image_in_private_reply", "open" if waits(step) else "closed"
             return None, "open" if waits(step) or not private else "closed"
-        case AiReplyStep():
-            return (None if window == "entry" else "ai_not_first"), window
-        case DelayStep() if ctx.comment and window == "entry":
-            return "delay_before_private_reply", window
+        case AiReplyStep() if step.id != start:
+            return "ai_not_first", window
         case BranchStep() if ctx.comment and window != "open":
             follows = any(isinstance(r.when, FollowsCondition) for r in step.rules)
             return ("follows_too_early" if follows else None), window
@@ -494,3 +495,46 @@ def walk(g: Graph, choose: Sequence[int] = ()) -> Iterator[Step]:
             return
         pick = choices.pop(0) if len(targets) > 1 and choices else 0
         step_id = targets[min(pick, len(targets) - 1)]
+
+
+def _excerpt(text: str, limit: int = 80) -> str:
+    flat = " ".join(text.split())
+    return flat if len(flat) <= limit else flat[: limit - 1].rstrip() + "…"
+
+
+def describe(definition: FlowDefinition) -> list[str]:
+    """One line per step a run can reach, in the order a walk meets them (Ask Social Hood reads
+    a flow this way)."""
+    try:
+        g = graph(definition)
+    except FlowError:
+        return []
+    lines = []
+    for step_id in reachable(g):
+        step = g.by_id[step_id]
+        match step:
+            case SendStep():
+                line = f"send “{_excerpt(step.text)}”"
+                if step.quick_replies:
+                    line += " with quick replies " + ", ".join(q.title for q in step.quick_replies)
+                if step.buttons:
+                    line += " with buttons " + ", ".join(b.title for b in step.buttons)
+            case AskStep():
+                line = f"ask for {step.expect}: “{_excerpt(step.text)}”"
+                if step.field_key:
+                    line += f", saved to {step.field_key}"
+            case BranchStep():
+                kinds = ", ".join(rule.when.kind for rule in step.rules)
+                line = f"branch on {kinds or 'nothing'}"
+            case ActionStep():
+                line = step.action.kind.replace("_", " ")
+            case DelayStep():
+                line = f"wait {step.seconds // 60} minutes"
+            case RandomizeStep():
+                line = f"split {len(step.paths)} ways"
+            case AiReplyStep():
+                line = "AI reply"
+            case _:
+                line = "end"
+        lines.append(f"{step.id}: {line}")
+    return lines

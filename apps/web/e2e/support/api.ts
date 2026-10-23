@@ -81,6 +81,7 @@ export class Api {
       adId?: string;
       adTitle?: string;
       postbackPayload?: string;
+      quickReplyPayload?: string;
     },
   ): Promise<{ stored: number }> {
     return this.call("POST", `/v1/w/${wid}/dev/sandbox/inbound`, {
@@ -94,7 +95,26 @@ export class Api {
       ad_id: event.adId,
       ad_title: event.adTitle,
       postback_payload: event.postbackPayload,
+      quick_reply_payload: event.quickReplyPayload,
     });
+  }
+
+  /** GR-03: an active DM keyword automation saved as ``flow`` (PUT …/flow). */
+  async flowAutomation(wid: string, accountId: string, keyword: string, flow: unknown): Promise<{ id: string }> {
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name: `Flow for ${keyword}`,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name: `Flow for ${keyword}`,
+      social_account_id: accountId,
+      trigger: "dm_keyword",
+      keywords: [keyword],
+      match_mode: "word",
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}/flow`, flow);
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
   }
 
   /** A draft automation made active through the API (setup for the plan limit in F-15). */

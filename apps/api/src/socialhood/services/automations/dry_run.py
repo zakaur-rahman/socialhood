@@ -9,6 +9,9 @@ with the follow nudge, the nudge a non-follower would get after the message (non
 automation without tap first, which never hears back from the person). Messages, the opening and
 the nudge carry the disclosure line.
 
+An automation saved as a flow (GR-03) shows its first message as the message, with the public
+reply; what follows depends on the person's answers.
+
 The automation under test is treated as live, so a draft can be tried before it is activated; the
 other candidates are the account's active automations inside their run window, as the runtime
 loads them. Cooldowns are not applied (there is no contact).
@@ -28,6 +31,7 @@ from socialhood.models.media import MediaItem
 from socialhood.repositories import automations as repo
 from socialhood.repositories.automations import PostRow
 from socialhood.schemas.automations import AutomationTest, AutomationTestResult, WinningAutomation
+from socialhood.schemas.flows import AskStep, SendStep
 from socialhood.services.automations import actions, matching, render, windows
 from socialhood.services.automations.queries import candidate
 from socialhood.services.automations.validation import COMMENT_TRIGGERS
@@ -77,6 +81,25 @@ def _rendered(automation: Automation, body: AutomationTest, disclosure: str | No
     return _Rendered(message, public, opening, nudge)
 
 
+async def _rendered_for(
+    session: AsyncSession, automation: Automation, body: AutomationTest, disclosure: str | None
+) -> _Rendered:
+    if automation.flow_version is None:
+        return _rendered(automation, body, disclosure)
+    from socialhood.services.automations import flow_store
+
+    definition, _, _ = await flow_store.current(session, automation)
+    first_name, username = _sample(body)
+    start = next(s for s in definition.steps if s.id == definition.start)
+    message = None
+    if isinstance(start, SendStep | AskStep) and start.text.strip():
+        message = render.with_disclosure(
+            render.render(start.text, first_name=first_name, username=username), disclosure
+        )
+    public = _rendered(automation, body, disclosure).public
+    return _Rendered(message=message, public=public)
+
+
 def _in_scope(automation: Automation, posts: Sequence[PostRow], item: MediaItem | None) -> bool:
     """Without a post, the scope is not checked; with one, "all" takes any post of the account
     and the other scopes only their linked posts."""
@@ -103,7 +126,7 @@ async def run(
                 "validation_error",
                 errors=[FieldError("media_item_id", "That post wasn't found.")],
             )
-    rendered = _rendered(automation, body, disclosure)
+    rendered = await _rendered_for(session, automation, body, disclosure)
 
     def result(
         reason: str | None,

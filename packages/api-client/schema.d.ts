@@ -678,6 +678,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/automations/{automation_id}/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Automation Flow
+         * @description The automation's flow: saved (``source: flow``), or compiled from its message settings
+         *     (``legacy``, version 0), with what activation still needs.
+         */
+        get: operations["get_automation_flow"];
+        /**
+         * Update Automation Flow
+         * @description Save the flow; from now on its steps replace the message settings. A broken graph is
+         *     refused (422 with each step's field); an active automation must stay complete.
+         */
+        put: operations["update_automation_flow"];
+        post?: never;
+        /**
+         * Delete Automation Flow
+         * @description Go back to the message settings; runs on a saved version finish on it.
+         */
+        delete: operations["delete_automation_flow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/automations/{automation_id}/pause": {
         parameters: {
             query?: never;
@@ -2463,6 +2493,20 @@ export interface components {
             /** Username */
             username: string | null;
         };
+        /** ActionStep */
+        ActionStep: {
+            /** Action */
+            action: components["schemas"]["AddTag"] | components["schemas"]["RemoveTag"] | components["schemas"]["SetField"] | components["schemas"]["NotifyTeam"] | components["schemas"]["HandOff"];
+            /** Id */
+            id: string;
+            /** Next */
+            next?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "action";
+        };
         /** Actor */
         Actor: {
             /**
@@ -2472,6 +2516,19 @@ export interface components {
             id: string;
             /** Name */
             name?: string | null;
+        };
+        /** AddTag */
+        AddTag: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "add_tag";
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
         };
         /**
          * AgentApproval
@@ -2915,6 +2972,25 @@ export interface components {
             feedback: "bad" | null;
         };
         /**
+         * AiReplyStep
+         * @description An AI reply from the knowledge base (T5.8), or a hand-off when it can't answer. It ends
+         *     the flow.
+         */
+        AiReplyStep: {
+            /** Id */
+            id: string;
+            /**
+             * Instructions
+             * @default
+             */
+            instructions: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "ai_reply";
+        };
+        /**
          * AiSettings
          * @description FR-KB-04 brand voice, FR-SUG-06 escalation phrases, FR-SUG-05 takeover period.
          */
@@ -3029,6 +3105,48 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * AskStep
+         * @description A question whose answer is checked and saved: free text to a custom field, an email or a
+         *     phone to the contact (or a custom field of that type). An answer that doesn't fit gets
+         *     ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip``.
+         */
+        AskStep: {
+            /**
+             * Expect
+             * @default text
+             * @enum {string}
+             */
+            expect: "text" | "email" | "phone";
+            /** Field Key */
+            field_key?: string | null;
+            /** Id */
+            id: string;
+            /** Next */
+            next?: string | null;
+            /** On Skip */
+            on_skip?: string | null;
+            /**
+             * Retry Text
+             * @default
+             */
+            retry_text: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Tries
+             * @default 2
+             */
+            tries: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "ask";
+        };
         /** Attachment */
         Attachment: {
             /** Duration S */
@@ -3083,6 +3201,12 @@ export interface components {
             display_status: "draft" | "scheduled" | "active" | "paused" | "ended";
             /** Ends At */
             ends_at?: string | null;
+            /**
+             * Flow Source
+             * @default legacy
+             * @enum {string}
+             */
+            flow_source: "legacy" | "flow";
             /** Follow Nudge */
             follow_nudge: boolean;
             /** Follow Nudge Text */
@@ -3561,6 +3685,30 @@ export interface components {
             trial_ends_at?: string | null;
             /** Usage */
             usage: components["schemas"]["UsageMeter"][];
+        };
+        /** BranchRule */
+        BranchRule: {
+            /** Next */
+            next?: string | null;
+            /** When */
+            when: components["schemas"]["TagCondition"] | components["schemas"]["FieldCondition"] | components["schemas"]["ContactCondition"] | components["schemas"]["FollowsCondition"] | components["schemas"]["PlatformCondition"] | components["schemas"]["LeadScoreCondition"];
+        };
+        /**
+         * BranchStep
+         * @description The first rule that holds picks the next step; none does, ``otherwise``.
+         */
+        BranchStep: {
+            /** Id */
+            id: string;
+            /** Otherwise */
+            otherwise?: string | null;
+            /** Rules */
+            rules?: components["schemas"]["BranchRule"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "branch";
         };
         /** BulkPause */
         BulkPause: {
@@ -4068,6 +4216,27 @@ export interface components {
              */
             status: "granted" | "revoked";
         };
+        /**
+         * ContactCondition
+         * @description Whether the contact's email or phone is known.
+         */
+        ContactCondition: {
+            /**
+             * Has
+             * @enum {string}
+             */
+            has: "email" | "phone";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "contact";
+            /**
+             * Known
+             * @default true
+             */
+            known: boolean;
+        };
         /** ContactDetail */
         ContactDetail: {
             /** Display Name */
@@ -4456,6 +4625,24 @@ export interface components {
             status: "received" | "processing" | "completed" | "failed";
         };
         /**
+         * DelayStep
+         * @description A pause, at most 23 hours, so what follows can still go inside the 24-hour reply window
+         *     (a send the window no longer allows ends the run instead).
+         */
+        DelayStep: {
+            /** Id */
+            id: string;
+            /** Next */
+            next?: string | null;
+            /** Seconds */
+            seconds: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "delay";
+        };
+        /**
          * DigestUnsubscribed
          * @description POST /v1/digest/unsubscribe?token=…: the digest is off for that member of that workspace
          *     (idempotent). The page names the workspace and links to Settings → Notifications.
@@ -4480,6 +4667,16 @@ export interface components {
             /** Waba Id */
             waba_id?: string | null;
         };
+        /** EndStep */
+        EndStep: {
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "end";
+        };
         /** EntitlementValue */
         EntitlementValue: {
             /** Key */
@@ -4493,6 +4690,27 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+        };
+        /**
+         * FieldCondition
+         * @description ``equals`` ignores case; ``set`` is any value.
+         */
+        FieldCondition: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "field";
+            /**
+             * Op
+             * @default set
+             * @enum {string}
+             */
+            op: "set" | "unset" | "equals";
+            /** Value */
+            value?: string | null;
         };
         /** FieldDefinition */
         FieldDefinition: {
@@ -4564,6 +4782,88 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "posted" | "failed";
+        };
+        /**
+         * Flow
+         * @description GET and PUT …/automations/{id}/flow. ``source`` says how it was made: ``legacy`` is
+         *     compiled from the automation's message settings (the current editor), ``flow`` was saved as
+         *     a flow.
+         */
+        Flow: {
+            /**
+             * Automation Id
+             * Format: uuid
+             */
+            automation_id: string;
+            definition: components["schemas"]["FlowDefinition"];
+            /** Missing For Activation */
+            missing_for_activation: string[];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "legacy" | "flow";
+            /** Version */
+            version: number;
+        };
+        /**
+         * FlowButton
+         * @description A link button: a https address, or the account's own Instagram profile (``profile``,
+         *     the follow nudge's "View profile").
+         */
+        FlowButton: {
+            /**
+             * Profile
+             * @default false
+             */
+            profile: boolean;
+            /** Title */
+            title: string;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * FlowDefinition
+         * @description ``start`` is the first step; a step without a next ends the flow.
+         */
+        FlowDefinition: {
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Start */
+            start: string;
+            /** Steps */
+            steps: (components["schemas"]["SendStep"] | components["schemas"]["AskStep"] | components["schemas"]["BranchStep"] | components["schemas"]["ActionStep"] | components["schemas"]["DelayStep"] | components["schemas"]["RandomizeStep"] | components["schemas"]["AiReplyStep"] | components["schemas"]["EndStep"])[];
+        };
+        /**
+         * FollowsCondition
+         * @description Whether they follow the account, read when the step runs; unknown counts as neither.
+         */
+        FollowsCondition: {
+            /**
+             * Follows
+             * @default true
+             */
+            follows: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "follows_business";
+        };
+        /**
+         * HandOff
+         * @description The conversation goes to Needs you, and the AI stops replying in it.
+         */
+        HandOff: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hand_off";
         };
         /** HashtagGroup */
         HashtagGroup: {
@@ -4843,6 +5143,16 @@ export interface components {
             characters_limit?: number | null;
             /** Characters Used */
             characters_used: number;
+        };
+        /** LeadScoreCondition */
+        LeadScoreCondition: {
+            /** At Least */
+            at_least: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "lead_score";
         };
         /** LinkButton */
         LinkButton: {
@@ -5166,6 +5476,19 @@ export interface components {
             email_digest: boolean;
             push: components["schemas"]["PushPreferences"];
         };
+        /** NotifyTeam */
+        NotifyTeam: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "notify_team";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
         /** OverlapWarning */
         OverlapWarning: {
             /**
@@ -5402,6 +5725,19 @@ export interface components {
             price?: components["schemas"]["BillingPrice"] | null;
             /** Trial Days */
             trial_days: number;
+        };
+        /** PlatformCondition */
+        PlatformCondition: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "platform";
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
         };
         /**
          * PolishRequest
@@ -5887,12 +6223,37 @@ export interface components {
             waiting: number;
         };
         /**
+         * QuickReply
+         * @description A tap-to-answer option; the flow goes on at ``next`` when it's tapped.
+         */
+        QuickReply: {
+            /** Next */
+            next?: string | null;
+            /** Title */
+            title: string;
+        };
+        /**
          * QuickReplyOut
          * @description A quick reply offered with the text (tap first, FR-AUT-21); shown, not tappable, here.
          */
         QuickReplyOut: {
             /** Title */
             title: string;
+        };
+        /**
+         * RandomizeStep
+         * @description An A/B split: each run takes one path, at random by weight.
+         */
+        RandomizeStep: {
+            /** Id */
+            id: string;
+            /** Paths */
+            paths: components["schemas"]["SplitPath"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "randomize";
         };
         /** Reaction */
         Reaction: {
@@ -5908,6 +6269,19 @@ export interface components {
             by: "customer" | "business";
             /** Emoji */
             emoji: string;
+        };
+        /** RemoveTag */
+        RemoveTag: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "remove_tag";
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
         };
         /** ReplyWindow */
         ReplyWindow: {
@@ -6270,6 +6644,35 @@ export interface components {
             text?: string | null;
         };
         /**
+         * SendStep
+         * @description A message. With quick replies the flow waits for an answer: a tap goes to that option's
+         *     step, anything typed to ``on_text`` (quick replies don't show on desktop).
+         */
+        SendStep: {
+            /** Buttons */
+            buttons?: components["schemas"]["FlowButton"][];
+            /** Id */
+            id: string;
+            /** Image Asset Id */
+            image_asset_id?: string | null;
+            /** Next */
+            next?: string | null;
+            /** On Text */
+            on_text?: string | null;
+            /** Quick Replies */
+            quick_replies?: components["schemas"]["QuickReply"][];
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "send";
+        };
+        /**
          * SentimentDistribution
          * @description GET …/analytics/sentiment: comment sentiment for one post, or for comments made in a date
          *     range (optionally one account's). Unanalysed comments are counted, not guessed.
@@ -6329,6 +6732,18 @@ export interface components {
             spam: number;
             /** Total */
             total: number;
+        };
+        /** SetField */
+        SetField: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "set_field";
+            /** Value */
+            value: string;
         };
         /** SkippedCounts */
         SkippedCounts: {
@@ -6415,6 +6830,16 @@ export interface components {
             /** Display Name */
             display_name?: string | null;
         };
+        /** SplitPath */
+        SplitPath: {
+            /** Next */
+            next?: string | null;
+            /**
+             * Weight
+             * @default 1
+             */
+            weight: number;
+        };
         /**
          * StepVerification
          * @description R2 (TR-AGT-06): what the verifier read back after a write.
@@ -6493,6 +6918,24 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** TagCondition */
+        TagCondition: {
+            /**
+             * Has
+             * @default true
+             */
+            has: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "tag";
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
         };
         /** TagCreate */
         TagCreate: {
@@ -8434,6 +8877,133 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Automation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_automation_flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Flow"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_automation_flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowDefinition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Flow"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_automation_flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Flow"];
                 };
             };
             /** @description Validation error */

@@ -154,6 +154,9 @@ async def save(
         )
     automation.flow_version = version
     automation.action = _action_of(definition)
+    start = next(s for s in definition.steps if s.id == definition.start)
+    if isinstance(start, AiReplyStep):  # the AI reply reads them from the automation (T5.8)
+        automation.ai_instructions = start.instructions
     await session.flush()
     return automation
 
