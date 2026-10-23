@@ -62,6 +62,72 @@ def digest_stats(**values: Any) -> dict[str, Any]:
             {"topic": "Do you ship to Dubai?", "asked": 5},
             {"topic": "Eggless options", "asked": 2},
         ],
+        "trends": [
+            {
+                "key": "messages_received",
+                "label": "Messages received",
+                "unit": "count",
+                "value": 142.0,
+                "previous": 120.0,
+                "change_pct": 18.3,
+                "change_points": None,
+                "direction": "up",
+            },
+            {
+                "key": "reply_rate",
+                "label": "Reply rate",
+                "unit": "percent",
+                "value": 88.4,
+                "previous": 91.0,
+                "change_pct": None,
+                "change_points": -2.6,
+                "direction": "down",
+            },
+            {
+                "key": "leads_won",
+                "label": "Leads won",
+                "unit": "count",
+                "value": 2.0,
+                "previous": 0.0,
+                "change_pct": None,
+                "change_points": None,
+                "direction": "up",
+            },
+            {
+                "key": "median_first_response_s",
+                "label": "Median first response",
+                "unit": "seconds",
+                "value": None,
+                "previous": None,
+                "change_pct": None,
+                "change_points": None,
+                "direction": None,
+            },
+        ],
+        "account": [
+            {
+                "metric": "reach",
+                "label": "Reach",
+                "value": 5400.0,
+                "previous": 5000.0,
+                "change_pct": 8.0,
+                "direction": "up",
+                "days_known": 5,
+                "days_total": 7,
+                "unavailable": None,
+            },
+            {
+                "metric": "views",
+                "label": "Views",
+                "value": None,
+                "previous": None,
+                "change_pct": None,
+                "direction": None,
+                "days_known": 0,
+                "days_total": 7,
+                "unavailable": "insights_not_granted",
+            },
+        ],
         **values,
     }
 
@@ -162,6 +228,43 @@ def test_the_digest_reads_the_weeks_numbers() -> None:
     assert f"Unsubscribe: {WEB}/unsubscribe?token=abc123" in email.text
     assert f"{WEB}/w/maple/comments/0f5d7a52-5a8e-4c45-9e57-5d7c5c2b9b1e" in email.text
     assert '<th scope="row"' in email.html
+
+
+def test_the_digest_shows_the_changes_the_gaps_and_the_report_link() -> None:
+    data = {
+        "workspace_name": "Maple Bakery",
+        "workspace_slug": "maple",
+        "stats": digest_stats(),
+    }
+    email = render(EmailTemplate.WEEKLY_DIGEST, data, web_base_url=WEB)
+    assert_accessible(email.html)
+    for expected in (
+        "Against the week before",
+        "Up 18.3% on the week before (was 120)",
+        "Down 2.6 points on the week before (was 91%)",
+        "Up from 0 the week before",
+        "No data for the week before",
+        "Your Instagram account",
+        "5,400",
+        "Counts 5 of 7 days",
+        "Up 8% on the week before (was 5,000)",
+        "Instagram insights aren't allowed for this account",
+    ):
+        assert expected in email.html.replace("&#x27;", "'"), expected
+        assert expected in email.text, expected
+    report = f"{WEB}/w/maple/reports?week=2026-09-21"
+    assert f'href="{report}"' in email.html
+    assert report in email.text
+
+
+def test_a_digest_from_before_the_report_has_no_trend_sections() -> None:
+    stats = digest_stats()
+    del stats["trends"], stats["account"]
+    data = {"workspace_name": "Maple Bakery", "workspace_slug": "maple", "stats": stats}
+    email = render(EmailTemplate.WEEKLY_DIGEST, data, web_base_url=WEB)
+    assert "Against the week before" not in email.html
+    assert "Your Instagram account" not in email.html
+    assert "/reports?week=2026-09-21" in email.text
 
 
 def test_a_quiet_week_says_no_data_instead_of_zero_percent() -> None:

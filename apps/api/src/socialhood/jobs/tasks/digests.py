@@ -26,7 +26,9 @@ from socialhood.jobs.runtime import runtime
 from socialhood.models.identity import Workspace, WorkspaceStatus
 from socialhood.notify import digest
 from socialhood.observability.logging import get_logger
+from socialhood.platforms.deps import deps_from
 from socialhood.repositories import weekly_digests
+from socialhood.services.analytics.common import Capabilities, capabilities_from
 
 log = get_logger(__name__)
 
@@ -54,7 +56,9 @@ async def due_workspaces(
 
 
 async def send_due_digests(
-    sessionmaker: async_sessionmaker[AsyncSession], now: datetime | None = None
+    sessionmaker: async_sessionmaker[AsyncSession],
+    now: datetime | None = None,
+    capabilities: Capabilities | None = None,
 ) -> dict[str, int]:
     """Send every digest due at ``now``; returns counts by outcome."""
     now = now or datetime.now(UTC)
@@ -63,7 +67,9 @@ async def send_due_digests(
         try:
             with workspace_scope(workspace_id):
                 async with sessionmaker() as session:
-                    outcome = await digest.send_digest(session, week_start=week_start, now=now)
+                    outcome = await digest.send_digest(
+                        session, week_start=week_start, now=now, capabilities=capabilities
+                    )
                     await session.commit()
         except Exception:
             log.exception("digest_failed", workspace_id=str(workspace_id))
@@ -77,4 +83,6 @@ async def send_due_digests(
 @app.periodic(cron="*/15 * * * *", periodic_id="send_weekly_digests")
 @app.task(name="send_weekly_digests", queue=BULK, queueing_lock="send_weekly_digests")
 async def send_weekly_digests(timestamp: int) -> None:
-    await send_due_digests(runtime().sessionmaker)
+    rt = runtime()
+    deps = deps_from(rt.http, rt.settings)
+    await send_due_digests(rt.sessionmaker, capabilities=capabilities_from(deps))

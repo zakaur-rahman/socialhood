@@ -2,9 +2,11 @@
 
 Data (email_deliveries.data, written by notify/digest.py): ``workspace_name``,
 ``workspace_slug`` and ``stats``, the week's numbers as services/overview_stats.py computed them
-(``OverviewStats.to_json``), plus ``unsubscribe_url`` added at send time (a signed token, never
-stored). A number the week has no basis for (no conversations, no replies) reads "No data" rather
-than 0%.
+(``OverviewStats.to_json``) with the weekly report's ``trends`` and ``account`` lists
+(services/reports.py ``digest_extras``, GR-34), plus ``unsubscribe_url`` added at send time (a
+signed token, never stored). A number the week has no basis for (no conversations, no replies, an
+insight with no readings) reads "No data" rather than 0%. The email links to the report page for
+the same week.
 """
 
 from __future__ import annotations
@@ -116,6 +118,71 @@ def _rows(stats: Mapping[str, Any]) -> list[Row]:
     ]
 
 
+def _count(value: float | None, unit: str) -> str:
+    if value is None:
+        return NO_DATA
+    if unit == "percent":
+        return percent(value)
+    if unit == "seconds":
+        return duration(round(value))
+    return f"{round(value):,}"
+
+
+def _change(item: Mapping[str, Any]) -> str | None:
+    """ "Up 12.5% on the week before (was 80)": the change as the service worked it out."""
+    direction = item.get("direction")
+    previous = item.get("previous")
+    if previous is None:
+        return "No data for the week before"
+    was = _count(previous, str(item.get("unit") or "count"))
+    if direction == "flat":
+        return f"About the same as the week before (was {was})"
+    if direction not in ("up", "down"):
+        return None
+    word = "Up" if direction == "up" else "Down"
+    if item.get("change_points") is not None:
+        return f"{word} {abs(float(item['change_points'])):g} points on the week before (was {was})"
+    if item.get("change_pct") is not None:
+        return f"{word} {abs(float(item['change_pct'])):g}% on the week before (was {was})"
+    return f"{word} from {was} the week before"
+
+
+def _trends(stats: Mapping[str, Any]) -> list[Row]:
+    return [
+        Row(
+            str(item["label"]),
+            _count(item.get("value"), str(item.get("unit") or "count")),
+            _change(item),
+        )
+        for item in stats.get("trends") or []
+    ]
+
+
+GAPS = {
+    "insights_not_granted": "Instagram insights aren't allowed for this account",
+    "no_readings": "No readings for this week yet",
+    "no_account": "No Instagram account connected",
+}
+
+
+def _account(stats: Mapping[str, Any]) -> list[Row]:
+    rows: list[Row] = []
+    for item in stats.get("account") or []:
+        known, total = int(item.get("days_known") or 0), int(item.get("days_total") or 0)
+        value = item.get("value")
+        notes = [GAPS.get(str(item.get("unavailable")), "") if value is None else ""]
+        if value is not None and known < total:
+            notes.append(f"Counts {known} of {total} days")
+        if value is not None:
+            notes.append(_change({**item, "unit": "count"}) or "")
+        rows.append(
+            Row(
+                str(item["label"]), _count(value, "count"), "; ".join(n for n in notes if n) or None
+            )
+        )
+    return rows
+
+
 def _intents(stats: Mapping[str, Any]) -> list[Row]:
     return [
         Row(
@@ -157,12 +224,27 @@ def render(data: Mapping[str, Any], *, web_base_url: str) -> RenderedEmail:
     settings_url = app_url(web_base_url, slug, "/settings/notifications")
     unsubscribe = str(data.get("unsubscribe_url") or settings_url)
 
+    report = app_url(web_base_url, slug, f"/reports?week={since.isoformat()}")
     rows, intents, questions, post = _rows(stats), _intents(stats), _questions(stats), _post(stats)
+    trends, account = _trends(stats), _account(stats)
     html_parts = [paragraph(intro), data_table("Messages", rows)]
     text_lines = [intro, ""]
     text_lines += [
         f"{row.label}: {row.value}" + (f" ({row.note})" if row.note else "") for row in rows
     ]
+    if trends:
+        html_parts.append(data_table("Against the week before", trends))
+        text_lines += ["", "Against the week before:"]
+        text_lines += [
+            f"- {row.label}: {row.value}" + (f" ({row.note})" if row.note else "") for row in trends
+        ]
+    if account:
+        html_parts.append(data_table("Your Instagram account", account))
+        text_lines += ["", "Your Instagram account:"]
+        text_lines += [
+            f"- {row.label}: {row.value}" + (f" ({row.note})" if row.note else "")
+            for row in account
+        ]
     if intents:
         html_parts.append(data_table("What customers wrote about", intents))
         text_lines += ["", "What customers wrote about:"]
@@ -189,8 +271,13 @@ def render(data: Mapping[str, Any], *, web_base_url: str) -> RenderedEmail:
             f"Post with the most comments: {caption}, "
             f"{plural(int(post['comments']), 'comment')} ({post_url})",
         ]
-    html_parts.append(button(Button("Open Social Hood", home)))
-    text_lines += ["", f"Open Social Hood: {home}", f"Inbox: {inbox}"]
+    html_parts.append(button(Button("See the full report", report)))
+    text_lines += [
+        "",
+        f"See the full report, with the last 8 weeks: {report}",
+        f"Open Social Hood: {home}",
+        f"Inbox: {inbox}",
+    ]
 
     footer_html = (
         f"You're getting the weekly digest of {escape(workspace)}. "

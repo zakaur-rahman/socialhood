@@ -14,29 +14,34 @@ match it (T8.7's acceptance).
   it was sent or is being sent: nothing to do), computes the numbers once, and queues one email
   per member with ``email_digest`` on (notify/outbox.queue_email, dedupe
   ``digest:{week_start}:{user_id}``), then records sent with the numbers and the recipient count.
-  A week with nothing to report (no messages, no comments, nobody waiting) or nobody opted in is
-  ``skipped``. The emails carry a signed unsubscribe link and List-Unsubscribe headers, added
-  when they are sent (notify/outbox.py). A failure rolls the claim back, so the next run tries
+  The numbers also carry the week-over-week changes and the account metrics of the weekly
+  report (GR-34, services/reports.py: ``trends`` and ``account``), so the email, Home's link and
+  the report page at ``/reports?week=<first day>`` agree. A week with nothing to report (no
+  messages, no comments, nobody waiting) or nobody opted in is ``skipped``. The emails carry a
+  signed unsubscribe link and List-Unsubscribe headers, added when they are sent
+  (notify/outbox.py). A failure rolls the claim back, so the next run tries
   again.
 """
 
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.db.tenancy import require_workspace
+from socialhood.models.connections import SocialAccount
 from socialhood.models.identity import User, Workspace, WorkspaceMember
 from socialhood.models.notifications import DigestStatus, EmailTemplate
 from socialhood.notify import preferences
 from socialhood.notify.outbox import queue_email
 from socialhood.observability.logging import get_logger
+from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import weekly_digests as repo
-from socialhood.services import overview_stats
-from socialhood.services.analytics.common import zone
+from socialhood.services import overview_stats, reports
+from socialhood.services.analytics.common import Capabilities, View, zone
 
 log = get_logger(__name__)
 
@@ -71,7 +76,19 @@ async def _recipients(session: AsyncSession) -> list[tuple[uuid.UUID, str]]:
     ]
 
 
-async def send_digest(session: AsyncSession, *, week_start: date, now: datetime) -> str:
+def _assume_insights(acct: SocialAccount) -> frozenset[Capability]:
+    """For a caller with no adapters at hand: an account with no readings is a gap, not a
+    refused permission (the job passes the real capabilities)."""
+    return frozenset({Capability.ACCOUNT_INSIGHTS})
+
+
+async def send_digest(
+    session: AsyncSession,
+    *,
+    week_start: date,
+    now: datetime,
+    capabilities: Capabilities | None = None,
+) -> str:
     """Queue the current workspace's digest for that week; returns ``sent``, ``skipped``, or
     ``already`` when the week was claimed before. The caller commits; the emails' jobs are
     deferred on commit."""
@@ -83,7 +100,17 @@ async def send_digest(session: AsyncSession, *, week_start: date, now: datetime)
         return "already"
     span = overview_stats.week_before(workspace.timezone, week_start)
     stats = await overview_stats.compute(session, span=span, now=now)
-    numbers = stats.to_json()
+    view = View(workspace.timezone, now, capabilities or _assume_insights)
+    report = await reports.build(
+        session,
+        view,
+        workspace,
+        week_start=week_start - timedelta(weeks=1),
+        current=stats,
+        with_series=False,
+        validate=False,
+    )
+    numbers = {**stats.to_json(), **reports.digest_extras(report)}
     recipients = await _recipients(session) if stats.active else []
     if not recipients:
         await repo.finish(

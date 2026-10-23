@@ -30,8 +30,11 @@ Ranges are local calendar days in the workspace's time zone (services/analytics/
 - **Needs you**: open conversations marked "Needs you" now.
 - **Unanswered questions**: knowledge gaps open now, asked in the last 30 days, most asked first
   (the Knowledge page's list, FR-KB-06).
-- **Story mentions** (GR-07): people who mentioned the account in a story in the range (Home
-  only; the digest doesn't read it).
+- **Story mentions** (GR-07): people who mentioned the account in a story in the range.
+- **Conversations from ads and from links** (GR-08, GR-09): conversations that began in the range
+  from an ad click or an entry link or QR code.
+- **Leads qualified and won** (GR-18): contacts that moved into the stage in the range, each
+  counted once (``lead_stage_changes``); a lead that moves back and forward counts once.
 - **Comments** and **top posts**: comments made in the range and not deleted; posts ranked by
   them, most first, then the newest post.
 - **Message sentiment**: customer messages received in the range, by their analysis's sentiment
@@ -71,6 +74,7 @@ from socialhood.models.ai import GapStatus, KnowledgeGap, MessageAnalysis, Senti
 from socialhood.models.analytics import PostMetricSnapshot
 from socialhood.models.automations import Comment
 from socialhood.models.connections import AccountStatus, SocialAccount
+from socialhood.models.contacts import LeadStage, LeadStageChange
 from socialhood.models.inbox import (
     Conversation,
     ConversationStatus,
@@ -193,6 +197,11 @@ class OverviewStats:
     needs_you: int = 0
     open_questions: int = 0
     top_questions: list[QuestionCount] = field(default_factory=list)
+    story_mentions: int = 0
+    conversations_from_ads: int = 0
+    conversations_from_links: int = 0
+    leads_qualified: int = 0
+    leads_won: int = 0
 
     @property
     def active(self) -> bool:
@@ -226,6 +235,11 @@ class OverviewStats:
             "needs_you": self.needs_you,
             "open_questions": self.open_questions,
             "top_questions": [asdict(item) for item in self.top_questions],
+            "story_mentions": self.story_mentions,
+            "conversations_from_ads": self.conversations_from_ads,
+            "conversations_from_links": self.conversations_from_links,
+            "leads_qualified": self.leads_qualified,
+            "leads_won": self.leads_won,
         }
 
 
@@ -468,6 +482,23 @@ async def story_mentions_received(session: AsyncSession, span: DateRange) -> int
     return await story_mentions.count_between(session, span.start, span.end)
 
 
+async def leads_moved(session: AsyncSession, span: DateRange) -> tuple[int, int]:
+    """GR-18: contacts that moved into ``qualified`` and into ``won`` in the range, each contact
+    once per stage."""
+    rows = await session.execute(
+        select(LeadStageChange.to_stage, func.count(func.distinct(LeadStageChange.contact_id)))
+        .where(
+            LeadStageChange.workspace_id == require_workspace(),
+            LeadStageChange.created_at >= span.start,
+            LeadStageChange.created_at < span.end,
+            LeadStageChange.to_stage.in_((LeadStage.QUALIFIED, LeadStage.WON)),
+        )
+        .group_by(LeadStageChange.to_stage)
+    )
+    found = {str(stage): int(n) for stage, n in rows.all()}
+    return found.get(LeadStage.QUALIFIED, 0), found.get(LeadStage.WON, 0)
+
+
 async def comments(
     session: AsyncSession, span: DateRange, n: int = TOP_N
 ) -> tuple[int, list[PostComments]]:
@@ -687,6 +718,8 @@ async def compute(session: AsyncSession, *, span: DateRange, now: datetime) -> O
     """Every number for the current workspace: flows over ``span``, states as of ``now``."""
     received, posts = await comments(session, span)
     open_count, questions = await unanswered_questions(session, now=now)
+    entries = await conversations_by_entry(session, span)
+    qualified, won = await leads_moved(session, span)
     return OverviewStats(
         since=span.since,
         until=span.until,
@@ -697,4 +730,9 @@ async def compute(session: AsyncSession, *, span: DateRange, now: datetime) -> O
         needs_you=await needs_you(session),
         open_questions=open_count,
         top_questions=questions,
+        story_mentions=await story_mentions_received(session, span),
+        conversations_from_ads=entries.get("ad", 0),
+        conversations_from_links=entries.get("link", 0),
+        leads_qualified=qualified,
+        leads_won=won,
     )
