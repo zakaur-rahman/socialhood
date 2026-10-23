@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { PageFrame } from "@/components/shell/PageFrame";
@@ -85,14 +85,12 @@ function Starters({ wid, slug, accountId }: { wid: string; slug: string; account
   const options = useAutomations(wid, { accountId, status: null, trigger: "ice_breaker", q: "", sort: "created" });
   const save = useSaveIceBreakers(wid, accountId);
   const sync = useSyncIceBreakers(wid, accountId);
-  const [rows, setRows] = useState<Row[] | null>(null);
+  const [edited, setRows] = useState<Row[] | null>(null);
   const [problems, setProblems] = useState<Record<string, string>>({});
   const saved = list.data?.items;
-
+  const fromSaved = useMemo(() => (saved ? rowsOf(saved) : null), [saved]);
   // Start from what is saved; after that the member's edits are the truth until they save.
-  useEffect(() => {
-    if (saved && rows === null) setRows(rowsOf(saved));
-  }, [saved, rows]);
+  const rows = edited ?? fromSaved;
 
   if (list.isPending || rows === null) {
     return (

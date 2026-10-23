@@ -2210,6 +2210,16 @@
             ],
             "title": "Ai Instructions"
           },
+          "comment_surface": {
+            "default": "posts",
+            "enum": [
+              "posts",
+              "live",
+              "both"
+            ],
+            "title": "Comment Surface",
+            "type": "string"
+          },
           "confirm_first": {
             "title": "Confirm First",
             "type": "boolean"
@@ -2504,7 +2514,8 @@
                   "story_reply",
                   "story_mention",
                   "entry_link",
-                  "ad_click"
+                  "ad_click",
+                  "ice_breaker"
                 ],
                 "type": "string"
               },
@@ -2631,6 +2642,16 @@
               }
             ],
             "title": "Ai Instructions"
+          },
+          "comment_surface": {
+            "default": "posts",
+            "enum": [
+              "posts",
+              "live",
+              "both"
+            ],
+            "title": "Comment Surface",
+            "type": "string"
           },
           "confirm_first": {
             "default": false,
@@ -2850,7 +2871,8 @@
                   "story_reply",
                   "story_mention",
                   "entry_link",
-                  "ad_click"
+                  "ad_click",
+                  "ice_breaker"
                 ],
                 "type": "string"
               },
@@ -3015,7 +3037,8 @@
                   "story_reply",
                   "story_mention",
                   "entry_link",
-                  "ad_click"
+                  "ad_click",
+                  "ice_breaker"
                 ],
                 "type": "string"
               },
@@ -3423,7 +3446,8 @@
               "story_reply",
               "story_mention",
               "entry_link",
-              "ad_click"
+              "ad_click",
+              "ice_breaker"
             ],
             "title": "Trigger",
             "type": "string"
@@ -7432,6 +7456,153 @@
         "title": "HashtagSuggestionRequest",
         "type": "object"
       },
+      "IceBreaker": {
+        "properties": {
+          "answer_with_ai": {
+            "default": false,
+            "title": "Answer With Ai",
+            "type": "boolean"
+          },
+          "automation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Id"
+          },
+          "automation_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "position",
+          "question"
+        ],
+        "title": "IceBreaker",
+        "type": "object"
+      },
+      "IceBreakerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "answer_with_ai": {
+            "default": false,
+            "title": "Answer With Ai",
+            "type": "boolean"
+          },
+          "automation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Id"
+          },
+          "question": {
+            "maxLength": 200,
+            "title": "Question",
+            "type": "string"
+          }
+        },
+        "required": [
+          "question"
+        ],
+        "title": "IceBreakerIn",
+        "type": "object"
+      },
+      "IceBreakerList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IceBreaker"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "max_items": {
+            "default": 4,
+            "title": "Max Items",
+            "type": "integer"
+          },
+          "sync_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Error"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "IceBreakerList",
+        "type": "object"
+      },
+      "IceBreakersUpdate": {
+        "additionalProperties": false,
+        "description": "The whole list, in order. An empty list removes the starters.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/IceBreakerIn"
+            },
+            "maxItems": 10,
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "IceBreakersUpdate",
+        "type": "object"
+      },
       "InboxCounts": {
         "description": "The Inbox nav badge (FR-INB-04) and view chips.",
         "properties": {
@@ -8114,7 +8285,8 @@
                   "story_reply",
                   "story_mention",
                   "entry_link",
-                  "ad_click"
+                  "ad_click",
+                  "ice_breaker"
                 ],
                 "type": "string"
               },
@@ -11346,6 +11518,19 @@
               }
             ],
             "title": "Ad Title"
+          },
+          "age_seconds": {
+            "anyOf": [
+              {
+                "maximum": 604800.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Seconds"
           },
           "from_id": {
             "anyOf": [
@@ -17017,7 +17202,8 @@
                     "story_reply",
                     "story_mention",
                     "entry_link",
-                    "ad_click"
+                    "ad_click",
+                    "ice_breaker"
                   ],
                   "type": "string"
                 },
@@ -25142,6 +25328,206 @@
         "summary": "Update Social Account",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers": {
+      "get": {
+        "description": "The account's conversation starters in order, and how the last sync to Instagram went.",
+        "operationId": "list_ice_breakers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IceBreakerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Ice Breakers",
+        "tags": [
+          "ice-breakers"
+        ]
+      },
+      "put": {
+        "description": "Save the whole list (up to 4, in order) and push it to Instagram. 422 validation_error\nnames each field; a failed push is not an error: the list is kept and ``sync_error`` says\nwhy.",
+        "operationId": "replace_ice_breakers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IceBreakersUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IceBreakerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Replace Ice Breakers",
+        "tags": [
+          "ice-breakers"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers/sync": {
+      "post": {
+        "description": "Push the saved starters to Instagram again.",
+        "operationId": "sync_ice_breakers",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IceBreakerList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Sync Ice Breakers",
+        "tags": [
+          "ice-breakers"
         ]
       }
     },
