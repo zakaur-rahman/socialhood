@@ -1,7 +1,7 @@
 # 08 · Decision record: visual answers in Ask Social Hood
 
-- **Status:** proposed (awaiting owner approval)
-- **Date:** 2026-10-23
+- **Status:** accepted. The owner chose option C on 2026-10-24.
+- **Date:** 2026-10-23 (proposed), 2026-10-24 (accepted)
 - **Related:** docs 01 to 07, `docs/agent-architecture.html`, C-075 (palette lock)
 
 ## Problem
@@ -43,7 +43,16 @@ Adopt **C**: tools build typed visuals from the same service data they return. T
   - labelled SVG chart components;
   - new ref kinds (`contact`, `account`).
 
-## Outstanding decisions (owner)
+## Owner decisions (2026-10-24)
+- **Option C is approved,** with the phase 0 → 1 scope (doc 10, VIS-01 to VIS-06).
+- **Defaults for the rest,** which the owner can change:
+  - one chart series colour (current = brand, previous = neutral);
+  - hand-built SVG charts;
+  - visuals in Ask only;
+  - English labels for v1.
+- **The OpenUI spike (VIS-14) is deferred** to after phase 1, against the gate in doc 07.
+
+## Decisions as first proposed
 1. **Approve option C and the phase 0 → 1 scope** (doc 10, VIS-01 to VIS-06).
 2. **Chart colours:** keep one series colour (current = brand, previous = neutral), or approve a second categorical hue (a change to C-075). Recommendation: keep one for v1.
 3. **Charting:** keep hand-built SVG (consistent with today), or add a library. Recommendation: hand-built for the 4 to 5 chart types in scope. Reconsider only if interactive charts (zoom, brush) are needed.

@@ -1,6 +1,6 @@
 # Generative UI for Ask Social Hood
 
-An investigation of how the existing agent could answer with charts, KPI cards, tables and safe actions, and whether to use OpenUI for it. **This is a proposal only:** no code has been changed, and nothing is decided until the owner approves doc 08.
+An investigation of how the existing agent could answer with charts, KPI cards, tables and safe actions, and whether to use OpenUI for it. **Status:** the owner approved option C (doc 08) on 2026-10-24. Phase 0 → 1 (VIS-01 to VIS-06) is next.
 
 | Doc | What's in it |
 |---|---|
