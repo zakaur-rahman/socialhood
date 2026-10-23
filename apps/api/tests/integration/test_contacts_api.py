@@ -167,7 +167,7 @@ async def test_custom_fields_validate_by_type_and_go_with_their_definition(
 async def test_the_plan_caps_custom_fields(engine: AsyncEngine, ws: Ws) -> None:
     listed = await ws.ok("GET", "/contact-fields")
     limit = listed["limit"]
-    assert limit == 5  # Free (proposed, PD decisions)
+    assert limit == 5  # Free (C-078)
     for i in range(limit):
         await ws.ok("POST", "/contact-fields", 201, json={"key": f"f{i}", "label": f"Field {i}"})
     over = await ws.call("POST", "/contact-fields", json={"key": "extra", "label": "Extra"})

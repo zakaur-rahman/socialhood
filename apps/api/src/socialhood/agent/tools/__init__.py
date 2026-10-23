@@ -30,6 +30,7 @@ TOOL_MODULES = (
     "socialhood.agent.tools.scheduling",
     "socialhood.agent.tools.automations",
     "socialhood.agent.tools.knowledge",
+    "socialhood.agent.tools.integrations",
 )
 
 

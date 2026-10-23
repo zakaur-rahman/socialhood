@@ -20,6 +20,7 @@ from socialhood.models.agent import FINAL_RUN_STATUSES, AgentRun
 from socialhood.models.billing import AiUsageEvent, Subscription
 from socialhood.models.identity import Workspace, WorkspaceStatus
 from socialhood.models.inbox import Conversation, Message
+from socialhood.models.integrations import DeliveryStatus, WebhookDelivery
 from socialhood.models.notifications import Notification
 from socialhood.models.platform import WebhookEvent
 
@@ -40,6 +41,17 @@ async def _delete(
 async def webhook_events_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
     """TR-WH-07 and TR-OPS-04: stored events, the failed ones (the dead-letter set) included."""
     return await _delete(session, WebhookEvent.id, limit, WebhookEvent.received_at < cutoff)
+
+
+async def webhook_deliveries_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
+    """GR-04: finished outbound deliveries (a pending one is still being tried)."""
+    return await _delete(
+        session,
+        WebhookDelivery.id,
+        limit,
+        WebhookDelivery.created_at < cutoff,
+        WebhookDelivery.status != DeliveryStatus.PENDING,
+    )
 
 
 async def notifications_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:

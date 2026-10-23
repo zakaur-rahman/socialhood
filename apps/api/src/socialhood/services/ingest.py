@@ -88,6 +88,7 @@ from socialhood.realtime.events import queue_conversation, queue_message
 from socialhood.repositories import inbox
 from socialhood.repositories import ingest as rows
 from socialhood.services.inbox_views import UNSENT_PREVIEW, conversation_touch, preview_text
+from socialhood.services.webhooks import events as webhook_events
 
 PROFILE_MAX_AGE = timedelta(days=7)
 RECONCILE_WINDOW = timedelta(minutes=2)  # TR-JOB-05
@@ -177,6 +178,15 @@ async def _follow_scheduled(session: AsyncSession, msg: Message) -> None:
 
     await scheduled.follow_message(session, msg)
     await results.follow_message(session, msg)
+
+
+async def _webhook_events(
+    session: AsyncSession, acct: SocialAccount, contact: Contact, msg: Message, new_contact: bool
+) -> None:
+    """GR-04: contact.created for someone new, and message.received."""
+    if new_contact:
+        await webhook_events.contact_created(session, contact, platform=acct.platform)
+    await webhook_events.message_received(session, contact, msg, platform=acct.platform)
 
 
 async def _automations(session: AsyncSession, contact: Contact, msg: Message) -> None:
@@ -290,6 +300,7 @@ class _Ingest:
         else:
             self._inbound(conv, contact, msg, event)
             if not self.backfill:
+                await _webhook_events(self.session, self.acct, contact, msg, new_contact)
                 await _automations(self.session, contact, msg)
                 await _supersede_suggestion(self.session, conv, msg)
                 if self.acct.ai_analysis_enabled:  # FR-PRV-02
@@ -381,12 +392,14 @@ class _Ingest:
         if self.acct.platform not in set(ConsentChannel):
             self.result.ignored.append(f"opt-ins on {self.acct.platform}")
             return
-        contact, _ = await rows.get_or_create_contact(
+        contact, new_contact = await rows.get_or_create_contact(
             self.session,
             social_account_id=self.acct.id,
             platform_user_id=event.contact_ref,
             first_seen_at=event.occurred_at,
         )
+        if new_contact and not self.backfill:
+            await webhook_events.contact_created(self.session, contact, platform=self.acct.platform)
         stopped = (event.status or "").lower() in ("stop", "stopped", "unsubscribe")
         evidence = {"platform_event": "messaging_optins"}
         if event.topic:
@@ -406,12 +419,14 @@ class _Ingest:
 
     async def _referral(self, event: Referral) -> None:
         """An entry link opened or an ad tapped, with no message yet (``messaging_referral``)."""
-        contact, _ = await rows.get_or_create_contact(
+        contact, new_contact = await rows.get_or_create_contact(
             self.session,
             social_account_id=self.acct.id,
             platform_user_id=event.contact_ref,
             first_seen_at=event.occurred_at,
         )
+        if new_contact and not self.backfill:
+            await webhook_events.contact_created(self.session, contact, platform=self.acct.platform)
         record = referral_record(event.referral, event.occurred_at)
         contact.last_referral = record
         self.result.updated_contact_ids.append(contact.id)

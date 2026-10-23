@@ -13,6 +13,10 @@
 - 15 seconds for the whole fetch, at most 2 MB of (decoded) body, and HTML pages only.
 
 Every refusal is a ``FetchError`` with a plain-language message the Knowledge page can show.
+
+``post_json`` sends an outbound webhook (GR-04) under the same address rules: the checked address,
+no redirects followed (a redirect is a failed delivery), a short timeout, and only the status read
+back. ``allow_private`` lets development and e2e post to a local receiver.
 """
 
 from __future__ import annotations
@@ -247,6 +251,81 @@ async def _read(response: httpx.Response, url: httpx.URL, max_bytes: int) -> Pag
     except httpx.TransportError as error:
         raise FetchError("connect", "The page stopped loading.", retryable=True) from error
     return Page(url=str(url), content=bytes(body), content_type=content_type)
+
+
+@dataclass(frozen=True)
+class Posted:
+    status: int
+    duration_ms: int
+
+
+async def post_json(
+    raw_url: str,
+    body: bytes,
+    headers: dict[str, str],
+    *,
+    timeout_s: float = 10.0,
+    allow_private: bool = False,
+    resolve: Resolver | None = None,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> Posted:
+    """POST ``body`` to a user's endpoint; FetchError when it can't be reached. Any status comes
+    back as ``Posted`` (the caller decides what counts as delivered). ``transport`` is for tests."""
+    try:
+        url = check_url(raw_url)
+    except FetchError as error:
+        if not (allow_private and error.code == "blocked"):
+            raise
+        url = httpx.URL(raw_url.strip())
+    addresses = [url.host] if allow_private else await public_addresses(url, resolve)
+    async with httpx.AsyncClient(
+        follow_redirects=False,
+        trust_env=False,
+        timeout=httpx.Timeout(timeout_s),
+        limits=httpx.Limits(max_keepalive_connections=0),
+        transport=transport,
+    ) as client:
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        try:
+            async with asyncio.timeout(timeout_s):
+                response = await _post(client, url, addresses, body, headers)
+        except TimeoutError as error:
+            raise FetchError("timeout", "The endpoint took too long to respond.") from error
+        await response.aclose()
+        return Posted(response.status_code, round((loop.time() - started) * 1000))
+
+
+async def _post(
+    client: httpx.AsyncClient,
+    url: httpx.URL,
+    addresses: list[str],
+    body: bytes,
+    headers: dict[str, str],
+) -> httpx.Response:
+    host = url.raw_host.decode("ascii")
+    sent = {
+        **headers,
+        "Host": url.netloc.decode("ascii"),
+        "User-Agent": USER_AGENT,
+        "Content-Type": "application/json",
+    }
+    extensions = {"sni_hostname": host} if url.scheme == "https" else {}
+    last: httpx.TransportError | None = None
+    for address in addresses:
+        target = url if address == url.host else url.copy_with(host=address)
+        request = client.build_request(
+            "POST", target, headers=sent, content=body, extensions=extensions
+        )
+        try:
+            return await client.send(request, stream=True)
+        except httpx.ConnectError as error:
+            last = error
+        except httpx.TimeoutException as error:
+            raise FetchError("timeout", "The endpoint took too long to respond.") from error
+        except httpx.TransportError as error:
+            raise FetchError("connect", "Couldn't connect to the endpoint.") from error
+    raise FetchError("connect", "Couldn't connect to the endpoint.") from last
 
 
 def _literal_ip(host: str) -> IPAddress | None:

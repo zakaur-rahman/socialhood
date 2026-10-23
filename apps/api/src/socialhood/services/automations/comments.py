@@ -84,7 +84,7 @@ async def intake(
     item = await repo.find_media_item(session, acct.id, event.media_id)
     if item is None:
         item = await _store_post(session, acct, event, deps=deps(), now=now)
-    contact, _ = await rows.get_or_create_contact(
+    contact, new_contact = await rows.get_or_create_contact(
         session,
         social_account_id=acct.id,
         platform_user_id=event.author_ref,
@@ -92,6 +92,10 @@ async def intake(
     )
     if event.author_username and contact.username != event.author_username:
         contact.username = event.author_username  # the newest we know
+    if new_contact and not backfill:
+        from socialhood.services.webhooks import events
+
+        await events.contact_created(session, contact, platform=acct.platform)
     if not backfill:
         touch_activity(contact, event.occurred_at)  # GR-02: a comment is contact activity
     values: dict[str, Any] = {

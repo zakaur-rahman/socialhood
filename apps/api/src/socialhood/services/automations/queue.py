@@ -767,6 +767,7 @@ async def _settle(run: _Pass, claimed: list[_Claimed], tally: _Tally) -> None:
             if msg is not None:
                 results.apply_message(settled, msg, opening=by_run[settled.id].opening)
                 await engine.after_message(session, settled, msg)  # a flow run goes on (GR-03)
+                await results.completed(session, settled, msg)  # GR-04
         for item in done:
             msg, conv = messages.get(item.message_id), conversations.get(item.conversation_id)
             if msg is None or conv is None:

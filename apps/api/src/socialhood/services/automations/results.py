@@ -183,8 +183,39 @@ async def follow_message(session: AsyncSession, msg: Message) -> None:
     await session.flush()
     if engine.is_flow_run(run):
         await engine.after_message(session, run, msg)
-    elif msg.status in DELIVERED and run.private_reply_message_id == msg.id:
+        return
+    if msg.status in DELIVERED and run.private_reply_message_id == msg.id:
         await nudge.after_message(session, run)
+    await completed(session, run, msg)
+
+
+SETTLED = frozenset({RunResult.SENT, RunResult.PARTIAL, RunResult.FAILED})
+
+
+async def completed(session: AsyncSession, run: AutomationRun, msg: Message) -> None:
+    """automation.run.completed (GR-04) for a run on its message settings: its message was sent
+    or failed (later read receipts don't count; the event is sent once per run)."""
+    from socialhood.services.automations import engine
+    from socialhood.services.webhooks import events
+
+    if (
+        engine.is_flow_run(run)
+        or run.private_reply_message_id != msg.id
+        or msg.status not in (MessageStatus.SENT, MessageStatus.FAILED)
+        or run.result not in SETTLED
+    ):
+        return
+    automation = await runs.get_automation(session, run.automation_id)
+    contact = await runs.contacts_by_id(session, [run.contact_id]) if run.contact_id else []
+    await events.run_completed(
+        session,
+        run_id=run.id,
+        result=run.result,
+        trigger="comment" if run.trigger_comment_id else "dm",
+        automation_id=run.automation_id,
+        automation_name=automation.name if automation else "",
+        contact=contact[0] if contact else None,
+    )
 
 
 async def _opens_first(session: AsyncSession, run: AutomationRun) -> bool:

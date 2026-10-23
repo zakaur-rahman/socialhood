@@ -396,6 +396,11 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     includes: (n) => counted(n, "custom contact field", "custom contact fields"),
     unlimited: "custom contact fields",
   },
+  webhook_endpoints: {
+    limitTitle: "Webhook endpoint limit reached",
+    includes: (n) => counted(n, "webhook endpoint", "webhook endpoints"),
+    unlimited: "webhook endpoints",
+  },
   members: {
     limitTitle: "Member limit reached",
     includes: (n) => counted(n, "member", "members"),
