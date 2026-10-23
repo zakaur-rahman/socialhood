@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -50,6 +50,7 @@ from socialhood.models.agent import RiskTier
 from socialhood.repositories import inbox, social_accounts
 from socialhood.schemas.agent import ScheduleMessageAction, ScheduleMessagePrefill
 from socialhood.schemas.inbox import InboxView
+from socialhood.services import contacts as contact_records
 from socialhood.services import conversations
 from socialhood.services.analysis import latest_analysis
 from socialhood.services.comments.queries import CommentQuery, find_comments
@@ -457,6 +458,12 @@ class CustomerResult(ToolResult):
     analysis: Analysis | None = None
     comment_count: int
     recent_comments: list[CustomerComment]
+    # GR-02: what the business recorded about them.
+    tags: list[str] = Field(default_factory=list)
+    fields: dict[str, Any] = Field(default_factory=dict)  # custom field label: value
+    has_email: bool = False
+    has_phone: bool = False
+    marketing_consent: dict[str, str] = Field(default_factory=dict)  # channel: granted or revoked
 
 
 @tool(
@@ -464,7 +471,8 @@ class CustomerResult(ToolResult):
     label="Reading the customer's details",
     description=(
         "A customer (contact) by id: who they are, their conversation's summary and latest "
-        "analysis (intent, sentiment, lead score) and their recent comments."
+        "analysis (intent, sentiment, lead score), their recent comments, and what the business "
+        "recorded: tags, custom fields, whether an email and phone are known, marketing consent."
     ),
     input_model=GetCustomerInput,
     result_model=CustomerResult,
@@ -480,6 +488,8 @@ async def get_customer(ctx: ToolContext, args: GetCustomerInput) -> CustomerResu
         ctx.session, CommentQuery(contact_id=contact.id, spam=None), limit=3
     )
     name = contact_name(contact)
+    record = await contact_records.get_record(ctx.session, contact.id)
+    labels = {d.key: d.label for d in (await contact_records.list_fields(ctx.session)).items}
     refs = [ref("conversation", conv.id, name)] if conv else []
     refs += [
         ref("comment", r.comment.id, quoted(r.comment.text), r.comment.media_item_id)
@@ -535,6 +545,110 @@ async def get_customer(ctx: ToolContext, args: GetCustomerInput) -> CustomerResu
             for r in comments.rows
         ],
         refs=refs,
+        caveats=caveats,
+        tags=[t.name for t in record.tags],
+        fields={labels.get(k, k): v for k, v in record.fields.items()},
+        has_email=record.email is not None,
+        has_phone=record.phone is not None,
+        marketing_consent={c.channel: c.status for c in record.consents},
+    )
+
+
+# ---------------------------------------------------------------- list_contacts (GR-02)
+
+
+class ListContactsInput(_Input):
+    tag: str | None = Field(
+        default=None, max_length=40, description="Only contacts with this tag (its name)."
+    )
+    has_email: bool | None = Field(
+        default=None, description="Only contacts with (or without) an email."
+    )
+    has_phone: bool | None = Field(
+        default=None, description="Only contacts with (or without) a phone."
+    )
+    platform: Literal["instagram", "whatsapp"] | None = None
+    min_lead_score: int | None = Field(default=None, ge=0, le=100)
+    limit: int = limit_field(default=10, maximum=25)
+
+
+class ContactLine(BaseModel):
+    contact_id: uuid.UUID
+    name: str
+    platform: str
+    tags: list[str]
+    lead_score: int | None = None
+    conversation_id: uuid.UUID | None = None
+    last_activity_label: str | None = None
+
+
+class ListContactsResult(ToolResult):
+    contacts: list[ContactLine]
+    more: bool
+
+
+@tool(
+    name="list_contacts",
+    label="Listing contacts",
+    description=(
+        "Contacts filtered by tag, whether an email or phone is known, platform or minimum lead "
+        "score, most recently active first. For questions like 'who is tagged VIP?' or 'which "
+        "leads gave an email?'."
+    ),
+    input_model=ListContactsInput,
+    result_model=ListContactsResult,
+)
+async def list_contacts(ctx: ToolContext, args: ListContactsInput) -> ListContactsResult:
+    tag_ids: tuple[uuid.UUID, ...] = ()
+    caveats: list[str] = []
+    if args.tag:
+        wanted = args.tag.strip().casefold()
+        match = next(
+            (
+                t
+                for t in (await contact_records.list_tags(ctx.session)).items
+                if t.name.casefold() == wanted
+            ),
+            None,
+        )
+        if match is None:
+            return ListContactsResult(
+                summary=clip(f"There's no tag called “{args.tag}”", 300) or "No such tag",
+                contacts=[],
+                more=False,
+                caveats=["Tags are matched by their full name."],
+            )
+        tag_ids = (match.id,)
+    page = await contact_records.list_contacts(
+        ctx.session,
+        contact_records.ContactFilter(
+            tag_ids=tag_ids,
+            has_email=args.has_email,
+            has_phone=args.has_phone,
+            platform=args.platform,
+            min_lead_score=args.min_lead_score,
+        ),
+        cursor=None,
+        limit=args.limit,
+    )
+    lines = [
+        ContactLine(
+            contact_id=item.id,
+            name=item.name,
+            platform=item.platform,
+            tags=[t.name for t in item.tags],
+            lead_score=item.lead_score,
+            conversation_id=item.conversation_id,
+            last_activity_label=when(ctx, item.last_activity_at),
+        )
+        for item in page.items
+    ]
+    count = f"{len(lines)}{'+' if page.next_cursor else ''}"
+    return ListContactsResult(
+        summary=clip(f"{count} contact{'s' if len(lines) != 1 else ''}", 300) or "Contacts",
+        contacts=lines,
+        more=page.next_cursor is not None,
+        refs=[ref("conversation", c.conversation_id, c.name) for c in lines if c.conversation_id],
         caveats=caveats,
     )
 

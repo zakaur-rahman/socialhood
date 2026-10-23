@@ -38,7 +38,8 @@ Entry sources (GR-01):
   as the conversation's ``last_referral``, and never starts a conversation (no empty threads). Meta
   may deliver it just after the first message, so it upgrades an organic entry recorded less than
   ENTRY_UPGRADE_WINDOW earlier;
-- an opt-in is left in the stored webhook event; GR-02 records it as consent.
+- an opt-in (Instagram ``messaging_optins``) records the contact's marketing consent for the
+  channel (GR-02): granted, or revoked when Meta says the person stopped.
 
 Follow-ups are deferred by a couple of seconds: the caller commits after this returns, and a job
 that finds no row (its transaction rolled back) does nothing. ``backfill=True`` (history from
@@ -240,7 +241,7 @@ class _Ingest:
         elif isinstance(event, Referral):
             await self._referral(event)
         elif isinstance(event, OptIn):
-            self.result.ignored.append("opt-ins are kept in the webhook event until GR-02")
+            await self._optin(event)
         elif isinstance(event, InboundComment):
             # Comments are taken in by services/automations/comments (F-12), not here.
             self.result.ignored.append("comments are not messages")
@@ -371,6 +372,37 @@ class _Ingest:
             ctwa_clid=record.get("ctwa_clid"),
             platform_source=record.get("platform_source"),
         )
+
+    async def _optin(self, event: OptIn) -> None:
+        """Marketing consent from the platform (GR-02), with what Meta said as evidence."""
+        from socialhood.models.contacts import ConsentChannel, ConsentSource, ConsentStatus
+        from socialhood.services.contacts import record_consent
+
+        if self.acct.platform not in set(ConsentChannel):
+            self.result.ignored.append(f"opt-ins on {self.acct.platform}")
+            return
+        contact, _ = await rows.get_or_create_contact(
+            self.session,
+            social_account_id=self.acct.id,
+            platform_user_id=event.contact_ref,
+            first_seen_at=event.occurred_at,
+        )
+        stopped = (event.status or "").lower() in ("stop", "stopped", "unsubscribe")
+        evidence = {"platform_event": "messaging_optins"}
+        if event.topic:
+            evidence["topic"] = event.topic
+        if event.status:
+            evidence["status"] = event.status
+        await record_consent(
+            self.session,
+            contact.id,
+            channel=self.acct.platform,
+            status=ConsentStatus.REVOKED if stopped else ConsentStatus.GRANTED,
+            source=ConsentSource.PLATFORM_OPTIN,
+            evidence=evidence,
+            at=event.occurred_at,
+        )
+        self.result.updated_contact_ids.append(contact.id)
 
     async def _referral(self, event: Referral) -> None:
         """An entry link opened or an ad tapped, with no message yet (``messaging_referral``)."""

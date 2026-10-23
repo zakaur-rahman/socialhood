@@ -170,14 +170,33 @@ async def test_a_postback_keeps_its_payload(
     )
 
 
-async def test_an_opt_in_is_kept_for_consent_and_changes_nothing_yet(
+async def test_an_opt_in_records_marketing_consent(
     engine: AsyncEngine, redis: Redis, workspace: uuid.UUID
 ) -> None:
-    assert await deliver(sessions(engine), redis, "webhook_optin.json") == IGNORED
-    [event] = await rows(engine, "SELECT event_type, last_error FROM webhook_events")
-    assert event["event_type"] == "optin"
-    assert "GR-02" in (event["last_error"] or "")
-    assert await rows(engine, "SELECT id FROM contacts") == []
+    """GR-02: Instagram's messaging_optins becomes a consent record, with Meta's words as
+    evidence; it starts no conversation."""
+    assert await deliver(sessions(engine), redis, "webhook_optin.json") == PROCESSED
+    [consent] = await rows(
+        engine, "SELECT channel, purpose, status, source, evidence FROM contact_consents"
+    )
+    assert consent == {
+        "channel": "instagram",
+        "purpose": "marketing",
+        "status": "granted",
+        "source": "platform_optin",
+        "evidence": {"platform_event": "messaging_optins", "topic": "Offers", "status": "resume"},
+    }
+    assert await rows(engine, "SELECT id FROM conversations") == []
+
+
+async def test_an_opt_in_that_stops_revokes_consent(
+    engine: AsyncEngine, redis: Redis, workspace: uuid.UUID
+) -> None:
+    body = copy.deepcopy(fixture("webhook_optin.json"))
+    body["entry"][0]["messaging"][0]["optin"]["notification_messages_status"] = "stop"
+    assert await deliver(sessions(engine), redis, body) == PROCESSED
+    [consent] = await rows(engine, "SELECT status FROM contact_consents")
+    assert consent["status"] == "revoked"
 
 
 async def any_comment_automation(engine: AsyncEngine, account: tuple[uuid.UUID, uuid.UUID]) -> None:

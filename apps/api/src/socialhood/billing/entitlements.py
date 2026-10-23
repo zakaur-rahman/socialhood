@@ -66,6 +66,7 @@ THINGS = {
     "scheduled_posts_monthly": "scheduled posts a month",
     "knowledge_characters": "characters of knowledge",
     "members": "members",
+    "contact_fields": "custom contact fields",
 }
 
 

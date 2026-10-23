@@ -19,6 +19,7 @@ READ = {
     "get_conversation",
     "find_contact",
     "get_customer",
+    "list_contacts",
     "get_post_comments",
     "search_comments",
     "get_posts",

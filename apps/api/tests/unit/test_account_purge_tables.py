@@ -26,6 +26,8 @@ EXPECTED = {
     "automations",
     "comment_analyses",
     "comments",
+    "contact_consents",
+    "contact_tags",
     "contacts",
     "conversations",
     "media_items",
