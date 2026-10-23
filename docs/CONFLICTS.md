@@ -2199,3 +2199,99 @@ renumbers this entry if another branch took C-088.)
 - **Unverified:** dragging on a touch screen (the handle is `touch-action: none`; the buttons and
   keys are the fallback), and the sandbox run of the e2e (`gr13-flow-editor.spec.ts`) is written
   but was not run.
+
+## C-089 · Visual answers in Ask (GR-38, feature/gr-38-visual-answers)
+
+Option C of `docs/architecture/generative-ui/` (accepted 2026-10-24), backlog VIS-01 to VIS-06 and
+the small items VIS-X1, X3 and X4. No migration.
+
+- **Owner's defaults kept:** visuals in Ask only, English labels, no OpenUI, the model never writes
+  a number, label or layout. A question no tool with chartable data answers shows no visual.
+- **Account metrics** (VIS-01): `services/analytics/account_metrics.py`, read by
+  `GET /v1/w/{wid}/analytics/account-metrics` (any member) and by the agent.
+  - Query: `since`, `until` (default the last 30 days), `account_id`, `metric` (repeatable),
+    `compare=previous` (the period of the same length just before).
+  - Metrics: reach, views, accounts_engaged, interactions, followers, follows, unfollows,
+    profile_link_taps (from `account_daily_metrics`), comments and messages_received (counted from
+    their tables over the workspace's local days).
+  - Sums add the days that have a reading and say how many (`days_known` of `days_total`). A gap is
+    never a zero. With no reading the value is null and `unavailable` says why:
+    `insights_not_granted`, `no_readings` or `no_account`.
+  - Followers is the latest reading in the period, per account, then added. Not a sum.
+  - The change is `(current - previous) / previous x 100`, one decimal, worked out in the service.
+    Null against a previous 0 (the direction is still up or down) or an unknown side. Flat under
+    0.5%.
+  - *Reach, views and the other insight metrics are daily values added up, so a person reached on
+    two days counts twice. Instagram has no period total for these in the data we store. The
+    caveats and the web say so.*
+- **Same days, not same labels:**
+  - Today has no row (it is written the next morning), so the agent's periods stop yesterday and a
+    caveat says so. "This month" on 23 October is 1-22 October.
+  - A period still running is matched with the other one over the same number of days, cut from
+    its start: 1-22 October against 1-22 September. The note says how.
+  - Two finished periods of different length are `comparable: false`: totals are given, no change.
+  - *The doc 05 design had one comparable-days rule; this is that rule plus the "today" cut, which
+    the doc didn't foresee.*
+- **Tools** (VIS-02), both read, any member:
+  - `compare_periods(range, compare_to, metrics, account)`; without `compare_to` the period just
+    before. The tool description says it is the only tool that compares periods.
+  - `metric_trend(metric, range, account)`: a point a day up to 31 days, then a week. It returns
+    first, last, lowest and highest points and the change between first and last. *It builds no
+    visual yet: the trend chart is VIS-07.*
+  - Prompt `agent.v3`: points the model to `compare_periods`; with visuals on, says the screen shows
+    the figures so the answer needn't repeat them. Off, the prompt text is v2's apart from the
+    comparison line. *The eval was not run (no key here), so v3's rate against v2's is unmeasured.*
+- **Visuals** (VIS-03): `Visual` is a closed union in `schemas/agent.py`: `metric_comparison`,
+  `ranked_posts`, `sentiment_summary`. Pure builders in `agent/visuals.py`.
+  - Caps in the types: 8 metrics, 10 posts, 6 topics, strings clipped, a thumbnail an https URL
+    under 400 characters. Each visual at most 8 KB serialised (a test builds the worst cases).
+  - A build that fails or is too big drops only the visual (log `agent_visual_failed`, counter).
+  - *Shapes differ from doc 05 where a simpler one did the job: a `MetricDelta` is one flat card
+    (`current`, `previous`, `change_pct`, `tone`, coverage, `unavailable`) instead of two
+    `MetricValue`s; there is no `account_ref` (a label instead) and no `TrendVisual` or
+    `LeadListVisual` yet.*
+  - `top_posts`, `sentiment_distribution`, `comment_topics` and `compare_periods` carry the visual.
+    `comment_topics` runs the distribution too (one more query, only with visuals on and no
+    sentiment filter) and returns it as `split`, so the numbers on screen are ones a tool returned.
+  - Built only with `AGENT_VISUALS_ENABLED` on; nothing is stored with it off.
+- **The run** (VIS-04): `AgentRun.visuals`, from the succeeded steps' `visual`, in step order, at most
+  3, each re-checked against the current models on read (an invalid one is dropped and counted).
+  - A second sentiment summary of the same scope replaces the first (it has the topics); an
+    identical visual shows once.
+  - `agent/report.model_view` removes `visual` from what the model reads (also on a resumed run).
+    `step.result` in the run detail drops it too, so the payload isn't doubled.
+  - The list endpoint includes visuals (at most 3 x 8 KB a run, 20 runs a page). *Doc 05 left list
+    vs detail open; the thread view draws from the list, so it is in.* If the page weight bites,
+    cap or omit it there.
+- **The flag:** *a server setting `AGENT_VISUALS_ENABLED` (default off), not a per-workspace flag:
+  the app has no feature-flag table, and one would need a migration. Off: `visuals` is `[]`, tools
+  build none, the prompt doesn't mention them. Per-workspace rollout can come with a real flags
+  table.*
+- **Web** (VIS-05): `VisualView` (error boundary, Sentry tag `visual_kind`) in `RunView`'s finished
+  state, between the answer with its sources and the action cards.
+  - `MetricComparison` from `MetricTile`s in a container-query grid; `RankedPosts` from `Table` and
+    `PostThumb`, rows link to the post; `SentimentSummary` from `SentimentBar` and its legend.
+  - Customer text is text; a picture must be https; an unknown kind draws nothing.
+  - One series colour is not needed yet (no chart); the rule is in DESIGN_SYSTEM 1.8.
+- **Observability** (VIS-X3): log `agent_visual` (kind, bytes, build_ms), counter
+  `socialhood_agent_visuals_total{kind,outcome}` with built, dropped and dropped_stored. Web render
+  errors go to Sentry. A web-side counter isn't added.
+- **Tests:**
+  - Unit: the arithmetic and gaps, the builders and size, the projection, the prompt.
+  - Integration (written, not run): the route, the tools on seeded days, the run API with the flag
+    on and off, roles and other workspaces.
+  - Web (written, not run): states, malicious text, the boundary and unknown kinds, the panel.
+  - E2E `gr38-visual-answers.spec.ts`: the fake model calls no tools, so a seed route in the e2e API
+    (`POST /__e2e/workspaces/{wid}/agent-runs`) stores a finished run whose step holds the visual
+    the real service and builder make from seeded days. The launcher sets
+    `AGENT_VISUALS_ENABLED=true`.
+  - Eval: 9 cases (`period-compare-*`, `trend-reach-30`, `visual-*`) over a seeded `account_daily`
+    series with two gap days; each visual's figures must be ones a tool returned and, where the case
+    computes them from the seed, the right ones. A concept question must show none. New target:
+    `visuals` 100%.
+- **Checked centrally:** `apps/api/openapi.json` and `packages/api-client` (the account-metrics
+  route, `AgentRun.visuals`, `Visual` and its parts, `AccountMetrics` and friends), typecheck,
+  build, the integration and tenancy suites, the web tests.
+- **Left for later:** VIS-07 onwards (trend chart, lead list, table, progressive visuals, range
+  controls, the report page), the OpenUI spike VIS-14, VIS-X2 (quote account names in the prompt),
+  localised labels.
