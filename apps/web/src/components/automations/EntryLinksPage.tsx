@@ -471,17 +471,13 @@ function EditDialog({
 
 function QrDialog({ wid, link, onClose }: { wid: string; link: EntryLink | null; onClose: () => void }) {
   const qr = useEntryLinkQr(wid, link?.id ?? "", link !== null);
-  const [src, setSrc] = useState<string | null>(null);
   const blob = qr.data;
+  // One object URL per image, revoked when the image changes or the dialog goes.
+  const src = useMemo(() => (blob ? URL.createObjectURL(blob) : null), [blob]);
   useEffect(() => {
-    if (!blob) {
-      setSrc(null);
-      return;
-    }
-    const url = URL.createObjectURL(blob);
-    setSrc(url);
-    return () => URL.revokeObjectURL(url);
-  }, [blob]);
+    if (!src) return;
+    return () => URL.revokeObjectURL(src);
+  }, [src]);
 
   return (
     <Dialog open={link !== null} onOpenChange={(open) => !open && onClose()}>
@@ -495,7 +491,7 @@ function QrDialog({ wid, link, onClose }: { wid: string; link: EntryLink | null;
             <ErrorState size="compact" error={qr.error} onRetry={() => void qr.refetch()} />
           ) : src ? (
             // eslint-disable-next-line @next/next/no-img-element -- a blob URL of the QR code
-            <img src={src} alt={`QR code for ${link?.name ?? "the link"}`} className="size-56 bg-white p-2" />
+            <img src={src} alt={`QR code for ${link?.name ?? "the link"}`} className="size-56 bg-on-brand p-2" />
           ) : (
             <Skeleton className="size-56" aria-label="Loading the QR code" />
           )}

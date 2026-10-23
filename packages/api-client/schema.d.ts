@@ -1514,6 +1514,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/entry-links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Entry Links
+         * @description The links, newest first, with the conversations and automation runs each has led to.
+         */
+        get: operations["list_entry_links"];
+        put?: never;
+        /**
+         * Create Entry Link
+         * @description A link on an Instagram account. Leave ``code`` out and one is made; it can't change later.
+         */
+        post: operations["create_entry_link"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/entry-links/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Entry Link */
+        get: operations["get_entry_link"];
+        /**
+         * Update Entry Link
+         * @description Rename the link or change the automation it starts. The account and code stay.
+         */
+        put: operations["update_entry_link"];
+        post?: never;
+        /**
+         * Delete Entry Link
+         * @description Deleting a link stops its automation starting from it. Conversations it opened keep
+         *     their entry.
+         */
+        delete: operations["delete_entry_link"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/entry-links/{link_id}/qr": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download Entry Link Qr
+         * @description The link's QR code as an image to download.
+         */
+        get: operations["download_entry_link_qr"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/events": {
         parameters: {
             query?: never;
@@ -3468,6 +3538,8 @@ export interface components {
             action?: ("send_message" | "ai_reply") | null;
             /** Activated At */
             activated_at?: string | null;
+            /** Ad Ids */
+            ad_ids?: string[];
             /** Ai Instructions */
             ai_instructions?: string | null;
             /** Confirm First */
@@ -3567,7 +3639,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
             /**
              * Updated At
              * Format: date-time
@@ -3594,6 +3666,8 @@ export interface components {
         AutomationDefinition: {
             /** Action */
             action?: ("send_message" | "ai_reply") | null;
+            /** Ad Ids */
+            ad_ids?: string[];
             /** Ai Instructions */
             ai_instructions?: string | null;
             /**
@@ -3665,7 +3739,7 @@ export interface components {
              */
             surge_order: "oldest_first" | "newest_first" | "public_only";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
         };
         /** AutomationDraftAction */
         AutomationDraftAction: {
@@ -3713,7 +3787,7 @@ export interface components {
             /** Template Key */
             template_key?: string | null;
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
         };
         /** AutomationList */
         AutomationList: {
@@ -3858,7 +3932,7 @@ export interface components {
              * Trigger
              * @enum {string}
              */
-            trigger: "dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention";
+            trigger: "dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click";
         };
         /** AutomationTemplateList */
         AutomationTemplateList: {
@@ -4983,6 +5057,74 @@ export interface components {
             /** Value */
             value: number | boolean | string[] | null;
         };
+        /**
+         * EntryLink
+         * @description ``url`` is the link to share (and what the QR code holds). ``opened_conversations`` counts
+         *     conversations that began from the link, ``runs`` the automation runs they led to.
+         */
+        EntryLink: {
+            /** Account Username */
+            account_username?: string | null;
+            /** Automation Id */
+            automation_id?: string | null;
+            /** Automation Name */
+            automation_name?: string | null;
+            /** Code */
+            code: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Opened Conversations */
+            opened_conversations: number;
+            /** Runs */
+            runs: number;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Url */
+            url: string;
+        };
+        /**
+         * EntryLinkCreate
+         * @description ``code`` is the ?ref= value; leave it out and one is made. It can't be changed later, so
+         *     printed QR codes keep working.
+         */
+        EntryLinkCreate: {
+            /** Automation Id */
+            automation_id?: string | null;
+            /** Code */
+            code?: string | null;
+            /** Name */
+            name: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+        };
+        /** EntryLinkList */
+        EntryLinkList: {
+            /** Items */
+            items: components["schemas"]["EntryLink"][];
+        };
+        /** EntryLinkUpdate */
+        EntryLinkUpdate: {
+            /** Automation Id */
+            automation_id?: string | null;
+            /** Name */
+            name: string;
+        };
         /** ErrorInfo */
         ErrorInfo: {
             /** Code */
@@ -5485,7 +5627,7 @@ export interface components {
              */
             status: "draft" | "active" | "paused";
             /** Trigger */
-            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
+            trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
         };
         /** MarkRead */
         MarkRead: {
@@ -5916,6 +6058,16 @@ export interface components {
             comments_received: number;
             /** Conversations */
             conversations: number;
+            /**
+             * Conversations From Ads
+             * @default 0
+             */
+            conversations_from_ads: number;
+            /**
+             * Conversations From Links
+             * @default 0
+             */
+            conversations_from_links: number;
             /** Conversations Replied */
             conversations_replied: number;
             /** First Responses */
@@ -9089,7 +9241,7 @@ export interface operations {
             query?: {
                 account_id?: string | null;
                 status?: ("draft" | "active" | "paused") | null;
-                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention") | null;
+                trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click") | null;
                 q?: string | null;
                 sort?: "recent_runs" | "name" | "created";
             };
@@ -11466,6 +11618,261 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SandboxInboundResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_entry_links: {
+        parameters: {
+            query?: {
+                account_id?: string | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryLinkList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_entry_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryLinkCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryLink"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_entry_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryLink"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_entry_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryLinkUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EntryLink"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_entry_link: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    download_entry_link_qr: {
+        parameters: {
+            query?: {
+                format?: "svg" | "png";
+            };
+            header?: never;
+            path: {
+                link_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
+                    "image/svg+xml": unknown;
                 };
             };
             /** @description Validation error */
