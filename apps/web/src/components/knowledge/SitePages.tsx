@@ -276,12 +276,11 @@ export function SitePages({ site, now }: { site: KnowledgeSource; now: Date }) {
               onClick={() => {
                 const page = removing;
                 if (!page) return;
-                remove.mutate(
-                  { siteId: site.id, pageId: page.id },
-                  {
-                    onSuccess: () => toast.success(`Removed ${pagePath(page.url)}`),
-                    onError: (error) => toastError(error),
-                  },
+                // mutateAsync: the list refetch can remount this panel before a per-call
+                // onSuccess would run, and the toast must still show.
+                remove.mutateAsync({ siteId: site.id, pageId: page.id }).then(
+                  () => toast.success(`Removed ${pagePath(page.url)}`),
+                  (error: unknown) => toastError(error),
                 );
               }}
             >

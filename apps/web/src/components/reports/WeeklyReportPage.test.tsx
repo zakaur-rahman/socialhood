@@ -198,7 +198,11 @@ describe("the weekly report page (GR-34)", () => {
 
   it("a rise from nothing is New, and a gap in the series breaks the line", async () => {
     setup();
-    const won = await waitFor(() => item("leads_won"));
+    const won = await waitFor(() => {
+      const found = item("leads_won");
+      expect(found).not.toBeNull();
+      return found;
+    });
     expect(within(won).getByTestId("trend")).toHaveTextContent("New");
     expect(within(won).getByTestId("series-gaps")).toHaveTextContent("2 weeks without data");
   });

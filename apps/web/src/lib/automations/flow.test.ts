@@ -540,7 +540,7 @@ describe("a Send step that sends a saved reply (GR-21)", () => {
   const savedSend = (extra: Partial<SendNode> = {}) => send("s", "", { saved: true, saved_reply_id: reply, ...extra });
 
   it("compiles to a send with the reply and nothing else", () => {
-    const { definition } = compile([savedSend({ text: "ignored", buttons: [{ title: "Open", url: "https://example.com" }] }), send("after")]);
+    const { definition } = compile([savedSend({ text: "ignored", buttons: [{ title: "Open", url: "https://example.com", profile: false }] }), send("after")]);
     expect(definition.steps[0]).toEqual({ type: "send", id: "s", text: "", saved_reply_id: reply, next: "after" });
   });
 

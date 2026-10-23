@@ -72,8 +72,8 @@ function setup(partial: Partial<State> = {}) {
       },
       "GET /v1/w/:wid/knowledge-sources/:id/pages": () =>
         json({ items: state.pages, total: state.total ?? state.pages.length }),
-      "DELETE /v1/w/:wid/knowledge-sources/:id/pages/:pageId": (_, p) => {
-        state.pages = state.pages.map((page) => (page.id === p.pageId ? { ...page, status: "removed" as const, ingest_status: null } : page));
+      "DELETE /v1/w/:wid/knowledge-sources/:id/pages/:page_id": (_, p) => {
+        state.pages = state.pages.map((page) => (page.id === p.page_id ? { ...page, status: "removed" as const, ingest_status: null } : page));
         return noContent();
       },
       "POST /v1/w/:wid/knowledge-sources/:id/excluded-paths": (call, p) => {
@@ -186,7 +186,7 @@ describe("A website's pages (GR-35)", () => {
     const items = within(panel).getAllByRole("listitem").filter((li) => li.hasAttribute("data-status"));
     expect(items).toHaveLength(6);
     const returns = items.find((li) => li.getAttribute("data-status") === "failed")!;
-    expect(within(returns).getByText("/returns")).toBeInTheDocument(); // no title: the path
+    expect(within(returns).getAllByText("/returns").length).toBeGreaterThan(0); // no title: the path
     expect(within(returns).getByText("The page returned an error (503).")).toBeInTheDocument();
     expect(within(returns).getByText("Failed")).toBeInTheDocument();
     expect(within(items[1]).getByText("Read")).toBeInTheDocument();

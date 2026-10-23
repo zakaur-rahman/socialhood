@@ -368,7 +368,7 @@ describe("the flow editor (GR-13)", () => {
     it("swaps the message for a picker, hiding the text, image, buttons and quick replies", async () => {
       const user = userEvent.setup();
       const seen: EditorStep[][] = [];
-      renderEditor({ initial: [send("a", "Hello", { buttons: [{ title: "Open", url: "https://example.com" }] })], onTree: (tree) => seen.push(tree) });
+      renderEditor({ initial: [send("a", "Hello", { buttons: [{ title: "Open", url: "https://example.com", profile: false }] })], onTree: (tree) => seen.push(tree) });
       const source = screen.getByRole("radiogroup", { name: "What to send" });
       expect(within(source).getByRole("radio", { name: "Write a message" })).toBeChecked();
       expect(screen.getByRole("textbox", { name: "Message" })).toBeInTheDocument();
