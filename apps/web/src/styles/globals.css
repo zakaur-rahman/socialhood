@@ -14,8 +14,14 @@
 /* Additions marked "C-070" are the UI audit's token foundation (docs/ui-audit/DESIGN_SYSTEM.md
    §1.13, §1.9, §2, §7): names for values already in use; the few on-screen changes are listed in
    docs/CONFLICTS.md C-070. Those marked "C-071" apply the owner's decisions D-01 (control edges),
-   D-06 (placeholders) and D-12 (overlay surface and elevation), approved in C-069. styles/tokens.ts
-   mirrors every value and tokens.test.ts checks this file against it. */
+   D-06 (placeholders) and D-12 (overlay surface and elevation), approved in C-069.
+
+   THIS FILE IS THE ONE PLACE A THEME VALUE IS WRITTEN (C-100, docs/ui-audit/THEME.md). Colours,
+   shadows, sizes, easings, radii, breakpoints and gradients live here and nowhere else.
+   `pnpm tokens` (scripts/gen-tokens.mjs, run by predev and prebuild) reads this file and writes
+   styles/tokens.generated.ts and .json, which the TypeScript consumers (Clerk, the OG image, the
+   manifest, the icon generator, /dev/tokens) read; tokens.ts holds only the descriptions. Edit a
+   value here, run `pnpm tokens`, commit the generated files. */
 
 @theme {
   /* The palette lock (UI-070, C-075): Tailwind's default colours are cleared, so only the
@@ -43,13 +49,23 @@
   --color-hover: rgb(255 255 255 / 0.05);    /* hover fill on any surface; neutral chip fill */
   --color-pressed: rgb(255 255 255 / 0.10);  /* pressed or open: aria-expanded, data-state=open */
   --color-scrim: rgb(0 0 0 / 0.60);          /* modal and drawer backdrop (UX-SH-02) */
-  --color-media-scrim: #000000;              /* on photos and video only, with an opacity (bg-media-scrim/60) */
+  --color-media-scrim: #000000;              /* on photos and video only; the steps below are its named shades */
+  --color-media-wash: color-mix(in srgb, var(--color-media-scrim) 20%, transparent);   /* a light dim over a photo: file cards, thumbnails */
+  --color-media-chip: color-mix(in srgb, var(--color-media-scrim) 70%, transparent);   /* a label or button on a photo: count chips, captions */
+  --color-media-heavy: color-mix(in srgb, var(--color-media-scrim) 85%, transparent);  /* text over a photo: upload progress, the end of a caption fade */
+  --color-canvas-veil: color-mix(in srgb, var(--color-canvas) 30%, transparent);       /* a dimmed cell or inset: days outside the month, a card in a flow */
+  --color-panel-glass: color-mix(in srgb, var(--color-panel) 50%, transparent);        /* marketing cards over the page glow */
+  --color-panel-veil: color-mix(in srgb, var(--color-panel) 85%, transparent);         /* the floating marketing nav over scrolled content */
 
   /* Text */
   --color-fg: #FFFFFF;
   --color-fg-secondary: #9B9CA0;  /* all secondary and meta text, including timestamps; placeholders (D-06, C-071) */
   --color-fg-disabled: #71717A;   /* disabled controls only (3.41:1 on panel: never readable text) */
   --color-on-brand: #FFFFFF;      /* text and icons on the brand gradient, brand-strong, danger-fill and platform fills (C-070) */
+  --color-on-brand-soft: color-mix(in srgb, var(--color-on-brand) 15%, transparent);         /* a quiet fill on a brand bubble: image and button previews */
+  --color-on-brand-line: color-mix(in srgb, var(--color-on-brand) 30%, transparent);         /* an edge on a brand bubble */
+  --color-on-brand-line-strong: color-mix(in srgb, var(--color-on-brand) 60%, transparent);  /* a chip edge on a brand bubble */
+  --color-fg-hover: color-mix(in srgb, var(--color-fg) 90%, transparent);  /* hover on the inverse button (bg-fg) */
 
   /* Brand */
   --color-brand: #567FF8;         /* non-text marks: focus ring, dots, selection bar, switch on; never behind text */
@@ -71,6 +87,9 @@
   --color-success-soft: rgb(34 197 94 / 0.15);  /* chip, banner and callout fills (C-070) */
   --color-warning-soft: rgb(251 146 60 / 0.15);
   --color-danger-soft: rgb(239 68 68 / 0.15);
+  --color-danger-line: color-mix(in srgb, var(--color-danger) 30%, transparent);  /* callout edges, as brand-line is for brand */
+  --color-warning-line: color-mix(in srgb, var(--color-warning) 40%, transparent);
+  --color-danger-fill-hover: color-mix(in srgb, var(--color-danger-fill) 90%, transparent);  /* hover on the destructive button */
 
   /* Platforms */
   --color-instagram: #BE185D;
@@ -90,12 +109,29 @@
   --text-2xs: 0.6875rem; --text-2xs--line-height: 1rem;      /* 11/16: status badges, chips, eyebrows */
   --text-md: 0.9375rem;  --text-md--line-height: 1.5rem;     /* 15/24: reading (Ask, legal prose) */
 
+  /* Letter spacing and line height that were arbitrary values in the type roles (C-100) */
+  --tracking-eyebrow: 0.08em;     /* uppercase eyebrows only */
+  --leading-display: 1.08;        /* the marketing display heading */
+
+  /* Radius scale: Tailwind's own values, written here so the scale is visible and Clerk and the
+     global error page read it instead of restating it (C-100). Cards and dialogs are xl, inputs,
+     buttons and menus lg, small buttons and tooltips md; marketing cards 2xl (DESIGN_SYSTEM §4). */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
   /* Motion easings (C-070); the durations are --motion-* below */
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);  /* state changes: colour, opacity, toggles */
   --ease-enter: cubic-bezier(0, 0, 0.2, 1);       /* things arriving */
   --ease-exit: cubic-bezier(0.4, 0, 1, 1);        /* things leaving */
 
-  /* Tailwind's breakpoints plus one (C-070) */
+  /* Tailwind's breakpoints plus one (C-070). md, lg and xl are Tailwind's own values, written here
+     so lib/breakpoints.ts reads them from the generated file instead of restating them (C-100). */
+  --breakpoint-md: 48rem;         /* 768 px: top bar and drawer below it */
+  --breakpoint-lg: 64rem;         /* 1024 px: sidebar expands; three-column dashboards */
+  --breakpoint-xl: 80rem;         /* 1280 px: inbox details inline; settings two columns */
   --breakpoint-wide: 90rem;       /* 1440 px: inbox details open by default, schedule rail inline */
 
   /* Elevation (DESIGN_SYSTEM §6; D-12, C-071): on near-black, Tailwind's 10% shadows don't show.
@@ -105,13 +141,30 @@
      take the edge with it. */
   --shadow-floating: 0 8px 24px -6px rgb(0 0 0 / 0.7);
   --shadow-overlay: 0 24px 64px -12px rgb(0 0 0 / 0.8);
+
+  /* Marketing glow (C-100): brand-tinted drops under marketing and auth cards. They replace
+     `shadow-2xl shadow-brand/15`, `hover:shadow-xl hover:shadow-brand/10` and
+     `shadow-lg shadow-brand/25`, so the size and the tint are chosen once. */
+  --shadow-glow: 0 25px 50px -12px color-mix(in srgb, var(--color-brand) 15%, transparent);
+  --shadow-glow-hover: 0 20px 25px -5px color-mix(in srgb, var(--color-brand) 10%, transparent), 0 8px 10px -6px color-mix(in srgb, var(--color-brand) 10%, transparent);
+  --shadow-glow-button: 0 10px 15px -3px color-mix(in srgb, var(--color-brand) 25%, transparent), 0 4px 6px -4px color-mix(in srgb, var(--color-brand) 25%, transparent);
 }
 
-/* Gradients (DESIGN_SYSTEM §1.9): four, each with one job; the stops are tokens (C-070). */
-@utility bg-brand-gradient { background-image: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%); }
-@utility bg-brand-gradient-decor { background-image: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%); }
-@utility bg-shell-gradient { background-image: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%); }
-@utility bg-glow-brand { background-image: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%); }
+/* Gradients (DESIGN_SYSTEM §1.9): four, each with one job, plus the marketing top glow; the stops
+   are tokens (C-070). Each is a variable too (C-100), so a consumer that can't use a utility reads
+   the same gradient: Clerk's primary button takes `var(--gradient-brand)`. */
+:root {
+  --gradient-brand: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%);
+  --gradient-brand-decor: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%);
+  --gradient-shell: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%);
+  --gradient-glow-brand: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%);
+  --gradient-glow-brand-top: radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%);
+}
+@utility bg-brand-gradient { background-image: var(--gradient-brand); }
+@utility bg-brand-gradient-decor { background-image: var(--gradient-brand-decor); }
+@utility bg-shell-gradient { background-image: var(--gradient-shell); }
+@utility bg-glow-brand { background-image: var(--gradient-glow-brand); }
+@utility bg-glow-brand-top { background-image: var(--gradient-glow-brand-top); }
 
 /* Motion durations (DESIGN_SYSTEM §7, C-070). The utilities set --tw-duration too, which
    tw-animate-css reads, so `duration-slow ease-enter` times transitions and animate-in alike. */
@@ -181,8 +234,11 @@
 
 :root {
   color-scheme: dark;
-  /* shadcn/ui semantic variables mapped onto the tokens. They stay inside components/ui; app code
-     uses the tokens (DESIGN_SYSTEM §1.10). Every one has a --color-* mapping below (C-070). */
+  /* shadcn/ui semantic variables mapped onto the tokens. Nothing hand-written uses these names:
+     components, primitives included, wear the tokens (bg-overlay, text-fg-secondary, border-line
+     …) and the design lint refuses the alias class names. They stay only so that `shadcn add`
+     output, which is written in these names, still compiles and lands on the tokens. They are
+     listed in styles/colour-exceptions.ts. Every one has a --color-* mapping below (C-070). */
   --background: var(--color-canvas);   --foreground: var(--color-fg);
   --card: var(--color-panel);          --card-foreground: var(--color-fg);
   --popover: var(--color-overlay);     --popover-foreground: var(--color-fg);
@@ -192,8 +248,9 @@
   --accent: var(--color-hover);        --accent-foreground: var(--color-fg);
   --destructive: var(--color-danger);
   --border: var(--color-line);  --input: var(--color-line-control);  --ring: var(--color-brand);
-  --radius: 0.5rem;  /* inert: nothing reads it; Tailwind's default radii are the scale (DESIGN_SYSTEM §4) */
 }
+/* The same aliases as Tailwind colours, so `bg-popover` and `border-border` generate CSS. Kept for
+   `shadcn add` output only (see :root above). */
 @theme inline {
   --color-background: var(--background); --color-foreground: var(--foreground);
   --color-card: var(--card); --color-card-foreground: var(--card-foreground);

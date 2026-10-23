@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "tokens": "node scripts/gen-tokens.mjs",
+    "predev": "node scripts/gen-tokens.mjs",
     "dev": "next dev",
+    "prebuild": "node scripts/gen-tokens.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

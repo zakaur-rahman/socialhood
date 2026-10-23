@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { cardVariants } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
 import {
   EYEBROW,
   META,
@@ -12,9 +15,11 @@ import {
   customVariants,
   easings,
   fontSizes,
+  glowShadows,
   gradientUtilities,
   motionDurations,
   otherUtilities,
+  radiusTokens,
   shadcnAliases,
   shadowTokens,
   typeRoles,
@@ -22,7 +27,8 @@ import {
 
 export const metadata: Metadata = { title: "Design tokens" };
 
-const CARD = "rounded-xl border border-line bg-panel";
+/** The card recipe (ui/card) without its padding: each block below sets its own. */
+const CARD = cn(cardVariants(), "p-0");
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -58,15 +64,16 @@ export default function TokensPage() {
       <header className="space-y-1">
         <h1 className={PAGE_TITLE}>Design tokens</h1>
         <p className="text-sm text-fg-secondary">
-          Rendered from <code>src/styles/tokens.ts</code>; a test checks <code>globals.css</code> against the same
-          lists. The rules are in <code>docs/ui-audit/DESIGN_SYSTEM.md</code>.
+          The values are read from <code>src/styles/globals.css</code> (through <code>tokens.generated.ts</code>)
+          and described in <code>src/styles/tokens.ts</code>. The rules are in{" "}
+          <code>docs/ui-audit/DESIGN_SYSTEM.md</code> and <code>docs/ui-audit/THEME.md</code>.
         </p>
       </header>
 
       <Section title="Colours">
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {colorTokens.map((token) => (
-            <li key={token.name} className={`${CARD} flex items-center gap-3 p-3`}>
+            <li key={token.name} className={cn(CARD, "flex items-center gap-3 p-3")}>
               <span className={`${token.swatch} size-10 shrink-0 rounded-lg border border-line-strong`} aria-hidden />
               <span className="min-w-0 text-sm">
                 <span className="block font-medium">{token.name}</span>
@@ -79,8 +86,8 @@ export default function TokensPage() {
       </Section>
 
       <Section title="shadcn aliases">
-        <p className={META}>Inside components/ui only; app code uses the tokens.</p>
-        <ul className={`${CARD} grid grid-cols-1 gap-x-6 p-4 text-sm sm:grid-cols-2 lg:grid-cols-3`}>
+        <p className={META}>Not used by hand-written code; they stay so that shadcn add output compiles.</p>
+        <ul className={cn(CARD, "grid grid-cols-1 gap-x-6 p-4 text-sm sm:grid-cols-2 lg:grid-cols-3")}>
           {shadcnAliases.map(({ alias, token }) => (
             <li key={alias} className="flex justify-between gap-3 py-1">
               <code>--{alias}</code>
@@ -94,7 +101,7 @@ export default function TokensPage() {
         <p className={META}>Aliases of the tokens, no new hues; categorical series use the identity palette.</p>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {chartAliases.map((alias) => (
-            <li key={alias.name} className={`${CARD} flex items-center gap-3 p-3`}>
+            <li key={alias.name} className={cn(CARD, "flex items-center gap-3 p-3")}>
               <span className={`${alias.swatch} size-10 shrink-0 rounded-lg border border-line-strong`} aria-hidden />
               <span className="min-w-0 text-sm">
                 <span className="block font-medium">{alias.name}</span>
@@ -111,7 +118,7 @@ export default function TokensPage() {
           Set by the primitives, never at call sites. Flat cards sit on panel; what floats sits on overlay with a
           line edge and one of the two shadows.
         </p>
-        <div className={`${CARD} grid grid-cols-1 gap-6 p-6 sm:grid-cols-2`}>
+        <div className={cn(CARD, "grid grid-cols-1 gap-6 p-6 sm:grid-cols-2")}>
           {shadowTokens.map((s) => (
             <div key={s.name} className={`${s.sample} rounded-lg p-4`}>
               <span className="block text-sm font-medium">{s.name}</span>
@@ -122,10 +129,35 @@ export default function TokensPage() {
         </div>
       </Section>
 
+      <Section title="Marketing glow">
+        <div className={cn(CARD, "grid grid-cols-1 gap-6 p-6 sm:grid-cols-3")}>
+          {glowShadows.map((g) => (
+            <div key={g.name} className={`${g.sample} rounded-lg p-4`}>
+              <span className="block text-sm font-medium">{g.name}</span>
+              <span className="block font-mono text-xs break-words text-fg-secondary">{g.value}</span>
+              <span className="block text-xs text-fg-secondary">{g.use}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Radius">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+          {radiusTokens.map((r) => (
+            <li key={r.name} className={cn(CARD, "p-3")}>
+              <span className={`${r.sample} block h-12 border border-line-strong bg-raised`} aria-hidden />
+              <span className="mt-2 block text-sm font-medium">{r.name}</span>
+              <span className="block font-mono text-xs text-fg-secondary">{r.value}</span>
+              <span className="block text-xs text-fg-secondary">{r.use}</span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
       <Section title="Gradients">
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {gradientUtilities.map((g) => (
-            <li key={g.name} className={`${CARD} p-3`}>
+            <li key={g.name} className={cn(CARD, "p-3")}>
               <span className={`${g.name} block h-12 rounded-lg`} aria-hidden />
               <span className="mt-2 block text-sm font-medium">{g.name}</span>
               <span className="block font-mono text-xs break-words text-fg-secondary">{g.value}</span>
@@ -136,7 +168,7 @@ export default function TokensPage() {
       </Section>
 
       <Section title="Type roles">
-        <ul className={`${CARD} divide-y divide-line-subtle`}>
+        <ul className={cn(CARD, "divide-y divide-line-subtle")}>
           {typeRoles.map((t) => (
             <li key={t.name} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3">
               <span className={t.className}>{t.role}</span>
@@ -146,7 +178,7 @@ export default function TokensPage() {
             </li>
           ))}
         </ul>
-        <ul className={`${CARD} divide-y divide-line-subtle`}>
+        <ul className={cn(CARD, "divide-y divide-line-subtle")}>
           {fontSizes.map((f) => (
             <Row key={f.name} name={f.name} value={`${f.size} / ${f.lineHeight} (${f.px} px)`} use={f.use} />
           ))}
@@ -154,7 +186,7 @@ export default function TokensPage() {
       </Section>
 
       <Section title="Motion">
-        <ul className={`${CARD} divide-y divide-line-subtle`}>
+        <ul className={cn(CARD, "divide-y divide-line-subtle")}>
           {motionDurations.map((d) => (
             <Row key={d.name} name={d.name} value={`${d.variable}: ${d.value}`} use={d.use} />
           ))}
@@ -166,7 +198,7 @@ export default function TokensPage() {
       </Section>
 
       <Section title="Breakpoints">
-        <ul className={`${CARD} divide-y divide-line-subtle`}>
+        <ul className={cn(CARD, "divide-y divide-line-subtle")}>
           {breakpoints.map((b) => (
             <Row key={b.name} name={`${b.name}:`} value={`${b.value} (${b.px} px)${b.custom ? ", added" : ""}`} use={b.use} />
           ))}
@@ -174,7 +206,7 @@ export default function TokensPage() {
       </Section>
 
       <Section title="Variants">
-        <ul className={`${CARD} divide-y divide-line-subtle`}>
+        <ul className={cn(CARD, "divide-y divide-line-subtle")}>
           {customVariants.map((v) => (
             <Row key={v.name} name={`${v.name}:`} value={v.value} use={v.use} />
           ))}
@@ -186,7 +218,7 @@ export default function TokensPage() {
       </Section>
 
       <Section title="Utilities">
-        <ul className={`${CARD} divide-y divide-line-subtle`}>
+        <ul className={cn(CARD, "divide-y divide-line-subtle")}>
           {otherUtilities.map((u) => (
             <Row key={u.name} name={u.name} value={u.value} use={u.use} />
           ))}

@@ -41,7 +41,8 @@ import {
   type WidgetForm as Form,
 } from "@/lib/widget/form";
 import { useCurrentWorkspace } from "@/lib/workspace";
-import { MONO, widgetAccents } from "@/styles/tokens";
+import { MONO } from "@/styles/tokens";
+import { widgetAccents } from "./accents";
 
 const BRANDING_UPGRADE = { code: "entitlement_required", entitlement: "widget_remove_branding" } as const;
 

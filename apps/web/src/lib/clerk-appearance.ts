@@ -1,13 +1,14 @@
 import { dark } from "@clerk/ui/themes";
 
-import { colorValue as token } from "@/styles/tokens";
+import { colorValue as token, radiusValue as radius } from "@/styles/tokens";
 
 const BRAND_TEXT = { color: "var(--color-brand-fg)", "&:hover": { color: "var(--color-brand-fg)" } };
 
 /**
  * Clerk's components on the §4.2 tokens (Clerk Core 3 variable names). Values are literal
- * because Clerk computes shades from them and cannot read CSS variables; the element styles below
- * are plain CSS, so they use the variables.
+ * (read from the generated tokens, so globals.css stays the only place they are written)
+ * because Clerk computes shades from them and cannot read CSS variables; the element styles
+ * below are plain CSS, so they use the variables, the brand gradient and the radii included.
  *
  * Its primary is `brand-strong` (DESIGN_SYSTEM §1.4): white on `brand` is 3.63:1 (UI-ISS-005), on
  * `brand-strong` 4.85:1. Clerk also writes its links in the primary colour, where `brand-strong` is
@@ -32,7 +33,7 @@ export const clerkAppearance = {
     colorSuccess: token("success"),
     colorWarning: token("warning"),
     colorModalBackdrop: token("scrim"),
-    borderRadius: "0.5rem",
+    borderRadius: radius("lg"),
     fontFamily: "var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif",
   },
   elements: {
@@ -42,7 +43,7 @@ export const clerkAppearance = {
       // destructive fill's is (DESIGN_SYSTEM §8.3), so the label gets more contrast, not less.
       // They wear the app's primary: the brand gradient (Button `default`), brighter on hover.
       '&[data-variant="solid"][data-color="primary"]': {
-        backgroundImage: "linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%)",
+        backgroundImage: "var(--gradient-brand)",
         color: "var(--color-on-brand)",
         boxShadow: "none",
         "&::after": { display: "none" },
@@ -67,7 +68,7 @@ export const clerkAppearance = {
     cardBox: {
       backgroundColor: "var(--color-panel)",
       border: "1px solid var(--color-line) !important",
-      borderRadius: "0.75rem",
+      borderRadius: "var(--radius-xl)",
       boxShadow: "var(--shadow-overlay) !important",
     },
     card: { backgroundColor: "transparent", border: "0 !important", borderRadius: "0", boxShadow: "none !important" },
@@ -75,7 +76,7 @@ export const clerkAppearance = {
     userButtonPopoverCard: {
       backgroundColor: "var(--color-overlay) !important",
       border: "1px solid var(--color-line) !important",
-      borderRadius: "0.75rem",
+      borderRadius: "var(--radius-xl)",
       boxShadow: "var(--shadow-floating) !important",
     },
     userButtonPopoverMain: { backgroundColor: "var(--color-overlay)" },
@@ -83,7 +84,7 @@ export const clerkAppearance = {
       background: "var(--color-overlay) !important",
       borderTop: "1px solid var(--color-line) !important",
     },
-    modalContent: { borderRadius: "0.75rem", border: "1px solid var(--color-line) !important" },
+    modalContent: { borderRadius: "var(--radius-xl)", border: "1px solid var(--color-line) !important" },
     navbar: { backgroundColor: "var(--color-panel)", borderRight: "1px solid var(--color-line) !important" },
     scrollBox: { backgroundColor: "var(--color-overlay)" },
     dividerLine: { backgroundColor: "var(--color-line)" },
@@ -92,7 +93,7 @@ export const clerkAppearance = {
     formFieldInput: {
       backgroundColor: "var(--color-field)",
       border: "1px solid var(--color-line-control) !important",
-      borderRadius: "0.5rem",
+      borderRadius: "var(--radius-lg)",
       boxShadow: "none !important",
       "&:focus, &:focus-visible": {
         borderColor: "var(--color-brand) !important",
