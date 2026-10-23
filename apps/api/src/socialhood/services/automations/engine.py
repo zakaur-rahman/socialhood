@@ -94,7 +94,7 @@ from socialhood.schemas.flows import (
     TagCondition,
 )
 from socialhood.services import leads
-from socialhood.services.automations import actions, capture, flows, render, results
+from socialhood.services.automations import actions, capture, flows, links, render, results
 from socialhood.services.webhooks import events as webhook_events
 
 log = get_logger(__name__)
@@ -319,6 +319,17 @@ async def _send(
     run = scene.run
     body = text if text is not None else _text(step, scene.contact, None, scene.disclosure)
     send_step = step if isinstance(step, SendStep) and text is None else None
+    buttons = _buttons(send_step.buttons, scene.acct.username) if send_step else ()
+    if buttons:  # GR-15: link buttons go through the tracked redirect
+        buttons = await links.track_buttons(
+            session,
+            deps.settings,
+            scene.automation,
+            run_id=run.id,
+            contact_id=scene.contact.id,
+            step_id=step.id,
+            buttons=buttons,
+        )
     try:
         msg = await sending.queue_outbound(
             session,
@@ -329,7 +340,7 @@ async def _send(
             attachment_asset_ids=(
                 [send_step.image_asset_id] if send_step and send_step.image_asset_id else ()
             ),
-            buttons=_buttons(send_step.buttons, scene.acct.username) if send_step else (),
+            buttons=buttons,
             quick_replies=_quick_replies(send_step, run.id) if send_step else quick_replies,
             automation_run_id=run.id,
             deps=deps,

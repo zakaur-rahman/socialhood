@@ -73,6 +73,11 @@ export type AutomationTemplateList = Schemas["AutomationTemplateList"];
 export type AutomationRun = Schemas["AutomationRun"];
 export type AutomationRunList = Schemas["AutomationRunList"];
 export type AutomationStats = Schemas["AutomationStats"];
+// GR-15: the per-step funnel and a Split's results
+export type AutomationFunnel = Schemas["AutomationFunnel"];
+export type FunnelStep = Schemas["FunnelStep"];
+export type SplitResult = Schemas["SplitResult"];
+export type SplitBranch = Schemas["SplitBranch"];
 export type AutomationTest = Schemas["AutomationTest"];
 export type AutomationTestResult = Schemas["AutomationTestResult"];
 export type OverlapWarning = Schemas["OverlapWarning"];

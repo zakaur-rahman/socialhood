@@ -128,6 +128,7 @@ export function toDefinition(automation: Automation): AutomationDefinition {
     opening_button: automation.opening_button ?? null,
     follow_nudge: automation.follow_nudge,
     follow_nudge_text: automation.follow_nudge_text ?? null,
+    track_links: automation.track_links ?? true,
   };
 }
 

@@ -81,7 +81,9 @@ PARAM_TO_SEED: dict[str, str] = {
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
-PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}"})
+# "/l/{code}" (GR-15, the tracked link redirect) is public and not in the OpenAPI schema, so the
+# walk never sees it; it is tested in tests/integration/test_link_clicks.py.
+PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}", "/l/{code}"})
 
 # A valid body for each write route, so the call fails on tenancy, not validation.
 # A string "{param}" in a body is replaced by B's id for that parameter.
@@ -326,6 +328,8 @@ B_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
     "story_mentions",
+    "tracked_links",
+    "link_clicks",
     "entry_links",
     "contact_segments",
     "lead_stage_changes",
@@ -571,6 +575,20 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         headers=clerk.headers(owner_b),
     )
     assert flow.status_code == 200, flow.text
+    async with engine.begin() as conn:  # GR-15: a tracked link and a click on it
+        await conn.execute(
+            text(
+                "WITH r AS (INSERT INTO automation_runs (workspace_id, automation_id,"
+                " matched_keyword, result) VALUES (:w, :a, 'link', 'sent') RETURNING id),"
+                " l AS (INSERT INTO tracked_links (workspace_id, automation_id, run_id,"
+                " contact_id, step_id, button_index, code, title, url)"
+                " SELECT :w, :a, id, :c, 'hello', 0, 'bbbbbbbbbbbbbbbb', 'Open',"
+                " 'https://shop.example/b' FROM r RETURNING id, run_id)"
+                " INSERT INTO link_clicks (workspace_id, link_id, automation_id, run_id,"
+                " contact_id, step_id) SELECT :w, id, :a, run_id, :c, 'hello' FROM l"
+            ),
+            {"w": wid, "a": automation, "c": thread.contact_id},
+        )
     on = {
         "workspace_id": wid,
         "conversation_id": thread.conversation_id,

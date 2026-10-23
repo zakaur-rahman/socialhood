@@ -35,10 +35,12 @@ from socialhood.schemas.automations import (
     TriggerName,
 )
 from socialhood.schemas.flows import Flow, FlowDefinition
+from socialhood.schemas.funnel import AutomationFunnel
 from socialhood.services.automations import (
     definitions,
     dry_run,
     flow_store,
+    funnel,
     queries,
     queue,
     stats,
@@ -57,6 +59,7 @@ def _whole_number(value: object) -> object:
 
 
 StatsDays = Annotated[Literal[7, 30], BeforeValidator(_whole_number)]
+FunnelDays = Annotated[Literal[7, 30, 90], BeforeValidator(_whole_number)]
 
 
 def _view(ctx: WorkspaceContext, now: datetime) -> queries.View:
@@ -225,6 +228,19 @@ async def get_automation_stats(
     return await stats.automation_stats(
         session, automation, days=days, timezone=ctx.workspace.timezone, now=datetime.now(UTC)
     )
+
+
+@router.get("/automations/{automation_id}/funnel", operation_id="get_automation_funnel")
+async def get_automation_funnel(
+    automation_id: uuid.UUID,
+    ctx: Admin,
+    session: Session,
+    days: Annotated[FunnelDays, Query()] = 30,
+) -> AutomationFunnel:
+    """Per step: reached, sent, delivered, read, taps, link clicks and captures, and each Split
+    step's results per path, for the last 7, 30 or 90 days (GR-15)."""
+    automation = await definitions.get_or_404(session, automation_id)
+    return await funnel.automation_funnel(session, automation, days=days, now=datetime.now(UTC))
 
 
 @router.post("/automations/{automation_id}/test", operation_id="test_automation")

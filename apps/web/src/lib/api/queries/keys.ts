@@ -95,6 +95,8 @@ export const keys = {
   automationRuns: (wid: string, id: string, result: RunResult | null) =>
     ["w", wid, "automation", id, "runs", result] as const,
   automationStats: (wid: string, id: string, days: 7 | 30) => ["w", wid, "automation", id, "stats", days] as const,
+  automationFunnel: (wid: string, id: string, days: 7 | 30 | 90) =>
+    ["w", wid, "automation", id, "funnel", days] as const,
   // posts: the automation post picker (P4) and the Comments grid (P6) share these lists
   postLists: (wid: string) => ["w", wid, "posts"] as const,
   posts: (wid: string, accountId: string | null, q: string, sort: PostSort = "recent") =>

@@ -471,6 +471,8 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.opening_button = body.opening_button or None
     automation.follow_nudge = body.follow_nudge
     automation.follow_nudge_text = body.follow_nudge_text or None
+    if body.track_links is not None:
+        automation.track_links = body.track_links
 
 
 # ---------------------------------------------------------------- activate and pause
@@ -629,6 +631,7 @@ async def duplicate(
         opening_button=source.opening_button,
         follow_nudge=source.follow_nudge,
         follow_nudge_text=source.follow_nudge_text,
+        track_links=source.track_links,
         created_by_user_id=user_id,
     )
     session.add(copy)

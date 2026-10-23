@@ -89,8 +89,9 @@ from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import messages as messages_repo
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, engine, flows, results, stats
+from socialhood.services.automations import actions, engine, flows, links, results, stats
 from socialhood.services.inbox_views import conversation_touch
+from socialhood.settings import Settings
 
 log = get_logger(__name__)
 
@@ -203,6 +204,7 @@ class _Pass:
     acct: SocialAccount
     now: datetime
     disclosure: str | None
+    settings: Settings
     drafts: dict[uuid.UUID, str] = field(default_factory=dict)  # AI replies to send (T5.8)
     # Flow runs' graphs (GR-03), by (automation, version): a run follows the version it started on.
     graphs: dict[tuple[uuid.UUID, int], flows.Graph] = field(default_factory=dict)
@@ -280,7 +282,9 @@ async def drain(
 
     tally = _Tally()
     if adapter is not None:
-        run = _Pass(sessionmaker, redis, TokenBuckets(redis), adapter, acct, now, disclosure)
+        run = _Pass(
+            sessionmaker, redis, TokenBuckets(redis), adapter, acct, now, disclosure, deps.settings
+        )
         while (sendable or ai) and _done(tally) < max_sends:
             limit = min(BATCH, max_sends - _done(tally))
             if sendable:
@@ -500,6 +504,17 @@ async def _prepare(
         if outbound is None:
             tally.failed += _give_up(queued, actions.NO_MESSAGE)
             continue
+        if outbound.buttons:  # GR-15: link buttons go through the tracked redirect
+            tracked = await links.track_buttons(
+                session,
+                run.settings,
+                automation,
+                run_id=queued.id,
+                contact_id=contact.id,
+                step_id=queued.step_id or "message",
+                buttons=outbound.buttons,
+            )
+            outbound = replace(outbound, buttons=tracked)
         ready.append((queued, comment, contact, outbound, waits))
 
     conversations = {

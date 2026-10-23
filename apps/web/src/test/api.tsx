@@ -409,6 +409,7 @@ export function automation(overrides: Partial<Automation> = {}): Automation {
     opening_button: null,
     follow_nudge: false,
     follow_nudge_text: null,
+    track_links: true,
     priority: 1,
     template_key: null,
     activated_at: null,

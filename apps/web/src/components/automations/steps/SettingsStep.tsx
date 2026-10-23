@@ -8,6 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition, SurgeOrder } from "@/lib/api/types";
 import { errorsFor, isCommentTrigger, runWindowProblem, type FieldErrors } from "@/lib/automations/definition";
@@ -151,6 +152,24 @@ export function SettingsStep({
               </p>
             </div>
           ) : null}
+
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-0.5">
+              <Label htmlFor="automation-track-links">Track link clicks</Label>
+              <p id="automation-track-links-hint" className="text-xs text-fg-secondary">
+                {draft.track_links === false
+                  ? "Link buttons are sent exactly as you wrote them, so clicks aren't counted."
+                  : "Link buttons go through a Social Hood link that sends people on to yours, so each step can show its clicks. Link previews aren't counted."}
+              </p>
+            </div>
+            <Switch
+              id="automation-track-links"
+              checked={draft.track_links !== false}
+              onCheckedChange={(checked) => change({ track_links: checked })}
+              aria-describedby="automation-track-links-hint"
+              className="mt-0.5"
+            />
+          </div>
 
           <div className="space-y-1">
             <p className="text-sm font-medium">Disclosure</p>

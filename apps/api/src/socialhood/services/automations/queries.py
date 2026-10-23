@@ -227,6 +227,7 @@ def _automation_out(
         opening_button=a.opening_button,
         follow_nudge=a.follow_nudge,
         follow_nudge_text=a.follow_nudge_text,
+        track_links=a.track_links,
         priority=a.priority,
         template_key=a.template_key,
         activated_at=a.activated_at,

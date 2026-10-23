@@ -2532,3 +2532,53 @@ copy and the editor's options. No migration, no new route.
   export (`tests/integration/test_data_capture.py`; the export is GR-02's).
 - **Unverified:** the integration tests, vitest and `gr14-data-capture.spec.ts` are written but were
   not run.
+
+## C-096 · Link click tracking and flow analytics (GR-15, feature/gr-14-15-capture-clicks)
+- **Tracked links.** A link button in an automation's message is sent as `{base}/l/{code}`; the
+  redirect records the click and answers 302 to the original address.
+  - **Which domain serves it: the API's.** `GET /l/{code}` is an API route (`webhooks/links.py`,
+    public, no sign-in, not in the OpenAPI schema), built on `LINK_BASE_URL` if set, else
+    `API_BASE_URL`. A short domain pointed at the API and set as `LINK_BASE_URL` shortens every
+    link with no code change. With neither set, buttons are sent as written. The web app's domain
+    doesn't serve it.
+  - **The code** is an opaque random token (96 bits, 16 characters), mapped in `tracked_links`.
+    The run, step and contact are only in our database, never in the URL. One link per run, step
+    and button, so a retried send reuses it.
+  - **Redirect rules:**
+    - the stored address must be http or https (`links.safe_target`), else 404 and no click;
+    - an unknown code is 404; the route is rate limited per IP like the other public routes (60 a
+      minute);
+    - the response is `no-store`, `no-referrer` and `noindex`.
+  - **Bots and previews (the rule, `links.is_bot`).** Not counted, but still redirected so a preview
+    shows the real page:
+    - a HEAD request, or no User-Agent;
+    - Meta's `facebookexternalhit` and `meta-external*` (Instagram and WhatsApp previews),
+      `WhatsApp/`, Slack, Telegram, Discord, X, LinkedIn, Google, Bing, Apple and other search
+      crawlers, curl, wget and common script clients;
+    - anything calling itself a bot, crawler, spider, scanner or preview.
+    - The in-app browsers of Instagram and Facebook are people. A second click on one link within 5
+      seconds counts once (a double tap or prefetch).
+    - *Unverified against real Instagram traffic; the list is one constant to extend.*
+  - **Where links are made:** the flow engine's sends, the legacy settings sends (DM, tap-first
+    release, and the comment queue's private reply, step `message`). The profile button ("View
+    profile") is never tracked. The inbox keeps showing what was actually sent, our address.
+  - **Opt-out:** `automations.track_links` (default on), a switch in Settings ("Track link
+    clicks"); off sends the raw link. Left out of a save, it keeps its value; a duplicate copies it.
+- **Funnel** (`GET …/automations/{id}/funnel?days=7|30|90`, admins; `services/automations/funnel.py`).
+  Nothing new on the send path: it reads what is recorded.
+  - Per step: reached (the step log), sent, delivered and read (the status of the step's message;
+    read only where the platform reports it), failed, quick reply taps, link clicks and the people
+    who clicked, answers saved by a question, answers that never fitted, and "yes" to the consent
+    question. Steps come in the order a walk meets them.
+  - Automations still on their message settings have no step log: their `message` step is built from
+    the runs' DMs and the clicks.
+  - **Split results:** per path, the runs that took it and, for the steps after it, delivered, read,
+    taps, link clicks and answers. A step shared by two paths counts for each run that went through.
+- **Where it shows:** the editor's Stats tab (a "By step" list and a table per Split) and the
+  Settings switch. The list refreshes every 30 seconds, so a click shows within a minute. *Not on the
+  Activity page: that is a feed of what failed, and a click isn't one.*
+- **Migration 0029:** `tracked_links`, `link_clicks` and `automations.track_links`. Expand-only.
+  Both tables hang off the automation, run and contact with cascading deletes, so an account's
+  purge removes them with its automations and contacts.
+- **Not done / pending:** per-quick-reply tap counts (taps are per step); a retention limit on
+  `link_clicks` (kept as long as the automation); the sandbox run of `gr15-link-clicks.spec.ts`.

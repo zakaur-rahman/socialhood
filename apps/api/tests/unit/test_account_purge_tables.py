@@ -45,6 +45,8 @@ EXPECTED = {
     "scheduled_messages",
     "scheduled_post_targets",
     "story_mentions",
+    "tracked_links",
+    "link_clicks",
 }
 
 

@@ -130,6 +130,8 @@ class Automation(ResponseModel):
     opening_button: str | None = None
     follow_nudge: bool
     follow_nudge_text: str | None = None
+    # GR-15: link buttons are sent through the tracked redirect, so clicks show on the funnel.
+    track_links: bool = True
     priority: int
     template_key: str | None = None
     activated_at: datetime | None = None
@@ -216,6 +218,8 @@ class AutomationDefinition(RequestModel):
     # Follow nudge (FR-AUT-22): after the message, only to people who don't follow the account.
     follow_nudge: bool = False
     follow_nudge_text: str | None = Field(default=None, max_length=300)
+    # GR-15: false sends the raw link; left out keeps what is saved.
+    track_links: bool | None = None
 
 
 class PrioritiesUpdate(RequestModel):
