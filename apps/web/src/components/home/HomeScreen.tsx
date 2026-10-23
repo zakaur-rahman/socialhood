@@ -1,7 +1,9 @@
 "use client";
 
 import { PAGE_TITLE } from "@/styles/tokens";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { AlertTriangle, FileText, RefreshCw } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 
 import { ProTrialOffer } from "@/components/billing/ProTrialOffer";
@@ -93,6 +95,11 @@ export function HomeScreen() {
           </Badge>
         ) : null}
         <RangeControl value={query} today={today} onChange={(next: OverviewQuery) => setStored(storedRange(next))} />
+        <Button variant="outline" asChild>
+          <Link href={`/w/${workspace.slug}/reports` as Route}>
+            <FileText aria-hidden /> Weekly report
+          </Link>
+        </Button>
         <Button
           variant="outline"
           size="icon"

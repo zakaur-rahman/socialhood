@@ -377,3 +377,13 @@ export type LeadStageCount = Schemas["LeadStageCount"];
 export type LeadWeek = Schemas["LeadWeek"];
 export type LeadSettings = Schemas["LeadSettings"];
 export type LeadSettingsPatch = Schemas["LeadSettingsPatch"];
+
+// Weekly report (GR-34)
+export type WeeklyReport = Schemas["WeeklyReport"];
+export type ReportMetric = Schemas["ReportMetric"];
+export type ReportMetricKey = ReportMetric["key"];
+export type ReportAccountMetric = Schemas["ReportAccountMetric"];
+export type ReportPoint = Schemas["ReportPoint"];
+export type ReportIntent = Schemas["ReportIntent"];
+export type ReportQuestion = Schemas["ReportQuestion"];
+export type ReportPost = Schemas["ReportPost"];

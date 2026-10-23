@@ -2648,3 +2648,83 @@ Five new templates on the new triggers and steps, and a saved-reply choice in th
   the reply's length and "alone" on activation.
 - **Preview path:** the step shows "Saved reply: <title>" instead of the text, and is titled
   "Saved reply".
+
+## C-097 · Trends and a weekly report (GR-34, feature/gr-34-trends-report)
+
+Roadmap P3. No migration.
+
+- **One service, three readers.** `services/reports.py` builds the report; the report page, the
+  digest email and the Home link all read it. Every number comes from `overview_stats` (Home and the
+  digest) or from GR-38's account metrics. No model writes, rounds or ranks a figure.
+- **Finished weeks only.** A week is Monday to Sunday in the workspace's zone and can be asked for
+  once Sunday is over; every comparison is seven days against seven (DST makes a span an hour longer
+  or shorter, as everywhere else). The latest week is the one before the current Monday. *Decided: no
+  "this week so far". A part-week against a whole one would mislead, and GR-38's rule for a running
+  period (cut the other one to the same days) would make the report's numbers differ from the
+  digest's.*
+- **Digest extended, not replaced.** `OverviewStats` gains story mentions, conversations from ads and
+  from links, and leads qualified and won (`lead_stage_changes`, each contact once per stage). Home
+  reads the first three from the same object, so the overview and the digest still agree (the test in
+  `test_overview.py` now compares them, with a link conversation seeded). Home's period has no
+  leads fields yet. `weekly_digests.stats` and the email's data also carry `trends` (each metric's
+  week, week before and change) and `account` (reach, views, accounts engaged, interactions,
+  followers, follows, unfollows, with days covered and the reason when missing). Old rows lack both
+  and the template leaves the sections out.
+- **Email.** Two new tables ("Against the week before", "Your Instagram account") and the button
+  "See the full report" to `/w/{slug}/reports?week={Monday}`. *The old "Open Social Hood" button is
+  gone; the text version still lists Home and the inbox.* Copy: "Up 18.3% on the week before (was
+  120)", "Down 2.6 points ...", "Up from 0 the week before", "No data for the week before",
+  "Counts 5 of 7 days".
+- **Trends.** Week against the week before, and 8 weeks ending with it (oldest first). The change is
+  GR-38's `change` (percent, one decimal, flat under 0.5%, a direction but no percent against 0). *A
+  rate (reply rate, handled by AI) changes in percentage points, not percent of a percent.* A faster
+  median first response is good news (`lower_is_better`).
+- **Gaps, the same as GR-38.** A rate with nothing to divide is null. A week that ended before the
+  workspace was created *and has nothing recorded* is null for every count (a workspace's earlier
+  weeks aren't zeros); if rows exist (an import) the real numbers show. Account figures sum the days
+  that have a reading and say how many; none gives null and the reason; followers is the latest
+  reading. The report week's account figures lack Sunday if the daily job hasn't written it yet (the
+  digest at 09:00 Monday often will): shown as "Counts 6 of 7 days", not as a drop.
+- **Account metrics in the digest job** need the platform capabilities (insights granted or not):
+  the task passes the real ones. Callers without adapters (tests) assume insights are granted, so a
+  missing reading reads "no readings", not "not allowed".
+- **Route.** `GET /v1/w/{wid}/reports/weekly?week=YYYY-MM-DD` (any member). `week` is a Monday that
+  has finished, at most 52 weeks back; anything else is 422 on `week`. Without it, the latest week.
+  The response has the week, the week before, the picker's 12 Mondays (newest first), each metric
+  with its series, the account metrics (figure plus series), `account_comparison` (a GR-38
+  `MetricComparisonVisual` built by the same builder, so tone, gap wording and day coverage match
+  Ask), top intents, top posts, "Open right now" counts and `notes`.
+- **Captures (GR-14) are not in the report.** Nothing counts them on this base; `notes` carries
+  `captures_not_built` and the page says so in one line. The slot is one more `MetricDef` once a
+  source exists (and a line in the digest follows from it).
+- **Page** `/w/{slug}/reports?week=`: tiles (`MetricTile`) with the change and a hand-built SVG
+  line under each (`SeriesChart`: one series colour `chart-series-1`, scale from 0, or 0 to 100 for
+  a share, a gap breaks the line and is counted under the chart, a dot on the latest week, the
+  picture labelled with every value in words). The account part is Ask's `MetricComparison` plus a
+  small chart per metric. Week picker: a select of the 12 weeks and Earlier/Later buttons; the week
+  is in the address. One column to 639 px, two from 640, three from 1280, no sideways scroll at 375.
+- **"Shareable".** *Decided: a stable address for members of the workspace. There is no public link
+  and no unsigned URL; someone outside the workspace gets the usual 404 from the API and the app's
+  sign-in. A public or expiring link would be a new surface and an owner's call.*
+- **Where it is linked.** The digest email, and a "Weekly report" button in Home's header. *Not in
+  the main nav (the sidebar lists are snapshotted and the report is a weekly read, not a daily
+  tool).* Not yet from Ask answers (VIS-13's "linked from answers"): that needs the agent session's
+  code, which is another branch's.
+- **Left from roadmap P3:** notable-change detection with thresholds (step 2), Home's "This week"
+  strip (step 3), the Ask `get_trends` tool (step 5), and trends for sentiment share, top topics and
+  post engagement at equal age (step 1 lists them). This task did the counts, rates, leads and
+  account figures the plan names. The series is 8 weeks; `SERIES_WEEKS` is a constant.
+- **Tests.** Unit: `test_reports.py` (week maths, DST, the 422 rules, changes in percent and points,
+  gaps stay gaps, the digest extras, the comparison reuse), `test_email_templates.py` (the new
+  tables and link, an old digest without them). Integration (written, not run): `test_weekly_report.py`
+  (the digest and the report give the same numbers, the week before and the series, weeks before the
+  workspace are gaps, story mentions/links/ads/leads in their week, account days and gaps, insights
+  not granted, no account, the route, 422s, roles, other workspaces and zones),
+  `test_weekly_digest.py` and `test_overview.py` updated. Vitest: `format.test.ts`,
+  `SeriesChart.test.tsx`, `WeeklyReportPage.test.tsx`, the Home link. E2E:
+  `gr34-weekly-report.spec.ts` (a finished week can't be seeded through the API, so it checks the
+  page against the API for the same week).
+- **For the coordinator:** regenerate the client (`get_weekly_report`, `WeeklyReport`, `ReportMetric`,
+  `ReportAccountMetric`, `ReportPoint`, `ReportIntent`, `ReportQuestion`, `ReportPost`); the web types
+  are aliases waiting for it. `test_isolation.py` needed nothing (no table, no path id). The route's
+  `week` parameter is a plain date. Nothing was added to the tenancy or purge lists.

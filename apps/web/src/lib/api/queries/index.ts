@@ -25,3 +25,4 @@ export * from "./integrations";
 export * from "./activity";
 export * from "./contacts";
 export * from "./leads";
+export * from "./reports";
