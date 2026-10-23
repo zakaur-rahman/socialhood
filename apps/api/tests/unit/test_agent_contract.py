@@ -344,6 +344,7 @@ def test_a_run_answer_serialises_with_its_cards() -> None:
                     "prefill": {"conversation_id": uuid.uuid4(), "text": "Your order ships Monday"},
                 }
             ],
+            "visuals": [],
             "credits": 3,
             "created_at": "2026-09-29T10:00:00Z",
         }
