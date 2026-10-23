@@ -71,7 +71,9 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("workspace_id", sa.Uuid(), nullable=False),
-        sa.CheckConstraint(f"from_stage IN ({STAGES})", name=op.f("ck_lead_stage_changes_from_stage")),
+        sa.CheckConstraint(
+            f"from_stage IN ({STAGES})", name=op.f("ck_lead_stage_changes_from_stage")
+        ),
         sa.CheckConstraint(f"to_stage IN ({STAGES})", name=op.f("ck_lead_stage_changes_to_stage")),
         sa.CheckConstraint(
             "actor_kind IN ('member', 'automation', 'rule', 'system')",

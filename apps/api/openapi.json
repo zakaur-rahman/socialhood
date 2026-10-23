@@ -4090,6 +4090,7 @@
                 "field": "#/components/schemas/FieldCondition",
                 "follows_business": "#/components/schemas/FollowsCondition",
                 "lead_score": "#/components/schemas/LeadScoreCondition",
+                "lead_stage": "#/components/schemas/LeadStageCondition",
                 "platform": "#/components/schemas/PlatformCondition",
                 "tag": "#/components/schemas/TagCondition"
               },
@@ -4113,6 +4114,9 @@
               },
               {
                 "$ref": "#/components/schemas/LeadScoreCondition"
+              },
+              {
+                "$ref": "#/components/schemas/LeadStageCondition"
               }
             ],
             "title": "When"
@@ -5544,6 +5548,20 @@
             ],
             "title": "Q"
           },
+          "stages": {
+            "items": {
+              "enum": [
+                "new",
+                "qualified",
+                "follow_up",
+                "won",
+                "lost"
+              ],
+              "type": "string"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
           "tag_ids": {
             "items": {
               "format": "uuid",
@@ -5710,6 +5728,21 @@
             ],
             "title": "Q"
           },
+          "stages": {
+            "items": {
+              "enum": [
+                "new",
+                "qualified",
+                "follow_up",
+                "won",
+                "lost"
+              ],
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Stages",
+            "type": "array"
+          },
           "tag_ids": {
             "items": {
               "format": "uuid",
@@ -5804,6 +5837,11 @@
             ],
             "title": "Last Activity At"
           },
+          "lead_cold": {
+            "default": false,
+            "title": "Lead Cold",
+            "type": "boolean"
+          },
           "lead_score": {
             "anyOf": [
               {
@@ -5814,6 +5852,41 @@
               }
             ],
             "title": "Lead Score"
+          },
+          "lead_stage": {
+            "default": "new",
+            "enum": [
+              "new",
+              "qualified",
+              "follow_up",
+              "won",
+              "lost"
+            ],
+            "title": "Lead Stage",
+            "type": "string"
+          },
+          "lead_stage_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Stage At"
+          },
+          "lead_stage_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Stage Reason"
           },
           "name": {
             "title": "Name",
@@ -6026,6 +6099,11 @@
             ],
             "title": "Last Activity At"
           },
+          "lead_cold": {
+            "default": false,
+            "title": "Lead Cold",
+            "type": "boolean"
+          },
           "lead_score": {
             "anyOf": [
               {
@@ -6036,6 +6114,41 @@
               }
             ],
             "title": "Lead Score"
+          },
+          "lead_stage": {
+            "default": "new",
+            "enum": [
+              "new",
+              "qualified",
+              "follow_up",
+              "won",
+              "lost"
+            ],
+            "title": "Lead Stage",
+            "type": "string"
+          },
+          "lead_stage_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Stage At"
+          },
+          "lead_stage_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Stage Reason"
           },
           "name": {
             "title": "Name",
@@ -8848,6 +8961,185 @@
           "at_least"
         ],
         "title": "LeadScoreCondition",
+        "type": "object"
+      },
+      "LeadSettings": {
+        "properties": {
+          "cold_after_days": {
+            "title": "Cold After Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cold_after_days"
+        ],
+        "title": "LeadSettings",
+        "type": "object"
+      },
+      "LeadSettingsPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "cold_after_days": {
+            "maximum": 90.0,
+            "minimum": 1.0,
+            "title": "Cold After Days",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "cold_after_days"
+        ],
+        "title": "LeadSettingsPatch",
+        "type": "object"
+      },
+      "LeadStageCondition": {
+        "additionalProperties": false,
+        "description": "Whether the contact's lead stage (GR-18) is any of ``stages``, read when the step runs.",
+        "properties": {
+          "kind": {
+            "const": "lead_stage",
+            "default": "lead_stage",
+            "title": "Kind",
+            "type": "string"
+          },
+          "stages": {
+            "items": {
+              "enum": [
+                "new",
+                "qualified",
+                "follow_up",
+                "won",
+                "lost"
+              ],
+              "type": "string"
+            },
+            "maxItems": 5,
+            "minItems": 1,
+            "title": "Stages",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stages"
+        ],
+        "title": "LeadStageCondition",
+        "type": "object"
+      },
+      "LeadStageCount": {
+        "properties": {
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "stage": {
+            "enum": [
+              "new",
+              "qualified",
+              "follow_up",
+              "won",
+              "lost"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "count"
+        ],
+        "title": "LeadStageCount",
+        "type": "object"
+      },
+      "LeadStageUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "stage": {
+            "enum": [
+              "new",
+              "qualified",
+              "follow_up",
+              "won",
+              "lost"
+            ],
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage"
+        ],
+        "title": "LeadStageUpdate",
+        "type": "object"
+      },
+      "LeadSummary": {
+        "properties": {
+          "cold": {
+            "title": "Cold",
+            "type": "integer"
+          },
+          "cold_after_days": {
+            "title": "Cold After Days",
+            "type": "integer"
+          },
+          "stages": {
+            "items": {
+              "$ref": "#/components/schemas/LeadStageCount"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "weeks": {
+            "items": {
+              "$ref": "#/components/schemas/LeadWeek"
+            },
+            "title": "Weeks",
+            "type": "array"
+          }
+        },
+        "required": [
+          "stages",
+          "cold",
+          "weeks",
+          "cold_after_days"
+        ],
+        "title": "LeadSummary",
+        "type": "object"
+      },
+      "LeadWeek": {
+        "description": "Leads that reached a stage in the week starting ``week_start`` (a Monday, UTC).",
+        "properties": {
+          "qualified": {
+            "title": "Qualified",
+            "type": "integer"
+          },
+          "week_start": {
+            "format": "date",
+            "title": "Week Start",
+            "type": "string"
+          },
+          "won": {
+            "title": "Won",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "week_start",
+          "qualified",
+          "won"
+        ],
+        "title": "LeadWeek",
         "type": "object"
       },
       "LinkButton": {
@@ -14961,7 +15253,8 @@
               "automation_run",
               "story_mention",
               "consent",
-              "tag"
+              "tag",
+              "lead_stage"
             ],
             "title": "Kind",
             "type": "string"
@@ -15458,6 +15751,7 @@
                 "contact.updated",
                 "contact.tagged",
                 "lead.captured",
+                "lead.stage_changed",
                 "message.received",
                 "conversation.assigned",
                 "automation.run.completed",
@@ -15548,6 +15842,7 @@
                 "contact.updated",
                 "contact.tagged",
                 "lead.captured",
+                "lead.stage_changed",
                 "message.received",
                 "conversation.assigned",
                 "automation.run.completed",
@@ -15625,6 +15920,7 @@
                     "contact.updated",
                     "contact.tagged",
                     "lead.captured",
+                    "lead.stage_changed",
                     "message.received",
                     "conversation.assigned",
                     "automation.run.completed",
@@ -15712,6 +16008,7 @@
                 "contact.updated",
                 "contact.tagged",
                 "lead.captured",
+                "lead.stage_changed",
                 "message.received",
                 "conversation.assigned",
                 "automation.run.completed",
@@ -15801,6 +16098,7 @@
               "contact.updated",
               "contact.tagged",
               "lead.captured",
+              "lead.stage_changed",
               "message.received",
               "conversation.assigned",
               "automation.run.completed",
@@ -21274,7 +21572,7 @@
     },
     "/v1/w/{wid}/contacts": {
       "get": {
-        "description": "Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches\npart of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose\ncurrent consent for that channel is granted. ``active_within_days`` keeps contacts active in\nthe last N days and ``inactive_for_days`` those with no activity for N days or more (moving\nranges, which a saved segment needs). ``field`` repeats: ``city:pune`` matches a\ncustom field's value ignoring case, ``city:*`` any value.",
+        "description": "Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches\npart of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose\ncurrent consent for that channel is granted. ``active_within_days`` keeps contacts active in\nthe last N days and ``inactive_for_days`` those with no activity for N days or more (moving\nranges, which a saved segment needs). ``field`` repeats: ``city:pune`` matches a\ncustom field's value ignoring case, ``city:*`` any value. ``stage`` repeats: a contact in any\nof those lead stages (GR-18).",
         "operationId": "list_contacts",
         "parameters": [
           {
@@ -21523,6 +21821,33 @@
                 }
               ],
               "title": "Field"
+            }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "new",
+                      "qualified",
+                      "follow_up",
+                      "won",
+                      "lost"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
             }
           },
           {
@@ -21909,6 +22234,33 @@
               ],
               "title": "Field"
             }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "new",
+                      "qualified",
+                      "follow_up",
+                      "won",
+                      "lost"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
           }
         ],
         "responses": {
@@ -22201,6 +22553,33 @@
               ],
               "title": "Field"
             }
+          },
+          {
+            "in": "query",
+            "name": "stage",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "enum": [
+                      "new",
+                      "qualified",
+                      "follow_up",
+                      "won",
+                      "lost"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Stage"
+            }
           }
         ],
         "responses": {
@@ -22443,6 +22822,80 @@
         "summary": "Record Contact Consent",
         "tags": [
           "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/{contact_id}/lead-stage": {
+      "post": {
+        "description": "Move a lead to any stage; the note is why. The same stage again changes nothing.",
+        "operationId": "set_lead_stage",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadStageUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Set Lead Stage",
+        "tags": [
+          "leads"
         ]
       }
     },
@@ -24919,6 +25372,175 @@
         "summary": "Test Knowledge",
         "tags": [
           "knowledge"
+        ]
+      }
+    },
+    "/v1/w/{wid}/leads/settings": {
+      "get": {
+        "operationId": "get_lead_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Lead Settings",
+        "tags": [
+          "leads"
+        ]
+      },
+      "patch": {
+        "description": "Days without a customer message before a qualified or follow-up lead goes cold (1 to 90).",
+        "operationId": "update_lead_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LeadSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Lead Settings",
+        "tags": [
+          "leads"
+        ]
+      }
+    },
+    "/v1/w/{wid}/leads/summary": {
+      "get": {
+        "description": "Contacts per stage, how many open leads have gone cold, and the last 8 weeks of leads\nqualified and won.",
+        "operationId": "get_lead_summary",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LeadSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Lead Summary",
+        "tags": [
+          "leads"
         ]
       }
     },

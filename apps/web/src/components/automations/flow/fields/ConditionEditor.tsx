@@ -4,11 +4,12 @@ import { useId } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { FlowCondition, FlowFieldDefinition, FlowTag } from "@/lib/api/types";
+import type { FlowCondition, FlowFieldDefinition, FlowTag, LeadStage } from "@/lib/api/types";
+import { LEAD_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 
 import { NativeSelect } from "../NativeSelect";
 
-/** The ways a branch can ask about a contact, as one list (the API's six conditions, with yes/no). */
+/** The ways a branch can ask about a contact, as one list (the API's seven conditions, with yes/no). */
 type Choice =
   | "tag"
   | "no_tag"
@@ -21,7 +22,8 @@ type Choice =
   | "not_follows"
   | "instagram"
   | "whatsapp"
-  | "lead_score";
+  | "lead_score"
+  | "lead_stage";
 
 const LABEL: Record<Choice, string> = {
   tag: "Has a tag",
@@ -36,6 +38,7 @@ const LABEL: Record<Choice, string> = {
   instagram: "They're on Instagram",
   whatsapp: "They're on WhatsApp",
   lead_score: "Lead score is at least",
+  lead_stage: "Lead stage is",
 };
 
 const ORDER = Object.keys(LABEL) as Choice[];
@@ -55,6 +58,8 @@ export function choiceOf(when: FlowCondition): Choice {
       return when.platform;
     case "lead_score":
       return "lead_score";
+    case "lead_stage":
+      return "lead_stage";
   }
 }
 
@@ -84,6 +89,8 @@ export function conditionFor(choice: Choice, previous: FlowCondition, tags: Flow
       return { kind: "platform", platform: choice };
     case "lead_score":
       return previous.kind === "lead_score" ? previous : { kind: "lead_score", at_least: 50 };
+    case "lead_stage":
+      return previous.kind === "lead_stage" ? previous : { kind: "lead_stage", stages: ["qualified"] };
   }
 }
 
@@ -205,6 +212,21 @@ export function ConditionEditor({
             className="sm:max-w-32"
           />
         </div>
+      ) : null}
+
+      {when.kind === "lead_stage" ? (
+        <NativeSelect
+          label={`${label}: stage`}
+          hideLabel
+          value={when.stages[0] ?? "qualified"}
+          onChange={(value) => onChange({ ...when, stages: [value as LeadStage] })}
+        >
+          {LEAD_STAGES.map((stage) => (
+            <option key={stage.value} value={stage.value}>
+              {STAGE_LABEL[stage.value]}
+            </option>
+          ))}
+        </NativeSelect>
       ) : null}
 
       {problem ? <p className="text-xs text-danger-fg">{problem}</p> : null}

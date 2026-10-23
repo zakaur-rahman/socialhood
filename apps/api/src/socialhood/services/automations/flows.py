@@ -56,6 +56,7 @@ from socialhood.schemas.flows import (
     FlowDefinition,
     FollowsCondition,
     LeadScoreCondition,
+    LeadStageCondition,
     PlatformCondition,
     QuickReply,
     RandomizeStep,
@@ -171,6 +172,9 @@ def describe_condition(
             return f"Is on {when.platform}"
         case LeadScoreCondition():
             return f"Lead score is {when.at_least} or more"
+        case LeadStageCondition():
+            stages = " or ".join(stage.replace("_", " ") for stage in when.stages)
+            return f"Lead stage is {stages}"
 
 
 def waits(step: Step) -> bool:

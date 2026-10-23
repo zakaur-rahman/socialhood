@@ -1222,7 +1222,8 @@ export interface paths {
          *     current consent for that channel is granted. ``active_within_days`` keeps contacts active in
          *     the last N days and ``inactive_for_days`` those with no activity for N days or more (moving
          *     ranges, which a saved segment needs). ``field`` repeats: ``city:pune`` matches a
-         *     custom field's value ignoring case, ``city:*`` any value.
+         *     custom field's value ignoring case, ``city:*`` any value. ``stage`` repeats: a contact in any
+         *     of those lead stages (GR-18).
          */
         get: operations["list_contacts"];
         put?: never;
@@ -1331,6 +1332,26 @@ export interface paths {
          * @description A member records consent given elsewhere, or its withdrawal; the note is the evidence.
          */
         post: operations["record_contact_consent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}/lead-stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Set Lead Stage
+         * @description Move a lead to any stage; the note is why. The same stage again changes nothing.
+         */
+        post: operations["set_lead_stage"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1867,6 +1888,48 @@ export interface paths {
          *     credits; 503 when the AI is unavailable.
          */
         post: operations["test_knowledge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/leads/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Lead Settings */
+        get: operations["get_lead_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Lead Settings
+         * @description Days without a customer message before a qualified or follow-up lead goes cold (1 to 90).
+         */
+        patch: operations["update_lead_settings"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/leads/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Lead Summary
+         * @description Contacts per stage, how many open leads have gone cold, and the last 8 weeks of leads
+         *     qualified and won.
+         */
+        get: operations["get_lead_summary"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4277,7 +4340,7 @@ export interface components {
             /** Next */
             next?: string | null;
             /** When */
-            when: components["schemas"]["TagCondition"] | components["schemas"]["FieldCondition"] | components["schemas"]["ContactCondition"] | components["schemas"]["FollowsCondition"] | components["schemas"]["PlatformCondition"] | components["schemas"]["LeadScoreCondition"];
+            when: components["schemas"]["TagCondition"] | components["schemas"]["FieldCondition"] | components["schemas"]["ContactCondition"] | components["schemas"]["FollowsCondition"] | components["schemas"]["PlatformCondition"] | components["schemas"]["LeadScoreCondition"] | components["schemas"]["LeadStageCondition"];
         };
         /**
          * BranchStep
@@ -4886,6 +4949,8 @@ export interface components {
             platform?: ("instagram" | "whatsapp") | null;
             /** Q */
             q?: string | null;
+            /** Stages */
+            stages?: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
             /** Tag Ids */
             tag_ids?: string[];
         };
@@ -4919,6 +4984,8 @@ export interface components {
             platform?: ("instagram" | "whatsapp") | null;
             /** Q */
             q?: string | null;
+            /** Stages */
+            stages?: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
             /** Tag Ids */
             tag_ids?: string[];
         };
@@ -4944,8 +5011,23 @@ export interface components {
             id: string;
             /** Last Activity At */
             last_activity_at?: string | null;
+            /**
+             * Lead Cold
+             * @default false
+             */
+            lead_cold: boolean;
             /** Lead Score */
             lead_score?: number | null;
+            /**
+             * Lead Stage
+             * @default new
+             * @enum {string}
+             */
+            lead_stage: "new" | "qualified" | "follow_up" | "won" | "lost";
+            /** Lead Stage At */
+            lead_stage_at?: string | null;
+            /** Lead Stage Reason */
+            lead_stage_reason?: string | null;
             /** Name */
             name: string;
             /** Phone */
@@ -5019,8 +5101,23 @@ export interface components {
             id: string;
             /** Last Activity At */
             last_activity_at?: string | null;
+            /**
+             * Lead Cold
+             * @default false
+             */
+            lead_cold: boolean;
             /** Lead Score */
             lead_score?: number | null;
+            /**
+             * Lead Stage
+             * @default new
+             * @enum {string}
+             */
+            lead_stage: "new" | "qualified" | "follow_up" | "won" | "lost";
+            /** Lead Stage At */
+            lead_stage_at?: string | null;
+            /** Lead Stage Reason */
+            lead_stage_reason?: string | null;
             /** Name */
             name: string;
             /** Phone */
@@ -5978,6 +6075,75 @@ export interface components {
              * @enum {string}
              */
             kind: "lead_score";
+        };
+        /** LeadSettings */
+        LeadSettings: {
+            /** Cold After Days */
+            cold_after_days: number;
+        };
+        /** LeadSettingsPatch */
+        LeadSettingsPatch: {
+            /** Cold After Days */
+            cold_after_days: number;
+        };
+        /**
+         * LeadStageCondition
+         * @description Whether the contact's lead stage (GR-18) is any of ``stages``, read when the step runs.
+         */
+        LeadStageCondition: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "lead_stage";
+            /** Stages */
+            stages: ("new" | "qualified" | "follow_up" | "won" | "lost")[];
+        };
+        /** LeadStageCount */
+        LeadStageCount: {
+            /** Count */
+            count: number;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "new" | "qualified" | "follow_up" | "won" | "lost";
+        };
+        /** LeadStageUpdate */
+        LeadStageUpdate: {
+            /** Note */
+            note?: string | null;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "new" | "qualified" | "follow_up" | "won" | "lost";
+        };
+        /** LeadSummary */
+        LeadSummary: {
+            /** Cold */
+            cold: number;
+            /** Cold After Days */
+            cold_after_days: number;
+            /** Stages */
+            stages: components["schemas"]["LeadStageCount"][];
+            /** Weeks */
+            weeks: components["schemas"]["LeadWeek"][];
+        };
+        /**
+         * LeadWeek
+         * @description Leads that reached a stage in the week starting ``week_start`` (a Monday, UTC).
+         */
+        LeadWeek: {
+            /** Qualified */
+            qualified: number;
+            /**
+             * Week Start
+             * Format: date
+             */
+            week_start: string;
+            /** Won */
+            won: number;
         };
         /** LinkButton */
         LinkButton: {
@@ -8157,7 +8323,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag";
+            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag" | "lead_stage";
             /**
              * Occurred At
              * Format: date-time
@@ -8348,7 +8514,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -8373,7 +8539,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
             /** Url */
             url: string;
         };
@@ -8389,7 +8555,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[] | null;
+            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[] | null;
             /** Status */
             status?: ("active" | "paused") | null;
             /** Url */
@@ -8410,7 +8576,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -8442,7 +8608,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished";
+            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished";
             /** Version */
             version: number;
         };
@@ -11560,6 +11726,7 @@ export interface operations {
                 active_within_days?: number | null;
                 inactive_for_days?: number | null;
                 field?: string[] | null;
+                stage?: ("new" | "qualified" | "follow_up" | "won" | "lost")[] | null;
                 cursor?: string | null;
                 limit?: number;
             };
@@ -11660,6 +11827,7 @@ export interface operations {
                 active_within_days?: number | null;
                 inactive_for_days?: number | null;
                 field?: string[] | null;
+                stage?: ("new" | "qualified" | "follow_up" | "won" | "lost")[] | null;
             };
             header?: never;
             path: {
@@ -11714,6 +11882,7 @@ export interface operations {
                 active_within_days?: number | null;
                 inactive_for_days?: number | null;
                 field?: string[] | null;
+                stage?: ("new" | "qualified" | "follow_up" | "won" | "lost")[] | null;
             };
             header?: never;
             path: {
@@ -11851,6 +12020,51 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ConsentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_lead_stage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadStageUpdate"];
             };
         };
         responses: {
@@ -13392,6 +13606,130 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KnowledgeTestResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_lead_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_lead_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LeadSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_lead_summary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LeadSummary"];
                 };
             };
             /** @description Validation error */

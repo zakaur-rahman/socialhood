@@ -631,6 +631,8 @@ export function describeCondition(when: FlowCondition, tagName?: (id: string) =>
       return `Is on ${when.platform}`;
     case "lead_score":
       return `Lead score is ${when.at_least} or more`;
+    case "lead_stage":
+      return `Lead stage is ${when.stages.map((stage) => stage.replace("_", " ")).join(" or ")}`;
   }
 }
 
