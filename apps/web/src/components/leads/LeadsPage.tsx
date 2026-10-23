@@ -14,6 +14,7 @@ import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { cardVariants } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -237,7 +238,7 @@ function LeadCard({ item, onOpen }: { item: ContactListItem; onOpen: () => void 
   const move = useSetLeadStage(wid);
   const last = item.last_activity_at ? relativeTime(item.last_activity_at) : null;
   return (
-    <li data-testid="lead-card" className="space-y-2 rounded-xl border border-border bg-surface p-3">
+    <li data-testid="lead-card" className={cn(cardVariants(), "space-y-2 p-3")}>
       <div className="flex items-start gap-3">
         <ContactAvatar id={item.id} name={item.name} pictureUrl={item.profile_picture_url} platform={item.platform as Platform} size={32} />
         <div className="min-w-0 flex-1">

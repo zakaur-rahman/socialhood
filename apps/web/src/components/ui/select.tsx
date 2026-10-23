@@ -42,14 +42,14 @@ function SelectValue({
 
 /**
  * The trigger is built on Input (DESIGN_SYSTEM §8.2), so a select beside an Input on one card looks
- * the same: ui/input's `inputVariants` gives the `field` surface, the `--input` edge, focus as the
+ * the same: ui/input's `inputVariants` gives the `field` surface, the `line-control` edge, focus as the
  * global outline plus a `ring` border, `aria-invalid` in `danger`, Input's text sizes and the
  * control ladder's heights (40 px on coarse pointers at every size). On top: as wide as its value,
  * room for the chevron, and the placeholder colour. A call site's height or width class still
  * replaces the size's.
  */
 const SELECT_TRIGGER =
-  "flex w-fit items-center justify-between gap-1.5 pr-2 whitespace-nowrap select-none data-placeholder:text-muted-foreground *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  "flex w-fit items-center justify-between gap-1.5 pr-2 whitespace-nowrap select-none data-placeholder:text-fg-secondary *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 
 function SelectTrigger({
   className,
@@ -66,7 +66,7 @@ function SelectTrigger({
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <ChevronDownIcon className="pointer-events-none size-4 text-muted-foreground" />
+        <ChevronDownIcon className="pointer-events-none size-4 text-fg-secondary" />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
@@ -165,7 +165,7 @@ function SelectSeparator({
   return (
     <SelectPrimitive.Separator
       data-slot="select-separator"
-      className={cn("pointer-events-none -mx-1 my-1 h-px bg-border", className)}
+      className={cn("pointer-events-none -mx-1 my-1 h-px bg-line", className)}
       {...props}
     />
   )
@@ -179,7 +179,7 @@ function SelectScrollUpButton({
     <SelectPrimitive.ScrollUpButton
       data-slot="select-scroll-up-button"
       className={cn(
-        "z-10 flex cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        "z-10 flex cursor-default items-center justify-center bg-overlay py-1 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}
@@ -198,7 +198,7 @@ function SelectScrollDownButton({
     <SelectPrimitive.ScrollDownButton
       data-slot="select-scroll-down-button"
       className={cn(
-        "z-10 flex cursor-default items-center justify-center bg-popover py-1 [&_svg:not([class*='size-'])]:size-4",
+        "z-10 flex cursor-default items-center justify-center bg-overlay py-1 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

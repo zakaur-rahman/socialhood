@@ -19,7 +19,7 @@ describe("Textarea", () => {
   it("uses the field surface and edge, the global focus outline and the danger edge when invalid", () => {
     render(<Textarea aria-label="Answer" aria-invalid />);
     const textarea = screen.getByRole("textbox", { name: "Answer" });
-    expect(textarea).toHaveClass("bg-field", "border-input", "focus-visible:border-ring", "focus-visible:bg-raised", "aria-invalid:border-danger");
+    expect(textarea).toHaveClass("bg-field", "border-line-control", "focus-visible:border-brand", "focus-visible:bg-raised", "aria-invalid:border-danger");
     expect(textarea).toHaveAttribute("aria-invalid", "true");
     const list = classes(textarea);
     expect(list).not.toContain("outline-none");

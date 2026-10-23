@@ -261,7 +261,7 @@ function FlowStepCard({
         className={cn(
           "scroll-mt-24 bg-canvas/40 sm:[--card-padding:--spacing(4)]",
           state === "error" && "border-danger",
-          dragging && "opacity-60 ring-2 ring-ring",
+          dragging && "opacity-60 ring-2 ring-brand",
         )}
       >
         <div className="flex flex-wrap items-center gap-x-1 gap-y-1">
@@ -271,7 +271,7 @@ function FlowStepCard({
             disabled={length < 2}
             aria-label={`Reorder step ${number}`}
             aria-describedby={length < 2 ? undefined : "flow-reorder-help"}
-            className="inline-flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-fg-secondary hover:bg-hover active:cursor-grabbing disabled:cursor-default disabled:opacity-30 pointer-coarse:size-10"
+            className="inline-flex size-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-fg-secondary hover:bg-hover active:cursor-grabbing disabled:cursor-default disabled:opacity-50 pointer-coarse:size-10"
           >
             <GripVertical className="size-4" aria-hidden />
           </button>

@@ -70,7 +70,7 @@ function DialogOverlay({
 /**
  * A centred dialog. It scrolls within the viewport less 2 rem, so its actions stay reachable on
  * short screens; `size` picks the width (and `lg`/`xl` dialogs get the larger title). It sits on
- * `overlay` (`--popover`) with a `line` ring and `shadow-overlay`, over the scrim (DESIGN_SYSTEM §6,
+ * `overlay` (`bg-overlay`) with a `line` ring and `shadow-overlay`, over the scrim (DESIGN_SYSTEM §6,
  * level 2; D-12).
  */
 function DialogContent({
@@ -90,7 +90,7 @@ function DialogContent({
         data-slot="dialog-content"
         data-size={size}
         className={cn(
-          "group/dialog-content fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-line shadow-overlay outline-none data-open:zoom-in-95 data-closed:zoom-out-95",
+          "group/dialog-content fixed top-1/2 left-1/2 z-50 grid max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 overflow-y-auto rounded-xl bg-overlay p-4 text-sm text-fg ring-1 ring-line shadow-overlay outline-none data-open:zoom-in-95 data-closed:zoom-out-95",
           MODAL_MOTION,
           DIALOG_SIZES[size],
           className
@@ -139,7 +139,7 @@ function DialogFooter({
     <div
       data-slot="dialog-footer"
       className={cn(
-        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-muted/50 p-4 sm:flex-row sm:justify-end",
+        "-mx-4 -mb-4 flex flex-col-reverse gap-2 rounded-b-xl border-t bg-field p-4 sm:flex-row sm:justify-end",
         className
       )}
       {...props}
@@ -182,7 +182,7 @@ function DialogDescription({
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
+        "text-sm text-fg-secondary *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-fg",
         className
       )}
       {...props}

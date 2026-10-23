@@ -7,12 +7,12 @@ import type * as React from "react"
  */
 
 /**
- * The floating surface (DESIGN_SYSTEM §6, level 1; D-12): `--popover`, which is `overlay`, a shade
- * lighter than the panel cards beneath, with a 1 px `line` edge and the dark `shadow-floating`, set
- * here so call sites don't add their own. The edge is a ring of its own, so a call site's leftover
- * `shadow-xl` (until the area sweeps remove it) replaces only the shadow, never the edge.
+ * The floating surface (DESIGN_SYSTEM §6, level 1; D-12): `overlay`, a shade lighter than the
+ * panel cards beneath, with a 1 px `line` edge and the dark `shadow-floating`, set here so call
+ * sites don't add their own. The edge is a ring of its own, so a call site's `shadow-*` replaces
+ * only the shadow, never the edge.
  */
-export const FLOATING_SURFACE = "rounded-lg bg-popover text-popover-foreground ring-1 ring-line shadow-floating"
+export const FLOATING_SURFACE = "rounded-lg bg-overlay text-fg ring-1 ring-line shadow-floating"
 
 /**
  * The floating motion (DESIGN_SYSTEM §7.2): in and out in `duration-fast` (120 ms), with
@@ -35,7 +35,7 @@ export const FLOATING_MOTION =
  * secondary text keep their colours when highlighted (secondary text is 4.75:1 on the fill).
  */
 export const FLOATING_ITEM =
-  "relative flex cursor-default items-center gap-1.5 rounded-md py-1 text-sm select-none pointer-coarse:min-h-10 focus:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring group-data-keyboard/floating:data-highlighted:outline-2 group-data-keyboard/floating:data-highlighted:-outline-offset-2 group-data-keyboard/floating:data-highlighted:outline-ring data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  "relative flex cursor-default items-center gap-1.5 rounded-md py-1 text-sm select-none pointer-coarse:min-h-10 focus:bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-brand group-data-keyboard/floating:data-highlighted:outline-2 group-data-keyboard/floating:data-highlighted:-outline-offset-2 group-data-keyboard/floating:data-highlighted:outline-brand data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 
 /** The class that names a menu's or select's content as the items' group. */
 export const FLOATING_GROUP = "group/floating"

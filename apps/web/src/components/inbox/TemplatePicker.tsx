@@ -92,7 +92,7 @@ export function TemplatePicker({
                       onClick={() => choose(template)}
                       className={cn(
                         "w-full rounded-lg border px-3 py-2 text-left",
-                        selected ? "border-brand-line bg-brand-soft" : "border-line bg-field hover:bg-raised",
+                        selected ? "border-brand-line bg-brand-soft" : "border-line bg-field hover:bg-hover",
                       )}
                     >
                       <span className="flex items-center justify-between gap-2 text-sm font-medium">

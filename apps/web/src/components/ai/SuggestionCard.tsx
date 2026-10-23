@@ -246,7 +246,7 @@ export function EditingSuggestionChip({ onStop }: { onStop: () => void }) {
           aria-label="Stop editing the suggestion"
           onClick={onStop}
           // The chip's ×: 16 px, with a 40 px hit area on coarse pointers (DESIGN_SYSTEM §8.4).
-          className="relative grid size-4 place-items-center rounded-md after:absolute after:-inset-1 hover:bg-pressed pointer-coarse:after:-inset-3"
+          className="relative grid size-4 place-items-center rounded-md after:absolute after:-inset-1 hover:bg-hover pointer-coarse:after:-inset-3"
         >
           <X aria-hidden />
         </button>

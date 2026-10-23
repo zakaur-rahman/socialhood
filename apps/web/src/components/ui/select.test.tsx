@@ -54,16 +54,16 @@ describe("Select (UI-013)", () => {
     expect(trigger).toHaveClass(
       "bg-field",
       "border",
-      "border-input",
+      "border-line-control",
       "rounded-lg",
       "text-fg",
       "text-sm",
       "max-md:text-base",
-      "focus-visible:border-ring",
+      "focus-visible:border-brand",
       "focus-visible:bg-raised",
       "aria-invalid:border-danger",
       "disabled:opacity-50",
-      "data-placeholder:text-muted-foreground",
+      "data-placeholder:text-fg-secondary",
       "transition-[color,background-color,border-color]",
       "duration-fast"
     );
@@ -114,7 +114,7 @@ describe("Select (UI-013)", () => {
     await user.click(screen.getByRole("combobox", { name: "Time zone" }));
     const listbox = await screen.findByRole("listbox");
     const content = listbox.closest('[data-slot="select-content"]') ?? listbox;
-    expect(content).toHaveClass("shadow-floating", "ring-1", "ring-line", "rounded-lg", "bg-popover", "min-w-36", ...words(FLOATING_MOTION));
+    expect(content).toHaveClass("shadow-floating", "ring-1", "ring-line", "rounded-lg", "bg-overlay", "min-w-36", ...words(FLOATING_MOTION));
     expect(content).not.toHaveClass("duration-100", "shadow-md", "shadow-xl");
     expectReducedMotionCancels(content);
     expect(content).toHaveClass("data-[align-trigger=true]:animate-none");
@@ -129,7 +129,7 @@ describe("Select (UI-013)", () => {
       "focus:bg-hover",
       "focus-visible:outline-2",
       "focus-visible:-outline-offset-2",
-      "focus-visible:outline-ring",
+      "focus-visible:outline-brand",
       "group-data-keyboard/floating:data-highlighted:outline-2",
       "pointer-coarse:min-h-10"
     );

@@ -10,9 +10,9 @@ import { cn } from "@/lib/utils"
  * The text-field look, shared by Input and Textarea (and by the select trigger, SearchInput and
  * ChipInput when they adopt it), so fields on one card look the same (DESIGN_SYSTEM §8.2, §8.3):
  *
- * - the `field` surface, `raised` while focused; focus is the global outline plus a `ring` border;
+ * - the `field` surface, `raised` while focused; focus is the global outline plus a `brand` border;
  *   `aria-invalid` turns the border `danger`; disabled is `opacity-50`;
- * - the edge is `--input` and the placeholder `muted-foreground` (fg-secondary), so the token
+ * - the edge is `line-control` and the placeholder `fg-secondary`, so the token
  *   decisions D-01 and D-06 (UI-018) land in globals.css and here, in one place;
  * - 16 px text below `md`, where iOS zooms into anything smaller, and 14 px from `md` (the Input
  *   type role). Written as `max-md:text-base` so a call site's leftover `text-sm` can't bring the
@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils"
  * - colour transitions only (never `outline-color`: the focus ring appears at once).
  */
 const fieldControlClass =
-  "w-full min-w-0 rounded-lg border border-input bg-field px-3 text-sm text-fg max-md:text-base placeholder:text-muted-foreground transition-[color,background-color,border-color] duration-fast ease-standard focus-visible:border-ring focus-visible:bg-raised disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger"
+  "w-full min-w-0 rounded-lg border border-line-control bg-field px-3 text-sm text-fg max-md:text-base placeholder:text-fg-secondary transition-[color,background-color,border-color] duration-fast ease-standard focus-visible:border-brand focus-visible:bg-raised disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-danger"
 
 /** Heights on the control ladder (DESIGN_SYSTEM §8.4); 40 px on coarse pointers at every size. */
 const inputVariants = cva(
@@ -52,7 +52,7 @@ const inputVariants = cva(
 const PICKER_TYPES = new Set(["date", "time", "datetime-local", "month", "week"])
 
 const pickerFocusClass =
-  "focus-within:border-ring focus-within:bg-raised focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-ring"
+  "focus-within:border-brand focus-within:bg-raised focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand"
 
 type InputProps = Omit<React.ComponentProps<"input">, "size"> & VariantProps<typeof inputVariants>
 

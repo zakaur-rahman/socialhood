@@ -269,15 +269,15 @@ describe("ChipInput: look", () => {
       "min-h-10",
       "has-[input:focus-visible]:outline-2",
       "has-[input:focus-visible]:outline-offset-2",
-      "has-[input:focus-visible]:outline-ring",
-      "has-[input:focus-visible]:border-ring",
+      "has-[input:focus-visible]:outline-brand",
+      "has-[input:focus-visible]:border-brand",
       "has-[input:focus-visible]:bg-raised",
     );
     const list = classes(box.className);
     expect(list.filter((c) => c.includes("ring-3") || c.includes("ring-ring/50"))).toEqual([]);
     expect(list).not.toContain("transition-all");
     // The text field hands its outline to the box (the replacement above), nothing else.
-    expect(field()).toHaveClass("focus-visible:outline-none", "placeholder:text-muted-foreground");
+    expect(field()).toHaveClass("focus-visible:outline-none", "placeholder:text-fg-secondary");
   });
 
   it("chips are brand-soft pills whose × keeps a 24 px target, 40 px on coarse pointers (rows 40 px apart there)", () => {

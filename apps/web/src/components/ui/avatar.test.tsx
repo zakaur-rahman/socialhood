@@ -51,7 +51,7 @@ describe("AvatarFallback", () => {
   it("fills with raised by default, visible on panel (shadcn's field-coloured muted is 1.02:1)", () => {
     render(<Contact />)
     const fallback = screen.getByText("P")
-    expect(fallback).toHaveClass("bg-raised", "text-muted-foreground")
+    expect(fallback).toHaveClass("bg-raised", "text-fg-secondary")
     expect(fallback).not.toHaveClass("bg-muted")
   })
 })

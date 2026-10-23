@@ -1,6 +1,7 @@
 "use client";
 
 import type { SavedReply } from "@/lib/api/types";
+import { FLOATING_SURFACE } from "@/components/ui/floating";
 import { cn } from "@/lib/utils";
 
 export const SAVED_REPLY_LIST_ID = "saved-reply-options";
@@ -33,7 +34,7 @@ export function SavedReplyPicker({
       role="listbox"
       aria-label="Saved replies"
       aria-busy={busy}
-      className="absolute inset-x-0 bottom-full z-20 mb-2 max-h-64 overflow-y-auto rounded-lg bg-popover p-1 text-popover-foreground shadow-floating ring-1 ring-line"
+      className={cn(FLOATING_SURFACE, "absolute inset-x-0 bottom-full z-20 mb-2 max-h-64 overflow-y-auto p-1")}
     >
       {replies.map((reply, index) => (
         <div
