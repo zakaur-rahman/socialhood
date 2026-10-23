@@ -39,6 +39,10 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "message_history_days": {"free": 90, "pro": None, "max": None},
     # Posts per account whose comments are analysed: the most recent ones (T6.2).
     "comment_intelligence_posts": {"free": 5, "pro": None, "max": None},
+    # Custom contact fields a workspace can define (GR-02). Contacts themselves are never
+    # metered (PD-2). Proposed values, pending the owner's plan decisions.
+    "contact_fields": {"free": 5, "pro": 50, "max": 200},
+    "webhook_endpoints": {"free": 1, "pro": 5, "max": 20},  # GR-04 (C-080)
 }
 
 

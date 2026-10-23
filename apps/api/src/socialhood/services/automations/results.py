@@ -18,7 +18,8 @@ the send pipeline (``hand_over``: ``sent``, or ``partial`` if the public reply h
 the run then mirrors that message like a DM run, the public reply's failure included.
 
 When a run's message reaches Instagram, the follow nudge may be due (services/automations/nudge,
-FR-AUT-22).
+FR-AUT-22). A flow run (GR-03) goes on to its next step instead (services/automations/engine): its
+first message settles the run like a private reply or a DM; the rest are logged per step.
 """
 
 from __future__ import annotations
@@ -163,7 +164,7 @@ def answered_failed(run: AutomationRun, code: str, message: str) -> None:
 async def follow_message(session: AsyncSession, msg: Message) -> None:
     """Mirror a sent or failed automation message onto its run; once the run's message reached
     Instagram, see whether the follow nudge is due."""
-    from socialhood.services.automations import nudge
+    from socialhood.services.automations import engine, nudge
 
     if msg.automation_run_id is None or msg.status not in (*DELIVERED, MessageStatus.FAILED):
         return
@@ -180,13 +181,50 @@ async def follow_message(session: AsyncSession, msg: Message) -> None:
         opening = bool(msg.quick_replies) or await _opens_first(session, run)
     apply_message(run, msg, opening=opening)
     await session.flush()
+    if engine.is_flow_run(run):
+        await engine.after_message(session, run, msg)
+        return
     if msg.status in DELIVERED and run.private_reply_message_id == msg.id:
         await nudge.after_message(session, run)
+    await completed(session, run, msg)
+
+
+SETTLED = frozenset({RunResult.SENT, RunResult.PARTIAL, RunResult.FAILED})
+
+
+async def completed(session: AsyncSession, run: AutomationRun, msg: Message) -> None:
+    """automation.run.completed (GR-04) for a run on its message settings: its message was sent
+    or failed (later read receipts don't count; the event is sent once per run)."""
+    from socialhood.services.automations import engine
+    from socialhood.services.webhooks import events
+
+    if (
+        engine.is_flow_run(run)
+        or run.private_reply_message_id != msg.id
+        or msg.status not in (MessageStatus.SENT, MessageStatus.FAILED)
+        or run.result not in SETTLED
+    ):
+        return
+    automation = await runs.get_automation(session, run.automation_id)
+    contact = await runs.contacts_by_id(session, [run.contact_id]) if run.contact_id else []
+    await events.run_completed(
+        session,
+        run_id=run.id,
+        result=run.result,
+        trigger="comment" if run.trigger_comment_id else "dm",
+        automation_id=run.automation_id,
+        automation_name=automation.name if automation else "",
+        contact=contact[0] if contact else None,
+    )
 
 
 async def _opens_first(session: AsyncSession, run: AutomationRun) -> bool:
-    from socialhood.services.automations import actions
+    """The run's first message waits for an answer: tap first, or a flow's first step."""
+    from socialhood.services.automations import actions, engine, flows
 
+    if engine.is_flow_run(run):
+        g = await engine.graph_for(session, run.automation_id, run.flow_version or 0)
+        return flows.waits(g.step(g.definition.start))
     automation = await runs.get_automation(session, run.automation_id)
     return automation is not None and actions.opens_first(automation)
 

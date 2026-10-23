@@ -30,6 +30,7 @@ describe("SettingsPageHeader (C-066, D-08)", () => {
       "Workspace",
       "Notifications",
       "Billing and usage",
+      "Integrations",
       "Ask Social Hood",
     ]);
   });

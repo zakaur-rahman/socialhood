@@ -16,6 +16,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "notifications", label: "Notifications", roles: EVERYONE },
   // §3.1: billing is the owner's (admins see it read-only, C-048's Upgrade leads there).
   { segment: "billing", label: "Billing and usage", roles: ["owner", "admin"] },
+  // GR-04: outbound webhooks, for owners and admins like the API's integrations routes.
+  { segment: "integrations", label: "Integrations", roles: ["owner", "admin"] },
   // agent-architecture.html §12: Settings → Agent, with the run history (FR-AGT-07).
   { segment: "agent", label: "Ask Social Hood", roles: EVERYONE },
 ];

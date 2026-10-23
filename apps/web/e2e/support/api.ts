@@ -63,10 +63,26 @@ export class Api {
     return this.call<SandboxAccount>("POST", `/v1/w/${wid}/dev/sandbox/accounts`);
   }
 
-  /** A DM or comment from a customer, through the same intake as a real webhook. */
+  /**
+   * A DM or comment from a customer, through the same intake as a real webhook. GR-01 adds a
+   * referral without a message (an entry link opened, an ad tapped), a postback, an opt-in and a
+   * Live comment; a DM may carry an ad referral.
+   */
   inbound(
     wid: string,
-    event: { accountId: string; kind: "dm" | "comment"; text: string; fromId?: string; fromUsername?: string },
+    event: {
+      accountId: string;
+      kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin";
+      text?: string;
+      fromId?: string;
+      fromUsername?: string;
+      referralSource?: "ad" | "link";
+      ref?: string;
+      adId?: string;
+      adTitle?: string;
+      postbackPayload?: string;
+      quickReplyPayload?: string;
+    },
   ): Promise<{ stored: number }> {
     return this.call("POST", `/v1/w/${wid}/dev/sandbox/inbound`, {
       account_id: event.accountId,
@@ -74,7 +90,31 @@ export class Api {
       text: event.text,
       from_id: event.fromId,
       from_username: event.fromUsername,
+      referral_source: event.referralSource,
+      ref: event.ref,
+      ad_id: event.adId,
+      ad_title: event.adTitle,
+      postback_payload: event.postbackPayload,
+      quick_reply_payload: event.quickReplyPayload,
     });
+  }
+
+  /** GR-03: an active DM keyword automation saved as ``flow`` (PUT …/flow). */
+  async flowAutomation(wid: string, accountId: string, keyword: string, flow: unknown): Promise<{ id: string }> {
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name: `Flow for ${keyword}`,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name: `Flow for ${keyword}`,
+      social_account_id: accountId,
+      trigger: "dm_keyword",
+      keywords: [keyword],
+      match_mode: "word",
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}/flow`, flow);
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
   }
 
   /** A draft automation made active through the API (setup for the plan limit in F-15). */

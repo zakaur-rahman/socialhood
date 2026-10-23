@@ -100,6 +100,16 @@ class ScheduledStatus(StrEnum):
     EXPIRED = "expired"
 
 
+class EntrySource(StrEnum):
+    """How a conversation began (GR-01)."""
+
+    ORGANIC = "organic"  # they wrote first, from no link or ad we know of
+    LINK = "link"  # an entry link (ig.me ?ref=, GR-08)
+    AD = "ad"  # a click-to-DM or click-to-WhatsApp ad (GR-09)
+    ICE_BREAKER = "ice_breaker"  # a conversation starter (GR-11)
+    OTHER = "other"  # a referral Meta names something else
+
+
 class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
     __tablename__ = "contacts"
 
@@ -116,6 +126,22 @@ class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
     follows_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     first_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GR-01: the latest entry link or ad they came from ({source, ref, ad_id, ad_title,
+    # ctwa_clid, at}), applied to the conversation it starts; and how they first arrived.
+    last_referral: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    first_entry_source: Mapped[str | None] = mapped_column(Text)
+    # GR-02: what a business knows about them. Custom field values by key (validated against
+    # contact_field_definitions); an email and a phone, each with where it came from and
+    # whether it was verified; their last activity outside the conversation (a comment). The
+    # contacts list's activity is the later of this and the conversation's last message.
+    fields: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sql("'{}'::jsonb"))
+    email: Mapped[str | None] = mapped_column(Text)
+    email_source: Mapped[str | None] = mapped_column(Text)
+    email_verified: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    phone: Mapped[str | None] = mapped_column(Text)  # E.164
+    phone_source: Mapped[str | None] = mapped_column(Text)
+    phone_verified: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "platform_user_id"),
@@ -159,6 +185,14 @@ class Conversation(IdMixin, TimestampMixin, TenantScoped, Base):
     messages_since_summary: Mapped[int] = mapped_column(Integer, server_default=sql("0"))
     platform_conversation_id: Mapped[str | None] = mapped_column(Text)
     window_reminder_for: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GR-01: how the conversation began (organic, an entry link, an ad; GR-11 adds ice
+    # breakers). Null for conversations from before GR-01. last_referral is the latest referral
+    # seen in it, which may differ from the entry.
+    entry_source: Mapped[str | None] = mapped_column(Text)
+    entry_ref: Mapped[str | None] = mapped_column(Text)
+    entry_ad_id: Mapped[str | None] = mapped_column(Text)
+    entry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_referral: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "contact_id"),
@@ -202,6 +236,9 @@ class Conversation(IdMixin, TimestampMixin, TenantScoped, Base):
             "last_message_preview IS NULL OR char_length(last_message_preview) <= 200",
             name="preview_length",
         ),
+        CheckConstraint(
+            f"entry_source IS NULL OR {_in('entry_source', EntrySource)}", name="entry_source"
+        ),
     )
 
 
@@ -233,6 +270,8 @@ class Message(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     # The quick reply the customer tapped (its payload; Instagram's message.quick_reply).
     quick_reply_payload: Mapped[str | None] = mapped_column(Text)
+    # The payload of a tapped postback: an ice breaker or a button (GR-01, GR-11).
+    postback_payload: Mapped[str | None] = mapped_column(Text)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     platform_message_id: Mapped[str | None] = mapped_column(Text)
     client_id: Mapped[uuid.UUID | None] = mapped_column()

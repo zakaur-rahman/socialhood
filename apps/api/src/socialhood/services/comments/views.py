@@ -114,6 +114,7 @@ def comment_out(
             "text": comment.text,
             "like_count": comment.like_count,
             "hidden": comment.hidden,
+            "is_live": comment.is_live,
             "commented_at": comment.commented_at,
             "deleted_at": comment.deleted_at,
             "analysis_status": comment.analysis_status,

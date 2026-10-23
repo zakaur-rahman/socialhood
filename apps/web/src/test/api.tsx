@@ -414,6 +414,7 @@ export function automation(overrides: Partial<Automation> = {}): Automation {
     stats: { runs_7d: 0, daily_7d: [0, 0, 0, 0, 0, 0, 0], last_run_at: null },
     queue: { waiting: 0, eta_minutes: null, order: "oldest_first" },
     missing_for_activation: [],
+    flow_source: "legacy",
     overlaps: [],
     ...overrides,
   };
@@ -482,6 +483,7 @@ export function comment(overrides: Partial<PostComment> = {}): PostComment {
     text: "What sizes do you have?",
     like_count: 0,
     hidden: false,
+    is_live: false,
     commented_at: "2026-09-28T11:00:00Z",
     deleted_at: null,
     analysis_status: "done",

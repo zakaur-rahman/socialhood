@@ -27,6 +27,7 @@ LANES = (INTERACTIVE, BULK)
 TASK_MODULES = [
     "socialhood.jobs.tasks.maintenance",
     "socialhood.jobs.tasks.webhooks",
+    "socialhood.jobs.tasks.outbound",
     "socialhood.jobs.tasks.accounts",
     "socialhood.jobs.tasks.privacy",
     "socialhood.jobs.tasks.ingest",

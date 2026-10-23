@@ -56,6 +56,7 @@ from socialhood.models.automations import (
     AutomationRun,
     AutomationStatus,
     Comment,
+    FlowState,
     RunResult,
     SurgeOrder,
 )
@@ -87,7 +88,7 @@ from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import ingest as rows
 from socialhood.repositories import messages as messages_repo
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, results, stats
+from socialhood.services.automations import actions, engine, flows, results, stats
 from socialhood.services.inbox_views import conversation_touch
 
 log = get_logger(__name__)
@@ -202,6 +203,8 @@ class _Pass:
     now: datetime
     disclosure: str | None
     drafts: dict[uuid.UUID, str] = field(default_factory=dict)  # AI replies to send (T5.8)
+    # Flow runs' graphs (GR-03), by (automation, version): a run follows the version it started on.
+    graphs: dict[tuple[uuid.UUID, int], flows.Graph] = field(default_factory=dict)
 
 
 @dataclass
@@ -436,7 +439,7 @@ async def _prepare(
             session, [c.contact_id for c in comments.values() if c.contact_id]
         )
     }
-    ready: list[tuple[AutomationRun, Comment, Contact, OutboundMessage]] = []
+    ready: list[tuple[AutomationRun, Comment, Contact, OutboundMessage, bool]] = []
     for queued in chosen:
         automation = by_automation[queued.automation_id]
         comment = comments.get(queued.trigger_comment_id) if queued.trigger_comment_id else None
@@ -445,7 +448,24 @@ async def _prepare(
             tally.failed += _give_up(queued, NO_CONTACT)
             continue
         outbound: OutboundMessage | None
-        if automation.action == AutomationAction.AI_REPLY:
+        waits = False
+        if engine.is_flow_run(queued):
+            g = await _graph(session, run, queued)
+            outbound, waits = (
+                engine.entry_message(
+                    g,
+                    queued,
+                    contact,
+                    username=comment.author_username,
+                    account_username=acct.username,
+                    disclosure=run.disclosure,
+                )
+                if g is not None
+                else (None, False)
+            )
+            if outbound is None:
+                queued.flow_state = FlowState.DONE
+        elif automation.action == AutomationAction.AI_REPLY:
             text = run.drafts.pop(queued.id, None)
             if text is None:
                 continue  # not drafted yet: it stays queued for _drain_ai (T5.8)
@@ -455,16 +475,16 @@ async def _prepare(
         if outbound is None:
             tally.failed += _give_up(queued, actions.NO_MESSAGE)
             continue
-        ready.append((queued, comment, contact, outbound))
+        ready.append((queued, comment, contact, outbound, waits))
 
     conversations = {
         c.contact_id: c
         for c in await runs.lock_conversations_of(
-            session, acct.id, list({contact.id for _, _, contact, _ in ready})
+            session, acct.id, list({contact.id for _, _, contact, _, _ in ready})
         )
     }
-    staged: list[tuple[AutomationRun, Comment, Contact, Message, OutboundMessage]] = []
-    for queued, comment, contact, outbound in ready:
+    staged: list[tuple[AutomationRun, Comment, Contact, Message, OutboundMessage, bool]] = []
+    for queued, comment, contact, outbound, waits in ready:
         conv = conversations.get(contact.id)
         if conv is None:
             conv, _ = await rows.get_or_create_conversation(
@@ -491,13 +511,17 @@ async def _prepare(
             reactions=[],
         )
         session.add(msg)
-        staged.append((queued, comment, contact, msg, outbound))
+        staged.append((queued, comment, contact, msg, outbound, waits))
     await session.flush()
     claimed: list[_Claimed] = []
-    for queued, comment, contact, msg, outbound in staged:
+    for queued, comment, contact, msg, outbound, waits in staged:
         queued.private_reply_message_id = msg.id
         queued.conversation_id = msg.conversation_id
         queued.contact_id = queued.contact_id or contact.id
+        if engine.is_flow_run(queued):
+            g = await _graph(session, run, queued)
+            if g is not None:
+                await engine.entry_logged(session, queued, g, msg.id)
         claimed.append(
             _Claimed(
                 run_id=queued.id,
@@ -507,11 +531,22 @@ async def _prepare(
                 comment_ref=comment.platform_comment_id,
                 contact=contact,
                 message=outbound,
-                opening=bool(outbound.quick_replies),
+                # Tap first (FR-AUT-21), or a flow's first step that waits for the answer.
+                opening=bool(outbound.quick_replies) or waits,
             )
         )
     await session.flush()
     return claimed
+
+
+async def _graph(session: AsyncSession, run: _Pass, queued: AutomationRun) -> flows.Graph | None:
+    key = (queued.automation_id, queued.flow_version or 0)
+    if key not in run.graphs:
+        try:
+            run.graphs[key] = await engine.graph_for(session, *key)
+        except (KeyError, flows.FlowError):
+            return None
+    return run.graphs[key]
 
 
 def _private_reply(
@@ -731,6 +766,8 @@ async def _settle(run: _Pass, claimed: list[_Claimed], tally: _Tally) -> None:
             msg = messages.get(reply_id) if reply_id else None
             if msg is not None:
                 results.apply_message(settled, msg, opening=by_run[settled.id].opening)
+                await engine.after_message(session, settled, msg)  # a flow run goes on (GR-03)
+                await results.completed(session, settled, msg)  # GR-04
         for item in done:
             msg, conv = messages.get(item.message_id), conversations.get(item.conversation_id)
             if msg is None or conv is None:

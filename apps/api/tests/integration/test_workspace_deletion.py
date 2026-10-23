@@ -360,8 +360,11 @@ async def _extra_rows(engine: AsyncEngine, wid: str, message_id: str) -> None:
         )
         await conn.execute(
             text(
-                "INSERT INTO automation_runs (workspace_id, automation_id, trigger_message_id,"
-                " matched_keyword, result) VALUES (:w, :a, :m, 'link', 'sent')"
+                "WITH r AS (INSERT INTO automation_runs (workspace_id, automation_id,"
+                " trigger_message_id, matched_keyword, result)"
+                " VALUES (:w, :a, :m, 'link', 'sent') RETURNING id)"
+                " INSERT INTO automation_run_steps (workspace_id, run_id, step_id, kind, status)"
+                " SELECT :w, id, 'hello', 'send', 'sent' FROM r"  # GR-03: a flow run's step log
             ),
             {"w": wid, "a": automation, "m": message_id},
         )

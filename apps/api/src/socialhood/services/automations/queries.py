@@ -54,7 +54,7 @@ from socialhood.schemas.automations import (
 from socialhood.schemas.automations import Automation as AutomationOut
 from socialhood.schemas.automations import AutomationRun as AutomationRunOut
 from socialhood.schemas.posts import CommentStats, PostList, PostSort, PostSummary
-from socialhood.services.automations import matching, stats, validation, windows
+from socialhood.services.automations import flow_store, matching, stats, validation, windows
 from socialhood.services.automations.definitions import definition_of
 from socialhood.services.comments.queries import needs_reply_conditions, needs_reply_counts
 from socialhood.services.conversations import decode_cursor, encode_cursor
@@ -147,11 +147,21 @@ async def project(
     figures = await stats.list_stats(session, automations, timezone=view.timezone, now=view.now)
     queue = await stats.queued_counts(session, now=view.now)
     overlaps = await _overlaps(session, automations, keywords)
+    stored = {
+        a.id: definition_of(
+            a,
+            keywords=keywords[a.id],
+            posts=posts[a.id],
+            account=accounts.get(a.social_account_id) if a.social_account_id else None,
+        )
+        for a in automations
+    }
+    problems = await flow_store.problems(
+        session, automations, disclosure=view.disclosure, now=view.now, definitions_by_id=stored
+    )
     out: list[AutomationOut] = []
     for a in automations:
-        account = accounts.get(a.social_account_id) if a.social_account_id else None
-        definition = definition_of(a, keywords=keywords[a.id], posts=posts[a.id], account=account)
-        errors = validation.activation_errors(definition, disclosure=view.disclosure, now=view.now)
+        errors = problems[a.id]
         out.append(
             _automation_out(
                 a,
@@ -220,6 +230,7 @@ def _automation_out(
         stats=figures,
         queue=queue.info(a),
         missing_for_activation=missing,
+        flow_source="legacy" if a.flow_version is None else "flow",
         overlaps=overlaps,
     )
 

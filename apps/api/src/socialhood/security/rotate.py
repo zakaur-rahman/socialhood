@@ -25,6 +25,7 @@ from socialhood.settings import get_settings
 ENCRYPTED_COLUMNS = (
     ("social_accounts", "access_token_enc"),
     ("social_accounts", "whatsapp_pin_enc"),
+    ("webhook_endpoints", "secret_enc"),  # GR-04: outbound webhook signing secrets
 )
 
 

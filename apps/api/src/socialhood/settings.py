@@ -152,6 +152,9 @@ class Settings(BaseSettings):
     push_provider: Literal["webpush", "fake"] = "webpush"
 
     sandbox_platform_enabled: bool = False
+    # GR-04: outbound webhooks may go to private and local addresses (development and e2e, which
+    # receive them locally); refused in production (security/ssrf.py).
+    webhooks_allow_private: bool = False
 
     # TR-API-07 (security/ratelimit.py). Off only for local load or end-to-end runs; refused in
     # production. CLIENT_IP_HEADER names the header that carries the caller's address; required
@@ -200,6 +203,8 @@ class Settings(BaseSettings):
         unsafe = []
         if self.sandbox_platform_enabled:
             unsafe.append("SANDBOX_PLATFORM_ENABLED must be false in production")
+        if self.webhooks_allow_private:
+            unsafe.append("WEBHOOKS_ALLOW_PRIVATE must be false in production")
         if self.log_level == "DEBUG":
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
         if not self.rate_limits_enabled:

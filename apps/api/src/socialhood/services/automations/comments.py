@@ -45,6 +45,7 @@ from socialhood.repositories import comments as repo
 from socialhood.repositories import ingest as rows
 from socialhood.services.automations import posts, runtime
 from socialhood.services.comments import views
+from socialhood.services.contacts import touch_activity
 
 log = get_logger(__name__)
 
@@ -83,7 +84,7 @@ async def intake(
     item = await repo.find_media_item(session, acct.id, event.media_id)
     if item is None:
         item = await _store_post(session, acct, event, deps=deps(), now=now)
-    contact, _ = await rows.get_or_create_contact(
+    contact, new_contact = await rows.get_or_create_contact(
         session,
         social_account_id=acct.id,
         platform_user_id=event.author_ref,
@@ -91,6 +92,12 @@ async def intake(
     )
     if event.author_username and contact.username != event.author_username:
         contact.username = event.author_username  # the newest we know
+    if new_contact and not backfill:
+        from socialhood.services.webhooks import events
+
+        await events.contact_created(session, contact, platform=acct.platform)
+    if not backfill:
+        touch_activity(contact, event.occurred_at)  # GR-02: a comment is contact activity
     values: dict[str, Any] = {
         "social_account_id": acct.id,
         "media_item_id": item.id,
@@ -101,6 +108,7 @@ async def intake(
         "author_username": event.author_username,
         "text": event.text,
         "commented_at": event.occurred_at,
+        "is_live": event.is_live,
     }
     if isinstance(event, PlatformComment):  # read from the platform: what only a read returns
         values["like_count"] = event.like_count
@@ -112,7 +120,11 @@ async def intake(
     await session.flush()
     if backfill:
         return Intake(comment)
-    await runtime.enqueue_for_comment(session, comment)
+    if not comment.is_live:
+        # A Live comment is stored and shown, but comment automations don't answer it: their
+        # post scopes mean posts and Reels, and a Live's private reply works only while it is on
+        # air. GR-10 adds the Live scope.
+        await runtime.enqueue_for_comment(session, comment)
     views.queue_comment(
         session,
         comment.workspace_id,

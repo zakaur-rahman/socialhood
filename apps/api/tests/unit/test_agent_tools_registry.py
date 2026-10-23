@@ -19,6 +19,7 @@ READ = {
     "get_conversation",
     "find_contact",
     "get_customer",
+    "list_contacts",
     "get_post_comments",
     "search_comments",
     "get_posts",
@@ -38,6 +39,7 @@ READ = {
     "search_knowledge",
     "answer_from_knowledge",
     "list_knowledge_gaps",
+    "list_webhook_endpoints",
 }
 DRAFT = {"draft_reply", "prepare_comment_reply", "prepare_scheduled_message", "prepare_automation"}
 ADMIN = {
@@ -50,6 +52,7 @@ ADMIN = {
     "search_knowledge",
     "answer_from_knowledge",
     "list_knowledge_gaps",
+    "list_webhook_endpoints",
 }
 
 

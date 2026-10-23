@@ -45,6 +45,72 @@
         "title": "AccountAttention",
         "type": "object"
       },
+      "ActionStep": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "discriminator": {
+              "mapping": {
+                "add_tag": "#/components/schemas/AddTag",
+                "hand_off": "#/components/schemas/HandOff",
+                "notify_team": "#/components/schemas/NotifyTeam",
+                "remove_tag": "#/components/schemas/RemoveTag",
+                "set_field": "#/components/schemas/SetField"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AddTag"
+              },
+              {
+                "$ref": "#/components/schemas/RemoveTag"
+              },
+              {
+                "$ref": "#/components/schemas/SetField"
+              },
+              {
+                "$ref": "#/components/schemas/NotifyTeam"
+              },
+              {
+                "$ref": "#/components/schemas/HandOff"
+              }
+            ],
+            "title": "Action"
+          },
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "type": {
+            "const": "action",
+            "default": "action",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "action"
+        ],
+        "title": "ActionStep",
+        "type": "object"
+      },
       "Actor": {
         "properties": {
           "id": {
@@ -68,6 +134,27 @@
           "id"
         ],
         "title": "Actor",
+        "type": "object"
+      },
+      "AddTag": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "add_tag",
+            "default": "add_tag",
+            "title": "Kind",
+            "type": "string"
+          },
+          "tag_id": {
+            "format": "uuid",
+            "title": "Tag Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag_id"
+        ],
+        "title": "AddTag",
         "type": "object"
       },
       "AgentApproval": {
@@ -1276,6 +1363,35 @@
         "title": "AiDecisionFeedback",
         "type": "object"
       },
+      "AiReplyStep": {
+        "additionalProperties": false,
+        "description": "An AI reply from the knowledge base (T5.8), or a hand-off when it can't answer. It ends\nthe flow.",
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "instructions": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "type": {
+            "const": "ai_reply",
+            "default": "ai_reply",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AiReplyStep",
+        "type": "object"
+      },
       "AiSettings": {
         "description": "FR-KB-04 brand voice, FR-SUG-06 escalation phrases, FR-SUG-05 takeover period.",
         "properties": {
@@ -1602,6 +1718,97 @@
         "title": "ApprovalApprove",
         "type": "object"
       },
+      "AskStep": {
+        "additionalProperties": false,
+        "description": "A question whose answer is checked and saved: free text to a custom field, an email or a\nphone to the contact (or a custom field of that type). An answer that doesn't fit gets\n``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip``.",
+        "properties": {
+          "expect": {
+            "default": "text",
+            "enum": [
+              "text",
+              "email",
+              "phone"
+            ],
+            "title": "Expect",
+            "type": "string"
+          },
+          "field_key": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z][a-z0-9_]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field Key"
+          },
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "on_skip": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Skip"
+          },
+          "retry_text": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Retry Text",
+            "type": "string"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Text",
+            "type": "string"
+          },
+          "tries": {
+            "default": 2,
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Tries",
+            "type": "integer"
+          },
+          "type": {
+            "const": "ask",
+            "default": "ask",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "AskStep",
+        "type": "object"
+      },
       "Attachment": {
         "properties": {
           "duration_s": {
@@ -1808,6 +2015,15 @@
               }
             ],
             "title": "Ends At"
+          },
+          "flow_source": {
+            "default": "legacy",
+            "enum": [
+              "legacy",
+              "flow"
+            ],
+            "title": "Flow Source",
+            "type": "string"
           },
           "follow_nudge": {
             "title": "Follow Nudge",
@@ -3350,6 +3566,107 @@
         "title": "BillingState",
         "type": "object"
       },
+      "BranchRule": {
+        "additionalProperties": false,
+        "properties": {
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "when": {
+            "discriminator": {
+              "mapping": {
+                "contact": "#/components/schemas/ContactCondition",
+                "field": "#/components/schemas/FieldCondition",
+                "follows_business": "#/components/schemas/FollowsCondition",
+                "lead_score": "#/components/schemas/LeadScoreCondition",
+                "platform": "#/components/schemas/PlatformCondition",
+                "tag": "#/components/schemas/TagCondition"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TagCondition"
+              },
+              {
+                "$ref": "#/components/schemas/FieldCondition"
+              },
+              {
+                "$ref": "#/components/schemas/ContactCondition"
+              },
+              {
+                "$ref": "#/components/schemas/FollowsCondition"
+              },
+              {
+                "$ref": "#/components/schemas/PlatformCondition"
+              },
+              {
+                "$ref": "#/components/schemas/LeadScoreCondition"
+              }
+            ],
+            "title": "When"
+          }
+        },
+        "required": [
+          "when"
+        ],
+        "title": "BranchRule",
+        "type": "object"
+      },
+      "BranchStep": {
+        "additionalProperties": false,
+        "description": "The first rule that holds picks the next step; none does, ``otherwise``.",
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "otherwise": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Otherwise"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/BranchRule"
+            },
+            "maxItems": 10,
+            "title": "Rules",
+            "type": "array"
+          },
+          "type": {
+            "const": "branch",
+            "default": "branch",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "BranchStep",
+        "type": "object"
+      },
       "BulkPause": {
         "additionalProperties": false,
         "properties": {
@@ -3470,6 +3787,57 @@
           "message"
         ],
         "title": "BulkSkipped",
+        "type": "object"
+      },
+      "BulkTagsResult": {
+        "properties": {
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "title": "BulkTagsResult",
+        "type": "object"
+      },
+      "BulkTagsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "add": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Add",
+            "type": "array"
+          },
+          "contact_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Contact Ids",
+            "type": "array"
+          },
+          "remove": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Remove",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contact_ids"
+        ],
+        "title": "BulkTagsUpdate",
         "type": "object"
       },
       "Calendar": {
@@ -3940,6 +4308,11 @@
             "title": "Id",
             "type": "string"
           },
+          "is_live": {
+            "default": false,
+            "title": "Is Live",
+            "type": "boolean"
+          },
           "like_count": {
             "title": "Like Count",
             "type": "integer"
@@ -4301,6 +4674,135 @@
         "title": "ConnectStart",
         "type": "object"
       },
+      "Consent": {
+        "description": "The current state for one channel: the latest record.",
+        "properties": {
+          "channel": {
+            "enum": [
+              "instagram",
+              "whatsapp",
+              "email"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "occurred_at": {
+            "format": "date-time",
+            "title": "Occurred At",
+            "type": "string"
+          },
+          "purpose": {
+            "const": "marketing",
+            "title": "Purpose",
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "platform_optin",
+              "flow",
+              "stop_reply",
+              "member",
+              "import"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "granted",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "purpose",
+          "status",
+          "source",
+          "occurred_at"
+        ],
+        "title": "Consent",
+        "type": "object"
+      },
+      "ConsentCreate": {
+        "additionalProperties": false,
+        "description": "A member records consent the customer gave elsewhere (a form, in person), or its\nwithdrawal. The note says how it was given; it's the evidence.",
+        "properties": {
+          "channel": {
+            "enum": [
+              "instagram",
+              "whatsapp",
+              "email"
+            ],
+            "title": "Channel",
+            "type": "string"
+          },
+          "note": {
+            "maxLength": 300,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "granted",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "channel",
+          "status",
+          "note"
+        ],
+        "title": "ConsentCreate",
+        "type": "object"
+      },
+      "ContactCondition": {
+        "additionalProperties": false,
+        "description": "Whether the contact's email or phone is known.",
+        "properties": {
+          "has": {
+            "enum": [
+              "email",
+              "phone"
+            ],
+            "title": "Has",
+            "type": "string"
+          },
+          "kind": {
+            "const": "contact",
+            "default": "contact",
+            "title": "Kind",
+            "type": "string"
+          },
+          "known": {
+            "default": true,
+            "title": "Known",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "has"
+        ],
+        "title": "ContactCondition",
+        "type": "object"
+      },
       "ContactDetail": {
         "properties": {
           "display_name": {
@@ -4370,6 +4872,403 @@
         "title": "ContactDetail",
         "type": "object"
       },
+      "ContactList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContactListItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ContactList",
+        "type": "object"
+      },
+      "ContactListItem": {
+        "properties": {
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "first_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
+          "lead_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Score"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "profile_picture_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Picture Url"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "social_account_id",
+          "platform",
+          "name",
+          "tags"
+        ],
+        "title": "ContactListItem",
+        "type": "object"
+      },
+      "ContactPatch": {
+        "additionalProperties": false,
+        "description": "Only what is sent changes. ``fields`` merges: a key set to null is removed. An email or\nphone set here is marked as entered by a member and not verified.",
+        "properties": {
+          "clear_email": {
+            "default": false,
+            "title": "Clear Email",
+            "type": "boolean"
+          },
+          "clear_phone": {
+            "default": false,
+            "title": "Clear Phone",
+            "type": "boolean"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "maxLength": 254,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fields"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          }
+        },
+        "title": "ContactPatch",
+        "type": "object"
+      },
+      "ContactRecord": {
+        "description": "One contact with what the business knows about them.",
+        "properties": {
+          "consents": {
+            "items": {
+              "$ref": "#/components/schemas/Consent"
+            },
+            "title": "Consents",
+            "type": "array"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "email_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Source"
+          },
+          "email_verified": {
+            "title": "Email Verified",
+            "type": "boolean"
+          },
+          "fields": {
+            "additionalProperties": true,
+            "title": "Fields",
+            "type": "object"
+          },
+          "first_entry_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Entry Source"
+          },
+          "first_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Seen At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_activity_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity At"
+          },
+          "lead_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Score"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "phone_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone Source"
+          },
+          "phone_verified": {
+            "title": "Phone Verified",
+            "type": "boolean"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "profile_picture_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Picture Url"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "$ref": "#/components/schemas/TagRef"
+            },
+            "title": "Tags",
+            "type": "array"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "social_account_id",
+          "platform",
+          "name",
+          "tags",
+          "fields",
+          "email_verified",
+          "phone_verified",
+          "consents"
+        ],
+        "title": "ContactRecord",
+        "type": "object"
+      },
       "ContactSummary": {
         "properties": {
           "display_name": {
@@ -4417,6 +5316,31 @@
         "title": "ContactSummary",
         "type": "object"
       },
+      "ContactTagsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "add": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Add",
+            "type": "array"
+          },
+          "remove": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Remove",
+            "type": "array"
+          }
+        },
+        "title": "ContactTagsUpdate",
+        "type": "object"
+      },
       "Conversation": {
         "properties": {
           "ai": {
@@ -4444,6 +5368,16 @@
           },
           "contact": {
             "$ref": "#/components/schemas/ContactDetail"
+          },
+          "entry": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConversationEntry"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "id": {
             "format": "uuid",
@@ -4784,6 +5718,72 @@
           "effective_mode"
         ],
         "title": "ConversationAi",
+        "type": "object"
+      },
+      "ConversationEntry": {
+        "description": "How the conversation began (GR-01): organic, an entry link (its ref), an ad (its id and,\nwhen Meta gave it, title), an ice breaker (GR-11) or another referral.",
+        "properties": {
+          "ad_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Id"
+          },
+          "ad_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Title"
+          },
+          "at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "At"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "source": {
+            "enum": [
+              "organic",
+              "link",
+              "ad",
+              "ice_breaker",
+              "other"
+            ],
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "ConversationEntry",
         "type": "object"
       },
       "ConversationList": {
@@ -5180,6 +6180,49 @@
         "title": "DataDeletionStatus",
         "type": "object"
       },
+      "DelayStep": {
+        "additionalProperties": false,
+        "description": "A pause, at most 23 hours, so what follows can still go inside the 24-hour reply window\n(a send the window no longer allows ends the run instead).",
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "seconds": {
+            "maximum": 82800.0,
+            "minimum": 1.0,
+            "title": "Seconds",
+            "type": "integer"
+          },
+          "type": {
+            "const": "delay",
+            "default": "delay",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "seconds"
+        ],
+        "title": "DelayStep",
+        "type": "object"
+      },
       "DigestUnsubscribed": {
         "description": "POST /v1/digest/unsubscribe?token=\u2026: the digest is off for that member of that workspace\n(idempotent). The page names the workspace and links to Settings \u2192 Notifications.",
         "properties": {
@@ -5242,6 +6285,28 @@
         "title": "EmbeddedSignup",
         "type": "object"
       },
+      "EndStep": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "end",
+            "default": "end",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "EndStep",
+        "type": "object"
+      },
       "EntitlementValue": {
         "properties": {
           "key": {
@@ -5294,6 +6359,225 @@
         "title": "ErrorInfo",
         "type": "object"
       },
+      "FieldCondition": {
+        "additionalProperties": false,
+        "description": "``equals`` ignores case; ``set`` is any value.",
+        "properties": {
+          "key": {
+            "maxLength": 40,
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "const": "field",
+            "default": "field",
+            "title": "Kind",
+            "type": "string"
+          },
+          "op": {
+            "default": "set",
+            "enum": [
+              "set",
+              "unset",
+              "equals"
+            ],
+            "title": "Op",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key"
+        ],
+        "title": "FieldCondition",
+        "type": "object"
+      },
+      "FieldDefinition": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "type": {
+            "enum": [
+              "text",
+              "email",
+              "phone",
+              "number",
+              "date",
+              "choice"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "key",
+          "label",
+          "type",
+          "options",
+          "position"
+        ],
+        "title": "FieldDefinition",
+        "type": "object"
+      },
+      "FieldDefinitionCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 40,
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Label",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "maxLength": 60,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Options",
+            "type": "array"
+          },
+          "type": {
+            "default": "text",
+            "enum": [
+              "text",
+              "email",
+              "phone",
+              "number",
+              "date",
+              "choice"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "FieldDefinitionCreate",
+        "type": "object"
+      },
+      "FieldDefinitionList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FieldDefinition"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "FieldDefinitionList",
+        "type": "object"
+      },
+      "FieldDefinitionPatch": {
+        "additionalProperties": false,
+        "description": "A field's key and type never change: values are stored by key and validated by type.",
+        "properties": {
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 60,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 30,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maximum": 999.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "title": "FieldDefinitionPatch",
+        "type": "object"
+      },
       "FirstCommentResult": {
         "description": "FR-PUB-11 for one account: the first comment is posted right after the post; a failure\nleaves the post published and is shown on it.",
         "properties": {
@@ -5333,6 +6617,185 @@
           "status"
         ],
         "title": "FirstCommentResult",
+        "type": "object"
+      },
+      "Flow": {
+        "description": "GET and PUT \u2026/automations/{id}/flow. ``source`` says how it was made: ``legacy`` is\ncompiled from the automation's message settings (the current editor), ``flow`` was saved as\na flow.",
+        "properties": {
+          "automation_id": {
+            "format": "uuid",
+            "title": "Automation Id",
+            "type": "string"
+          },
+          "definition": {
+            "$ref": "#/components/schemas/FlowDefinition"
+          },
+          "missing_for_activation": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing For Activation",
+            "type": "array"
+          },
+          "source": {
+            "enum": [
+              "legacy",
+              "flow"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "automation_id",
+          "version",
+          "source",
+          "definition",
+          "missing_for_activation"
+        ],
+        "title": "Flow",
+        "type": "object"
+      },
+      "FlowButton": {
+        "additionalProperties": false,
+        "description": "A link button: a https address, or the account's own Instagram profile (``profile``,\nthe follow nudge's \"View profile\").",
+        "properties": {
+          "profile": {
+            "default": false,
+            "title": "Profile",
+            "type": "boolean"
+          },
+          "title": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "FlowButton",
+        "type": "object"
+      },
+      "FlowDefinition": {
+        "additionalProperties": false,
+        "description": "``start`` is the first step; a step without a next ends the flow.",
+        "properties": {
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "start": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Start",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "action": "#/components/schemas/ActionStep",
+                  "ai_reply": "#/components/schemas/AiReplyStep",
+                  "ask": "#/components/schemas/AskStep",
+                  "branch": "#/components/schemas/BranchStep",
+                  "delay": "#/components/schemas/DelayStep",
+                  "end": "#/components/schemas/EndStep",
+                  "randomize": "#/components/schemas/RandomizeStep",
+                  "send": "#/components/schemas/SendStep"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/SendStep"
+                },
+                {
+                  "$ref": "#/components/schemas/AskStep"
+                },
+                {
+                  "$ref": "#/components/schemas/BranchStep"
+                },
+                {
+                  "$ref": "#/components/schemas/ActionStep"
+                },
+                {
+                  "$ref": "#/components/schemas/DelayStep"
+                },
+                {
+                  "$ref": "#/components/schemas/RandomizeStep"
+                },
+                {
+                  "$ref": "#/components/schemas/AiReplyStep"
+                },
+                {
+                  "$ref": "#/components/schemas/EndStep"
+                }
+              ]
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "start",
+          "steps"
+        ],
+        "title": "FlowDefinition",
+        "type": "object"
+      },
+      "FollowsCondition": {
+        "additionalProperties": false,
+        "description": "Whether they follow the account, read when the step runs; unknown counts as neither.",
+        "properties": {
+          "follows": {
+            "default": true,
+            "title": "Follows",
+            "type": "boolean"
+          },
+          "kind": {
+            "const": "follows_business",
+            "default": "follows_business",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "FollowsCondition",
+        "type": "object"
+      },
+      "HandOff": {
+        "additionalProperties": false,
+        "description": "The conversation goes to Needs you, and the AI stops replying in it.",
+        "properties": {
+          "kind": {
+            "const": "hand_off",
+            "default": "hand_off",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "title": "HandOff",
         "type": "object"
       },
       "HashtagGroup": {
@@ -6094,6 +7557,28 @@
           "characters_used"
         ],
         "title": "KnowledgeUsage",
+        "type": "object"
+      },
+      "LeadScoreCondition": {
+        "additionalProperties": false,
+        "properties": {
+          "at_least": {
+            "maximum": 100.0,
+            "minimum": 0.0,
+            "title": "At Least",
+            "type": "integer"
+          },
+          "kind": {
+            "const": "lead_score",
+            "default": "lead_score",
+            "title": "Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "at_least"
+        ],
+        "title": "LeadScoreCondition",
         "type": "object"
       },
       "LinkButton": {
@@ -7085,6 +8570,25 @@
         "title": "NotificationPreferences",
         "type": "object"
       },
+      "NotifyTeam": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "notify_team",
+            "default": "notify_team",
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "default": "",
+            "maxLength": 200,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "title": "NotifyTeam",
+        "type": "object"
+      },
       "OverlapWarning": {
         "properties": {
           "automation_id": {
@@ -7697,6 +9201,30 @@
           "available"
         ],
         "title": "PlanOffer",
+        "type": "object"
+      },
+      "PlatformCondition": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "platform",
+            "default": "platform",
+            "title": "Kind",
+            "type": "string"
+          },
+          "platform": {
+            "enum": [
+              "instagram",
+              "whatsapp"
+            ],
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "platform"
+        ],
+        "title": "PlatformCondition",
         "type": "object"
       },
       "PolishRequest": {
@@ -9037,6 +10565,36 @@
         "title": "QueueInfo",
         "type": "object"
       },
+      "QuickReply": {
+        "additionalProperties": false,
+        "description": "A tap-to-answer option; the flow goes on at ``next`` when it's tapped.",
+        "properties": {
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "title": {
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title"
+        ],
+        "title": "QuickReply",
+        "type": "object"
+      },
       "QuickReplyOut": {
         "description": "A quick reply offered with the text (tap first, FR-AUT-21); shown, not tappable, here.",
         "properties": {
@@ -9049,6 +10607,39 @@
           "title"
         ],
         "title": "QuickReplyOut",
+        "type": "object"
+      },
+      "RandomizeStep": {
+        "additionalProperties": false,
+        "description": "An A/B split: each run takes one path, at random by weight.",
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "paths": {
+            "items": {
+              "$ref": "#/components/schemas/SplitPath"
+            },
+            "maxItems": 5,
+            "minItems": 2,
+            "title": "Paths",
+            "type": "array"
+          },
+          "type": {
+            "const": "randomize",
+            "default": "randomize",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "paths"
+        ],
+        "title": "RandomizeStep",
         "type": "object"
       },
       "Reaction": {
@@ -9077,6 +10668,27 @@
           "at"
         ],
         "title": "Reaction",
+        "type": "object"
+      },
+      "RemoveTag": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "const": "remove_tag",
+            "default": "remove_tag",
+            "title": "Kind",
+            "type": "string"
+          },
+          "tag_id": {
+            "format": "uuid",
+            "title": "Tag Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag_id"
+        ],
+        "title": "RemoveTag",
         "type": "object"
       },
       "ReplyWindow": {
@@ -9177,11 +10789,36 @@
       },
       "SandboxInbound": {
         "additionalProperties": false,
+        "description": "A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry\nlink opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live\ncomment; a DM can carry an ad referral (its first message from an ad).",
         "properties": {
           "account_id": {
             "format": "uuid",
             "title": "Account Id",
             "type": "string"
+          },
+          "ad_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Id"
+          },
+          "ad_title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ad Title"
           },
           "from_id": {
             "anyOf": [
@@ -9210,10 +10847,26 @@
           "kind": {
             "enum": [
               "dm",
-              "comment"
+              "comment",
+              "live_comment",
+              "referral",
+              "postback",
+              "optin"
             ],
             "title": "Kind",
             "type": "string"
+          },
+          "postback_payload": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postback Payload"
           },
           "quick_reply_payload": {
             "anyOf": [
@@ -9227,17 +10880,50 @@
             ],
             "title": "Quick Reply Payload"
           },
+          "ref": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ref"
+          },
+          "referral_source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ad",
+                  "link"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Referral Source"
+          },
           "text": {
-            "maxLength": 1000,
-            "minLength": 1,
-            "title": "Text",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
           }
         },
         "required": [
           "account_id",
-          "kind",
-          "text"
+          "kind"
         ],
         "title": "SandboxInbound",
         "type": "object"
@@ -10101,6 +11787,89 @@
         "title": "SendMessage",
         "type": "object"
       },
+      "SendStep": {
+        "additionalProperties": false,
+        "description": "A message. With quick replies the flow waits for an answer: a tap goes to that option's\nstep, anything typed to ``on_text`` (quick replies don't show on desktop).",
+        "properties": {
+          "buttons": {
+            "items": {
+              "$ref": "#/components/schemas/FlowButton"
+            },
+            "maxItems": 3,
+            "title": "Buttons",
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Asset Id"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "on_text": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "On Text"
+          },
+          "quick_replies": {
+            "items": {
+              "$ref": "#/components/schemas/QuickReply"
+            },
+            "maxItems": 13,
+            "title": "Quick Replies",
+            "type": "array"
+          },
+          "text": {
+            "default": "",
+            "maxLength": 4000,
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "send",
+            "default": "send",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "SendStep",
+        "type": "object"
+      },
       "SentimentDistribution": {
         "description": "GET \u2026/analytics/sentiment: comment sentiment for one post, or for comments made in a date\nrange (optionally one account's). Unanalysed comments are counted, not guessed.\n\n``positive + neutral + negative`` are analysed comments that are not spam; the percentages\nare shares of that sum (None when it is 0).",
         "properties": {
@@ -10294,6 +12063,34 @@
           "negative_pct"
         ],
         "title": "SentimentSplit",
+        "type": "object"
+      },
+      "SetField": {
+        "additionalProperties": false,
+        "properties": {
+          "key": {
+            "maxLength": 40,
+            "pattern": "^[a-z][a-z0-9_]{0,39}$",
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "const": "set_field",
+            "default": "set_field",
+            "title": "Kind",
+            "type": "string"
+          },
+          "value": {
+            "maxLength": 200,
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "value"
+        ],
+        "title": "SetField",
         "type": "object"
       },
       "SkippedCounts": {
@@ -10580,6 +12377,33 @@
         "title": "SocialAccountPatch",
         "type": "object"
       },
+      "SplitPath": {
+        "additionalProperties": false,
+        "properties": {
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "weight": {
+            "default": 1,
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Weight",
+            "type": "integer"
+          }
+        },
+        "title": "SplitPath",
+        "type": "object"
+      },
       "StepVerification": {
         "description": "R2 (TR-AGT-06): what the verifier read back after a write.",
         "properties": {
@@ -10718,6 +12542,157 @@
           "title"
         ],
         "title": "SuggestionSource",
+        "type": "object"
+      },
+      "Tag": {
+        "properties": {
+          "color": {
+            "title": "Color",
+            "type": "integer"
+          },
+          "contact_count": {
+            "default": 0,
+            "title": "Contact Count",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "title": "Tag",
+        "type": "object"
+      },
+      "TagCondition": {
+        "additionalProperties": false,
+        "properties": {
+          "has": {
+            "default": true,
+            "title": "Has",
+            "type": "boolean"
+          },
+          "kind": {
+            "const": "tag",
+            "default": "tag",
+            "title": "Kind",
+            "type": "string"
+          },
+          "tag_id": {
+            "format": "uuid",
+            "title": "Tag Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "tag_id"
+        ],
+        "title": "TagCondition",
+        "type": "object"
+      },
+      "TagCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "default": 0,
+            "maximum": 15.0,
+            "minimum": 0.0,
+            "title": "Color",
+            "type": "integer"
+          },
+          "name": {
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "TagCreate",
+        "type": "object"
+      },
+      "TagList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Tag"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "TagList",
+        "type": "object"
+      },
+      "TagPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "color": {
+            "anyOf": [
+              {
+                "maximum": 15.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Color"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          }
+        },
+        "title": "TagPatch",
+        "type": "object"
+      },
+      "TagRef": {
+        "properties": {
+          "color": {
+            "title": "Color",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "color"
+        ],
+        "title": "TagRef",
         "type": "object"
       },
       "TargetIn": {
@@ -11005,6 +12980,578 @@
           "used"
         ],
         "title": "UsageMeter",
+        "type": "object"
+      },
+      "WebhookDelivery": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "endpoint_id": {
+            "format": "uuid",
+            "title": "Endpoint Id",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "event_id": {
+            "format": "uuid",
+            "title": "Event Id",
+            "type": "string"
+          },
+          "event_type": {
+            "title": "Event Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "replay_of_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replay Of Id"
+          },
+          "response_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Code"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "endpoint_id",
+          "event_id",
+          "event_type",
+          "status",
+          "attempts",
+          "created_at",
+          "payload"
+        ],
+        "title": "WebhookDelivery",
+        "type": "object"
+      },
+      "WebhookDeliveryList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookDelivery"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Cursor"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WebhookDeliveryList",
+        "type": "object"
+      },
+      "WebhookEndpoint": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "disabled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled At"
+          },
+          "events": {
+            "items": {
+              "enum": [
+                "contact.created",
+                "contact.updated",
+                "contact.tagged",
+                "lead.captured",
+                "message.received",
+                "conversation.assigned",
+                "automation.run.completed",
+                "broadcast.finished"
+              ],
+              "type": "string"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "failing_deliveries": {
+            "title": "Failing Deliveries",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure At"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "paused",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "events",
+          "status",
+          "failing_deliveries",
+          "created_at"
+        ],
+        "title": "WebhookEndpoint",
+        "type": "object"
+      },
+      "WebhookEndpointCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "events": {
+            "items": {
+              "enum": [
+                "contact.created",
+                "contact.updated",
+                "contact.tagged",
+                "lead.captured",
+                "message.received",
+                "conversation.assigned",
+                "automation.run.completed",
+                "broadcast.finished"
+              ],
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Events",
+            "type": "array"
+          },
+          "url": {
+            "maxLength": 2000,
+            "minLength": 8,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url",
+          "events"
+        ],
+        "title": "WebhookEndpointCreate",
+        "type": "object"
+      },
+      "WebhookEndpointList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookEndpoint"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WebhookEndpointList",
+        "type": "object"
+      },
+      "WebhookEndpointPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "events": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "contact.created",
+                    "contact.updated",
+                    "contact.tagged",
+                    "lead.captured",
+                    "message.received",
+                    "conversation.assigned",
+                    "automation.run.completed",
+                    "broadcast.finished"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Events"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "paused"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "title": "WebhookEndpointPatch",
+        "type": "object"
+      },
+      "WebhookEndpointWithSecret": {
+        "description": "Create and rotate: the signing secret, shown this once (Standard Webhooks, whsec_\u2026).",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "disabled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disabled At"
+          },
+          "events": {
+            "items": {
+              "enum": [
+                "contact.created",
+                "contact.updated",
+                "contact.tagged",
+                "lead.captured",
+                "message.received",
+                "conversation.assigned",
+                "automation.run.completed",
+                "broadcast.finished"
+              ],
+              "type": "string"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "failing_deliveries": {
+            "title": "Failing Deliveries",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure At"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "signing_secret": {
+            "title": "Signing Secret",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "paused",
+              "disabled"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "url",
+          "events",
+          "status",
+          "failing_deliveries",
+          "created_at",
+          "signing_secret"
+        ],
+        "title": "WebhookEndpointWithSecret",
+        "type": "object"
+      },
+      "WebhookEventType": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "emitted": {
+            "title": "Emitted",
+            "type": "boolean"
+          },
+          "type": {
+            "enum": [
+              "contact.created",
+              "contact.updated",
+              "contact.tagged",
+              "lead.captured",
+              "message.received",
+              "conversation.assigned",
+              "automation.run.completed",
+              "broadcast.finished"
+            ],
+            "title": "Type",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "type",
+          "version",
+          "description",
+          "emitted"
+        ],
+        "title": "WebhookEventType",
+        "type": "object"
+      },
+      "WebhookEventTypeList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WebhookEventType"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WebhookEventTypeList",
         "type": "object"
       },
       "WhatsAppTemplate": {
@@ -14223,6 +16770,204 @@
         ]
       }
     },
+    "/v1/w/{wid}/automations/{automation_id}/flow": {
+      "delete": {
+        "description": "Go back to the message settings; runs on a saved version finish on it.",
+        "operationId": "delete_automation_flow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "automation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Automation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Automation Flow",
+        "tags": [
+          "automations"
+        ]
+      },
+      "get": {
+        "description": "The automation's flow: saved (``source: flow``), or compiled from its message settings\n(``legacy``, version 0), with what activation still needs.",
+        "operationId": "get_automation_flow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "automation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Automation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Automation Flow",
+        "tags": [
+          "automations"
+        ]
+      },
+      "put": {
+        "description": "Save the flow; from now on its steps replace the message settings. A broken graph is\nrefused (422 with each step's field); an active automation must stay complete.",
+        "operationId": "update_automation_flow",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "automation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Automation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FlowDefinition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Flow"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Automation Flow",
+        "tags": [
+          "automations"
+        ]
+      }
+    },
     "/v1/w/{wid}/automations/{automation_id}/pause": {
       "post": {
         "operationId": "pause_automation",
@@ -15445,6 +18190,1133 @@
         "summary": "Unhide Comment",
         "tags": [
           "comments"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contact-fields": {
+      "get": {
+        "description": "In order, with the plan's contact_fields limit.",
+        "operationId": "list_contact_fields",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldDefinitionList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Contact Fields",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "post": {
+        "description": "402 quota_exceeded over the plan's contact_fields; 409 for a key in use.",
+        "operationId": "create_contact_field",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldDefinitionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldDefinition"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Contact Field",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contact-fields/{field_id}": {
+      "delete": {
+        "description": "The field goes, and its values from every contact.",
+        "operationId": "delete_contact_field",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "field_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Field Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Contact Field",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "patch": {
+        "operationId": "update_contact_field",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "field_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Field Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldDefinitionPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FieldDefinition"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Contact Field",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts": {
+      "get": {
+        "description": "Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches\npart of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose\ncurrent consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a\ncustom field's value ignoring case, ``city:*`` any value.",
+        "operationId": "list_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "instagram",
+                    "whatsapp"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_email",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Email"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_phone",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Phone"
+            }
+          },
+          {
+            "in": "query",
+            "name": "marketing_consent",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "instagram",
+                    "whatsapp",
+                    "email"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Marketing Consent"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_lead_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Lead Score"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 100,
+                    "pattern": "^[a-z][a-z0-9_]{0,39}:.",
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Contacts",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/bulk-tags": {
+      "post": {
+        "description": "Add and remove tags on up to 500 contacts at once; 404 for an unknown tag.",
+        "operationId": "bulk_tag_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BulkTagsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BulkTagsResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Bulk Tag Contacts",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/export.csv": {
+      "get": {
+        "description": "The filtered contacts as CSV (the R2 data export), streamed: nothing is stored. A cell a\nspreadsheet would read as a formula starts with a quote.",
+        "operationId": "export_contacts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tag_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  "maxItems": 10,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tag Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "platform",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "instagram",
+                    "whatsapp"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Platform"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_email",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Email"
+            }
+          },
+          {
+            "in": "query",
+            "name": "has_phone",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Has Phone"
+            }
+          },
+          {
+            "in": "query",
+            "name": "marketing_consent",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "instagram",
+                    "whatsapp",
+                    "email"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Marketing Consent"
+            }
+          },
+          {
+            "in": "query",
+            "name": "min_lead_score",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 100,
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Min Lead Score"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active_before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "field",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "maxLength": 100,
+                    "pattern": "^[a-z][a-z0-9_]{0,39}:.",
+                    "type": "string"
+                  },
+                  "maxItems": 5,
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Field"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Export Contacts",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/{contact_id}": {
+      "get": {
+        "operationId": "get_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Contact",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "patch": {
+        "description": "422 lists each value that doesn't fit (an email's shape, a phone without a country code, a\nfield's type or an unknown field).",
+        "operationId": "update_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Contact",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/{contact_id}/consents": {
+      "post": {
+        "description": "A member records consent given elsewhere, or its withdrawal; the note is the evidence.",
+        "operationId": "record_contact_consent",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Record Contact Consent",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/contacts/{contact_id}/tags": {
+      "post": {
+        "operationId": "tag_contact",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactTagsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactRecord"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Tag Contact",
+        "tags": [
+          "contacts"
         ]
       }
     },
@@ -20325,6 +24197,913 @@
         "summary": "Dismiss Suggestion",
         "tags": [
           "ai"
+        ]
+      }
+    },
+    "/v1/w/{wid}/tags": {
+      "get": {
+        "description": "Every tag, by name, with how many contacts carry it.",
+        "operationId": "list_tags",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TagList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Tags",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "post": {
+        "description": "409 when a tag with that name (any case) exists.",
+        "operationId": "create_tag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Tag",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/tags/{tag_id}": {
+      "delete": {
+        "description": "The tag goes from every contact too.",
+        "operationId": "delete_tag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tag_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tag Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Tag",
+        "tags": [
+          "contacts"
+        ]
+      },
+      "patch": {
+        "operationId": "update_tag",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tag_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tag Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TagPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tag"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Tag",
+        "tags": [
+          "contacts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/webhook-deliveries/{delivery_id}/replay": {
+      "post": {
+        "description": "Send the same event again (the same webhook-id) as a new delivery.",
+        "operationId": "replay_webhook_delivery",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "delivery_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Delivery Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDelivery"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Replay Webhook Delivery",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/webhook-endpoints": {
+      "get": {
+        "operationId": "list_webhook_endpoints",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Webhook Endpoints",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "post": {
+        "description": "Add an endpoint; its signing secret is in this response only.",
+        "operationId": "create_webhook_endpoint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEndpointCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointWithSecret"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Webhook Endpoint",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}": {
+      "delete": {
+        "operationId": "delete_webhook_endpoint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "endpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Endpoint Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Webhook Endpoint",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "get": {
+        "operationId": "get_webhook_endpoint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "endpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Endpoint Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Webhook Endpoint",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "patch": {
+        "operationId": "update_webhook_endpoint",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "endpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Endpoint Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebhookEndpointPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpoint"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Webhook Endpoint",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}/deliveries": {
+      "get": {
+        "description": "The delivery log, newest first: each delivery's last attempt.",
+        "operationId": "list_webhook_deliveries",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "endpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Endpoint Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "succeeded",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Cursor"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDeliveryList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Webhook Deliveries",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}/rotate-secret": {
+      "post": {
+        "description": "A new signing secret, in this response only; the old one stops working at once.",
+        "operationId": "rotate_webhook_secret",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "endpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Endpoint Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEndpointWithSecret"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Rotate Webhook Secret",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}/test": {
+      "post": {
+        "description": "Send a ``webhook.test`` event; its delivery shows in the log.",
+        "operationId": "send_webhook_test",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "endpoint_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Endpoint Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookDelivery"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Send Webhook Test",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/webhook-events": {
+      "get": {
+        "description": "Every event an endpoint can subscribe to, with its payload version.",
+        "operationId": "list_webhook_events",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebhookEventTypeList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Webhook Events",
+        "tags": [
+          "integrations"
         ]
       }
     },

@@ -39,6 +39,7 @@ from socialhood.models.automations import (
     AutomationRun,
     AutomationStatus,
     Comment,
+    FlowState,
     PostScope,
     RunResult,
     SurgeOrder,
@@ -300,6 +301,9 @@ def _awaiting(contact_id: uuid.UUID, since: datetime) -> list[ColumnElement[bool
         AutomationRun.contact_id == contact_id,
         AutomationRun.result == RunResult.AWAITING_REPLY,
         AutomationRun.confirmed_at.is_(None),
+        AutomationRun.flow_state.is_(
+            None
+        ),  # a flow run's answers go to services/automations/engine
         AutomationRun.created_at >= since - timedelta(days=7),
         opened_since(since),
     ]
@@ -658,3 +662,64 @@ async def lock_many(session: AsyncSession, run_ids: Sequence[uuid.UUID]) -> list
         execution_options=_FRESH,
     )
     return list(result.all())
+
+
+# ---------------------------------------------------------------- flow runs (GR-03)
+
+
+def _flow_on_account(social_account_id: uuid.UUID) -> ColumnElement[bool]:
+    return exists().where(
+        Automation.id == AutomationRun.automation_id,
+        Automation.social_account_id == social_account_id,
+    )
+
+
+async def flow_run_of(
+    session: AsyncSession, run_id: uuid.UUID, contact_id: uuid.UUID, social_account_id: uuid.UUID
+) -> AutomationRun | None:
+    """The flow run a quick-reply payload names, if it is this contact's on this account."""
+    return (
+        await session.scalars(
+            select(AutomationRun).where(
+                AutomationRun.id == run_id,
+                AutomationRun.contact_id == contact_id,
+                AutomationRun.flow_state.is_not(None),
+                _flow_on_account(social_account_id),
+            )
+        )
+    ).one_or_none()
+
+
+async def flow_waiting(
+    session: AsyncSession, contact_id: uuid.UUID, social_account_id: uuid.UUID, *, since: datetime
+) -> AutomationRun | None:
+    """The contact's newest flow run on this account waiting for an answer
+    (ix_automation_runs_flow_replying)."""
+    return (
+        await session.scalars(
+            select(AutomationRun)
+            .where(
+                AutomationRun.contact_id == contact_id,
+                AutomationRun.flow_state == FlowState.REPLYING,
+                AutomationRun.created_at >= since,
+                _flow_on_account(social_account_id),
+            )
+            .order_by(AutomationRun.created_at.desc(), AutomationRun.id.desc())
+            .limit(1)
+        )
+    ).one_or_none()
+
+
+async def has_flow_waiting(
+    session: AsyncSession, contact_id: uuid.UUID, *, since: datetime
+) -> bool:
+    found = await session.scalar(
+        select(AutomationRun.id)
+        .where(
+            AutomationRun.contact_id == contact_id,
+            AutomationRun.flow_state == FlowState.REPLYING,
+            AutomationRun.created_at >= since,
+        )
+        .limit(1)
+    )
+    return found is not None

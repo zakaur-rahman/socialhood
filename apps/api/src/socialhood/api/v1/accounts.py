@@ -181,9 +181,50 @@ async def sandbox_inbound(
     return SandboxInboundResult(stored=len(stored))
 
 
+def _sandbox_referral(body: SandboxInbound) -> dict[str, object]:
+    """Meta's referral object: an ad (source ADS, ad_id, ads_context_data) or an ig.me link."""
+    if body.referral_source == "ad":
+        referral: dict[str, object] = {
+            "source": "ADS",
+            "type": "OPEN_THREAD",
+            "ad_id": body.ad_id or "sandbox_ad_1",
+        }
+        if body.ref:
+            referral["ref"] = body.ref
+        if body.ad_title:
+            referral["ads_context_data"] = {"ad_title": body.ad_title}
+        return referral
+    return {"ref": body.ref or "sandbox", "source": "ig.me", "type": "OPEN_THREAD"}
+
+
 def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object]:
     sender = body.from_id or f"sandbox_user_{secrets.token_hex(3)}"
     now_ms = int(time.time() * 1000)
+    base: dict[str, object] = {
+        "sender": {"id": sender},
+        "recipient": {"id": account_ref},
+        "timestamp": now_ms,
+    }
+    if body.kind in ("comment", "live_comment"):
+        live = body.kind == "live_comment"
+        value: dict[str, object] = {
+            # Live comments name their id comment_id (Meta's webhook examples).
+            ("comment_id" if live else "id"): f"sandbox_comment_{secrets.token_hex(8)}",
+            "text": body.text,
+            "from": {"id": sender, "username": body.from_username or "sandbox_customer"},
+            "media": {
+                "id": "sandbox_live_1" if live else "sandbox_media_1",
+                "media_product_type": "LIVE" if live else "FEED",
+            },
+            "timestamp": datetime.now(UTC).isoformat(),
+        }
+        entry: dict[str, object] = {
+            "id": account_ref,
+            "time": now_ms // 1000,
+            "changes": [{"field": "live_comments" if live else "comments", "value": value}],
+        }
+        return {"object": "instagram", "entry": [entry]}
+    item: dict[str, object] = dict(base)
     if body.kind == "dm":
         message: dict[str, object] = {
             "mid": f"sandbox_mid_{secrets.token_hex(8)}",
@@ -191,24 +232,18 @@ def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object
         }
         if body.quick_reply_payload:
             message["quick_reply"] = {"payload": body.quick_reply_payload}
-        item: dict[str, object] = {
-            "sender": {"id": sender},
-            "recipient": {"id": account_ref},
-            "timestamp": now_ms,
-            "message": message,
+        if body.referral_source:
+            message["referral"] = _sandbox_referral(body)
+        item["message"] = message
+    elif body.kind == "postback":
+        item["postback"] = {
+            "mid": f"sandbox_mid_{secrets.token_hex(8)}",
+            "title": body.text,
+            "payload": body.postback_payload or "SANDBOX_POSTBACK",
         }
-        entry: dict[str, object] = {"id": account_ref, "time": now_ms // 1000, "messaging": [item]}
-    else:
-        value = {
-            "id": f"sandbox_comment_{secrets.token_hex(8)}",
-            "text": body.text,
-            "from": {"id": sender, "username": body.from_username or "sandbox_customer"},
-            "media": {"id": "sandbox_media_1", "media_product_type": "FEED"},
-            "timestamp": datetime.now(UTC).isoformat(),
-        }
-        entry = {
-            "id": account_ref,
-            "time": now_ms // 1000,
-            "changes": [{"field": "comments", "value": value}],
-        }
+    elif body.kind == "referral":
+        item["referral"] = _sandbox_referral(body)
+    else:  # optin
+        item["optin"] = {"type": "notification_messages", "notification_messages_status": "resume"}
+    entry = {"id": account_ref, "time": now_ms // 1000, "messaging": [item]}
     return {"object": "instagram", "entry": [entry]}

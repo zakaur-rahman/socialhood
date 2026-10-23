@@ -4,6 +4,10 @@ Pure: no I/O and no clock. Messages become InboundMessage (text, image, video, a
 sticker, location; a template button or interactive reply is text replying to our message;
 anything else is kind ``unsupported``), reactions become Reaction, and ``statuses[]`` become
 WhatsAppDeliveryStatus. Shapes we don't act on return Unsupported with the reason.
+
+GR-01: a message from a Click to WhatsApp ad carries a ``referral`` object (``source_type`` ad or
+post, ``source_id``, ``headline``, and ``ctwa_clid``, which Status ads leave out; Meta's messages
+webhook reference). It becomes the message's ReferralInfo.
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from socialhood.platforms.events import (
     InboundMediaRef,
     InboundMessage,
     Reaction,
+    ReferralInfo,
     Unsupported,
 )
 from socialhood.platforms.whatsapp.errors import status_failure
@@ -136,6 +141,23 @@ def _message(payload: dict[str, Any], account_ref: str) -> InboundEvent:
         text=text,
         attachments=attachments,
         reply_to_id=context.get("id") or None,
+        referral=referral_info(message.get("referral")),
+    )
+
+
+def referral_info(raw: object) -> ReferralInfo | None:
+    """A Click to WhatsApp ``referral`` as ours: an ad (``source_type: ad``) or a post; None when
+    there is none."""
+    referral = _dict(raw)
+    if not referral:
+        return None
+    source_type = str(referral.get("source_type") or "") or None
+    return ReferralInfo(
+        source="ad" if source_type == "ad" else "other",
+        ad_id=str(referral.get("source_id") or "") or None,
+        ad_title=str(referral.get("headline") or "") or None,
+        ctwa_clid=str(referral.get("ctwa_clid") or "") or None,
+        platform_source=source_type,
     )
 
 

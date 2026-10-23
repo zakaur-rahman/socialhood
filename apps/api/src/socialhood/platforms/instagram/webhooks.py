@@ -53,6 +53,9 @@ def _change_event(field: str, value: dict[str, Any]) -> tuple[str, str]:
             "comment",
             f"ig:comment:{value.get('id') or _digest(value)}:{field}:{value.get('verb', 'add')}",
         )
+    if field == "live_comments":  # GR-01: the comment id is comment_id here
+        comment_id = value.get("comment_id") or value.get("id") or _digest(value)
+        return "live_comment", f"ig:live_comment:{comment_id}"
     return field or "change", f"ig:{field}:{value.get('id') or _digest(value)}"
 
 

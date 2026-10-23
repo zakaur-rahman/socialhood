@@ -31,6 +31,7 @@ export type Platform = SocialAccount["platform"];
 export type ConversationListItem = Schemas["ConversationListItem"];
 export type ConversationList = Schemas["ConversationList"];
 export type Conversation = Schemas["Conversation"];
+export type ConversationEntry = Schemas["ConversationEntry"];
 export type ConversationPatch = Schemas["ConversationPatch"];
 export type ContactSummary = Schemas["ContactSummary"];
 export type InboxCounts = Schemas["InboxCounts"];
@@ -256,3 +257,15 @@ export type AgentStepEvent = {
 export type InboxView = NonNullable<
   NonNullable<operations["list_conversations"]["parameters"]["query"]>["view"]
 >;
+
+// ---- outbound webhooks (GR-04)
+
+export type WebhookEventType = Schemas["WebhookEventType"];
+export type WebhookEventName = WebhookEventType["type"];
+export type WebhookEndpoint = Schemas["WebhookEndpoint"];
+export type WebhookEndpointWithSecret = Schemas["WebhookEndpointWithSecret"];
+export type WebhookEndpointList = Schemas["WebhookEndpointList"];
+export type WebhookEndpointCreate = Schemas["WebhookEndpointCreate"];
+export type WebhookEndpointPatch = Schemas["WebhookEndpointPatch"];
+export type WebhookDelivery = Schemas["WebhookDelivery"];
+export type WebhookDeliveryList = Schemas["WebhookDeliveryList"];

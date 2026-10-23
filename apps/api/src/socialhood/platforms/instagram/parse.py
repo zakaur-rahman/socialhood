@@ -8,6 +8,11 @@ what real payloads confirmed: ``entry.time`` is milliseconds for messaging and s
 changes, and an echo arrives under the sending account's own ``entry.id``. Parsing is tolerant:
 a missing field falls back, it never fails the event.
 
+GR-01 adds what the new webhook fields carry: ``messaging_referral`` (an ig.me link opened, its
+``ref``) and an ad's ``message.referral`` (``source: "ADS"``, ``ad_id``, ``ads_context_data``),
+the payload of a tapped postback (an ice breaker), ``messaging_optins``, and ``live_comments``
+(whose comment id is ``comment_id``, Meta's webhook examples, 2026).
+
 Graph reads for sync and backfill live here too: ``/me/media`` items, Conversations API threads
 and a post's comments (T6.1). Their shapes are unverified until T0.9 item 7. So do the content
 publishing answers (T7.2): created ids, the publishing quota and container status.
@@ -35,8 +40,11 @@ from socialhood.platforms.events import (
     InboundMessage,
     MessageDeleted,
     MessageEdit,
+    OptIn,
     Reaction,
     ReadReceipt,
+    Referral,
+    ReferralInfo,
     Unsupported,
 )
 
@@ -152,10 +160,52 @@ def _messaging(entry_id: str, at: datetime, item: dict[str, Any]) -> InboundEven
         return MessageEdit(account_ref=entry_id, occurred_at=at, platform_message_id=mid, text=text)
     if "postback" in item:
         return _postback(entry_id, at, sender, _dict(item["postback"]))
-    for other in ("referral", "optin"):
-        if other in item:
-            return Unsupported(account_ref=entry_id, occurred_at=at, reason=f"{other} events")
+    if "referral" in item:
+        info = referral_info(item["referral"])
+        if not sender or sender == entry_id or info is None:
+            return Unsupported(account_ref=entry_id, occurred_at=at, reason="unreadable referral")
+        return Referral(account_ref=entry_id, occurred_at=at, contact_ref=sender, referral=info)
+    if "optin" in item:
+        if not sender or sender == entry_id:
+            return Unsupported(account_ref=entry_id, occurred_at=at, reason="unreadable opt-in")
+        optin = _dict(item["optin"])
+        return OptIn(
+            account_ref=entry_id,
+            occurred_at=at,
+            contact_ref=sender,
+            topic=_str(optin.get("topic")) or _str(optin.get("type")),
+            status=_str(optin.get("notification_messages_status")) or _str(optin.get("status")),
+        )
     return Unsupported(account_ref=entry_id, occurred_at=at, reason="unknown messaging event")
+
+
+def referral_info(raw: object) -> ReferralInfo | None:
+    """Meta's ``referral`` object as ours. Ads say ``source: "ADS"`` with an ``ad_id``; an ig.me
+    link carries its ``ref`` (and names the link as its source). None when it says nothing
+    usable."""
+    referral = _dict(raw)
+    if not referral:
+        return None
+    platform_source = _str(referral.get("source"))
+    ref = _str(referral.get("ref"))
+    ad_id = _str(referral.get("ad_id"))
+    context = _dict(referral.get("ads_context_data"))
+    source: Literal["ad", "link", "other"]
+    if (platform_source or "").upper() == "ADS" or ad_id:
+        source = "ad"
+    elif ref:
+        source = "link"
+    elif platform_source:
+        source = "other"
+    else:
+        return None
+    return ReferralInfo(
+        source=source,
+        ref=ref,
+        ad_id=ad_id,
+        ad_title=_str(context.get("ad_title")),
+        platform_source=platform_source,
+    )
 
 
 def _message(
@@ -209,6 +259,7 @@ def _message(
         reply_to_id=_str(reply_to.get("mid")),
         is_echo=is_echo,
         quick_reply_payload=quick_reply,
+        referral=None if is_echo else referral_info(message.get("referral")),
     )
 
 
@@ -273,7 +324,8 @@ def _reaction(
 def _postback(
     entry_id: str, at: datetime, sender: str | None, postback: dict[str, Any]
 ) -> InboundEvent:
-    """A tapped ice breaker or button: stored as the customer's text so the thread reads right."""
+    """A tapped ice breaker or button: stored as the customer's text so the thread reads right,
+    with the payload we set kept for the automation it maps to (GR-11)."""
     mid, title = _str(postback.get("mid")), _str(postback.get("title"))
     if not (mid and title and sender) or sender == entry_id:
         return Unsupported(account_ref=entry_id, occurred_at=at, reason="postback events")
@@ -285,11 +337,13 @@ def _postback(
         platform_message_id=mid,
         kind="text",
         text=title,
+        postback_payload=_str(postback.get("payload")),
+        referral=referral_info(postback.get("referral")),
     )
 
 
 def _change(entry_id: str, at: datetime, field: str, value: dict[str, Any]) -> InboundEvent:
-    if field != "comments":
+    if field not in ("comments", "live_comments"):
         return Unsupported(
             account_ref=entry_id, occurred_at=at, reason=f"{field or 'unknown'} changes"
         )
@@ -298,7 +352,8 @@ def _change(entry_id: str, at: datetime, field: str, value: dict[str, Any]) -> I
         # Instagram documents only new comments; should an edit or removal ever arrive, it must
         # not be taken for a new comment (and fire automations).
         return Unsupported(account_ref=entry_id, occurred_at=at, reason=f"comment {verb} events")
-    comment_id = _str(value.get("id"))
+    # Live comments name their id comment_id (Meta's webhook examples); comments use id.
+    comment_id = _str(value.get("id")) or _str(value.get("comment_id"))
     author = _dict(value.get("from"))
     media_id = _id(value.get("media"))
     if not comment_id or not media_id or not _id(author):
@@ -312,6 +367,7 @@ def _change(entry_id: str, at: datetime, field: str, value: dict[str, Any]) -> I
         author_ref=_id(author) or "",
         author_username=_str(author.get("username")),
         text=str(value.get("text") or ""),
+        is_live=field == "live_comments",
     )
 
 

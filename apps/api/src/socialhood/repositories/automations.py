@@ -18,8 +18,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.automations import (
     Automation,
+    AutomationFlow,
     AutomationKeyword,
     AutomationPost,
+    AutomationRun,
     AutomationStatus,
     PostScope,
 )
@@ -378,3 +380,49 @@ async def lock_past_end(session: AsyncSession, now: datetime, limit: int) -> lis
         .with_for_update(skip_locked=True)
     )
     return list((await session.scalars(statement)).all())
+
+
+# ---------------------------------------------------------------- flows (GR-03)
+
+
+async def flows_at(
+    session: AsyncSession, wanted: Sequence[tuple[uuid.UUID, int]]
+) -> dict[uuid.UUID, AutomationFlow]:
+    """Each automation's flow at the given version, by automation id."""
+    if not wanted:
+        return {}
+    rows = await session.scalars(
+        select(AutomationFlow).where(
+            or_(
+                *(
+                    (AutomationFlow.automation_id == automation_id)
+                    & (AutomationFlow.version == version)
+                    for automation_id, version in wanted
+                )
+            )
+        )
+    )
+    return {row.automation_id: row for row in rows.all()}
+
+
+async def latest_flow_version(session: AsyncSession, automation_id: uuid.UUID) -> int:
+    """The highest version saved (0 when none)."""
+    found = await session.scalar(
+        select(func.max(AutomationFlow.version)).where(
+            AutomationFlow.automation_id == automation_id
+        )
+    )
+    return int(found or 0)
+
+
+async def runs_on_flow(session: AsyncSession, automation_id: uuid.UUID, version: int) -> bool:
+    return bool(
+        await session.scalar(
+            select(
+                exists().where(
+                    AutomationRun.automation_id == automation_id,
+                    AutomationRun.flow_version == version,
+                )
+            )
+        )
+    )

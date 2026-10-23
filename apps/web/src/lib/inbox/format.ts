@@ -2,6 +2,7 @@
 import type {
   AiMode,
   ContactSummary,
+  ConversationEntry,
   ConversationListItem,
   EscalationReason,
   MessageKind,
@@ -171,6 +172,25 @@ export function windowChip(window: ReplyWindow, now: Date): { label: string; ton
     case "closed":
     default:
       return { label: "Window closed", tone: "danger" };
+  }
+}
+
+/**
+ * GR-01: how a conversation began, for the details panel. An entry link shows its ref, an ad its
+ * title when Meta gave one.
+ */
+export function entryLabel(entry: ConversationEntry): string {
+  switch (entry.source) {
+    case "link":
+      return entry.ref ? `Entry link "${entry.ref}"` : "An entry link";
+    case "ad":
+      return entry.ad_title ? `Ad "${entry.ad_title}"` : "An ad";
+    case "ice_breaker":
+      return "A conversation starter";
+    case "other":
+      return "A referral";
+    default:
+      return "They wrote first";
   }
 }
 

@@ -54,6 +54,7 @@ PURGE_EXPIRED_BUDGET_S = 540.0  # stop starting batches in time to commit and lo
 RETENTION_BATCH = 5000
 
 WEBHOOK_EVENTS_KEPT = timedelta(days=30)
+WEBHOOK_DELIVERIES_KEPT = timedelta(days=30)  # GR-04: the outbound delivery log
 NOTIFICATIONS_KEPT = timedelta(days=90)
 AGENT_RUNS_KEPT = timedelta(days=180)
 AI_USAGE_KEPT_MONTHS = 13
@@ -198,6 +199,7 @@ async def purge_expired_rows(
                 return False
 
     webhook_cutoff = now - WEBHOOK_EVENTS_KEPT
+    deliveries_cutoff = now - WEBHOOK_DELIVERIES_KEPT
     notification_cutoff = now - NOTIFICATIONS_KEPT
     usage_cutoff = months_before(now, AI_USAGE_KEPT_MONTHS)
     runs_cutoff = now - AGENT_RUNS_KEPT
@@ -205,6 +207,10 @@ async def purge_expired_rows(
         (
             "webhook_events",
             lambda s: retention.webhook_events_before(s, webhook_cutoff, limit=batch),
+        ),
+        (
+            "webhook_deliveries",
+            lambda s: retention.webhook_deliveries_before(s, deliveries_cutoff, limit=batch),
         ),
         (
             "notifications",

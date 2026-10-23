@@ -1526,3 +1526,205 @@ the code does after C-069 to C-075. No code changes.
 - **AGENT_CONTEXT:** the decision table marks D-02, D-04, D-05, D-07 to D-11 and D-14 to D-17 as
   applied, with their tasks. The checklist names the design lint and the copy lint. The chart
   aliases, the palette lock and the resizable panes are listed.
+
+## C-077 · Webhook coverage and entry sources (GR-01, feature/gr-01-webhook-coverage)
+An addition to the spec's platform layer (§1.5, TR-PL-12), from the growth plan
+(`docs/roadmap/IMPLEMENTATION_PLAN.md`).
+- **Instagram subscribes to four more webhook fields:** `messaging_postbacks`,
+  `messaging_referral`, `messaging_optins` and `live_comments`.
+  - Meta's Instagram API overview lists all four (2026).
+  - Existing accounts pick them up from the `reconcile_subscriptions` job (TR-WH-08).
+  - Outside accounts receive them only with Advanced Access, after App Review.
+- **Parsing, following Meta's documented shapes:**
+  - An ig.me link with `?ref=` arrives as a referral event; an ad arrives as a message's `referral`
+    (`source: "ADS"`, `ad_id`, `ads_context_data.ad_title`).
+  - A WhatsApp message from a Click to WhatsApp ad carries `referral` (`source_type`, `source_id`,
+    `headline`, and `ctwa_clid` when there is one).
+  - A tapped postback keeps its payload (for GR-11's ice breakers).
+  - An opt-in is parsed and kept in the stored webhook event for GR-02's consent records.
+  - A Live comment is a comment with `is_live`; its id field is `comment_id`.
+- **Entry source:** each new conversation records how it began: organic, an entry link (its
+  ref), an ad (its id), with ice breakers added by GR-11.
+  - The entry comes from the first message's referral, or a referral the contact made in the hour
+    before.
+  - A referral alone never starts a conversation, so the inbox shows no empty threads. It is kept
+    on the contact.
+  - A referral delivered up to five minutes after the first message upgrades an organic entry.
+  - Conversations from before GR-01 have no entry.
+  - The conversation detail returns `entry`, and the details panel shows "Started from".
+- **Live comments** are stored and labelled "Live" in the comments list. Comment automations
+  don't answer them yet: post scopes mean posts and Reels, and a Live's private reply works only
+  while it is on air. GR-10 adds the Live scope.
+- **Migration 0018** adds the columns:
+  - `conversations.entry_source`, `entry_ref`, `entry_ad_id`, `entry_at` and `last_referral`;
+  - `contacts.last_referral` and `first_entry_source`;
+  - `comments.is_live`;
+  - `messages.postback_payload`.
+- **The sandbox** injects every new kind, so dev and e2e go through the real webhook path.
+
+## C-078 · Contacts foundation: tags, custom fields, consent, export (GR-02, feature/gr-02-contacts)
+An addition from the growth plan. It is backend and API only; GR-17 builds the contacts page.
+- **One contact per channel identity, as before (PD-10).** No matching across Instagram and
+  WhatsApp.
+- **Tags:**
+  - A workspace's labels, unique by name in any case, with a colour from the identity palette, so
+    they never wear status colours.
+  - Any member tags contacts, one at a time or up to 500 at once; admins manage the tags.
+- **Custom fields:**
+  - Each has a key, a label and a type: text, email, phone, number, date or choice (with options).
+  - Values are stored by key on `contacts.fields` and validated by type; an unknown key is refused.
+  - A key and type never change; deleting a field removes its values from every contact.
+  - The number of fields is capped by a new entitlement, `contact_fields`: Free 5, Pro 50, Max
+    200. Decided 2026-10-23: the owner left it to us. A few fields free, room to grow on paid
+    plans.
+  - **Contacts themselves are never metered (PD-2).**
+- **Email and phone** on the contact, each with where it came from and whether it was verified.
+  An email is lower-cased and checked for shape. A phone is stored as E.164, with a ten-digit
+  Indian mobile taken as +91.
+- **Consent** (`contact_consents`) is append-only: channel, purpose (marketing), granted or
+  revoked, source (platform opt-in, flow, STOP reply, member, import) and evidence. The latest
+  record per channel is current.
+  - Instagram's `messaging_optins`, parsed in GR-01, now records consent: granted, or revoked
+    when Meta reports a stop.
+  - Admins record consent given elsewhere with a note, which is the evidence.
+- **The list:**
+  - Newest activity first, with a keyset cursor. Activity is the latest of the conversation's last
+    message (every send path keeps it), the contact's own last comment (`last_activity_at`) and
+    when the contact was created.
+  - Filters: search on name, @username, email or phone; every chosen tag; platform; account;
+    email or phone present; current marketing consent per channel; minimum lead score; activity
+    range; up to five custom fields, each `key:value` (equal, ignoring case) or `key:*` (any
+    value). A filter on a field the workspace doesn't have is refused.
+- **Export (the R2 "data export"):** admins download the filtered contacts as CSV, streamed from
+  the API, so no file of personal data is ever stored. Custom fields follow the fixed columns, and
+  a cell a spreadsheet would read as a formula gets a leading quote. *Deviation from GR-02 as
+  planned, which said "a job that emails a link".*
+- **Ask Social Hood:** `get_customer` now includes tags, fields, whether an email and phone are
+  known, and marketing consent. A new `list_contacts` lists contacts by tag, email or phone
+  present, platform or minimum lead score.
+- **Moved to GR-14:** contact fields as message variables (`{field.key}`), where flows first
+  capture data.
+- **Migration 0019:**
+  - new tables `tags`, `contact_tags` (with an id, so an account's purge deletes them in batches
+    with their contacts), `contact_field_definitions` and `contact_consents`;
+  - on `contacts`: `fields`, `email`, `email_source`, `email_verified`, `phone`, `phone_source`,
+    `phone_verified` and `last_activity_at`, backfilled from comments.
+
+## C-079 · The flow engine (GR-03, feature/gr-03-flow-engine)
+An addition from the growth plan. What an automation does after its trigger becomes a graph of
+steps; the trigger, keywords, posts, public replies and run settings stay on the automation.
+- **Steps** (`schemas/flows.py`, schema version 1, at most 50):
+  - `send`: text, an image, link buttons (a https link, or the account's profile), or quick
+    replies, each leading to its own step, with typed answers going to `on_text`;
+  - `ask`: a question whose answer is checked (text, email or phone) and saved to a custom field,
+    or for an email or phone to the contact; a retry prompt, then `on_skip`;
+  - `branch`: the first rule that holds (a tag, a field, email or phone known, follows the
+    account, platform, lead score), else `otherwise`;
+  - `action`: add or remove a tag, set a field, notify the team, hand off to a person;
+  - `delay` (at most 23 hours), `randomize` (A/B by weight), `ai_reply` and `end`.
+- **No loops:** a run visits each step at most once. Branches may meet again.
+- **What Instagram allows, checked on every path:**
+  - A comment's flow starts with its message, the private reply: no image, and nothing more until
+    the person answers (a quick reply or a question).
+  - Whether someone follows the account is known only once they've written.
+  - An AI reply is the first step and ends the flow.
+- **Today's automations are compiled, not stored.** Their flow is built from the message settings
+  whenever it's read (`flows.compile_legacy`), so it can never drift from the current editor:
+  - tap first becomes an opening with one quick reply (or any typed answer) leading to the
+    message;
+  - the follow nudge becomes a branch on not following, then the nudge with "View profile";
+  - a comment automation without tap first gets no nudge, as before.
+  - A regression suite runs every template, with tap first and the nudge on and off, against the
+    current renderer. *Deviation from GR-03 as planned, which said to store a compiled graph for
+    every automation in the migration.*
+- **Saved flows:** `PUT …/automations/{id}/flow` saves one, and its steps replace the message
+  settings from then on (`flow_source: flow`).
+  - Versions are kept in `automation_flows`. A save changes the current version until a run has
+    started on it, then makes the next, so a run always follows the flow it started with.
+  - The automation's action follows the flow (`ai_reply` when it has an AI reply), so the AI plan
+    entitlement and the private-reply queue apply as before.
+  - `DELETE …/flow` goes back to the settings.
+  - Activation and an active automation's saves check the flow, with each step's field
+    (`flow.steps.2.text`).
+- **Runtime** (`services/automations/engine.py`), for automations saved as a flow. Automations
+  on their message settings keep today's runtime, so they behave exactly as before. *Deviation
+  from GR-03 as planned, which runs every automation on the graph; a later cleanup can convert
+  them once the flow editor (GR-13) makes every automation a flow.*
+  - A run keeps its flow version, its step and its state (sending, replying, next, delaying,
+    done), and logs every step it reaches in `automation_run_steps`: its status, its message, and
+    what happened (the answer, the rule or path taken, the tries, why it failed).
+  - Entry is unchanged: keywords, posts, cooldowns and the read-only account. A DM's first steps
+    run at once; a comment's private reply goes through the account's queue. A flow starting with
+    an AI reply runs the AI reply as before.
+  - A run moves on once its message is delivered. A message with quick replies, or a question,
+    waits for the answer (`awaiting_reply`).
+  - **Answers come before keyword matching:**
+    - A tapped quick reply names its run, step and option (`shf:{run}:{step}:{n}`). A tap on a
+      step the run has left is handled and sends nothing.
+    - Typed text answers the contact's newest run waiting for a question, or for a message whose
+      typed answers lead somewhere.
+    - An email or phone answer goes to the contact (source `flow`), anything else to its custom
+      field. One that doesn't fit gets the retry prompt, then `on_skip`.
+  - **The continue job** (`run_automation("flow", run_id)`):
+    - A branch on following reads the follow status fresh, outside any transaction.
+    - A delay schedules the job for its end.
+    - A message the 24-hour window no longer allows fails its step and ends the run.
+  - **Actions:**
+    - "Hand off" puts the conversation in Needs you and pauses the AI until it's resumed.
+    - "Notify the team" is a new in-app notification, `automation_alert`.
+  - Ask Social Hood's `get_automation` lists a flow's steps.
+- **Migration 0020:**
+  - new tables `automation_flows` and `automation_run_steps`;
+  - `automations.flow_version`;
+  - on `automation_runs`: `flow_version`, `step_id`, `flow_state` and `wait_until`.
+  - Expand-only; nothing is rewritten.
+
+## C-080 · Outbound events and webhooks (GR-04, feature/gr-04-outbound-webhooks)
+An addition from the growth plan: one event pipeline for Zapier, Make, Sheets and CRMs to sit on.
+- **The events** (`services/webhooks/events.py`, each with a version):
+  - `contact.created`: a new person wrote, commented or opened an entry link;
+  - `contact.updated`: email, phone or custom fields changed;
+  - `contact.tagged`: a tag added or removed, only when it really changed;
+  - `lead.captured`: a flow's question saved an email, phone or field (GR-03; GR-14 extends it);
+  - `message.received`;
+  - `automation.run.completed`: a flow run finished, or a run on its settings had its message
+    sent or failed; once per run.
+  - `conversation.assigned` (GR-20) and `broadcast.finished` (GR-23) are in the catalogue so
+    endpoints can subscribe now, and are emitted once those exist.
+  - Backfilled history emits nothing.
+- **The envelope:** `{id, type, version, created_at, workspace_id, data}`.
+  - A contact is its id, platform, @username and name.
+  - An email or phone appears only in `lead.captured` and in `contact.updated` when it changed.
+  - No access tokens.
+- **Delivery** (`services/webhooks/delivery.py`, job `deliver_webhook`):
+  - Signed per Standard Webhooks: `webhook-id` is the event id, the same on every attempt and
+    replay, so it's the receiver's idempotency key; plus `webhook-timestamp` and
+    `webhook-signature`.
+  - Posted under the SSRF rules (the checked address, no redirects, 10 seconds).
+  - A 2xx delivers it. Anything else is retried after 1 minute, 5 minutes, 30 minutes, 2 hours,
+    6 hours and 12 hours: 7 attempts in about 21 hours.
+  - The log keeps each delivery's last attempt: status code, duration and reason.
+  - After 5 deliveries in a row run out of attempts, the endpoint is disabled and owners and
+    admins get an in-app notification, `webhook_disabled`.
+  - Finished deliveries are kept 30 days.
+- **Endpoints** (`/webhook-endpoints`, owners and admins):
+  - https only, checked against private addresses;
+  - the signing secret (`whsec_…`) is shown once, on create and rotate, and stored encrypted
+    like platform tokens (added to the key rotation);
+  - pause, turn back on (which resets the failure count), test event, replay, delete.
+  - The new `webhook_endpoints` plan limit is Free 1, Pro 5, Max 20. Decided 2026-10-23: the
+    owner left it to us.
+    - Free gets one, because sending leads to a sheet or CRM is a core early reason to stay,
+      and a webhook costs almost nothing to run.
+    - The pressure to upgrade comes from AI credits, contacts and broadcasts.
+    - Pro covers a CRM, a sheet and a notifier; Max covers agencies.
+  - `signing_secret` is allowed in responses by the schema security test for that reason.
+- **`WEBHOOKS_ALLOW_PRIVATE`** lets development and e2e post to a local receiver. Production
+  refuses it.
+- **Web:** Settings › Integrations (owners and admins).
+  - Add an endpoint with its events.
+  - See the secret once, with a copy button.
+  - Turn it on or off, send a test event, get a new secret, delete it.
+  - Each endpoint's latest deliveries, with status, attempts, response and when, and "Send again"
+    for a failed one. The log refreshes while a delivery is being tried.
+- **Migration 0021:** `webhook_endpoints` and `webhook_deliveries`. Expand-only.

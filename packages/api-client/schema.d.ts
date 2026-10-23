@@ -678,6 +678,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/automations/{automation_id}/flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Automation Flow
+         * @description The automation's flow: saved (``source: flow``), or compiled from its message settings
+         *     (``legacy``, version 0), with what activation still needs.
+         */
+        get: operations["get_automation_flow"];
+        /**
+         * Update Automation Flow
+         * @description Save the flow; from now on its steps replace the message settings. A broken graph is
+         *     refused (422 with each step's field); an active automation must stay complete.
+         */
+        put: operations["update_automation_flow"];
+        post?: never;
+        /**
+         * Delete Automation Flow
+         * @description Go back to the message settings; runs on a saved version finish on it.
+         */
+        delete: operations["delete_automation_flow"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/automations/{automation_id}/pause": {
         parameters: {
             query?: never;
@@ -1037,6 +1067,174 @@ export interface paths {
          * @description Show a hidden comment again.
          */
         post: operations["unhide_comment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contact-fields": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Contact Fields
+         * @description In order, with the plan's contact_fields limit.
+         */
+        get: operations["list_contact_fields"];
+        put?: never;
+        /**
+         * Create Contact Field
+         * @description 402 quota_exceeded over the plan's contact_fields; 409 for a key in use.
+         */
+        post: operations["create_contact_field"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contact-fields/{field_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Contact Field
+         * @description The field goes, and its values from every contact.
+         */
+        delete: operations["delete_contact_field"];
+        options?: never;
+        head?: never;
+        /** Update Contact Field */
+        patch: operations["update_contact_field"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Contacts
+         * @description Newest activity first. ``tag_id`` repeats: a contact must carry every one. ``q`` matches
+         *     part of the name, @username, email or phone; ``marketing_consent`` keeps contacts whose
+         *     current consent for that channel is granted. ``field`` repeats: ``city:pune`` matches a
+         *     custom field's value ignoring case, ``city:*`` any value.
+         */
+        get: operations["list_contacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/bulk-tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bulk Tag Contacts
+         * @description Add and remove tags on up to 500 contacts at once; 404 for an unknown tag.
+         */
+        post: operations["bulk_tag_contacts"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/export.csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Contacts
+         * @description The filtered contacts as CSV (the R2 data export), streamed: nothing is stored. A cell a
+         *     spreadsheet would read as a formula starts with a quote.
+         */
+        get: operations["export_contacts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Contact */
+        get: operations["get_contact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Contact
+         * @description 422 lists each value that doesn't fit (an email's shape, a phone without a country code, a
+         *     field's type or an unknown field).
+         */
+        patch: operations["update_contact"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Contact Consent
+         * @description A member records consent given elsewhere, or its withdrawal; the note is the evidence.
+         */
+        post: operations["record_contact_consent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/contacts/{contact_id}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Tag Contact */
+        post: operations["tag_contact"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2209,6 +2407,191 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Tags
+         * @description Every tag, by name, with how many contacts carry it.
+         */
+        get: operations["list_tags"];
+        put?: never;
+        /**
+         * Create Tag
+         * @description 409 when a tag with that name (any case) exists.
+         */
+        post: operations["create_tag"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/tags/{tag_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete Tag
+         * @description The tag goes from every contact too.
+         */
+        delete: operations["delete_tag"];
+        options?: never;
+        head?: never;
+        /** Update Tag */
+        patch: operations["update_tag"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/webhook-deliveries/{delivery_id}/replay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replay Webhook Delivery
+         * @description Send the same event again (the same webhook-id) as a new delivery.
+         */
+        post: operations["replay_webhook_delivery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/webhook-endpoints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Webhook Endpoints */
+        get: operations["list_webhook_endpoints"];
+        put?: never;
+        /**
+         * Create Webhook Endpoint
+         * @description Add an endpoint; its signing secret is in this response only.
+         */
+        post: operations["create_webhook_endpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Webhook Endpoint */
+        get: operations["get_webhook_endpoint"];
+        put?: never;
+        post?: never;
+        /** Delete Webhook Endpoint */
+        delete: operations["delete_webhook_endpoint"];
+        options?: never;
+        head?: never;
+        /** Update Webhook Endpoint */
+        patch: operations["update_webhook_endpoint"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}/deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Webhook Deliveries
+         * @description The delivery log, newest first: each delivery's last attempt.
+         */
+        get: operations["list_webhook_deliveries"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rotate Webhook Secret
+         * @description A new signing secret, in this response only; the old one stops working at once.
+         */
+        post: operations["rotate_webhook_secret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/webhook-endpoints/{endpoint_id}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Webhook Test
+         * @description Send a ``webhook.test`` event; its delivery shows in the log.
+         */
+        post: operations["send_webhook_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/webhook-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Webhook Events
+         * @description Every event an endpoint can subscribe to, with its payload version.
+         */
+        get: operations["list_webhook_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces": {
         parameters: {
             query?: never;
@@ -2250,6 +2633,20 @@ export interface components {
             /** Username */
             username: string | null;
         };
+        /** ActionStep */
+        ActionStep: {
+            /** Action */
+            action: components["schemas"]["AddTag"] | components["schemas"]["RemoveTag"] | components["schemas"]["SetField"] | components["schemas"]["NotifyTeam"] | components["schemas"]["HandOff"];
+            /** Id */
+            id: string;
+            /** Next */
+            next?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "action";
+        };
         /** Actor */
         Actor: {
             /**
@@ -2259,6 +2656,19 @@ export interface components {
             id: string;
             /** Name */
             name?: string | null;
+        };
+        /** AddTag */
+        AddTag: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "add_tag";
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
         };
         /**
          * AgentApproval
@@ -2702,6 +3112,25 @@ export interface components {
             feedback: "bad" | null;
         };
         /**
+         * AiReplyStep
+         * @description An AI reply from the knowledge base (T5.8), or a hand-off when it can't answer. It ends
+         *     the flow.
+         */
+        AiReplyStep: {
+            /** Id */
+            id: string;
+            /**
+             * Instructions
+             * @default
+             */
+            instructions: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "ai_reply";
+        };
+        /**
          * AiSettings
          * @description FR-KB-04 brand voice, FR-SUG-06 escalation phrases, FR-SUG-05 takeover period.
          */
@@ -2816,6 +3245,48 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        /**
+         * AskStep
+         * @description A question whose answer is checked and saved: free text to a custom field, an email or a
+         *     phone to the contact (or a custom field of that type). An answer that doesn't fit gets
+         *     ``retry_text`` until ``tries`` run out, then the flow goes on at ``on_skip``.
+         */
+        AskStep: {
+            /**
+             * Expect
+             * @default text
+             * @enum {string}
+             */
+            expect: "text" | "email" | "phone";
+            /** Field Key */
+            field_key?: string | null;
+            /** Id */
+            id: string;
+            /** Next */
+            next?: string | null;
+            /** On Skip */
+            on_skip?: string | null;
+            /**
+             * Retry Text
+             * @default
+             */
+            retry_text: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Tries
+             * @default 2
+             */
+            tries: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "ask";
+        };
         /** Attachment */
         Attachment: {
             /** Duration S */
@@ -2870,6 +3341,12 @@ export interface components {
             display_status: "draft" | "scheduled" | "active" | "paused" | "ended";
             /** Ends At */
             ends_at?: string | null;
+            /**
+             * Flow Source
+             * @default legacy
+             * @enum {string}
+             */
+            flow_source: "legacy" | "flow";
             /** Follow Nudge */
             follow_nudge: boolean;
             /** Follow Nudge Text */
@@ -3349,6 +3826,30 @@ export interface components {
             /** Usage */
             usage: components["schemas"]["UsageMeter"][];
         };
+        /** BranchRule */
+        BranchRule: {
+            /** Next */
+            next?: string | null;
+            /** When */
+            when: components["schemas"]["TagCondition"] | components["schemas"]["FieldCondition"] | components["schemas"]["ContactCondition"] | components["schemas"]["FollowsCondition"] | components["schemas"]["PlatformCondition"] | components["schemas"]["LeadScoreCondition"];
+        };
+        /**
+         * BranchStep
+         * @description The first rule that holds picks the next step; none does, ``otherwise``.
+         */
+        BranchStep: {
+            /** Id */
+            id: string;
+            /** Otherwise */
+            otherwise?: string | null;
+            /** Rules */
+            rules?: components["schemas"]["BranchRule"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "branch";
+        };
         /** BulkPause */
         BulkPause: {
             /** Ids */
@@ -3394,6 +3895,20 @@ export interface components {
             id: string;
             /** Message */
             message: string;
+        };
+        /** BulkTagsResult */
+        BulkTagsResult: {
+            /** Updated */
+            updated: number;
+        };
+        /** BulkTagsUpdate */
+        BulkTagsUpdate: {
+            /** Add */
+            add?: string[];
+            /** Contact Ids */
+            contact_ids: string[];
+            /** Remove */
+            remove?: string[];
         };
         /**
          * Calendar
@@ -3614,6 +4129,11 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Is Live
+             * @default false
+             */
+            is_live: boolean;
             /** Like Count */
             like_count: number;
             /** Parent Platform Comment Id */
@@ -3784,6 +4304,79 @@ export interface components {
             /** Authorize Url */
             authorize_url: string;
         };
+        /**
+         * Consent
+         * @description The current state for one channel: the latest record.
+         */
+        Consent: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "instagram" | "whatsapp" | "email";
+            /** Note */
+            note?: string | null;
+            /**
+             * Occurred At
+             * Format: date-time
+             */
+            occurred_at: string;
+            /**
+             * Purpose
+             * @constant
+             */
+            purpose: "marketing";
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "platform_optin" | "flow" | "stop_reply" | "member" | "import";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "granted" | "revoked";
+        };
+        /**
+         * ConsentCreate
+         * @description A member records consent the customer gave elsewhere (a form, in person), or its
+         *     withdrawal. The note says how it was given; it's the evidence.
+         */
+        ConsentCreate: {
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "instagram" | "whatsapp" | "email";
+            /** Note */
+            note: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "granted" | "revoked";
+        };
+        /**
+         * ContactCondition
+         * @description Whether the contact's email or phone is known.
+         */
+        ContactCondition: {
+            /**
+             * Has
+             * @enum {string}
+             */
+            has: "email" | "phone";
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "contact";
+            /**
+             * Known
+             * @default true
+             */
+            known: boolean;
+        };
         /** ContactDetail */
         ContactDetail: {
             /** Display Name */
@@ -3807,6 +4400,127 @@ export interface components {
             /** Username */
             username?: string | null;
         };
+        /** ContactList */
+        ContactList: {
+            /** Items */
+            items: components["schemas"]["ContactListItem"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** ContactListItem */
+        ContactListItem: {
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** First Seen At */
+            first_seen_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Activity At */
+            last_activity_at?: string | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Platform */
+            platform: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * ContactPatch
+         * @description Only what is sent changes. ``fields`` merges: a key set to null is removed. An email or
+         *     phone set here is marked as entered by a member and not verified.
+         */
+        ContactPatch: {
+            /**
+             * Clear Email
+             * @default false
+             */
+            clear_email: boolean;
+            /**
+             * Clear Phone
+             * @default false
+             */
+            clear_phone: boolean;
+            /** Email */
+            email?: string | null;
+            /** Fields */
+            fields?: {
+                [key: string]: unknown;
+            } | null;
+            /** Phone */
+            phone?: string | null;
+        };
+        /**
+         * ContactRecord
+         * @description One contact with what the business knows about them.
+         */
+        ContactRecord: {
+            /** Consents */
+            consents: components["schemas"]["Consent"][];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Email */
+            email?: string | null;
+            /** Email Source */
+            email_source?: string | null;
+            /** Email Verified */
+            email_verified: boolean;
+            /** Fields */
+            fields: {
+                [key: string]: unknown;
+            };
+            /** First Entry Source */
+            first_entry_source?: string | null;
+            /** First Seen At */
+            first_seen_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Activity At */
+            last_activity_at?: string | null;
+            /** Lead Score */
+            lead_score?: number | null;
+            /** Name */
+            name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Phone Source */
+            phone_source?: string | null;
+            /** Phone Verified */
+            phone_verified: boolean;
+            /** Platform */
+            platform: string;
+            /** Profile Picture Url */
+            profile_picture_url?: string | null;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Tags */
+            tags: components["schemas"]["TagRef"][];
+            /** Username */
+            username?: string | null;
+        };
         /** ContactSummary */
         ContactSummary: {
             /** Display Name */
@@ -3821,6 +4535,13 @@ export interface components {
             /** Username */
             username?: string | null;
         };
+        /** ContactTagsUpdate */
+        ContactTagsUpdate: {
+            /** Add */
+            add?: string[];
+            /** Remove */
+            remove?: string[];
+        };
         /** Conversation */
         Conversation: {
             ai: components["schemas"]["ConversationAi"];
@@ -3829,6 +4550,7 @@ export interface components {
             /** Awaiting Reply */
             awaiting_reply: boolean;
             contact: components["schemas"]["ContactDetail"];
+            entry?: components["schemas"]["ConversationEntry"] | null;
             /**
              * Id
              * Format: uuid
@@ -3906,6 +4628,26 @@ export interface components {
             override?: ("off" | "suggest" | "auto") | null;
             /** Paused Until */
             paused_until?: string | null;
+        };
+        /**
+         * ConversationEntry
+         * @description How the conversation began (GR-01): organic, an entry link (its ref), an ad (its id and,
+         *     when Meta gave it, title), an ice breaker (GR-11) or another referral.
+         */
+        ConversationEntry: {
+            /** Ad Id */
+            ad_id?: string | null;
+            /** Ad Title */
+            ad_title?: string | null;
+            /** At */
+            at?: string | null;
+            /** Ref */
+            ref?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "organic" | "link" | "ad" | "ice_breaker" | "other";
         };
         /** ConversationList */
         ConversationList: {
@@ -4023,6 +4765,24 @@ export interface components {
             status: "received" | "processing" | "completed" | "failed";
         };
         /**
+         * DelayStep
+         * @description A pause, at most 23 hours, so what follows can still go inside the 24-hour reply window
+         *     (a send the window no longer allows ends the run instead).
+         */
+        DelayStep: {
+            /** Id */
+            id: string;
+            /** Next */
+            next?: string | null;
+            /** Seconds */
+            seconds: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "delay";
+        };
+        /**
          * DigestUnsubscribed
          * @description POST /v1/digest/unsubscribe?token=…: the digest is off for that member of that workspace
          *     (idempotent). The page names the workspace and links to Settings → Notifications.
@@ -4047,6 +4807,16 @@ export interface components {
             /** Waba Id */
             waba_id?: string | null;
         };
+        /** EndStep */
+        EndStep: {
+            /** Id */
+            id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "end";
+        };
         /** EntitlementValue */
         EntitlementValue: {
             /** Key */
@@ -4060,6 +4830,82 @@ export interface components {
             code: string;
             /** Message */
             message: string;
+        };
+        /**
+         * FieldCondition
+         * @description ``equals`` ignores case; ``set`` is any value.
+         */
+        FieldCondition: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "field";
+            /**
+             * Op
+             * @default set
+             * @enum {string}
+             */
+            op: "set" | "unset" | "equals";
+            /** Value */
+            value?: string | null;
+        };
+        /** FieldDefinition */
+        FieldDefinition: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: string[];
+            /** Position */
+            position: number;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "text" | "email" | "phone" | "number" | "date" | "choice";
+        };
+        /** FieldDefinitionCreate */
+        FieldDefinitionCreate: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options?: string[];
+            /**
+             * Type
+             * @default text
+             * @enum {string}
+             */
+            type: "text" | "email" | "phone" | "number" | "date" | "choice";
+        };
+        /** FieldDefinitionList */
+        FieldDefinitionList: {
+            /** Items */
+            items: components["schemas"]["FieldDefinition"][];
+            /** Limit */
+            limit?: number | null;
+        };
+        /**
+         * FieldDefinitionPatch
+         * @description A field's key and type never change: values are stored by key and validated by type.
+         */
+        FieldDefinitionPatch: {
+            /** Label */
+            label?: string | null;
+            /** Options */
+            options?: string[] | null;
+            /** Position */
+            position?: number | null;
         };
         /**
          * FirstCommentResult
@@ -4076,6 +4922,88 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "posted" | "failed";
+        };
+        /**
+         * Flow
+         * @description GET and PUT …/automations/{id}/flow. ``source`` says how it was made: ``legacy`` is
+         *     compiled from the automation's message settings (the current editor), ``flow`` was saved as
+         *     a flow.
+         */
+        Flow: {
+            /**
+             * Automation Id
+             * Format: uuid
+             */
+            automation_id: string;
+            definition: components["schemas"]["FlowDefinition"];
+            /** Missing For Activation */
+            missing_for_activation: string[];
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "legacy" | "flow";
+            /** Version */
+            version: number;
+        };
+        /**
+         * FlowButton
+         * @description A link button: a https address, or the account's own Instagram profile (``profile``,
+         *     the follow nudge's "View profile").
+         */
+        FlowButton: {
+            /**
+             * Profile
+             * @default false
+             */
+            profile: boolean;
+            /** Title */
+            title: string;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * FlowDefinition
+         * @description ``start`` is the first step; a step without a next ends the flow.
+         */
+        FlowDefinition: {
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Start */
+            start: string;
+            /** Steps */
+            steps: (components["schemas"]["SendStep"] | components["schemas"]["AskStep"] | components["schemas"]["BranchStep"] | components["schemas"]["ActionStep"] | components["schemas"]["DelayStep"] | components["schemas"]["RandomizeStep"] | components["schemas"]["AiReplyStep"] | components["schemas"]["EndStep"])[];
+        };
+        /**
+         * FollowsCondition
+         * @description Whether they follow the account, read when the step runs; unknown counts as neither.
+         */
+        FollowsCondition: {
+            /**
+             * Follows
+             * @default true
+             */
+            follows: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "follows_business";
+        };
+        /**
+         * HandOff
+         * @description The conversation goes to Needs you, and the AI stops replying in it.
+         */
+        HandOff: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "hand_off";
         };
         /** HashtagGroup */
         HashtagGroup: {
@@ -4355,6 +5283,16 @@ export interface components {
             characters_limit?: number | null;
             /** Characters Used */
             characters_used: number;
+        };
+        /** LeadScoreCondition */
+        LeadScoreCondition: {
+            /** At Least */
+            at_least: number;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "lead_score";
         };
         /** LinkButton */
         LinkButton: {
@@ -4678,6 +5616,19 @@ export interface components {
             email_digest: boolean;
             push: components["schemas"]["PushPreferences"];
         };
+        /** NotifyTeam */
+        NotifyTeam: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "notify_team";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
         /** OverlapWarning */
         OverlapWarning: {
             /**
@@ -4914,6 +5865,19 @@ export interface components {
             price?: components["schemas"]["BillingPrice"] | null;
             /** Trial Days */
             trial_days: number;
+        };
+        /** PlatformCondition */
+        PlatformCondition: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "platform";
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "instagram" | "whatsapp";
         };
         /**
          * PolishRequest
@@ -5399,12 +6363,37 @@ export interface components {
             waiting: number;
         };
         /**
+         * QuickReply
+         * @description A tap-to-answer option; the flow goes on at ``next`` when it's tapped.
+         */
+        QuickReply: {
+            /** Next */
+            next?: string | null;
+            /** Title */
+            title: string;
+        };
+        /**
          * QuickReplyOut
          * @description A quick reply offered with the text (tap first, FR-AUT-21); shown, not tappable, here.
          */
         QuickReplyOut: {
             /** Title */
             title: string;
+        };
+        /**
+         * RandomizeStep
+         * @description An A/B split: each run takes one path, at random by weight.
+         */
+        RandomizeStep: {
+            /** Id */
+            id: string;
+            /** Paths */
+            paths: components["schemas"]["SplitPath"][];
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "randomize";
         };
         /** Reaction */
         Reaction: {
@@ -5420,6 +6409,19 @@ export interface components {
             by: "customer" | "business";
             /** Emoji */
             emoji: string;
+        };
+        /** RemoveTag */
+        RemoveTag: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "remove_tag";
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
         };
         /** ReplyWindow */
         ReplyWindow: {
@@ -5452,13 +6454,22 @@ export interface components {
             /** Message */
             message: string;
         };
-        /** SandboxInbound */
+        /**
+         * SandboxInbound
+         * @description A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
+         *     link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
+         *     comment; a DM can carry an ad referral (its first message from an ad).
+         */
         SandboxInbound: {
             /**
              * Account Id
              * Format: uuid
              */
             account_id: string;
+            /** Ad Id */
+            ad_id?: string | null;
+            /** Ad Title */
+            ad_title?: string | null;
             /** From Id */
             from_id?: string | null;
             /** From Username */
@@ -5467,11 +6478,17 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "dm" | "comment";
+            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin";
+            /** Postback Payload */
+            postback_payload?: string | null;
             /** Quick Reply Payload */
             quick_reply_payload?: string | null;
+            /** Ref */
+            ref?: string | null;
+            /** Referral Source */
+            referral_source?: ("ad" | "link") | null;
             /** Text */
-            text: string;
+            text?: string | null;
         };
         /** SandboxInboundResult */
         SandboxInboundResult: {
@@ -5767,6 +6784,35 @@ export interface components {
             text?: string | null;
         };
         /**
+         * SendStep
+         * @description A message. With quick replies the flow waits for an answer: a tap goes to that option's
+         *     step, anything typed to ``on_text`` (quick replies don't show on desktop).
+         */
+        SendStep: {
+            /** Buttons */
+            buttons?: components["schemas"]["FlowButton"][];
+            /** Id */
+            id: string;
+            /** Image Asset Id */
+            image_asset_id?: string | null;
+            /** Next */
+            next?: string | null;
+            /** On Text */
+            on_text?: string | null;
+            /** Quick Replies */
+            quick_replies?: components["schemas"]["QuickReply"][];
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            type: "send";
+        };
+        /**
          * SentimentDistribution
          * @description GET …/analytics/sentiment: comment sentiment for one post, or for comments made in a date
          *     range (optionally one account's). Unanalysed comments are counted, not guessed.
@@ -5826,6 +6872,18 @@ export interface components {
             spam: number;
             /** Total */
             total: number;
+        };
+        /** SetField */
+        SetField: {
+            /** Key */
+            key: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "set_field";
+            /** Value */
+            value: string;
         };
         /** SkippedCounts */
         SkippedCounts: {
@@ -5912,6 +6970,16 @@ export interface components {
             /** Display Name */
             display_name?: string | null;
         };
+        /** SplitPath */
+        SplitPath: {
+            /** Next */
+            next?: string | null;
+            /**
+             * Weight
+             * @default 1
+             */
+            weight: number;
+        };
         /**
          * StepVerification
          * @description R2 (TR-AGT-06): what the verifier read back after a write.
@@ -5973,6 +7041,75 @@ export interface components {
             id: string;
             /** Title */
             title: string;
+        };
+        /** Tag */
+        Tag: {
+            /** Color */
+            color: number;
+            /**
+             * Contact Count
+             * @default 0
+             */
+            contact_count: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** TagCondition */
+        TagCondition: {
+            /**
+             * Has
+             * @default true
+             */
+            has: boolean;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "tag";
+            /**
+             * Tag Id
+             * Format: uuid
+             */
+            tag_id: string;
+        };
+        /** TagCreate */
+        TagCreate: {
+            /**
+             * Color
+             * @default 0
+             */
+            color: number;
+            /** Name */
+            name: string;
+        };
+        /** TagList */
+        TagList: {
+            /** Items */
+            items: components["schemas"]["Tag"][];
+        };
+        /** TagPatch */
+        TagPatch: {
+            /** Color */
+            color?: number | null;
+            /** Name */
+            name?: string | null;
+        };
+        /** TagRef */
+        TagRef: {
+            /** Color */
+            color: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
         };
         /**
          * TargetIn
@@ -6085,6 +7222,176 @@ export interface components {
             period_end?: string | null;
             /** Used */
             used: number;
+        };
+        /** WebhookDelivery */
+        WebhookDelivery: {
+            /** Attempts */
+            attempts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duration Ms */
+            duration_ms?: number | null;
+            /**
+             * Endpoint Id
+             * Format: uuid
+             */
+            endpoint_id: string;
+            /** Error */
+            error?: string | null;
+            /**
+             * Event Id
+             * Format: uuid
+             */
+            event_id: string;
+            /** Event Type */
+            event_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Attempt At */
+            last_attempt_at?: string | null;
+            /** Next Attempt At */
+            next_attempt_at?: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Replay Of Id */
+            replay_of_id?: string | null;
+            /** Response Code */
+            response_code?: number | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "succeeded" | "failed";
+        };
+        /** WebhookDeliveryList */
+        WebhookDeliveryList: {
+            /** Items */
+            items: components["schemas"]["WebhookDelivery"][];
+            /** Next Cursor */
+            next_cursor?: string | null;
+        };
+        /** WebhookEndpoint */
+        WebhookEndpoint: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description?: string | null;
+            /** Disabled At */
+            disabled_at?: string | null;
+            /** Events */
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            /** Failing Deliveries */
+            failing_deliveries: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Failure At */
+            last_failure_at?: string | null;
+            /** Last Success At */
+            last_success_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "paused" | "disabled";
+            /** Url */
+            url: string;
+        };
+        /** WebhookEndpointCreate */
+        WebhookEndpointCreate: {
+            /** Description */
+            description?: string | null;
+            /** Events */
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            /** Url */
+            url: string;
+        };
+        /** WebhookEndpointList */
+        WebhookEndpointList: {
+            /** Items */
+            items: components["schemas"]["WebhookEndpoint"][];
+            /** Limit */
+            limit?: number | null;
+        };
+        /** WebhookEndpointPatch */
+        WebhookEndpointPatch: {
+            /** Description */
+            description?: string | null;
+            /** Events */
+            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[] | null;
+            /** Status */
+            status?: ("active" | "paused") | null;
+            /** Url */
+            url?: string | null;
+        };
+        /**
+         * WebhookEndpointWithSecret
+         * @description Create and rotate: the signing secret, shown this once (Standard Webhooks, whsec_…).
+         */
+        WebhookEndpointWithSecret: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Description */
+            description?: string | null;
+            /** Disabled At */
+            disabled_at?: string | null;
+            /** Events */
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            /** Failing Deliveries */
+            failing_deliveries: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Failure At */
+            last_failure_at?: string | null;
+            /** Last Success At */
+            last_success_at?: string | null;
+            /** Signing Secret */
+            signing_secret: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "paused" | "disabled";
+            /** Url */
+            url: string;
+        };
+        /** WebhookEventType */
+        WebhookEventType: {
+            /** Description */
+            description: string;
+            /** Emitted */
+            emitted: boolean;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished";
+            /** Version */
+            version: number;
+        };
+        /** WebhookEventTypeList */
+        WebhookEventTypeList: {
+            /** Items */
+            items: components["schemas"]["WebhookEventType"][];
         };
         /** WhatsAppTemplate */
         WhatsAppTemplate: {
@@ -7902,6 +9209,133 @@ export interface operations {
             };
         };
     };
+    get_automation_flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Flow"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_automation_flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FlowDefinition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Flow"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_automation_flow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                automation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Flow"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     pause_automation: {
         parameters: {
             query?: never;
@@ -8601,6 +10035,500 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Comment"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_contact_fields: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefinitionList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_contact_field: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldDefinitionCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefinition"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_contact_field: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_contact_field: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                field_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FieldDefinitionPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FieldDefinition"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_contacts: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                tag_id?: string[] | null;
+                platform?: ("instagram" | "whatsapp") | null;
+                account_id?: string | null;
+                has_email?: boolean | null;
+                has_phone?: boolean | null;
+                marketing_consent?: ("instagram" | "whatsapp" | "email") | null;
+                min_lead_score?: number | null;
+                active_after?: string | null;
+                active_before?: string | null;
+                field?: string[] | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    bulk_tag_contacts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BulkTagsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkTagsResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    export_contacts: {
+        parameters: {
+            query?: {
+                q?: string | null;
+                tag_id?: string[] | null;
+                platform?: ("instagram" | "whatsapp") | null;
+                account_id?: string | null;
+                has_email?: boolean | null;
+                has_phone?: boolean | null;
+                marketing_consent?: ("instagram" | "whatsapp" | "email") | null;
+                min_lead_score?: number | null;
+                active_after?: string | null;
+                active_before?: string | null;
+                field?: string[] | null;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/csv": unknown;
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    record_contact_consent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    tag_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContactTagsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContactRecord"];
                 };
             };
             /** @description Validation error */
@@ -11538,6 +13466,591 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Suggestion"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_tags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TagList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_tag: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tag_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TagPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Tag"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    replay_webhook_delivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                delivery_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDelivery"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_webhook_endpoints: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_webhook_endpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEndpointCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointWithSecret"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_webhook_endpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpoint_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_webhook_endpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpoint_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_webhook_endpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpoint_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WebhookEndpointPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpoint"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_webhook_deliveries: {
+        parameters: {
+            query?: {
+                status?: ("pending" | "succeeded" | "failed") | null;
+                cursor?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                endpoint_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDeliveryList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    rotate_webhook_secret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpoint_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEndpointWithSecret"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    send_webhook_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                endpoint_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookDelivery"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_webhook_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WebhookEventTypeList"];
                 };
             };
             /** @description Validation error */

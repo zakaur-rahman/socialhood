@@ -18,6 +18,20 @@ class InboundMediaRef:
 
 
 @dataclass(frozen=True, kw_only=True)
+class ReferralInfo:
+    """How a conversation was entered (GR-01): an ad, an entry link (ig.me ``ref``) or something
+    else Meta names. ``source`` is ours; ``platform_source`` is Meta's own value ("ADS", the
+    ig.me link, WhatsApp's ``source_type``)."""
+
+    source: Literal["ad", "link", "other"]
+    ref: str | None = None  # ig.me ?ref= value
+    ad_id: str | None = None
+    ad_title: str | None = None
+    ctwa_clid: str | None = None  # WhatsApp click id, for a later Conversions API (GR-09)
+    platform_source: str | None = None
+
+
+@dataclass(frozen=True, kw_only=True)
 class Inbound:
     account_ref: str  # Instagram entry.id, WhatsApp metadata.phone_number_id
     occurred_at: datetime  # the platform's timestamp, not arrival time
@@ -34,6 +48,8 @@ class InboundMessage(Inbound):
     reply_to_id: str | None = None
     is_echo: bool = False  # sent by the business outside Social Hood
     quick_reply_payload: str | None = None  # the quick reply they tapped (FR-AUT-21)
+    postback_payload: str | None = None  # the ice breaker or button they tapped (GR-01, GR-11)
+    referral: ReferralInfo | None = None  # an ad the message came from (GR-01)
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -44,6 +60,27 @@ class InboundComment(Inbound):
     author_ref: str
     author_username: str | None
     text: str
+    is_live: bool = False  # a comment on a live broadcast (GR-01; automations in GR-10)
+
+
+@dataclass(frozen=True, kw_only=True)
+class Referral(Inbound):
+    """Someone opened the conversation from an entry link or an ad without sending a message yet
+    (Instagram ``messaging_referral``). Recorded on the contact; it becomes the conversation's
+    entry when the conversation starts (GR-01)."""
+
+    contact_ref: str
+    referral: ReferralInfo
+
+
+@dataclass(frozen=True, kw_only=True)
+class OptIn(Inbound):
+    """Someone agreed to receive messages from the account (Instagram ``messaging_optins``).
+    Parsed now and kept in the stored webhook event; GR-02 records it as consent."""
+
+    contact_ref: str
+    topic: str | None = None
+    status: str | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -87,6 +124,8 @@ class Unsupported(Inbound):
 InboundEvent = (
     InboundMessage
     | InboundComment
+    | Referral
+    | OptIn
     | Reaction
     | ReadReceipt
     | MessageEdit
