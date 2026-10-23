@@ -262,11 +262,18 @@ async def update_automation_flow(
     automation_id: uuid.UUID, body: FlowDefinition, ctx: Admin, session: Session
 ) -> Flow:
     """Save the flow; from now on its steps replace the message settings. A broken graph is
-    refused (422 with each step's field); an active automation must stay complete."""
+    refused (422 with each step's field); an active automation must stay complete; more steps
+    than the plan allows is a 402 (``flow_steps``, pending PD-5)."""
     now = datetime.now(UTC)
     disclosure = ctx.workspace.automation_disclosure
     await flow_store.save(
-        session, automation_id, body, user_id=ctx.user.id, disclosure=disclosure, now=now
+        session,
+        automation_id,
+        body,
+        user_id=ctx.user.id,
+        plan=await current_plan(session),
+        disclosure=disclosure,
+        now=now,
     )
     await session.commit()
     return await flow_store.view(session, automation_id, disclosure=disclosure, now=now)

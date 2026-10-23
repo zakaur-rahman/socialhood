@@ -48,11 +48,15 @@ from socialhood.schemas.flows import (
     AskStep,
     BranchRule,
     BranchStep,
+    Condition,
+    ContactCondition,
     DelayStep,
     FieldCondition,
     FlowButton,
     FlowDefinition,
     FollowsCondition,
+    LeadScoreCondition,
+    PlatformCondition,
     QuickReply,
     RandomizeStep,
     RemoveTag,
@@ -127,6 +131,46 @@ def successors(step: Step) -> list[str | None]:
             return [p.next for p in step.paths]
         case _:
             return []  # ai_reply and end
+
+
+def exit_labels(step: Step, tag_names: Mapping[uuid.UUID, str] | None = None) -> list[str]:
+    """Plain words for each exit of ``successors(step)``, in the same order (the preview and the
+    dry run name the way a run goes at a fork)."""
+    match step:
+        case SendStep(quick_replies=replies) if replies:
+            return [f"Taps {r.title}" for r in replies] + ["Types an answer"]
+        case AskStep():
+            return ["Answers", "Doesn't answer in a way that fits"]
+        case BranchStep():
+            return [describe_condition(r.when, tag_names) for r in step.rules] + ["Otherwise"]
+        case RandomizeStep():
+            return [f"Path {chr(65 + i)} ({p.weight})" for i, p in enumerate(step.paths)]
+        case _:
+            return ["Next"] * len(successors(step))
+
+
+def describe_condition(
+    when: Condition,
+    tag_names: Mapping[uuid.UUID, str] | None = None,
+) -> str:
+    match when:
+        case TagCondition():
+            name = (tag_names or {}).get(when.tag_id, "a tag")
+            return f"Has the tag {name}" if when.has else f"Doesn't have the tag {name}"
+        case FieldCondition(op="equals"):
+            return f"{when.key} is {when.value or ''}"
+        case FieldCondition(op="unset"):
+            return f"{when.key} is empty"
+        case FieldCondition():
+            return f"{when.key} is filled in"
+        case ContactCondition():
+            return f"{'Has' if when.known else 'Has no'} {when.has}"
+        case FollowsCondition():
+            return "Follows you" if when.follows else "Doesn't follow you"
+        case PlatformCondition():
+            return f"Is on {when.platform}"
+        case LeadScoreCondition():
+            return f"Lead score is {when.at_least} or more"
 
 
 def waits(step: Step) -> bool:
