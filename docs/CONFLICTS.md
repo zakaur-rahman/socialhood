@@ -1608,3 +1608,72 @@ An addition from the growth plan. It is backend and API only; GR-17 builds the c
     with their contacts), `contact_field_definitions` and `contact_consents`;
   - on `contacts`: `fields`, `email`, `email_source`, `email_verified`, `phone`, `phone_source`,
     `phone_verified` and `last_activity_at`, backfilled from comments.
+
+## C-079 · The flow engine (GR-03, feature/gr-03-flow-engine)
+An addition from the growth plan. What an automation does after its trigger becomes a graph of
+steps; the trigger, keywords, posts, public replies and run settings stay on the automation.
+- **Steps** (`schemas/flows.py`, schema version 1, at most 50):
+  - `send`: text, an image, link buttons (a https link, or the account's profile), or quick
+    replies, each leading to its own step, with typed answers going to `on_text`;
+  - `ask`: a question whose answer is checked (text, email or phone) and saved to a custom field,
+    or for an email or phone to the contact; a retry prompt, then `on_skip`;
+  - `branch`: the first rule that holds (a tag, a field, email or phone known, follows the
+    account, platform, lead score), else `otherwise`;
+  - `action`: add or remove a tag, set a field, notify the team, hand off to a person;
+  - `delay` (at most 23 hours), `randomize` (A/B by weight), `ai_reply` and `end`.
+- **No loops:** a run visits each step at most once. Branches may meet again.
+- **What Instagram allows, checked on every path:**
+  - A comment's flow starts with its message, the private reply: no image, and nothing more until
+    the person answers (a quick reply or a question).
+  - Whether someone follows the account is known only once they've written.
+  - An AI reply is the first step and ends the flow.
+- **Today's automations are compiled, not stored.** Their flow is built from the message settings
+  whenever it's read (`flows.compile_legacy`), so it can never drift from the current editor:
+  - tap first becomes an opening with one quick reply (or any typed answer) leading to the
+    message;
+  - the follow nudge becomes a branch on not following, then the nudge with "View profile";
+  - a comment automation without tap first gets no nudge, as before.
+  - A regression suite runs every template, with tap first and the nudge on and off, against the
+    current renderer. *Deviation from GR-03 as planned, which said to store a compiled graph for
+    every automation in the migration.*
+- **Saved flows:** `PUT …/automations/{id}/flow` saves one, and its steps replace the message
+  settings from then on (`flow_source: flow`).
+  - Versions are kept in `automation_flows`. A save changes the current version until a run has
+    started on it, then makes the next, so a run always follows the flow it started with.
+  - The automation's action follows the flow (`ai_reply` when it has an AI reply), so the AI plan
+    entitlement and the private-reply queue apply as before.
+  - `DELETE …/flow` goes back to the settings.
+  - Activation and an active automation's saves check the flow, with each step's field
+    (`flow.steps.2.text`).
+- **Runtime** (`services/automations/engine.py`), for automations saved as a flow. Automations
+  on their message settings keep today's runtime, so they behave exactly as before. *Deviation
+  from GR-03 as planned, which runs every automation on the graph; a later cleanup can convert
+  them once the flow editor (GR-13) makes every automation a flow.*
+  - A run keeps its flow version, its step and its state (sending, replying, next, delaying,
+    done), and logs every step it reaches in `automation_run_steps`: its status, its message, and
+    what happened (the answer, the rule or path taken, the tries, why it failed).
+  - Entry is unchanged: keywords, posts, cooldowns and the read-only account. A DM's first steps
+    run at once; a comment's private reply goes through the account's queue. A flow starting with
+    an AI reply runs the AI reply as before.
+  - A run moves on once its message is delivered. A message with quick replies, or a question,
+    waits for the answer (`awaiting_reply`).
+  - **Answers come before keyword matching:**
+    - A tapped quick reply names its run, step and option (`shf:{run}:{step}:{n}`). A tap on a
+      step the run has left is handled and sends nothing.
+    - Typed text answers the contact's newest run waiting for a question, or for a message whose
+      typed answers lead somewhere.
+    - An email or phone answer goes to the contact (source `flow`), anything else to its custom
+      field. One that doesn't fit gets the retry prompt, then `on_skip`.
+  - **The continue job** (`run_automation("flow", run_id)`):
+    - A branch on following reads the follow status fresh, outside any transaction.
+    - A delay schedules the job for its end.
+    - A message the 24-hour window no longer allows fails its step and ends the run.
+  - **Actions:**
+    - "Hand off" puts the conversation in Needs you and pauses the AI until it's resumed.
+    - "Notify the team" is a new in-app notification, `automation_alert`.
+  - Ask Social Hood's `get_automation` lists a flow's steps.
+- **Migration 0020:**
+  - new tables `automation_flows` and `automation_run_steps`;
+  - `automations.flow_version`;
+  - on `automation_runs`: `flow_version`, `step_id`, `flow_state` and `wait_until`.
+  - Expand-only; nothing is rewritten.

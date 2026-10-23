@@ -71,6 +71,7 @@ class NotificationType(StrEnum):
     AI_ESCALATED = "ai_escalated"  # "Needs you" (F-09)
     WINDOW_CLOSING = "window_closing"  # F-18
     AUTOMATION_ENDED = "automation_ended"  # FR-AUT-17
+    AUTOMATION_ALERT = "automation_alert"  # a flow's "notify the team" step (GR-03), in app only
     NEW_LEAD = "new_lead"  # lead score reaches 70 (FR-NOT-03; T8.6)
     PAYMENT_PROBLEM = "payment_problem"  # subscription on hold or a failed payment (FR-BIL-06)
     PLAN_ACTIVATED = "plan_activated"  # "We'll email you when Pro is active" (F-15)

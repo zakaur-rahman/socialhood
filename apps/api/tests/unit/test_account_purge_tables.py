@@ -20,8 +20,10 @@ PLATFORM_ID_COLUMNS = {"social_accounts.platform_account_id", "webhook_events.pl
 EXPECTED = {
     "account_daily_metrics",
     "ai_decisions",
+    "automation_flows",
     "automation_keywords",
     "automation_posts",
+    "automation_run_steps",
     "automation_runs",
     "automations",
     "comment_analyses",

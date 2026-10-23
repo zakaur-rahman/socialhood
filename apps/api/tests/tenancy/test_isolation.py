@@ -140,6 +140,10 @@ EXAMPLE_BODIES.update(
         },
         ("POST", "/v1/w/{wid}/automations/pause"): {"ids": ["{automation_id}"]},
         ("PUT", "/v1/w/{wid}/automations/{automation_id}"): {"name": "Taken over"},
+        ("PUT", "/v1/w/{wid}/automations/{automation_id}/flow"): {
+            "start": "a",
+            "steps": [{"type": "send", "id": "a", "text": "Taken over"}],
+        },
         ("POST", "/v1/w/{wid}/automations/{automation_id}/test"): {"kind": "dm", "text": "link"},
     }
 )
@@ -274,6 +278,8 @@ B_TABLES = (
     "automation_keywords",
     "automation_posts",
     "automation_runs",
+    "automation_flows",
+    "automation_run_steps",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -437,6 +443,12 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     )
     asset = await make_asset(engine, workspace_id=wid)
     automation = await make_automation(engine, workspace_id=wid, account_id=account_id)
+    flow = await client.put(
+        f"/v1/w/{wid}/automations/{automation}/flow",
+        json={"start": "a", "steps": [{"type": "send", "id": "a", "text": "Hi"}]},
+        headers=clerk.headers(owner_b),
+    )
+    assert flow.status_code == 200, flow.text
     on = {
         "workspace_id": wid,
         "conversation_id": thread.conversation_id,

@@ -70,11 +70,11 @@ from socialhood.repositories import automation_runs as runs
 from socialhood.repositories import comments as comments_repo
 from socialhood.repositories import inbox
 from socialhood.repositories import social_accounts as accounts
-from socialhood.services.automations import actions, ai_reply, matching, results
+from socialhood.services.automations import actions, ai_reply, engine, flows, matching, results
 
 log = get_logger(__name__)
 
-Kind = Literal["dm", "comment", "nudge"]
+Kind = Literal["dm", "comment", "nudge", "flow"]
 
 DM_TRIGGERS = ("dm_keyword",)
 COMMENT_TRIGGERS = ("comment_keyword", "comment_any")
@@ -108,8 +108,10 @@ async def enqueue_for_message(
     """A new inbound customer DM (not an echo, not backfill) from ``contact_id``."""
     from socialhood.services.automations.answers import ANSWER_WINDOW
 
-    answers_opening = contact_id is not None and await runs.has_awaiting(
-        session, contact_id, since=datetime.now(UTC) - ANSWER_WINDOW
+    since = datetime.now(UTC) - ANSWER_WINDOW
+    answers_opening = contact_id is not None and (
+        await runs.has_awaiting(session, contact_id, since=since)
+        or await runs.has_flow_waiting(session, contact_id, since=since)  # GR-03
     )
     if not answers_opening and not await runs.has_active(
         session, message.social_account_id, DM_TRIGGERS
@@ -178,7 +180,7 @@ async def run(
 ) -> Outcome:
     """run_automation(kind, id), in the event's workspace scope."""
     env = _Env(sessionmaker, redis, deps, now or datetime.now(UTC))
-    handlers = {"dm": _run_dm, "comment": _run_comment, "nudge": _run_nudge}
+    handlers = {"dm": _run_dm, "comment": _run_comment, "nudge": _run_nudge, "flow": _run_flow}
     handler = handlers.get(kind)
     if handler is None:
         log.warning("automation_unknown_kind", kind=kind)
@@ -269,13 +271,28 @@ async def _run_dm(env: _Env, message_id: uuid.UUID) -> Outcome:
         earlier = await runs.event_runs(session, message_id=msg.id)
         drafting = ai_reply.drafting_run(earlier)
         answer = None
+        flow_answer = None
         if drafting is None:
             if msg.automation_handled or earlier:
                 return Outcome.ALREADY_RAN
-            # Tap first (FR-AUT-21): an answer to a waiting opening comes before any keyword.
-            answer = await answers.find(session, msg, contact.id, now=env.now)
-            if answer is None:
+            # An answer to a waiting flow step (GR-03) or tap-first opening (FR-AUT-21) comes
+            # before any keyword.
+            flow_answer = await engine.find_answer(session, msg, contact.id, now=env.now)
+            if flow_answer is None:
+                answer = await answers.find(session, msg, contact.id, now=env.now)
+            if flow_answer is None and answer is None:
                 return await _match_dm(session, env, msg, conv, contact)
+    if flow_answer is not None:
+        await engine.answer(
+            env.sessionmaker,
+            env.redis,
+            env.deps,
+            message_id=message_id,
+            conversation_id=conv.id,
+            found=flow_answer,
+            now=env.now,
+        )
+        return Outcome.ANSWERED
     if drafting is not None:
         # A retry of a run whose AI reply was being drafted (T5.8): finish it.
         await ai_reply.answer_dm(
@@ -326,6 +343,9 @@ async def _match_dm(
             )
             break
         ai = automation.action == AutomationAction.AI_REPLY
+        flow = await _flow_values(session, automation, comment=False)
+        if flow is None:
+            continue  # its saved flow is gone (never: the row is kept while it points at it)
         run = await runs.insert_run(
             session,
             _run_row(
@@ -335,6 +355,7 @@ async def _match_dm(
                 result=RunResult.QUEUED if ai else RunResult.SENT,
                 conversation_id=conv.id,
                 **common,
+                **flow,
             ),
         )
         if run is None:  # another worker ran this event first
@@ -343,7 +364,10 @@ async def _match_dm(
         automation.last_run_at = env.now
         if ai:
             return await _answer_with_ai(session, env, automation, run, msg)
-        await _send_dm(session, env, automation, run, msg, conv, contact)
+        if engine.is_flow_run(run):
+            await engine.start_dm(session, env.deps, automation, run, msg, now=env.now)
+        else:
+            await _send_dm(session, env, automation, run, msg, conv, contact)
         await session.flush()
         await events.commit_and_publish(session, env.redis)
         log.info(
@@ -375,6 +399,34 @@ async def _answer_with_ai(
         result=str(result),
     )
     return Outcome.FIRED
+
+
+async def _flow_values(
+    session: AsyncSession, automation: Automation, *, comment: bool
+) -> dict[str, Any] | None:
+    """A flow run's columns (GR-03; none for an automation on its message settings); None when
+    its saved flow can't be loaded."""
+    if automation.flow_version is None:
+        return {}
+    try:
+        g = await engine.graph_for(session, automation.id, automation.flow_version)
+    except (KeyError, flows.FlowError):
+        log.warning("automation_flow_missing", automation_id=str(automation.id))
+        return None
+    return engine.start_values(automation, g, comment=comment)
+
+
+# ---- flows (GR-03)
+
+
+async def _run_flow(env: _Env, run_id: uuid.UUID) -> Outcome:
+    outcome = await engine.resume(env.sessionmaker, env.redis, env.deps, run_id=run_id, now=env.now)
+    return {
+        "missing": Outcome.MISSING,
+        "ignored": Outcome.ALREADY_RAN,
+        "advanced": Outcome.FIRED,
+        "done": Outcome.FIRED,
+    }[outcome]
 
 
 # ---- the follow nudge (FR-AUT-22)
@@ -447,7 +499,10 @@ def _plan(automation: Automation) -> _Plan:
         )
     if automation.action != AutomationAction.SEND_MESSAGE:
         return _Plan(dm=False, public=False)
-    has_dm = bool(automation.message_text and automation.message_text.strip())
+    # A flow (GR-03) always starts a comment's with its message (flows.activation_errors).
+    has_dm = automation.flow_version is not None or bool(
+        automation.message_text and automation.message_text.strip()
+    )
     return _Plan(
         dm=has_dm and automation.surge_order != SurgeOrder.PUBLIC_ONLY,
         public=bool(automation.public_reply_texts),
@@ -547,6 +602,9 @@ async def _first_passing(
                 session, _skipped_read_only(automation, match.keyword, read_only, **common)
             )
             return None
+        flow = await _flow_values(session, automation, comment=True)
+        if flow is None:
+            continue
         plan = _plan(automation)
         variant = None
         if plan.public:
@@ -558,6 +616,7 @@ async def _first_passing(
             result=RunResult.QUEUED if plan.dm else RunResult.SENT,
             public_reply_variant=variant,
             **common,
+            **(flow if plan.dm else {}),
         )
         if not plan.dm and not plan.public:
             values.update(

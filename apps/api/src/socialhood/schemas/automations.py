@@ -117,6 +117,9 @@ class Automation(ResponseModel):
     queue: QueueInfo
     missing_for_activation: list[str]  # field names, e.g. ["keywords", "message_text"]
     overlaps: list[OverlapWarning]
+    # GR-03: "flow" when saved as a flow (…/flow), whose steps replace the message settings
+    # above; "legacy" when the flow is compiled from them.
+    flow_source: Literal["legacy", "flow"] = "legacy"
 
 
 class AutomationList(ResponseModel):

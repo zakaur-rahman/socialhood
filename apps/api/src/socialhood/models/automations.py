@@ -77,6 +77,23 @@ class RunResult(StrEnum):
     SKIPPED_READ_ONLY = "skipped_read_only"
 
 
+class FlowState(StrEnum):
+    """Where a flow run is (GR-03; services/automations/engine)."""
+
+    SENDING = "sending"  # step_id's message is on its way; the run goes on once it's delivered
+    REPLYING = "replying"  # step_id waits for their answer (a quick reply or a question)
+    NEXT = "next"  # step_id runs next (the continue job)
+    DELAYING = "delaying"  # step_id runs at wait_until
+    DONE = "done"
+
+
+class StepStatus(StrEnum):
+    SENT = "sent"  # its message was handed to the send pipeline
+    WAITING = "waiting"  # its message was delivered; waiting for their answer
+    DONE = "done"
+    FAILED = "failed"
+
+
 class AnalysisStatus(StrEnum):
     PENDING = "pending"
     DONE = "done"
@@ -119,6 +136,9 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     follow_nudge: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     follow_nudge_text: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[int] = mapped_column(Integer, server_default=sql("100"))
+    # GR-03: the automation_flows version it runs, when it was saved as a flow. None: its flow is
+    # compiled from the message settings above (services/automations/flows.compile_legacy).
+    flow_version: Mapped[int | None] = mapped_column(Integer)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -163,6 +183,28 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
             " AND action IS NOT NULL)",
             name="complete_when_active",
         ),
+    )
+
+
+class AutomationFlow(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A saved version of an automation's flow (GR-03; schemas/flows.FlowDefinition as JSON). A
+    save changes the current version in place until a run has started on it; then it makes the
+    next version, so a run always follows the flow it started with."""
+
+    __tablename__ = "automation_flows"
+
+    automation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("automations.id", ondelete="CASCADE")
+    )
+    version: Mapped[int] = mapped_column(Integer)
+    definition: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        UniqueConstraint("automation_id", "version"),
+        CheckConstraint("version >= 1", name="version"),
     )
 
 
@@ -307,6 +349,12 @@ class AutomationRun(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     error_code: Mapped[str | None] = mapped_column(Text)
     error_message: Mapped[str | None] = mapped_column(Text)
+    # GR-03: the automation_flows version a flow run follows (None: the automation runs on its
+    # message settings), the step it's at and what it waits for.
+    flow_version: Mapped[int | None] = mapped_column(Integer)
+    step_id: Mapped[str | None] = mapped_column(Text)
+    flow_state: Mapped[str | None] = mapped_column(Text)
+    wait_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         Index(
@@ -337,8 +385,37 @@ class AutomationRun(IdMixin, TimestampMixin, TenantScoped, Base):
             "created_at",
             postgresql_where=sql("result = 'awaiting_reply'"),
         ),
+        Index(
+            "ix_automation_runs_flow_replying",
+            "contact_id",
+            sql("created_at DESC"),
+            postgresql_where=sql("flow_state = 'replying'"),
+        ),
         CheckConstraint(_in("result", RunResult), name="result"),
         CheckConstraint(
             "(trigger_message_id IS NULL) <> (trigger_comment_id IS NULL)", name="one_trigger"
         ),
+        CheckConstraint(f"flow_state IS NULL OR {_in('flow_state', FlowState)}", name="flow_state"),
+    )
+
+
+class AutomationRunStep(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A flow run's step log (GR-03): one row per step it reached, for the Activity page and
+    flow analytics. ``detail`` says what happened: the answer, the rule or path taken, the
+    tries, or why it failed."""
+
+    __tablename__ = "automation_run_steps"
+
+    run_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("automation_runs.id", ondelete="CASCADE"))
+    step_id: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(Text)  # the step's type
+    status: Mapped[str] = mapped_column(Text)
+    message_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("messages.id", ondelete="SET NULL")
+    )
+    detail: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sql("'{}'::jsonb"))
+
+    __table_args__ = (
+        UniqueConstraint("run_id", "step_id"),
+        CheckConstraint(_in("status", StepStatus), name="status"),
     )

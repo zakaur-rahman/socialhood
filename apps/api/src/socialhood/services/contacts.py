@@ -27,9 +27,10 @@ import uuid
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Protocol
 
 from sqlalchemy import Select, and_, exists, func, literal, or_, select
+from sqlalchemy.dialects.postgresql import distinct_on
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -99,7 +100,17 @@ def normalize_phone(value: str) -> str:
     return "+" + number
 
 
-def field_value(definition: ContactFieldDefinition, value: Any) -> Any:
+class FieldSpec(Protocol):
+    """A custom field's type and choice options (a ContactFieldDefinition, or a flow's copy)."""
+
+    @property
+    def type(self) -> str: ...
+
+    @property
+    def options(self) -> list[str]: ...
+
+
+def field_value(definition: FieldSpec, value: Any) -> Any:
     """A custom field's value as stored, or ValueError with what to fix."""
     kind = definition.type
     if kind == FieldType.TEXT:
@@ -364,7 +375,7 @@ async def current_consents(session: AsyncSession, contact_id: uuid.UUID) -> list
                 ContactConsent.occurred_at.desc(),
                 ContactConsent.created_at.desc(),
             )
-            .distinct(ContactConsent.channel)
+            .ext(distinct_on(ContactConsent.channel))
         )
     ).all()
     return [

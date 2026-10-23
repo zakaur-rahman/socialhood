@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +38,7 @@ from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.automations import (
     Automation,
+    AutomationFlow,
     AutomationPost,
     AutomationStatus,
     PostScope,
@@ -324,7 +325,9 @@ async def update(
     existing = (await repo.posts_for(session, [automation.id]))[automation.id]
     posts = plan_posts(automation, body, existing, items)
     if automation.status == ACTIVE:
-        problems = validation.activation_errors(
+        problems = await _problems_after(
+            session,
+            automation,
             _definition_from_body(body, account, keywords, posts.targets),
             disclosure=disclosure,
             now=now,
@@ -344,6 +347,30 @@ async def update(
     )
     await session.flush()
     return automation
+
+
+async def _problems_after(
+    session: AsyncSession,
+    automation: Automation,
+    definition: Definition,
+    *,
+    disclosure: str | None,
+    now: datetime,
+) -> list[FieldError]:
+    """What activation would find with the automation changed to ``definition``; a flow is
+    checked against the new trigger (GR-03)."""
+    from socialhood.services.automations import flow_store, flows
+
+    if automation.flow_version is None:
+        return validation.activation_errors(definition, disclosure=disclosure, now=now)
+    errors = validation.activation_errors(
+        replace(definition, uses_flow=True), disclosure=disclosure, now=now
+    )
+    flow, _, _ = await flow_store.current(session, automation)
+    ctx = replace(
+        await flow_store.context(session, automation, disclosure), trigger=definition.trigger
+    )
+    return errors + flows.activation_errors(flow, ctx)
 
 
 def _definition_from_body(
@@ -381,7 +408,8 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.social_account_id = body.social_account_id
     automation.trigger = body.trigger
     automation.match_mode = body.match_mode
-    automation.action = body.action
+    if automation.flow_version is None:  # a flow sets the action (services/automations/flow_store)
+        automation.action = body.action
     automation.message_text = body.message_text or None
     automation.message_buttons = [{"title": b.title, "url": b.url} for b in body.message_buttons]
     automation.message_media_asset_id = body.message_media_asset_id
@@ -417,8 +445,11 @@ async def activate(
         return automation
     if automation.action == "ai_reply" and not entitlement(plan, "ai_reply_automations"):
         raise entitlement_error("ai_reply_automations")
-    definition = await stored_definition(session, automation)
-    errors = validation.activation_errors(definition, disclosure=disclosure, now=now)
+    from socialhood.services.automations import flow_store
+
+    errors = (await flow_store.problems(session, [automation], disclosure=disclosure, now=now))[
+        automation.id
+    ]
     if errors:
         raise ApiError("validation_error", ACTIVATE_DETAIL, errors=errors)
     if automation.social_account_id is not None:  # FR-BIL-07: a read-only account can't send
@@ -549,6 +580,18 @@ async def duplicate(
     )
     session.add(copy)
     await session.flush()
+    if source.flow_version is not None:  # GR-03: the copy starts its own versions
+        flow = (await repo.flows_at(session, [(source.id, source.flow_version)])).get(source.id)
+        if flow is not None:
+            session.add(
+                AutomationFlow(
+                    automation_id=copy.id,
+                    version=1,
+                    definition=dict(flow.definition),
+                    created_by_user_id=user_id,
+                )
+            )
+            copy.flow_version = 1
     keywords = (await repo.keywords_for(session, [source.id]))[source.id]
     await repo.replace_keywords(session, copy.id, keywords, now)
     if source.post_scope == PostScope.SELECTED:

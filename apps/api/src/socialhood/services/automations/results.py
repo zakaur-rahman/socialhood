@@ -18,7 +18,8 @@ the send pipeline (``hand_over``: ``sent``, or ``partial`` if the public reply h
 the run then mirrors that message like a DM run, the public reply's failure included.
 
 When a run's message reaches Instagram, the follow nudge may be due (services/automations/nudge,
-FR-AUT-22).
+FR-AUT-22). A flow run (GR-03) goes on to its next step instead (services/automations/engine): its
+first message settles the run like a private reply or a DM; the rest are logged per step.
 """
 
 from __future__ import annotations
@@ -163,7 +164,7 @@ def answered_failed(run: AutomationRun, code: str, message: str) -> None:
 async def follow_message(session: AsyncSession, msg: Message) -> None:
     """Mirror a sent or failed automation message onto its run; once the run's message reached
     Instagram, see whether the follow nudge is due."""
-    from socialhood.services.automations import nudge
+    from socialhood.services.automations import engine, nudge
 
     if msg.automation_run_id is None or msg.status not in (*DELIVERED, MessageStatus.FAILED):
         return
@@ -180,13 +181,19 @@ async def follow_message(session: AsyncSession, msg: Message) -> None:
         opening = bool(msg.quick_replies) or await _opens_first(session, run)
     apply_message(run, msg, opening=opening)
     await session.flush()
-    if msg.status in DELIVERED and run.private_reply_message_id == msg.id:
+    if engine.is_flow_run(run):
+        await engine.after_message(session, run, msg)
+    elif msg.status in DELIVERED and run.private_reply_message_id == msg.id:
         await nudge.after_message(session, run)
 
 
 async def _opens_first(session: AsyncSession, run: AutomationRun) -> bool:
-    from socialhood.services.automations import actions
+    """The run's first message waits for an answer: tap first, or a flow's first step."""
+    from socialhood.services.automations import actions, engine, flows
 
+    if engine.is_flow_run(run):
+        g = await engine.graph_for(session, run.automation_id, run.flow_version or 0)
+        return flows.waits(g.step(g.definition.start))
     automation = await runs.get_automation(session, run.automation_id)
     return automation is not None and actions.opens_first(automation)
 
