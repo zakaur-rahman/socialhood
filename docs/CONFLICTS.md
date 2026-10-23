@@ -2745,7 +2745,7 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   `…/pages`. A page's text is stored in its source's `body` (at most 20,000 characters, the column's
   limit), and ingestion of a `page` takes it from there instead of fetching again, so the crawl is
   the only thing that touches the site.
-- **Migration 0031** (down revision 0027), expand-only: the `type` check widened to `site` and
+- **Migration 0030** (after 0029), expand-only: the `type` check widened to `site` and
   `page`; `knowledge_sources.parent_source_id`; the tables `site_crawls` (one row per site: re-crawl
   setting, excluded paths, status, whether it is seeded, whether it hit the cap, the cap of that
   crawl, error, start and finish times, `next_crawl_at`) and `site_pages` (one row per address:
@@ -2861,4 +2861,4 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   and `page` in the type literals, the four new operations); the web types are aliases waiting for
   it (`KnowledgeCreateType` is `KnowledgeSourceCreate["type"]`). The web calls the new paths through
   the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
-  config. Migration 0031 chains from 0027; re-chain it after 0028 and 0029.
+  config.

@@ -10,8 +10,8 @@
 
 Expand-only: a nullable column, a wider check and two new tables; nothing is rewritten.
 
-Revision ID: 0031
-Revises: 0027
+Revision ID: 0030
+Revises: 0029
 Create Date: 2026-10-24 18:00:00.000000+00:00
 """
 
@@ -23,8 +23,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0031"
-down_revision: str | None = "0027"
+revision: str = "0030"
+down_revision: str | None = "0029"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
