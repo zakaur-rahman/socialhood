@@ -119,6 +119,9 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     follow_nudge: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     follow_nudge_text: Mapped[str | None] = mapped_column(Text)
     priority: Mapped[int] = mapped_column(Integer, server_default=sql("100"))
+    # GR-03: the automation_flows version it runs, when it was saved as a flow. None: its flow is
+    # compiled from the message settings above (services/automations/flows.compile_legacy).
+    flow_version: Mapped[int | None] = mapped_column(Integer)
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -163,6 +166,28 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
             " AND action IS NOT NULL)",
             name="complete_when_active",
         ),
+    )
+
+
+class AutomationFlow(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A saved version of an automation's flow (GR-03; schemas/flows.FlowDefinition as JSON). A
+    save changes the current version in place until a run has started on it; then it makes the
+    next version, so a run always follows the flow it started with."""
+
+    __tablename__ = "automation_flows"
+
+    automation_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("automations.id", ondelete="CASCADE")
+    )
+    version: Mapped[int] = mapped_column(Integer)
+    definition: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        UniqueConstraint("automation_id", "version"),
+        CheckConstraint("version >= 1", name="version"),
     )
 
 
@@ -307,6 +332,9 @@ class AutomationRun(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     error_code: Mapped[str | None] = mapped_column(Text)
     error_message: Mapped[str | None] = mapped_column(Text)
+    # GR-03: the automation_flows version the run follows; None: the flow compiled from the
+    # automation's message settings.
+    flow_version: Mapped[int | None] = mapped_column(Integer)
 
     __table_args__ = (
         Index(

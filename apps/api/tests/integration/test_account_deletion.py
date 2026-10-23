@@ -208,6 +208,13 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         a=automation,
         c=comment,
     )
+    await execute(  # GR-03: a saved flow
+        engine,
+        "INSERT INTO automation_flows (workspace_id, automation_id, version, definition)"
+        " VALUES (:w, :a, 1, '{}'::jsonb)",
+        w=wid,
+        a=automation,
+    )
     await make_posting_slot(engine, workspace_id=wid, account_id=account_id)
     # GR-02: a tag on the contact and their consent (the tag itself is the workspace's).
     await execute(

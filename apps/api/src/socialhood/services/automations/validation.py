@@ -116,6 +116,9 @@ class Definition:
     follow_nudge: bool = False
     follow_nudge_text: str | None = None
     ai_instructions: str | None = None
+    # GR-03: saved as a flow, whose own checks (services/automations/flows) replace the message,
+    # opening, nudge and AI checks here.
+    uses_flow: bool = False
 
     @property
     def taps_first(self) -> bool:
@@ -202,8 +205,19 @@ def _post_errors(d: Definition) -> list[FieldError]:
 
 
 def _action_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
-    if d.action is None:
+    if d.action is None and not d.uses_flow:
         return [FieldError("action", COPY["action_missing"])]
+    errors: list[FieldError] = []
+    if not d.uses_flow:
+        errors += _message_settings_errors(d, disclosure)
+    if d.trigger in COMMENT_TRIGGERS:
+        errors += _public_reply_errors(d.public_reply_texts)
+        if d.surge_order == "public_only" and not d.public_reply_texts:
+            errors.append(FieldError("public_reply_texts", COPY["public_only_needs_reply"]))
+    return errors
+
+
+def _message_settings_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
     errors: list[FieldError] = []
     if d.action == "ai_reply":
         if not (d.ai_instructions or "").strip():
@@ -214,10 +228,6 @@ def _action_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
         errors += _opening_errors(d, disclosure)
     if d.nudges:
         errors += _nudge_errors(d)
-    if d.trigger in COMMENT_TRIGGERS:
-        errors += _public_reply_errors(d.public_reply_texts)
-        if d.surge_order == "public_only" and not d.public_reply_texts:
-            errors.append(FieldError("public_reply_texts", COPY["public_only_needs_reply"]))
     return errors
 
 

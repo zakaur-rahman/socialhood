@@ -34,9 +34,11 @@ from socialhood.schemas.automations import (
     StatusName,
     TriggerName,
 )
+from socialhood.schemas.flows import Flow, FlowDefinition
 from socialhood.services.automations import (
     definitions,
     dry_run,
+    flow_store,
     queries,
     queue,
     stats,
@@ -238,3 +240,43 @@ async def test_automation(
         disclosure=ctx.workspace.automation_disclosure,
         now=datetime.now(UTC),
     )
+
+
+# ---------------------------------------------------------------- flows (GR-03)
+
+
+@router.get("/automations/{automation_id}/flow", operation_id="get_automation_flow")
+async def get_automation_flow(automation_id: uuid.UUID, ctx: Admin, session: Session) -> Flow:
+    """The automation's flow: saved (``source: flow``), or compiled from its message settings
+    (``legacy``, version 0), with what activation still needs."""
+    return await flow_store.view(
+        session,
+        automation_id,
+        disclosure=ctx.workspace.automation_disclosure,
+        now=datetime.now(UTC),
+    )
+
+
+@router.put("/automations/{automation_id}/flow", operation_id="update_automation_flow")
+async def update_automation_flow(
+    automation_id: uuid.UUID, body: FlowDefinition, ctx: Admin, session: Session
+) -> Flow:
+    """Save the flow; from now on its steps replace the message settings. A broken graph is
+    refused (422 with each step's field); an active automation must stay complete."""
+    now = datetime.now(UTC)
+    disclosure = ctx.workspace.automation_disclosure
+    await flow_store.save(
+        session, automation_id, body, user_id=ctx.user.id, disclosure=disclosure, now=now
+    )
+    await session.commit()
+    return await flow_store.view(session, automation_id, disclosure=disclosure, now=now)
+
+
+@router.delete("/automations/{automation_id}/flow", operation_id="delete_automation_flow")
+async def delete_automation_flow(automation_id: uuid.UUID, ctx: Admin, session: Session) -> Flow:
+    """Go back to the message settings; runs on a saved version finish on it."""
+    now = datetime.now(UTC)
+    disclosure = ctx.workspace.automation_disclosure
+    await flow_store.use_settings(session, automation_id, disclosure=disclosure, now=now)
+    await session.commit()
+    return await flow_store.view(session, automation_id, disclosure=disclosure, now=now)
