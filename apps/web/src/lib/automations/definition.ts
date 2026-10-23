@@ -35,6 +35,11 @@ export function isStoryTrigger(trigger: TriggerName | null | undefined): boolean
   return trigger === "story_reply" || trigger === "story_mention";
 }
 
+/** A DM that starts from how the chat began: an entry link or an ad (GR-08, GR-09). */
+export function isEntryTrigger(trigger: TriggerName | null | undefined): boolean {
+  return trigger === "entry_link" || trigger === "ad_click";
+}
+
 type TapFirstFields = Pick<AutomationDefinition, "trigger" | "action" | "confirm_first">;
 
 /** Tap first applies to comment triggers that send a message (FR-AUT-21). */
@@ -66,7 +71,7 @@ export function tapFirstOn(
  */
 export function triggerPatch(draft: AutomationDefinition, trigger: TriggerName): Partial<AutomationDefinition> {
   const patch: Partial<AutomationDefinition> = { trigger };
-  if (isStoryTrigger(trigger) && draft.post_scope === "next_post") patch.post_scope = "all";
+  if ((isStoryTrigger(trigger) || trigger === "ad_click") && draft.post_scope === "next_post") patch.post_scope = "all";
   if (trigger === "comment_any" && draft.post_scope === "all") patch.post_scope = "selected";
   const firstComment = isCommentTrigger(trigger) && !isCommentTrigger(draft.trigger);
   const neverOpened = draft.opening_text == null && draft.opening_button == null;
@@ -95,6 +100,7 @@ export function toDefinition(automation: Automation): AutomationDefinition {
     ),
     story_ids: [...(automation.story_ids ?? [])],
     story_heart: automation.story_heart ?? false,
+    ad_ids: [...(automation.ad_ids ?? [])],
     cooldown_hours: automation.cooldown_hours,
     starts_at: automation.starts_at ?? null,
     ends_at: automation.ends_at ?? null,
@@ -117,6 +123,7 @@ export function toDefinition(automation: Automation): AutomationDefinition {
 export function toRequestBody(draft: AutomationDefinition): AutomationDefinition {
   const comment = isCommentTrigger(draft.trigger);
   const storyReply = draft.trigger === "story_reply";
+  const adClick = draft.trigger === "ad_click";
   const ai = draft.action === "ai_reply";
   const buttons = (draft.message_buttons ?? [])
     .map((button) => ({ title: button.title.trim().slice(0, BUTTON_TITLE_MAX), url: button.url.trim() }))
@@ -126,14 +133,17 @@ export function toRequestBody(draft: AutomationDefinition): AutomationDefinition
     ...draft,
     name: draft.name.trim() || DEFAULT_NAME,
     keywords:
-      draft.trigger === "comment_any" || draft.trigger === "story_mention" ? [] : (draft.keywords ?? []),
+      draft.trigger === "comment_any" || draft.trigger === "story_mention" || isEntryTrigger(draft.trigger)
+        ? []
+        : (draft.keywords ?? []),
     message_buttons: buttons,
     public_reply_texts: comment ? (draft.public_reply_texts ?? []).map((text) => text.trim()).filter(Boolean) : [],
-    post_scope: comment || (storyReply && draft.post_scope === "selected") ? draft.post_scope : "all",
+    post_scope: comment || ((storyReply || adClick) && draft.post_scope === "selected") ? draft.post_scope : "all",
     media_item_ids: comment && draft.post_scope === "selected" ? (draft.media_item_ids ?? []) : [],
     scheduled_post_ids: comment && draft.post_scope === "selected" ? (draft.scheduled_post_ids ?? []) : [],
     story_ids: storyReply && draft.post_scope === "selected" ? (draft.story_ids ?? []) : [],
     story_heart: storyReply ? (draft.story_heart ?? false) : false,
+    ad_ids: adClick && draft.post_scope === "selected" ? (draft.ad_ids ?? []) : [],
     confirm_first: comment && !ai ? draft.confirm_first : false,
     opening_text: comment ? draft.opening_text || null : null,
     opening_button: comment ? openingButton || null : null,
@@ -155,7 +165,10 @@ export function visibleSteps(trigger: TriggerName | null | undefined): StepId[] 
     case "story_reply":
       return ["when", "posts", "keywords", "then", "settings"];
     case "story_mention":
+    case "entry_link":
       return ["when", "then", "settings"];
+    case "ad_click":
+      return ["when", "posts", "then", "settings"];
     default:
       return ["when", "keywords", "then", "settings"];
   }
@@ -227,6 +240,9 @@ export function stepComplete(step: StepId, draft: AutomationDefinition, disclosu
       if (draft.trigger === "story_reply") {
         return draft.post_scope !== "selected" || (draft.story_ids?.length ?? 0) > 0;
       }
+      if (draft.trigger === "ad_click") {
+        return draft.post_scope !== "selected" || (draft.ad_ids?.length ?? 0) > 0;
+      }
       if (draft.post_scope === "selected") {
         return (draft.media_item_ids?.length ?? 0) + (draft.scheduled_post_ids?.length ?? 0) > 0;
       }
@@ -269,6 +285,7 @@ const FIELD_STEP: Record<string, StepId | "name"> = {
   scheduled_post_ids: "posts",
   story_ids: "posts",
   story_heart: "posts",
+  ad_ids: "posts",
   keywords: "keywords",
   match_mode: "keywords",
   action: "then",

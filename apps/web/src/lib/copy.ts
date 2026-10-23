@@ -48,6 +48,10 @@ export const emptyStates = {
     title: "No story mentions yet",
     body: "When someone mentions you in their story, they show up here.",
   },
+  entryLinks: {
+    title: "No entry links yet",
+    body: "Make a link or QR code that opens a chat with you and starts an automation. Put it in your bio, on a flyer or in a shop window.",
+  },
   automationRuns: {
     title: "No runs yet",
     body: "Each time this automation answers someone, it shows here.",

@@ -75,6 +75,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "field_id": "field_id",
     "endpoint_id": "endpoint_id",  # GR-04
     "delivery_id": "delivery_id",
+    "link_id": "link_id",  # GR-08
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -83,6 +84,8 @@ PUBLIC_ROUTES = frozenset({"/v1/data-deletion/{code}"})
 # A valid body for each write route, so the call fails on tenancy, not validation.
 # A string "{param}" in a body is replaced by B's id for that parameter.
 EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
+    ("POST", "/v1/w/{wid}/entry-links"): {"social_account_id": "{account_id}", "name": "Into B"},
+    ("PUT", "/v1/w/{wid}/entry-links/{link_id}"): {"name": "Taken over"},
     ("PATCH", "/v1/w/{wid}"): {"name": "Taken over", "timezone": "UTC"},
     ("PATCH", "/v1/w/{wid}/social-accounts/{account_id}"): {"auto_hide_spam": True},
     ("POST", "/v1/w/{wid}/dev/sandbox/inbound"): {
@@ -290,6 +293,7 @@ B_TABLES = (
     "webhook_endpoints",
     "webhook_deliveries",
     "story_mentions",
+    "entry_links",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -343,6 +347,7 @@ class Seed:
     field_id: str = ""
     endpoint_id: str = ""
     delivery_id: str = ""
+    link_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -470,6 +475,12 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             ),
             {"w": wid, "a": account_id, "c": thread.contact_id, "m": thread.message_ids[0]},
         )
+    link = await client.post(  # GR-08: an entry link
+        f"/v1/w/{wid}/entry-links",
+        json={"social_account_id": account_id, "name": "B link"},
+        headers=clerk.headers(owner_b),
+    )
+    assert link.status_code == 201, link.text
     scheduled = await make_scheduled(
         engine, workspace_id=wid, conversation_id=thread.conversation_id
     )
@@ -563,6 +574,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         field_id=field.json()["id"],
         endpoint_id=hook.json()["id"],
         delivery_id=sent.json()["id"],
+        link_id=link.json()["id"],
     )
 
 

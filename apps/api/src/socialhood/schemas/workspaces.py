@@ -99,6 +99,9 @@ class OverviewPeriod(ResponseModel):
     median_first_response_s: int | None
     comments_received: int
     story_mentions: int = 0  # people who mentioned the account in a story (GR-07)
+    # Conversations that began in the period from an ad (GR-09) or an entry link (GR-08).
+    conversations_from_ads: int = 0
+    conversations_from_links: int = 0
 
 
 class SentimentSplit(ResponseModel):

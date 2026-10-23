@@ -32,6 +32,7 @@ EXPECTED = {
     "contact_tags",
     "contacts",
     "conversations",
+    "entry_links",
     "media_items",
     "message_analyses",
     "messages",

@@ -108,8 +108,8 @@ describe("entryLabel (GR-01)", () => {
     [entry("organic"), "They wrote first"],
     [entry("link", { ref: "bio" }), 'Entry link "bio"'],
     [entry("link"), "An entry link"],
-    [entry("ad", { ad_title: "Diwali hampers" }), 'Ad "Diwali hampers"'],
-    [entry("ad", { ad_id: "42" }), "An ad"],
+    [entry("ad", { ad_title: "Diwali hampers" }), 'From an ad: "Diwali hampers"'],
+    [entry("ad", { ad_id: "42" }), "From an ad"],
     [entry("ice_breaker"), "A conversation starter"],
     [entry("other"), "A referral"],
   ])("%o reads %s", (value, label) => {

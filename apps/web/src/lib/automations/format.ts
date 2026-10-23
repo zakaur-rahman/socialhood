@@ -24,6 +24,8 @@ export const TRIGGER_LABEL: Record<TriggerName, string> = {
   dm_keyword: "DM keyword",
   story_reply: "Story reply",
   story_mention: "Story mention",
+  entry_link: "Entry link",
+  ad_click: "Ad click",
 };
 
 /** Where the trigger is named: the editor, the gallery and the list's filter say which network (UI-064). */
@@ -33,6 +35,8 @@ export const TRIGGER_LABEL_IG: Record<TriggerName, string> = {
   dm_keyword: "Instagram DM keyword",
   story_reply: "Instagram story reply",
   story_mention: "Instagram story mention",
+  entry_link: "Instagram entry link",
+  ad_click: "Instagram ad click",
 };
 
 export const MATCH_LABEL: Record<MatchMode, string> = {
@@ -94,12 +98,17 @@ function plural(n: number, one: string, many: string): string {
 
 /** The row's trigger label: "Comment on 3 posts", "Any comment on next post", "DM keyword", "Story reply to any story". */
 export function triggerSummary(
-  automation: Pick<Automation, "trigger" | "post_scope" | "posts"> & Partial<Pick<Automation, "story_ids">>,
+  automation: Pick<Automation, "trigger" | "post_scope" | "posts"> & Partial<Pick<Automation, "story_ids" | "ad_ids">>,
 ): string {
   const { trigger, post_scope: scope, posts } = automation;
   if (!trigger) return "No trigger yet";
   if (trigger === "dm_keyword") return "DM keyword";
   if (trigger === "story_mention") return "Story mention";
+  if (trigger === "entry_link") return "Entry link";
+  if (trigger === "ad_click") {
+    const ads = automation.ad_ids ?? [];
+    return scope === "selected" ? `Ad click on ${plural(ads.length, "ad", "ads")}` : "Ad click on any ad";
+  }
   if (trigger === "story_reply") {
     const stories = automation.story_ids ?? [];
     return scope === "selected" ? `Story reply on ${plural(stories.length, "story", "stories")}` : "Story reply to any story";

@@ -17,6 +17,8 @@ Rules:
   the order entered.
 - Stories (GR-06): a story reply automation with post_scope "selected" stores the chosen story ids
   (up to 20) and its heart setting; any other trigger stores none, whatever the request says.
+- Ads (GR-09): an ad click automation with post_scope "selected" stores the typed ad ids (up to
+  20); any other trigger stores none.
 - Posts: "selected" stores the chosen media items and scheduled posts; "next_post" keeps the link
   the automation made to its post (services/automations/posts.py) while the account stays the
   same; "all" stores none.
@@ -114,6 +116,7 @@ def definition_of(
         post_scope=automation.post_scope,
         posts=post_targets(posts),
         story_ids=list(automation.story_ids or []),
+        ad_ids=list(automation.ad_ids or []),
         action=automation.action,
         message_text=automation.message_text,
         message_buttons=[
@@ -391,6 +394,7 @@ def _definition_from_body(
         post_scope=body.post_scope,
         posts=posts,
         story_ids=_story_ids(body),
+        ad_ids=_ad_ids(body),
         action=body.action,
         message_text=body.message_text,
         message_buttons=[ButtonInfo(b.title, b.url) for b in body.message_buttons],
@@ -415,6 +419,13 @@ def _story_ids(body: AutomationDefinition) -> list[str]:
     return list(dict.fromkeys(body.story_ids))
 
 
+def _ad_ids(body: AutomationDefinition) -> list[str]:
+    """The chosen ads, once each: only an ad click scoped to chosen ads keeps them."""
+    if body.trigger != "ad_click" or body.post_scope != "selected":
+        return []
+    return list(dict.fromkeys(a.strip() for a in body.ad_ids if a.strip()))
+
+
 def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.name = body.name
     automation.social_account_id = body.social_account_id
@@ -429,6 +440,7 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.public_reply_texts = list(body.public_reply_texts)
     automation.post_scope = body.post_scope
     automation.story_ids = _story_ids(body)
+    automation.ad_ids = _ad_ids(body)
     automation.story_heart = body.story_heart and body.trigger == "story_reply"
     automation.cooldown_hours = body.cooldown_hours
     automation.starts_at = body.starts_at
@@ -586,6 +598,7 @@ async def duplicate(
         post_scope=source.post_scope,
         story_ids=list(source.story_ids or []),
         story_heart=source.story_heart,
+        ad_ids=list(source.ad_ids or []),
         cooldown_hours=source.cooldown_hours,
         confirm_first=source.confirm_first,
         opening_text=source.opening_text,

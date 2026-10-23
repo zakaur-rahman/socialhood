@@ -40,6 +40,8 @@ class Trigger(StrEnum):
     COMMENT_ANY = "comment_any"
     STORY_REPLY = "story_reply"  # GR-06: a DM that replies to one of the account's stories
     STORY_MENTION = "story_mention"  # GR-07: someone mentioned the account in their story
+    ENTRY_LINK = "entry_link"  # GR-08: a DM opened from one of the account's entry links
+    AD_CLICK = "ad_click"  # GR-09: a DM opened from an ad (click to Instagram DM)
 
 
 class MatchMode(StrEnum):
@@ -141,6 +143,9 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
     # GR-06, story_reply with post_scope "selected": the platform ids of the chosen stories (empty
     # means any story). A story lasts 24 hours, so a chosen story stops matching once it expires.
     story_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
+    # GR-09, ad_click with post_scope "selected": the ids of the chosen ads, typed by hand (empty
+    # means any ad). Listing the account's ads would need ads_read, which is not requested.
+    ad_ids: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=sql("'{}'"))
     # GR-06: also send Instagram's heart sticker to the story reply, ahead of the message.
     story_heart: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     # GR-03: the automation_flows version it runs, when it was saved as a flow. None: its flow is
@@ -172,6 +177,7 @@ class Automation(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint("cooldown_hours BETWEEN 0 AND 72", name="cooldown_hours"),
         CheckConstraint("cardinality(public_reply_texts) <= 5", name="public_reply_texts"),
         CheckConstraint("cardinality(story_ids) <= 20", name="story_ids"),
+        CheckConstraint("cardinality(ad_ids) <= 20", name="ad_ids"),
         CheckConstraint("jsonb_array_length(message_buttons) <= 3", name="message_buttons"),
         CheckConstraint(
             "ai_instructions IS NULL OR char_length(ai_instructions) <= 2000",
@@ -456,4 +462,34 @@ class StoryMention(IdMixin, TimestampMixin, TenantScoped, Base):
             "media_expires_at",
             postgresql_where=sql("media_url IS NOT NULL"),
         ),
+    )
+
+
+class EntryLink(IdMixin, TimestampMixin, TenantScoped, Base):
+    """An entry link (GR-08): ``ig.me/m/<username>?ref=<code>`` opens a DM with the account and
+    Instagram sends the code back as a referral. ``automation_id`` is the entry link automation
+    that starts when someone opens the DM from it (null once that automation is deleted, so the
+    link's counts stay). The code is unique per account and never changes."""
+
+    __tablename__ = "entry_links"
+
+    social_account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("social_accounts.id", ondelete="CASCADE")
+    )
+    automation_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("automations.id", ondelete="SET NULL")
+    )
+    code: Mapped[str] = mapped_column(Text)
+    name: Mapped[str] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("social_account_id", "code"),
+        Index("ix_entry_links_listing", "workspace_id", sql("created_at DESC"), "id"),
+        Index(
+            "ix_entry_links_automation_id",
+            "automation_id",
+            postgresql_where=sql("automation_id IS NOT NULL"),
+        ),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 80", name="name_length"),
+        CheckConstraint("code ~ '^[A-Za-z0-9_-]{3,40}$'", name="code_format"),
     )

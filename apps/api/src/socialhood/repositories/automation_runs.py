@@ -145,7 +145,7 @@ async def candidates(
 
 
 def _trigger(value: str | None) -> TriggerName:
-    if value in ("comment_any", "story_reply", "story_mention"):
+    if value in ("comment_any", "story_reply", "story_mention", "entry_link", "ad_click"):
         return cast(TriggerName, value)
     return "comment_keyword" if value == "comment_keyword" else "dm_keyword"
 

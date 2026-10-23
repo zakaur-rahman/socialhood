@@ -1862,3 +1862,76 @@ failures; now they can see them. A read model over existing tables: no migration
 - **Tables:** `story_mentions` is in the account purge (it references the account), the workspace
   deletion and the isolation seeds.
 - **Migration 0022** is shared with C-082.
+
+## C-084 · Entry links and QR codes (GR-08, feature/gr-08-09-entry)
+
+- **A link** is a row in the new `entry_links` table: account, code (unique per account, 3 to 40
+  letters, digits, `_` and `-`), name, and the automation it starts. The address is
+  `https://ig.me/m/<username>?ref=<code>` (the account's id when it has no username). The code is
+  made (8 characters, no look-alikes) unless typed, and never changes, so a printed QR code keeps
+  working. Deleting the automation sets the link's automation to null; the link and its counts stay.
+- **Trigger `entry_link`** (the `ck_automations_trigger` check is re-created in migration 0023):
+  the automation needs nothing but a message. It starts from the DM that is the first customer
+  message after a referral whose ref is one of the account's links, within one hour (GR-01's
+  referral window), and only for the automation the link points at.
+  - The run reads the conversation's `last_referral` (GR-01 stores a message's own referral, a
+    `messaging_referral` event, or the contact's recent referral there) in
+    `services/automations/entry`. A later message, an unknown ref or a referral older than an hour
+    starts nothing. Cooldown, read-only and flows work as for any DM trigger.
+  - Entry link and ad click automations run **before** keyword automations in the DM runtime
+    (`matching.runtime_order`: entry, then keywords, then answers-anything). *A link or an ad is the
+    more specific way in, so it wins over a keyword in the first message.*
+  - *A referral that Meta delivers after the first message (GR-01's five-minute upgrade) is not
+    seen: the run looks about a second after the message. Such a conversation is still marked as
+    from the link, but its automation does not start.*
+- **API** (owners and admins): `GET/POST /entry-links`, `GET/PUT/DELETE /entry-links/{id}` and
+  `GET /entry-links/{id}/qr?format=svg|png` (an attachment). A link's automation must be an entry
+  link automation of the same account. Stats per link: `opened_conversations` (conversations whose
+  `entry_source` is link and `entry_ref` is the code) and `runs` (runs of entry link automations on
+  those conversations).
+- **QR codes** use `segno` (new dependency, pure Python, no further dependencies; `uv.lock`
+  updated). Error correction M, 4-module quiet zone, 10 pixels per module.
+- **Web:** Automations has an "Entry links" button to `/automations/entry-links`: create, edit
+  (name and automation), delete, copy link, QR preview and SVG and PNG downloads, and the two
+  counts. The When step has "Instagram entry link"; it has no keywords step.
+- **WhatsApp:** *deviation from the plan, which said `wa.me/<number>?text=<keyword>`.* Automations
+  run on Instagram accounts only (validation refuses a WhatsApp account), so a WhatsApp link would
+  have no automation to start. Links are Instagram only; a WhatsApp prefilled link can come when
+  WhatsApp automations do. *Unverified:* that `ig.me/m/<id>` works for an account without a
+  username.
+- **Unverified (Meta):** that `messaging_referral` arrives for a user opening an `ig.me` link with
+  `?ref=` when a conversation already exists, and the shape of the referral for a first-time user
+  (it is delivered with the first message as `message.referral` in some cases). GR-01's parsing
+  covers both; only a real account settles which one Instagram sends.
+- **Tables:** `entry_links` is in the account purge (it references the account), the isolation
+  seeds (`link_id`, an example body for the write routes) and the account deletion seed.
+- **Migration 0023** (shared with C-085): the trigger check, `automations.ad_ids` and `entry_links`.
+  Expand-only.
+
+## C-085 · Ad clicks (GR-09, feature/gr-08-09-entry)
+
+- **Trigger `ad_click`** answers a DM that is the first customer message after an ad referral
+  (GR-01: an Instagram ad's `message.referral`, or a Click to WhatsApp ad's, recorded as
+  `entry_source` "ad" and `entry_ad_id`). Same timing rule, order and cooldown as C-084. No
+  keywords.
+- **Scope** reuses `post_scope`: "all" answers any ad, "selected" the ad ids in the new
+  `automations.ad_ids` (text[], at most 20, typed by hand in the editor; "next post" is refused).
+  The editor's posts slot reads "On these ads".
+- **Listing ads is not built.** It would need Meta's `ads_read` permission (optional, *unverified*),
+  which would add an App Review item; the plan marked it optional. Ad ids come from Ads Manager.
+- **Attribution:**
+  - the inbox details panel's "Started from" now reads `From an ad: "<title>"` (or "From an ad");
+  - the Home overview periods carry `conversations_from_ads` and `conversations_from_links`
+    (conversations that began in the period, by entry source). *The plan said "a filter in the
+    analytics"; the analytics routes are post-based and have no conversation to filter, so the
+    breakdown is on the overview, where conversations are counted.*
+- **`ctwa_clid`** was already kept by GR-01 in `contacts.last_referral` and
+  `conversations.last_referral` (the referral record), and survives the entry upgrade. Nothing is
+  sent to the Conversions API yet; a later task reads it from there.
+- **WhatsApp:** a Click to WhatsApp referral is stored and shows "From an ad", but WhatsApp has no
+  automations, so the trigger only runs for Instagram ads (click to Instagram DM). *Unverified:*
+  the 72-hour window in which follow-up marketing messages from a Click to WhatsApp conversation
+  are free. No pricing or sending logic depends on it.
+- **Sandbox:** a DM with `referral_source: "ad"`, `ad_id` and `ad_title` (already in GR-01's
+  injector) tests it end to end.
+- **Migration 0023** is shared with C-084.

@@ -244,6 +244,13 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         c=thread.contact_id,
         m=thread.message_ids[0],
     )
+    await execute(  # GR-08: an entry link
+        engine,
+        "INSERT INTO entry_links (workspace_id, social_account_id, code, name)"
+        " VALUES (:w, :a, 'spring', 'Spring')",
+        w=wid,
+        a=account_id,
+    )
     return Seeded(
         conversation_id=thread.conversation_id,
         message_ids=thread.message_ids,

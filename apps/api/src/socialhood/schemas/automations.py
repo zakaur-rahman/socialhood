@@ -15,7 +15,13 @@ from pydantic import Field
 from socialhood.schemas.common import RequestModel, ResponseModel
 
 TriggerName = Literal[
-    "dm_keyword", "comment_keyword", "comment_any", "story_reply", "story_mention"
+    "dm_keyword",
+    "comment_keyword",
+    "comment_any",
+    "story_reply",
+    "story_mention",
+    "entry_link",
+    "ad_click",
 ]
 MatchModeName = Literal["word", "exact", "contains"]
 ActionName = Literal["send_message", "ai_reply"]
@@ -102,6 +108,8 @@ class Automation(ResponseModel):
     # story_heart also sends the heart sticker to the story reply.
     story_ids: list[str] = Field(default_factory=list)
     story_heart: bool = False
+    # GR-09 (ad_click): with post_scope "selected", the ads it answers (typed ad ids).
+    ad_ids: list[str] = Field(default_factory=list)
     cooldown_hours: int
     starts_at: datetime | None = None
     ends_at: datetime | None = None
@@ -179,6 +187,10 @@ class AutomationDefinition(RequestModel):
         default_factory=list, max_length=20
     )
     story_heart: bool = False
+    # GR-09: an ad click automation's chosen ads (post_scope "selected"), typed by hand.
+    ad_ids: list[Annotated[str, Field(min_length=1, max_length=64)]] = Field(
+        default_factory=list, max_length=20
+    )
     cooldown_hours: int = Field(default=24, ge=0, le=72)
     starts_at: datetime | None = None
     ends_at: datetime | None = None

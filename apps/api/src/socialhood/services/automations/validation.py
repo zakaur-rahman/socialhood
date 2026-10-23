@@ -14,6 +14,10 @@ so it cannot carry an image; one set to public reply only needs a public reply.
 Story triggers (GR-06, GR-07) are DM triggers. A story reply takes keywords or none (any reply), and
 its scope is any story or at least one chosen story; a story mention needs nothing but a message.
 
+Entry triggers (GR-08, GR-09) are DM triggers that need no keywords: an entry link automation
+needs nothing but a message (its links are made on the Entry links page); an ad click automation
+answers any ad or at least one chosen ad id.
+
 Tap first (FR-AUT-21, comment triggers sending a message): the private reply is the opening, so
 it needs its text (1,000 bytes at most in its longest rendering with the disclosure line) and a
 button title of 1 to 20 characters; the message follows their answer as a normal DM, so it may
@@ -55,6 +59,8 @@ COPY = {
     "posts_missing": "Choose at least one post.",
     "stories_missing": "Choose at least one story, or answer any story.",
     "story_scope": "A story reply answers any story or the stories you choose.",
+    "ads_missing": "Add at least one ad id, or answer any ad.",
+    "ad_scope": "An ad click answers any ad or the ads you choose.",
     "posts_other_account": "Choose posts from this automation's account.",
     "action_missing": "Choose what the automation does.",
     "ai_instructions_missing": "Tell the AI how to reply, for example what to offer or link to.",
@@ -115,6 +121,7 @@ class Definition:
     ends_at: datetime | None
     surge_order: str = "oldest_first"
     story_ids: Sequence[str] = ()  # GR-06: a story reply's chosen stories
+    ad_ids: Sequence[str] = ()  # GR-09: an ad click's chosen ads
     has_image: bool = False
     confirm_first: bool = False
     opening_text: str | None = None
@@ -193,7 +200,17 @@ def _trigger_errors(d: Definition) -> list[FieldError]:
         errors += _post_errors(d)
     if d.trigger == "story_reply":
         errors += _story_errors(d)
+    if d.trigger == "ad_click":
+        errors += _ad_errors(d)
     return errors
+
+
+def _ad_errors(d: Definition) -> list[FieldError]:
+    if d.post_scope == "next_post":
+        return [FieldError("post_scope", COPY["ad_scope"])]
+    if d.post_scope == "selected" and not d.ad_ids:
+        return [FieldError("ad_ids", COPY["ads_missing"])]
+    return []
 
 
 def _story_errors(d: Definition) -> list[FieldError]:

@@ -317,3 +317,37 @@ describe("story triggers (GR-06, GR-07)", () => {
     expect(stepOfField("story_ids")).toBe("posts");
   });
 });
+
+describe("entry triggers (GR-08, GR-09)", () => {
+  const link = { ...toDefinition(automation({ trigger: "entry_link", keywords: [] })) };
+  const ad = { ...toDefinition(automation({ trigger: "ad_click", keywords: [] })) };
+
+  it("shows the steps each entry trigger uses", () => {
+    expect(visibleSteps("entry_link")).toEqual(["when", "then", "settings"]);
+    expect(visibleSteps("ad_click")).toEqual(["when", "posts", "then", "settings"]);
+  });
+
+  it("needs no keywords, and an ad click needs an ad only when ads are chosen", () => {
+    expect(visibleSteps("entry_link").every((step) => stepComplete(step, { ...link, message_text: "Hi" }))).toBe(true);
+    expect(stepComplete("posts", ad)).toBe(true);
+    expect(stepComplete("posts", { ...ad, post_scope: "selected", ad_ids: [] })).toBe(false);
+    expect(stepComplete("posts", { ...ad, post_scope: "selected", ad_ids: ["123"] })).toBe(true);
+  });
+
+  it("sends the chosen ads only for an ad click, and no keywords for either trigger", () => {
+    const chosen = { ...ad, post_scope: "selected" as const, ad_ids: ["1", "2"], keywords: ["x"] };
+    expect(toRequestBody(chosen)).toMatchObject({ post_scope: "selected", ad_ids: ["1", "2"], keywords: [] });
+    expect(toRequestBody({ ...chosen, post_scope: "all" })).toMatchObject({ post_scope: "all", ad_ids: [] });
+    expect(toRequestBody({ ...chosen, trigger: "entry_link" })).toMatchObject({ post_scope: "all", ad_ids: [], keywords: [] });
+  });
+
+  it("keeps the ads in the definition and moves off the next post", () => {
+    const stored = toDefinition(automation({ trigger: "ad_click", post_scope: "selected", ad_ids: ["9"] }));
+    expect(stored.ad_ids).toEqual(["9"]);
+    expect(triggerPatch({ ...stored, post_scope: "next_post" }, "ad_click")).toEqual({
+      trigger: "ad_click",
+      post_scope: "all",
+    });
+    expect(stepOfField("ad_ids")).toBe("posts");
+  });
+});
