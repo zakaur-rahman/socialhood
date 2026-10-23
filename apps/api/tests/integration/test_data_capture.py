@@ -55,7 +55,14 @@ def question(**kw: Any) -> dict[str, Any]:
     return {
         "start": "q",
         "steps": [
-            {"type": "ask", "id": "q", "text": "Your email?", "expect": "email", **kw},
+            {
+                "type": "ask",
+                "id": "q",
+                "text": "Your email?",
+                "expect": "email",
+                "next": "after",
+                **kw,
+            },
             send("after", "Done."),
         ],
     }
@@ -203,7 +210,7 @@ async def test_a_consent_question_follows_the_answer_and_records_its_evidence(
     assert evidence["message_id"] == str(answer)
     assert evidence["text"] == "Yes"
     assert evidence["channel"] == "instagram"
-    assert evidence["question_message_id"] == str(ask_consent["id"])
+    assert evidence["question_message_id"] == str(again["id"])  # the latest time it was asked
     assert evidence["run_id"] == str(run["id"])
     assert consent["occurred_at"] is not None
     assert (await outbound(world))[-1]["text"] == "Thanks."

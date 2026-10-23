@@ -579,7 +579,8 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         await conn.execute(
             text(
                 "WITH r AS (INSERT INTO automation_runs (workspace_id, automation_id,"
-                " matched_keyword, result) VALUES (:w, :a, 'link', 'sent') RETURNING id),"
+                " trigger_message_id, matched_keyword, result)"
+                " VALUES (:w, :a, :m, 'link', 'sent') RETURNING id),"
                 " l AS (INSERT INTO tracked_links (workspace_id, automation_id, run_id,"
                 " contact_id, step_id, button_index, code, title, url)"
                 " SELECT :w, :a, id, :c, 'hello', 0, 'bbbbbbbbbbbbbbbb', 'Open',"
@@ -587,7 +588,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                 " INSERT INTO link_clicks (workspace_id, link_id, automation_id, run_id,"
                 " contact_id, step_id) SELECT :w, id, :a, run_id, :c, 'hello' FROM l"
             ),
-            {"w": wid, "a": automation, "c": thread.contact_id},
+            {"w": wid, "a": automation, "c": thread.contact_id, "m": thread.message_ids[0]},
         )
     on = {
         "workspace_id": wid,
