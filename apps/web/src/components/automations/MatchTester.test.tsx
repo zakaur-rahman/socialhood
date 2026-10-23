@@ -7,15 +7,19 @@ import { json, renderWithApi, type Call } from "@/test/api";
 
 import { MatchTester } from "./MatchTester";
 
-function renderTester(result: AutomationTestResult, beforeTest = vi.fn(async () => true)) {
+function renderTester(
+  result: Omit<AutomationTestResult, "flow_path"> & Partial<Pick<AutomationTestResult, "flow_path">>,
+  beforeTest = vi.fn(async () => true),
+  isFlow = false,
+) {
   const bodies: unknown[] = [];
   const view = renderWithApi(
-    <MatchTester wid="w1" automationId="au1" trigger="comment_keyword" beforeTest={beforeTest} />,
+    <MatchTester wid="w1" automationId="au1" trigger="comment_keyword" beforeTest={beforeTest} isFlow={isFlow} />,
     {
       handlers: {
         "POST /v1/w/:wid/automations/:id/test": (call: Call) => {
           bodies.push(call.body);
-          return json(result);
+          return json({ flow_path: [], ...result });
         },
       },
     },
@@ -88,6 +92,7 @@ describe("MatchTester (UX-SCR-03 Test)", () => {
               rendered_opening: "Hi there! Tap below and I'll send it over 👇",
               rendered_message: "Hi Priya! Here's the link.",
               rendered_nudge: "Enjoying this? Follow us for more.",
+              flow_path: [],
             } satisfies AutomationTestResult),
         },
       },
@@ -135,5 +140,65 @@ describe("MatchTester (UX-SCR-03 Test)", () => {
     await user.click(screen.getByRole("button", { name: "Test" }));
     expect(await screen.findByText(/aren't saved yet/)).toBeInTheDocument();
     expect(bodies).toEqual([]);
+  });
+  it("a flow: the walk shows one way through, and picking another way tests again", async () => {
+    const user = userEvent.setup();
+    const step = {
+      buttons: [],
+      quick_replies: [],
+      exits: [],
+    };
+    const first = {
+      matched: true,
+      matched_keyword: "link",
+      winner: { id: "au1", name: "Flow" },
+      rendered_message: "Which one?",
+      flow_path: [
+        {
+          ...step,
+          step_id: "ask",
+          kind: "send",
+          title: "Message",
+          text: "Which one?",
+          quick_replies: ["Guide", "Prices"],
+          exits: ["Taps Guide", "Taps Prices", "Types an answer"],
+          picked: 0,
+        },
+        { ...step, step_id: "guide", kind: "send", title: "Message", text: "Here's the guide.", picked: null },
+      ],
+    } satisfies AutomationTestResult;
+    const prices = {
+      ...first,
+      flow_path: [
+        { ...first.flow_path[0], picked: 1 },
+        { ...step, step_id: "prices", kind: "send", title: "Message", text: "Prices start at 499.", picked: null },
+      ],
+    } satisfies AutomationTestResult;
+    const bodies: unknown[] = [];
+    renderWithApi(
+      <MatchTester wid="w1" automationId="au1" trigger="dm_keyword" beforeTest={vi.fn(async () => true)} isFlow />,
+      {
+        handlers: {
+          "POST /v1/w/:wid/automations/:id/test": (call: Call) => {
+            bodies.push(call.body);
+            const picked = (call.body as { choices?: number[] }).choices?.[0];
+            return json(picked === 1 ? prices : first);
+          },
+        },
+      },
+    );
+    await user.click(screen.getByRole("radio", { name: "A DM" }));
+    await user.type(screen.getByRole("textbox", { name: "Message" }), "link");
+    await user.click(screen.getByRole("button", { name: "Test" }));
+
+    const flow = await screen.findByTestId("test-flow");
+    expect(within(flow).getByText("Here's the guide.")).toBeInTheDocument();
+    // The first message is part of the walk, not shown twice.
+    expect(screen.queryByTestId("test-message")).toBeNull();
+    expect(bodies[0]).toMatchObject({ choices: [] });
+
+    await user.selectOptions(within(flow).getByRole("combobox", { name: "Branch 1" }), "Taps Prices");
+    expect(await within(await screen.findByTestId("test-flow")).findByText("Prices start at 499.")).toBeInTheDocument();
+    expect(bodies[1]).toMatchObject({ choices: [1] });
   });
 });

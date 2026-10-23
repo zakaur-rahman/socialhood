@@ -5,10 +5,17 @@ from __future__ import annotations
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.models.inbox import Contact, Conversation, Message, ScheduledMessage
+from socialhood.models.inbox import (
+    Contact,
+    Conversation,
+    Direction,
+    Message,
+    MessageSource,
+    ScheduledMessage,
+)
 
 
 async def get_conversation(
@@ -25,6 +32,32 @@ async def get_message(session: AsyncSession, message_id: uuid.UUID) -> Message |
 
 async def get_contact(session: AsyncSession, contact_id: uuid.UUID) -> Contact | None:
     return (await session.scalars(select(Contact).where(Contact.id == contact_id))).one_or_none()
+
+
+async def has_earlier_inbound_dm(
+    session: AsyncSession, message: Message, contact_id: uuid.UUID
+) -> bool:
+    """GR-12: whether the contact sent this account a customer message before ``message`` (by
+    time, then id, so two arriving together still have one first). Comments are not DMs, so a
+    contact who only commented has none. It reads true history, not the feature's launch, which
+    is why an existing contact's next message gets no welcome."""
+    found = await session.scalar(
+        select(Message.id)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(
+            Conversation.contact_id == contact_id,
+            Message.social_account_id == message.social_account_id,
+            Message.direction == Direction.INBOUND,
+            Message.source == MessageSource.CUSTOMER,
+            Message.id != message.id,
+            or_(
+                Message.occurred_at < message.occurred_at,
+                and_(Message.occurred_at == message.occurred_at, Message.id < message.id),
+            ),
+        )
+        .limit(1)
+    )
+    return found is not None
 
 
 async def get_scheduled(

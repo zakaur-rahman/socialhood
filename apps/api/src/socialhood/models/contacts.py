@@ -9,7 +9,11 @@ PD-10). These tables add:
 - ``contact_consents``: an append-only history of marketing consent per channel. The latest row
   for (contact, channel, purpose) is the current state. Each row says where it came from (a
   platform opt-in, a flow question, a STOP reply, a member) with its evidence, so a broadcast
-  (GR-23) can prove it was allowed.
+  (GR-23) can prove it was allowed;
+- ``contact_segments`` (GR-17): a named, saved contact filter. It stores the filter, not the
+  contacts, so a segment is always the people who match it now;
+- ``lead_stage_changes`` (GR-18): the history of a contact's lead stage (the stage itself is on
+  ``contacts``): from, to, who or what moved it, and why.
 """
 
 from __future__ import annotations
@@ -32,7 +36,7 @@ from sqlalchemy import text as sql
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
-from socialhood.db.base import Base, IdMixin, TimestampMixin
+from socialhood.db.base import Base, CreatedAtMixin, IdMixin, TimestampMixin
 from socialhood.db.tenancy import TenantScoped
 from socialhood.models.identity import _in
 
@@ -67,6 +71,26 @@ class ConsentSource(StrEnum):
     STOP_REPLY = "stop_reply"  # a STOP or unsubscribe reply (GR-23)
     MEMBER = "member"  # recorded by a member, with a note
     IMPORT = "import"
+
+
+class LeadStage(StrEnum):
+    """Where a contact is as a lead (GR-18). The first three are open; won and lost are closed."""
+
+    NEW = "new"
+    QUALIFIED = "qualified"
+    FOLLOW_UP = "follow_up"
+    WON = "won"
+    LOST = "lost"
+
+
+class StageActor(StrEnum):
+    """Who moved a lead: a member, an automation's step, a rule of the product (lead score,
+    intent, a captured email, going cold) or the system."""
+
+    MEMBER = "member"
+    AUTOMATION = "automation"
+    RULE = "rule"
+    SYSTEM = "system"
 
 
 class Tag(IdMixin, TimestampMixin, TenantScoped, Base):
@@ -142,4 +166,50 @@ class ContactConsent(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint(_in("purpose", ConsentPurpose), name="purpose"),
         CheckConstraint(_in("status", ConsentStatus), name="status"),
         CheckConstraint(_in("source", ConsentSource), name="source"),
+    )
+
+
+class ContactSegment(IdMixin, TimestampMixin, TenantScoped, Base):
+    """A saved filter on the contacts page (and, from GR-23, a broadcast's audience). ``filter``
+    holds the same keys as the list's query (schemas.contacts.ContactFilterSpec)."""
+
+    __tablename__ = "contact_segments"
+
+    name: Mapped[str] = mapped_column(Text)
+    filter: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=sql("'{}'::jsonb"))
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+
+    __table_args__ = (
+        Index(
+            "uq_contact_segments_workspace_name", "workspace_id", sql("lower(name)"), unique=True
+        ),
+        CheckConstraint("char_length(name) BETWEEN 1 AND 60", name="name_length"),
+    )
+
+
+class LeadStageChange(IdMixin, CreatedAtMixin, TenantScoped, Base):
+    """One move of a contact's lead stage; append-only. ``rule`` names the rule behind an
+    automatic move (``lead_score``, ``intent``, ``email_captured``, ``gone_cold``) or the
+    automation's id for ``actor_kind = automation``; ``reason`` is a plain sentence."""
+
+    __tablename__ = "lead_stage_changes"
+
+    contact_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("contacts.id", ondelete="CASCADE"))
+    from_stage: Mapped[str] = mapped_column(Text)
+    to_stage: Mapped[str] = mapped_column(Text)
+    actor_kind: Mapped[str] = mapped_column(Text)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    rule: Mapped[str | None] = mapped_column(Text)
+    reason: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        Index("ix_lead_stage_changes_contact", "contact_id", sql("created_at DESC")),
+        CheckConstraint(_in("from_stage", LeadStage), name="from_stage"),
+        CheckConstraint(_in("to_stage", LeadStage), name="to_stage"),
+        CheckConstraint(_in("actor_kind", StageActor), name="actor_kind"),
+        CheckConstraint("reason IS NULL OR char_length(reason) <= 300", name="reason_length"),
     )

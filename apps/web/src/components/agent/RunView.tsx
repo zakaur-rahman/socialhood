@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { ActionCardView } from "./ActionCardView";
 import { AnswerText, SourcesList } from "./AnswerText";
 import { StepList, WorkingSteps } from "./StepList";
+import { VisualView } from "./VisualView";
 
 export type RunContext = {
   wid: string;
@@ -95,6 +96,9 @@ function Finished({
   const outcome = runOutcome(run.status, run.error);
   const answer = run.answer?.trim() ? run.answer : null;
   const followUps = latest && answer && context.onAsk ? followUpsFor(run.answer_refs, run.request) : [];
+  // GR-38: cards, a ranking or a sentiment bar the API built from the tools' numbers; none when its
+  // visuals setting is off, or for a run from before it existed.
+  const visuals = run.visuals ?? [];
 
   return (
     <div className="min-w-0 flex-1 space-y-3" data-testid="run-result">
@@ -116,6 +120,13 @@ function Finished({
         <div role="status" aria-busy="true" aria-label="Getting the answer" className="space-y-2 pt-1">
           <Skeleton className="h-3 w-5/6" />
           <Skeleton className="h-3 w-2/3" />
+        </div>
+      ) : null}
+      {visuals.length > 0 ? (
+        <div className="space-y-3" data-testid="run-visuals">
+          {visuals.map((visual, index) => (
+            <VisualView key={`${visual.kind}:${index}`} visual={visual} slug={slug} onNavigate={onNavigate} />
+          ))}
         </div>
       ) : null}
       {run.action_cards.length > 0 ? (

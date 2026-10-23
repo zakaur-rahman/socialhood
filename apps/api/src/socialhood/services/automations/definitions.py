@@ -497,6 +497,8 @@ async def activate(
     ]
     if errors:
         raise ApiError("validation_error", ACTIVATE_DETAIL, errors=errors)
+    if automation.flow_version is not None:  # GR-13: a flow saved before a downgrade
+        flow_store.check_step_cap((await flow_store.current(session, automation))[0], plan)
     if automation.social_account_id is not None:  # FR-BIL-07: a read-only account can't send
         account = await social_accounts.get(session, automation.social_account_id)
         if account is not None:

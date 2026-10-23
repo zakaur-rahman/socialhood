@@ -9,6 +9,12 @@ not_found, never 403, so another member's run can't be probed (TR-API-03).
 
 A run's action cards come from its succeeded draft steps, in step order (FR-AGT-03); its steps
 show the tool in plain words (agent/progress.py).
+
+A run's visuals (GR-38) come from the ``visual`` its succeeded tool steps stored, in step order, at
+most MAX_VISUALS: one that doesn't validate with the current models is dropped, a second sentiment
+summary of the same scope replaces the first (it has the topics), and an identical one is shown
+once. With the ``agent_visuals_enabled`` setting off they aren't read at all: ``visuals`` is []. A
+step's own ``result`` never carries its visual (``step_out``).
 """
 
 from __future__ import annotations
@@ -20,7 +26,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.agent import progress
+from socialhood.agent import progress, visuals
 from socialhood.agent.planner import current_tools
 from socialhood.ai.metering import quota
 from socialhood.auth.deps import ROLE_RANK, WorkspaceContext
@@ -58,11 +64,38 @@ def _cards(results: list[dict[str, Any]]) -> list[Any]:
     return [r["action_card"] for r in results if isinstance(r.get("action_card"), dict)]
 
 
+def shown_visuals(stored: list[Any]) -> list[schemas.Visual]:
+    """The valid stored visuals, in step order, deduplicated and capped (module docstring)."""
+    found: list[schemas.Visual] = []
+    for raw in stored:
+        visual = visuals.read(raw)
+        if visual is None:
+            continue
+        same = next((i for i, other in enumerate(found) if _same(other, visual)), None)
+        if same is None:
+            found.append(visual)
+        else:
+            found[same] = visual
+    return found[: schemas.MAX_VISUALS]
+
+
+def _same(a: schemas.Visual, b: schemas.Visual) -> bool:
+    """The same answer drawn twice: identical, or a sentiment summary of the same scope."""
+    if a == b:
+        return True
+    return (
+        isinstance(a, schemas.SentimentSummaryVisual)
+        and isinstance(b, schemas.SentimentSummaryVisual)
+        and a.scope == b.scope
+    )
+
+
 def run_out(
     row: AgentRun,
     *,
     names: dict[uuid.UUID, str | None],
     drafts: dict[uuid.UUID, list[dict[str, Any]]],
+    stored_visuals: dict[uuid.UUID, list[Any]] | None = None,
 ) -> schemas.AgentRun:
     requester = row.requested_by_user_id
     return schemas.AgentRun.model_validate(
@@ -79,6 +112,7 @@ def run_out(
             "answer": row.answer,
             "answer_refs": row.answer_refs or [],
             "action_cards": _cards(drafts.get(row.id, [])),
+            "visuals": shown_visuals((stored_visuals or {}).get(row.id, [])),
             "credits": row.credits or 0,
             "error": progress.error_info(row.error_code, row.error_message),
             "created_at": row.created_at,
@@ -86,6 +120,14 @@ def run_out(
             "completed_at": row.completed_at,
         }
     )
+
+
+def _without_visual(result: dict[str, Any] | None) -> dict[str, Any] | None:
+    """A step's result without its ``visual``: the run's ``visuals`` is where the web reads it, so
+    the step doesn't carry the same payload twice (and, with the setting off, none leaks)."""
+    if result is None or "visual" not in result:
+        return result
+    return {k: v for k, v in result.items() if k != "visual"}
 
 
 def step_out(step: AgentStep) -> schemas.AgentStep:
@@ -100,7 +142,7 @@ def step_out(step: AgentStep) -> schemas.AgentStep:
             "status": step.status,
             "args": step.args or {},
             "summary": progress.step_summary(step.result),
-            "result": step.result,
+            "result": _without_visual(step.result),
             "decision": step.decision,
             "verification": step.verification,
             "attempts": step.attempts or 0,
@@ -112,14 +154,20 @@ def step_out(step: AgentStep) -> schemas.AgentStep:
     )
 
 
-async def runs_out(session: AsyncSession, rows: list[AgentRun]) -> list[schemas.AgentRun]:
+async def runs_out(
+    session: AsyncSession, rows: list[AgentRun], *, with_visuals: bool = False
+) -> list[schemas.AgentRun]:
+    """``with_visuals``: the agent_visuals_enabled setting; off, stored visuals aren't read."""
     names = await repo.user_names(session, [r.requested_by_user_id for r in rows])
     drafts = await repo.draft_results(session, [r.id for r in rows])
-    return [run_out(r, names=names, drafts=drafts) for r in rows]
+    stored = await repo.visual_results(session, [r.id for r in rows]) if with_visuals else None
+    return [run_out(r, names=names, drafts=drafts, stored_visuals=stored) for r in rows]
 
 
-async def detail_out(session: AsyncSession, row: AgentRun) -> schemas.AgentRunDetail:
-    [base] = await runs_out(session, [row])
+async def detail_out(
+    session: AsyncSession, row: AgentRun, *, with_visuals: bool = False
+) -> schemas.AgentRunDetail:
+    [base] = await runs_out(session, [row], with_visuals=with_visuals)
     steps = await repo.steps_of(session, row.id)
     return schemas.AgentRunDetail.model_validate(
         {
@@ -183,6 +231,7 @@ async def list_runs(
     limit: int,
     statuses: Sequence[str] = (),
     q: str | None = None,
+    with_visuals: bool = False,
 ) -> schemas.AgentRunList:
     """Newest first. A thread is always the caller's own; without one, owners and admins see
     every run. ``statuses`` and ``q`` narrow the list (Settings → Agent's history, C-066)."""
@@ -198,7 +247,7 @@ async def list_runs(
     )
     page = rows[:limit]
     return schemas.AgentRunList(
-        items=await runs_out(session, page),
+        items=await runs_out(session, page, with_visuals=with_visuals),
         next_cursor=(
             encode_cursor(page[-1].created_at, page[-1].id) if len(rows) > limit else None
         ),

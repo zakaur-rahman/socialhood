@@ -142,9 +142,23 @@ class Contact(IdMixin, TimestampMixin, TenantScoped, Base):
     phone_source: Mapped[str | None] = mapped_column(Text)
     phone_verified: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GR-18: where they are as a lead (models.contacts.LeadStage), when and why it last changed,
+    # and when the gone-cold job flagged them (cold while that is later than their last message).
+    lead_stage: Mapped[str] = mapped_column(Text, server_default=sql("'new'"), default="new")
+    lead_stage_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    lead_stage_reason: Mapped[str | None] = mapped_column(Text)
+    lead_cold_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "platform_user_id"),
+        Index("ix_contacts_lead_stage", "workspace_id", "lead_stage"),
+        CheckConstraint(
+            "lead_stage IN ('new', 'qualified', 'follow_up', 'won', 'lost')", name="lead_stage"
+        ),
+        CheckConstraint(
+            "lead_stage_reason IS NULL OR char_length(lead_stage_reason) <= 300",
+            name="lead_stage_reason_length",
+        ),
         Index(
             "ix_contacts_search_trgm",
             sql("(coalesce(display_name, '') || ' ' || coalesce(username, '')) gin_trgm_ops"),

@@ -152,6 +152,8 @@ def _trigger(value: str | None) -> TriggerName:
         "entry_link",
         "ad_click",
         "ice_breaker",
+        "first_message",
+        "default_reply",
     ):
         return cast(TriggerName, value)
     return "comment_keyword" if value == "comment_keyword" else "dm_keyword"

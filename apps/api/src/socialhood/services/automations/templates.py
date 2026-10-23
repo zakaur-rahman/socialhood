@@ -198,6 +198,31 @@ TEMPLATES: tuple[Template, ...] = (
         ),
         message_buttons=(Button("Claim your reward"),),
     ),
+    Template(
+        key="welcome_new_contacts",
+        name="Welcome new contacts",
+        outcome="Greet everyone the first time they DM you",
+        category="grow",
+        icon="hand",
+        trigger="first_message",
+        action="send_message",
+        message_text=(
+            "Hi {first_name|there}! Thanks for getting in touch. We'll reply as soon as we can."
+        ),
+    ),
+    Template(
+        key="default_reply_when_ai_off",
+        name="Default reply",
+        outcome="Answer DMs nothing else answers, while AI replies are off",
+        category="support",
+        icon="message-square-reply",
+        trigger="default_reply",
+        action="send_message",
+        message_text=(
+            "Hi {first_name|there}! Thanks for your message. A person will get back to you soon."
+        ),
+        cooldown_hours=12,
+    ),
 )
 
 BY_KEY: dict[str, Template] = {t.key: t for t in TEMPLATES}

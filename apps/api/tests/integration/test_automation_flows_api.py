@@ -12,7 +12,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from tests.support.api import Clerk
-from tests.support.automation_api import LINK, Ws, make_run, workspace
+from tests.support.automation_api import LINK, Ws, make_run, set_plan, workspace
 from tests.support.ingest import rows
 
 
@@ -210,3 +210,70 @@ async def test_a_copy_takes_the_flow(ws: Ws) -> None:
 async def test_another_workspaces_automation_has_no_flow(ws: Ws) -> None:
     missing = await ws.call("GET", f"/automations/{uuid.uuid4()}/flow")
     assert missing.status_code == 404
+
+
+# ---------------------------------------------------------------- the flow editor (GR-13)
+
+
+def linear(count: int) -> dict[str, Any]:
+    """A flow of ``count`` messages, one after the other."""
+    steps = [
+        {"type": "send", "id": f"s{i}", "text": f"Message {i}", "next": f"s{i + 1}"}
+        for i in range(count - 1)
+    ]
+    steps.append({"type": "send", "id": f"s{count - 1}", "text": "The last one"})
+    return {"start": "s0", "steps": steps}
+
+
+async def test_the_free_plan_caps_a_flow_at_five_steps(ws: Ws, engine: AsyncEngine) -> None:
+    """PD-5 (pending): every plan can branch; Free is capped, with a plain 402."""
+    draft = await ws.draft()
+    path = f"/automations/{draft['id']}/flow"
+    await ws.ok("PUT", path, json=linear(5))
+    refused = await ws.call("PUT", path, json=linear(6))
+    assert refused.status_code == 402
+    body = refused.json()
+    assert (body["code"], body["entitlement"], body["limit"]) == ("quota_exceeded", "flow_steps", 5)
+    assert "5 steps in a flow" in body["detail"]
+    # The stored flow is untouched by the refusal.
+    assert len((await ws.ok("GET", path))["definition"]["steps"]) == 5
+
+    await set_plan(engine, ws.wid, "pro")
+    assert (await ws.ok("PUT", path, json=linear(6)))["source"] == "flow"
+
+
+async def test_a_flow_over_the_plan_cap_does_not_activate(ws: Ws, engine: AsyncEngine) -> None:
+    """A flow saved on Pro, then a downgrade: activation says so rather than running it."""
+    draft = await ws.draft()
+    await set_plan(engine, ws.wid, "pro")
+    await ws.ok("PUT", f"/automations/{draft['id']}/flow", json=linear(7))
+    await set_plan(engine, ws.wid, "free")
+    refused = await ws.call("POST", f"/automations/{draft['id']}/activate")
+    assert refused.status_code == 402
+    assert refused.json()["entitlement"] == "flow_steps"
+
+
+async def test_the_test_walks_a_flow_dry(ws: Ws) -> None:
+    draft = await ws.draft()
+    await ws.ok("PUT", f"/automations/{draft['id']}/flow", json=two_branch())
+    path = f"/automations/{draft['id']}/test"
+    first = await ws.ok("POST", path, json={"kind": "dm", "text": "link please"})
+    assert [s["step_id"] for s in first["flow_path"]] == ["hello", "email", "catalogue"]
+    hello = first["flow_path"][0]
+    assert hello["quick_replies"] == ["Catalogue", "Prices"]
+    assert hello["exits"] == ["Taps Catalogue", "Taps Prices", "Types an answer"]
+    assert hello["picked"] == 0
+    assert hello["text"].startswith("Hi Priya!")
+
+    prices = await ws.ok("POST", path, json={"kind": "dm", "text": "link", "choices": [1]})
+    assert [(s["step_id"], s["picked"]) for s in prices["flow_path"]] == [
+        ("hello", 1),
+        ("prices", None),
+    ]
+
+    # A settings automation has no flow path: its message is the whole test.
+    plain = await ws.draft()
+    result = await ws.ok(
+        "POST", f"/automations/{plain['id']}/test", json={"kind": "dm", "text": "link"}
+    )
+    assert result["flow_path"] == []

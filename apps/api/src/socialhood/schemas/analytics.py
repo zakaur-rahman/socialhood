@@ -147,3 +147,69 @@ class TopPosts(ResponseModel):
     until: date
     considered: int  # posts in the range that have the metric: the sample size
     items: list[TopPost]  # best first
+
+
+# ---- account metrics (GR-38): what an account did over a period, from account_daily_metrics
+# (insights and followers, one row per account per day) and the comment and message tables.
+
+# Sums over the period's days, except ``followers``, which is the latest reading in the period.
+# ``comments`` and ``messages_received`` count rows, so every day is known.
+AccountMetricName = Literal[
+    "reach",
+    "views",
+    "accounts_engaged",
+    "interactions",
+    "followers",
+    "follows",
+    "unfollows",
+    "profile_link_taps",
+    "comments",
+    "messages_received",
+]
+# Why a figure is None: the account hasn't granted insights, no day of the period has a reading
+# yet, or no Instagram account is connected.
+MetricGap = Literal["insights_not_granted", "no_readings", "no_account"]
+ChangeDirection = Literal["up", "down", "flat"]
+
+
+class DaySpan(ResponseModel):
+    """Calendar days in the workspace's zone, both included."""
+
+    since: date
+    until: date
+    days: int
+
+
+class PeriodFigure(ResponseModel):
+    """One metric over one period. ``value`` is None when it isn't known (``unavailable`` says
+    why), never 0. With gaps it sums the days that have a reading: ``days_known`` of
+    ``days_total``."""
+
+    value: float | None = None
+    days_known: int
+    days_total: int
+    unavailable: MetricGap | None = None
+
+
+class AccountMetricFigure(ResponseModel):
+    """A metric for the period and, when asked, the period before. ``change_pct`` is
+    (current - previous) / previous x 100 to one decimal, computed here: None when either side is
+    unknown, the previous value is 0, or the periods aren't comparable."""
+
+    metric: AccountMetricName
+    current: PeriodFigure
+    previous: PeriodFigure | None = None
+    change_pct: float | None = None
+    direction: ChangeDirection | None = None  # flat under 0.5%; None when either side is unknown
+
+
+class AccountMetrics(ResponseModel):
+    """GET …/analytics/account-metrics: an account's (or every account's) figures for a period,
+    optionally against another. ``comparable`` is False when the two periods differ in length: the
+    figures are still given, but no change is computed."""
+
+    account_id: uuid.UUID | None = None
+    period: DaySpan
+    previous_period: DaySpan | None = None
+    comparable: bool
+    figures: list[AccountMetricFigure]

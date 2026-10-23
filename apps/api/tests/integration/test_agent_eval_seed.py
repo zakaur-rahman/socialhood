@@ -237,3 +237,50 @@ async def test_a_member_cant_use_the_admin_tools(shop: Shop) -> None:
         with pytest.raises(ApiError) as refused:
             await call(shop, name, role=Role.AGENT, **args)
         assert refused.value.code == "forbidden"
+
+
+async def test_account_metrics_match_the_seed(shop: Shop) -> None:
+    """GR-38: compare_periods and metric_trend read the seeded account days like the eval expects:
+    this month so far (1-29 Sep, today has no row) against the same days of August."""
+    (cur, prev) = S.matched_months()
+    found = await call(
+        shop,
+        "compare_periods",
+        range="this month",
+        compare_to="last month",
+        metrics=["reach", "views", "followers", "comments"],
+    )
+    assert (found.current.since, found.current.until) == cur
+    assert (found.previous.since, found.previous.until) == prev
+    by_name = {m.metric: m for m in found.metrics}
+    for name in ("reach", "views"):
+        assert by_name[name].current == S.account_total(name, *cur), name
+        assert by_name[name].previous == S.account_total(name, *prev), name
+        assert by_name[name].change_pct == S.change_pct(
+            S.account_total(name, *cur), S.account_total(name, *prev)
+        )
+    assert by_name["followers"].current == S.account_followers_at(*cur)
+    assert by_name["followers"].previous == S.account_followers_at(*prev)
+    assert by_name["comments"].current == S.comments_total(*cur)
+    assert by_name["comments"].previous == S.comments_total(*prev)
+    # 12 and 13 Sep have no row: the reach total counts 27 of 29 days and says so.
+    assert by_name["reach"].current_days == "27 of 29 days"
+
+    trend = await call(shop, "metric_trend", metric="reach", range="the last 30 days")
+    assert trend.granularity == "day"
+    assert (trend.first.value, trend.last.value) == (  # type: ignore[union-attr]
+        S.account_total("reach", cur[0], cur[0]),
+        S.account_total("reach", cur[1], cur[1]),
+    )
+    assert trend.known_points == 27
+
+    cakes = await call(
+        shop,
+        "compare_periods",
+        range="this month",
+        compare_to="last month",
+        metrics=["reach"],
+        account="maple.cakes",
+    )
+    assert cakes.metrics[0].current is None
+    assert "Insights aren't granted for @maple.cakes" in (cakes.metrics[0].unavailable or "")

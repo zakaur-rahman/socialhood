@@ -18,6 +18,7 @@ from typing import Annotated, Literal
 from pydantic import Field, StringConstraints
 
 from socialhood.schemas.common import RequestModel, ResponseModel
+from socialhood.schemas.contacts import LeadStageName
 
 FLOW_SCHEMA_VERSION = 1
 MAX_STEPS = 50  # per flow; a plan cap may lower it (PD-5)
@@ -123,13 +124,21 @@ class LeadScoreCondition(RequestModel):
     at_least: int = Field(ge=0, le=100)
 
 
+class LeadStageCondition(RequestModel):
+    """Whether the contact's lead stage (GR-18) is any of ``stages``, read when the step runs."""
+
+    kind: Literal["lead_stage"] = "lead_stage"
+    stages: list[LeadStageName] = Field(min_length=1, max_length=5)
+
+
 Condition = Annotated[
     TagCondition
     | FieldCondition
     | ContactCondition
     | FollowsCondition
     | PlatformCondition
-    | LeadScoreCondition,
+    | LeadScoreCondition
+    | LeadStageCondition,
     Field(discriminator="kind"),
 ]
 

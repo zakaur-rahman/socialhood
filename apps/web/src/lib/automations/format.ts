@@ -27,6 +27,8 @@ export const TRIGGER_LABEL: Record<TriggerName, string> = {
   entry_link: "Entry link",
   ad_click: "Ad click",
   ice_breaker: "Conversation starter",
+  first_message: "First message",
+  default_reply: "Default reply",
 };
 
 /** Where the trigger is named: the editor, the gallery and the list's filter say which network (UI-064). */
@@ -39,6 +41,8 @@ export const TRIGGER_LABEL_IG: Record<TriggerName, string> = {
   entry_link: "Instagram entry link",
   ad_click: "Instagram ad click",
   ice_breaker: "Instagram conversation starter",
+  first_message: "First message (welcome)",
+  default_reply: "Any other message (default reply)",
 };
 
 export const MATCH_LABEL: Record<MatchMode, string> = {
@@ -113,6 +117,8 @@ export function triggerSummary(
     return scope === "selected" ? `Ad click on ${plural(ads.length, "ad", "ads")}` : "Ad click on any ad";
   }
   if (trigger === "ice_breaker") return "Conversation starter";
+  if (trigger === "first_message") return "First message (welcome)";
+  if (trigger === "default_reply") return "Default reply";
   if (trigger === "story_reply") {
     const stories = automation.story_ids ?? [];
     return scope === "selected" ? `Story reply on ${plural(stories.length, "story", "stories")}` : "Story reply to any story";

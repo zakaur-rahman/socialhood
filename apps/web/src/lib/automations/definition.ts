@@ -40,6 +40,22 @@ export function isEntryTrigger(trigger: TriggerName | null | undefined): boolean
   return trigger === "entry_link" || trigger === "ad_click";
 }
 
+/** The welcome and the default reply answer a DM by who sent it and what came before, not by its words (GR-12). */
+export function isFallbackTrigger(trigger: TriggerName | null | undefined): boolean {
+  return trigger === "first_message" || trigger === "default_reply";
+}
+
+/** Triggers that take no keywords: they answer every event of their kind. */
+export function takesNoKeywords(trigger: TriggerName | null | undefined): boolean {
+  return (
+    trigger === "comment_any" ||
+    trigger === "story_mention" ||
+    trigger === "ice_breaker" ||
+    isEntryTrigger(trigger) ||
+    isFallbackTrigger(trigger)
+  );
+}
+
 type TapFirstFields = Pick<AutomationDefinition, "trigger" | "action" | "confirm_first">;
 
 /** Tap first applies to comment triggers that send a message (FR-AUT-21). */
@@ -134,11 +150,7 @@ export function toRequestBody(draft: AutomationDefinition): AutomationDefinition
   return {
     ...draft,
     name: draft.name.trim() || DEFAULT_NAME,
-    keywords:
-      draft.trigger === "comment_any" || draft.trigger === "story_mention" || isEntryTrigger(draft.trigger) ||
-      draft.trigger === "ice_breaker"
-        ? []
-        : (draft.keywords ?? []),
+    keywords: takesNoKeywords(draft.trigger) ? [] : (draft.keywords ?? []),
     message_buttons: buttons,
     public_reply_texts: comment ? (draft.public_reply_texts ?? []).map((text) => text.trim()).filter(Boolean) : [],
     post_scope: liveOnly
@@ -176,6 +188,8 @@ export function visibleSteps(trigger: TriggerName | null | undefined): StepId[] 
     case "story_mention":
     case "entry_link":
     case "ice_breaker":
+    case "first_message":
+    case "default_reply":
       return ["when", "then", "settings"];
     case "ad_click":
       return ["when", "posts", "then", "settings"];
@@ -315,6 +329,7 @@ const FIELD_STEP: Record<string, StepId | "name"> = {
   starts_at: "settings",
   ends_at: "settings",
   surge_order: "settings",
+  flow: "then", // GR-13: flow.steps.2.text
 };
 
 /** "message_buttons.0.url" belongs to Then; unknown fields to none. */

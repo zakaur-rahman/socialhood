@@ -10,7 +10,8 @@ automation without tap first, which never hears back from the person). Messages,
 the nudge carry the disclosure line.
 
 An automation saved as a flow (GR-03) shows its first message as the message, with the public
-reply; what follows depends on the person's answers.
+reply, and (GR-13) ``flow_path``: the steps one run would take, following ``choices`` at each fork
+(services/automations/flow_preview), so the Test tab walks the whole flow dry.
 
 The automation under test is treated as live, so a draft can be tried before it is activated; the
 other candidates are the account's active automations inside their run window, as the runtime
@@ -23,6 +24,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError, FieldError
@@ -30,7 +32,12 @@ from socialhood.models.automations import Automation, AutomationStatus
 from socialhood.models.media import MediaItem
 from socialhood.repositories import automations as repo
 from socialhood.repositories.automations import PostRow
-from socialhood.schemas.automations import AutomationTest, AutomationTestResult, WinningAutomation
+from socialhood.schemas.automations import (
+    AutomationTest,
+    AutomationTestResult,
+    FlowPreviewStep,
+    WinningAutomation,
+)
 from socialhood.schemas.flows import AskStep, SendStep
 from socialhood.services.automations import actions, matching, render, windows
 from socialhood.services.automations.queries import candidate
@@ -41,7 +48,7 @@ SAMPLE_USERNAME = "priya.shah"
 # A story reply and a story mention arrive as DMs (GR-06, GR-07). The test cannot tell a plain DM
 # from a story reply, so it treats the text as a story reply for those triggers.
 TRIGGERS_FOR = {
-    "dm": ("dm_keyword", "story_reply", "story_mention"),
+    "dm": ("dm_keyword", "story_reply", "story_mention", "first_message", "default_reply"),
     "comment": ("comment_keyword", "comment_any"),
 }
 
@@ -58,6 +65,7 @@ class _Rendered:
     public: str | None = None
     opening: str | None = None
     nudge: str | None = None
+    path: tuple[FlowPreviewStep, ...] = ()
 
 
 def _rendered(automation: Automation, body: AutomationTest, disclosure: str | None) -> _Rendered:
@@ -91,7 +99,8 @@ async def _rendered_for(
 ) -> _Rendered:
     if automation.flow_version is None:
         return _rendered(automation, body, disclosure)
-    from socialhood.services.automations import flow_store
+    from socialhood.models.contacts import Tag
+    from socialhood.services.automations import flow_preview, flow_store
 
     definition, _, _ = await flow_store.current(session, automation)
     first_name, username = _sample(body)
@@ -102,7 +111,16 @@ async def _rendered_for(
             render.render(start.text, first_name=first_name, username=username), disclosure
         )
     public = _rendered(automation, body, disclosure).public
-    return _Rendered(message=message, public=public)
+    tag_names = {row.id: row.name for row in (await session.execute(select(Tag.id, Tag.name)))}
+    path = flow_preview.preview(
+        definition,
+        choices=body.choices,
+        first_name=first_name,
+        username=username,
+        disclosure=disclosure,
+        tag_names=tag_names,
+    )
+    return _Rendered(message=message, public=public, path=tuple(path))
 
 
 def _in_scope(automation: Automation, posts: Sequence[PostRow], item: MediaItem | None) -> bool:
@@ -149,6 +167,7 @@ async def run(
             rendered_public_reply=rendered.public,
             rendered_opening=rendered.opening,
             rendered_nudge=rendered.nudge,
+            flow_path=list(rendered.path),
         )
 
     account_id, trigger = automation.social_account_id, automation.trigger

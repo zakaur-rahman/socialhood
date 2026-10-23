@@ -248,6 +248,7 @@ async function main() {
     TOKEN_ENCRYPTION_KEYS: fernetKey(),
     SANDBOX_PLATFORM_ENABLED: "true",
     WEBHOOKS_ALLOW_PRIVATE: "true", // GR-04: the e2e receiver is local
+    AGENT_VISUALS_ENABLED: "true", // GR-38: runs carry their visuals
     // Every test signs in as the one e2e user, from 3 workers at once: together they pass the
     // per-user 300 a minute (TR-API-07), which tests/integration/test_rate_limits.py covers.
     RATE_LIMITS_ENABLED: "false",

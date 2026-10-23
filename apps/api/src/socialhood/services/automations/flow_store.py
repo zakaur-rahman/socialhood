@@ -9,6 +9,8 @@ automation_flows). Saving:
 - changes the current version in place until a run has started on it, then makes the next one;
 - sets the automation's action from the flow (``ai_reply`` when it has an AI reply), so the AI
   entitlement and the private-reply queue see it as before.
+- keeps a flow within the plan's ``flow_steps`` (402 quota_exceeded, PD-5 pending); the same check
+  runs on activation, for a flow saved before a downgrade.
 Going back to the settings (DELETE) keeps the saved versions for the runs that follow them.
 """
 
@@ -22,6 +24,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.entitlements import quota_error
+from socialhood.billing.plans import entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.automations import (
     Automation,
@@ -36,6 +40,24 @@ from socialhood.schemas.flows import AiReplyStep, Flow, FlowDefinition, FlowSour
 from socialhood.services.automations import definitions, flows, validation
 
 KEEP_COMPLETE_DETAIL = definitions.KEEP_COMPLETE_DETAIL
+
+
+def step_cap(plan: str) -> int | None:
+    """The most steps a flow may have on ``plan`` (None: no plan cap). PD-5, pending."""
+    limit = entitlement(plan, "flow_steps")
+    return None if limit is None else int(limit)
+
+
+def check_step_cap(definition: FlowDefinition, plan: str) -> None:
+    """Raise 402 quota_exceeded when the flow has more steps than the plan allows."""
+    limit = step_cap(plan)
+    if limit is not None and len(definition.steps) > limit:
+        raise quota_error(
+            "flow_steps",
+            limit,
+            f"Your plan includes {limit} steps in a flow, and this one has "
+            f"{len(definition.steps)}. Remove some, or upgrade to add more.",
+        )
 
 
 async def _context_parts(
@@ -112,6 +134,7 @@ async def save(
     definition: FlowDefinition,
     *,
     user_id: uuid.UUID,
+    plan: str,
     disclosure: str | None,
     now: datetime,
 ) -> Automation:
@@ -120,6 +143,7 @@ async def save(
         flows.graph(definition)
     except flows.FlowError as error:
         raise ApiError("validation_error", errors=error.errors) from error
+    check_step_cap(definition, plan)
     if errors := await _image_errors(session, definition):
         raise ApiError("validation_error", errors=errors)
     if automation.status == AutomationStatus.ACTIVE:

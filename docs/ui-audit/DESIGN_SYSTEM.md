@@ -158,6 +158,13 @@ sentiment bar and card, the automation stats and the trend line read them; `toke
 the pattern from the automation stats: colour plus a legend plus numbers in text, and an `sr-only`
 table or `role="img"` with a label.
 
+**Visual answers in Ask (GR-38).** The visuals the agent shows (§8.2, "Visual answers") draw only
+with these aliases and existing components. They have no chart of their own yet: a comparison is
+cards with a change chip, a ranking is a table, sentiment is the existing split bar. When a trend
+line arrives (VIS-07) it is one hand-built SVG series: `chart-series-1` for the current period,
+`chart-neutral` for the previous, a `role="img"` with a label that gives the first, last, lowest
+and highest points, and the numbers in text beside it. A second hue is an owner decision (C-075).
+
 ### 1.9 Gradients
 
 Four gradients, each with one job; stops reference tokens (no hex in `@utility`). No new gradients.
@@ -551,6 +558,7 @@ and one safety net in `globals.css`:
 | Skeleton | `ui/skeleton` | default `bg-raised`, pulse `motion-safe` | 114 overrides | Change |
 | Avatar | `ui/avatar` with `AvatarBadge`; product wrapper `ContactAvatar` | `size`, `platform` | AccountAvatar, AccountCard inline, marketing Avatar (D18) | Change |
 | Empty and error states | `states/EmptyState`, `states/ErrorState` | `size`: `default`, `compact` | 13 inline versions (D17) | Change |
+| Visual answers (Ask, GR-38) | `agent/VisualView` (wraps one visual in an error boundary and switches on its `kind`) with `visuals/MetricComparison`, `visuals/RankedPosts`, `visuals/SentimentSummary` | `kind`: `metric_comparison`, `ranked_posts`, `sentiment_summary` (a closed set; an unknown one draws nothing). **States:** values; a figure that isn't available shows "—" and the API's reason (never 0); gaps say "21 of 22 days"; periods of different length show totals without a change; no rows or no analysed comments have their own line. **Tokens:** only the chart aliases (§1.8); a change chip's tone is the API's (more unfollows is bad), not the arrow's. **Responsive:** `MetricComparison` is a list of `MetricTile`s that follows its own column (`@container`: one column under 20 rem, two to 42 rem, then three), so it works at 375 px and in the Ask panel; `RankedPosts` is a `Table` that scrolls inside its card. **A11y:** each visual is a named `section`, the bar is `role="img"` with its counts, the table has a caption, change words are `sr-only`. **Safety:** customer text (captions, topics) is plain text, a picture is shown only if its address is https, and a render error hides the visual and reports it to Sentry (tag `visual_kind`) while the answer stays | one-off cards in the answer text | Add |
 
 ### 8.3 Interaction states
 

@@ -2009,3 +2009,380 @@ failures; now they can see them. A read model over existing tables: no migration
 - **Deviation from the plan:** the plan said "Settings or Automations"; it lives under
   Automations, beside the automations it starts.
 - **Migration 0024** (shared with C-086).
+## C-088 · Welcome and default replies (GR-12, feature/gr-12-welcome-default)
+
+- **Two triggers, both DMs, no keywords:** `first_message` (a welcome) and `default_reply`. They
+  use the existing DM path: `runtime.dm_triggers` lists them for an ordinary DM, `_match_dm` keeps
+  them only when they apply, and `matching.runtime_order` puts them last. Flows, AI-reply actions,
+  cooldowns, the read-only account check and run records work as for any DM automation.
+- **First message means:** the contact has no earlier inbound customer message to this account
+  (`repositories/inbox.has_earlier_inbound_dm`: earlier by time, then id, across the contact's
+  conversations on the account).
+  - It reads true history, so contacts who existed before the feature shipped are not welcomed on
+    their next message.
+  - A contact who only commented has no DM yet, so their first DM is welcomed.
+  - Any earlier customer message counts, including a story reply or mention.
+- **Default reply means:** an ordinary DM that no automation matched, while the conversation's
+  effective AI mode is Off (`conversations.ai_mode_override`, else `social_accounts.ai_mode`, as
+  the suggestions code resolves it).
+  - `ai_paused_until` is not read: a pause means a person is handling it, and with Suggest or Auto
+    the mode is not Off anyway.
+  - *The plan's Auto is not checked against the plan's entitlement: an account on Auto without
+    the entitlement gets no default reply.*
+- **Order and precedence (decision):** keyword and any-reply automations go first. The welcome and
+  default reply answer only a DM that none of them matched.
+  - A keyword that matched but was on cooldown still counts as matched, so a repeated question
+    does not get "we did not understand".
+  - If both fallbacks apply (a first DM, AI off), the welcome answers and the default reply does
+    not. The next DM is not a first message, so the default reply answers it.
+  - Why: one automatic message per DM, and the specific answer beats the generic one.
+- **Never fire on:** a story reply or mention, a postback or ice breaker tap, a quick reply tap,
+  a message that answers a waiting flow step or tap-first opening, or one already handled. Our own
+  echoes never run automations.
+- **Loops:** each automation's `cooldown_hours` per contact applies (default 24; the default reply
+  template uses 12). A welcome fires once anyway, because only a first message qualifies.
+- **Web:** the When step has "First message (welcome)" and "Any other message (default reply)",
+  each with a one-line explanation (the default reply says it answers only while AI is Off). Both
+  hide the keywords and posts steps. Templates `welcome_new_contacts` and
+  `default_reply_when_ai_off`.
+- **Test tab:** treats the text as a DM for both triggers; it cannot know if the contact is new or
+  AI is off, so it reports a match.
+- **Ask Social Hood:** `prepare_automation` accepts both triggers; no new tool.
+- **Migration 0025** (parent 0022 until re-chained): the trigger check only. Downgrade turns these
+  automations into trigger-less drafts.
+- **Unverified:** nothing here depends on Meta rules. Welcome messages are ordinary DMs inside the
+  24-hour window opened by the customer's message.
+
+
+## C-091 · The contacts page (GR-17, feature/gr-17-contacts)
+
+GR-02 had already built the contacts list, its filters, the CSV export, tags, fields and consent
+in the API. GR-17 adds what the page needed on top, and the page itself. (The coordinator
+renumbers this entry if another branch took C-088.)
+
+- **List, filters and export: reused as built.** Filters are tag (every one chosen), search, email
+  or phone present, platform, account, marketing consent per channel, minimum lead score, activity
+  range and up to five custom fields (`key:value` equals, `key:*` has any value). Export stays
+  admin only and streams. "Tag = lead-magnet and has email" is `tag_id` plus `has_email=true`, and
+  the export of it has the same rows (an integration test checks both).
+- **Moving activity ranges (new).** `active_within_days` (active in the last N days) and
+  `inactive_for_days` (no activity for N days or more), 1 to 3650, beside the fixed
+  `active_after` and `active_before`. *A saved segment needs a range that moves; two fixed dates
+  would go stale.* The page uses only the moving ones (7, 30 or 90 days active; quiet for 30 or 90).
+- **Count.** `GET /contacts/count` takes the list's filters and says how many match. It feeds
+  "Select all 312 that match" and the bulk cap message.
+- **Saved segments (new table `contact_segments`, migration 0026).**
+  - A name (1 to 60, unique in any case per workspace) and the filter as JSON, the same keys as
+    the list. It stores the filter, never the people, so a segment is whoever matches now. At most
+    50 per workspace.
+  - `GET /contact-segments` (any member); `POST`, `PATCH /{id}` and `DELETE /{id}` for owners and
+    admins. *Decided: agents use segments but do not manage them, matching tags and fields (admins
+    manage, any member uses).*
+  - Saving checks the filter: a tag that is not there is 404, a custom field the workspace does
+    not have is 422. A tag or field deleted later does not break the segment; the list then
+    refuses the field with its plain message instead of quietly widening the match.
+  - The response filter is its own class, `ContactFilterOut`, so the API description keeps one
+    name per direction (a model used both ways with defaults is split in two by FastAPI).
+  - *Not built: a segment id on the list, count or export routes.* The page sends the segment's
+    filters. Broadcasts (GR-23) will read `contact_segments.filter` through
+    `services/contact_segments`.
+- **Bulk tag by filter.** `POST /contacts/bulk-tags` takes `contact_ids` (up to 500) **or**
+  `filter` (the same keys), not both. A filter applies to everyone it matches, up to **5,000**
+  (`BULK_FILTER_CAP`). A bigger match is a 422 on `filter` that says how many matched ("That
+  filter matches 7,200 contacts. Narrow it to 5,000 or fewer to tag them at once."), and nothing
+  is changed. Any member may bulk tag, as before.
+  - **Audit.** Every real change is still one `contact.tagged` event (GR-04, so webhooks and
+    Activity see it), and one log line (`contacts_bulk_tagged`) records who, how many contacts and
+    how many tags were added or removed, and whether a filter chose them. There is no audit table
+    yet; the team audit arrives with GR-19.
+  - `change_tags` now reads the existing pairs in one query instead of one per contact and tag, so
+    5,000 contacts is a few queries.
+- **Timeline.** `GET /contacts/{id}/timeline?cursor&limit` (any member, read-only, 30 per page by
+  default, 100 at most). Sources that exist today: the contact's conversation (with how it began),
+  comments, automation runs (the automation's name and a plain outcome, no error text), story
+  mentions, consent records and tags added. Each source is read newest first by (time, id) and
+  merged, so paging never repeats or skips an item. A comment shows its first 200 characters.
+  - *Left out because the data does not exist yet:* captured answers (GR-14 adds them; email and
+    phone have a source but no time) and broadcasts received (GR-23). Each adds a source in
+    `services/contact_timeline.py`.
+- **Consent filter and display.** `contact_consents` exists (GR-02), so the page filters by "agreed
+  on Instagram, WhatsApp or email", shows the current state per channel in the drawer and lets
+  admins record consent or withdrawal with a note.
+- **Web.**
+  - **Contacts** is in the main nav under Engage, for every role (it was Inbox and Comments). The
+    page fills the width (no fixed maximum), a list at 375 px (each row stacks) and a table-like
+    grid from 768 px. Search waits 250 ms, filters sit in a panel that is a full-screen sheet on a
+    phone, then a segment bar, the count, ticked rows with a Tag action, "Select all N that match"
+    when a page is ticked and more exist, and Export CSV (admins).
+  - **The contact drawer** is a sheet that is full screen below 768 px and 420 px wide from there.
+    It edits tags (add, remove, and admins create a tag), email, phone and custom fields (one
+    Save, only what changed, the API's messages beside the value it refuses), shows consent and
+    the timeline. It opens from a row, and from the inbox details panel's "View contact".
+  - Tags wear the identity palette colour stored on the tag (never a status colour).
+- **Tests.** Unit: filter parsing and limits (`test_contact_filters.py`); integration:
+  `test_contact_segments.py` (the done-when filter and export, count, field and activity filters,
+  segments CRUD and limits, bulk tag by filter and its cap, the timeline and its paging, roles,
+  another workspace); tenancy: the segment routes and table in `test_isolation.py`; vitest: the
+  filters and edit helpers, the page, the drawer; e2e `gr17-contacts.spec.ts`.
+- **Migration 0026** (down revision 0025): `contact_segments` only. Expand-only. It references
+  the workspace and users, not accounts, so the account purge is unchanged (workspace deletion
+  cascades).
+- **Unsure / for the coordinator:** the generated client has to be regenerated for the new routes
+  and models (`ContactFilterSpec`, `ContactFilterOut`, `Segment*`, `Timeline*`, `ContactCount`,
+  the changed `BulkTagsUpdate`); the web types are aliases waiting for it.
+
+
+## C-090 · The flow editor (GR-13, feature/gr-13-flow-editor)
+
+- **A tree on screen, a graph in the API.** The editor works on a vertical list; a step that forks
+  (quick replies, a question that can fail, a branch, a split) has indented groups of its own
+  ("arms"). `lib/automations/flow.ts` turns the tree into the stored graph (`compile`) and a stored
+  graph back into a tree (`decompile`).
+  - A list runs top to bottom: each step's next is the step below it.
+  - **An arm that runs out carries on with the step below the step that forks**, so branches meet
+    again (the engine allows it, C-079). An arm that should stop ends with an End step. An empty arm
+    with nothing below the fork ends the flow.
+  - A quick reply is an arm whose title is edited in the arm's header. The answer typed instead of
+    a tap can do nothing, copy an option, or have its own steps.
+  - A question that never gets an answer that fits can carry on or end the flow.
+  - Step ids are random (`s` and six letters or digits) and stay with the step across saves, so a
+    run's log keeps naming the same step.
+- **Reading a flow back.** `decompile` finds where the arms of a fork meet (the earliest step
+  that most of them reach). A path that stops where others carry on gets a lone End, which is
+  saved with the next edit. A shape the tree can't show (paths that share steps without one place
+  they meet, or steps nothing leads to; only possible through the API) is shown **read-only**
+  with "Start again from one message". It still runs as saved.
+- **How a non-flow automation opens (decision).** Automations and templates still create settings
+  automations (C-079's compiled flow); nothing about the gallery changed.
+  - The Then step shows the message as the first step, in today's fields (tap first, the follow
+    nudge, buttons, image), with a "More steps" card.
+  - **Adding a step turns it into a flow:** the compiled flow is read, the new step goes at the
+    end, and the whole thing is saved with `PUT …/flow`. Tap first and the nudge become steps.
+    Public replies stay on the automation.
+  - An active automation must be paused first (the empty new step would make it incomplete).
+  - "Back to one message" calls `DELETE …/flow` after a confirmation; runs underway finish.
+  - *Deviation from the plan's "rebuild Then on the step model": the single message keeps its
+    builder until a step is added, so nothing that works today changes. A later cleanup can make
+    every automation a flow (C-079).*
+- **Steps.** "Add step" offers Send, Ask, Branch, Action, Delay, Split (the engine's `randomize`)
+  and End. The AI reply stays the choice above the steps (a flow with one shows it as a card, and
+  it must be first). Each step reuses the builder's parts: the message field with insert-field and
+  the byte count, the image upload, the link buttons. A Send can also carry the profile button.
+  - Ask defaults to an email saved to the contact; text goes to a custom field. *The email check
+    itself is GR-14; here Ask uses what the engine does today.*
+  - Branch rules cover all six conditions (tag, field, email or phone known, follows, platform,
+    lead score). Actions cover the five the engine runs. Delay is minutes or hours, up to 23.
+  - Tags and fields come from `GET …/tags` and `GET …/contact-fields`.
+- **Reordering.** Drag the handle (pointer events, no new dependency), or press the arrow keys on
+  the focused handle, or use Move up and Move down. Order changes only within a list; to move a
+  step into another group, delete and add it there. A drop marker shows where a card lands.
+- **Checks on each step.** Fields show their problem once a step has been edited; a step is
+  "complete", "not finished" or "needs attention". The API's refusals (a refused save, a refused
+  activation: `flow.steps.N.field`) are placed on steps by index. A list at the top names each step
+  with a problem and "Go to step N" focuses it; a refused activation focuses the first.
+- **Preview and Test.** The Preview walks the draft one branch at a time with a picker at each
+  fork (a question counts as a fork: it can fail). The Test tab asks the API:
+  - `AutomationTest.choices` names the way at each fork (0 where none); the result's `flow_path`
+    lists the steps one run would take, with each fork's ways and the one taken
+    (`services/automations/flow_preview.py`, called from `dry_run`). Picking another way tests again.
+  - A settings automation has an empty `flow_path` and the old result.
+- **Step cap (pending PD-5).** The plan's recommended option: every plan can branch; Free is capped.
+  - New entitlement `flow_steps`: Free 5, Pro 50, Max 50 (`billing/plans.py`; a flow is at most 50
+    whatever the plan, the schema's limit). Lifting the cap is one edit.
+  - Every step counts, End included. "Comment, ask for an email, branch on a button, send A or B"
+    is four.
+  - `PUT …/flow` over the cap is 402 `quota_exceeded` (`flow_steps`, the limit, a plain sentence);
+    so is **activation** of a flow saved under a bigger plan. The editor disables Add step at the
+    cap, says why, and the 402 dialog has its copy.
+- **API.** No new routes or tables. `AutomationTest.choices`, `AutomationTestResult.flow_path`
+  (`FlowPreviewStep`), the 402 on `PUT …/flow`, and `flows.exit_labels` / `describe_condition`.
+- **Unverified:** dragging on a touch screen (the handle is `touch-action: none`; the buttons and
+  keys are the fallback), and the sandbox run of the e2e (`gr13-flow-editor.spec.ts`) is written
+  but was not run.
+
+## C-089 · Visual answers in Ask (GR-38, feature/gr-38-visual-answers)
+
+Option C of `docs/architecture/generative-ui/` (accepted 2026-10-24), backlog VIS-01 to VIS-06 and
+the small items VIS-X1, X3 and X4. No migration.
+
+- **Owner's defaults kept:** visuals in Ask only, English labels, no OpenUI, the model never writes
+  a number, label or layout. A question no tool with chartable data answers shows no visual.
+- **Account metrics** (VIS-01): `services/analytics/account_metrics.py`, read by
+  `GET /v1/w/{wid}/analytics/account-metrics` (any member) and by the agent.
+  - Query: `since`, `until` (default the last 30 days), `account_id`, `metric` (repeatable),
+    `compare=previous` (the period of the same length just before).
+  - Metrics: reach, views, accounts_engaged, interactions, followers, follows, unfollows,
+    profile_link_taps (from `account_daily_metrics`), comments and messages_received (counted from
+    their tables over the workspace's local days).
+  - Sums add the days that have a reading and say how many (`days_known` of `days_total`). A gap is
+    never a zero. With no reading the value is null and `unavailable` says why:
+    `insights_not_granted`, `no_readings` or `no_account`.
+  - Followers is the latest reading in the period, per account, then added. Not a sum.
+  - The change is `(current - previous) / previous x 100`, one decimal, worked out in the service.
+    Null against a previous 0 (the direction is still up or down) or an unknown side. Flat under
+    0.5%.
+  - *Reach, views and the other insight metrics are daily values added up, so a person reached on
+    two days counts twice. Instagram has no period total for these in the data we store. The
+    caveats and the web say so.*
+- **Same days, not same labels:**
+  - Today has no row (it is written the next morning), so the agent's periods stop yesterday and a
+    caveat says so. "This month" on 23 October is 1-22 October.
+  - A period still running is matched with the other one over the same number of days, cut from
+    its start: 1-22 October against 1-22 September. The note says how.
+  - Two finished periods of different length are `comparable: false`: totals are given, no change.
+  - *The doc 05 design had one comparable-days rule; this is that rule plus the "today" cut, which
+    the doc didn't foresee.*
+- **Tools** (VIS-02), both read, any member:
+  - `compare_periods(range, compare_to, metrics, account)`; without `compare_to` the period just
+    before. The tool description says it is the only tool that compares periods.
+  - `metric_trend(metric, range, account)`: a point a day up to 31 days, then a week. It returns
+    first, last, lowest and highest points and the change between first and last. *It builds no
+    visual yet: the trend chart is VIS-07.*
+  - Prompt `agent.v3`: points the model to `compare_periods`; with visuals on, says the screen shows
+    the figures so the answer needn't repeat them. Off, the prompt text is v2's apart from the
+    comparison line. *The eval was not run (no key here), so v3's rate against v2's is unmeasured.*
+- **Visuals** (VIS-03): `Visual` is a closed union in `schemas/agent.py`: `metric_comparison`,
+  `ranked_posts`, `sentiment_summary`. Pure builders in `agent/visuals.py`.
+  - Caps in the types: 8 metrics, 10 posts, 6 topics, strings clipped, a thumbnail an https URL
+    under 400 characters. Each visual at most 8 KB serialised (a test builds the worst cases).
+  - A build that fails or is too big drops only the visual (log `agent_visual_failed`, counter).
+  - *Shapes differ from doc 05 where a simpler one did the job: a `MetricDelta` is one flat card
+    (`current`, `previous`, `change_pct`, `tone`, coverage, `unavailable`) instead of two
+    `MetricValue`s; there is no `account_ref` (a label instead) and no `TrendVisual` or
+    `LeadListVisual` yet.*
+  - `top_posts`, `sentiment_distribution`, `comment_topics` and `compare_periods` carry the visual.
+    `comment_topics` runs the distribution too (one more query, only with visuals on and no
+    sentiment filter) and returns it as `split`, so the numbers on screen are ones a tool returned.
+  - Built only with `AGENT_VISUALS_ENABLED` on; nothing is stored with it off.
+- **The run** (VIS-04): `AgentRun.visuals`, from the succeeded steps' `visual`, in step order, at most
+  3, each re-checked against the current models on read (an invalid one is dropped and counted).
+  - A second sentiment summary of the same scope replaces the first (it has the topics); an
+    identical visual shows once.
+  - `agent/report.model_view` removes `visual` from what the model reads (also on a resumed run).
+    `step.result` in the run detail drops it too, so the payload isn't doubled.
+  - The list endpoint includes visuals (at most 3 x 8 KB a run, 20 runs a page). *Doc 05 left list
+    vs detail open; the thread view draws from the list, so it is in.* If the page weight bites,
+    cap or omit it there.
+- **The flag:** *a server setting `AGENT_VISUALS_ENABLED` (default off), not a per-workspace flag:
+  the app has no feature-flag table, and one would need a migration. Off: `visuals` is `[]`, tools
+  build none, the prompt doesn't mention them. Per-workspace rollout can come with a real flags
+  table.*
+- **Web** (VIS-05): `VisualView` (error boundary, Sentry tag `visual_kind`) in `RunView`'s finished
+  state, between the answer with its sources and the action cards.
+  - `MetricComparison` from `MetricTile`s in a container-query grid; `RankedPosts` from `Table` and
+    `PostThumb`, rows link to the post; `SentimentSummary` from `SentimentBar` and its legend.
+  - Customer text is text; a picture must be https; an unknown kind draws nothing.
+  - One series colour is not needed yet (no chart); the rule is in DESIGN_SYSTEM 1.8.
+- **Observability** (VIS-X3): log `agent_visual` (kind, bytes, build_ms), counter
+  `socialhood_agent_visuals_total{kind,outcome}` with built, dropped and dropped_stored. Web render
+  errors go to Sentry. A web-side counter isn't added.
+- **Tests:**
+  - Unit: the arithmetic and gaps, the builders and size, the projection, the prompt.
+  - Integration (written, not run): the route, the tools on seeded days, the run API with the flag
+    on and off, roles and other workspaces.
+  - Web (written, not run): states, malicious text, the boundary and unknown kinds, the panel.
+  - E2E `gr38-visual-answers.spec.ts`: the fake model calls no tools, so a seed route in the e2e API
+    (`POST /__e2e/workspaces/{wid}/agent-runs`) stores a finished run whose step holds the visual
+    the real service and builder make from seeded days. The launcher sets
+    `AGENT_VISUALS_ENABLED=true`.
+  - Eval: 9 cases (`period-compare-*`, `trend-reach-30`, `visual-*`) over a seeded `account_daily`
+    series with two gap days; each visual's figures must be ones a tool returned and, where the case
+    computes them from the seed, the right ones. A concept question must show none. New target:
+    `visuals` 100%.
+- **Checked centrally:** `apps/api/openapi.json` and `packages/api-client` (the account-metrics
+  route, `AgentRun.visuals`, `Visual` and its parts, `AccountMetrics` and friends), typecheck,
+  build, the integration and tenancy suites, the web tests.
+- **Left for later:** VIS-07 onwards (trend chart, lead list, table, progressive visuals, range
+  controls, the report page), the OpenUI spike VIS-14, VIS-X2 (quote account names in the prompt),
+  localised labels.
+
+## C-092 · Leads (GR-18, feature/gr-18-leads)
+
+A lead is a contact. This adds a stage to the contact, the rules that move it, a gone-cold job and a
+Leads view on top of GR-17's contacts list. (The coordinator renumbers this entry if another branch
+took C-092.)
+
+- **Where the stage lives.** *The roadmap (P2) put the stage on the conversation; the plan (GR-18)
+  puts it on the contact, with the conversation linking to it. Decided: the contact, as the plan
+  says.* A person who wrote in twice on one account still has one conversation (PD-10), and a
+  commenter with no conversation can be a lead too. Cards link to the conversation when there is one.
+  - Stages: `new`, `qualified`, `follow_up`, `won`, `lost`. New, qualified and follow up are open.
+  - *Not built from the roadmap: the optional lead value, and a backfill of `new` for conversations
+    with a score of 60 or more.* Every existing contact starts `new`, and the first analysis that
+    reaches the bar qualifies it. The migration rewrites nothing.
+- **Migration 0027** (down revision 0026), expand-only: `contacts.lead_stage` (default `new`),
+  `lead_stage_at`, `lead_stage_reason`, `lead_cold_at`, an index on (workspace, stage); the table
+  `lead_stage_changes`; `workspaces.lead_cold_days` (default 7, 1 to 90).
+- **History (`lead_stage_changes`, append only).** From, to, who or what moved it (`actor_kind`:
+  member, automation, rule, system), the member, the rule name (`lead_score`, `intent`,
+  `email_captured`, `gone_cold`) and a reason of up to 300 characters. It references the contact,
+  so an account purge removes it with the contact (the purge test snapshot lists it). Moving to the
+  stage a lead is already in records nothing.
+- **Rules (`services/leads.py`).**
+  - *A member* moves a lead to any stage at any time, with an optional note (any role, like tagging).
+    `POST /contacts/{id}/lead-stage`.
+  - *Automatic qualification* only ever moves a lead out of `new`, so a lead a member or an earlier
+    rule moved on is never pulled back. After each stored analysis: a lead score of 60 or more (the
+    inbox's Leads line), or a buying intent (pricing, purchase) with a score of 40 or more.
+    *Decided: 60, and 40 for a buying intent; both are constants, not settings.* The intent is the
+    member's correction when there is one.
+  - *A captured email qualifies* a new lead: `leads.on_capture(session, contact, kind)`, called by
+    the flow engine's question step today. **GR-14 calls the same function** when its lead capture
+    saves an email (`kind="email"`). A phone or a custom field does not qualify. An email a member
+    types into the drawer does not either: it is their own note, not a signal from the customer.
+  - *Gone cold* (`mark_cold_leads`, hourly at :10, bulk lane): a qualified or follow-up lead whose
+    customer has not written for the workspace's `lead_cold_days`, counted from their last message
+    or from the last stage change, whichever is later (so a lead a member just moved is not cold at
+    once). A qualified lead moves to follow up (rule `gone_cold`); a follow-up lead stays. Both get
+    `lead_cold_at`, and every member gets an in-app `lead_cold` notification with a link to the
+    conversation. *The plan says "notify the assignee"; there is no assignee until GR-20, so it is
+    every member for now.* A lead is cold while the flag is later than its last customer message, so
+    a new message ends it with no write, and any stage change clears it. It is idempotent (a flagged
+    lead is not selected again until it has written and gone quiet again), workspace-scoped (each
+    workspace's own days; rows locked with `FOR UPDATE SKIP LOCKED`), and RETRY in `RECOVERY`.
+  - *Won and lost* are never touched by a rule. Cold only looks at qualified and follow up.
+- **Setting.** `GET` and `PATCH /leads/settings` (`cold_after_days`, 1 to 90; admins change it).
+  *The plan asks for "N days (a workspace setting)" with no owner decision, so 7 is the default
+  and the Leads page offers 3, 5, 7, 14, 30 and 60 to admins.*
+- **API.** `GET /leads/summary` (any member): contacts per stage, open leads gone cold, and the last
+  8 weeks of leads that reached qualified and won (each contact once per week and stage, weeks start
+  on Monday UTC). *This is the roadmap's "conversion counts by week".* The lead list is
+  `GET /contacts?stage=` (repeat for any of them), the same filter everywhere: the list, count,
+  export, saved segments (`stages`) and bulk tagging. The contact list item and record gain
+  `lead_stage`, `lead_stage_at`, `lead_stage_reason` and `lead_cold`.
+- **History in the drawer.** A new timeline source in `services/contact_timeline.py`: "Lead stage:
+  Qualified", detail "From New. By Priya. Asked for a quote." (or "Automatically." for a rule).
+- **Flow condition.** `lead_stage` in the GR-03 branch conditions: `{"kind": "lead_stage",
+  "stages": ["qualified", "follow_up"]}` holds when the contact is in any of them, read when the step
+  runs. It needs no activation check. *The web has no list of condition options (the editor is
+  GR-13's), so `AutomationEditor` is untouched; GR-13 offers the new kind next to the others.*
+- **Event.** `lead.stage_changed` (version 1) in GR-04's catalogue, so the catalogue has nine events.
+  The payload has the contact, `from`, `to`, `changed_by` (`kind`, `user_id`, `rule`) and `reason`.
+  It is emitted by every real move.
+- **Web.**
+  - **Leads** is in the main nav under Engage, for every role. From 1024 px it is a board with a
+    column per stage; below that it is one stage at a time with a row of stage buttons above it, so
+    it works at 375 px. Each column is the contacts list filtered to its stage, so search and the
+    filter sheet are GR-17's (the sheet leaves the stage control out here; on Contacts it is a
+    "Lead stage" group, and each row wears its stage). A card shows the name, score, last activity,
+    why the lead is where it is, a "Gone cold" chip, up to three tags, a stage control and a link to
+    the conversation. Admins get "Gone cold after N days" in the page header.
+  - **The contact drawer** has a Lead stage section first (stage, since when, why, a control to move
+    it with an optional note); the history is in its timeline. It also opens from the inbox's
+    details panel.
+  - *Left for later:* a lead stage chip in the conversation header (the roadmap's step 5) and the
+    Ask tool `list_leads` (step 6). The drawer is one click from the details panel.
+- **Tests.** Unit: `test_leads.py` (stages, qualification rules, cold flag, history wording, request
+  limits, filter, flow condition, event, recovery class). Integration: `test_leads.py` (move, no-op,
+  roles, 404, history in the timeline, filter and count, segments, summary, setting, event),
+  `test_lead_rules.py` (analysis qualifies, buying intent, never pulls back, the cold job: selection,
+  idempotence, per-workspace days, a recent move), `test_lead_flow.py` (the branch, a captured email
+  qualifies once and fires the event, a phone does not). Tenancy: the new routes, body and table in
+  `test_isolation.py`; the account purge snapshot and seed. Vitest: the Leads page, the drawer's
+  stage section, the contacts page's stage badge and filter, `filters.test.ts`, the nav. E2E:
+  `gr18-leads.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (`LeadStageUpdate`, `LeadSummary`,
+  `LeadStageCount`, `LeadWeek`, `LeadSettings`, `LeadSettingsPatch`, the new fields on
+  `ContactListItem` and `ContactRecord`, `stages` on the filter models, `lead_stage` in
+  `TimelineKind`, `lead.stage_changed` in the event names); the web types are aliases waiting for it.
+  The hand-written web fixtures for the contact list item and record carry the new fields.

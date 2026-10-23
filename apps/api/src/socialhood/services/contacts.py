@@ -15,6 +15,8 @@ Rules:
   The number of definitions is capped by the plan's ``contact_fields``.
 - Consent is append-only: each record says what changed, where it came from and its evidence;
   the latest per (contact, channel, purpose) is current.
+- The lead stage (GR-18, services/leads.py) is a filter here (``stages``, any of them) and a field
+  on every contact; moving it is leads.set_stage.
 - Tags are case-insensitively unique per workspace. Contacts are never metered (PD-2).
 """
 
@@ -26,7 +28,7 @@ import re
 import uuid
 from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any, Protocol
 
 from sqlalchemy import Select, and_, exists, func, literal, or_, select
@@ -53,6 +55,7 @@ from socialhood.models.inbox import Contact, Conversation
 from socialhood.repositories.base import scoped_delete, scoped_update
 from socialhood.schemas.contacts import (
     Consent,
+    ContactFilterSpec,
     ContactList,
     ContactListItem,
     ContactPatch,
@@ -65,6 +68,7 @@ from socialhood.schemas.contacts import (
     TagRef,
 )
 from socialhood.schemas.contacts import Tag as TagOut
+from socialhood.services import leads
 
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 DIGITS = re.compile(r"\D")
@@ -163,10 +167,40 @@ class ContactFilter:
     has_phone: bool | None = None
     marketing_consent: str | None = None  # a channel with current consent granted
     min_lead_score: int | None = None
+    stages: tuple[str, ...] = ()  # any of these lead stages (GR-18)
     active_after: datetime | None = None
     active_before: datetime | None = None
+    # Moving ranges: active in the last N days; no activity for N days or more.
+    active_within_days: int | None = None
+    inactive_for_days: int | None = None
     # Custom fields by key: a value to equal, ignoring case, or None for any value.
     fields: tuple[tuple[str, str | None], ...] = ()
+
+
+def parse_field_match(match: str) -> tuple[str, str | None]:
+    """``city:pune`` is (city, "pune"), ``city:*`` is (city, None): any value."""
+    key, _, value = match.partition(":")
+    return key, None if value == "*" else value
+
+
+def filter_from_spec(spec: ContactFilterSpec) -> ContactFilter:
+    """The service's filter for a request body or a saved segment."""
+    return ContactFilter(
+        q=spec.q,
+        tag_ids=tuple(spec.tag_ids),
+        platform=spec.platform,
+        account_id=spec.account_id,
+        has_email=spec.has_email,
+        has_phone=spec.has_phone,
+        marketing_consent=spec.marketing_consent,
+        min_lead_score=spec.min_lead_score,
+        stages=tuple(spec.stages),
+        active_after=spec.active_after,
+        active_before=spec.active_before,
+        active_within_days=spec.active_within_days,
+        inactive_for_days=spec.inactive_for_days,
+        fields=tuple(parse_field_match(match) for match in spec.fields),
+    )
 
 
 # Postgres's greatest() skips nulls, so this is never null.
@@ -247,10 +281,18 @@ def _filtered(filt: ContactFilter) -> Select[Contact, Conversation, SocialAccoun
         query = query.where(_current_consent(filt.marketing_consent))
     if filt.min_lead_score is not None:
         query = query.where(Conversation.lead_score >= filt.min_lead_score)
+    if filt.stages:
+        query = query.where(Contact.lead_stage.in_(filt.stages))
     if filt.active_after:
         query = query.where(_activity >= filt.active_after)
     if filt.active_before:
         query = query.where(_activity < filt.active_before)
+    if filt.active_within_days:
+        query = query.where(
+            _activity >= datetime.now(UTC) - timedelta(days=filt.active_within_days)
+        )
+    if filt.inactive_for_days:
+        query = query.where(_activity < datetime.now(UTC) - timedelta(days=filt.inactive_for_days))
     for key, value in filt.fields:
         query = query.where(
             Contact.fields.has_key(key)
@@ -258,6 +300,25 @@ def _filtered(filt: ContactFilter) -> Select[Contact, Conversation, SocialAccoun
             else func.lower(Contact.fields[key].astext) == value.lower()
         )
     return query
+
+
+async def count_contacts(session: AsyncSession, filt: ContactFilter) -> int:
+    """How many contacts match, for the count beside a filter and the bulk cap."""
+    matching = _filtered(filt).with_only_columns(Contact.id).subquery()
+    return int(await session.scalar(select(func.count()).select_from(matching)) or 0)
+
+
+async def matching_ids(
+    session: AsyncSession, filt: ContactFilter, *, limit: int
+) -> list[uuid.UUID]:
+    """Up to ``limit`` ids of the contacts that match, newest activity first."""
+    rows = await session.scalars(
+        _filtered(filt)
+        .with_only_columns(Contact.id)
+        .order_by(_activity.desc(), Contact.id.desc())
+        .limit(limit)
+    )
+    return list(rows.all())
 
 
 async def check_filter(session: AsyncSession, filt: ContactFilter) -> None:
@@ -317,6 +378,10 @@ def _item(
         "phone": contact.phone,
         "tags": tags,
         "lead_score": conv.lead_score if conv else None,
+        "lead_stage": contact.lead_stage,
+        "lead_stage_at": contact.lead_stage_at,
+        "lead_stage_reason": contact.lead_stage_reason,
+        "lead_cold": leads.is_cold(contact, conv.last_inbound_at if conv else None),
         "conversation_id": conv.id if conv else None,
         "last_activity_at": activity,
         "first_seen_at": contact.first_seen_at or contact.created_at,
@@ -575,18 +640,20 @@ async def change_tags(
                 ContactTag.contact_id.in_(ids), ContactTag.tag_id.in_(remove)
             )
         )
-    for contact_id in ids:
-        for tag_id in add:
-            exists_already = await session.scalar(
-                select(ContactTag.tag_id).where(
-                    ContactTag.contact_id == contact_id, ContactTag.tag_id == tag_id
-                )
+    if add and ids:
+        existing = await session.execute(
+            select(ContactTag.contact_id, ContactTag.tag_id).where(
+                ContactTag.contact_id.in_(ids), ContactTag.tag_id.in_(add)
             )
-            if exists_already is None:
-                session.add(
-                    ContactTag(contact_id=contact_id, tag_id=tag_id, added_by_user_id=user_id)
-                )
-                changed.append((contact_id, tag_id, True))
+        )
+        have = {(contact_id, tag_id) for contact_id, tag_id in existing.all()}
+        for contact_id in ids:
+            for tag_id in dict.fromkeys(add):
+                if (contact_id, tag_id) not in have:
+                    session.add(
+                        ContactTag(contact_id=contact_id, tag_id=tag_id, added_by_user_id=user_id)
+                    )
+                    changed.append((contact_id, tag_id, True))
     await session.flush()
     if changed and await events.wanted(session, "contact.tagged"):
         people = {

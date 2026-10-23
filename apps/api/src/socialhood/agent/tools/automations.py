@@ -73,6 +73,8 @@ TRIGGER_WORDS = {
     "story_mention": "a mention in someone's story",
     "entry_link": "someone opening a chat from an entry link",
     "ad_click": "someone opening a chat from an ad",
+    "first_message": "a contact's first message (a welcome)",
+    "default_reply": "any other message (a default reply)",
 }
 # Triggers that need no keywords: they answer every event of their kind (a story reply may also
 # take keywords).
@@ -82,6 +84,8 @@ NO_KEYWORD_TRIGGERS = (
     "story_mention",
     "entry_link",
     "ad_click",
+    "first_message",
+    "default_reply",
 )
 ACTION_WORDS = {"send_message": "sends a message", "ai_reply": "replies with AI"}
 # prepare_automation without a template, trigger or action: the first template whose words
@@ -535,8 +539,9 @@ def _keywords(typed: list[str]) -> list[str]:
     label="Preparing an automation draft",
     description=(
         "Prepare a new automation from the request: fill the template, trigger (dm_keyword, "
-        "comment_keyword, comment_any, story_reply, story_mention, entry_link, ad_click), "
-        "keywords, action (send_message or ai_reply), message and posts you can tell from it. "
+        "comment_keyword, comment_any, story_reply, story_mention, entry_link, ad_click, "
+        "first_message, default_reply), keywords, action (send_message or ai_reply), message "
+        "and posts you can tell from it. "
         "Returns a card that opens the automation editor filled in and unsaved; "
         "the member saves and activates it there. Nothing is created."
     ),

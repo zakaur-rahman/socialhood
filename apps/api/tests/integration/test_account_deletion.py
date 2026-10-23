@@ -235,6 +235,13 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         c=thread.contact_id,
     )
+    await execute(  # GR-18: a lead stage move
+        engine,
+        "INSERT INTO lead_stage_changes (workspace_id, contact_id, from_stage, to_stage,"
+        " actor_kind, rule) VALUES (:w, :c, 'new', 'qualified', 'rule', 'lead_score')",
+        w=wid,
+        c=thread.contact_id,
+    )
     await execute(  # GR-11: a conversation starter
         engine,
         "INSERT INTO ice_breakers (workspace_id, social_account_id, position, question,"

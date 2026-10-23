@@ -1,14 +1,23 @@
 "use client";
 
 import { Sparkles } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import type { AutomationDefinition } from "@/lib/api/types";
-import { DEFAULT_OPENING_BUTTON, isCommentTrigger, usesFollowNudge, usesTapFirst } from "@/lib/automations/definition";
+import type { AutomationDefinition, FlowDefinition, FlowTag } from "@/lib/api/types";
+import { walk } from "@/lib/automations/flow";
+import {
+  DEFAULT_OPENING_BUTTON,
+  isCommentTrigger,
+  takesNoKeywords,
+  usesFollowNudge,
+  usesTapFirst,
+} from "@/lib/automations/definition";
 import { renderFields, withDisclosure, type FieldValues } from "@/lib/automations/render";
 import { IDENTITY_FILL, identityAt, type Identity } from "@/lib/ui/identity";
 import { cn } from "@/lib/utils";
+
+import { PathView } from "./flow/PathView";
 
 export const SAMPLE_CONTACT = { first_name: "Priya", username: "priya.styles" } as const;
 
@@ -30,23 +39,34 @@ export function PreviewPane({
   accountUsername,
   disclosure,
   mediaUrl,
+  flow = null,
+  tags = [],
 }: {
   draft: AutomationDefinition;
   accountUsername: string | null;
   disclosure: string | null;
   mediaUrl: string | null;
+  /** GR-13: the flow being edited. The DM part then walks it one branch at a time. */
+  flow?: FlowDefinition | null;
+  tags?: FlowTag[];
 }) {
   const [sample, setSample] = useState<Sample>("known");
+  // The way chosen at each fork of the walk, in order (0: the first way).
+  const [choices, setChoices] = useState<number[]>([]);
   const values = SAMPLES[sample];
+  const path = useMemo(
+    () =>
+      flow
+        ? walk(flow, { choices, values, disclosure, tagName: (id) => tags.find((tag) => tag.id === id)?.name })
+        : [],
+    [flow, choices, values, disclosure, tags],
+  );
+  const withImage = useMemo(
+    () => new Set((flow?.steps ?? []).flatMap((step) => (step.type === "send" && step.image_asset_id ? [step.id] : []))),
+    [flow],
+  );
   const comment = isCommentTrigger(draft.trigger);
-  const keyword =
-    draft.trigger === "comment_any" ||
-    draft.trigger === "story_mention" ||
-    draft.trigger === "entry_link" ||
-    draft.trigger === "ad_click" ||
-    draft.trigger === "ice_breaker"
-      ? null
-      : (draft.keywords?.[0] ?? null);
+  const keyword = takesNoKeywords(draft.trigger) ? null : (draft.keywords?.[0] ?? null);
   const fallback = comment ? "Love this!" : draft.trigger === "story_reply" ? "Love this story!" : "Hi";
   // A mention has no words of its own: the conversation shows it as a line.
   const incoming =
@@ -107,7 +127,15 @@ export function PreviewPane({
           <Theirs>{incoming}</Theirs>
         )}
 
-        {tapFirst ? (
+        {flow ? (
+          <PathView
+            steps={path}
+            imageNote={withImage}
+            onChoose={(fork, exit) => setChoices((current) => [...current.slice(0, fork), exit])}
+          />
+        ) : null}
+
+        {!flow && tapFirst ? (
           <>
             {opening ? (
               <div className="flex flex-col items-end gap-1.5">
@@ -128,7 +156,7 @@ export function PreviewPane({
           </>
         ) : null}
 
-        <div className="flex justify-end">
+        <div className={cn("flex justify-end", flow && "hidden")}>
           {draft.action === "ai_reply" ? (
             <p className="bg-brand-gradient flex max-w-[88%] items-start gap-2 rounded-2xl rounded-br-md px-3 py-2 text-on-brand">
               <Sparkles className="mt-0.5 size-4 shrink-0" aria-hidden />
@@ -156,7 +184,7 @@ export function PreviewPane({
           )}
         </div>
 
-        {nudge ? (
+        {!flow && nudge ? (
           <div className="flex flex-col items-end gap-1">
             <p className="text-2xs text-fg-secondary">Only to people who don&apos;t follow you</p>
             <Mine testId="preview-nudge">

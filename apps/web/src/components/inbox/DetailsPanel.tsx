@@ -1,12 +1,13 @@
 "use client";
 
 import { AlertTriangle, ExternalLink, PauseCircle } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 import { pausedUntil } from "@/components/ai/AiModeControl";
 import { AnalysisDetails } from "@/components/ai/AnalysisChips";
 import { SummarySection } from "@/components/ai/SummarySection";
 import { latestQuestion, useCachedMessages, useTeachAi } from "@/components/ai/TeachAi";
+import { ContactDrawer } from "@/components/contacts/ContactDrawer";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -75,6 +76,7 @@ export function DetailsPanel({
   const now = useNow();
   const cachedMessages = useCachedMessages(conversationId);
   const teachAi = useTeachAi({ upload: knowledgeUpload });
+  const [contactOpen, setContactOpen] = useState(false); // GR-17: the contact drawer
 
   if (!conversation.data) {
     return (
@@ -145,6 +147,9 @@ export function DetailsPanel({
             ) : null}
           </dl>
           {c.lead_score !== null && c.lead_score !== undefined ? <LeadScore score={c.lead_score} /> : null}
+          <Button variant="secondary" size="sm" className="w-full" onClick={() => setContactOpen(true)}>
+            View contact
+          </Button>
         </CardInset>
         <Attention conversation={c} now={now} timeZone={workspace.timezone} />
       </Section>
@@ -185,6 +190,7 @@ export function DetailsPanel({
         </CardInset>
       </Section>
       {teachAi.sheet}
+      <ContactDrawer contactId={contactOpen ? c.contact.id : null} onClose={() => setContactOpen(false)} />
     </div>
   );
 }

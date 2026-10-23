@@ -30,6 +30,8 @@ READ = {
     "top_posts",
     "sentiment_distribution",
     "comment_topics",
+    "compare_periods",
+    "metric_trend",
     "list_scheduled_messages",
     "list_scheduled_posts",
     "list_automations",

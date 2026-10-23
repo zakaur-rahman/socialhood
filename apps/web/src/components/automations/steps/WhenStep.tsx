@@ -1,6 +1,17 @@
 "use client";
 
-import { AtSign, Link2, ListChecks, Megaphone, MessageCircle, MessagesSquare, Reply, Send } from "lucide-react";
+import {
+  AtSign,
+  Hand,
+  Link2,
+  ListChecks,
+  Megaphone,
+  MessageCircle,
+  MessagesSquare,
+  MessageSquareReply,
+  Reply,
+  Send,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 
@@ -26,6 +37,16 @@ const TRIGGERS: { value: TriggerName; icon: typeof Send; hint: string }[] = [
     value: "ice_breaker",
     icon: ListChecks,
     hint: "Someone taps one of your conversation starters. Set the starters up under Conversation starters on the Automations page.",
+  },
+  {
+    value: "first_message",
+    icon: Hand,
+    hint: "A welcome: it goes to someone the first time they DM this account, whatever they write. It runs only when no other automation answers that message.",
+  },
+  {
+    value: "default_reply",
+    icon: MessageSquareReply,
+    hint: "A catch-all: it answers a DM that no other automation matched, but only while AI replies are Off for the conversation. With AI on Suggest or Auto, the AI answers instead.",
   },
 ];
 

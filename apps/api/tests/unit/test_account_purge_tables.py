@@ -34,6 +34,7 @@ EXPECTED = {
     "conversations",
     "entry_links",
     "ice_breakers",
+    "lead_stage_changes",
     "media_items",
     "message_analyses",
     "messages",

@@ -23,6 +23,8 @@ TriggerName = Literal[
     "entry_link",
     "ad_click",
     "ice_breaker",
+    "first_message",
+    "default_reply",
 ]
 MatchModeName = Literal["word", "exact", "contains"]
 ActionName = Literal["send_message", "ai_reply"]
@@ -308,6 +310,22 @@ class AutomationTest(RequestModel):
     media_item_id: uuid.UUID | None = None  # a comment on this post (post scope)
     first_name: str | None = Field(default=None, max_length=60)  # sample for the preview
     username: str | None = Field(default=None, max_length=60)
+    # A flow's dry run (GR-13): at each fork, the exit to follow (an index into the step's
+    # exits); 0 where none is given.
+    choices: list[Annotated[int, Field(ge=0, le=20)]] = Field(default_factory=list, max_length=50)
+
+
+class FlowPreviewStep(ResponseModel):
+    """One step of a flow's dry run, as the contact would meet it."""
+
+    step_id: str
+    kind: str  # send, ask, branch, action, delay, randomize, ai_reply or end
+    title: str  # a short line: "Message", "Ask for an email", "Wait 10 minutes"...
+    text: str | None = None  # the message or question, with the sample name and disclosure
+    buttons: list[str] = Field(default_factory=list)  # link buttons
+    quick_replies: list[str] = Field(default_factory=list)
+    exits: list[str] = Field(default_factory=list)  # a fork's ways on, in plain words
+    picked: int | None = None  # which exit this walk took (None: not a fork)
 
 
 class WinningAutomation(ResponseModel):
@@ -326,3 +344,5 @@ class AutomationTestResult(ResponseModel):
     rendered_public_reply: str | None = None
     rendered_opening: str | None = None  # tap first: the private reply before the message
     rendered_nudge: str | None = None  # the follow nudge, as a non-follower would get it
+    # A flow saved with the editor (GR-13): the steps one run would take (empty otherwise).
+    flow_path: list[FlowPreviewStep] = Field(default_factory=list)

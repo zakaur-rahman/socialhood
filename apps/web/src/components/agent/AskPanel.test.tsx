@@ -9,11 +9,13 @@ import { billingState, json, planList, problem, renderWithApi, workspace, type C
 import {
   agentStep,
   agentThread,
+  comparisonVisual,
   draftCard,
   emitRun,
   emitStep,
   LATEST_POST_ANSWER,
   LATEST_POST_REFS,
+  rankedVisual,
   replyCard,
   runDetail,
   scheduleCard,
@@ -426,6 +428,42 @@ describe("Asking (FR-AGT-01, agent-architecture.html §12)", () => {
     await user.click(within(run).getByRole("button", { name: "Open: Reply to this comment" }));
     expect(nav.push).toHaveBeenCalledWith("/w/maple/comments/po1");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("draws the run's visuals after the answer and before the prepared actions; a link in one closes the panel (GR-38)", async () => {
+    setup({
+      runs: {
+        r1: runDetail({
+          answer: "Reach is up 18% on the same days of September.",
+          visuals: [comparisonVisual(), rankedVisual()],
+          action_cards: [scheduleCard()],
+        }),
+      },
+    });
+    useAskStore.getState().setThread("w1", "r1");
+    const { user, panel } = await openPanel();
+    const run = await within(panel).findByRole("article");
+    const drawn = await within(run).findAllByTestId("visual");
+    expect(drawn.map((visual) => visual.getAttribute("data-kind"))).toEqual(["metric_comparison", "ranked_posts"]);
+    const answer = within(run).getByText("Reach is up 18% on the same days of September.");
+    const actions = within(run).getByRole("region", { name: "Scheduled message" });
+    expect(answer.compareDocumentPosition(drawn[0]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(drawn[1].compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(drawn[0]).getAllByTestId("metric-tile")).toHaveLength(3);
+
+    const link = within(drawn[1]).getAllByRole("link")[0];
+    link.addEventListener("click", (event) => event.preventDefault());
+    await user.click(link);
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  it("a run from before visuals existed, or with none, draws none", async () => {
+    setup({ runs: { r1: runDetail({ answer: "Done.", visuals: undefined as never }) } });
+    useAskStore.getState().setThread("w1", "r1");
+    const { panel } = await openPanel();
+    const run = await within(panel).findByRole("article");
+    expect(await within(run).findByText("Done.")).toBeInTheDocument();
+    expect(within(run).queryByTestId("run-visuals")).toBeNull();
   });
 
   it("Stop cancels a working run; finished steps stay and it can be asked again", async () => {

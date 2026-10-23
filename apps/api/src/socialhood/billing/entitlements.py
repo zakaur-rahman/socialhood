@@ -68,6 +68,7 @@ THINGS = {
     "members": "members",
     "contact_fields": "custom contact fields",
     "webhook_endpoints": "webhook endpoints",
+    "flow_steps": "steps in a flow",
 }
 
 

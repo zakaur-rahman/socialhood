@@ -11,8 +11,10 @@ import {
   EllipsisVertical,
   GripVertical,
   ListChecks,
+  Hand,
   MessageCircle,
   MessagesSquare,
+  MessageSquareReply,
   Pause,
   Play,
   Reply,
@@ -69,6 +71,8 @@ const TRIGGER_ICON: Record<TriggerName, typeof Send> = {
   entry_link: Link2,
   ad_click: Megaphone,
   ice_breaker: ListChecks,
+  first_message: Hand,
+  default_reply: MessageSquareReply,
 };
 
 const MAX_CHIPS = 3;

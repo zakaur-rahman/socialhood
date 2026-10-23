@@ -43,6 +43,8 @@ class Trigger(StrEnum):
     ENTRY_LINK = "entry_link"  # GR-08: a DM opened from one of the account's entry links
     AD_CLICK = "ad_click"  # GR-09: a DM opened from an ad (click to Instagram DM)
     ICE_BREAKER = "ice_breaker"  # GR-11: someone tapped one of the account's conversation starters
+    FIRST_MESSAGE = "first_message"  # GR-12: a contact's first DM to the account (a welcome)
+    DEFAULT_REPLY = "default_reply"  # GR-12: a DM nothing else answered, while AI is off
 
 
 class MatchMode(StrEnum):

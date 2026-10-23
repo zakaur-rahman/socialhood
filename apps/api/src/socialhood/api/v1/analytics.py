@@ -9,14 +9,16 @@ another workspace's post or account is 404 not_found; a ``since`` after ``until`
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, date, datetime
-from typing import Annotated
+from datetime import UTC, date, datetime, timedelta
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
 
 from socialhood.auth.deps import AnyMember, Session, WorkspaceContext
 from socialhood.platforms.deps import deps_from
 from socialhood.schemas.analytics import (
+    AccountMetricName,
+    AccountMetrics,
     AgeName,
     BaselineKind,
     MetricName,
@@ -25,8 +27,8 @@ from socialhood.schemas.analytics import (
     SentimentDistribution,
     TopPosts,
 )
-from socialhood.services.analytics import queries, sentiment
-from socialhood.services.analytics.common import View, capabilities_from
+from socialhood.services.analytics import account_metrics, queries, sentiment
+from socialhood.services.analytics.common import View, capabilities_from, date_range
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["analytics"])
 
@@ -126,4 +128,36 @@ async def list_top_posts(
         n=n,
         age=age,
         account_id=account_id,
+    )
+
+
+@router.get("/analytics/account-metrics", operation_id="get_account_metrics")
+async def get_account_metrics(
+    request: Request,
+    ctx: AnyMember,
+    session: Session,
+    since: Annotated[date | None, Query()] = None,
+    until: Annotated[date | None, Query()] = None,
+    account_id: Annotated[uuid.UUID | None, Query()] = None,
+    compare: Annotated[Literal["none", "previous"], Query()] = "none",
+    metric: Annotated[list[AccountMetricName] | None, Query()] = None,
+) -> AccountMetrics:
+    """What the account (or every account) did over the range, from its daily readings and the
+    comment and message tables; ``compare=previous`` adds the period of the same length just
+    before, with the change in % (worked out here). A day without a reading is a gap, not a zero:
+    each figure says how many days it has, and is null with the reason when none. Today has no
+    reading yet. ``metric`` (repeatable) picks metrics; default all. 404 for another workspace's
+    account."""
+    view = _view(request, ctx)
+    wanted = date_range(view.timezone, view.now, since, until)
+    current = account_metrics.span_of(wanted.since, wanted.until)
+    previous = (
+        account_metrics.span_of(
+            current.since - timedelta(days=current.days), current.since - timedelta(days=1)
+        )
+        if compare == "previous"
+        else None
+    )
+    return await account_metrics.account_metrics(
+        session, view, current=current, previous=previous, account_id=account_id, metrics=metric
     )
