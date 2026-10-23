@@ -44,6 +44,10 @@ export const emptyStates = {
     title: "No automations match",
     body: "Try another search or clear the filters.",
   },
+  storyMentions: {
+    title: "No story mentions yet",
+    body: "When someone mentions you in their story, they show up here.",
+  },
   automationRuns: {
     title: "No runs yet",
     body: "Each time this automation answers someone, it shows here.",
