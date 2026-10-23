@@ -575,21 +575,6 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         headers=clerk.headers(owner_b),
     )
     assert flow.status_code == 200, flow.text
-    async with engine.begin() as conn:  # GR-15: a tracked link and a click on it
-        await conn.execute(
-            text(
-                "WITH r AS (INSERT INTO automation_runs (workspace_id, automation_id,"
-                " trigger_message_id, matched_keyword, result)"
-                " VALUES (:w, :a, :m, 'link', 'sent') RETURNING id),"
-                " l AS (INSERT INTO tracked_links (workspace_id, automation_id, run_id,"
-                " contact_id, step_id, button_index, code, title, url)"
-                " SELECT :w, :a, id, :c, 'hello', 0, 'bbbbbbbbbbbbbbbb', 'Open',"
-                " 'https://shop.example/b' FROM r RETURNING id, run_id)"
-                " INSERT INTO link_clicks (workspace_id, link_id, automation_id, run_id,"
-                " contact_id, step_id) SELECT :w, id, :a, run_id, :c, 'hello' FROM l"
-            ),
-            {"w": wid, "a": automation, "c": thread.contact_id, "m": thread.message_ids[0]},
-        )
     on = {
         "workspace_id": wid,
         "conversation_id": thread.conversation_id,
@@ -605,6 +590,22 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         engine, workspace_id=wid, account_id=account_id, media_item_id=post
     )
     await make_comment_analysis(engine, workspace_id=wid, comment_id=comment)
+    async with engine.begin() as conn:  # GR-15: a tracked link and a click on it, on a
+        # comment-triggered run (the workspace deletion test adds one triggered by the message)
+        await conn.execute(
+            text(
+                "WITH r AS (INSERT INTO automation_runs (workspace_id, automation_id,"
+                " trigger_comment_id, matched_keyword, result)"
+                " VALUES (:w, :a, :m, 'link', 'sent') RETURNING id),"
+                " l AS (INSERT INTO tracked_links (workspace_id, automation_id, run_id,"
+                " contact_id, step_id, button_index, code, title, url)"
+                " SELECT :w, :a, id, :c, 'hello', 0, 'bbbbbbbbbbbbbbbb', 'Open',"
+                " 'https://shop.example/b' FROM r RETURNING id, run_id)"
+                " INSERT INTO link_clicks (workspace_id, link_id, automation_id, run_id,"
+                " contact_id, step_id) SELECT :w, id, :a, run_id, :c, 'hello' FROM l"
+            ),
+            {"w": wid, "a": automation, "c": thread.contact_id, "m": comment},
+        )
     await make_snapshot(engine, workspace_id=wid, media_item_id=post)
     await make_account_day(engine, workspace_id=wid, account_id=account_id)
     scheduled_post = await make_scheduled_post(
