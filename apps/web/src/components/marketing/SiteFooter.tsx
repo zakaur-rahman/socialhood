@@ -61,7 +61,7 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           </ul>
         </nav>
         <nav aria-labelledby="footer-legal">
-          <h2 id="footer-legal" className="text-xs font-semibold tracking-[0.08em] text-fg uppercase">
+          <h2 id="footer-legal" className={EYEBROW}>
             Legal
           </h2>
           <ul className="mt-3 grid gap-1 sm:gap-1.5">
