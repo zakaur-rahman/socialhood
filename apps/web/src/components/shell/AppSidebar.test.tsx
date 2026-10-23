@@ -55,7 +55,7 @@ describe("AppSidebar (UX-SH-01)", () => {
   it("shows labels, the workspace, the plan and every section for an owner when expanded", () => {
     renderSidebar({ userName: "Priya Nair", userEmail: "priya@aria.example" });
     const nav = mainNav();
-    for (const label of ["Home", "Inbox", "Comments", "Schedule", "Automations", "Knowledge", "Settings", "Help"]) {
+    for (const label of ["Home", "Inbox", "Comments", "Contacts", "Schedule", "Automations", "Knowledge", "Settings", "Help"]) {
       expect(within(nav).getByText(label)).toBeInTheDocument();
     }
     expect(within(nav).getByText("Social Hood")).toBeInTheDocument();
@@ -106,7 +106,7 @@ describe("navigation groups by role", () => {
       const { unmount } = renderSidebar({ workspace: { ...owner, role } });
       const engage = screen.getByRole("group", { name: "Engage" });
       const grow = screen.getByRole("group", { name: "Grow" });
-      expect(linkNames(engage)).toEqual(["Inbox", "Comments"]);
+      expect(linkNames(engage)).toEqual(["Inbox", "Comments", "Contacts"]);
       expect(linkNames(grow)).toEqual(["Schedule", "Automations", "Knowledge"]);
       const home = screen.getByRole("link", { name: "Home" });
       expect(home.closest('[role="group"]')).toBeNull();
@@ -116,10 +116,10 @@ describe("navigation groups by role", () => {
     }
   });
 
-  it("agents: Home, Inbox and Comments; the Grow group, label and all, is hidden", () => {
+  it("agents: Home, Inbox, Comments and Contacts; the Grow group, label and all, is hidden", () => {
     renderSidebar({ workspace: { ...owner, role: "agent" } });
     const nav = mainNav();
-    expect(linkNames(screen.getByRole("group", { name: "Engage" }))).toEqual(["Inbox", "Comments"]);
+    expect(linkNames(screen.getByRole("group", { name: "Engage" }))).toEqual(["Inbox", "Comments", "Contacts"]);
     expect(screen.queryByRole("group", { name: "Grow" })).not.toBeInTheDocument();
     expect(within(nav).queryByText("Grow")).not.toBeInTheDocument();
     for (const hidden of ["Automations", "Schedule", "Knowledge"]) {
@@ -130,7 +130,7 @@ describe("navigation groups by role", () => {
   it("collapsed, the labels become dividers but still name the groups", () => {
     renderSidebar({ collapsed: true });
     const engage = screen.getByRole("group", { name: "Engage" });
-    expect(linkNames(engage)).toEqual(["Inbox", "Comments"]);
+    expect(linkNames(engage)).toEqual(["Inbox", "Comments", "Contacts"]);
     expect(within(engage).getByText("Engage")).toHaveClass("sr-only");
   });
 });

@@ -1,3 +1,4 @@
+import type { ContactFilters } from "@/lib/contacts/filters";
 import type {
   ActivityKind,
   AgeName,
@@ -52,6 +53,15 @@ export const keys = {
   /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
   activityLists: (wid: string) => ["w", wid, "activity"] as const,
   activity: (wid: string, filters: ActivityFilters) => ["w", wid, "activity", filters] as const,
+  // contacts (GR-17): `contactLists(wid)` is the prefix of every list, count, record and timeline
+  contactLists: (wid: string) => ["w", wid, "contacts"] as const,
+  contacts: (wid: string, filters: ContactFilters) => ["w", wid, "contacts", "list", filters] as const,
+  contactCount: (wid: string, filters: ContactFilters) => ["w", wid, "contacts", "count", filters] as const,
+  contact: (wid: string, id: string) => ["w", wid, "contacts", "one", id] as const,
+  contactTimeline: (wid: string, id: string) => ["w", wid, "contacts", "timeline", id] as const,
+  tags: (wid: string) => ["w", wid, "tags"] as const,
+  contactFields: (wid: string) => ["w", wid, "contact-fields"] as const,
+  contactSegments: (wid: string) => ["w", wid, "contact-segments"] as const,
   // inbox (P3)
   conversationLists: (wid: string) => ["w", wid, "conversations"] as const,
   conversations: (wid: string, filters: ConversationFilters) => ["w", wid, "conversations", filters] as const,
