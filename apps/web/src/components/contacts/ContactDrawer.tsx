@@ -7,6 +7,7 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 
 import { ContactAvatar } from "@/components/inbox/ContactAvatar";
+import { LeadStageSection } from "@/components/leads/LeadStageSection";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -66,7 +67,8 @@ function Section({ id, title, children }: { id: string; title: string; children:
 
 /**
  * The contact drawer (GR-17): one contact's tags, email, phone and custom fields (editable by any
- * member), marketing consent (admins record it), and a read-only timeline. A full-screen panel
+ * member), the lead stage (any member moves it), marketing consent (admins record it), and a
+ * read-only timeline that includes the stage history. A full-screen panel
  * below 768 px and a 420 px panel beside the page from there. It opens from the contacts list and
  * from the inbox's details panel.
  */
@@ -136,6 +138,9 @@ function DrawerBody({ record }: { record: ContactRecord }) {
         </div>
       </SheetHeader>
       <div className="flex flex-col gap-6 p-4">
+        <Section id="contact-lead-stage" title="Lead stage">
+          <LeadStageSection record={record} />
+        </Section>
         <Section id="contact-tags" title="Tags">
           <TagsEditor record={record} admin={admin} />
         </Section>

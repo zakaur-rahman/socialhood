@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useContactFields, useTags } from "@/lib/api/queries";
-import type { ConsentChannel, Platform } from "@/lib/api/types";
+import type { ConsentChannel, LeadStage, Platform } from "@/lib/api/types";
 import {
   ACTIVITY_RANGES,
   EMPTY_FILTERS,
@@ -19,6 +19,7 @@ import {
   type ContactFilters,
   type FieldFilter,
 } from "@/lib/contacts/filters";
+import { LEAD_STAGES } from "@/lib/leads/stages";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { TagChip } from "./TagChip";
@@ -36,8 +37,8 @@ function fromTriState(value: string): boolean | null {
 }
 
 /**
- * The filters (GR-17): tag (every one chosen), email and phone, platform, marketing consent, lead
- * score, last activity and up to five custom field conditions (has a value, or equals one). They
+ * The filters (GR-17): tag (every one chosen), lead stage (GR-18, any one chosen), email and phone,
+ * platform, marketing consent, lead score, last activity and up to five custom field conditions (has a value, or equals one). They
  * apply as you change them; the list filters on the server.
  */
 export function FiltersSheet({
@@ -45,11 +46,14 @@ export function FiltersSheet({
   onOpenChange,
   filters,
   onChange,
+  hideStage = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filters: ContactFilters;
   onChange: (next: ContactFilters) => void;
+  /** The Leads view is already split by stage, so it leaves the stage filter out. */
+  hideStage?: boolean;
 }) {
   const { id: wid } = useCurrentWorkspace();
   const tags = useTags(wid).data ?? [];
@@ -58,6 +62,9 @@ export function FiltersSheet({
 
   function toggleTag(id: string, on: boolean) {
     set({ tagIds: on ? [...filters.tagIds, id].slice(0, MAX_TAG_FILTERS) : filters.tagIds.filter((t) => t !== id) });
+  }
+  function toggleStage(stage: LeadStage, on: boolean) {
+    set({ stages: on ? [...filters.stages, stage] : filters.stages.filter((s) => s !== stage) });
   }
   function setFieldRow(index: number, patch: Partial<FieldFilter>) {
     set({ fields: filters.fields.map((row, i) => (i === index ? { ...row, ...patch } : row)) });
@@ -93,6 +100,26 @@ export function FiltersSheet({
               </ul>
             )}
           </fieldset>
+
+          {hideStage ? null : (
+            <fieldset className="space-y-2">
+              <legend className="mb-1 text-sm font-medium">Lead stage</legend>
+              <ul className="space-y-1">
+                {LEAD_STAGES.map((stage) => (
+                  <li key={stage.value}>
+                    <label className="flex min-h-8 items-center gap-2 text-sm pointer-coarse:min-h-10">
+                      <Checkbox
+                        checked={filters.stages.includes(stage.value)}
+                        onCheckedChange={(on) => toggleStage(stage.value, on === true)}
+                        aria-label={`Stage ${stage.label}`}
+                      />
+                      {stage.label}
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </fieldset>
+          )}
 
           <Field>
             <FieldLabel>Email</FieldLabel>

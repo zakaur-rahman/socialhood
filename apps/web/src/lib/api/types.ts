@@ -349,3 +349,12 @@ export type ContactSegmentPatch = Schemas["SegmentPatch"];
 export type TimelineItem = Schemas["TimelineItem"];
 export type TimelineList = Schemas["TimelineList"];
 export type TimelineKind = TimelineItem["kind"];
+
+// Leads (GR-18)
+export type LeadStage = ContactListItem["lead_stage"];
+export type LeadStageUpdate = Schemas["LeadStageUpdate"];
+export type LeadSummary = Schemas["LeadSummary"];
+export type LeadStageCount = Schemas["LeadStageCount"];
+export type LeadWeek = Schemas["LeadWeek"];
+export type LeadSettings = Schemas["LeadSettings"];
+export type LeadSettingsPatch = Schemas["LeadSettingsPatch"];

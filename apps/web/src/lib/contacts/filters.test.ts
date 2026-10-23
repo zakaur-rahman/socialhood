@@ -64,6 +64,7 @@ describe("contact filters (GR-17)", () => {
       hasEmail: true,
       consent: "whatsapp",
       minLeadScore: 40,
+      stages: ["qualified", "follow_up"],
       activity: "quiet30",
       fields: [
         { key: "city", mode: "equals", value: "Pune" },
@@ -83,5 +84,14 @@ describe("contact filters (GR-17)", () => {
     expect(sameFilters(filters({ tagIds: ["t1"] }), filters({ tagIds: ["t1"], activity: "any" }))).toBe(true);
     expect(sameFilters(filters({ tagIds: ["t1"] }), filters({ tagIds: ["t2"] }))).toBe(false);
     expect(sameFilters(filters({ q: " x " }), filters({ q: "x" }))).toBe(true);
+  });
+
+  it("filters by lead stage (GR-18): any of them, as a repeated query key", () => {
+    const f = filters({ stages: ["qualified", "follow_up"] });
+    expect(filtersToSpec(f)).toEqual({ stages: ["qualified", "follow_up"] });
+    expect(filtersToQuery(f)).toMatchObject({ stage: ["qualified", "follow_up"] });
+    expect(activeFilterCount(f)).toBe(1);
+    expect(specToFilters({ stages: ["won"] }).stages).toEqual(["won"]);
+    expect(specToFilters({}).stages).toEqual([]);
   });
 });

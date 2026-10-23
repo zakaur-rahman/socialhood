@@ -1,4 +1,4 @@
-import type { ConsentChannel, ContactFilterSpec, Platform } from "@/lib/api/types";
+import type { ConsentChannel, ContactFilterSpec, LeadStage, Platform } from "@/lib/api/types";
 
 /** Last activity as a moving range: the API takes days, so a saved segment stays current. */
 export type ActivityRange = "any" | "7d" | "30d" | "90d" | "quiet30" | "quiet90";
@@ -24,6 +24,8 @@ export type ContactFilters = {
   hasPhone: boolean | null;
   consent: ConsentChannel | null;
   minLeadScore: number | null;
+  /** Lead stages (GR-18): a contact in any of them. Empty: every stage. */
+  stages: LeadStage[];
   activity: ActivityRange;
   fields: FieldFilter[];
 };
@@ -36,6 +38,7 @@ export const EMPTY_FILTERS: ContactFilters = {
   hasPhone: null,
   consent: null,
   minLeadScore: null,
+  stages: [],
   activity: "any",
   fields: [],
 };
@@ -70,6 +73,7 @@ export function filtersToSpec(f: ContactFilters): ContactFilterSpec {
   if (f.hasPhone !== null) spec.has_phone = f.hasPhone;
   if (f.consent) spec.marketing_consent = f.consent;
   if (f.minLeadScore !== null) spec.min_lead_score = f.minLeadScore;
+  if (f.stages.length) spec.stages = f.stages;
   if (range.within) spec.active_within_days = range.within;
   if (range.quiet) spec.inactive_for_days = range.quiet;
   const fields = fieldMatches(f.fields);
@@ -88,6 +92,7 @@ export function filtersToQuery(f: ContactFilters) {
     has_phone: spec.has_phone,
     marketing_consent: spec.marketing_consent,
     min_lead_score: spec.min_lead_score,
+    stage: spec.stages,
     active_within_days: spec.active_within_days,
     inactive_for_days: spec.inactive_for_days,
     field: spec.fields,
@@ -111,6 +116,7 @@ export function specToFilters(spec: ContactFilterSpec): ContactFilters {
     hasPhone: spec.has_phone ?? null,
     consent: spec.marketing_consent ?? null,
     minLeadScore: spec.min_lead_score ?? null,
+    stages: spec.stages ?? [],
     activity,
     fields: (spec.fields ?? []).map((match) => {
       const at = match.indexOf(":");
@@ -130,6 +136,7 @@ export function activeFilterCount(f: ContactFilters): number {
     (f.hasPhone !== null ? 1 : 0) +
     (f.consent ? 1 : 0) +
     (f.minLeadScore !== null ? 1 : 0) +
+    (f.stages.length > 0 ? 1 : 0) +
     (f.activity !== "any" ? 1 : 0) +
     fieldMatches(f.fields).length
   );

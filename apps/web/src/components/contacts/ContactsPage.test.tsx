@@ -35,6 +35,10 @@ function contact(values: Partial<ContactListItem> = {}): ContactListItem {
     phone: null,
     tags: [{ id: "t1", name: "lead-magnet", color: 1 }],
     lead_score: 72,
+    lead_stage: "qualified",
+    lead_stage_at: "2026-10-22T10:00:00Z",
+    lead_stage_reason: "Lead score reached 72.",
+    lead_cold: false,
     conversation_id: "c1",
     last_activity_at: new Date(Date.now() - 2 * 3_600_000).toISOString(),
     first_seen_at: "2026-09-27T09:00:00Z",
@@ -111,6 +115,25 @@ describe("ContactsPage (GR-17)", () => {
     expect(within(rows[0]).getByText("priya@example.com")).toBeInTheDocument();
     expect(within(rows[1]).getByText("No email or phone")).toBeInTheDocument();
     expect(await screen.findByTestId("contact-count")).toHaveTextContent("2 contacts");
+  });
+
+  it("shows each contact's lead stage", async () => {
+    setup({ items: [contact(), contact({ id: "p2", name: "Rahul Kumar", lead_stage: "won" })] });
+    const rows = await screen.findAllByTestId("contact-row");
+    expect(within(rows[0]).getByTestId("contact-stage")).toHaveTextContent("Qualified");
+    expect(within(rows[1]).getByTestId("contact-stage")).toHaveTextContent("Won");
+  });
+
+  it("filters by lead stage on the server, for the list and the count", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup();
+    await screen.findAllByTestId("contact-row");
+    await user.click(screen.getByRole("button", { name: "Filters" }));
+    await user.click(await screen.findByRole("checkbox", { name: "Stage Qualified" }));
+    await user.click(screen.getByRole("checkbox", { name: "Stage Follow up" }));
+    await waitFor(() => expect(listCalls(calls).at(-1)?.url.searchParams.getAll("stage")).toEqual(["qualified", "follow_up"]));
+    const count = calls.filter((c) => c.path === "/v1/w/w1/contacts/count").at(-1);
+    expect(count?.url.searchParams.getAll("stage")).toEqual(["qualified", "follow_up"]);
   });
 
   it("explains an empty list", async () => {

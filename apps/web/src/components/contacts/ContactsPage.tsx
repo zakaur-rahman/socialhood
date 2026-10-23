@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ContactAvatar } from "@/components/inbox/ContactAvatar";
+import { STAGE_LABEL, STAGE_TONE } from "@/lib/leads/stages";
 import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +43,7 @@ function saveBlob(blob: Blob, name: string): void {
 /**
  * Contacts (GR-17): everyone who has messaged or commented, newest activity first, filtered on the
  * server and loaded in pages. Search, filters (tag, email, phone, platform, consent, lead score,
- * last activity, custom fields), saved segments, bulk tagging (the ticked rows, or everyone the
+ * lead stage, last activity, custom fields), saved segments, bulk tagging (the ticked rows, or everyone the
  * filters match) and a CSV export for admins. A row opens the contact drawer, a full-screen panel
  * on a phone. It fills the width of the screen.
  */
@@ -302,6 +303,9 @@ function ContactRow({
           <span className="min-w-0">
             <span className="block truncate font-medium">{item.name}</span>
             {item.username ? <span className="block truncate text-xs text-fg-secondary">@{item.username}</span> : null}
+            <Badge tone={STAGE_TONE[item.lead_stage]} className="mt-1" data-testid="contact-stage">
+              {STAGE_LABEL[item.lead_stage]}
+            </Badge>
           </span>
         </span>
         <span className="flex min-w-0 flex-wrap gap-1">

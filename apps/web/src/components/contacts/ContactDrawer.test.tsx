@@ -31,6 +31,10 @@ const record: ContactRecord = {
   phone: null,
   tags: [{ id: "t1", name: "lead-magnet", color: 1 }],
   lead_score: 72,
+  lead_stage: "qualified",
+  lead_stage_at: "2026-10-22T10:00:00Z",
+  lead_stage_reason: "Lead score reached 72.",
+  lead_cold: false,
   conversation_id: "c1",
   last_activity_at: "2026-10-23T10:00:00Z",
   first_seen_at: "2026-09-27T09:00:00Z",
@@ -51,13 +55,13 @@ const timeline: TimelineItem[] = [
   { id: "i3", kind: "conversation", occurred_at: "2026-10-01T09:00:00Z", title: "Conversation started", detail: "From an entry link", conversation_id: "c1" },
 ];
 
-function setup(options: { role?: "owner" | "agent"; next?: string | null; patch?: (call: Call) => Response } = {}) {
+function setup(options: { role?: "owner" | "agent"; next?: string | null; cold?: boolean; patch?: (call: Call) => Response } = {}) {
   let served = 0;
   const onClose = vi.fn();
   const view = renderWithApi(<ContactDrawer contactId="p1" onClose={onClose} />, {
     ws: { ...workspace, role: options.role ?? "owner" },
     handlers: {
-      "GET /v1/w/:wid/contacts/:id": () => json(record),
+      "GET /v1/w/:wid/contacts/:id": () => json({ ...record, lead_cold: options.cold ?? false }),
       "GET /v1/w/:wid/contacts/:id/timeline": () => {
         served += 1;
         return json(served === 1 ? { items: timeline, next_cursor: options.next ?? null } : { items: [{ ...timeline[2], id: "i4", title: "Tagged vip", kind: "tag", detail: null }], next_cursor: null });
@@ -75,6 +79,7 @@ function setup(options: { role?: "owner" | "agent"; next?: string | null; patch?
       "PATCH /v1/w/:wid/contacts/:id": options.patch ?? ((call) => json({ ...record, ...(call.body as object) })),
       "POST /v1/w/:wid/contacts/:id/tags": () => json({ ...record, tags: [...record.tags, { id: "t2", name: "vip", color: 0 }] }),
       "POST /v1/w/:wid/contacts/:id/consents": () => json(record),
+      "POST /v1/w/:wid/contacts/:id/lead-stage": (call) => json({ ...record, lead_stage: (call.body as { stage: ContactRecord["lead_stage"] }).stage }),
     },
   });
   return { ...view, onClose };
@@ -93,6 +98,36 @@ describe("ContactDrawer (GR-17)", () => {
     expect(items.map((i) => i.getAttribute("data-kind"))).toEqual(["comment", "automation_run", "conversation"]);
     expect(within(drawer).getByText("LINK please")).toBeInTheDocument();
     expect(within(drawer).getAllByRole("link", { name: "Open conversation" }).length).toBeGreaterThan(0);
+  });
+
+  it("shows the lead stage and why it is there", async () => {
+    setup();
+    const drawer = await screen.findByRole("dialog");
+    expect(await within(drawer).findByTestId("lead-stage")).toHaveTextContent("Qualified");
+    expect(within(drawer).getByText("Lead score reached 72.")).toBeInTheDocument();
+    expect(within(drawer).getByRole("combobox", { name: "Lead stage" })).toHaveTextContent("Qualified");
+    expect(within(drawer).queryByText("Gone cold")).not.toBeInTheDocument();
+  });
+
+  it("flags a lead that has gone cold", async () => {
+    setup({ cold: true });
+    const drawer = await screen.findByRole("dialog");
+    expect(await within(drawer).findByText("Gone cold")).toBeInTheDocument();
+  });
+
+  it("moves the lead to another stage with a note, for any member", async () => {
+    const user = userEvent.setup();
+    const { calls } = setup({ role: "agent" });
+    const drawer = await screen.findByRole("dialog");
+    await user.type(await within(drawer).findByLabelText("Why? (optional)"), "Paid in full");
+    await user.click(within(drawer).getByRole("combobox", { name: "Lead stage" }));
+    await user.click(await screen.findByRole("option", { name: "Won" }));
+    await waitFor(() => {
+      const post = calls.find((c) => c.method === "POST" && c.path.endsWith("/lead-stage"));
+      expect(post?.body).toEqual({ stage: "won", note: "Paid in full" });
+    });
+    await waitFor(() => expect(within(drawer).getByTestId("lead-stage")).toHaveTextContent("Won"));
+    expect(within(drawer).getByLabelText("Why? (optional)")).toHaveValue("");
   });
 
   it("saves only what changed, and removes an emptied field", async () => {

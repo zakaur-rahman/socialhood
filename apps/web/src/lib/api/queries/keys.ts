@@ -60,6 +60,9 @@ export const keys = {
   contact: (wid: string, id: string) => ["w", wid, "contacts", "one", id] as const,
   contactTimeline: (wid: string, id: string) => ["w", wid, "contacts", "timeline", id] as const,
   tags: (wid: string) => ["w", wid, "tags"] as const,
+  // leads (GR-18): moving a lead also refreshes `contactLists(wid)`, which holds its cards
+  leadSummary: (wid: string) => ["w", wid, "leads", "summary"] as const,
+  leadSettings: (wid: string) => ["w", wid, "leads", "settings"] as const,
   contactFields: (wid: string) => ["w", wid, "contact-fields"] as const,
   contactSegments: (wid: string) => ["w", wid, "contact-segments"] as const,
   // inbox (P3)

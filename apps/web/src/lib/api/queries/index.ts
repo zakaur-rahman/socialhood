@@ -22,3 +22,4 @@ export * from "./agent";
 export * from "./integrations";
 export * from "./activity";
 export * from "./contacts";
+export * from "./leads";

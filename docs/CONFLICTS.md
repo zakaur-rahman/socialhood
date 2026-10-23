@@ -2295,3 +2295,94 @@ the small items VIS-X1, X3 and X4. No migration.
 - **Left for later:** VIS-07 onwards (trend chart, lead list, table, progressive visuals, range
   controls, the report page), the OpenUI spike VIS-14, VIS-X2 (quote account names in the prompt),
   localised labels.
+
+## C-092 · Leads (GR-18, feature/gr-18-leads)
+
+A lead is a contact. This adds a stage to the contact, the rules that move it, a gone-cold job and a
+Leads view on top of GR-17's contacts list. (The coordinator renumbers this entry if another branch
+took C-092.)
+
+- **Where the stage lives.** *The roadmap (P2) put the stage on the conversation; the plan (GR-18)
+  puts it on the contact, with the conversation linking to it. Decided: the contact, as the plan
+  says.* A person who wrote in twice on one account still has one conversation (PD-10), and a
+  commenter with no conversation can be a lead too. Cards link to the conversation when there is one.
+  - Stages: `new`, `qualified`, `follow_up`, `won`, `lost`. New, qualified and follow up are open.
+  - *Not built from the roadmap: the optional lead value, and a backfill of `new` for conversations
+    with a score of 60 or more.* Every existing contact starts `new`, and the first analysis that
+    reaches the bar qualifies it. The migration rewrites nothing.
+- **Migration 0027** (down revision 0026), expand-only: `contacts.lead_stage` (default `new`),
+  `lead_stage_at`, `lead_stage_reason`, `lead_cold_at`, an index on (workspace, stage); the table
+  `lead_stage_changes`; `workspaces.lead_cold_days` (default 7, 1 to 90).
+- **History (`lead_stage_changes`, append only).** From, to, who or what moved it (`actor_kind`:
+  member, automation, rule, system), the member, the rule name (`lead_score`, `intent`,
+  `email_captured`, `gone_cold`) and a reason of up to 300 characters. It references the contact,
+  so an account purge removes it with the contact (the purge test snapshot lists it). Moving to the
+  stage a lead is already in records nothing.
+- **Rules (`services/leads.py`).**
+  - *A member* moves a lead to any stage at any time, with an optional note (any role, like tagging).
+    `POST /contacts/{id}/lead-stage`.
+  - *Automatic qualification* only ever moves a lead out of `new`, so a lead a member or an earlier
+    rule moved on is never pulled back. After each stored analysis: a lead score of 60 or more (the
+    inbox's Leads line), or a buying intent (pricing, purchase) with a score of 40 or more.
+    *Decided: 60, and 40 for a buying intent; both are constants, not settings.* The intent is the
+    member's correction when there is one.
+  - *A captured email qualifies* a new lead: `leads.on_capture(session, contact, kind)`, called by
+    the flow engine's question step today. **GR-14 calls the same function** when its lead capture
+    saves an email (`kind="email"`). A phone or a custom field does not qualify. An email a member
+    types into the drawer does not either: it is their own note, not a signal from the customer.
+  - *Gone cold* (`mark_cold_leads`, hourly at :10, bulk lane): a qualified or follow-up lead whose
+    customer has not written for the workspace's `lead_cold_days`, counted from their last message
+    or from the last stage change, whichever is later (so a lead a member just moved is not cold at
+    once). A qualified lead moves to follow up (rule `gone_cold`); a follow-up lead stays. Both get
+    `lead_cold_at`, and every member gets an in-app `lead_cold` notification with a link to the
+    conversation. *The plan says "notify the assignee"; there is no assignee until GR-20, so it is
+    every member for now.* A lead is cold while the flag is later than its last customer message, so
+    a new message ends it with no write, and any stage change clears it. It is idempotent (a flagged
+    lead is not selected again until it has written and gone quiet again), workspace-scoped (each
+    workspace's own days; rows locked with `FOR UPDATE SKIP LOCKED`), and RETRY in `RECOVERY`.
+  - *Won and lost* are never touched by a rule. Cold only looks at qualified and follow up.
+- **Setting.** `GET` and `PATCH /leads/settings` (`cold_after_days`, 1 to 90; admins change it).
+  *The plan asks for "N days (a workspace setting)" with no owner decision, so 7 is the default
+  and the Leads page offers 3, 5, 7, 14, 30 and 60 to admins.*
+- **API.** `GET /leads/summary` (any member): contacts per stage, open leads gone cold, and the last
+  8 weeks of leads that reached qualified and won (each contact once per week and stage, weeks start
+  on Monday UTC). *This is the roadmap's "conversion counts by week".* The lead list is
+  `GET /contacts?stage=` (repeat for any of them), the same filter everywhere: the list, count,
+  export, saved segments (`stages`) and bulk tagging. The contact list item and record gain
+  `lead_stage`, `lead_stage_at`, `lead_stage_reason` and `lead_cold`.
+- **History in the drawer.** A new timeline source in `services/contact_timeline.py`: "Lead stage:
+  Qualified", detail "From New. By Priya. Asked for a quote." (or "Automatically." for a rule).
+- **Flow condition.** `lead_stage` in the GR-03 branch conditions: `{"kind": "lead_stage",
+  "stages": ["qualified", "follow_up"]}` holds when the contact is in any of them, read when the step
+  runs. It needs no activation check. *The web has no list of condition options (the editor is
+  GR-13's), so `AutomationEditor` is untouched; GR-13 offers the new kind next to the others.*
+- **Event.** `lead.stage_changed` (version 1) in GR-04's catalogue, so the catalogue has nine events.
+  The payload has the contact, `from`, `to`, `changed_by` (`kind`, `user_id`, `rule`) and `reason`.
+  It is emitted by every real move.
+- **Web.**
+  - **Leads** is in the main nav under Engage, for every role. From 1024 px it is a board with a
+    column per stage; below that it is one stage at a time with a row of stage buttons above it, so
+    it works at 375 px. Each column is the contacts list filtered to its stage, so search and the
+    filter sheet are GR-17's (the sheet leaves the stage control out here; on Contacts it is a
+    "Lead stage" group, and each row wears its stage). A card shows the name, score, last activity,
+    why the lead is where it is, a "Gone cold" chip, up to three tags, a stage control and a link to
+    the conversation. Admins get "Gone cold after N days" in the page header.
+  - **The contact drawer** has a Lead stage section first (stage, since when, why, a control to move
+    it with an optional note); the history is in its timeline. It also opens from the inbox's
+    details panel.
+  - *Left for later:* a lead stage chip in the conversation header (the roadmap's step 5) and the
+    Ask tool `list_leads` (step 6). The drawer is one click from the details panel.
+- **Tests.** Unit: `test_leads.py` (stages, qualification rules, cold flag, history wording, request
+  limits, filter, flow condition, event, recovery class). Integration: `test_leads.py` (move, no-op,
+  roles, 404, history in the timeline, filter and count, segments, summary, setting, event),
+  `test_lead_rules.py` (analysis qualifies, buying intent, never pulls back, the cold job: selection,
+  idempotence, per-workspace days, a recent move), `test_lead_flow.py` (the branch, a captured email
+  qualifies once and fires the event, a phone does not). Tenancy: the new routes, body and table in
+  `test_isolation.py`; the account purge snapshot and seed. Vitest: the Leads page, the drawer's
+  stage section, the contacts page's stage badge and filter, `filters.test.ts`, the nav. E2E:
+  `gr18-leads.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (`LeadStageUpdate`, `LeadSummary`,
+  `LeadStageCount`, `LeadWeek`, `LeadSettings`, `LeadSettingsPatch`, the new fields on
+  `ContactListItem` and `ContactRecord`, `stages` on the filter models, `lead_stage` in
+  `TimelineKind`, `lead.stage_changed` in the event names); the web types are aliases waiting for it.
+  The hand-written web fixtures for the contact list item and record carry the new fields.
