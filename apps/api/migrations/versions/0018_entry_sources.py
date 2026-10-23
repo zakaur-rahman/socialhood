@@ -36,9 +36,7 @@ def upgrade() -> None:
     op.add_column("conversations", sa.Column("entry_source", sa.Text(), nullable=True))
     op.add_column("conversations", sa.Column("entry_ref", sa.Text(), nullable=True))
     op.add_column("conversations", sa.Column("entry_ad_id", sa.Text(), nullable=True))
-    op.add_column(
-        "conversations", sa.Column("entry_at", sa.DateTime(timezone=True), nullable=True)
-    )
+    op.add_column("conversations", sa.Column("entry_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column(
         "conversations",
         sa.Column("last_referral", postgresql.JSONB(astext_type=sa.Text()), nullable=True),
