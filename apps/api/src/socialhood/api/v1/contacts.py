@@ -12,7 +12,7 @@ from __future__ import annotations
 import csv
 import io
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
@@ -34,6 +34,7 @@ from socialhood.schemas.contacts import (
     FieldDefinitionList,
     FieldDefinitionPatch,
     FieldMatch,
+    LeadStageName,
     Segment,
     SegmentCreate,
     SegmentList,
@@ -65,6 +66,7 @@ def _filter(
     active_within_days: int | None = None,
     inactive_for_days: int | None = None,
     field: list[str] | None = None,
+    stage: Sequence[str] | None = None,
 ) -> ContactFilter:
     return ContactFilter(
         q=q,
@@ -80,6 +82,7 @@ def _filter(
         active_within_days=active_within_days,
         inactive_for_days=inactive_for_days,
         fields=tuple(service.parse_field_match(match) for match in field or ()),
+        stages=tuple(stage or ()),
     )
 
 
@@ -100,6 +103,7 @@ async def list_contacts(
     active_within_days: Annotated[int | None, Query(ge=1, le=3650)] = None,
     inactive_for_days: Annotated[int | None, Query(ge=1, le=3650)] = None,
     field: Annotated[list[FieldMatch] | None, Query(max_length=5)] = None,
+    stage: Annotated[list[LeadStageName] | None, Query(max_length=5)] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> ContactList:
@@ -108,10 +112,12 @@ async def list_contacts(
     current consent for that channel is granted. ``active_within_days`` keeps contacts active in
     the last N days and ``inactive_for_days`` those with no activity for N days or more (moving
     ranges, which a saved segment needs). ``field`` repeats: ``city:pune`` matches a
-    custom field's value ignoring case, ``city:*`` any value."""
+    custom field's value ignoring case, ``city:*`` any value. ``stage`` repeats: a contact in any
+    of those lead stages (GR-18)."""
     filt = _filter(
         q, tag_id, platform, account_id, has_email, has_phone, marketing_consent,
         min_lead_score, active_after, active_before, active_within_days, inactive_for_days, field,
+        stage,
     )  # fmt: skip
     await service.check_filter(session, filt)
     return await service.list_contacts(session, filt, cursor=cursor, limit=limit)
@@ -134,11 +140,13 @@ async def count_contacts(
     active_within_days: Annotated[int | None, Query(ge=1, le=3650)] = None,
     inactive_for_days: Annotated[int | None, Query(ge=1, le=3650)] = None,
     field: Annotated[list[FieldMatch] | None, Query(max_length=5)] = None,
+    stage: Annotated[list[LeadStageName] | None, Query(max_length=5)] = None,
 ) -> ContactCount:
     """How many contacts match the same filters as the list."""
     filt = _filter(
         q, tag_id, platform, account_id, has_email, has_phone, marketing_consent,
         min_lead_score, active_after, active_before, active_within_days, inactive_for_days, field,
+        stage,
     )  # fmt: skip
     await service.check_filter(session, filt)
     return ContactCount(count=await service.count_contacts(session, filt))
@@ -166,12 +174,14 @@ async def export_contacts(
     active_within_days: Annotated[int | None, Query(ge=1, le=3650)] = None,
     inactive_for_days: Annotated[int | None, Query(ge=1, le=3650)] = None,
     field: Annotated[list[FieldMatch] | None, Query(max_length=5)] = None,
+    stage: Annotated[list[LeadStageName] | None, Query(max_length=5)] = None,
 ) -> StreamingResponse:
     """The filtered contacts as CSV (the R2 data export), streamed: nothing is stored. A cell a
     spreadsheet would read as a formula starts with a quote."""
     filt = _filter(
         q, tag_id, platform, account_id, has_email, has_phone, marketing_consent,
         min_lead_score, active_after, active_before, active_within_days, inactive_for_days, field,
+        stage,
     )  # fmt: skip
     await service.check_filter(session, filt)
 

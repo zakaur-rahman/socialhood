@@ -15,6 +15,8 @@ Rules:
   The number of definitions is capped by the plan's ``contact_fields``.
 - Consent is append-only: each record says what changed, where it came from and its evidence;
   the latest per (contact, channel, purpose) is current.
+- The lead stage (GR-18, services/leads.py) is a filter here (``stages``, any of them) and a field
+  on every contact; moving it is leads.set_stage.
 - Tags are case-insensitively unique per workspace. Contacts are never metered (PD-2).
 """
 
@@ -66,6 +68,7 @@ from socialhood.schemas.contacts import (
     TagRef,
 )
 from socialhood.schemas.contacts import Tag as TagOut
+from socialhood.services import leads
 
 EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]+\.[^@\s]{2,}$")
 DIGITS = re.compile(r"\D")
@@ -164,6 +167,7 @@ class ContactFilter:
     has_phone: bool | None = None
     marketing_consent: str | None = None  # a channel with current consent granted
     min_lead_score: int | None = None
+    stages: tuple[str, ...] = ()  # any of these lead stages (GR-18)
     active_after: datetime | None = None
     active_before: datetime | None = None
     # Moving ranges: active in the last N days; no activity for N days or more.
@@ -190,6 +194,7 @@ def filter_from_spec(spec: ContactFilterSpec) -> ContactFilter:
         has_phone=spec.has_phone,
         marketing_consent=spec.marketing_consent,
         min_lead_score=spec.min_lead_score,
+        stages=tuple(spec.stages),
         active_after=spec.active_after,
         active_before=spec.active_before,
         active_within_days=spec.active_within_days,
@@ -276,6 +281,8 @@ def _filtered(filt: ContactFilter) -> Select[Contact, Conversation, SocialAccoun
         query = query.where(_current_consent(filt.marketing_consent))
     if filt.min_lead_score is not None:
         query = query.where(Conversation.lead_score >= filt.min_lead_score)
+    if filt.stages:
+        query = query.where(Contact.lead_stage.in_(filt.stages))
     if filt.active_after:
         query = query.where(_activity >= filt.active_after)
     if filt.active_before:
@@ -371,6 +378,10 @@ def _item(
         "phone": contact.phone,
         "tags": tags,
         "lead_score": conv.lead_score if conv else None,
+        "lead_stage": contact.lead_stage,
+        "lead_stage_at": contact.lead_stage_at,
+        "lead_stage_reason": contact.lead_stage_reason,
+        "lead_cold": leads.is_cold(contact, conv.last_inbound_at if conv else None),
         "conversation_id": conv.id if conv else None,
         "last_activity_at": activity,
         "first_seen_at": contact.first_seen_at or contact.created_at,

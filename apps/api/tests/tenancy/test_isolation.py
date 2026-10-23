@@ -137,6 +137,9 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "filter": {"tag_ids": ["{tag_id}"]},
     },
     ("PATCH", "/v1/w/{wid}/contact-segments/{segment_id}"): {"name": "Renamed"},
+    # GR-18: moving B's lead is 404 from A's workspace; the cold setting is the workspace's own.
+    ("POST", "/v1/w/{wid}/contacts/{contact_id}/lead-stage"): {"stage": "won"},
+    ("PATCH", "/v1/w/{wid}/leads/settings"): {"cold_after_days": 30},
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
@@ -306,6 +309,7 @@ B_TABLES = (
     "story_mentions",
     "entry_links",
     "contact_segments",
+    "lead_stage_changes",
     "ice_breakers",
     "comments",
     "message_analyses",
@@ -475,6 +479,12 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             headers=clerk.headers(owner_b),
         )
         assert done.status_code == 200, done.text
+    moved = await client.post(  # GR-18: a lead stage and its history
+        f"/v1/w/{wid}/contacts/{thread.contact_id}/lead-stage",
+        json={"stage": "qualified", "note": "Asked for a quote"},
+        headers=clerk.headers(owner_b),
+    )
+    assert moved.status_code == 200, moved.text
     hook = await client.post(  # GR-04: an endpoint and a delivery to it
         f"/v1/w/{wid}/webhook-endpoints",
         json={"url": "https://hooks.example.com/b", "events": ["lead.captured"]},

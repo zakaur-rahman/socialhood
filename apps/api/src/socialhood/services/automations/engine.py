@@ -80,6 +80,7 @@ from socialhood.schemas.flows import (
     FollowsCondition,
     HandOff,
     LeadScoreCondition,
+    LeadStageCondition,
     NotifyTeam,
     PlatformCondition,
     RandomizeStep,
@@ -89,6 +90,7 @@ from socialhood.schemas.flows import (
     Step,
     TagCondition,
 )
+from socialhood.services import leads
 from socialhood.services.automations import actions, flows, render, results
 from socialhood.services.webhooks import events as webhook_events
 
@@ -379,6 +381,8 @@ async def _holds(session: AsyncSession, scene: Scene, rule_when: object) -> bool
             return scene.acct.platform == platform
         case LeadScoreCondition(at_least=at_least):
             return scene.conv.lead_score is not None and scene.conv.lead_score >= at_least
+        case LeadStageCondition(stages=stages):
+            return contact.lead_stage in stages
     return False
 
 
@@ -878,10 +882,12 @@ async def _take(
         return step.on_skip, True
     _save_answer(scene.contact, step, value)
     await _log(session, run, step, StepStatus.DONE, tries=tries, answer=value)
+    kind = "field" if step.field_key else step.expect
+    await leads.on_capture(session, scene.contact, kind)  # a captured email qualifies (GR-18)
     await webhook_events.lead_captured(
         session,
         scene.contact,
-        kind="field" if step.field_key else step.expect,
+        kind=kind,
         value=value,
         field_key=step.field_key,
         automation_id=scene.automation.id,

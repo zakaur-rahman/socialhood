@@ -67,6 +67,7 @@ RECOVERY: dict[str, Recovery] = {
     "sweep_stuck_scheduled": R,
     "end_automation_windows": R,
     "check_automation_failures": R,  # notifications dedupe on automation and six-hour bucket
+    "mark_cold_leads": R,  # a flagged lead is no longer selected; one transaction
     "check_closing_windows": R,  # one transaction: reminded conversations are no longer due
     "dispatch_comment_analysis": R,
     "dispatch_post_summaries": R,

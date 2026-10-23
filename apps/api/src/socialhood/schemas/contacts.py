@@ -15,6 +15,7 @@ FieldTypeName = Literal["text", "email", "phone", "number", "date", "choice"]
 ConsentChannelName = Literal["instagram", "whatsapp", "email"]
 ConsentStatusName = Literal["granted", "revoked"]
 ConsentSourceName = Literal["platform_optin", "flow", "stop_reply", "member", "import"]
+LeadStageName = Literal["new", "qualified", "follow_up", "won", "lost"]  # GR-18
 Option = Annotated[str, Field(min_length=1, max_length=60)]  # a choice field's value
 # A custom field filter: ``key:value`` (equal, ignoring case) or ``key:*`` (has any value).
 FieldMatch = Annotated[str, StringConstraints(max_length=100, pattern=r"^[a-z][a-z0-9_]{0,39}:.")]
@@ -120,6 +121,12 @@ class ContactListItem(ResponseModel):
     phone: str | None = None
     tags: list[TagRef]
     lead_score: int | None = None
+    # GR-18: the lead stage, when and why it last changed, and whether the lead has gone cold
+    # (flagged by the gone-cold job and not written to since).
+    lead_stage: LeadStageName = "new"
+    lead_stage_at: datetime | None = None
+    lead_stage_reason: str | None = None
+    lead_cold: bool = False
     conversation_id: uuid.UUID | None = None  # None: never messaged (for example a commenter)
     last_activity_at: datetime | None = None
     first_seen_at: datetime | None = None
@@ -170,6 +177,7 @@ class ContactFilterSpec(RequestModel):
     has_phone: bool | None = None
     marketing_consent: ConsentChannelName | None = None
     min_lead_score: int | None = Field(default=None, ge=0, le=100)
+    stages: list[LeadStageName] = Field(default_factory=list, max_length=5)  # any of them (GR-18)
     active_after: datetime | None = None
     active_before: datetime | None = None
     # Moving ranges, so a saved segment stays "active this week": active in the last N days, or
@@ -197,6 +205,7 @@ class ContactFilterOut(ResponseModel):
     has_phone: bool | None = None
     marketing_consent: ConsentChannelName | None = None
     min_lead_score: int | None = None
+    stages: list[LeadStageName] = Field(default_factory=list)
     active_after: datetime | None = None
     active_before: datetime | None = None
     active_within_days: int | None = None
@@ -253,7 +262,7 @@ class SegmentPatch(RequestModel):
 # ---- timeline
 
 TimelineKind = Literal[
-    "conversation", "comment", "automation_run", "story_mention", "consent", "tag"
+    "conversation", "comment", "automation_run", "story_mention", "consent", "tag", "lead_stage"
 ]
 
 

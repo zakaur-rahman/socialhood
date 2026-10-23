@@ -1,8 +1,8 @@
 """One contact's timeline (GR-17): what happened with them, newest first, read-only.
 
 Sources today: their conversation, their comments, automation runs on them, story mentions,
-consent records and tags added. (Captured answers have no table of their own until GR-14 and
-broadcasts arrive in GR-23; each adds a source here.)
+consent records, tags added and lead stage moves (GR-18). (Captured answers have no table of
+their own until GR-14 and broadcasts arrive in GR-23; each adds a source here.)
 
 Rules:
 - Each source is read newest first with the same keyset, (time, id) before the cursor, and the
@@ -30,9 +30,17 @@ from socialhood.models.automations import (
     RunResult,
     StoryMention,
 )
-from socialhood.models.contacts import ConsentStatus, ContactConsent, ContactTag, Tag
+from socialhood.models.contacts import (
+    ConsentStatus,
+    ContactConsent,
+    ContactTag,
+    LeadStage,
+    LeadStageChange,
+    Tag,
+)
 from socialhood.models.inbox import Contact, Conversation, EntrySource
 from socialhood.schemas.contacts import TimelineItem, TimelineKind, TimelineList
+from socialhood.services import leads
 from socialhood.services.contacts import _decode, _encode
 
 DEFAULT_LIMIT = 30
@@ -98,6 +106,19 @@ def consent_title(channel: str, status: str) -> str:
     if status == ConsentStatus.GRANTED:
         return f"Agreed to marketing on {label}"
     return f"Withdrew marketing consent on {label}"
+
+
+def _stage_detail(
+    from_stage: str, actor_kind: str, user_name: str | None, reason: str | None
+) -> str:
+    """ "From New. By Priya. Asked for a quote.": where it moved from, who did it, and why."""
+    parts = [
+        f"From {leads.STAGE_LABEL[LeadStage(from_stage)]}",
+        leads.actor_phrase(actor_kind, user_name),
+    ]
+    if reason:
+        parts.append(reason.rstrip("."))
+    return ". ".join(parts) + "."
 
 
 async def timeline(
@@ -216,6 +237,43 @@ async def timeline(
         .limit(take)
     )
     items += [_item(i, "tag", at, f"Tagged {name}") for i, at, name in tags.all()]
+
+    moves = (
+        await session.execute(
+            _before(
+                select(
+                    LeadStageChange.id,
+                    LeadStageChange.created_at,
+                    LeadStageChange.from_stage,
+                    LeadStageChange.to_stage,
+                    LeadStageChange.actor_kind,
+                    LeadStageChange.actor_user_id,
+                    LeadStageChange.reason,
+                ).where(LeadStageChange.contact_id == contact_id),
+                LeadStageChange.created_at,
+                LeadStageChange.id,
+                after,
+            )
+            .order_by(LeadStageChange.created_at.desc(), LeadStageChange.id.desc())
+            .limit(take)
+        )
+    ).all()
+    names = await leads.user_names(session, [m.actor_user_id for m in moves if m.actor_user_id])
+    items += [
+        _item(
+            m.id,
+            "lead_stage",
+            m.created_at,
+            f"Lead stage: {leads.STAGE_LABEL[LeadStage(m.to_stage)]}",
+            _stage_detail(
+                m.from_stage,
+                m.actor_kind,
+                names.get(m.actor_user_id) if m.actor_user_id else None,
+                m.reason,
+            ),
+        )
+        for m in moves
+    ]
 
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     page = items[:limit]

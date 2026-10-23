@@ -12,6 +12,7 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Index,
+    SmallInteger,
     Text,
     UniqueConstraint,
     func,
@@ -82,8 +83,11 @@ class Workspace(IdMixin, TimestampMixin, Base):
     )
     checklist_dismissed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     automation_disclosure: Mapped[str | None] = mapped_column(Text)
+    # GR-18: days without a customer message before a qualified or follow-up lead goes cold.
+    lead_cold_days: Mapped[int] = mapped_column(SmallInteger, server_default=text("7"))
 
     __table_args__ = (
+        CheckConstraint("lead_cold_days BETWEEN 1 AND 90", name="lead_cold_days"),
         CheckConstraint(_in("status", WorkspaceStatus), name="status"),
         CheckConstraint("owner_user_id IS NOT NULL OR status = 'deleting'", name="owner"),
         CheckConstraint(f"slug ~ '{SLUG_PATTERN}'", name="slug"),
