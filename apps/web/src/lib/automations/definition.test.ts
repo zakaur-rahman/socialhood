@@ -351,3 +351,27 @@ describe("entry triggers (GR-08, GR-09)", () => {
     expect(stepOfField("ad_ids")).toBe("posts");
   });
 });
+
+describe("Live comments and conversation starters (GR-10, GR-11)", () => {
+  const comment = { ...toDefinition(automation({ trigger: "comment_keyword", keywords: ["link"] })) };
+
+  it("a Live-only comment automation needs no posts and sends none", () => {
+    const live = { ...comment, comment_surface: "live" as const, post_scope: "selected" as const, media_item_ids: ["m1"] };
+    expect(stepComplete("posts", live)).toBe(true);
+    expect(toRequestBody(live)).toMatchObject({ comment_surface: "live", post_scope: "all", media_item_ids: [] });
+  });
+
+  it("keeps the post scope when the automation listens on both", () => {
+    const both = { ...comment, comment_surface: "both" as const, post_scope: "selected" as const, media_item_ids: ["m1"] };
+    expect(toRequestBody(both)).toMatchObject({ comment_surface: "both", post_scope: "selected", media_item_ids: ["m1"] });
+  });
+
+  it("other triggers always send the posts surface", () => {
+    expect(toRequestBody({ ...comment, trigger: "dm_keyword", comment_surface: "live" }).comment_surface).toBe("posts");
+  });
+
+  it("a conversation starter has no keywords or posts", () => {
+    expect(visibleSteps("ice_breaker")).toEqual(["when", "then", "settings"]);
+    expect(toRequestBody({ ...comment, trigger: "ice_breaker", keywords: ["x"] }).keywords).toEqual([]);
+  });
+});

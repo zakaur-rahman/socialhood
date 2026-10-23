@@ -6,7 +6,7 @@ from __future__ import annotations
 import secrets
 import time
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
@@ -216,7 +216,7 @@ def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object
                 "id": "sandbox_live_1" if live else "sandbox_media_1",
                 "media_product_type": "LIVE" if live else "FEED",
             },
-            "timestamp": datetime.now(UTC).isoformat(),
+            "timestamp": (datetime.now(UTC) - timedelta(seconds=body.age_seconds or 0)).isoformat(),
         }
         entry: dict[str, object] = {
             "id": account_ref,

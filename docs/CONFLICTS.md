@@ -1935,3 +1935,77 @@ failures; now they can see them. A read model over existing tables: no migration
 - **Sandbox:** a DM with `referral_source: "ad"`, `ad_id` and `ad_title` (already in GR-01's
   injector) tests it end to end.
 - **Migration 0023** is shared with C-084.
+
+## C-086 · Live comments trigger (GR-10, feature/gr-10-11-live-icebreakers)
+
+- **The Live scope is a new column, not a post scope.** `automations.comment_surface` is `posts`
+  (default, today's behaviour), `live` or `both`; comment keyword and any comment triggers use it.
+  *Deviation from the plan's "a Live scope": `post_scope` has a check constraint and means which
+  posts, so a Live is not one of them.*
+  - A Live comment ignores `post_scope` and chosen posts; a Live-only automation is saved with
+    post scope "all" and no posts, and needs no post choice to activate (even "any comment").
+  - A posts-only automation passes over Live comments, and a Live-only one passes over posts.
+- **Intake** no longer skips Live comments (C-077): `enqueue_for_comment` queues the run for them
+  and the runtime checks the surface. Replies in a thread still start keyword automations only.
+- **When the Live ended.** Instagram sends no "Live ended" event.
+  - *A Live comment is "late" once it is more than 10 minutes old (`LIVE_REPLY_WINDOW`) when it is
+    matched, or when the queue gets to it. Unverified (T0.9): the window, and that Instagram refuses
+    a private reply after the broadcast.*
+  - A late comment records a `skipped_expired` run with the code `live_ended` and the reason "The
+    Live had ended". No new `RunResult`, so the result check is unchanged. Nothing is sent.
+- **Priority, not a second path.** Private replies still go only through the account's queue and its
+  750-an-hour bucket. Each pass takes Live-only automations first while they have runs waiting;
+  each drain also skips queued Live runs older than the window. An automation on "both" is ordered
+  like any other.
+- **Activity (GR-05):** the code `live_ended` reads "Instagram only lets an account reply privately
+  to a Live comment while the Live is on." with the title "... skipped a comment that came after
+  the Live ended". The runs list label for `skipped_expired` is now "Skipped: too late to reply".
+- **Flows and the AI** work as for other comment triggers (a private reply first).
+- **Sandbox:** `SandboxInbound.age_seconds` makes a comment or Live comment arrive that many
+  seconds old, to show a late Live comment.
+- **Web:** the posts step has Posts and Reels, Live, or both; Live hides the post scope.
+- **Migration 0024** (shared with C-087): `comment_surface` and its check. Expand-only; the
+  downgrade drafts Live-only automations first.
+
+## C-087 · Ice breakers (GR-11, feature/gr-10-11-live-icebreakers)
+
+- **A table, not JSON on the account.** `ice_breakers` holds up to 4 rows per Instagram account
+  (position 0 to 3, unique per account), each with the question (1 to 80 characters), the
+  automation it starts or `answer_with_ai` (never both), and how the last sync went (`synced_at`,
+  `sync_error`, the same on every row of the account). It is in the account purge, the workspace
+  deletion and the isolation seeds.
+- **Payload `ib:{id}`.** A position keeps its row, and so its id, when its question or mapping
+  changes, so a starter already shown in someone's app keeps working. A removed position's old
+  payload matches nothing.
+- **Trigger `ice_breaker`** (the trigger check is re-created in migration 0024). The automation has
+  no keywords; flows work as for any DM trigger. A postback whose payload is one of our starters
+  starts ice breaker automations only, and only the one its starter maps to; it answers no waiting
+  question (tap first or flow). `runtime.dm_triggers` picks this by the payload.
+- **Answer with AI:** no automation starts and the message is not marked handled, so the inbox AI
+  answers it as any customer message (the existing analysis and suggestion path). Nothing new to
+  build there.
+- **Entry source:** a conversation that begins with a tap records `ice_breaker` (C-077 had
+  reserved it) with the question as its ref, unless a referral came first.
+- **API** (owners and admins write, any member reads), under the account so isolation is by path:
+  - `GET /social-accounts/{id}/ice-breakers` gives the list, `synced_at`, `sync_error` and
+    `max_items`;
+  - `PUT` replaces the whole list in order and pushes it; `POST .../sync` pushes again;
+  - a push the platform refuses is not an HTTP error: the list is kept, `sync_error` is a plain
+    sentence (the usual platform error copy), and `synced_at` stays at the last good push.
+  - Validation is 422 per field: one target per starter, an automation of this account on the
+    `ice_breaker` trigger, 80 characters, no repeated question, at most 4. WhatsApp accounts are
+    refused.
+- **Adapter:** `set_ice_breakers(acct, starters)` replaces the list (an empty list clears it).
+  Instagram: `POST /me/messenger_profile?platform=instagram` with one default-locale
+  `ice_breakers` entry, `DELETE` of the `ice_breakers` field to clear, then a `GET` to read it
+  back. *Unverified (T0.9): the request shapes, that only a default locale is accepted, the
+  80-character limit, and that a re-set replaces the old list.* The sandbox keeps what was set
+  per account (`outbox.ICE_BREAKERS`); a question holding `[sandbox:fail=<code>]` fails the push.
+  WhatsApp raises `capability_unavailable`.
+- **Web:** Automations has a "Conversation starters" page (`/automations/starters`): up to four
+  rows (question, then an automation or "Answer with AI"), Save, and the sync line with the
+  reason and "Send to Instagram again". The When step offers "Instagram conversation starter".
+  The page says the starters don't show on desktop.
+- **Deviation from the plan:** the plan said "Settings or Automations"; it lives under
+  Automations, beside the automations it starts.
+- **Migration 0024** (shared with C-086).

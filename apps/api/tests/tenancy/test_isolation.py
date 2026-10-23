@@ -139,6 +139,10 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "events": ["lead.captured"],
     },
     ("PATCH", "/v1/w/{wid}/webhook-endpoints/{endpoint_id}"): {"description": "Taken over"},
+    # GR-11: conversation starters of B's account.
+    ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers"): {
+        "items": [{"question": "Taken over", "answer_with_ai": True}]
+    },
 }
 
 EXAMPLE_BODIES.update(
@@ -294,6 +298,7 @@ B_TABLES = (
     "webhook_deliveries",
     "story_mentions",
     "entry_links",
+    "ice_breakers",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -465,6 +470,14 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         f"/v1/w/{wid}/webhook-endpoints/{hook.json()['id']}/test", headers=clerk.headers(owner_b)
     )
     assert sent.status_code == 202, sent.text
+    async with engine.begin() as conn:  # GR-11: a conversation starter
+        await conn.execute(
+            text(
+                "INSERT INTO ice_breakers (workspace_id, social_account_id, position, question,"
+                " answer_with_ai) VALUES (:w, :a, 0, 'Opening hours?', true)"
+            ),
+            {"w": wid, "a": account_id},
+        )
     async with engine.begin() as conn:  # GR-07: a story mention
         await conn.execute(
             text(

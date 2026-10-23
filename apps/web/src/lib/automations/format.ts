@@ -26,6 +26,7 @@ export const TRIGGER_LABEL: Record<TriggerName, string> = {
   story_mention: "Story mention",
   entry_link: "Entry link",
   ad_click: "Ad click",
+  ice_breaker: "Conversation starter",
 };
 
 /** Where the trigger is named: the editor, the gallery and the list's filter say which network (UI-064). */
@@ -37,6 +38,7 @@ export const TRIGGER_LABEL_IG: Record<TriggerName, string> = {
   story_mention: "Instagram story mention",
   entry_link: "Instagram entry link",
   ad_click: "Instagram ad click",
+  ice_breaker: "Instagram conversation starter",
 };
 
 export const MATCH_LABEL: Record<MatchMode, string> = {
@@ -79,7 +81,7 @@ export const RESULT_LABEL: Record<RunResult, string> = {
   partial: "Partial",
   failed: "Failed",
   skipped_cooldown: "Skipped: cooldown",
-  skipped_expired: "Skipped: 7-day limit passed",
+  skipped_expired: "Skipped: too late to reply",
   escalated: "Handed to you",
   awaiting_reply: "Waiting for tap",
   skipped_read_only: "Skipped: account is read-only",
@@ -98,7 +100,8 @@ function plural(n: number, one: string, many: string): string {
 
 /** The row's trigger label: "Comment on 3 posts", "Any comment on next post", "DM keyword", "Story reply to any story". */
 export function triggerSummary(
-  automation: Pick<Automation, "trigger" | "post_scope" | "posts"> & Partial<Pick<Automation, "story_ids" | "ad_ids">>,
+  automation: Pick<Automation, "trigger" | "post_scope" | "posts"> &
+    Partial<Pick<Automation, "story_ids" | "ad_ids" | "comment_surface">>,
 ): string {
   const { trigger, post_scope: scope, posts } = automation;
   if (!trigger) return "No trigger yet";
@@ -109,11 +112,14 @@ export function triggerSummary(
     const ads = automation.ad_ids ?? [];
     return scope === "selected" ? `Ad click on ${plural(ads.length, "ad", "ads")}` : "Ad click on any ad";
   }
+  if (trigger === "ice_breaker") return "Conversation starter";
   if (trigger === "story_reply") {
     const stories = automation.story_ids ?? [];
     return scope === "selected" ? `Story reply on ${plural(stories.length, "story", "stories")}` : "Story reply to any story";
   }
   const lead = trigger === "comment_any" ? "Any comment" : "Comment";
+  if (automation.comment_surface === "live") return `${lead} on a Live`;
+  if (automation.comment_surface === "both") return `${lead} on posts and Lives`;
   if (scope === "next_post") return `${lead} on next post`;
   if (scope === "selected") return `${lead} on ${plural(posts.length, "post", "posts")}`;
   return `${lead} on any post`;

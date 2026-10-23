@@ -82,6 +82,8 @@ export class Api {
         | "story_reply"
         | "story_like"
         | "story_mention";
+      /** GR-10: how old a comment or Live comment is when it arrives, in seconds. */
+      ageSeconds?: number;
       text?: string;
       fromId?: string;
       fromUsername?: string;
@@ -108,6 +110,7 @@ export class Api {
       postback_payload: event.postbackPayload,
       quick_reply_payload: event.quickReplyPayload,
       story_id: event.storyId,
+      age_seconds: event.ageSeconds,
     });
   }
 
@@ -166,6 +169,34 @@ export class Api {
     return draft;
   }
 
+  /** GR-10: an active comment keyword automation on Lives (``surface`` "live"), no post scope. */
+  async liveAutomation(
+    wid: string,
+    accountId: string,
+    keyword: string,
+    messageText: string,
+  ): Promise<{ id: string }> {
+    const name = `Live ${keyword}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger: "comment_keyword",
+      keywords: [keyword],
+      match_mode: "word",
+      action: "send_message",
+      message_text: messageText,
+      comment_surface: "live",
+      post_scope: "all",
+      confirm_first: false,
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
   /** GR-08: an entry link on the account that starts ``automationId``. */
   entryLink(
     wid: string,
@@ -178,6 +209,26 @@ export class Api {
       automation_id: values.automationId,
       code: values.code,
     });
+  }
+
+  /** GR-11: an active automation on the conversation starter trigger (a tap starts it). */
+  async iceBreakerAutomation(wid: string, accountId: string, messageText: string): Promise<{ id: string }> {
+    const name = `Starter ${Date.now().toString(36)}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger: "ice_breaker",
+      keywords: [],
+      match_mode: "word",
+      action: "send_message",
+      message_text: messageText,
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
   }
 
   /** GR-03: an active DM keyword automation saved as ``flow`` (PUT …/flow). */

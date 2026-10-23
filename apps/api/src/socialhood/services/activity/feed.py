@@ -143,7 +143,7 @@ def _run_reason(row: Any) -> reasons.Reason:
 
 def _run_code(row: Any) -> str | None:
     if row.result == RunResult.SKIPPED_EXPIRED:
-        return reasons.EXPIRED
+        return reasons.LIVE_ENDED if row.error_code == reasons.LIVE_ENDED else reasons.EXPIRED
     if row.result == RunResult.SKIPPED_READ_ONLY:
         return reasons.READ_ONLY
     code: str | None = row.error_code
@@ -163,6 +163,8 @@ def _run_item(row: Any) -> ActivityItem:
         title = f"{row.automation_name} couldn't reply{_to(who)}"
     elif row.result == RunResult.PARTIAL:
         title = f"{row.automation_name} replied in part{_to(who)}"
+    elif row.result == RunResult.SKIPPED_EXPIRED and row.error_code == reasons.LIVE_ENDED:
+        title = f"{row.automation_name} skipped a comment that came after the Live ended"
     elif row.result == RunResult.SKIPPED_EXPIRED:
         title = f"{row.automation_name} skipped a comment that was too old"
     elif row.result == RunResult.SKIPPED_READ_ONLY:

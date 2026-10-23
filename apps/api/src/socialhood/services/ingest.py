@@ -365,8 +365,13 @@ class _Ingest:
             conv.last_referral = record
         if not new_conversation:
             return
+        from socialhood.services import ice_breakers
+
         referral = event.referral or self._recent_referral(contact, event.occurred_at)
-        if referral is None:
+        if referral is None and ice_breakers.is_tap(event.postback_payload):
+            conv.entry_source = EntrySource.ICE_BREAKER  # GR-11: began with a conversation starter
+            conv.entry_ref = event.text  # the question they tapped
+        elif referral is None:
             conv.entry_source = EntrySource.ORGANIC
         else:
             conv.entry_source = referral.source

@@ -110,8 +110,10 @@ class World:
         parent: str | None = None,
         at: datetime | None = None,
         account_id: uuid.UUID | None = None,
+        live: bool = False,
     ) -> uuid.UUID | None:
-        """A comment through the real intake (F-12); its id, or None when nothing was stored."""
+        """A comment through the real intake (F-12); its id, or None when nothing was stored.
+        ``live``: a comment on a Live broadcast (GR-10)."""
         event = InboundComment(
             account_ref="sandbox",
             occurred_at=at or datetime.now(UTC),
@@ -121,6 +123,7 @@ class World:
             author_ref=author or f"99{uuid.uuid4().int % 10**13:013d}",
             author_username=username,
             text=text_,
+            is_live=live,
         )
         with workspace_scope(self.wid):
             async with self.maker() as session:

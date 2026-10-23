@@ -10,6 +10,7 @@ import {
   Copy,
   EllipsisVertical,
   GripVertical,
+  ListChecks,
   MessageCircle,
   MessagesSquare,
   Pause,
@@ -67,6 +68,7 @@ const TRIGGER_ICON: Record<TriggerName, typeof Send> = {
   story_mention: AtSign,
   entry_link: Link2,
   ad_click: Megaphone,
+  ice_breaker: ListChecks,
 };
 
 const MAX_CHIPS = 3;

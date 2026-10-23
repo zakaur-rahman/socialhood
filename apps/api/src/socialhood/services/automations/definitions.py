@@ -117,6 +117,7 @@ def definition_of(
         posts=post_targets(posts),
         story_ids=list(automation.story_ids or []),
         ad_ids=list(automation.ad_ids or []),
+        comment_surface=automation.comment_surface,
         action=automation.action,
         message_text=automation.message_text,
         message_buttons=[
@@ -323,6 +324,7 @@ async def update(
 ) -> Automation:
     """Replace the whole editable definition (autosave)."""
     automation = await get_or_404(session, automation_id, for_update=True)
+    body = _normalized(body)
     account, items, errors = await _check_references(session, body)
     keywords, keyword_errors = _typed_keywords(body.keywords)
     errors += keyword_errors
@@ -395,6 +397,7 @@ def _definition_from_body(
         posts=posts,
         story_ids=_story_ids(body),
         ad_ids=_ad_ids(body),
+        comment_surface=_surface(body),
         action=body.action,
         message_text=body.message_text,
         message_buttons=[ButtonInfo(b.title, b.url) for b in body.message_buttons],
@@ -410,6 +413,21 @@ def _definition_from_body(
         follow_nudge_text=body.follow_nudge_text,
         ai_instructions=body.ai_instructions,
     )
+
+
+def _surface(body: AutomationDefinition) -> str:
+    """Where a comment trigger listens (GR-10); other triggers always read "posts"."""
+    return body.comment_surface if body.trigger in validation.COMMENT_TRIGGERS else "posts"
+
+
+def _normalized(body: AutomationDefinition) -> AutomationDefinition:
+    """A Live-only automation has no post scope: "all" and no posts, whatever was sent."""
+    surface = _surface(body)
+    if surface == "live" and (body.post_scope != "all" or body.media_item_ids):
+        return body.model_copy(
+            update={"comment_surface": surface, "post_scope": "all", "media_item_ids": []}
+        )
+    return body.model_copy(update={"comment_surface": surface})
 
 
 def _story_ids(body: AutomationDefinition) -> list[str]:
@@ -442,6 +460,7 @@ def _apply(automation: Automation, body: AutomationDefinition) -> None:
     automation.story_ids = _story_ids(body)
     automation.ad_ids = _ad_ids(body)
     automation.story_heart = body.story_heart and body.trigger == "story_reply"
+    automation.comment_surface = _surface(body)
     automation.cooldown_hours = body.cooldown_hours
     automation.starts_at = body.starts_at
     automation.ends_at = body.ends_at
@@ -599,6 +618,7 @@ async def duplicate(
         story_ids=list(source.story_ids or []),
         story_heart=source.story_heart,
         ad_ids=list(source.ad_ids or []),
+        comment_surface=source.comment_surface,
         cooldown_hours=source.cooldown_hours,
         confirm_first=source.confirm_first,
         opening_text=source.opening_text,

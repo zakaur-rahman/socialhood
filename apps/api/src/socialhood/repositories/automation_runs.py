@@ -145,7 +145,7 @@ async def candidates(
 
 
 def _trigger(value: str | None) -> TriggerName:
-    if value in ("comment_any", "story_reply", "story_mention", "entry_link", "ad_click"):
+    if value in ("comment_any", "story_reply", "story_mention", "entry_link", "ad_click", "ice_breaker"):
         return cast(TriggerName, value)
     return "comment_keyword" if value == "comment_keyword" else "dm_keyword"
 
@@ -368,9 +368,13 @@ def _on_account(
     *,
     commented_before: datetime | None = None,
     commented_after: datetime | None = None,
+    live: bool | None = None,
+    live_after: datetime | None = None,
 ) -> ColumnElement[bool]:
     """The run's comment is on this account (and older or newer than a time): an EXISTS probe
-    per run, so queries walk the queued-runs index instead of every comment of the account."""
+    per run, so queries walk the queued-runs index instead of every comment of the account.
+    ``live`` limits it to Live comments (True) or posts' comments (False); ``live_after`` leaves
+    out Live comments older than a time (GR-10: the Live is over)."""
     conditions = [
         Comment.id == AutomationRun.trigger_comment_id,
         Comment.social_account_id == social_account_id,
@@ -379,6 +383,10 @@ def _on_account(
         conditions.append(Comment.commented_at < commented_before)
     if commented_after is not None:
         conditions.append(Comment.commented_at >= commented_after)
+    if live is not None:
+        conditions.append(Comment.is_live.is_(live))
+    if live_after is not None:
+        conditions.append(or_(Comment.is_live.is_(False), Comment.commented_at >= live_after))
     return exists().where(*conditions)
 
 
@@ -435,16 +443,44 @@ async def expire_queued(
     return len(result.all())
 
 
+async def expire_queued_live(
+    session: AsyncSession,
+    social_account_id: uuid.UUID,
+    automation_ids: Sequence[uuid.UUID],
+    *,
+    live_before: datetime,
+    code: str,
+    message: str,
+) -> int:
+    """GR-10: queued runs whose Live comment is older than ``live_before`` (the Live is over)
+    become skipped_expired with the Live's reason."""
+    if not automation_ids:
+        return 0
+    result = await session.execute(
+        scoped_update(AutomationRun, result=RunResult.QUEUED)
+        .where(
+            AutomationRun.automation_id.in_(list(automation_ids)),
+            AutomationRun.private_reply_message_id.is_(None),
+            _on_account(social_account_id, commented_before=live_before, live=True),
+        )
+        .values(result=RunResult.SKIPPED_EXPIRED, error_code=code, error_message=message)
+        .returning(AutomationRun.id)
+    )
+    return len(result.all())
+
+
 async def claim(
     session: AsyncSession,
     automation: Automation,
     social_account_id: uuid.UUID,
     *,
     commented_after: datetime,
+    live_after: datetime | None = None,
     limit: int = 1,
 ) -> list[AutomationRun]:
     """Lock the automation's next unclaimed queued runs in its surge order (oldest or newest
-    first), skipping rows another worker holds and comments past the 7-day limit."""
+    first), skipping rows another worker holds, comments past the 7-day limit and (with
+    ``live_after``) Live comments from before it."""
     newest_first = automation.surge_order == SurgeOrder.NEWEST_FIRST
     order = (
         (AutomationRun.created_at.desc(), AutomationRun.id.desc())
@@ -456,7 +492,7 @@ async def claim(
         .where(
             AutomationRun.automation_id == automation.id,
             _unclaimed(),
-            _on_account(social_account_id, commented_after=commented_after),
+            _on_account(social_account_id, commented_after=commented_after, live_after=live_after),
         )
         .order_by(*order)
         .limit(limit)

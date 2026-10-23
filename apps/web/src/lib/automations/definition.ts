@@ -101,6 +101,7 @@ export function toDefinition(automation: Automation): AutomationDefinition {
     story_ids: [...(automation.story_ids ?? [])],
     story_heart: automation.story_heart ?? false,
     ad_ids: [...(automation.ad_ids ?? [])],
+    comment_surface: automation.comment_surface ?? "posts",
     cooldown_hours: automation.cooldown_hours,
     starts_at: automation.starts_at ?? null,
     ends_at: automation.ends_at ?? null,
@@ -124,6 +125,7 @@ export function toRequestBody(draft: AutomationDefinition): AutomationDefinition
   const comment = isCommentTrigger(draft.trigger);
   const storyReply = draft.trigger === "story_reply";
   const adClick = draft.trigger === "ad_click";
+  const liveOnly = comment && draft.comment_surface === "live";
   const ai = draft.action === "ai_reply";
   const buttons = (draft.message_buttons ?? [])
     .map((button) => ({ title: button.title.trim().slice(0, BUTTON_TITLE_MAX), url: button.url.trim() }))
@@ -133,17 +135,24 @@ export function toRequestBody(draft: AutomationDefinition): AutomationDefinition
     ...draft,
     name: draft.name.trim() || DEFAULT_NAME,
     keywords:
-      draft.trigger === "comment_any" || draft.trigger === "story_mention" || isEntryTrigger(draft.trigger)
+      draft.trigger === "comment_any" || draft.trigger === "story_mention" || isEntryTrigger(draft.trigger) ||
+      draft.trigger === "ice_breaker"
         ? []
         : (draft.keywords ?? []),
     message_buttons: buttons,
     public_reply_texts: comment ? (draft.public_reply_texts ?? []).map((text) => text.trim()).filter(Boolean) : [],
-    post_scope: comment || ((storyReply || adClick) && draft.post_scope === "selected") ? draft.post_scope : "all",
-    media_item_ids: comment && draft.post_scope === "selected" ? (draft.media_item_ids ?? []) : [],
-    scheduled_post_ids: comment && draft.post_scope === "selected" ? (draft.scheduled_post_ids ?? []) : [],
+    post_scope: liveOnly
+      ? "all"
+      : comment || ((storyReply || adClick) && draft.post_scope === "selected")
+        ? draft.post_scope
+        : "all",
+    media_item_ids: comment && !liveOnly && draft.post_scope === "selected" ? (draft.media_item_ids ?? []) : [],
+    scheduled_post_ids:
+      comment && !liveOnly && draft.post_scope === "selected" ? (draft.scheduled_post_ids ?? []) : [],
     story_ids: storyReply && draft.post_scope === "selected" ? (draft.story_ids ?? []) : [],
     story_heart: storyReply ? (draft.story_heart ?? false) : false,
     ad_ids: adClick && draft.post_scope === "selected" ? (draft.ad_ids ?? []) : [],
+    comment_surface: comment ? (draft.comment_surface ?? "posts") : "posts",
     confirm_first: comment && !ai ? draft.confirm_first : false,
     opening_text: comment ? draft.opening_text || null : null,
     opening_button: comment ? openingButton || null : null,
@@ -166,6 +175,7 @@ export function visibleSteps(trigger: TriggerName | null | undefined): StepId[] 
       return ["when", "posts", "keywords", "then", "settings"];
     case "story_mention":
     case "entry_link":
+    case "ice_breaker":
       return ["when", "then", "settings"];
     case "ad_click":
       return ["when", "posts", "then", "settings"];
@@ -237,6 +247,7 @@ export function stepComplete(step: StepId, draft: AutomationDefinition, disclosu
     case "when":
       return Boolean(draft.social_account_id && draft.trigger);
     case "posts":
+      if (isCommentTrigger(draft.trigger) && draft.comment_surface === "live") return true; // GR-10: no posts
       if (draft.trigger === "story_reply") {
         return draft.post_scope !== "selected" || (draft.story_ids?.length ?? 0) > 0;
       }
@@ -286,6 +297,7 @@ const FIELD_STEP: Record<string, StepId | "name"> = {
   story_ids: "posts",
   story_heart: "posts",
   ad_ids: "posts",
+  comment_surface: "posts",
   keywords: "keywords",
   match_mode: "keywords",
   action: "then",
