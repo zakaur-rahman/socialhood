@@ -124,7 +124,7 @@ describe("the flow editor (GR-13)", () => {
     const user = userEvent.setup();
     renderEditor({ initial: [send("a", "Hello")] });
     await user.click(screen.getByRole("button", { name: "Add step" }));
-    const kinds = screen.getAllByRole("menuitem").map((item) => item.textContent?.match(/^[A-Za-z]+/)?.[0]);
+    const kinds = screen.getAllByRole("menuitem").map((item) => item.querySelector("span")?.textContent);
     expect(kinds).toEqual(["Send", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
 
     await user.click(screen.getByRole("menuitem", { name: /^Delay/ }));
