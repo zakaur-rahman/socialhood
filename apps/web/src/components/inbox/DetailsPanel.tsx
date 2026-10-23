@@ -17,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useConversation } from "@/lib/api/queries";
 import type { Conversation } from "@/lib/api/types";
-import { contactName, ESCALATION_LABEL, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
+import { contactName, entryLabel, ESCALATION_LABEL, PLATFORM_LABEL, platformContactUrl } from "@/lib/inbox/format";
 import { formatDay, formatDayTime } from "@/lib/tz";
 import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -134,6 +134,15 @@ export function DetailsPanel({
               <dt className="text-xs text-fg-secondary">Linked account</dt>
               <dd className="truncate font-medium">{linked}</dd>
             </div>
+            {/* GR-01: how this conversation began; unknown for conversations from before it. */}
+            {c.entry ? (
+              <div className="col-span-2 min-w-0" data-testid="conversation-entry">
+                <dt className="text-xs text-fg-secondary">Started from</dt>
+                <dd className="truncate font-medium">
+                  {entryLabel(c.entry)}
+                </dd>
+              </div>
+            ) : null}
           </dl>
           {c.lead_score !== null && c.lead_score !== undefined ? <LeadScore score={c.lead_score} /> : null}
         </CardInset>

@@ -17,8 +17,11 @@ from socialhood.platforms.events import (
     InboundMessage,
     MessageDeleted,
     MessageEdit,
+    OptIn,
     Reaction,
     ReadReceipt,
+    Referral,
+    ReferralInfo,
     Unsupported,
 )
 from socialhood.platforms.instagram.parse import epoch_time, graph_time, media_item, parse, thread
@@ -196,7 +199,9 @@ def _messaging(item: dict[str, Any]) -> InboundEvent:
 @pytest.mark.parametrize(
     ("item", "reason"),
     [
-        ({"sender": {"id": CUSTOMER}, "referral": {"ref": "ad"}}, "referral events"),
+        ({"sender": {"id": CUSTOMER}, "referral": {}}, "unreadable referral"),
+        ({"sender": {"id": ACCOUNT}, "referral": {"ref": "x"}}, "unreadable referral"),
+        ({"sender": {"id": ACCOUNT}, "optin": {"type": "x"}}, "unreadable opt-in"),
         ({"sender": {"id": CUSTOMER}, "something": "new"}, "unknown messaging event"),
         ({"sender": {"id": CUSTOMER}, "message": {"text": "no id"}}, "message without an id"),
         (
@@ -309,3 +314,82 @@ def test_a_heart_sticker_arrives_as_its_emoji() -> None:
     event = parsed("webhook_message_heart.json")
     assert isinstance(event, InboundMessage)
     assert (event.kind, event.text, event.attachments) == ("sticker", "❤️", ())
+
+
+# ---------------------------------------------------------------- GR-01: the new webhook fields
+
+
+def test_an_entry_link_opened_is_a_referral() -> None:
+    """``messaging_referral``: an ig.me link with ?ref= opened; no message yet."""
+    event = parsed("webhook_referral_link.json")
+    assert isinstance(event, Referral), event
+    assert (event.account_ref, event.contact_ref) == (ACCOUNT, CUSTOMER)
+    assert event.referral.source == "link"
+    assert event.referral.ref == "spring-sale"
+    assert event.referral.ad_id is None
+
+
+def test_a_message_from_an_ad_carries_its_referral() -> None:
+    event = message("webhook_message_from_ad.json")
+    assert event.text == "Is the Diwali hamper still available?"
+    assert event.referral == ReferralInfo(
+        source="ad",
+        ref="diwali",
+        ad_id="120210000000000001",
+        ad_title="Diwali hampers",
+        platform_source="ADS",
+    )
+
+
+def test_a_plain_message_has_no_referral() -> None:
+    assert message("webhook_message_text.json").referral is None
+
+
+def test_a_tapped_ice_breaker_keeps_its_payload() -> None:
+    event = message("webhook_postback.json")
+    assert event.text == "What are your opening hours?"
+    assert event.postback_payload == "ICE_BREAKER_HOURS"
+
+
+def test_an_opt_in() -> None:
+    event = parsed("webhook_optin.json")
+    assert isinstance(event, OptIn), event
+    assert (event.contact_ref, event.topic, event.status) == (CUSTOMER, "Offers", "resume")
+
+
+def test_a_live_comment_is_a_comment_marked_live() -> None:
+    """``live_comments`` names the comment's id comment_id (Meta's webhook examples)."""
+    event = parsed("webhook_live_comment.json")
+    assert isinstance(event, InboundComment), event
+    assert (event.platform_comment_id, event.media_id) == ("18030000000000009", "18020000000000005")
+    assert (event.author_ref, event.author_username, event.text) == (
+        CUSTOMER,
+        "priya.bakes",
+        "PRICE",
+    )
+    assert event.is_live is True
+
+
+def test_a_post_comment_is_not_live() -> None:
+    event = parsed("webhook_comment_changes.json")
+    assert isinstance(event, InboundComment)
+    assert event.is_live is False
+
+
+@pytest.mark.parametrize(
+    ("referral", "expected"),
+    [
+        ({"source": "ADS", "ad_id": "1"}, ("ad", None, "1")),
+        ({"ad_id": "2"}, ("ad", None, "2")),  # an ad id alone still means an ad
+        ({"ref": "bio", "source": "https://ig.me/m/x?ref=bio"}, ("link", "bio", None)),
+        ({"source": "SOMETHING_NEW"}, ("other", None, None)),
+    ],
+)
+def test_referral_sources(
+    referral: dict[str, Any], expected: tuple[str, str | None, str | None]
+) -> None:
+    event = _messaging(
+        {"sender": {"id": CUSTOMER}, "timestamp": 1790000000000, "referral": referral}
+    )
+    assert isinstance(event, Referral), event
+    assert (event.referral.source, event.referral.ref, event.referral.ad_id) == expected

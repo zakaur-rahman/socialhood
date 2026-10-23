@@ -171,6 +171,17 @@ class ConversationSummary(ResponseModel):
     updated_at: datetime
 
 
+class ConversationEntry(ResponseModel):
+    """How the conversation began (GR-01): organic, an entry link (its ref), an ad (its id and,
+    when Meta gave it, title), an ice breaker (GR-11) or another referral."""
+
+    source: Literal["organic", "link", "ad", "ice_breaker", "other"]
+    ref: str | None = None
+    ad_id: str | None = None
+    ad_title: str | None = None
+    at: datetime | None = None
+
+
 class ConversationAccount(ResponseModel):
     id: uuid.UUID
     username: str | None = None
@@ -188,6 +199,7 @@ class Conversation(ConversationListItem):
     social_account: ConversationAccount
     scheduled_count: int
     last_inbound_at: datetime | None = None  # the customer's last message (reply window)
+    entry: ConversationEntry | None = None  # null for conversations from before GR-01
 
 
 class ConversationList(ResponseModel):

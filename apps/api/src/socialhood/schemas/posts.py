@@ -156,6 +156,7 @@ class Comment(ResponseModel):
     text: str
     like_count: int
     hidden: bool
+    is_live: bool = False  # a comment on a live broadcast (GR-01)
     commented_at: datetime
     deleted_at: datetime | None = None  # only in the comment.updated of a delete: drop the row
     analysis_status: CommentAnalysisStatus

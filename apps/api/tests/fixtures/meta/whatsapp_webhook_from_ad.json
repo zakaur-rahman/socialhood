@@ -1,0 +1,45 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "102290129340398",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": {
+              "display_phone_number": "919876543210",
+              "phone_number_id": "106540352242922"
+            },
+            "contacts": [
+              {
+                "profile": { "name": "Priya Shah" },
+                "wa_id": "919812345678"
+              }
+            ],
+            "messages": [
+              {
+                "from": "919812345678",
+                "id": "wamid.HBgMOTE5ODEyMzQ1Njc4FQIAEhggQURSRUZFUlJBTDAwMDEA",
+                "timestamp": "1759046500",
+                "type": "text",
+                "text": { "body": "Hi, I saw your ad" },
+                "referral": {
+                  "source_url": "https://fb.me/abcDEF123",
+                  "source_id": "120210000000000002",
+                  "source_type": "ad",
+                  "headline": "Fresh sourdough, delivered",
+                  "body": "Order on WhatsApp",
+                  "media_type": "image",
+                  "image_url": "https://scontent.whatsapp.net/ad-image.jpg",
+                  "ctwa_clid": "ARAkLkA8rmlFeiCktEJQ-QTwRiyYHAFDLMNDBH0CD3qpjd0HR4irJ6LEkR7JwFF4XvnO2E4Nx0-eM-GABDLOPaOdRMv-_zfUQ2a"
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}

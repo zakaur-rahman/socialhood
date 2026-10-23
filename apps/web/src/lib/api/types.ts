@@ -31,6 +31,7 @@ export type Platform = SocialAccount["platform"];
 export type ConversationListItem = Schemas["ConversationListItem"];
 export type ConversationList = Schemas["ConversationList"];
 export type Conversation = Schemas["Conversation"];
+export type ConversationEntry = Schemas["ConversationEntry"];
 export type ConversationPatch = Schemas["ConversationPatch"];
 export type ContactSummary = Schemas["ContactSummary"];
 export type InboxCounts = Schemas["InboxCounts"];

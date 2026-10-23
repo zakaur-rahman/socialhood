@@ -63,10 +63,25 @@ export class Api {
     return this.call<SandboxAccount>("POST", `/v1/w/${wid}/dev/sandbox/accounts`);
   }
 
-  /** A DM or comment from a customer, through the same intake as a real webhook. */
+  /**
+   * A DM or comment from a customer, through the same intake as a real webhook. GR-01 adds a
+   * referral without a message (an entry link opened, an ad tapped), a postback, an opt-in and a
+   * Live comment; a DM may carry an ad referral.
+   */
   inbound(
     wid: string,
-    event: { accountId: string; kind: "dm" | "comment"; text: string; fromId?: string; fromUsername?: string },
+    event: {
+      accountId: string;
+      kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin";
+      text?: string;
+      fromId?: string;
+      fromUsername?: string;
+      referralSource?: "ad" | "link";
+      ref?: string;
+      adId?: string;
+      adTitle?: string;
+      postbackPayload?: string;
+    },
   ): Promise<{ stored: number }> {
     return this.call("POST", `/v1/w/${wid}/dev/sandbox/inbound`, {
       account_id: event.accountId,
@@ -74,6 +89,11 @@ export class Api {
       text: event.text,
       from_id: event.fromId,
       from_username: event.fromUsername,
+      referral_source: event.referralSource,
+      ref: event.ref,
+      ad_id: event.adId,
+      ad_title: event.adTitle,
+      postback_payload: event.postbackPayload,
     });
   }
 

@@ -1526,3 +1526,38 @@ the code does after C-069 to C-075. No code changes.
 - **AGENT_CONTEXT:** the decision table marks D-02, D-04, D-05, D-07 to D-11 and D-14 to D-17 as
   applied, with their tasks. The checklist names the design lint and the copy lint. The chart
   aliases, the palette lock and the resizable panes are listed.
+
+## C-077 · Webhook coverage and entry sources (GR-01, feature/gr-01-webhook-coverage)
+An addition to the spec's platform layer (§1.5, TR-PL-12), from the growth plan
+(`docs/roadmap/IMPLEMENTATION_PLAN.md`).
+- **Instagram subscribes to four more webhook fields:** `messaging_postbacks`,
+  `messaging_referral`, `messaging_optins` and `live_comments`.
+  - Meta's Instagram API overview lists all four (2026).
+  - Existing accounts pick them up from the `reconcile_subscriptions` job (TR-WH-08).
+  - Outside accounts receive them only with Advanced Access, after App Review.
+- **Parsing, following Meta's documented shapes:**
+  - An ig.me link with `?ref=` arrives as a referral event; an ad arrives as a message's `referral`
+    (`source: "ADS"`, `ad_id`, `ads_context_data.ad_title`).
+  - A WhatsApp message from a Click to WhatsApp ad carries `referral` (`source_type`, `source_id`,
+    `headline`, and `ctwa_clid` when there is one).
+  - A tapped postback keeps its payload (for GR-11's ice breakers).
+  - An opt-in is parsed and kept in the stored webhook event for GR-02's consent records.
+  - A Live comment is a comment with `is_live`; its id field is `comment_id`.
+- **Entry source:** each new conversation records how it began: organic, an entry link (its
+  ref), an ad (its id), with ice breakers added by GR-11.
+  - The entry comes from the first message's referral, or a referral the contact made in the hour
+    before.
+  - A referral alone never starts a conversation, so the inbox shows no empty threads. It is kept
+    on the contact.
+  - A referral delivered up to five minutes after the first message upgrades an organic entry.
+  - Conversations from before GR-01 have no entry.
+  - The conversation detail returns `entry`, and the details panel shows "Started from".
+- **Live comments** are stored and labelled "Live" in the comments list. Comment automations
+  don't answer them yet: post scopes mean posts and Reels, and a Live's private reply works only
+  while it is on air. GR-10 adds the Live scope.
+- **Migration 0018** adds the columns:
+  - `conversations.entry_source`, `entry_ref`, `entry_ad_id`, `entry_at` and `last_referral`;
+  - `contacts.last_referral` and `first_entry_source`;
+  - `comments.is_live`;
+  - `messages.postback_payload`.
+- **The sandbox** injects every new kind, so dev and e2e go through the real webhook path.

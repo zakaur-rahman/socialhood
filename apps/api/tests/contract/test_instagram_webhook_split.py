@@ -48,3 +48,16 @@ def test_unknown_items_are_kept_not_dropped() -> None:
 def test_junk_entries_are_skipped() -> None:
     assert split_payload({"object": "instagram", "entry": ["x", None]}) == []
     assert split_payload({}) == []
+
+
+def test_a_live_comment_and_a_referral_have_their_own_types_and_stable_keys() -> None:
+    """GR-01: live_comments key on comment_id; a referral keys on sender, time and content."""
+    [live] = split_payload(fixture("webhook_live_comment.json"))
+    assert (live.event_type, live.dedupe_key) == (
+        "live_comment",
+        "ig:live_comment:18030000000000009",
+    )
+    body = fixture("webhook_referral_link.json")
+    [referral] = split_payload(body)
+    assert referral.event_type == "referral"
+    assert [e.dedupe_key for e in split_payload(copy.deepcopy(body))] == [referral.dedupe_key]

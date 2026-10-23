@@ -2,7 +2,16 @@ import { describe, expect, it } from "vitest";
 
 import { IDENTITIES } from "@/lib/ui/identity";
 
-import { AVATAR_GRADIENTS, avatarGradient, contactName, previewPrefix, signalChip, timeLeft, windowChip } from "./format";
+import {
+  AVATAR_GRADIENTS,
+  avatarGradient,
+  contactName,
+  entryLabel,
+  previewPrefix,
+  signalChip,
+  timeLeft,
+  windowChip,
+} from "./format";
 
 const now = new Date("2026-09-28T12:00:00Z");
 const inHours = (h: number) => new Date(now.getTime() + h * 3_600_000).toISOString();
@@ -82,5 +91,28 @@ describe("avatar gradients", () => {
     for (const gradient of AVATAR_GRADIENTS) {
       expect(gradient).not.toMatch(/success|warning|danger|instagram|whatsapp/);
     }
+  });
+});
+
+describe("entryLabel (GR-01)", () => {
+  const entry = (source: "organic" | "link" | "ad" | "ice_breaker" | "other", extra = {}) => ({
+    source,
+    ref: null,
+    ad_id: null,
+    ad_title: null,
+    at: null,
+    ...extra,
+  });
+
+  it.each([
+    [entry("organic"), "They wrote first"],
+    [entry("link", { ref: "bio" }), 'Entry link "bio"'],
+    [entry("link"), "An entry link"],
+    [entry("ad", { ad_title: "Diwali hampers" }), 'Ad "Diwali hampers"'],
+    [entry("ad", { ad_id: "42" }), "An ad"],
+    [entry("ice_breaker"), "A conversation starter"],
+    [entry("other"), "A referral"],
+  ])("%o reads %s", (value, label) => {
+    expect(entryLabel(value)).toBe(label);
   });
 });

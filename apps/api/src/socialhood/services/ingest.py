@@ -30,6 +30,16 @@ FR-AUT-21). A tapped quick reply keeps its payload (``quick_reply_payload``). Wi
 for the account it queues ``analyze_conversation`` (4 s, one waiting job per conversation, so a
 burst is analysed once; TR-AI-05).
 
+Entry sources (GR-01):
+- a new conversation's entry is the referral its first message carries (an ad), else a referral
+  the contact made within REFERRAL_WINDOW before it (an entry link opened, then a message), else
+  organic. Backfilled history and conversations from before GR-01 stay unknown (null);
+- a referral without a message (Instagram ``messaging_referral``) is recorded on the contact and
+  as the conversation's ``last_referral``, and never starts a conversation (no empty threads). Meta
+  may deliver it just after the first message, so it upgrades an organic entry recorded less than
+  ENTRY_UPGRADE_WINDOW earlier;
+- an opt-in is left in the stored webhook event; GR-02 records it as consent.
+
 Follow-ups are deferred by a couple of seconds: the caller commits after this returns, and a job
 that finds no row (its transaction rolled back) does nothing. ``backfill=True`` (history from
 FR-CON-01) leaves unread counts and the archive alone and sends one ``conversation.updated`` per
@@ -52,6 +62,7 @@ from socialhood.models.inbox import (
     Conversation,
     ConversationStatus,
     Direction,
+    EntrySource,
     Message,
     MessageKind,
     MessageSource,
@@ -65,8 +76,11 @@ from socialhood.platforms.events import (
     InboundMessage,
     MessageDeleted,
     MessageEdit,
+    OptIn,
     Reaction,
     ReadReceipt,
+    Referral,
+    ReferralInfo,
     Unsupported,
 )
 from socialhood.realtime.events import queue_conversation, queue_message
@@ -77,6 +91,8 @@ from socialhood.services.inbox_views import UNSENT_PREVIEW, conversation_touch, 
 PROFILE_MAX_AGE = timedelta(days=7)
 RECONCILE_WINDOW = timedelta(minutes=2)  # TR-JOB-05
 FOLLOWUP_DELAY_S = 2.0
+REFERRAL_WINDOW = timedelta(hours=1)  # an entry link opened, then the first message (GR-01)
+ENTRY_UPGRADE_WINDOW = timedelta(minutes=5)  # a referral delivered just after the first message
 # Attachment types ingest_media copies to our storage (TR-MED-03). Stories are never copied
 # (Meta's policy for story mentions; a story reply's story is the account's own and expires with
 # it); shared posts keep the link to someone else's post.
@@ -97,11 +113,27 @@ class IngestResult:
     created_message_ids: list[uuid.UUID] = field(default_factory=list)
     updated_message_ids: list[uuid.UUID] = field(default_factory=list)
     conversation_ids: list[uuid.UUID] = field(default_factory=list)
+    updated_contact_ids: list[uuid.UUID] = field(default_factory=list)  # a referral (GR-01)
     ignored: list[str] = field(default_factory=list)  # reasons, for the webhook event's note
 
     @property
     def changed(self) -> bool:
-        return bool(self.created_message_ids or self.updated_message_ids or self.conversation_ids)
+        return bool(
+            self.created_message_ids
+            or self.updated_message_ids
+            or self.conversation_ids
+            or self.updated_contact_ids
+        )
+
+
+def referral_record(referral: ReferralInfo, at: datetime) -> dict[str, Any]:
+    """A referral as stored in contacts and conversations.last_referral (GR-01)."""
+    record: dict[str, Any] = {"source": referral.source, "at": at.isoformat()}
+    for key in ("ref", "ad_id", "ad_title", "ctwa_clid", "platform_source"):
+        value = getattr(referral, key)
+        if value:
+            record[key] = value
+    return record
 
 
 async def ingest(
@@ -205,6 +237,10 @@ class _Ingest:
             await self._unsend(event)
         elif isinstance(event, DeliveryStatus):
             await self._status(event)
+        elif isinstance(event, Referral):
+            await self._referral(event)
+        elif isinstance(event, OptIn):
+            self.result.ignored.append("opt-ins are kept in the webhook event until GR-02")
         elif isinstance(event, InboundComment):
             # Comments are taken in by services/automations/comments (F-12), not here.
             self.result.ignored.append("comments are not messages")
@@ -231,12 +267,14 @@ class _Ingest:
             first_seen_at=event.occurred_at,
             display_name=event.contact_name,
         )
-        conv, _ = await rows.get_or_create_conversation(
+        conv, new_conversation = await rows.get_or_create_conversation(
             self.session,
             social_account_id=self.acct.id,
             contact_id=contact.id,
             platform=self.acct.platform,
         )
+        if not event.is_echo and not self.backfill:
+            self._entry(conv, contact, event, new_conversation=new_conversation)
         if event.is_echo and await self._own_send(conv, event):
             return
         if event.is_echo and event.text and await self._reconcile(conv, event):
@@ -280,7 +318,86 @@ class _Ingest:
             "sent_at": event.occurred_at if echo else None,
             "reply_to_platform_message_id": event.reply_to_id,
             "quick_reply_payload": None if echo else event.quick_reply_payload,
+            "postback_payload": None if echo else event.postback_payload,
         }
+
+    # ---- entry sources (GR-01)
+
+    def _entry(
+        self,
+        conv: Conversation,
+        contact: Contact,
+        event: InboundMessage,
+        *,
+        new_conversation: bool,
+    ) -> None:
+        if event.referral is not None:
+            record = referral_record(event.referral, event.occurred_at)
+            contact.last_referral = record
+            conv.last_referral = record
+        if not new_conversation:
+            return
+        referral = event.referral or self._recent_referral(contact, event.occurred_at)
+        if referral is None:
+            conv.entry_source = EntrySource.ORGANIC
+        else:
+            conv.entry_source = referral.source
+            conv.entry_ref = referral.ref
+            conv.entry_ad_id = referral.ad_id
+            conv.last_referral = referral_record(referral, event.occurred_at)
+        conv.entry_at = event.occurred_at
+        if contact.first_entry_source is None:
+            contact.first_entry_source = conv.entry_source
+
+    @staticmethod
+    def _recent_referral(contact: Contact, at: datetime) -> ReferralInfo | None:
+        """The contact's referral made within REFERRAL_WINDOW before ``at``, if any."""
+        record = contact.last_referral or {}
+        try:
+            made = datetime.fromisoformat(str(record.get("at")))
+        except ValueError:
+            return None
+        if not timedelta(0) <= at - made <= REFERRAL_WINDOW or record.get("source") not in (
+            "ad",
+            "link",
+            "other",
+        ):
+            return None
+        return ReferralInfo(
+            source=record["source"],
+            ref=record.get("ref"),
+            ad_id=record.get("ad_id"),
+            ad_title=record.get("ad_title"),
+            ctwa_clid=record.get("ctwa_clid"),
+            platform_source=record.get("platform_source"),
+        )
+
+    async def _referral(self, event: Referral) -> None:
+        """An entry link opened or an ad tapped, with no message yet (``messaging_referral``)."""
+        contact, _ = await rows.get_or_create_contact(
+            self.session,
+            social_account_id=self.acct.id,
+            platform_user_id=event.contact_ref,
+            first_seen_at=event.occurred_at,
+        )
+        record = referral_record(event.referral, event.occurred_at)
+        contact.last_referral = record
+        self.result.updated_contact_ids.append(contact.id)
+        conv = await rows.find_conversation_for_contact(self.session, self.acct.id, contact.id)
+        if conv is None:
+            return  # recorded on the contact; the conversation it starts takes it (_entry)
+        conv.last_referral = record
+        if (
+            conv.entry_source == EntrySource.ORGANIC
+            and conv.entry_at is not None
+            and abs(event.occurred_at - conv.entry_at) <= ENTRY_UPGRADE_WINDOW
+        ):
+            conv.entry_source = event.referral.source
+            conv.entry_ref = event.referral.ref
+            conv.entry_ad_id = event.referral.ad_id
+            if contact.first_entry_source in (None, EntrySource.ORGANIC):
+                contact.first_entry_source = event.referral.source
+        self.touched[conv.id] = (conv, contact)
 
     def _newest(self, conv: Conversation, msg: Message) -> bool:
         if conv.last_message_at is None or msg.occurred_at >= conv.last_message_at:
