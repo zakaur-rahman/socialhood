@@ -94,7 +94,7 @@ describe("AppSidebar (UX-SH-01)", () => {
     renderSidebar({ onToggleCollapsed: toggle });
     const button = screen.getByRole("button", { name: "Collapse sidebar" });
     expect(button).toHaveAttribute("aria-keyshortcuts", "Control+[ Meta+[");
-    expect(button).toHaveTextContent("Ctrl [");
+    expect(button).toHaveTextContent(""); // icon only, on the card's edge; the shortcut is in its tooltip
     await userEvent.click(button);
     expect(toggle).toHaveBeenCalledOnce();
   });

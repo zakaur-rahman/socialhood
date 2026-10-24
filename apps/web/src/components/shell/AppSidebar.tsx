@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Route } from "next";
-import { LifeBuoy, PanelLeftClose, PanelLeftOpen, Sparkles } from "lucide-react";
+import { ChevronLeft, ChevronRight, LifeBuoy, Sparkles } from "lucide-react";
 import { useId, type ReactNode } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -107,6 +107,32 @@ export function AppSidebar({
         style={{ backgroundImage: "url(/grain.jpg)" }}
       />
 
+      {/* Owner, 2026-10-25: the toggle is an icon on the card's right edge, centred, half over the
+          border; the label and the Ctrl/⌘ [ shortcut are in its tooltip. z-40 keeps it above the
+          page's sticky headers, which it overlaps by half its width. */}
+      {onToggleCollapsed ? (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={onToggleCollapsed}
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              aria-keyshortcuts={COLLAPSE_SHORTCUT_ARIA}
+              className="absolute top-1/2 -right-3 z-40 flex size-6 -translate-y-1/2 items-center justify-center rounded-full border border-line glass-float text-fg-secondary shadow-glass transition-colors duration-fast hover:border-line-strong hover:text-fg"
+            >
+              {collapsed ? (
+                <ChevronRight className="size-3.5" aria-hidden />
+              ) : (
+                <ChevronLeft className="size-3.5" aria-hidden />
+              )}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {collapsed ? "Expand sidebar" : "Collapse sidebar"} ({collapseHint})
+          </TooltipContent>
+        </Tooltip>
+      ) : null}
+
       <div className={cn("relative w-full", collapsed && "flex justify-center")}>
         <WorkspaceMenu
           workspace={workspace}
@@ -164,27 +190,6 @@ export function AppSidebar({
             {collapsed ? null : <span>Help</span>}
           </a>
         </WithTooltip>
-        {onToggleCollapsed ? (
-          <WithTooltip label={`Expand sidebar (${collapseHint})`} enabled={collapsed}>
-            <button
-              type="button"
-              onClick={onToggleCollapsed}
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-keyshortcuts={COLLAPSE_SHORTCUT_ARIA}
-              className={sidebarRowClass({ collapsed })}
-            >
-              {collapsed ? (
-                <PanelLeftOpen className={sidebarIconClass()} aria-hidden />
-              ) : (
-                <>
-                  <PanelLeftClose className={sidebarIconClass()} aria-hidden />
-                  <span>Collapse</span>
-                  <kbd className={cn(KBD_CLASS, "ml-auto")}>{collapseHint}</kbd>
-                </>
-              )}
-            </button>
-          </WithTooltip>
-        ) : null}
       </div>
 
       <UsageCard view={usageView(credits, workspace.role)} collapsed={collapsed} />
