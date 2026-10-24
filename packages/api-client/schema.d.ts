@@ -6390,13 +6390,17 @@ export interface components {
         BreakdownMetric: {
             /** Change Pct */
             change_pct?: number | null;
+            /** Days Known */
+            days_known?: number | null;
+            /** Days Total */
+            days_total?: number | null;
             /** Direction */
             direction?: ("up" | "down" | "flat") | null;
             /**
              * Key
              * @enum {string}
              */
-            key: "messages_received" | "conversations" | "comments_received" | "replies_sent" | "automation_runs" | "reach" | "followers";
+            key: "messages_received" | "conversations" | "comments_received" | "replies_sent" | "automation_runs" | "reach" | "views" | "accounts_engaged" | "interactions" | "followers" | "follows" | "unfollows";
             /** Label */
             label: string;
             /** Previous */

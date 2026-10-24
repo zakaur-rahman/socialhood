@@ -65,7 +65,19 @@ from dataclasses import asdict, dataclass, field
 from datetime import date, datetime, time, timedelta
 from typing import Any
 
-from sqlalchemy import ColumnElement, and_, case, exists, extract, func, literal, not_, or_, select
+from sqlalchemy import (
+    ColumnElement,
+    and_,
+    case,
+    exists,
+    extract,
+    func,
+    literal,
+    literal_column,
+    not_,
+    or_,
+    select,
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
@@ -831,64 +843,76 @@ async def compute(
 # ---------------------------------------------------------------- per account
 
 
-async def counts_by_account(
-    session: AsyncSession, span: DateRange
-) -> dict[uuid.UUID, dict[str, float]]:
-    """The range's counts for every account, one query each: ``messages_received``,
-    ``conversations`` (people who wrote in), ``comments_received``, ``replies_sent`` (people, AI
-    and automations: the reply rate's own definition) and ``automation_runs``. A count an account
-    has none of is absent; callers read it as 0."""
+async def counts_by_account_week(
+    session: AsyncSession, timezone: str, span: DateRange
+) -> dict[date, dict[uuid.UUID, dict[str, float]]]:
+    """The range's counts for every account and every Monday to Sunday week in it, five queries
+    however many accounts and weeks there are (grouped by account and by the workspace's local
+    week in the database): ``messages_received``, ``conversations`` (people who wrote in),
+    ``comments_received``, ``replies_sent`` (people, AI and automations: the reply rate's own
+    definition) and ``automation_runs``. A count an account has none of in a week is absent;
+    callers read it as 0. The span should start on a Monday."""
     ws = require_workspace()
-    out: dict[uuid.UUID, dict[str, float]] = {}
+    out: dict[date, dict[uuid.UUID, dict[str, float]]] = {}
+
+    def week_of(column: Any) -> Any:
+        # One labelled expression, grouped by its label: separate copies would carry separate bind
+        # parameters and Postgres would not see them as the same expression.
+        return func.date_trunc("week", func.timezone(timezone, column)).label("week")
 
     def add(key: str, rows: Any) -> None:
-        for account, n in rows:
+        for week, account, n in rows:
             if account is not None:
-                out.setdefault(account, {})[key] = float(n)
+                out.setdefault(week.date(), {}).setdefault(account, {})[key] = float(n)
 
+    received_at = Message.occurred_at
     in_range = _received_in(ws, span)
     add(
         "messages_received",
         await session.execute(
-            select(Message.social_account_id, func.count())
+            select(week_of(received_at), Message.social_account_id, func.count())
             .where(in_range)
-            .group_by(Message.social_account_id)
+            .group_by(literal_column("week"), Message.social_account_id)
         ),
     )
     add(
         "conversations",
         await session.execute(
-            select(Message.social_account_id, func.count(func.distinct(Message.conversation_id)))
+            select(
+                week_of(received_at),
+                Message.social_account_id,
+                func.count(func.distinct(Message.conversation_id)),
+            )
             .where(in_range)
-            .group_by(Message.social_account_id)
+            .group_by(literal_column("week"), Message.social_account_id)
         ),
     )
     add(
         "comments_received",
         await session.execute(
-            select(Comment.social_account_id, func.count())
+            select(week_of(Comment.commented_at), Comment.social_account_id, func.count())
             .where(_comments_in(ws, span))
-            .group_by(Comment.social_account_id)
+            .group_by(literal_column("week"), Comment.social_account_id)
         ),
     )
     sent_at = _reply_at(Message)
     add(
         "replies_sent",
         await session.execute(
-            select(Message.social_account_id, func.count())
+            select(week_of(sent_at), Message.social_account_id, func.count())
             .where(
                 Message.workspace_id == ws,
                 _reply(Message),
                 sent_at >= span.start,
                 sent_at < span.end,
             )
-            .group_by(Message.social_account_id)
+            .group_by(literal_column("week"), Message.social_account_id)
         ),
     )
     add(
         "automation_runs",
         await session.execute(
-            select(Automation.social_account_id, func.count())
+            select(week_of(AutomationRun.created_at), Automation.social_account_id, func.count())
             .select_from(AutomationRun)
             .join(Automation, Automation.id == AutomationRun.automation_id)
             .where(
@@ -896,7 +920,7 @@ async def counts_by_account(
                 AutomationRun.created_at >= span.start,
                 AutomationRun.created_at < span.end,
             )
-            .group_by(Automation.social_account_id)
+            .group_by(literal_column("week"), Automation.social_account_id)
         ),
     )
     return out

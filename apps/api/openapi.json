@@ -5465,6 +5465,28 @@
             ],
             "title": "Change Pct"
           },
+          "days_known": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Known"
+          },
+          "days_total": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Total"
+          },
           "direction": {
             "anyOf": [
               {
@@ -5489,7 +5511,12 @@
               "replies_sent",
               "automation_runs",
               "reach",
-              "followers"
+              "views",
+              "accounts_engaged",
+              "interactions",
+              "followers",
+              "follows",
+              "unfollows"
             ],
             "title": "Key",
             "type": "string"

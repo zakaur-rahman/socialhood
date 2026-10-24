@@ -10,6 +10,7 @@ from typing import Any
 
 import httpx
 import pytest
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.db.tenancy import workspace_scope
@@ -30,6 +31,8 @@ from tests.support.api import Clerk
 from tests.support.automation_api import workspace
 from tests.support.inbox import make_account
 from tests.support.notify_team import Team, make_team
+
+BREAKDOWN_QUERY_BUDGET = 100  # was 133 with one account and 154 with four
 
 
 def insights_on_instagram_only(account: Any) -> frozenset[Capability]:
@@ -202,3 +205,32 @@ async def test_the_route_filters_by_account_and_hides_other_workspaces(
     assert other.json()["code"] == "not_found"
     assert junk.status_code == 422
     assert date.fromisoformat(body["week_start"]) == REPORT_WEEK
+
+
+async def test_the_breakdown_runs_the_same_number_of_queries_for_any_number_of_accounts(
+    team: Team,
+) -> None:
+    """The breakdown groups by account (and week) in the database: its queries do not grow with
+    the accounts, and nothing is asked per account or per week."""
+    statements: list[str] = []
+
+    def record(_conn: Any, _cursor: Any, statement: str, *_rest: Any) -> None:
+        statements.append(statement)
+
+    async def queries() -> int:
+        statements.clear()
+        event.listen(team.engine.sync_engine, "before_cursor_execute", record)
+        try:
+            await report_for(team, breakdown=True)
+        finally:
+            event.remove(team.engine.sync_engine, "before_cursor_execute", record)
+        return len(statements)
+
+    await make_account(team.engine, team.wid, username="one")
+    with_one = await queries()
+    for name in ("two", "three", "four"):
+        await make_account(team.engine, team.wid, username=name)
+    with_four = await queries()
+
+    assert with_four == with_one
+    assert with_four <= BREAKDOWN_QUERY_BUDGET

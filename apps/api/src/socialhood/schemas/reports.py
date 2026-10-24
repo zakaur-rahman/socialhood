@@ -96,7 +96,12 @@ BreakdownMetricKey = Literal[
     "replies_sent",
     "automation_runs",
     "reach",
+    "views",
+    "accounts_engaged",
+    "interactions",
     "followers",
+    "follows",
+    "unfollows",
 ]
 
 
@@ -123,6 +128,8 @@ class BreakdownMetric(ResponseModel):
     change_pct: float | None = None
     direction: ChangeDirection | None = None
     unavailable: str | None = None
+    days_known: int | None = None  # insights: days with a reading in the week
+    days_total: int | None = None
     series: list[ReportPoint]
 
 
