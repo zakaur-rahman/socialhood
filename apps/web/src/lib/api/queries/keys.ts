@@ -50,6 +50,7 @@ export const keys = {
   overview: (wid: string, range: string) => ["w", wid, "overview", range] as const,
   accounts: (wid: string) => ["w", wid, "social-accounts"] as const,
   notifications: (wid: string) => ["w", wid, "notifications"] as const,
+  apiKeys: (wid: string) => ["w", wid, "api-keys"] as const,
   webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
   webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
   googleSheets: (wid: string) => ["w", wid, "google-sheets"] as const,

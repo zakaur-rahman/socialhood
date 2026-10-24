@@ -367,6 +367,15 @@ export type GoogleSheetInfo = Schemas["SheetOut"];
 export type GoogleSheetMappingPut = Schemas["SheetMappingPut"];
 export type GoogleSheetTestResult = Schemas["SheetTestResult"];
 
+// ---- API keys (GR-25)
+
+export type ApiKey = Schemas["ApiKey"];
+export type ApiKeyWithKey = Schemas["ApiKeyWithKey"];
+export type ApiKeyList = Schemas["ApiKeyList"];
+export type ApiKeyCreate = Schemas["ApiKeyCreate"];
+export type ApiScope = Schemas["ApiScope"];
+export type ApiScopeName = ApiScope["scope"];
+
 // Activity (GR-05)
 export type ActivityItem = Schemas["ActivityItem"];
 export type ActivityList = Schemas["ActivityList"];

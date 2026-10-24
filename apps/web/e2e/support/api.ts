@@ -68,6 +68,28 @@ export class Api {
     return this.seed<void>("POST", `/google-sheets/${sheetId}/delete`);
   }
 
+  /**
+   * GR-25, GR-26: a call to the public API with an API key (not the Clerk session). Resolves with
+   * the status and parsed body instead of throwing, so a spec can check a 403 or a 401.
+   */
+  async publicCall<T = unknown>(
+    key: string,
+    method: string,
+    path: string,
+    body?: unknown,
+    extra: Record<string, string> = {},
+  ): Promise<{ status: number; body: T }> {
+    const headers: Record<string, string> = { Authorization: `Bearer ${key}`, ...extra };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const response = await fetch(`${this.stack.E2E_API_URL}/public/v1${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const text = await response.text();
+    return { status: response.status, body: (text ? JSON.parse(text) : undefined) as T };
+  }
+
   mediaAsset(wid: string, filename = "e2e-post.jpg"): Promise<{ id: string; secure_url: string }> {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }

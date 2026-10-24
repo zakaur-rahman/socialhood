@@ -474,6 +474,10 @@ const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
     feature: "Google Sheets sync",
     body: "On Pro, every lead you capture is added to a Google Sheet as a new row.",
   },
+  public_api: {
+    feature: "Public API access",
+    body: "On Pro, make API keys to connect your own tools, and use the Social Hood app in Zapier.",
+  },
 };
 
 /** What a limit of n on this §1.7 key includes, e.g. "3 active automations"; null for other keys. */

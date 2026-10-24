@@ -5,6 +5,7 @@ import { Suspense, useState } from "react";
 import { toast } from "sonner";
 
 import { GoogleSheetsCard } from "@/components/integrations/GoogleSheetsCard";
+import { ApiKeysSection } from "@/components/integrations/ApiKeysSection";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -131,6 +132,7 @@ export function IntegrationsPage() {
         }}
       />
       <SecretDialog secret={secret} onClose={() => setSecret(null)} />
+      <ApiKeysSection />
     </SettingsFrame>
   );
 }
