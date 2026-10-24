@@ -4174,6 +4174,15 @@ Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCar
   `/__e2e/shopify/sign`.
 - Owner track O-10: the Shopify Partner account, the app listing, the callback and webhook
   addresses, and the three privacy webhooks' wording. `.env.example` has the new settings.
+- *Fixed in the combined batch:* the Shopify callback checked the install redirect's signature
+  whenever `SHOPIFY_PROVIDER` was not `fake`, even with the built-in store in use; it now asks
+  `registry.is_fake` (the setting or a test override). The built-in store kept a disconnected
+  store's token revoked for ever, so reconnecting failed with "Shopify didn't respond"; installing
+  again now clears the revocation, as a real reinstall gives a fresh token. A one-letter store
+  ("x") passed as a valid address; handles need two characters, and the connect body no longer has
+  a `min_length` so the friendly message (not Pydantic's) is what the person sees. A CSV line whose
+  product name differs from the stored one only by case no longer renames the product. The CSV
+  starter file in the web app had rows with 11 fields under a 16-column header.
 
 ## C-117 · Conversation assignment (GR-20, feature/gr-20-24-assign-sequences)
 
@@ -4258,6 +4267,11 @@ Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCar
   `mine` and `unassigned` views, `assignee_id`, `mine` on `InboxCounts`, `assignment` on `TimelineKind`
   and the four operations); the web types are aliases waiting for it. `ContactTimeline`'s icon map and
   `ListHeader`'s chips will not typecheck until then. Migration `0041` follows `0040` (GR-31).
+- *Fixed in the combined batch:* picking the next member took `FOR UPDATE` on the workspace row
+  while ingest already held `KEY SHARE` on it (the new conversation's foreign key), so two messages
+  arriving together deadlocked; it now takes `FOR NO KEY UPDATE` (`with_for_update(key_share=True)`),
+  which waits for the other turn instead. The inbox details panel's "Assigned to" group is a
+  `CardInset` like the others.
 
 ## C-118 · Sequences (GR-24, feature/gr-20-24-assign-sequences)
 
@@ -4387,3 +4401,8 @@ Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCar
   `0041` (GR-20), which follows `0040` (GR-31). The e2e spec relies on the worker's minutely sweep
   running in the e2e stack (the broadcast spec relies on the same). A sequence created while
   `BROADCASTS_ENABLED` is off still saves; only its template steps are skipped.
+- *Fixed in the combined batch:* a tag added through the contacts API never entered a sequence unless
+  a webhook endpoint wanted `contact.tagged`, because `contacts.py` gated the call to
+  `events.contacts_tagged` (which also feeds sequences) on `wanted`; the gate is gone and
+  `contacts_tagged` still decides whether to emit. The web sequence form and pages read `problems`
+  as possibly absent (the generated type marks defaulted response fields optional).
