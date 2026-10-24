@@ -150,6 +150,12 @@ class FakeShopify:
         else:
             self._revoked.add(token)
 
+    async def _reinstate(self, token: str) -> None:
+        if self._redis is not None:
+            await self._redis.srem(f"{_PREFIX}:revoked", token)
+        else:
+            self._revoked.discard(token)
+
     async def _is_revoked(self, token: str) -> bool:
         if self._redis is not None:
             return bool(await self._redis.sismember(f"{_PREFIX}:revoked", token))
@@ -174,7 +180,9 @@ class FakeShopify:
         await self._enter("exchange_code", shop=shop)
         if code != f"{CODE_PREFIX}{shop}":
             raise ShopifyError("auth", "Shopify no longer accepts the access.", status=400)
-        return Grant(f"{TOKEN_PREFIX}{shop}", ("read_products",))
+        token = f"{TOKEN_PREFIX}{shop}"
+        await self._reinstate(token)  # installing again gives a working token, as on Shopify
+        return Grant(token, ("read_products",))
 
     async def shop_info(self, shop: str, token: str) -> ShopInfo:
         await self._enter("shop_info", shop=shop)

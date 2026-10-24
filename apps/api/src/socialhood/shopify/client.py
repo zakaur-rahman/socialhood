@@ -26,7 +26,7 @@ RETRYABLE: frozenset[ErrorKind] = frozenset({"rate_limited", "unavailable"})
 PRODUCT_TOPICS = ("products/create", "products/update", "products/delete", "app/uninstalled")
 PRIVACY_TOPICS = ("customers/data_request", "customers/redact", "shop/redact")
 
-_SHOP = re.compile(r"^[a-z0-9][a-z0-9-]{0,60}\.myshopify\.com$")
+_SHOP = re.compile(r"^[a-z0-9][a-z0-9-]{1,60}\.myshopify\.com$")
 _ID = re.compile(r"(\d+)$")
 
 

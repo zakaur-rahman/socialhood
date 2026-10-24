@@ -44,6 +44,12 @@ def get_shopify(
     return HttpShopifyClient(http, settings)
 
 
+def is_fake(settings: Settings) -> bool:
+    """Whether the built-in store is in use (the setting, or a test's override): its redirects
+    are not signed."""
+    return bool(_override) or settings.shopify_provider == "fake"
+
+
 def configured(settings: Settings) -> bool:
     """Whether Connect can work: the fake always, the real client with its app credentials set."""
     if _override or settings.shopify_provider == "fake":

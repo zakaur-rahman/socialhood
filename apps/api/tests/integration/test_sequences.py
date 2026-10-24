@@ -238,9 +238,8 @@ async def test_text_inside_the_window_goes_without_consent_and_text_outside_it_i
     start = datetime.now(UTC)
     assert await sweep(desk, start + timedelta(minutes=11)) == {"sent": 1}  # inside the window
     assert await deliver(desk) == 1
-    [message] = await desk.rows(
-        "SELECT text FROM messages WHERE source = 'automation' AND template IS NULL"
-    )
+    [message] = await desk.rows("SELECT text, template FROM messages WHERE source = 'automation'")
+    assert message["template"] in (None, {})
     assert message["text"] == "Still interested, Esha?"
     # A day on, the window is closed and the step has no template.
     assert await sweep(desk, start + timedelta(days=1, hours=2)) == {"skipped": 1}
@@ -486,7 +485,7 @@ async def test_a_step_held_to_business_hours_waits_for_the_next_opening(desk: Sh
 async def test_template_steps_share_the_numbers_daily_limit_with_broadcasts(
     desk: Shop, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(throttle, "DEFAULT_DAILY_LIMIT", 1)
+    monkeypatch.setitem(throttle.TIER_LIMITS, "TIER_1K", 1)  # the sandbox number reads as TIER_1K
     asha, ben = await desk.customer("Asha Rao"), await desk.customer("Ben Cole")
     tag_id = await tag(desk)
     await running(desk, tag_id, [step(DAY, template=True)])

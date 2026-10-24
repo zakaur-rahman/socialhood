@@ -18,11 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from socialhood.auth.invitations import FakeInvitationSender, use_invitation_sender
 from socialhood.services.automations.runtime import Outcome
+from socialhood.services.webhook_processing import process_event
 from socialhood.settings import Settings
 from tests.integration.test_flow_runs import ref, send, started, with_flow
 from tests.support.api import Clerk
 from tests.support.automation_api import Ws, set_plan, workspace
 from tests.support.inbox import make_thread
+from tests.support.ingest import sessions
 from tests.support.runtime import World, make_world, platform_deps
 
 
@@ -33,7 +35,7 @@ def _sender() -> Any:
 
 
 @pytest.fixture
-async def ws(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine) -> Ws:
+async def ws(client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine, queue: None) -> Ws:
     owner = await workspace(client, clerk)
     await set_plan(engine, owner.wid, "pro")  # three seats
     return owner
@@ -66,12 +68,23 @@ async def assignee_of(ws: Ws, conversation: str) -> str | None:
 
 
 async def inbound(ws: Ws, sender: str, body: str = "Hello") -> None:
+    """A sandbox message, stored; ``process`` handles it next."""
     await ws.ok(
         "POST",
         "/dev/sandbox/inbound",
         200,
         json={"account_id": ws.account_id, "kind": "dm", "text": body, "from_id": sender},
     )
+
+
+async def process(engine: AsyncEngine, redis: Redis) -> None:
+    """Process every stored webhook event, all at once (as the worker would)."""
+    ids = [
+        r["id"]
+        for r in await rows(engine, "SELECT id FROM webhook_events WHERE status = 'received'")
+    ]
+    maker = sessions(engine)
+    await asyncio.gather(*(process_event(maker, event_id, redis) for event_id in ids))
 
 
 async def name_of(ws: Ws, user_id: str) -> str:
@@ -197,7 +210,7 @@ async def rows(engine: AsyncEngine, sql: str, **params: Any) -> list[dict[str, A
 
 async def test_assigned_to_me_shows_only_my_conversations(ws: Ws, engine: AsyncEngine) -> None:
     sam = await join(ws, "sam@example.com", "agent")
-    first, second, third = (await thread(ws, engine, n) for n in ("A", "B", "C"))
+    first, second, third = [await thread(ws, engine, n) for n in ("A", "B", "C")]
     await assign(ws, first, sam.user_id)
     await assign(ws, second, ws.user_id)
 
@@ -231,11 +244,14 @@ async def test_round_robin_is_off_by_default_and_admins_turn_it_on(ws: Ws) -> No
     assert (await sam.ok("GET", "/assignment"))["round_robin"] is True  # any member reads it
 
 
-async def test_a_round_robin_assignment_notifies_the_agent(ws: Ws) -> None:
+async def test_a_round_robin_assignment_notifies_the_agent(
+    ws: Ws, engine: AsyncEngine, redis: Redis
+) -> None:
     sam = await join(ws, "sam@example.com", "agent")
     await ws.ok("PUT", "/assignment/settings", json={"round_robin": True})
     for i in range(4):
         await inbound(ws, f"cust_{i}")
+    await process(engine, redis)
     mine = await sam.ok("GET", "/conversations", params={"view": "mine"})
     theirs = await ws.ok("GET", "/conversations", params={"view": "mine"})
     assert len(mine["items"]) == 2
@@ -249,7 +265,7 @@ async def test_a_round_robin_assignment_notifies_the_agent(ws: Ws) -> None:
     assert {e["actor_name"] for e in audited["items"]} == {"Round-robin"}
 
 
-async def test_a_member_who_is_away_is_skipped(ws: Ws) -> None:
+async def test_a_member_who_is_away_is_skipped(ws: Ws, engine: AsyncEngine, redis: Redis) -> None:
     sam = await join(ws, "sam@example.com", "agent")
     await ws.ok("PUT", "/assignment/settings", json={"round_robin": True})
     await sam.ok("PUT", f"/members/{sam.user_id}/availability", 204, json={"available": False})
@@ -257,16 +273,18 @@ async def test_a_member_who_is_away_is_skipped(ws: Ws) -> None:
     assert members[sam.user_id]["available"] is False
     for i in range(3):
         await inbound(ws, f"cust_{i}")
+    await process(engine, redis)
     assert len((await ws.ok("GET", "/conversations", params={"view": "mine"}))["items"]) == 3
     assert (await sam.ok("GET", "/conversations", params={"view": "mine"}))["items"] == []
 
 
 async def test_nobody_available_leaves_it_unassigned_and_manual_ignores_availability(
-    ws: Ws, engine: AsyncEngine
+    ws: Ws, engine: AsyncEngine, redis: Redis
 ) -> None:
     await ws.ok("PUT", "/assignment/settings", json={"round_robin": True})
     await ws.ok("PUT", f"/members/{ws.user_id}/availability", 204, json={"available": False})
     await inbound(ws, "cust_1")
+    await process(engine, redis)
     [listed] = (await ws.ok("GET", "/conversations"))["items"]
     assert listed["assignee"] is None
     assert (await assign(ws, listed["id"], ws.user_id)).status_code == 200  # still allowed by hand
@@ -284,10 +302,13 @@ async def test_availability_is_yours_unless_you_are_an_admin(ws: Ws) -> None:
     assert gone.status_code == 404
 
 
-async def test_concurrent_messages_take_different_turns(ws: Ws) -> None:
+async def test_concurrent_messages_take_different_turns(
+    ws: Ws, engine: AsyncEngine, redis: Redis
+) -> None:
     sam = await join(ws, "sam@example.com", "agent")
     await ws.ok("PUT", "/assignment/settings", json={"round_robin": True})
     await asyncio.gather(*(inbound(ws, f"cust_{i}") for i in range(6)))
+    await process(engine, redis)
     assert len((await ws.ok("GET", "/conversations", params={"view": "mine"}))["items"]) == 3
     assert len((await sam.ok("GET", "/conversations", params={"view": "mine"}))["items"]) == 3
 
@@ -311,10 +332,8 @@ async def test_an_assignment_reaches_open_inboxes_live(
     conv = await thread(ws, engine)
     await assign(ws, conv, sam.user_id)
     stream = await redis.xrange(f"events:{ws.wid}")
-    updated = [
-        fields[b"data"] for _, fields in stream if fields[b"type"] == b"conversation.updated"
-    ]
-    assert any(sam.user_id.encode() in data for data in updated)
+    updated = [fields["data"] for _, fields in stream if fields["type"] == "conversation.updated"]
+    assert any(sam.user_id in data for data in updated)
 
 
 # ---------------------------------------------------------------- the flow action

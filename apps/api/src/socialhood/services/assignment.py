@@ -228,7 +228,7 @@ async def pick_round_robin(session: AsyncSession) -> uuid.UUID | None:
         await session.scalars(
             select(Workspace)
             .where(Workspace.id == require_workspace())
-            .with_for_update()
+            .with_for_update(key_share=True)  # NO KEY UPDATE: ingest holds KEY SHARE
             .execution_options(populate_existing=True)
         )
     ).one()

@@ -427,7 +427,10 @@ async def _apply_group(session: AsyncSession, group: Group, valid: list[Row]) ->
         data = ProductData(name=first.name, currency=first.currency or money.DEFAULT_CURRENCY)
     else:
         data = products.data_of(product, group.existing)
-        data.name = first.name
+        if (
+            first.name.casefold() != product.name.casefold()
+        ):  # a case-only difference is the same name
+            data.name = first.name
     for row in valid:  # blank cells never clear a value
         if row.description is not None:
             data.description = row.description

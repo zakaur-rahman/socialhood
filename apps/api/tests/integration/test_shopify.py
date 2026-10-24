@@ -172,6 +172,7 @@ async def test_a_real_install_redirect_must_be_signed(
 
     started = await ws.ok("POST", f"{BASE}/connect", json={"shop": SHOP})
     query = {k: v[0] for k, v in parse_qs(urlsplit(started["authorize_url"]).query).items()}
+    monkeypatch.setattr("socialhood.shopify.registry._override", [])  # the real client's rules
     monkeypatch.setattr(app.state.settings, "shopify_provider", "shopify")
     unsigned = await client.get("/v1/oauth/shopify/callback", params=query)
     assert unsigned.headers["location"].endswith("/app?error=state_invalid")

@@ -19694,7 +19694,6 @@
         "properties": {
           "shop": {
             "maxLength": 100,
-            "minLength": 3,
             "title": "Shop",
             "type": "string"
           }

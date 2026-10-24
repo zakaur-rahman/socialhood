@@ -155,7 +155,7 @@ class ImportResult(ResponseModel):
 
 
 class ShopifyConnectRequest(RequestModel):
-    shop: str = Field(min_length=3, max_length=100)  # "my-store" or "my-store.myshopify.com"
+    shop: str = Field(max_length=100)  # "my-store" or "my-store.myshopify.com"
 
 
 class ShopifyConnectStart(ResponseModel):

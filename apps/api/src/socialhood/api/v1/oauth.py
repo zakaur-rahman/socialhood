@@ -23,7 +23,7 @@ from socialhood.services import connections as service
 from socialhood.services import sheets
 from socialhood.services.catalogue import shopify as shopify_service
 from socialhood.settings import Settings
-from socialhood.shopify.registry import webhook_secret
+from socialhood.shopify.registry import is_fake, webhook_secret
 from socialhood.shopify.signatures import verify_query
 
 router = APIRouter(prefix="/v1/oauth", tags=["oauth"])
@@ -147,7 +147,7 @@ async def shopify_callback(
     against a real install."""
     settings: Settings = request.app.state.settings
     params = dict(request.query_params)
-    if settings.shopify_provider != "fake" and not verify_query(params, webhook_secret(settings)):
+    if not is_fake(settings) and not verify_query(params, webhook_secret(settings)):
         log.warning("shopify_callback_signature_invalid")
         return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
     data = await service.pop_state(request.app.state.redis, state)
