@@ -312,6 +312,13 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         a=account_id,
     )
+    await execute(  # GR-33: the catalogue connected through the account
+        engine,
+        "INSERT INTO catalogue_connections (workspace_id, social_account_id, catalog_id, brand)"
+        " VALUES (:w, :a, 'cat-1', 'Maple')",
+        w=wid,
+        a=account_id,
+    )
     await execute(  # GR-32: an order for the contact, and a line on it
         engine,
         "WITH o AS (INSERT INTO orders (workspace_id, number, contact_id, conversation_id, status,"

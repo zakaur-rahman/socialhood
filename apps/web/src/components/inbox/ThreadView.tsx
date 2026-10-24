@@ -9,6 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { AiModeMenu } from "@/components/ai/AiModeControl";
 import { AssigneeMenu } from "@/components/assignment/AssigneeMenu";
 import { CreateOrderDialog } from "@/components/orders/CreateOrderDialog";
+import { SendProductDialog } from "./SendProductDialog";
 import { AnalysisChips } from "@/components/ai/AnalysisChips";
 import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
@@ -127,6 +128,7 @@ function Thread({
   const outbox = useInboxStore((state) => state.outbox);
   const queryClient = useQueryClient();
   const [ordering, setOrdering] = useState(false); // GR-32: the Create order dialog
+  const [productKind, setProductKind] = useState<"product" | "product_list" | null>(null); // GR-33
   const { send: sendReply, retry, discard } = useSendReply(wid, conversationId);
   const pendingSuggestionId = conversation.pending_suggestion?.id ?? null;
   // Any reply retires the pending suggestion: sent as is, edited, or typed instead (F-08).
@@ -243,9 +245,26 @@ function Thread({
         onMarkUnread={() => ui?.markUnread(conversationId)}
         aiControl={<AiModeMenu conversation={conversation} now={now} />}
         assigneeControl={<AssigneeMenu conversation={conversation} />}
-        commerceActions={[{ key: "create-order", label: "Create order", onSelect: () => setOrdering(true) }]}
+        commerceActions={[
+          { key: "create-order", label: "Create order", onSelect: () => setOrdering(true) },
+          ...(conversation.platform === "whatsapp"
+            ? [
+                { key: "send-product", label: "Send product", onSelect: () => setProductKind("product") },
+                { key: "send-product-list", label: "Send product list", onSelect: () => setProductKind("product_list") },
+              ]
+            : []),
+        ]}
       />
       <CreateOrderDialog conversationId={conversationId} open={ordering} onOpenChange={setOrdering} />
+      {conversation.platform === "whatsapp" ? (
+        <SendProductDialog
+          key={productKind ?? "closed"}
+          conversationId={conversationId}
+          kind={productKind ?? "product"}
+          open={productKind !== null}
+          onOpenChange={(open) => (open ? undefined : setProductKind(null))}
+        />
+      ) : null}
       <MessageLog
         messages={all}
         timeZone={workspace.timezone}

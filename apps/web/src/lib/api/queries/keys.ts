@@ -63,6 +63,7 @@ export const keys = {
   orders: (wid: string) => ["w", wid, "orders"] as const, // GR-32
   orderList: (wid: string, status: string | null) => ["w", wid, "orders", "list", status] as const,
   payments: (wid: string) => ["w", wid, "payments"] as const,
+  waCatalogue: (wid: string) => ["w", wid, "wa-catalogue"] as const, // GR-33
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
   /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
   activityLists: (wid: string) => ["w", wid, "activity"] as const,

@@ -75,6 +75,8 @@ function setup(initial: ProductList, extra: Record<string, (call: Call) => Respo
     handlers: {
       "GET /v1/w/:wid/products": () => json(current),
       "GET /v1/w/:wid/integrations/shopify": () => json(SHOPIFY_OFF),
+      "GET /v1/w/:wid/integrations/whatsapp-catalogue": () => json({ entitled: true, connected: false, items_synced: 0, items_pending: 0, items_error: 0, syncing: false, problems: [] }), // GR-33
+      "GET /v1/w/:wid/social-accounts": () => json({ items: [] }),
       "POST /v1/w/:wid/products": (call) => {
         const body = call.body as { name: string };
         current = list([product({ id: "new", name: body.name }), ...current.items]);

@@ -325,7 +325,7 @@ async def _next_number(session: AsyncSession) -> int:
     return int(last or 0) + 1
 
 
-async def _check_month(session: AsyncSession, now: datetime) -> None:
+async def check_month(session: AsyncSession, now: datetime) -> None:
     limit = entitlement(await current_plan(session), "orders_monthly")
     if limit is None:
         return
@@ -409,7 +409,7 @@ async def create(
         session, [(i.product_id, i.variant_id, i.quantity) for i in body.items]
     )
     await check_entitlement(session, KEY, detail=COPY["plan"])
-    await _check_month(session, now)
+    await check_month(session, now)
     address = (
         {k: v.strip() for k, v in body.address.model_dump().items() if v and v.strip()}
         if body.address

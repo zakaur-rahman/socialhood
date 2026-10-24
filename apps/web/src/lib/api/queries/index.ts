@@ -29,6 +29,7 @@ export * from "./integrations";
 export * from "./googleSheets";
 export * from "./catalogue";
 export * from "./orders";
+export * from "./waCatalogue";
 export * from "./apiKeys";
 export * from "./activity";
 export * from "./contacts";

@@ -36,6 +36,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 import { ImportDialog } from "./ImportDialog";
 import { ProductSheet, type ProductUploader } from "./ProductSheet";
 import { ShopifyCard } from "./ShopifyCard";
+import { WhatsAppCatalogueCard } from "./WhatsAppCatalogueCard";
 
 const SOURCE_LABEL: Record<Product["source"], string> = {
   manual: "Added here",
@@ -96,6 +97,7 @@ export function ProductsPage({ upload }: { upload?: ProductUploader }) {
         ) : null}
 
         <ShopifyCard wid={wid} />
+        <WhatsAppCatalogueCard wid={wid} />
 
         <Card asChild padding="roomy">
           <section aria-labelledby="catalogue-title">

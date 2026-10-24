@@ -109,6 +109,48 @@ def message(acct: SocialAccount, *, sender: str, name: str, text: str) -> dict[s
     )
 
 
+def order(
+    acct: SocialAccount,
+    *,
+    sender: str,
+    name: str,
+    note: str | None,
+    items: list[tuple[str, int, str | None]],
+) -> dict[str, Any]:
+    """A customer's cart sent as an ``order`` message (GR-33): Meta's documented shape,
+    ``order.catalog_id``, ``order.text`` and ``order.product_items[]``. *Unverified.*"""
+    return _entry(
+        acct,
+        "messages",
+        {
+            "messaging_product": "whatsapp",
+            "metadata": _metadata(acct),
+            "contacts": [{"profile": {"name": name}, "wa_id": sender}],
+            "messages": [
+                {
+                    "from": sender,
+                    "id": new_wamid(),
+                    "timestamp": str(int(time.time())),
+                    "type": "order",
+                    "order": {
+                        "catalog_id": "sandbox_catalog",
+                        "text": note or "",
+                        "product_items": [
+                            {
+                                "product_retailer_id": retailer,
+                                "quantity": quantity,
+                                "item_price": price or "0",
+                                "currency": "INR",
+                            }
+                            for retailer, quantity, price in items
+                        ],
+                    },
+                }
+            ],
+        },
+    )
+
+
 def status(
     acct: SocialAccount,
     *,

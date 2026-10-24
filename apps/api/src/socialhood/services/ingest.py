@@ -248,6 +248,22 @@ async def _assign(
     await assignment.on_inbound(session, conv, contact, now=now)
 
 
+async def _cart(
+    session: AsyncSession,
+    conv: Conversation,
+    contact: Contact,
+    msg: Message,
+    event: InboundMessage,
+    now: datetime,
+) -> None:
+    """GR-33: a WhatsApp cart (an ``order`` message) becomes an order awaiting payment."""
+    if event.order is None:
+        return
+    from socialhood.services.orders import cart
+
+    await cart.from_cart(session, conv, contact, msg, event.order, now=now)
+
+
 async def _automations(session: AsyncSession, contact: Contact, msg: Message) -> None:
     """A new customer DM: count it as a reply to recent automation DMs (FR-AUT-16) and let
     automations answer it (F-11 runtime, before the AI's analysis): a tap-first opening waiting
@@ -364,6 +380,7 @@ class _Ingest:
                 replied = await _broadcasts(self.session, self.acct, contact, msg, self.now)
                 await _sequences(self.session, self.acct, contact, msg, replied)
                 await _assign(self.session, conv, contact, self.now)
+                await _cart(self.session, conv, contact, msg, event, self.now)
                 await _automations(self.session, contact, msg)
                 await _supersede_suggestion(self.session, conv, msg)
                 if self.acct.ai_analysis_enabled:  # FR-PRV-02

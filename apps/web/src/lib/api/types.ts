@@ -443,6 +443,13 @@ export type PaymentSettings = Schemas["PaymentSettings"];
 export type RazorpayConnectInput = Schemas["RazorpayConnect"];
 export type UpiSaveInput = Schemas["UpiSave"];
 
+// ---- WhatsApp catalogue messages (GR-33)
+
+export type WaCatalogueStatus = Schemas["WaCatalogueStatus"];
+export type WaCatalogueConnectInput = Schemas["WaCatalogueConnect"];
+export type ProductMessageSend = Schemas["ProductMessageSend"];
+export type ProductMessageItem = Schemas["ItemRef"];
+
 // ---- API keys (GR-25)
 
 export type ApiKey = Schemas["ApiKey"];

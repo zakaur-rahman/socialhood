@@ -4521,3 +4521,143 @@ coordinator runs them).*
 - `alembic check` for 0043 (after 0042). The e2e stack gained `RAZORPAY_PROVIDER=fake`; the suite signs
   its own webhooks with the secret it types into the card. Owner track: Razorpay account(s) for a live
   test, and whether to become a Technology Partner (OAuth).
+
+## C-121 · WhatsApp catalogue messages (GR-33, feature/gr-32-33-orders-wa-catalogue)
+
+Products copied to a Meta commerce catalogue, product and product-list messages sent from the inbox,
+the flow step "send product" as a native WhatsApp message when it can be one, and a customer's cart
+becoming a GR-32 order. *Nothing here has run against Meta: it is built like Facebook (GR-29) and
+Shopify (GR-31), against a sandbox catalogue for sandbox WhatsApp numbers, and listed as unverified in
+`docs/verification.md` item 39.* PD-8 applies: commerce is Pro and Max.
+
+### What Meta's documentation says (read 2026-10-25) and what is unverified
+Read from Meta's current pages for the Cloud API (Graph v26.0 in the examples; the app uses
+`META_GRAPH_VERSION`, v25.0) and the Catalog API:
+- **Product message** (`messages`, `type: interactive`): `interactive.type = product`, optional `body`
+  and `footer` text, `action.catalog_id` and `action.product_retailer_id`. The retailer id must match
+  an item in the catalogue or the API returns an error and nothing is sent. Free-form: only inside an
+  existing chat (the 24-hour window), no template. A customer on an old WhatsApp version sees a
+  failure and the business gets a delivery-failed webhook.
+- **Product list**: `interactive.type = product_list`; `header` (type `text`) **required**, `body`
+  required, `footer` optional; `action.catalog_id` and `action.sections[]` each with a `title` and
+  `product_items[].product_retailer_id`. Up to 30 products across up to 10 sections. If at least one
+  item matches the catalogue it is sent and unmatched ones are dropped with an error; if none match
+  nothing is sent.
+- **Order webhook**: a message with `type: order` and `order.catalog_id`, `order.text` and
+  `order.product_items[]` with `product_retailer_id`, `quantity`, `item_price` and `currency` (numbers
+  in Meta's examples, quoted strings in one partner's; the parser reads both).
+- **Catalog Batch API**: `POST /{catalog_id}/items_batch` with `item_type` (`PRODUCT_ITEM`) and
+  `requests` (up to 5,000, Meta suggests under 3,000; 28 MB), each `{method: CREATE | UPDATE | DELETE,
+  data: {...}}`; `allow_upsert` defaults to true so `UPDATE` creates a missing item; `DELETE` needs only
+  the identifying `id`; the answer has `handles` and `validation_status[]` (`retailer_id`, `errors`,
+  `warnings`); `GET /{catalog_id}/check_batch_request_status?handle=` reports progress. The older
+  `/batch` endpoint is deprecated (unavailable from API v27), so `items_batch` is used.
+- **Commerce settings**: a phone number's catalogue is shown with `is_catalog_visible` on
+  `POST /{phone_number_id}/whatsapp_commerce_settings` (default false); a catalogue is connected to the
+  WhatsApp Business Account in WhatsApp Manager (one catalogue per business account, shared by its
+  numbers, from the same Business Manager). *Not called by us:* the owner connects it in Meta's tools.
+- **Unverified, in code as written** (`metacatalog/http.py`, `platforms/whatsapp/adapter.py`):
+  the exact fields a commerce catalogue item requires (this sends `id`, `title`, `description`,
+  `availability`, `condition`, `price` as "799.00 INR", `link`, `image_link`, `brand`); that the
+  header limit is 60 and a section title 24 characters (the body's 1,024 is Meta's documented limit);
+  the shape of `check_batch_request_status`; **which permission the Embedded Signup business token
+  carries**: Meta's pages did not name `catalog_management` for these calls, and the token WhatsApp
+  Embedded Signup issues may lack it or `business_management`, in which case connecting answers 409
+  with "Meta doesn't let this number use that catalogue ..." and the owner must grant catalogue access;
+  that the same token that sends messages can call the Catalog API at all (it may need a system-user
+  token); and error codes (190, 200, 100, 803, 80014 are mapped to auth, not found and rate limited).
+  If catalogue access can't come from the number's token, the connection will need its own token
+  (a follow-up; the card and sync already read the token through one function, `token_of`).
+
+### Decisions
+- **Sync** (`services/catalogue/wa_catalogue.py`, job `sync_whatsapp_catalogue`, bulk lane, 3 tries):
+  one catalogue item per variant, or per product without variants; the retailer id is our variant or
+  product id. The job compares what the catalogue should hold with a hash per item
+  (`catalogue_items.content_hash`) and sends only what changed (upserts via `UPDATE`) and deletes what is
+  gone or switched off. Triggered 8 seconds after a product is created, changed, deleted or imported,
+  after a Shopify sync, when Sync now is pressed, and by a 5-minute sweep (`sweep_whatsapp_catalogue`),
+  so a missed trigger heals. Items go in batches of 200. Deletion is found by comparison, not by hooks,
+  so every way a product disappears (Shopify, CSV, the API) is covered.
+- **What an item needs.** Meta needs a price, a link and a picture: a product without them is not sent
+  and the card lists it with the reason ("Add a link to this product. Meta needs one for every catalogue
+  item."). Out of stock only when stock is recorded as 0 (stock not recorded is "in stock", the catalogue
+  has no unknown). The brand is the workspace's name unless the connect request gives one. A picture
+  uploaded here wins over one given as an address.
+- **Per-workspace catalogue** (`catalogue_connections`, one per workspace): the catalogue id, the WhatsApp
+  number it was connected through (its token makes the calls), the brand and the sync state. Connecting
+  checks the catalogue with Meta first (`GET /{catalog_id}`); a catalogue Meta won't show is a 409 with
+  Meta's reason in words, Meta not answering a 502, a non-WhatsApp account a 422, another workspace's
+  account a 404. Reconnecting marks every item to be sent again. Disconnecting forgets the connection
+  and the item records; the Meta catalogue is left as it is.
+- **Sandbox.** A sandbox WhatsApp number (`sandbox_...`, which exists only where the sandbox platform is
+  on) uses the built-in catalogue (`metacatalog/fake.py`); the catalogue id `missing` is refused as not
+  found and `denied` as access refused; a title containing `[fail]` is refused item by item. Tests swap
+  the client with `use_catalogue`. No new setting.
+- **Sending** (`services/catalogue/wa_send.py`, `POST /conversations/{id}/product-message`): "Send
+  product" and "Send product list" in the inbox's More menu on WhatsApp conversations. Every item must
+  be in the catalogue as last synced ("... isn't in the WhatsApp catalogue yet. Wait for the sync, or
+  press Sync now."), the conversation must be on the number the catalogue was connected through (409
+  otherwise), the message is a free-form send (window, takeover and read-only rules of the ordinary
+  send pipeline), and the typed text is the message body and what the thread shows. The message is
+  stored in the new `messages.interactive` JSON column (migration 0044) and sent by
+  `sending.pending_parts` as `OutboundMessage.products`; no change to message kinds.
+- **Flow step "send product"**: on WhatsApp, with a catalogue connected through the conversation's number
+  and every needed item synced, it sends a native message: a product message for a named variant or a
+  product without variants, a product list (one section, up to 30 variants) for a product with variants
+  and none named; the step's intro is the body, else the product's name. Otherwise (another platform, no
+  catalogue, another number, an item not synced yet) it sends the text and link of GR-31, unchanged.
+- **Cart to order.** An `order` message becomes an inbound text ("Sent an order of 3 items") and, with
+  commerce on the plan and room under `orders_monthly`, a GR-32 order for that contact in that
+  conversation with status `awaiting_payment`, source `whatsapp`, priced from the catalogue now (the
+  price the customer saw is not trusted; if it differs, the order's note says so). Items that are gone,
+  switched off, unpriced or in another currency are left out and counted in the note; stock is not
+  enforced for a cart. No usable item or no plan means no order, and the message stays in the thread.
+  The message text is then rewritten to name the order ("... Order #12."). Audit: `order.created` by
+  "WhatsApp cart".
+- **Plan.** Connecting, syncing and sending need `commerce` (PD-8). Reading the status is open to every
+  member (the inbox needs to know a catalogue is connected). A downgrade stops the sync ("The catalogue is
+  part of Pro, so the sync stopped."); what is in Meta stays.
+
+### Data (migration 0044, after 0043, expand-only)
+`catalogue_connections`, `catalogue_items` and a nullable `messages.interactive`. The connection
+references the WhatsApp account with `ON DELETE CASCADE`, so it is an account table for the purge
+(`catalogue_connections` in the expected list, a seeded row in `seed_account`). The tenancy walk got a
+seeded connection and item, two `B_TABLES` and the example bodies of the two routes that name B's
+resources.
+
+### Routes
+`GET/PUT/DELETE /v1/w/{wid}/integrations/whatsapp-catalogue`, `POST .../whatsapp-catalogue/sync` (202),
+`POST /v1/w/{wid}/conversations/{conversation_id}/product-message` (202). The sandbox inbound gained kind
+`order` (with `cart`) for development and the end-to-end stack.
+
+### Not built
+Reading Meta's catalogue back (importing from it), creating a catalogue, setting `is_catalog_visible`
+or connecting the catalogue to the business account (done in Meta's tools), product messages on
+Instagram or Facebook, a "catalogue" or cart request message, order status updates back to the
+customer through WhatsApp's order templates, sending a product message outside the 24-hour window
+(a template would be needed), and per-item sync of a single product (a pass is cheap, it compares
+hashes).
+
+### Tests
+Unit: `test_wa_catalogue.py` (the item built from a variant or product, availability, the link and
+picture rules, the digest, the stored message round trip, Meta's interactive payloads, the cart parsed
+from an `order` webhook, the batch client's requests and error kinds, the sandbox catalogue), the
+purge list and the job recovery table. Integration: `test_wa_catalogue.py` (the plan, the connect
+checks, the sync sending only what changed, deletes, unsendable items with their reasons, Meta
+refusing access, disconnecting, a product and a product-list message and the sandbox receiving them,
+an item not synced yet, the flow step native and fallback, a cart becoming an order, a cart with
+nothing orderable). Tenancy: the new routes, bodies and tables. Vitest: `WhatsAppCatalogueCard`. E2E:
+`gr33-wa-catalogue.spec.ts` (connect, sync, send a product; a cart becomes an order). *The integration,
+tenancy, vitest and e2e tests were written but not run (the coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `WaCatalogueStatus`, `WaCatalogueConnect`, `ProductMessageSend`,
+  `ItemRef`, `SectionIn`, `WaCatalogueProblem`, the operations `get_whatsapp_catalogue`,
+  `connect_whatsapp_catalogue`, `sync_whatsapp_catalogue`, `disconnect_whatsapp_catalogue`,
+  `send_product_message`, and the `order` sandbox-inbound kind with `cart`. The web types are aliases
+  waiting for it.
+- `alembic check` for 0044 (after 0043). New periodic task `sweep_whatsapp_catalogue` (every 5
+  minutes) and task `sync_whatsapp_catalogue`; both are in the recovery table. No new environment
+  setting.
+- Owner track: a real WhatsApp number with a commerce catalogue connected in WhatsApp Manager, and a
+  check of which token can call the Catalog API (item 39).

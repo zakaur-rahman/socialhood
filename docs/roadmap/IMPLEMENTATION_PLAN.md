@@ -578,6 +578,9 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - Sync products to a Meta commerce catalogue, and send product and product-list messages on
   WhatsApp.
 - Check the current Commerce Manager requirements and permissions first.
+- **Built as:** see C-121. Sync, product and product-list messages, the flow step's native message and
+  a cart becoming an order are built against a sandbox catalogue; nothing Meta-side is verified, and
+  which token may call the Catalog API is the open question (`docs/verification.md` item 39).
 
 ### Wave 7: intelligence and AI
 

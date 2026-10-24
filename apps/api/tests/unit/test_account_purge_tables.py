@@ -29,6 +29,7 @@ EXPECTED = {
     "broadcast_recipients",
     "broadcasts",
     "business_hours",
+    "catalogue_connections",  # GR-33
     "comment_analyses",
     "comments",
     "contact_consents",

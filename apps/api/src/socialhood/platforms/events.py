@@ -37,6 +37,26 @@ class Inbound:
     occurred_at: datetime  # the platform's timestamp, not arrival time
 
 
+@dataclass(frozen=True)
+class CartItem:
+    """One line of a customer's WhatsApp cart (GR-33): the catalogue item's retailer id, how many
+    and the price the customer saw (a decimal text, in ``currency``)."""
+
+    retailer_id: str
+    quantity: int
+    price: str | None = None
+    currency: str | None = None
+
+
+@dataclass(frozen=True)
+class CartOrder:
+    """A customer's WhatsApp cart sent as an ``order`` message (GR-33)."""
+
+    catalog_id: str | None
+    note: str | None
+    items: tuple[CartItem, ...]
+
+
 @dataclass(frozen=True, kw_only=True)
 class InboundMessage(Inbound):
     contact_ref: str  # IGSID or WhatsApp wa_id
@@ -50,6 +70,7 @@ class InboundMessage(Inbound):
     quick_reply_payload: str | None = None  # the quick reply they tapped (FR-AUT-21)
     postback_payload: str | None = None  # the ice breaker or button they tapped (GR-01, GR-11)
     referral: ReferralInfo | None = None  # an ad the message came from (GR-01)
+    order: CartOrder | None = None  # a WhatsApp cart (GR-33)
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -157,8 +157,11 @@ export class Api {
         // GR-23, a sandbox WhatsApp number: a delivery status for the last message sent to
         // `fromId`, and a number's quality or tier change.
         | "status"
-        | "quality";
+        | "quality"
+        // GR-33, a sandbox WhatsApp number: a customer's cart (retailer ids are variant or product ids).
+        | "order";
       deliveryStatus?: "sent" | "delivered" | "read" | "failed";
+      cart?: { retailerId: string; quantity: number; price?: string }[];
       errorCode?: number;
       errorText?: string;
       qualityEvent?: "ONBOARDING" | "UPGRADE" | "DOWNGRADE" | "FLAGGED" | "UNFLAGGED";
@@ -197,6 +200,7 @@ export class Api {
       error_text: event.errorText,
       quality_event: event.qualityEvent,
       tier: event.tier,
+      cart: event.cart?.map((item) => ({ retailer_id: item.retailerId, quantity: item.quantity, price: item.price })),
     });
   }
 

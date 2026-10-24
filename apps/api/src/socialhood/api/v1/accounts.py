@@ -221,8 +221,8 @@ async def sandbox_inbound(
         return SandboxInboundResult(stored=len(stored))
     if acct.platform == "whatsapp":
         return await _sandbox_whatsapp(session, acct, body)
-    if body.kind in ("status", "quality"):
-        raise ApiError("conflict", "Statuses and quality updates are for WhatsApp numbers.")
+    if body.kind in ("status", "quality", "order"):
+        raise ApiError("conflict", "Statuses, orders and quality updates are for WhatsApp numbers.")
     payload = _sandbox_payload(acct.platform_account_id, body)
     stored = await store_and_enqueue(session, WebhookProvider.INSTAGRAM, split_payload(payload))
     return SandboxInboundResult(stored=len(stored))
@@ -256,8 +256,18 @@ async def _sandbox_whatsapp(
         payload = sandbox_whatsapp.quality(
             acct, event=body.quality_event or "UPGRADE", tier=body.tier
         )
+    elif body.kind == "order":
+        payload = sandbox_whatsapp.order(
+            acct,
+            sender=body.from_id or f"9198{secrets.randbelow(10**8):08d}",
+            name=body.from_username or "Sandbox customer",
+            note=body.text,
+            items=[(i.retailer_id, i.quantity, i.price) for i in body.cart or []],
+        )
     else:
-        raise ApiError("conflict", "A WhatsApp number takes DMs, statuses and quality updates.")
+        raise ApiError(
+            "conflict", "A WhatsApp number takes DMs, orders, statuses and quality updates."
+        )
     stored = await store_and_enqueue(session, WebhookProvider.WHATSAPP, whatsapp_split(payload))
     return SandboxInboundResult(stored=len(stored))
 

@@ -250,6 +250,21 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# GR-33: the WhatsApp catalogue. B's number and B's conversation are a 404 before any plan check.
+EXAMPLE_BODIES.update(
+    {
+        ("PUT", "/v1/w/{wid}/integrations/whatsapp-catalogue"): {
+            "social_account_id": "{account_id}",
+            "catalog_id": "into-b",
+        },
+        ("POST", "/v1/w/{wid}/conversations/{conversation_id}/product-message"): {
+            "kind": "product",
+            "body": "Sent into B",
+            "item": {"product_id": "{product_id}"},
+        },
+    }
+)
+
 # GR-23: broadcasts. The walk turns BROADCASTS_ENABLED on (it is off by default); with it off every
 # route is a plain 404 and proves nothing.
 BROADCAST_DRAFT = {
@@ -470,6 +485,8 @@ B_TABLES = (
     "products",  # GR-31
     "product_variants",
     "shopify_connections",
+    "catalogue_connections",  # GR-33
+    "catalogue_items",
     "payment_connections",  # GR-32
     "orders",
     "order_items",
@@ -925,6 +942,21 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                 " VALUES (:w, 'b-webhook-token', 'b@okbank', 'B')"
             ),
             {"w": wid},
+        )
+    async with engine.begin() as conn:  # GR-33: B's catalogue connection and one item sent
+        await conn.execute(
+            text(
+                "INSERT INTO catalogue_connections (workspace_id, social_account_id, catalog_id,"
+                " brand) VALUES (:w, :a, 'b-catalog', 'B')"
+            ),
+            {"w": wid, "a": account_id},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO catalogue_items (workspace_id, retailer_id, product_id, state)"
+                " VALUES (:w, :r, :p, 'synced')"
+            ),
+            {"w": wid, "r": str(product), "p": product},
         )
     sequence, enrolment = await make_sequence_rows(  # GR-24
         engine,
