@@ -72,7 +72,7 @@ from sqlalchemy.orm import aliased
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.ai import GapStatus, KnowledgeGap, MessageAnalysis, Sentiment
 from socialhood.models.analytics import PostMetricSnapshot
-from socialhood.models.automations import Comment
+from socialhood.models.automations import AutomationRunStep, Comment
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.contacts import LeadStage, LeadStageChange
 from socialhood.models.inbox import (
@@ -202,6 +202,7 @@ class OverviewStats:
     conversations_from_links: int = 0
     leads_qualified: int = 0
     leads_won: int = 0
+    captures: int = 0
 
     @property
     def active(self) -> bool:
@@ -240,6 +241,7 @@ class OverviewStats:
             "conversations_from_links": self.conversations_from_links,
             "leads_qualified": self.leads_qualified,
             "leads_won": self.leads_won,
+            "captures": self.captures,
         }
 
 
@@ -480,6 +482,26 @@ async def story_mentions_received(session: AsyncSession, span: DateRange) -> int
     from socialhood.repositories import story_mentions
 
     return await story_mentions.count_between(session, span.start, span.end)
+
+
+async def captures_received(session: AsyncSession, span: DateRange) -> int:
+    """GR-14: answers a flow's question step (``ask``) took in the range. The stored source of
+    truth is the step log: an ask step's row gets an ``answer`` only when the answer was accepted
+    and saved (a skipped question has ``skipped`` instead), the same predicate the flow funnel
+    counts. It is dated by when the row last changed, which is when the answer was taken; a
+    consent follow-up a few minutes later can move it, never into another week in practice.
+    ``lead.captured`` events are not counted: they exist only for workspaces with an endpoint."""
+    count = await session.scalar(
+        select(func.count())
+        .select_from(AutomationRunStep)
+        .where(
+            AutomationRunStep.kind == "ask",
+            func.jsonb_exists(AutomationRunStep.detail, "answer"),
+            AutomationRunStep.updated_at >= span.start,
+            AutomationRunStep.updated_at < span.end,
+        )
+    )
+    return int(count or 0)
 
 
 async def leads_moved(session: AsyncSession, span: DateRange) -> tuple[int, int]:
@@ -735,4 +757,5 @@ async def compute(session: AsyncSession, *, span: DateRange, now: datetime) -> O
         conversations_from_links=entries.get("link", 0),
         leads_qualified=qualified,
         leads_won=won,
+        captures=await captures_received(session, span),
     )

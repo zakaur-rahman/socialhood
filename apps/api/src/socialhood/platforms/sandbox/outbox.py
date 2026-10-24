@@ -14,6 +14,9 @@ profile says about a contact following the account; without it a sandbox contact
 contains ``follower`` follows, one whose id contains ``unknown`` is unknown, and anyone else does
 not follow, so the nudge can be seen in development.
 
+A sandbox WhatsApp number (GR-23) lists approved templates and reads its quality and tier from
+``set_number_health``; its sends, template sends included, are recorded here like any other.
+
 Comment moderation (T6.2, T6.3): hides, unhides and deletes are recorded in ``MODERATION``;
 ``fail_next(code, kind="moderation")`` makes the next one fail. ``reset()`` also forgets comments
 seeded with ``sandbox.comments.seed``, and everything sandbox publishing holds (containers,
@@ -30,6 +33,7 @@ from typing import Literal
 
 from socialhood.platforms.base import IceBreaker, OutboundMessage
 from socialhood.platforms.errors import PlatformError
+from socialhood.platforms.whatsapp.health import NumberHealth
 
 DIRECTIVE = re.compile(r"\[sandbox:fail=([a-z_]+)\]")
 KEEP = 200
@@ -68,6 +72,7 @@ MODERATION: deque[SandboxModeration] = deque(maxlen=KEEP)
 SEEN: deque[tuple[str, str]] = deque(maxlen=KEEP)  # (account_ref, recipient_ref) marked seen
 _FAILURES: deque[tuple[SendKind | None, PlatformError]] = deque()
 ICE_BREAKERS: dict[str, list[IceBreaker]] = {}  # account ref -> the starters last set (GR-11)
+NUMBER_HEALTH: dict[str, NumberHealth] = {}  # WhatsApp account ref -> its quality and tier (GR-23)
 FOLLOWS: dict[str, bool | None] = {}  # contact ref -> is_user_follow_business
 _REJECT_QUICK_REPLIES: list[bool] = [False]
 
@@ -82,6 +87,11 @@ def follows(contact_ref: str) -> bool | None:
     if "unknown" in contact_ref:
         return None
     return "follower" in contact_ref
+
+
+def set_number_health(account_ref: str, quality: str, tier: str | None = None) -> None:
+    """What the sandbox WhatsApp number reports when read: green, yellow, red or unknown."""
+    NUMBER_HEALTH[account_ref] = NumberHealth(quality, tier)
 
 
 def reject_quick_replies(on: bool = True) -> None:
@@ -121,13 +131,17 @@ def reset() -> None:
     _FAILURES.clear()
     FOLLOWS.clear()
     ICE_BREAKERS.clear()
+    NUMBER_HEALTH.clear()
     _REJECT_QUICK_REPLIES[0] = False
     comments.SEEDED.clear()
     publishing.reset()
 
 
 def failure_for(message: OutboundMessage, kind: SendKind = "send") -> PlatformError | None:
-    return failure_for_text(message.text, kind)
+    """A template carries its directive in a parameter (GR-23)."""
+    template = message.template
+    text = " ".join(template.params) if template is not None else message.text
+    return failure_for_text(text, kind)
 
 
 def failure_for_text(text: str | None, kind: SendKind) -> PlatformError | None:

@@ -200,9 +200,9 @@ function Thread({
   const account = accounts.data?.find((a) => a.id === conversation.social_account_id);
   const canAttach = account ? account.capabilities.includes("dm_attachments") : true;
   const handle =
-    conversation.platform === "instagram"
-      ? conversation.social_account.username
-      : (conversation.social_account.display_name ?? account?.phone_number);
+    conversation.platform === "whatsapp"
+      ? (conversation.social_account.display_name ?? account?.phone_number)
+      : conversation.social_account.username;
   const reconnectHref = `/w/${workspace.slug}/settings/connections` as Route;
   const canSchedule = conversation.reply_window.state === "open" || conversation.reply_window.state === "human_agent";
   const accountStatus = conversation.social_account.status;

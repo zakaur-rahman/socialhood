@@ -13,7 +13,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import Admin, Session
+from socialhood.auth.deps import CanManagePublishing, Session
 from socialhood.schemas.publishing import (
     CaptionRequest,
     CaptionSuggestion,
@@ -27,7 +27,7 @@ router = APIRouter(prefix="/v1/w/{wid}", tags=["publishing"])
 
 @router.post("/ai/caption", operation_id="generate_caption", dependencies=[ratelimit.AI])
 async def generate_caption(
-    request: Request, body: CaptionRequest, ctx: Admin, session: Session
+    request: Request, body: CaptionRequest, ctx: CanManagePublishing, session: Session
 ) -> CaptionSuggestion:
     """Write a caption from a brief, or improve the caption given (422 on ``brief`` or
     ``caption`` when the one the mode needs is missing). At most 2,200 characters, 30 hashtags
@@ -39,7 +39,7 @@ async def generate_caption(
 
 @router.post("/ai/hashtags", operation_id="suggest_hashtags", dependencies=[ratelimit.AI])
 async def suggest_hashtags(
-    request: Request, body: HashtagSuggestionRequest, ctx: Admin, session: Session
+    request: Request, body: HashtagSuggestionRequest, ctx: CanManagePublishing, session: Session
 ) -> HashtagSuggestion:
     """Up to ``count`` (at most 20) hashtags for the caption, none already in it or in
     ``exclude``."""

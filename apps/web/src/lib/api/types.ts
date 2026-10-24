@@ -60,6 +60,9 @@ export type ResourceType = MediaAsset["resource_type"];
 export type AssetPurpose = Schemas["UploadSignatureRequest"]["purpose"];
 export type WhatsAppTemplate = Schemas["WhatsAppTemplate"];
 export type EmbeddedSignup = Schemas["EmbeddedSignup"];
+export type FacebookPageOption = Schemas["FacebookPageOption"];
+export type FacebookPageList = Schemas["FacebookPageList"];
+export type SandboxAccountCreate = Schemas["SandboxAccountCreate"];
 
 // ---- automations (P4: FR-AUT-01…19, UX-SCR-02, 03, 11, 12)
 
@@ -113,6 +116,23 @@ export type SavedReplyList = Schemas["SavedReplyList"];
 export type SavedReplyCreate = Schemas["SavedReplyCreate"];
 export type SavedReplyUpdate = Schemas["SavedReplyUpdate"];
 export type SavedReplyFilled = Schemas["SavedReplyFilled"];
+// GR-23: WhatsApp broadcasts (aliases of the Pydantic classes; the client is regenerated centrally).
+export type Broadcast = Schemas["Broadcast"];
+export type BroadcastList = Schemas["BroadcastList"];
+export type BroadcastCreate = Schemas["BroadcastCreate"];
+export type BroadcastDraft = Schemas["BroadcastDraft"];
+export type BroadcastUpdate = Schemas["BroadcastUpdate"];
+export type BroadcastStart = Schemas["BroadcastStart"];
+export type BroadcastPreview = Schemas["BroadcastPreview"];
+export type BroadcastAvailability = Schemas["BroadcastAvailability"];
+export type BroadcastCounts = Schemas["BroadcastCounts"];
+export type BroadcastStatus = Broadcast["status"];
+export type BroadcastRecipient = Schemas["Recipient"];
+export type BroadcastRecipientList = Schemas["RecipientList"];
+export type RecipientStatus = BroadcastRecipient["status"];
+export type VariableSpec = Schemas["VariableSpec"];
+export type CostEstimate = Schemas["CostEstimate"];
+export type RateCard = Schemas["RateCardOut"];
 // GR-22: business hours and the away message.
 export type BusinessHours = Schemas["BusinessHours"];
 export type BusinessHoursUpdate = Schemas["BusinessHoursUpdate"];
@@ -121,6 +141,12 @@ export type AccountBusinessHours = Schemas["AccountBusinessHours"];
 export type DaySchedule = Schemas["DaySchedule"];
 export type TimeRange = Schemas["TimeRange"];
 export type AutoModeName = BusinessHours["auto_mode"];
+
+// GR-28: the website chat widget's settings.
+export type WidgetSettings = Schemas["WidgetSettingsOut"];
+export type WidgetSettingsUpdate = Schemas["WidgetSettingsUpdate"];
+export type WidgetEmailCapture = WidgetSettings["email_capture"];
+export type WidgetPosition = WidgetSettings["position"];
 // GR-08: entry links (ig.me links with QR codes).
 export type EntryLink = Schemas["EntryLink"];
 export type EntryLinkList = Schemas["EntryLinkList"];
@@ -254,6 +280,8 @@ export type CalendarSlot = Schemas["CalendarSlot"];
 export type CalendarAccount = Schemas["CalendarAccount"];
 export type PostingSlot = Schemas["PostingSlot"];
 export type PostingSlots = Schemas["PostingSlots"];
+export type BestTimes = Schemas["BestTimes"];
+export type BestTimeDay = Schemas["BestTimeDay"];
 export type HashtagGroup = Schemas["HashtagGroup"];
 export type HashtagGroupCreate = Schemas["HashtagGroupCreate"];
 export type HashtagGroupPatch = Schemas["HashtagGroupPatch"];
@@ -283,9 +311,23 @@ export type ActionKind = ActionCard["kind"];
 export type ScheduleMessageAction = Schemas["ScheduleMessageAction"];
 export type CommentReplyAction = Schemas["CommentReplyAction"];
 export type AutomationDraftAction = Schemas["AutomationDraftAction"];
+export type FlowProposalAction = Schemas["FlowProposalAction"];
+export type SegmentProposalAction = Schemas["SegmentProposalAction"];
+/** GR-36: a write the agent proposed. Nothing is saved until a member approves it. */
+export type ProposalCard = FlowProposalAction | SegmentProposalAction;
+/** A prepared action (FR-AGT-03): it opens an existing screen pre-filled. */
+export type PreparedCard = Exclude<ActionCard, ProposalCard>;
+export type PreparedKind = PreparedCard["kind"];
 export type ScheduleMessagePrefill = Schemas["ScheduleMessagePrefill"];
 export type CommentReplyPrefill = Schemas["CommentReplyPrefill"];
 export type AutomationDraftPrefill = Schemas["AutomationDraftPrefill"];
+
+/** GR-36: the agent's proposed writes: waiting, decided or expired, with the audit trail. */
+export type AgentApproval = Schemas["AgentApproval"];
+export type AgentApprovalList = Schemas["AgentApprovalList"];
+export type ApprovalOutcome = Schemas["ApprovalOutcome"];
+export type ApprovalEvent = Schemas["ApprovalEvent"];
+export type ApprovalStatus = AgentApproval["status"];
 
 /**
  * A visual answer (GR-38): built by the API's tools from service numbers and listed in the run's
@@ -338,6 +380,26 @@ export type WebhookEndpointCreate = Schemas["WebhookEndpointCreate"];
 export type WebhookEndpointPatch = Schemas["WebhookEndpointPatch"];
 export type WebhookDelivery = Schemas["WebhookDelivery"];
 export type WebhookDeliveryList = Schemas["WebhookDeliveryList"];
+
+// ---- Google Sheets sync (GR-27)
+
+export type GoogleSheetsStatus = Schemas["GoogleSheetsStatus"];
+export type GoogleSheetsConnectStart = Schemas["GoogleConnectStart"];
+export type GoogleSheetColumn = Schemas["SheetColumnOut"];
+export type GoogleSheetFieldOption = Schemas["SheetFieldOption"];
+export type GoogleSheetRow = Schemas["SheetRowOut"];
+export type GoogleSheetInfo = Schemas["SheetOut"];
+export type GoogleSheetMappingPut = Schemas["SheetMappingPut"];
+export type GoogleSheetTestResult = Schemas["SheetTestResult"];
+
+// ---- API keys (GR-25)
+
+export type ApiKey = Schemas["ApiKey"];
+export type ApiKeyWithKey = Schemas["ApiKeyWithKey"];
+export type ApiKeyList = Schemas["ApiKeyList"];
+export type ApiKeyCreate = Schemas["ApiKeyCreate"];
+export type ApiScope = Schemas["ApiScope"];
+export type ApiScopeName = ApiScope["scope"];
 
 // Activity (GR-05)
 export type ActivityItem = Schemas["ActivityItem"];
@@ -393,3 +455,17 @@ export type ReportPoint = Schemas["ReportPoint"];
 export type ReportIntent = Schemas["ReportIntent"];
 export type ReportQuestion = Schemas["ReportQuestion"];
 export type ReportPost = Schemas["ReportPost"];
+
+// ---- team (GR-19)
+
+export type WorkspacePermissions = Schemas["WorkspacePermissions"];
+export type TeamMember = Schemas["Member"];
+export type TeamMemberList = Schemas["MemberList"];
+export type TeamSeats = Schemas["Seats"];
+export type TeamInvitation = Schemas["Invitation"];
+export type TeamInvitationList = Schemas["InvitationList"];
+export type TeamInvitationCreate = Schemas["InvitationCreate"];
+export type TeamInvitableRole = TeamInvitationCreate["role"];
+export type OwnershipTransfer = Schemas["OwnershipTransfer"];
+export type AuditEvent = Schemas["AuditEvent"];
+export type AuditEventList = Schemas["AuditEventList"];

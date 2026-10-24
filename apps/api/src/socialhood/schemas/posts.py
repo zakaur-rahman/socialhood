@@ -187,7 +187,8 @@ class CommentReplyCreate(RequestModel):
 
 class PrivateReplyCreate(RequestModel):
     """POST …/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's
-    private replies carry no attachments). Instagram's limit is 1,000 bytes; the service checks
-    bytes."""
+    private replies carry no attachments). Instagram's limit is 1,000 bytes and a Facebook Page's
+    2,000 characters (GR-29); the service checks the account's own limit; this only bounds the body
+    size."""
 
-    text: str = Field(min_length=1, max_length=1000)
+    text: str = Field(min_length=1, max_length=4096)

@@ -27,6 +27,10 @@ import {
   MAX_HASHTAGS,
   MAX_MENTIONS,
   MIN_SCHEDULE_LEAD_MS,
+  FACEBOOK_NO_MIX,
+  postPlatforms,
+  storyShapeOff,
+  storyVideoProblem,
   videoTooLong,
   type AssetInfo,
 } from "./rules";
@@ -94,6 +98,14 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const items: ChecklistItem[] = [];
   const targets = draft.targets ?? [];
   const assetIds = draft.asset_ids ?? [];
+  const story = draft.kind === "story";
+  const selected = targets
+    .map((target) => accounts.find((item) => item.id === target.social_account_id))
+    .filter((account): account is SocialAccount => Boolean(account));
+  const { instagram: ig, facebook: fb } = postPlatforms(selected);
+  // Text for Facebook Pages alone, with no media, is a text post (GR-30).
+  const textPost = fb && !ig && !story && assetIds.length === 0 && Boolean((draft.caption ?? "").trim());
+  const limitName = ig ? "Instagram" : "Social Hood";
 
   // accounts: at least one, each connected and able to publish
   if (targets.length === 0) {
@@ -104,7 +116,12 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       const account = accounts.find((item) => item.id === target.social_account_id);
       if (!account) return; // not loaded yet, or gone: the API says which
       const reason = cannotPublishReason(account);
-      if (!reason) return;
+      if (!reason) {
+        if (story && account.platform !== "instagram") {
+          problems.push(fail("accounts", `${handleOf(account)} can't publish Stories. Remove it or choose a post.`, `targets.${index}`));
+        }
+        return;
+      }
       const handle = handleOf(account);
       const message =
         account.status === "needs_reconnect"
@@ -123,7 +140,15 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   // media: the assets make a format
   const known = assetIds.map((id) => assets[id]).filter((asset): asset is AssetInfo => Boolean(asset));
   if (assetIds.length === 0) {
-    items.push(fail("media", "Add a photo or video.", "asset_ids"));
+    items.push(
+      textPost
+        ? pass("media", "Text post")
+        : fail("media", fb && !ig ? "Add a photo or video, or write the post's text." : "Add a photo or video.", "asset_ids"),
+    );
+  } else if (fb && !story && assetIds.length > 1 && known.some((asset) => asset.resource_type === "video")) {
+    items.push(fail("media", FACEBOOK_NO_MIX, "asset_ids"));
+  } else if (story) {
+    items.push(assetIds.length === 1 ? pass("media", "Story") : fail("media", "A Story is one photo or one video.", "asset_ids"));
   } else if (assetIds.length > MAX_ASSETS) {
     items.push(fail("media", `A carousel can have up to ${MAX_ASSETS} photos and videos.`, "asset_ids"));
   } else if (assetIds.length > 1) {
@@ -138,11 +163,14 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     const asset = assets[id];
     if (!asset) return;
     const label = assetLabel(asset, index);
-    const crop = cropNeeded(asset);
-    if (crop) {
+    const crop = story || !ig ? null : cropNeeded(asset);
+    const storyProblem = story ? storyVideoProblem(asset) : null;
+    if (storyProblem) {
+      fileProblems.push(fail("media_files", `${label}: ${storyProblem}`, `asset_ids.${index}`));
+    } else if (crop) {
       const shape = crop === "tall" ? "taller than 4:5" : "wider than 1.91:1";
       fileProblems.push(fail("media_files", `${label} is ${shape}. Crop it to 1:1, 4:5 or 1.91:1.`, `asset_ids.${index}`));
-    } else if (videoTooLong(asset)) {
+    } else if (!story && videoTooLong(asset)) {
       fileProblems.push(
         fail(
           "media_files",
@@ -152,8 +180,24 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       );
     }
   });
+  const offShape = story && assetIds.length === 1 && assets[assetIds[0]] && storyShapeOff(assets[assetIds[0]]);
   if (fileProblems.length) items.push(...fileProblems);
-  else if (assetIds.length) items.push(pass("media_files", "Photos and videos fit Instagram's sizes"));
+  else if (assetIds.length) {
+    items.push(
+      pass(
+        "media_files",
+        offShape
+          ? "9:16 fits a Story best. Instagram may crop or add bars to this file."
+          : `Photos and videos fit ${ig && fb ? "Instagram's and Facebook's" : fb ? "Facebook's" : "Instagram's"} sizes`,
+      ),
+    );
+  }
+
+  // A Story has no caption, hashtags or mentions: what the draft holds is kept but never sent.
+  if (story) {
+    items.push(pass("caption", "Stories are published without a caption"));
+    return finishChecklist(items, draft, now);
+  }
 
   // caption, hashtags, mentions: every caption, and the first comment's length and hashtags
   const slots = captionSlots(draft, accounts);
@@ -167,17 +211,17 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       captionProblems.push(
         fail(
           "caption",
-          `${slot.owner} is ${formatCount(counts.chars)} characters. Instagram allows ${formatCount(CAPTION_MAX_CHARS)}.`,
+          `${slot.owner} is ${formatCount(counts.chars)} characters. ${limitName} allows ${formatCount(CAPTION_MAX_CHARS)}.`,
           slot.field,
         ),
       );
     }
-    if (counts.hashtags > MAX_HASHTAGS) {
+    if (ig && counts.hashtags > MAX_HASHTAGS) {
       hashtagProblems.push(
         fail("hashtags", `${slot.owner} has ${counts.hashtags} hashtags. Instagram allows ${MAX_HASHTAGS}.`, slot.field),
       );
     }
-    if (counts.mentions > MAX_MENTIONS) {
+    if (ig && counts.mentions > MAX_MENTIONS) {
       mentionProblems.push(
         fail("mentions", `${slot.owner} mentions ${counts.mentions} accounts. Instagram allows ${MAX_MENTIONS}.`, slot.field),
       );
@@ -188,21 +232,28 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     captionProblems.push(
       fail(
         "caption",
-        `The first comment is ${formatCount(commentCounts.chars)} characters. Instagram allows ${formatCount(FIRST_COMMENT_MAX_CHARS)}.`,
+        `The first comment is ${formatCount(commentCounts.chars)} characters. ${limitName} allows ${formatCount(FIRST_COMMENT_MAX_CHARS)}.`,
         "first_comment",
       ),
     );
   }
-  if (commentCounts.hashtags > MAX_HASHTAGS) {
+  if (ig && commentCounts.hashtags > MAX_HASHTAGS) {
     hashtagProblems.push(
       fail("hashtags", `The first comment has ${commentCounts.hashtags} hashtags. Instagram allows ${MAX_HASHTAGS}.`, "first_comment"),
     );
   }
   items.push(...(captionProblems.length ? captionProblems : [pass("caption", `Caption within ${formatCount(CAPTION_MAX_CHARS)} characters`)]));
-  items.push(...(hashtagProblems.length ? hashtagProblems : [pass("hashtags", `Up to ${MAX_HASHTAGS} hashtags`)]));
-  items.push(...(mentionProblems.length ? mentionProblems : [pass("mentions", `Up to ${MAX_MENTIONS} mentions`)]));
+  // Hashtag and mention limits are Instagram's: a post for Facebook Pages alone has none.
+  if (ig) {
+    items.push(...(hashtagProblems.length ? hashtagProblems : [pass("hashtags", `Up to ${MAX_HASHTAGS} hashtags`)]));
+    items.push(...(mentionProblems.length ? mentionProblems : [pass("mentions", `Up to ${MAX_MENTIONS} mentions`)]));
+  }
 
-  // publish_at: only when the post has a time
+  return finishChecklist(items, draft, now);
+}
+
+/** publish_at: only when the post has a time. */
+function finishChecklist(items: ChecklistItem[], draft: ScheduledPostDraft, now: Date): ChecklistItem[] {
   if (draft.publish_at) {
     const at = new Date(draft.publish_at).getTime();
     items.push(

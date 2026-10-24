@@ -4,8 +4,10 @@ from socialhood.models import (
     agent,
     ai,
     analytics,
+    api_keys,
     automations,
     billing,
+    broadcasts,
     connections,
     contacts,
     identity,
@@ -16,14 +18,18 @@ from socialhood.models import (
     platform,
     publishing,
     replies,
+    team,
+    widget,
 )
 
 __all__ = [
     "agent",
     "ai",
     "analytics",
+    "api_keys",
     "automations",
     "billing",
+    "broadcasts",
     "connections",
     "contacts",
     "identity",
@@ -34,4 +40,6 @@ __all__ = [
     "platform",
     "publishing",
     "replies",
+    "team",
+    "widget",
 ]

@@ -8,13 +8,15 @@ every run (FR-AGT-07). A run, thread or approval that isn't this workspace's (or
 isn't theirs) is 404 not_found. A refused write is a step result, never an HTTP error.
 
 The routes below are the PA contract. TA.1 built the runs, threads and policy read
-(services/agent_runs.py); the policy change and approvals are R2 and keep their ``openapi_extra``
-marker until built, so the tenancy suite covers them then.
+(services/agent_runs.py); GR-36 built the approvals (services/agent_actions.py, the action
+gateway). The policy change is R2 and keeps its ``openapi_extra`` marker until built, so the
+tenancy suite covers it then.
 """
 
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request
@@ -22,7 +24,7 @@ from fastapi import APIRouter, Query, Request
 from socialhood.agent import orchestrator
 from socialhood.api import ratelimit
 from socialhood.api.v1.ai import pending
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import Admin, AnyMember, CanAsk, CanManageSettings, Session
 from socialhood.billing.entitlements import credits_gate
 from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.agent import (
@@ -37,9 +39,9 @@ from socialhood.schemas.agent import (
     AgentRunStatusName,
     AgentThreadList,
     ApprovalApprove,
-    ApprovalStatusName,
+    ApprovalListStatus,
 )
-from socialhood.services import agent_runs
+from socialhood.services import agent_actions, agent_runs
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["agent"])
 
@@ -56,7 +58,7 @@ def _visuals_on(request: Request) -> bool:
     "/agent/runs", status_code=202, operation_id="create_agent_run", dependencies=[ratelimit.AI]
 )
 async def create_agent_run(
-    request: Request, body: AgentRunCreate, ctx: AnyMember, session: Session
+    request: Request, body: AgentRunCreate, ctx: CanAsk, session: Session
 ) -> AgentRun:
     """FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent
     is enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing
@@ -107,12 +109,14 @@ async def get_agent_run(
     verification, latency; the run's credits, model and prompt version (TR-AGT-08).
     ``visuals``: see schemas/agent.py (empty unless the server has visuals on)."""
     row = await agent_runs.visible_run(session, ctx, run_id)
-    return await agent_runs.detail_out(session, row, with_visuals=_visuals_on(request))
+    return await agent_runs.detail_out(
+        session, row, with_visuals=_visuals_on(request), role=ctx.role
+    )
 
 
 @router.post("/agent/runs/{run_id}/cancel", operation_id="cancel_agent_run")
 async def cancel_agent_run(
-    request: Request, run_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, run_id: uuid.UUID, ctx: CanAsk, session: Session
 ) -> AgentRun:
     """Stop at the next step (§9): an unfinished run becomes ``cancelled`` at once and run_agent
     stops before its next step or model turn; a step already running finishes and is kept. A
@@ -149,48 +153,66 @@ async def get_agent_policy(ctx: Admin, session: Session) -> AgentPolicy:
 
 
 @router.put("/agent/policy", operation_id="update_agent_policy", openapi_extra=pending("R2"))
-async def update_agent_policy(body: AgentPolicyUpdate, ctx: Admin, session: Session) -> AgentPolicy:
+async def update_agent_policy(
+    body: AgentPolicyUpdate, ctx: CanManageSettings, session: Session
+) -> AgentPolicy:
     """R2: replace the policy (owners and admins). 409 for ``autonomous`` until R3."""
     raise NotImplementedError("R2")
 
 
-# ---------------------------------------------------------------- approvals (R2, FR-AGT-09)
+# ---------------------------------------------------------------- approvals (FR-AGT-09, GR-36)
 
 
-@router.get("/agent/approvals", operation_id="list_agent_approvals", openapi_extra=pending("R2"))
+@router.get("/agent/approvals", operation_id="list_agent_approvals")
 async def list_agent_approvals(
     ctx: AnyMember,
     session: Session,
-    status: Annotated[ApprovalStatusName, Query()] = "pending",
+    status: Annotated[ApprovalListStatus, Query()] = "pending",
+    run_id: Annotated[uuid.UUID | None, Query()] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 20,
 ) -> AgentApprovalList:
-    """R2: approvals across runs; a member sees the ones they may decide (their own runs' writes
-    their role allows), owners and admins all."""
-    raise NotImplementedError("R2")
+    """The writes the agent proposed, soonest to expire first ("Waiting for you"): owners and
+    admins see every approval, a member those of their own runs. ``status`` ``all`` keeps every
+    status; ``run_id`` one run's. Approvals past their time are marked expired first."""
+    await agent_actions.expire_due(session, datetime.now(UTC))
+    out = await agent_actions.list_approvals(
+        session, ctx, status=status, run_id=run_id, cursor=cursor, limit=limit
+    )
+    await session.commit()
+    return out
 
 
-@router.post(
-    "/agent/approvals/{approval_id}/approve",
-    operation_id="approve_agent_approval",
-    openapi_extra=pending("R2"),
-)
+@router.post("/agent/approvals/{approval_id}/approve", operation_id="approve_agent_approval")
 async def approve_agent_approval(
-    approval_id: uuid.UUID, body: ApprovalApprove, ctx: AnyMember, session: Session
+    approval_id: uuid.UUID, body: ApprovalApprove, ctx: CanAsk, session: Session
 ) -> AgentApproval:
-    """R2: run the write as shown, or with edited ``args`` (re-checked by the gateway). The
-    caller's role must allow the tool (403 forbidden); 409 when it is no longer pending."""
-    raise NotImplementedError("R2")
+    """Run the write as proposed, or with edited ``args``, through the normal service (what the
+    screen would do by hand). 403 forbidden when the caller's role couldn't do it by hand; 404
+    when it isn't the caller's to see; 409 when it is no longer pending (decided or expired); 422
+    for edited arguments that don't fit. When the service refuses it (a name taken since, a plan
+    limit) nothing is saved, the approval stays pending and its ``outcome`` says why."""
+    now = datetime.now(UTC)
+    await agent_actions.visible_approval(session, ctx, approval_id)
+    await agent_actions.expire_due(session, now)
+    await session.commit()  # an expiry is kept even when this approval turns out to be one
+    row = await agent_actions.approve(session, ctx, approval_id, body.args, now=now)
+    [out] = await agent_actions.approvals_out(session, ctx.role, [row])
+    await session.commit()
+    return out
 
 
-@router.post(
-    "/agent/approvals/{approval_id}/reject",
-    operation_id="reject_agent_approval",
-    openapi_extra=pending("R2"),
-)
+@router.post("/agent/approvals/{approval_id}/reject", operation_id="reject_agent_approval")
 async def reject_agent_approval(
-    approval_id: uuid.UUID, ctx: AnyMember, session: Session
+    approval_id: uuid.UUID, ctx: CanAsk, session: Session
 ) -> AgentApproval:
-    """R2: cancel the write; the step is skipped and the run continues without it. 409 when it
-    is no longer pending."""
-    raise NotImplementedError("R2")
+    """Say no: nothing is saved. 404 when it isn't the caller's to see; 409 when it is no longer
+    pending."""
+    now = datetime.now(UTC)
+    await agent_actions.visible_approval(session, ctx, approval_id)
+    await agent_actions.expire_due(session, now)
+    await session.commit()
+    row = await agent_actions.reject(session, ctx, approval_id, now=now)
+    [out] = await agent_actions.approvals_out(session, ctx.role, [row])
+    await session.commit()
+    return out

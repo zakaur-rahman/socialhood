@@ -11,7 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
 
-from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanAssign, CanReply, Session
 from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.inbox import (
     Conversation,
@@ -73,7 +73,7 @@ async def update_conversation(
     request: Request,
     conversation_id: uuid.UUID,
     body: ConversationPatch,
-    ctx: AnyMember,
+    ctx: CanAssign,
     session: Session,
 ) -> Conversation:
     """Archive or unarchive; set or clear the conversation's AI mode override (auto needs a paid
@@ -93,7 +93,7 @@ async def update_conversation(
     operation_id="mark_conversation_read",
 )
 async def mark_conversation_read(
-    request: Request, conversation_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, conversation_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Response:
     conv = await service.get_or_404(session, conversation_id)
     if await service.mark_read(
@@ -109,7 +109,7 @@ async def mark_conversation_read(
     operation_id="mark_conversation_unread",
 )
 async def mark_conversation_unread(
-    request: Request, conversation_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, conversation_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Response:
     conv = await service.get_or_404(session, conversation_id)
     if await service.mark_unread(

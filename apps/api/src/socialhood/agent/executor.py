@@ -216,13 +216,16 @@ async def execute(
     step = await state.start_step(spec, args.model_dump(mode="json"))
     started = time.monotonic()
     attempt = 1
+    ctx.step_id, ctx.step_key = step.id, step.idempotency_key  # GR-36: proposals file against it
     while True:
         try:
             async with asyncio.timeout(TOOL_TIMEOUT_S):
                 result = await spec.handler(ctx, args)
             if not isinstance(result, spec.result_model) or not isinstance(result, ToolResult):
                 raise TypeError(f"{spec.name} returned {type(result).__name__}")
-            await ctx.session.commit()  # ends the read transaction; R1 tools change nothing
+            await (
+                ctx.session.commit()
+            )  # ends the read transaction; a proposal's approval row is saved
             break
         except Exception as error:
             await ctx.session.rollback()

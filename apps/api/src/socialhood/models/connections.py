@@ -30,6 +30,7 @@ class Platform(StrEnum):
     WHATSAPP = "whatsapp"
     FACEBOOK = "facebook"
     LINKEDIN = "linkedin"
+    WEB = "web"  # the website chat widget (GR-28)
 
 
 class AccountStatus(StrEnum):
@@ -92,6 +93,13 @@ class SocialAccount(IdMixin, TimestampMixin, TenantScoped, Base):
             "platform_account_id",
             unique=True,
             postgresql_where=text("status <> 'disconnected'"),
+        ),
+        # GR-28: one website chat widget per workspace.
+        Index(
+            "uq_social_accounts_workspace_web",
+            "workspace_id",
+            unique=True,
+            postgresql_where=text("platform = 'web'"),
         ),
         Index("ix_social_accounts_platform_platform_account_id", "platform", "platform_account_id"),
         CheckConstraint(_in("platform", Platform), name="platform"),

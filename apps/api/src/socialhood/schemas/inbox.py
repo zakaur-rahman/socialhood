@@ -15,8 +15,10 @@ from pydantic import Field
 
 from socialhood.schemas.common import RequestModel, ResponseModel
 
-PlatformName = Literal["instagram", "whatsapp"]
-MessageSourceName = Literal["customer", "human", "ai_auto", "automation", "native_app", "system"]
+PlatformName = Literal["instagram", "whatsapp", "facebook", "web"]
+MessageSourceName = Literal[
+    "customer", "human", "ai_auto", "automation", "broadcast", "native_app", "system"
+]
 MessageKindName = Literal[
     "text",
     "image",

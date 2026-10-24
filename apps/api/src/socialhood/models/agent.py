@@ -245,9 +245,23 @@ class AgentStep(IdMixin, TimestampMixin, TenantScoped, Base):
     )
 
 
+class AgentApprovalEventKind(StrEnum):
+    """What agent_approval_events records (GR-36): the whole life of one proposed write."""
+
+    PROPOSED = "proposed"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+    EXECUTED = "executed"  # the normal service function ran and the change was saved
+    FAILED = "failed"  # approved, but the service refused it; nothing was saved
+
+
 class AgentApproval(IdMixin, TimestampMixin, TenantScoped, Base):
-    """R2 (FR-AGT-09): a write the policy doesn't allow outright, waiting for a person. Created
-    now so the contract is fixed; nothing writes it in R1."""
+    """A write the agent proposed, waiting for a person (FR-AGT-09; GR-36 builds the gateway
+    around it: services/agent_actions.py). The agent only ever inserts it (``pending``); a member's
+    approval runs it through the normal service function, in the same transaction as the status
+    change. ``idempotency_key`` is the proposing step's key, so a retried step finds its approval
+    instead of adding another."""
 
     __tablename__ = "agent_approvals"
 
@@ -264,8 +278,20 @@ class AgentApproval(IdMixin, TimestampMixin, TenantScoped, Base):
         ForeignKey("users.id", ondelete="SET NULL")
     )
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # "{run_id}:{ordinal}" of the proposing step (GR-36); null for rows made before.
+    idempotency_key: Mapped[str | None] = mapped_column(Text)
+    # What the approval did (GR-36): {ok, summary, resource: {kind, id, route}, error}. Set once,
+    # with the status change, so the card can show the result after.
+    outcome: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
+        UniqueConstraint("workspace_id", "idempotency_key"),
+        Index(
+            "ix_agent_approvals_pending_expiry",
+            "expires_at",
+            postgresql_where=sql("status = 'pending'"),
+        ),
         Index(
             "uq_agent_approvals_pending",
             "step_id",
@@ -273,6 +299,33 @@ class AgentApproval(IdMixin, TimestampMixin, TenantScoped, Base):
             postgresql_where=sql("status = 'pending'"),
         ),
         CheckConstraint(_in("status", ApprovalStatus), name="status"),
+    )
+
+
+class AgentApprovalEvent(IdMixin, TimestampMixin, TenantScoped, Base):
+    """The agent's own audit trail of a proposed write (GR-36): who, when, what and the outcome,
+    one row per proposal, approval, rejection, expiry and execution. Append-only. GR-19's general
+    ``audit_events`` can mirror these rows; they stay here so the run trace reads them without it.
+    """
+
+    __tablename__ = "agent_approval_events"
+
+    approval_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("agent_approvals.id", ondelete="CASCADE"), index=True
+    )
+    event: Mapped[str] = mapped_column(Text)
+    # The member; null for the agent's proposal (``proposed`` is recorded for the requester) and
+    # for expiry.
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # {tool, summary, error_code, resource, ...}: plain facts, never message text beyond the
+    # proposal's own summary.
+    detail: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=_jsonb({}))
+
+    __table_args__ = (
+        CheckConstraint(_in("event", AgentApprovalEventKind), name="event"),
+        CheckConstraint("jsonb_typeof(detail) = 'object'", name="detail"),
     )
 
 

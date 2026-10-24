@@ -18,7 +18,7 @@ import { SearchInput } from "@/components/ui/search-input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useContacts, useLeadSettings, useLeadSummary, useSetLeadStage, useUpdateLeadSettings } from "@/lib/api/queries";
-import type { ContactListItem, LeadStage } from "@/lib/api/types";
+import type { ContactListItem, LeadStage, Platform } from "@/lib/api/types";
 import { activeFilterCount, EMPTY_FILTERS, hasAnyFilter, type ContactFilters } from "@/lib/contacts/filters";
 import { coldDayOptions, LEAD_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 import { relativeTime } from "@/lib/time";
@@ -239,7 +239,7 @@ function LeadCard({ item, onOpen }: { item: ContactListItem; onOpen: () => void 
   return (
     <li data-testid="lead-card" className="space-y-2 rounded-xl border border-border bg-surface p-3">
       <div className="flex items-start gap-3">
-        <ContactAvatar id={item.id} name={item.name} pictureUrl={item.profile_picture_url} platform={item.platform as "instagram" | "whatsapp"} size={32} />
+        <ContactAvatar id={item.id} name={item.name} pictureUrl={item.profile_picture_url} platform={item.platform as Platform} size={32} />
         <div className="min-w-0 flex-1">
           <button type="button" onClick={onOpen} aria-label={`Open ${item.name}`} className="block max-w-full truncate text-left font-medium hover:underline">
             {item.name}

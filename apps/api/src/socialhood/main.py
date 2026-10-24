@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from socialhood import __version__
-from socialhood.api import health
+from socialhood.api import health, public, public_hooks
 from socialhood.api import v1 as api_v1
 from socialhood.api.middleware import BodyLimitMiddleware, RequestContextMiddleware
 from socialhood.api.openapi_errors import problem_openapi
@@ -25,10 +25,12 @@ from socialhood.observability.sentry import init_sentry, instrument_running_loop
 from socialhood.settings import Settings, get_settings
 from socialhood.webhooks import clerk as clerk_webhook
 from socialhood.webhooks import dodo as dodo_webhook
+from socialhood.webhooks import facebook as facebook_webhook
 from socialhood.webhooks import instagram as instagram_webhook
 from socialhood.webhooks import links as links_redirect
 from socialhood.webhooks import meta_privacy
 from socialhood.webhooks import whatsapp as whatsapp_webhook
+from socialhood.widget import routes as widget_files
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -65,17 +67,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.http = make_http_client()
 
     install_problem_handlers(app)
-    app.openapi = lambda: problem_openapi(app)  # type: ignore[method-assign]
+    # The public API (GR-25) has its own document, api/public_openapi.py.
+    app.openapi = lambda: problem_openapi(app, (public.router, public_hooks.router))  # type: ignore[method-assign]
     app.include_router(health.router)
     app.include_router(observability_http.router)  # /metrics behind METRICS_TOKEN (SEC-12)
     for router in api_v1.ROUTERS:
         app.include_router(router)
+    app.include_router(public.router)  # GR-25: /public/v1, authenticated by an API key
+    app.include_router(public_hooks.router)  # GR-26: the REST hooks Zapier triggers use
     app.include_router(clerk_webhook.router)
     app.include_router(dodo_webhook.router)
     app.include_router(instagram_webhook.router)
+    app.include_router(facebook_webhook.router)
     app.include_router(meta_privacy.router)
     app.include_router(whatsapp_webhook.router)
     app.include_router(links_redirect.router)  # GR-15: /l/<code>, the tracked link redirect
+    app.include_router(widget_files.router)  # GR-28: /widget.js and the chat frame
 
     # SEC-05: exact origins only, no credentials (bearer tokens, not cookies).
     app.add_middleware(

@@ -53,6 +53,43 @@ export class Api {
     return this.seed<void>("DELETE", `/users/${clerkUserId}`);
   }
 
+  /** GR-19: the workspace on a plan, without a checkout. */
+  setPlan(wid: string, plan: "free" | "pro" | "max"): Promise<void> {
+    return this.seed<void>("POST", `/workspaces/${wid}/plan`, { plan });
+  }
+
+  /** GR-27: the header and rows the fake Google holds for a sheet. */
+  googleSheet(sheetId: string): Promise<{ header: string[]; rows: string[][] }> {
+    return this.seed("GET", `/google-sheets/${sheetId}`);
+  }
+
+  /** GR-27: delete the sheet as the person would in Google Drive. */
+  deleteGoogleSheet(sheetId: string): Promise<void> {
+    return this.seed<void>("POST", `/google-sheets/${sheetId}/delete`);
+  }
+
+  /**
+   * GR-25, GR-26: a call to the public API with an API key (not the Clerk session). Resolves with
+   * the status and parsed body instead of throwing, so a spec can check a 403 or a 401.
+   */
+  async publicCall<T = unknown>(
+    key: string,
+    method: string,
+    path: string,
+    body?: unknown,
+    extra: Record<string, string> = {},
+  ): Promise<{ status: number; body: T }> {
+    const headers: Record<string, string> = { Authorization: `Bearer ${key}`, ...extra };
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const response = await fetch(`${this.stack.E2E_API_URL}/public/v1${path}`, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const text = await response.text();
+    return { status: response.status, body: (text ? JSON.parse(text) : undefined) as T };
+  }
+
   mediaAsset(wid: string, filename = "e2e-post.jpg"): Promise<{ id: string; secure_url: string }> {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }
@@ -75,10 +112,27 @@ export class Api {
     });
   }
 
+  /**
+   * GR-36: a finished Ask run whose draft step called propose_flow or propose_segment through the
+   * real tool and gateway (the fake model calls no tools): a pending approval and its card. A
+   * segment's `tag` must already exist in the workspace.
+   */
+  agentProposal(
+    wid: string,
+    proposal: { request: string; kind: "flow" | "segment"; name: string; keyword?: string; tag?: string },
+  ): Promise<{ run_id: string; thread_id: string; approval_id: string }> {
+    return this.seed("POST", `/workspaces/${wid}/agent-proposals`, proposal);
+  }
+
   // ---------------------------------------------------------------- the app's own endpoints
 
-  connectSandbox(wid: string): Promise<SandboxAccount> {
-    return this.call<SandboxAccount>("POST", `/v1/w/${wid}/dev/sandbox/accounts`);
+  /** A sandbox Instagram account, a Facebook Page (GR-29) or a WhatsApp number with approved templates (GR-23). */
+  connectSandbox(wid: string, platform: "instagram" | "facebook" | "whatsapp" = "instagram"): Promise<SandboxAccount> {
+    return this.call<SandboxAccount>(
+      "POST",
+      `/v1/w/${wid}/dev/sandbox/accounts`,
+      platform === "instagram" ? undefined : { platform },
+    );
   }
 
   /**
@@ -99,7 +153,16 @@ export class Api {
         | "optin"
         | "story_reply"
         | "story_like"
-        | "story_mention";
+        | "story_mention"
+        // GR-23, a sandbox WhatsApp number: a delivery status for the last message sent to
+        // `fromId`, and a number's quality or tier change.
+        | "status"
+        | "quality";
+      deliveryStatus?: "sent" | "delivered" | "read" | "failed";
+      errorCode?: number;
+      errorText?: string;
+      qualityEvent?: "ONBOARDING" | "UPGRADE" | "DOWNGRADE" | "FLAGGED" | "UNFLAGGED";
+      tier?: string;
       /** GR-10: how old a comment or Live comment is when it arrives, in seconds. */
       ageSeconds?: number;
       text?: string;
@@ -129,6 +192,11 @@ export class Api {
       quick_reply_payload: event.quickReplyPayload,
       story_id: event.storyId,
       age_seconds: event.ageSeconds,
+      delivery_status: event.deliveryStatus,
+      error_code: event.errorCode,
+      error_text: event.errorText,
+      quality_event: event.qualityEvent,
+      tier: event.tier,
     });
   }
 
@@ -182,6 +250,34 @@ export class Api {
       message_text: values.messageText,
       post_scope: values.adIds?.length ? "selected" : "all",
       ad_ids: values.adIds ?? [],
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-29: an active comment keyword automation: a public reply and a private message. */
+  async commentAutomation(
+    wid: string,
+    accountId: string,
+    keyword: string,
+    values: { messageText: string; publicReplies: string[] },
+  ): Promise<{ id: string }> {
+    const name = `Comment ${keyword}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger: "comment_keyword",
+      keywords: [keyword],
+      match_mode: "word",
+      action: "send_message",
+      message_text: values.messageText,
+      public_reply_texts: values.publicReplies,
+      post_scope: "all",
+      confirm_first: false,
     });
     await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
     return draft;

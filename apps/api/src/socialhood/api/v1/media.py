@@ -10,7 +10,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request
 
-from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanReply, Session
 from socialhood.media.cloudinary import Cloudinary
 from socialhood.schemas.inbox import (
     MediaAssetCreate,
@@ -31,7 +31,7 @@ def _cloudinary(request: Request) -> Cloudinary:
 
 @router.post("/media-assets/upload-signature", operation_id="create_upload_signature")
 async def create_upload_signature(
-    request: Request, body: UploadSignatureRequest, ctx: AnyMember, session: Session
+    request: Request, body: UploadSignatureRequest, ctx: CanReply, session: Session
 ) -> UploadSignature:
     """Parameters for uploading one file from the browser into ws/{workspace_id}/{purpose}."""
     return media_assets.upload_signature(
@@ -44,7 +44,7 @@ async def create_upload_signature(
 
 @router.post("/media-assets", status_code=201, operation_id="register_media_asset")
 async def register_media_asset(
-    request: Request, body: MediaAssetCreate, ctx: AnyMember, session: Session
+    request: Request, body: MediaAssetCreate, ctx: CanReply, session: Session
 ) -> MediaAssetOut:
     """Register an uploaded file: it must be in this workspace's folder (else 422 on public_id)
     and within the limits (else 415 unsupported_media). Registering it again returns it."""

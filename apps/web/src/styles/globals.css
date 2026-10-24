@@ -77,6 +77,7 @@
   --color-whatsapp: #16A34A;
   --color-facebook: #2563EB;
   --color-linkedin: #1E40AF;
+  --color-web: #0F766E;  /* the website chat widget (GR-28): 5.5:1 with on-brand */
 
   /* Charts (COLOR_SYSTEM §11.6, C-075): aliases, no new hues. Every chart reads these, so a
      series' colour is set in one place; the legend, numbers and an sr-only table carry the values. */

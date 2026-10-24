@@ -109,7 +109,7 @@ async def test_a_post_keeps_its_assets_in_order_and_one_target_per_account(
     ("values", "check"),
     [
         ({"status": "queued"}, "status"),
-        ({"format": "story"}, "format"),
+        ({"format": "slideshow"}, "format"),
         ({"caption": "x" * 2201}, "caption_length"),
         ({"first_comment": ""}, "first_comment_length"),
         ({"status": "scheduled", "format": None}, "schedulable"),

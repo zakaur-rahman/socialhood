@@ -130,7 +130,7 @@ class FollowsCondition(RequestModel):
 
 class PlatformCondition(RequestModel):
     kind: Literal["platform"] = "platform"
-    platform: Literal["instagram", "whatsapp"]
+    platform: Literal["instagram", "whatsapp", "facebook"]
 
 
 class LeadScoreCondition(RequestModel):

@@ -16,6 +16,10 @@ Structure, checked on every save (a broken graph is never stored):
 - the tags and fields a branch or an action names exist, and a set value fits its field;
 - an AI reply has its instructions.
 
+On a Facebook Page (GR-29) a message is at most 2,000 characters, and three things Messenger lacks
+are refused: a branch on following the Page, the "View profile" button (Instagram's profile) and
+a question that asks for marketing consent (no consent record for Facebook yet).
+
 And what Instagram allows along every path from the start (``_path_errors``):
 - a comment's flow starts with its first message, a private reply: text and buttons only, no
   image. Until the person answers (a quick reply, or a question), nothing more can be sent;
@@ -93,6 +97,16 @@ COPY = {
         "after a quick reply or a question."
     ),
     "ai_not_first": "An AI reply has to be the first step.",
+    "facebook_follows": (
+        "Messenger doesn't say whether someone follows your Page. Remove this branch or use "
+        "another condition."
+    ),
+    "facebook_profile_button": (
+        "The profile button opens an Instagram profile. Give this button a link instead."
+    ),
+    "facebook_consent": (
+        "Facebook doesn't record marketing consent yet. Turn off the consent question."
+    ),
     "ai_instructions": validation.COPY["ai_instructions_missing"],
     "answer_field": "Choose the field to save the answer to.",
     "field_missing": "That field doesn't exist any more. Choose another.",
@@ -296,6 +310,8 @@ class Context:
     # GR-21: the workspace's saved replies, id to body (their length is checked now; a body
     # edited later is checked by the send).
     saved_replies: Mapping[uuid.UUID, str] = field(default_factory=dict)
+    # GR-29: the account's platform, which sets the text limit and what Messenger lacks.
+    platform: str = "instagram"
 
     @property
     def comment(self) -> bool:
@@ -343,21 +359,20 @@ def _step_errors(i: int, step: Step, ctx: Context) -> list[FieldError]:
 
 
 def _text_errors(where: str, text: str, ctx: Context, *, buttons: bool) -> list[FieldError]:
-    size = validation.message_bytes(text, ctx.disclosure)
-    limit = validation.INSTAGRAM_MESSAGE_BYTES
-    errors = []
-    if size > limit:
-        errors.append(
-            FieldError(
-                where,
-                f"Instagram allows {limit:,} bytes. With a long name"
-                f"{' and the disclosure line' if ctx.disclosure else ''} this message is "
-                f"{size:,}. Shorten it.",
-            )
-        )
+    size = validation.message_size(ctx.platform, text, ctx.disclosure)
+    errors = validation.placeholder_errors(where, text)
+    problem = validation.too_long_copy(
+        ctx.platform, size, what="message", disclosure=ctx.disclosure
+    )
+    if problem:
+        errors.append(FieldError(where, problem))
     longest = render.with_disclosure(render.longest_render(text), ctx.disclosure)
     if buttons and len(longest) > validation.BUTTON_TEXT_CHARS:
-        errors.append(FieldError(where, validation.COPY["button_text_long"]))
+        errors.append(
+            FieldError(
+                where, validation.localize(validation.COPY["button_text_long"], ctx.platform)
+            )
+        )
     return errors
 
 
@@ -386,6 +401,8 @@ def _send_errors(i: int, step: SendStep, ctx: Context) -> list[FieldError]:
     for b, button in enumerate(step.buttons):
         where = path(i, f"buttons.{b}.url")
         if button.profile:
+            if ctx.platform == "facebook":
+                errors.append(FieldError(path(i, f"buttons.{b}"), COPY["facebook_profile_button"]))
             continue
         if not button.url:
             errors.append(FieldError(where, COPY["button_link"]))
@@ -411,6 +428,8 @@ def _ask_errors(i: int, step: AskStep, ctx: Context) -> list[FieldError]:
         extra = getattr(step, part)
         if extra.strip():
             errors += _text_errors(path(i, part), extra, ctx, buttons=False)
+    if step.consent and ctx.platform == "facebook":
+        errors.append(FieldError(path(i, "consent"), COPY["facebook_consent"]))
     where = path(i, "field_key")
     if step.field_key is None:
         if step.expect == "text":
@@ -433,6 +452,8 @@ def _branch_errors(i: int, step: BranchStep, ctx: Context) -> list[FieldError]:
                 errors.append(FieldError(where, COPY["field_missing"]))
             case FieldCondition(op="equals", value=value) if not (value or "").strip():
                 errors.append(FieldError(where, COPY["value_missing"]))
+            case FollowsCondition() if ctx.platform == "facebook":
+                errors.append(FieldError(where, COPY["facebook_follows"]))
     return errors
 
 
@@ -469,7 +490,7 @@ def _path_errors(g: Graph, ctx: Context) -> dict[str, str]:
         step = g.by_id[step_id]
         problem, after = _allowed(step, window, ctx, g.definition.start)
         if problem is not None:
-            errors.setdefault(step_id, COPY[problem])
+            errors.setdefault(step_id, validation.localize(COPY[problem], ctx.platform))
         stack.extend((t, after) for t in successors(step) if t is not None)
     return errors
 

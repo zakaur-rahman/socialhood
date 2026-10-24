@@ -15,6 +15,7 @@ import {
   FORMAT_LABEL,
   MAX_ASSETS,
   POST_FILE_ACCEPT,
+  storyVideoProblem,
   videoTooLong,
   type AssetInfo,
 } from "@/lib/publishing/rules";
@@ -183,8 +184,9 @@ export function MediaTray({
         <ul aria-label="Post media" className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
           {entries.map(({ asset, replacing }, index) => {
             const label = assetLabel(asset, index);
-            const crop = cropNeeded(asset);
-            const tooLong = videoTooLong(asset);
+            // A Story takes any photo shape (9:16 fits best) and videos of 3 to 60 seconds.
+            const crop = format === "story" ? null : cropNeeded(asset);
+            const tooLong = format === "story" ? storyVideoProblem(asset) !== null : videoTooLong(asset);
             const dragging = drag?.from === index;
             const gap = drag ? drag.drop : -1;
             const marker = drag && gap !== drag.from && gap !== drag.from + 1 ? (gap === index ? "before" : gap === entries.length && index === entries.length - 1 ? "after" : null) : null;

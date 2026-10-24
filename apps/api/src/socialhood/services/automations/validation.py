@@ -11,6 +11,12 @@ buttons the text is Instagram's button template, at most 640 characters in its l
 A comment automation's DM is a private reply, which Instagram sends as text (and buttons) only,
 so it cannot carry an image; one set to public reply only needs a public reply.
 
+Facebook Pages (GR-29) run the same automations on Messenger where Meta allows it. A message is
+at most 2,000 characters in its longest rendering (the Send API's text limit); link buttons, tap
+first, public replies and private replies work as on Instagram. Not on Messenger, so activation
+refuses them in plain words: story replies and story mentions (Pages have none), Live comments,
+and the follow nudge (Messenger doesn't say whether someone follows the Page).
+
 Story triggers (GR-06, GR-07) are DM triggers. A story reply takes keywords or none (any reply), and
 its scope is any story or at least one chosen story; a story mention needs nothing but a message.
 
@@ -38,9 +44,11 @@ from datetime import datetime
 from urllib.parse import urlsplit
 
 from socialhood.errors import FieldError
-from socialhood.services.automations import render
+from socialhood.services.automations import render, templates
 
 INSTAGRAM_MESSAGE_BYTES = 1000  # TR-PL-10
+FACEBOOK_MESSAGE_CHARS = 2000  # Messenger's text limit (unverified, GR-29)
+AUTOMATION_PLATFORMS = ("instagram", "facebook")
 PUBLIC_REPLY_CHARS = 300  # FR-AUT-14
 BUTTON_TITLE_CHARS = 20  # FR-AUT-13
 BUTTON_TEXT_CHARS = 640  # the button template's text (services/sending.BUTTON_TEXT_LIMITS)
@@ -51,7 +59,19 @@ KEYWORD_TRIGGERS = frozenset({"dm_keyword", "comment_keyword"})  # story_reply's
 
 COPY = {
     "account_missing": "Choose the account this automation runs on.",
-    "account_platform": "Automations run on Instagram accounts. Choose an Instagram account.",
+    "account_platform": (
+        "Automations run on Instagram and Facebook accounts. Choose one of those."
+    ),
+    "facebook_stories": (
+        "Facebook Pages have no story replies or story mentions. Choose another trigger."
+    ),
+    "facebook_live": (
+        "Live comments on Facebook aren't supported yet. Answer comments on posts instead."
+    ),
+    "facebook_follow": (
+        "Messenger doesn't say whether someone follows your Page, so the follow line can't be "
+        "used. Turn it off."
+    ),
     "account_disconnected": "This account is disconnected. Reconnect it or choose another.",
     "trigger_missing": "Choose what starts the automation.",
     "keywords_missing": "Add at least one keyword.",
@@ -82,6 +102,40 @@ COPY = {
     "window_order": "The end must be after the start.",
     "window_past": "This end time has passed. Pick a later one or remove it.",
 }
+
+
+def localize(text: str, platform: str | None) -> str:
+    """Copy written for Instagram, said for the account's platform."""
+    return text.replace("Instagram", "Facebook") if platform == "facebook" else text
+
+
+def message_limit(platform: str | None) -> tuple[int, str]:
+    """(the most a message may be, its unit) on the platform (TR-PL-10)."""
+    if platform == "facebook":
+        return FACEBOOK_MESSAGE_CHARS, "characters"
+    return INSTAGRAM_MESSAGE_BYTES, "bytes"
+
+
+def message_size(platform: str | None, text: str, disclosure: str | None) -> int:
+    """The message in its longest rendering with the disclosure line, in the platform's unit."""
+    if platform == "facebook":
+        return len(render.with_disclosure(render.longest_render(text), disclosure))
+    return message_bytes(text, disclosure)
+
+
+def too_long_copy(
+    platform: str | None, size: int, *, what: str, disclosure: str | None
+) -> str | None:
+    """The validation message when ``size`` is over the platform's limit, else None."""
+    limit, unit = message_limit(platform)
+    if size <= limit:
+        return None
+    name = "Facebook" if platform == "facebook" else "Instagram"
+    return (
+        f"{name} allows {limit:,} {unit}. With a long name"
+        f"{' and the disclosure line' if disclosure else ''} this {what} is "
+        f"{size:,}. Shorten it."
+    )
 
 
 @dataclass(frozen=True)
@@ -135,6 +189,10 @@ class Definition:
     uses_flow: bool = False
 
     @property
+    def platform(self) -> str | None:
+        return self.account.platform if self.account else None
+
+    @property
     def taps_first(self) -> bool:
         """Tap first applies: a comment trigger sending a message (FR-AUT-21)."""
         return (
@@ -167,6 +225,11 @@ def message_bytes(text: str, disclosure: str | None) -> int:
     return render.utf8_bytes(render.with_disclosure(render.longest_render(text), disclosure))
 
 
+def placeholder_errors(field: str, text: str | None) -> list[FieldError]:
+    """One error for each template placeholder ("[price]") still in the text."""
+    return [FieldError(field, templates.unfilled_copy(t)) for t in templates.unfilled(text or "")]
+
+
 def activation_errors(d: Definition, *, disclosure: str | None, now: datetime) -> list[FieldError]:
     errors: list[FieldError] = []
     errors += _account_errors(d)
@@ -184,7 +247,7 @@ def missing_fields(errors: Sequence[FieldError]) -> list[str]:
 def _account_errors(d: Definition) -> list[FieldError]:
     if d.social_account_id is None or d.account is None:
         return [FieldError("social_account_id", COPY["account_missing"])]
-    if d.account.platform != "instagram":
+    if d.account.platform not in AUTOMATION_PLATFORMS:
         return [FieldError("social_account_id", COPY["account_platform"])]
     if d.account.status == "disconnected":
         return [FieldError("social_account_id", COPY["account_disconnected"])]
@@ -194,6 +257,11 @@ def _account_errors(d: Definition) -> list[FieldError]:
 def _trigger_errors(d: Definition) -> list[FieldError]:
     if d.trigger is None:
         return [FieldError("trigger", COPY["trigger_missing"])]
+    if d.platform == "facebook":
+        if d.trigger in ("story_reply", "story_mention"):
+            return [FieldError("trigger", COPY["facebook_stories"])]
+        if d.trigger in COMMENT_TRIGGERS and d.comment_surface != "posts":
+            return [FieldError("comment_surface", COPY["facebook_live"])]
     errors: list[FieldError] = []
     if d.trigger in KEYWORD_TRIGGERS and not d.keywords:
         errors.append(FieldError("keywords", COPY["keywords_missing"]))
@@ -260,7 +328,9 @@ def _message_settings_errors(d: Definition, disclosure: str | None) -> list[Fiel
         errors += _message_errors(d, disclosure)
     if d.taps_first:
         errors += _opening_errors(d, disclosure)
-    if d.nudges:
+    if d.nudges and d.platform == "facebook":
+        errors.append(FieldError("follow_nudge", COPY["facebook_follow"]))
+    elif d.nudges:
         errors += _nudge_errors(d)
     return errors
 
@@ -271,21 +341,22 @@ def _message_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
     if not text:
         errors.append(FieldError("message_text", COPY["message_missing"]))
     else:
-        size = message_bytes(text, disclosure)
-        if size > INSTAGRAM_MESSAGE_BYTES:
-            errors.append(
-                FieldError(
-                    "message_text",
-                    f"Instagram allows {INSTAGRAM_MESSAGE_BYTES:,} bytes. With a long name"
-                    f"{' and the disclosure line' if disclosure else ''} this message is "
-                    f"{size:,}. Shorten it.",
-                )
-            )
+        errors += placeholder_errors("message_text", text)
+        size = message_size(d.platform, text, disclosure)
+        problem = too_long_copy(d.platform, size, what="message", disclosure=disclosure)
+        if problem:
+            errors.append(FieldError("message_text", problem))
         longest = render.with_disclosure(render.longest_render(text), disclosure)
         if d.message_buttons and len(longest) > BUTTON_TEXT_CHARS:
-            errors.append(FieldError("message_text", COPY["button_text_long"]))
+            errors.append(
+                FieldError("message_text", localize(COPY["button_text_long"], d.platform))
+            )
     if d.has_image and d.trigger in COMMENT_TRIGGERS and not d.taps_first:
-        errors.append(FieldError("message_media_asset_id", COPY["image_in_private_reply"]))
+        errors.append(
+            FieldError(
+                "message_media_asset_id", localize(COPY["image_in_private_reply"], d.platform)
+            )
+        )
     for i, button in enumerate(d.message_buttons):
         if not 1 <= len(button.title.strip()) <= BUTTON_TITLE_CHARS:
             errors.append(FieldError(f"message_buttons.{i}.title", COPY["button_title"]))
@@ -300,16 +371,11 @@ def _opening_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
     if not text:
         errors.append(FieldError("opening_text", COPY["opening_missing"]))
     else:
-        size = message_bytes(text, disclosure)
-        if size > INSTAGRAM_MESSAGE_BYTES:
-            errors.append(
-                FieldError(
-                    "opening_text",
-                    f"Instagram allows {INSTAGRAM_MESSAGE_BYTES:,} bytes. With a long name"
-                    f"{' and the disclosure line' if disclosure else ''} this opening is "
-                    f"{size:,}. Shorten it.",
-                )
-            )
+        errors += placeholder_errors("opening_text", text)
+        size = message_size(d.platform, text, disclosure)
+        problem = too_long_copy(d.platform, size, what="opening", disclosure=disclosure)
+        if problem:
+            errors.append(FieldError("opening_text", problem))
     if not 1 <= len((d.opening_button or "").strip()) <= BUTTON_TITLE_CHARS:
         errors.append(FieldError("opening_button", COPY["opening_button"]))
     return errors
@@ -320,9 +386,10 @@ def _nudge_errors(d: Definition) -> list[FieldError]:
     disclosure line are added when it is sent)."""
     if not (d.follow_nudge_text or "").strip():
         return [FieldError("follow_nudge_text", COPY["nudge_missing"])]
+    errors = placeholder_errors("follow_nudge_text", d.follow_nudge_text)
     if len(d.follow_nudge_text or "") > NUDGE_CHARS:
-        return [FieldError("follow_nudge_text", COPY["nudge_long"])]
-    return []
+        errors.append(FieldError("follow_nudge_text", COPY["nudge_long"]))
+    return errors
 
 
 def _public_reply_errors(texts: Sequence[str]) -> list[FieldError]:

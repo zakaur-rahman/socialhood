@@ -16,12 +16,18 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "replies", label: "Saved replies", roles: EVERYONE },
   // GR-22: when the workspace is open, the away message and Auto mode's hours (agents read them).
   { segment: "hours", label: "Business hours", roles: EVERYONE },
+  // GR-28: the website chat widget, for owners and admins like the settings route (it makes the widget).
+  { segment: "widget", label: "Website chat", roles: ["owner", "admin"] },
   // T8.6: every member's own digest and push settings.
   { segment: "notifications", label: "Notifications", roles: EVERYONE },
   // §3.1: billing is the owner's (admins see it read-only, C-048's Upgrade leads there).
   { segment: "billing", label: "Billing and usage", roles: ["owner", "admin"] },
   // GR-04: outbound webhooks, for owners and admins like the API's integrations routes.
   { segment: "integrations", label: "Integrations", roles: ["owner", "admin"] },
+  // GR-19: the team and who did what, for owners and admins (the API enforces members.read and
+  // audit.read; the pages also ask the API what the caller may do).
+  { segment: "members", label: "Members", roles: ["owner", "admin"] },
+  { segment: "audit", label: "Audit log", roles: ["owner", "admin"] },
   // GR-05: what automations and sends did and what failed, for owners and admins (the API's
   // activity route is admin-only, like the automations it reports on).
   { segment: "activity", label: "Activity", roles: ["owner", "admin"] },

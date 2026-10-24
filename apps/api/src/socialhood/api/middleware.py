@@ -24,6 +24,8 @@ SECURITY_HEADERS: tuple[tuple[bytes, bytes], ...] = (
     (b"content-security-policy", b"frame-ancestors 'none'"),
 )
 
+WIDGET_FRAME_PATH = "/widget/frame"
+
 log = get_logger("socialhood.http")
 
 
@@ -53,12 +55,16 @@ class RequestContextMiddleware:
             if message["type"] == "http.response.start":
                 response_started = True
                 status = message["status"]
+                replaced = {h for h, _ in SECURITY_HEADERS}
+                if scope.get("path", "").endswith(WIDGET_FRAME_PATH) and any(
+                    k.lower() == b"content-security-policy" for k, _ in message.get("headers", [])
+                ):
+                    # The widget frame names the sites allowed to embed it in its own policy.
+                    replaced.discard(b"content-security-policy")
                 headers = [
-                    (k, v)
-                    for k, v in message.get("headers", [])
-                    if k.lower() not in {h for h, _ in SECURITY_HEADERS}
+                    (k, v) for k, v in message.get("headers", []) if k.lower() not in replaced
                 ]
-                headers.extend(SECURITY_HEADERS)
+                headers.extend(h for h in SECURITY_HEADERS if h[0] in replaced)
                 headers.append((b"x-request-id", request_id.encode("latin-1")))
                 message["headers"] = headers
             await send(message)

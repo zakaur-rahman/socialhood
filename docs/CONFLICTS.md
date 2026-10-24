@@ -2862,3 +2862,1132 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   it (`KnowledgeCreateType` is `KnowledgeSourceCreate["type"]`). The web calls the new paths through
   the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
   config.
+
+## C-106 · Team members and roles (GR-19, feature/gr-19-team)
+
+- **Permission matrix, in one place.** `auth/permissions.py` has a `Permission` enum and a
+  role-to-permissions map (each role has everything below it). Routes ask for a permission with
+  `require_permission` (`CanReply`, `CanManageAutomations` and the other aliases in `auth/deps.py`),
+  never for a role. The old `Admin`/`Owner`/`AnyMember` aliases stay for read routes. Every write
+  route under `/v1/w/{wid}` now declares a permission; the tiers are the ones the routes already had
+  (agents reply, tag and assign, and use Ask; admins also automations, knowledge, settings, channels,
+  publishing, contact fields, segments, webhooks, the audit log and inviting agents; owners also
+  billing, members, ownership and deleting the workspace). `tests/unit/test_permission_routes.py`
+  walks the app's routes and fails for a workspace write route without a permission, and for a write
+  route outside a workspace that is not in its short, reasoned list.
+- **The web reads the matrix from the API.** `GET /v1/w/{wid}/permissions` returns the caller's role
+  and permission names; `useCan()` (`lib/permissions.ts`) answers `can(name)` and allows nothing
+  while it loads. The TypeScript side holds permission names only. The existing role-based hiding
+  (nav items, settings tabs, page layouts) is left as it was; the new pages and their buttons use
+  `can()`.
+- **Invitations.** Table `workspace_invitations` (email lower-cased, role admin or agent, invited by,
+  status pending, accepted or revoked, expiry, Clerk's invitation id). No token: Clerk sends the email
+  and holds the link. One pending invitation per workspace and email (a partial unique index). They
+  expire after 14 days; "expired" is worked out on read, and a resend starts the 14 days again.
+  *Only owners invite admins; admins invite agents* (a decision; the plan left it open). Routes:
+  `POST/GET /invitations`, `POST /invitations/{id}/resend`, `DELETE /invitations/{id}`.
+- **Clerk is behind an interface** (`auth/invitations.py`): the real sender calls the Backend API's
+  invitations; `CLERK_INVITATIONS_PROVIDER=fake` (refused in production, set in the e2e stack) and
+  `use_invitation_sender` in tests keep it in memory. A person who already has an account is not sent
+  to Clerk (it refuses a known address); they get a plain email from us and join at their next sign-in.
+  If Clerk fails the invitation is not created (503).
+- **Accepting.** `GET /v1/me` and `GET /v1/workspaces` call `auth/accept_invitations.py`: a pending,
+  unexpired invitation for the user's email joins them with the invited role, but only when Clerk says
+  that email is verified (an address typed at sign-up and never confirmed must not open a workspace).
+  Their last workspace becomes the new one, so `/app` lands there. A Clerk outage skips the step and
+  the next call retries. No webhook is needed.
+- **Members.** `GET /members` (with seats), `PATCH /members/{user_id}` (admin or agent; owners only),
+  `DELETE /members/{user_id}` (owners only), `POST /ownership-transfer` (owners only, needs the
+  workspace name; the old owner becomes an admin and the new one the owner of record). The owner of
+  record cannot be demoted or removed (409): transfer first, so a workspace always has an owner. You
+  cannot remove yourself. Removing a member deletes the membership only; their past messages,
+  automations and audit rows keep their user id and name. *The inbox has no per-member assignment yet
+  (GR-20), so there is nothing to clear on removal;* GR-20 adds that to `services/team.remove_member`.
+- **Seats.** `members` entitlement: **Free 1, Pro 3, Max 10, decided by the owner on 2026-10-24
+  ("for now")** (PD-1). Members plus unexpired pending invitations count; one more past the cap is a
+  402 `quota_exceeded` naming `members`. Revoking or an expiry frees the seat.
+- **Audit.** Table `audit_events` (actor, actor name at the time, action, target type and id, small
+  detail JSON, time). `services/audit.record` adds a row to the caller's session, never commits, and
+  drops detail keys that could hold message text or a credential (body, text, content, token, secret,
+  password, key, caption) and long values. *Deviation: rows are written from the route handlers, next
+  to the commit, where the member is known; the service functions do not carry the user.* Recorded:
+  message sent, automation created/updated/deleted/activated/paused, knowledge source
+  created/updated/deleted, settings (workspace, AI, business hours, lead settings, saved replies,
+  webhook endpoints, social accounts), billing (checkout started, cancelled, resumed), members
+  (invited, resent, revoked, joined, role changed, removed, ownership transferred). Not recorded yet:
+  contact tags/fields/segments, comment replies, scheduled posts, plan changes that arrive by Dodo's
+  webhook. `GET /audit-events` (owners and admins) filters by member, action and date, 30 a page with
+  `offset` and `has_more`, and lists the actions present for the filter.
+- **Web.** Settings gains Members and Audit log tabs (owners and admins). Members: list with role and
+  last active, a role select, Remove (asks first), Make owner (type the workspace name), the seat
+  summary, pending invitations with Resend and Revoke, and an Invite dialog (the admin role only for
+  owners). Audit log: member, action and date filters, Newer and Older. Both stack at 375 px.
+- **Tests.** Unit: `test_team_rules.py` (matrix, who invites whom, seat counting, invitation states,
+  audit detail, the fake sender), `test_permission_routes.py`, `test_settings.py`. Integration:
+  `test_team.py` (invite, accept, unverified email, existing account, expiry and resend, revoke,
+  duplicates, Clerk failing, seats on Free and Pro, role changes, the owner rules, transfer, removal
+  keeping attribution, 403s for agents and admins, audit writes, filters and paging, tenancy);
+  tenancy: the new routes, params and tables in `test_isolation.py`; the workspace deletion test seeds
+  an invitation and an audit row. Vitest: `MembersPage`, `AuditLogPage`, `permissions`, the settings
+  tab lists. E2E: `gr19-team.spec.ts` (an invited agent signs up, replies' inbox opens, 403 on
+  automations and billing, the UI hides them; a `plan` seed route in the e2e API).
+- **Unsure / for the coordinator:** regenerate the client (`WorkspacePermissions`, `Member`,
+  `MemberList`, `Seats`, `Invitation`, `InvitationList`, `InvitationCreate`, `MemberRolePatch`,
+  `OwnershipTransfer`, `AuditEvent`, `AuditEventList` and the new operations); the web types are
+  aliases waiting for it. Migration `0032` follows `0031`. The e2e stack
+  needs `CLERK_INVITATIONS_PROVIDER=fake` (added to `scripts/e2e-stack.mjs`).
+
+## C-103 · Native Google Sheets sync (GR-27, feature/gr-27-sheets-followups)
+
+Roadmap P5. Migration `0031_google_sheets` (expand-only; the coordinator re-chains it).
+
+- **Access.** Google OAuth with the narrow `drive.file` scope (plus `openid email`, only to show
+  which account is connected). Offline access with `prompt=consent` so Google always returns a
+  refresh credential. The credential is stored encrypted like platform tokens
+  (`google_connections.credential_enc`, Fernet via `TokenCipher`) and never returned; responses carry
+  no field with token, secret or password in its name.
+- **Unverified (cannot be checked from here; no Google account or app was used).**
+  - *Existing sheets under `drive.file`.* From Google's documentation, `drive.file` gives per-file
+    access: files the app created, or files the person opened with the app through the Google
+    Picker. So a link pasted into a form is **not** enough to grant access to a sheet Social Hood
+    didn't make; the Sheets API answers 404 or 403. *Decided: the supported path is "Create sheet"
+    (Social Hood makes the sheet and writes its header row). "Use a sheet by its link" is offered and
+    works only for a sheet Google already lets the app see (one it made earlier, for example after
+    disconnecting and connecting again); otherwise it says so in plain words on the field.* The
+    Picker (a browser script and a Google API key) would let a person grant a sheet they already
+    have; it is left for later because it can't be tested without Google.
+  - *App verification (O-10).* `drive.file` is documented as a non-sensitive scope, which does not
+    need Google's sensitive-scope review; the OAuth consent screen still needs the app name, logo,
+    privacy policy and terms links and a verified domain, and an app in "testing" mode only lets the
+    listed test users in and expires refresh credentials after 7 days. Plan on moving the consent
+    screen to "In production" before real customers connect. If the Picker or a broader scope is ever
+    added, the review is longer. Not confirmed with Google.
+  - The real client follows Google's documented endpoints and is tested against recorded shapes with
+    respx (`tests/contract/test_google_sheets_client.py`); it has never run against Google.
+- **Setting up.** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+  (`<API>/v1/oauth/google/callback`), `GOOGLE_PROVIDER` (`google` or `fake`; `fake` is refused in
+  production). Not required in production: without them the card says Google isn't set up.
+- **Connecting.** Like Instagram's (X-1) the public callback connects nothing: it parks the code
+  (encrypted) under a one-time nonce bound to the member and workspace from the state, and redirects
+  to `/w/{slug}/settings/integrations?google={nonce}`; the signed-in page posts it to `…/complete`.
+  Only the starter can finish it (404 expired or used, 403 someone else). A state made for another
+  platform is refused at this callback. Reconnecting keeps the sheet and mapping unless the Google
+  account changed.
+- **API** (`/v1/w/{wid}/integrations/google-sheets`, owners and admins, Pro and Max). `GET` (status:
+  connection, sheet, columns, the fields a column can hold, counts and the latest 10 rows),
+  `POST /connect`, `POST /complete`, `POST /sheet` (create), `PUT /sheet` (by link), `PUT /mapping`,
+  `POST /test` (a sample row now; 409 with the reason in plain words), `DELETE` (revokes at Google
+  as far as Google answers, removes the connection and its waiting rows).
+- **Plan: PD-6 decided 2026-10-24 ("for now").** Webhooks stay on every plan (Free 1, Pro 5, Max 20
+  endpoints); Google Sheets, the public API and Zapier are Pro and Max. New entitlement
+  `sheets_sync` (Free no, Pro yes, Max yes); 402 `entitlement_required` "Google Sheets sync is part of
+  Pro." The card shows the plan message with a link to the plans. A workspace that drops to Free
+  keeps its connection but queues no new rows.
+- **Mapping.** An ordered list of `{field, header}`, at most 30. Fields: name, @username, platform,
+  email, phone, automation, captured at, consent, and any custom contact field (`field:<key>`); a
+  field appears once. The default is the eight fixed fields. The header row is written only to a
+  sheet Social Hood made (on create and when the mapping is saved); a sheet that was already the
+  person's is never overwritten.
+- **Rows.** `lead.captured` also queues a `sheet_rows` row in the same transaction
+  (`sheets.queue_lead`, called from `events.lead_captured`, only with a connection, a chosen sheet and
+  a plan that includes Sheets sync). The `append_sheet_row` job (bulk lane, recovery class RETRY) adds
+  it with `valueInputOption=RAW`, so a customer's text starting with `=` is never a formula. The row
+  keeps only the custom fields the mapping uses. *A sibling table and job rather than a new
+  webhook delivery kind: `webhook_deliveries` belongs to an endpoint (address, signing secret,
+  failure count) and a Google row has none of those.* It reuses the webhook machinery's backoff
+  (`delivery.backoff`: 1 minute, 5 minutes, 30 minutes, 2 hours, 6 hours, 12 hours; 7 attempts).
+  Only Google being busy (429, 5xx, no connection) is retried; the other answers fail at once.
+- **Failure reasons (plain words, stored with a code).**
+  - `access_removed`: "Access was removed: reconnect Google in Settings, under Integrations." The
+    connection becomes `needs_reconnect`; waiting rows fail without calling Google.
+  - `sheet_gone`: "Google said the sheet was deleted. Pick or create a sheet again."
+  - `sheet_refused`: "Google won't let Social Hood write to that sheet. Pick or create a sheet
+    again."
+  - `no_sheet`, `google_busy` (retries ran out), `google_refused`.
+
+  Owners and admins are told once a day per reason (new notification type `sheets_failing`, in app
+  only). Reconnecting sends the rows that failed with `access_removed`; creating or choosing a sheet
+  sends those that failed for the sheet reasons.
+  *Deviation from the plan: the failures are on the Sheets card (status, last error, latest rows),
+  not in the Activity feed.* The feed's kinds are a closed list shared with the web types, and a new
+  one is a change to GR-05's schema and page; left for a later pass.
+- **Consent column.** The row carries the marketing consent recorded for the contact's channel when
+  it is queued. A flow's consent question comes after the answer it follows, so the row for the
+  first capture usually has an empty consent cell. *Limitation, not fixed.*
+- **More than one row per person.** One row per capture event: a flow that asks for an email and then
+  a phone adds two rows, the second with both. Updating the first row in place needs the row's
+  address from Google and was left out.
+- **Duplicates.** Google's append isn't idempotent: a worker killed after Google accepted a row and
+  before it was recorded sends it again on recovery. Rare, accepted.
+- **Retention.** Finished `sheet_rows` (they hold names, emails and phones) are deleted with the
+  webhook deliveries' window by the purge job.
+- **Fake Google.** `google/fake.py`, chosen by `GOOGLE_PROVIDER=fake` or `use_google` in tests
+  (`tests/support/google.py`, on in every test). It sees only the sheets it made, can revoke access,
+  delete a sheet and fail the next call. With a Redis client the sheets live in Redis, so the e2e API
+  and worker share them; the e2e API has `GET /__e2e/google-sheets/{id}`, `POST …/{id}/delete` and
+  `POST /__e2e/workspaces/{wid}/plan`.
+- **Web.** A Google Sheets card at the top of Settings, Integrations: connect (or reconnect), the
+  sheet (create with a name, or use a link, with the API's reason on the field), the columns (header
+  field, move up and down, remove, add an unused field, save, undo), a test row, the latest rows with
+  their plain reasons, and Disconnect (asks first). Free sees the plan message.
+- **Tests.** Unit: `test_sheets.py`. Contract: `test_google_sheets_client.py`. Integration:
+  `test_google_sheets.py` (callback and nonce, forged and foreign states, create, mapping and header,
+  existing sheets, test rows, revoked access and reconnect, disconnect, plan and roles, a capture
+  becoming a row, retries and the backoff, running out of attempts, a deleted sheet, consent and
+  custom fields, retention). Tenancy: the four new bodies and both tables in `test_isolation.py`.
+  Vitest: `GoogleSheetsCard.test.tsx`, `sheetMapping.test.ts`. E2E: `gr27-sheets-sync.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (`GoogleSheetsStatus`, `GoogleConnectStart`,
+  `SheetColumnOut`, `SheetFieldOption`, `SheetRowOut`, `SheetOut`, `SheetMappingPut`,
+  `SheetTestResult` and the seven operations); the web calls the new paths through the typed client.
+  The plan comparison tables (`lib/billing/plan.ts`, `lib/marketing/plans.ts`) don't list Sheets sync
+  yet. Add the Google OAuth client to the production config before turning this on.
+
+## C-104 · Captures in the weekly report (GR-34 follow-up, feature/gr-27-sheets-followups)
+
+No migration.
+
+- **The count.** `overview_stats.captures_received`: the flow step log rows of kind `ask` whose
+  `detail` has an `answer`, in the week. That is the stored source of truth: an ask step gets an
+  `answer` only when the answer was accepted and saved (a question skipped after its tries has
+  `skipped` instead; a send step's tap also has an `answer` and is not counted), and it is the same
+  predicate the flow funnel (GR-15) counts. *Not the `lead.captured` events: those are stored only as
+  deliveries to an endpoint, so a workspace without one would show zero.*
+- **Dated by `updated_at`,** which is when the answer was taken (the row is created when the question
+  is asked, which can be days earlier). A consent follow-up a few minutes after the answer touches the
+  row again and could move a Sunday-night capture into the next week; accepted.
+- **One list.** `OverviewStats.captures` (so the digest stores it in `weekly_digests.stats`) and a
+  new `captures` metric ("Leads captured", a count) in the report's `COUNT_METRICS`, before leads
+  qualified: the week, the week before, the change and the 8-week series like the others. The
+  digest's trends table carries it automatically; `test_weekly_report.py` still compares every
+  report metric with the stored digest. A week before the workspace existed with nothing in it is a
+  gap, as for the other counts (`captures` joins `QUIET_KEYS`).
+- **Note removed.** `ReportNote`, `WeeklyReport.notes`, `reports.NOTES` and the report page's "aren't
+  counted here yet" line are gone. *The API field `notes` is removed, not emptied: it had one value
+  and nothing else reads it.*
+- **Tests.** `test_reports.py` (the metric and its place), `test_weekly_report.py` (a skipped, a
+  tapped and a waiting step are not counted; the week, the week before, after the week; the series;
+  no `notes`), `test_weekly_digest.py` (the stored stats carry `captures`), `WeeklyReportPage.test.tsx`.
+- **Unsure / for the coordinator:** regenerate the client (`captures` in the metric keys, `notes`
+  removed from `WeeklyReport`).
+
+## C-105 · Template placeholders are checked at activation (GR-16 follow-up, feature/gr-27-sheets-followups)
+
+No migration. Closes the open point in C-099: a flow template's `[price]` or `[code]` looked filled
+to activation.
+
+- **One list.** `templates.PLACEHOLDERS` maps each bracket token a template uses to what goes there
+  (`[price]`: your price, `[code]`: your code). `templates.unfilled(text)` finds the tokens still in a
+  text (case-insensitive, each once, in order of appearance) and `unfilled_copy(token)` words the
+  error: "Replace [price] with your price." Only listed tokens count, so a user's own brackets
+  ("[incl. GST]", "[1]", "[prices]", "[Shop link]") never trip it. A unit test checks that every
+  bracket token the templates use is in the list.
+- **Where it refuses.** Activation of a flow (`flows._text_errors`, so a send step's text, a
+  question's text, retry, consent and confirm lines, and the body of a saved reply a step uses) and
+  of an automation on the message settings (`message_text`, the tap-first `opening_text`, the
+  `follow_nudge_text`). The error sits on that field, so the step shows it like any other activation
+  error; two tokens in one text give two errors; `missing_for_activation` lists the field. Button
+  titles, public replies and AI instructions are not send text and aren't checked.
+- **Editor.** The step checker (`stepProblems`) marks the same texts as you type, from a mirror of
+  the list (`PLACEHOLDERS` in `lib/automations/flow.ts`; the comment names the Python list to keep in
+  step). The API's answer is merged as before, so a token the editor doesn't know still shows when
+  activation is refused.
+- **Template tests changed.** The price-by-option and coupon templates now need their price or code
+  as well as their link: `test_template_flows.py` (what each holds, and that they activate once
+  filled), `test_template_flows_api.py` (fields still to fill, 422 per step, filling one at a time),
+  and the GR-16 e2e spec fills them.
+- **Tests.** Unit `test_template_placeholders.py` (the list, the tokens found, ordinary brackets left
+  alone, flows, questions, the message settings, the opening and follow line); integration
+  `test_template_flows_api.py` (refused on each step, the coupon code, a message on the settings);
+  vitest `flow.test.ts`, `FlowEditor.test.tsx`.
+
+## C-107 · Copilot write actions (GR-36, feature/gr-36-copilot-writes)
+
+The agent can propose a flow or a segment; a member approves it; only then is it saved, by the same
+service the screen calls. It builds on the approval tables and routes the agent contract already
+had (`agent_approvals`, `…/agent/approvals/*`) and on the flow engine (GR-03, GR-13) and segments
+(GR-17).
+
+- **The action gateway** is `services/agent_actions.py`, with the actions it knows in
+  `agent/actions.py`. *`agent/gateway.py` (the R2 tier, mode and policy table) stays as it was: it
+  decides what an agent may do on its own, which nothing does yet.* Proposals never execute.
+  - *Propose* (from the tool, in the model's turn): the action must exist and not be an unavailable
+    one; the principal's role must allow it (403 `forbidden`); the arguments are checked with the
+    UI's own service validation (the flow graph, the plan step cap, tags and fields that exist,
+    the segment's name and limit); then a pending approval is stored with the proposing step's
+    idempotency key and the step is marked `approval`. A retried step finds its approval instead of
+    adding another. Nothing in the workspace changes.
+  - *Approve* (a member, `POST …/approvals/{id}/approve`): the approval row is locked and must still
+    be pending and not past its time; the approver's role must allow the action; the arguments (as
+    shown, or edited) are checked again; then the normal service function runs in a savepoint in
+    the same transaction that marks the approval `approved` and stores its outcome. A flow is saved
+    with `definitions.create`, `definitions.update` and `flow_store.save`; a segment with
+    `contact_segments.create_segment`. A second approve is 409, so a write never runs twice.
+  - *If the service refuses on approval* (a name taken since, a plan limit): nothing is saved, the
+    approval stays pending, its `outcome` says `ok: false` and why, the trail gets `failed`, and
+    the response is 200. The member can edit it (`args`) or reject it. *This differs from the
+    contract's "409 when no longer pending" only for this case, which is not a state change.*
+  - *Reject*: `rejected`, nothing saved. Anyone who can see the approval may reject (it changes
+    nothing); 409 when decided.
+  - *Expiry*: a proposal lasts **24 hours** (`APPROVAL_TTL`, already in the models; recorded here).
+    `expire_agent_approvals` runs every 15 minutes, and the list and decision routes expire what is
+    due first, so a stale card never approves. Expired is final: the member asks again.
+- **The agent never executes on its own.** *Decided: the proposal tools are draft tier, not write
+  tier, and the workspace's agent policy (mode, `create_automations` switch) does not gate
+  proposing.* The policy is about what the agent may do without asking, and no tool does; a
+  proposal only files a request that a member must approve, as if they had opened the screen. The
+  policy stays read-only by default and its PUT stays R2. When a write tool that runs on its own is
+  built, it goes through `gateway.decide` and the policy as designed.
+- **Roles.** Both screens are for owners and admins (`Admin` on the automation, flow and segment
+  routes), so `min_role` is admin for both actions: the proposal tools are not offered to a team
+  member, and approving needs the same. A team member sees the approvals of their own runs (and can
+  reject them); `can_decide` on each approval tells the web whether to enable Approve. *GR-19:*
+  `agent.actions.required_role(spec)` is the one place to replace with the permission matrix
+  (`automations.manage` for a flow, `contacts.manage` for a segment); callers don't change. The
+  propose and approve checks both call it.
+- **Audit.** Every proposal, approval, rejection, expiry, execution and refused execution is a row
+  in `agent_approval_events` (who, when, what, outcome as plain facts), shown in the run trace
+  (`approvals` on `GET …/agent/runs/{id}`, and "Proposed writes" in Settings → Agent's trace) and
+  logged as `agent_approval`. *Kept in the agent's own tables: GR-19's general `audit_events` is
+  not a dependency.* The hook is `_record` in `services/agent_actions.py`; mirror each event there.
+- **Write tools** (`agent/tools/proposals.py`, admins):
+  - `propose_flow`: a new automation (trigger, keywords, public replies, account) with a flow, or
+    a new flow for an existing automation (`automation_id`). The model writes steps in order
+    (send, ask, action, delay, branch, ai_reply, end) and names tags; the tool resolves names to
+    ids and builds the typed `FlowDefinition`, chaining each step to the next unless a `goto`, a
+    branch rule or a quick reply says otherwise. An unknown tag is refused with the tags the
+    workspace has. Approving saves a **draft** automation (never activated); an existing
+    automation keeps its status, and the card says so when it is live.
+  - `propose_segment`: tags (by name, all required), platform, account, email or phone given,
+    marketing consent, lead stages, score, activity and fields, as the contacts filter has them.
+    The card shows the count it matches; the count is read again on approval.
+  - `propose_broadcast`: **unavailable**. Registered for R2 so the model is never offered it; the
+    plain reason is `agent.actions.UNAVAILABLE` ("Broadcasts aren't available yet…") and the
+    gateway refuses the action with it. When GR-23 lands: add its action to `agent/actions.py`,
+    register the tool in R1 and drop the entry.
+  - `ToolContext` gains `step_id` and `step_key`, set by the executor, so a proposal files its
+    approval against the step that made it.
+- **Prompt.** `agent.v4`: the agent may propose flows and segments, must say a proposal is waiting
+  for approval and what the card shows, that an approved flow is a draft that stays off, never says
+  it is created, saved, live or sent, says plainly when a tool refuses, and says broadcasts can't be
+  drafted yet. Eval cases (`area: writes`): the PRICE flow (English and Hinglish), the vip segment,
+  an unknown tag, a team member (no tools; the answer names owners and admins), and a broadcast.
+  The two earlier `prepare_automation` cases accept either tool. The eval seed gains the tags `vip`
+  and `wholesale`.
+- **Migration 0033** (after 0032), expand-only: `agent_approvals.idempotency_key` (unique per
+  workspace), `outcome`, `executed_at`, an index on pending expiry, and the table
+  `agent_approval_events`. The coordinator re-chains it.
+- **API.** `GET …/agent/approvals` (`status` now also takes `all`, plus `run_id`), `POST
+  …/approvals/{id}/approve` (body `args` optional) and `…/reject` are built (no longer `x-pending`).
+  `AgentApproval` gains `lines`, `match_count`, `step_count`, `can_decide`, `requested_by`,
+  `outcome` and `events`; `AgentRunDetail` gains `approvals`; the action cards gain
+  `flow_proposal` and `segment_proposal` (`approval_id`, `title`, `lines`, and `step_count` or
+  `match_count`). New schemas: `ApprovalOutcome`, `ApprovalEvent`, `ApprovalListStatus`.
+- **Web.** An answer's proposal card says in plain words what will happen (the flow's steps, or the
+  segment's filters and count), when it expires, and has Approve and Reject. Approve is disabled,
+  with the reason, for roles that can't do it. After a decision the card shows the result and an
+  Open button (the automation or the segment), or why nothing was saved. **Waiting for you** sits
+  above the question box in the panel and the page, collapsed, with a count, and decides the same
+  approvals. The cards read the approval from the API, so they are right after a reload. No new
+  real-time event: a decision refreshes the lists, and the list refetches on focus.
+- **Not built.** Editing a proposal in the web (the API takes edited `args`; the card only approves
+  or rejects as shown); a real-time event when someone else decides; resuming a run after an
+  approval (a run ends when it has proposed; the answer says it is waiting); proposals that change
+  or delete things other than a flow and a segment.
+- **Tests.** Unit: `test_agent_actions.py` (the flow built from steps, branches, quick replies,
+  tags, missing parts; strict inputs; the registry; the refusals before any database; plain-words
+  filters; vocabulary). Integration: `test_agent_actions.py` (propose, nothing saved, approve to a
+  segment and a draft automation with its flow and keywords, tags, a change to an existing
+  automation, the step cap, reject, expiry on list and on decision, a refused approval then an
+  edit, idempotent proposals, roles, the run trace). Tenancy: `agent_approval_events` in
+  `test_isolation.py`; the approvals routes are no longer pending. Vitest: `ProposalCardView.test.tsx`,
+  `WaitingForYou.test.tsx`. E2E: `gr36-copilot-writes.spec.ts` with the seed route
+  `POST /__e2e/workspaces/{wid}/agent-proposals`.
+- **Unsure / for the coordinator:** regenerate the client (`FlowProposalAction`,
+  `SegmentProposalAction`, `ApprovalOutcome`, `ApprovalEvent`, the new fields of `AgentApproval`
+  and `AgentRunDetail.approvals`, `ApprovalListStatus`, `run_id` on the list); the web types are
+  aliases waiting for it. Run `alembic check` (the model and migration
+  declare the same index and unique constraint). The agent eval needs a live key; I did not run it.
+
+## C-108 · Facebook Pages, Messenger and comments (GR-29, feature/gr-29-facebook)
+A Facebook Page is a third platform: connect Pages, answer Messenger in the inbox, answer comments
+on Page posts, and run the wave 2 to 4 automations on it where Messenger allows. **Every Meta
+behaviour below was written from Meta's docs and none has been seen on a real Page.** Each one is
+marked *unverified* and listed in `docs/verification.md` item 36. The second App Review submission
+(O-10) is `docs/ops/app-review.md` section 8.
+
+### The platform
+- **Account.** `social_accounts.platform = "facebook"` (the check already allowed it).
+  `platform_account_id` is the Page id (the webhook `entry.id`), `app_scoped_id` the connecting
+  person's Facebook id (so Meta's deauthorize and data-deletion callbacks, which look accounts up by
+  that id, find every Page they connected), `username` the Page's username, `display_name` its name.
+  The Page access token is stored encrypted like every token. *Unverified:* a Page token made from a
+  long-lived user token does not expire, so `token_expires_at` is null and nothing refreshes it
+  (`FacebookAdapter.refresh_token` returns the token as it is).
+- **Adapter** (`platforms/facebook/`): `FacebookAdapter` implements `PlatformAdapter` on
+  `graph.facebook.com` (`me` is the Page). Capabilities: DM send, DM attachments, read receipts,
+  conversation backfill, comments and private reply; Human Agent follows `IG_HUMAN_AGENT_ENABLED`
+  (below). No templates, no heart sticker, no stories. Publishing, post insights and account
+  insights raise `capability_unavailable` until GR-30; `get_account_insights` returns the Page's
+  followers only. Modules mirror Instagram's: `oauth`, `webhooks` (split), `parse`, `reads`
+  (posts, counts, followers, profile, threads), `comments`, `moderation`, `profile` (ice breakers).
+  Messenger's message shapes go through the Instagram parser (they are the same), so only reads,
+  deliveries, postbacks without an id and `feed` comments are parsed here.
+- **Sandbox.** `SandboxAdapter` serves any account with a `sandbox_` id; for a Facebook one it
+  reports the Page's capabilities plus Human Agent. `POST /dev/sandbox/accounts` takes an optional
+  `{platform: "instagram" | "facebook"}`; `POST /dev/sandbox/inbound` on a sandbox Page builds Page
+  webhook bodies (a DM, a comment as a `feed` change on the Page's first sandbox post, a referral
+  with `source: SHORTLINK` or `ADS`, a postback, an opt-in) and stores them as `facebook` events.
+  Live comments and the story kinds are refused there with 422 on `kind`.
+- **Migration 0034** (after 0033). `webhook_events.provider` accepts `facebook`. Nothing else changes: no new
+  table, so the account purge, tenancy seeds and `B_TABLES` need no change.
+
+### Connect
+- Facebook Login for Pages, in two steps so the person picks which Pages (the plan asks "pick which
+  Pages"). `POST /social-accounts/facebook/connect` returns the authorize URL (state in Valkey, single
+  use, 10 minutes; 503 until `META_APP_ID`, `META_APP_SECRET` and `FB_REDIRECT_URI` are set; 402 over
+  `accounts_per_platform`). The public callback `GET /v1/oauth/facebook/callback` never connects
+  anything (X-1, as Instagram): it parks the code, encrypted, under a one-time nonce bound to the
+  member and workspace, and redirects to Connections with `?facebook=<nonce>` (errors:
+  `?error=…&platform=facebook`).
+- `POST …/facebook/pages {nonce}` exchanges the code, makes a long-lived user token, reads
+  `/me/accounts` and keeps the Page tokens (encrypted, 10 minutes) under the same nonce; it returns
+  each Page with `connected`, `can_connect` and a `problem` (a person without the MESSAGING task
+  can't answer messages). Asking again returns the same list. 403 for another member or workspace,
+  404 when expired, 502 when Facebook fails.
+- `POST …/facebook/connect-pages {nonce, page_ids}` connects the picked Pages: the plan's limit is
+  checked for all of them first (402, nothing added, the nonce stays valid), then each is upserted
+  (a reconnect updates in place; 409 `account_in_use` when another workspace has it live), subscribed
+  to webhooks and queued for the first sync. The nonce is spent only on success. A failed
+  subscription leaves the Page in `error` with Retry, as for Instagram.
+- The Instagram connect now tags the held code with its platform, so a Facebook nonce can't finish an
+  Instagram connect and the reverse.
+- Settings: `fb_redirect_uri`, `fb_webhook_verify_token`. They are not in the production-required
+  list (Facebook is off until set).
+
+### Messenger
+- **Webhook.** `GET/POST /webhooks/facebook`, signed with `META_APP_SECRET`, verify token
+  `FB_WEBHOOK_VERIFY_TOKEN`; events stored once per `fb:` key and processed by a `facebook` handler
+  that routes by Page id exactly like Instagram's (messages and echoes, postbacks, referrals, reads,
+  deliveries, reactions, edits, opt-ins). A delivery receipt names several messages: one event each.
+  A read is a watermark, so every message we sent before it is read. *Unverified:* all payload shapes.
+- **Sending** follows the Instagram pipeline: the 24-hour window, `messaging_type: RESPONSE`;
+  text up to 2,000 characters (`TEXT_LIMITS`), attachments by URL up to 25 MB, quick replies (13),
+  link buttons as the button template (3 buttons, 640 characters). **Message tags:** the app models
+  only HUMAN_AGENT, so a Page gets the same 7-day human window as Instagram when
+  `IG_HUMAN_AGENT_ENABLED` is on (Meta approves Human Agent once for the app, so there is no
+  separate setting); nothing else is sent outside the 24 hours, and the existing
+  `reply_window_closed` error says so with "Facebook". Meta's closed-window error for Messenger
+  (10 / 2018278) maps to the same code. The send buckets are per account, so the Instagram ones are
+  reused (they only pace us; Messenger's limits are higher).
+- **Inbox.** Conversations have `platform: "facebook"`; the platform filter and badges include it.
+  The contact's name and picture come from the Messenger profile; people have no handle.
+- **Backfill** reads `/me/conversations?platform=messenger` through the Instagram thread parser.
+
+### Comments
+- Comments arrive as the `feed` field (`item: comment`, `verb: add`); edits, removals, hides and
+  other items are ignored. Post ids are the Page post ids; a post we don't have is read with
+  `GET /{post_id}` and stored like Instagram's. The Page's own comments are skipped. *Unverified:*
+  the commenter's `from.id` may differ from the Page-scoped id their messages carry; then the
+  comment's contact and the person's Messenger contact are two contacts until they write.
+- Public reply `POST /{comment_id}/comments`; private reply the Send API addressed by
+  `recipient.comment_id` (text, link buttons and quick replies; no attachments, as Instagram);
+  hide and unhide `is_hidden`; delete (already gone counts as done). Backfill reads
+  `/{post_id}/comments` with the replies expansion. The private-reply bucket (750 an hour), the
+  7-day limit and one per comment are shared with Instagram.
+
+### Automations
+Every trigger and step works on a Page except what Messenger lacks, which activation refuses in plain
+words (`validation.py`, `flows.py`; copy shared with the web):
+- **Allowed:** DM keyword, comment keyword and any comment (with public replies and private replies,
+  tap first, link buttons, tracked links), entry link (`https://m.me/<username or id>?ref=<code>`),
+  ad click (a click-to-Messenger ad's `referral` with `source: ADS`), conversation starters
+  (Messenger's `ice_breakers`, the same editor and `ib:{id}` payloads; a tap is a postback),
+  welcome and default reply, AI replies, flows (send, quick replies, ask, branch, action, delay,
+  split, saved replies), data capture, business hours, lead scoring.
+- **Refused:** story reply and story mention ("Facebook Pages have no story replies or story
+  mentions"), Live comments ("Live comments on Facebook aren't supported yet"), the follow message
+  and a flow branch on following (Messenger doesn't say who follows a Page), the flow's profile
+  button (it opens an Instagram profile), and an Ask step's marketing-consent question (there is no
+  Facebook consent channel yet; adding one means a new `contact_consents.channel` value and
+  contact-list column). *Deviation from "every trigger and step": these four groups are the ones
+  Messenger doesn't have; the first two because Pages have no such surface, the last two because the
+  data isn't there.*
+- **Limits.** A message may be 2,000 characters (not 1,000 bytes) in its longest rendering;
+  button-template text stays 640; public replies stay 300 (our own cap). Copy written for Instagram
+  is said with "Facebook" (`validation.localize`).
+- Automations created without an account still pick the workspace's only live **Instagram** account
+  (`live_instagram_accounts`); with a Page and an Instagram account the member chooses.
+
+### Other
+- Ask Social Hood no longer says "Facebook isn't connected" when a Page is; the tools check for a
+  connected Page (`facebook_unconnected`) and treat `facebook` as a platform name like the others.
+  Analytics tools cover a Page's posts and comments; insights are absent until GR-30.
+- Billing: a `facebook_accounts` usage meter (plan limit `accounts_per_platform`, per platform).
+- Webhook health (`check_webhook_health`) still watches Instagram only. *Not built.*
+- Marketing pages, the privacy policy and terms still say Instagram and WhatsApp; they change with
+  the second App Review submission. *Not built, needs the owner's wording.*
+
+### Web
+- `FacebookGlyph`, `PlatformGlyph` and `PLATFORM_BG` (the existing `facebook` colour token);
+  Connections gets **Connect Facebook** (and **Add sandbox Page** in development), a Pages dialog
+  after Facebook's redirect (tick Pages; a Page that can't be connected says why; a refusal keeps the
+  list), Page cards ("Facebook Pages API"), search and filter. The inbox platform strip, thread
+  header, unsupported-message link, attachment rules (25 MB), contact filter, Home, Billing and the
+  send-failure copy include Facebook. Comments, entry links and conversation starters list Pages and
+  say Facebook; the post panel opens the post in Facebook.
+- The automation editor knows the account's platform: Facebook trigger names, the story triggers
+  disabled with the reason, message counters in characters out of 2,000, no follow message, and in
+  flows no follows condition, profile button or consent question.
+- `instagramAccounts` stays for story mentions and publishing; `automationAccounts` (Instagram and
+  Facebook) is what automations, comments, entry links and starters list.
+
+### Tests
+- Unit: `test_facebook_platform.py` (splitting, every parse, send payloads, ice breakers, connect URL,
+  Page list, registry, sandbox payloads), `test_facebook_automations.py` (activation rules and flow
+  rules on a Page). Integration: `test_facebook_connect.py` (the whole connect, X-1, quota, expiry,
+  reconnect, deauthorize), `test_facebook_messenger.py` (webhook route, intake, echo/delivery/read,
+  postback, m.me, ad referral, reply, window, limits), `test_facebook_comments.py` (comment intake,
+  automations on a Page, comment actions, refusals, entry links, starters, purge); tenancy bodies for
+  the three new routes and the sandbox body. Vitest: `FacebookPagesDialog`, `PlatformGlyph`,
+  `facebook-rules`, `steps/facebook`, `upload-facebook`, `inbox/facebook`, additions to the
+  Connections page, platform strip and Billing tests. E2E: `gr29-facebook.spec.ts` on the sandbox.
+- *Existing tests changed:* the automation notice's link is now "Connect an account" and says
+  "Instagram and Facebook"; the empty Connections text names Facebook; `test_entry_triggers.py`'s
+  account stubs carry a platform.
+
+### Unsure / for the coordinator
+- Regenerate the client: `FacebookConnectPages`, `FacebookPageList`, `FacebookPageOption`,
+  `FacebookPagesRequest`, `SandboxAccountCreate`, `facebook` in the platform literals
+  (`SocialAccountOut`, conversations, contacts filters, flow platform condition), the four new
+  operations (`start_facebook_connect`, `list_facebook_pages`, `connect_facebook_pages`, the
+  optional body of `create_sandbox_account`), then typecheck: web code calls them through the typed
+  client and keys several `Record<Platform, …>` by `facebook`.
+- `alembic check` for 0034 (after 0033).
+- Meta's behaviour: see `docs/verification.md` item 36. The risky ones: the commenter id, whether
+  private replies take buttons and quick replies, ice breakers without a Get Started button, the
+  `tasks` field, and the Messenger text limit.
+
+## C-109 · Public API and API keys (GR-25, feature/gr-25-26-api-zapier)
+
+- **Owner decision PD-6 (decided 2026-10-24):** outbound webhooks stay on every plan (Free 1, Pro 5,
+  Max 20 endpoints, GR-04); the public API, API keys and the Zapier app are **Pro and Max only**.
+  It is the `public_api` entitlement in `billing/plans.py` (`free: False`), checked with
+  `check_entitlement`, so the 402 is `entitlement_required` with `entitlement: "public_api"`
+  ("The public API, API keys and Zapier are part of Pro."). Making a key on Free is 402. Listing
+  and revoking keys stay open, so a workspace that downgraded can clean up. A key made on Pro stops
+  working (402, same body) the moment the workspace is on Free again, and works again if it comes
+  back. *Decided, not pending.*
+- **Keys.** `api_keys` (migration 0035 (after 0034), shared with C-110's column): name (1 to 80), the first 12
+  characters (`key_prefix`, `shk_` and 8 more), the SHA-256 of the whole key (`key_hash`, unique),
+  scopes, `last_used_at`, `revoked_at`, who made it. A key is `shk_` and 43 random characters
+  (`secrets.token_urlsafe(32)`), shown once in the create response (`ApiKeyWithKey.key`) and never
+  stored or logged. *A plain SHA-256, not a slow hash: the key is 256 random bits, so there is
+  nothing to guess.* A key never changes after it is made (no edit; make another); revoking sets
+  `revoked_at` and is the end of it. At most 20 unrevoked keys per workspace (409 over it).
+- **Scopes** (`schemas/api_keys.py`): `contacts:read`, `contacts:write`, `tags:read`, `tags:write`,
+  `conversations:read`, `messages:send`, `automations:read`, `webhooks:subscribe` (C-110's REST
+  hooks). The key form starts read-only (`contacts:read` ticked). A route needs exactly one scope;
+  a key without it gets 403 `forbidden`, naming the scope.
+- **Managing keys** (owners and admins, `/v1/w/{wid}/api-keys`): list (with the scope catalogue),
+  create (201), revoke (`DELETE`, returns the key; again is a no-op). In Settings > Integrations
+  below the webhook endpoints: a list (name, prefix, scopes, made, last used or revoked), a create
+  dialog (name and scopes), a copy-once dialog and a revoke confirmation. A Free workspace sees
+  "part of Pro" and a link to plans instead of the form. *The routes carry a TODO for GR-19: they
+  move to the same `require_permission` as the webhook endpoints.*
+- **Authentication** (`auth/api_key.py`): `Authorization: Bearer shk_...` on `/public/v1`. The key's
+  hash finds the key (the one cross-workspace lookup, in `tenant_bypass_scope`, as `auth/` may); it
+  must be unrevoked and its workspace active (401 `unauthorized` otherwise; an unknown key also
+  counts against the caller's IP, 60 a minute, so guessing is slow); then the per-key limit, then
+  the plan. The key's workspace becomes the request's tenant exactly as for a member, so every
+  service query is scoped and a key can never reach another workspace (404 for another workspace's
+  id, like the app). `last_used_at` is written at most once a minute (Valkey `SET NX`). Every
+  request's log line carries `api_key_id` and `workspace_id`; the key never reaches a log.
+- **Rate limit.** *New limit `api_key`: 120 requests a minute per key* (a sliding window like the
+  others, `security/ratelimit.py`). Sending a message also counts against the workspace's existing
+  60 sends a minute (`sends`), the same budget as the app's. 429 `rate_limited` with `Retry-After`.
+  *The numbers are proposals; changing them is one line each.*
+- **Routes** (`api/public.py`, all call the app's services, no forked logic):
+  `GET /accounts`, `GET/POST /contacts`, `GET/PATCH /contacts/{id}`, `GET /contact-fields`,
+  `GET /tags`, `POST /contacts/{id}/tags` (add and remove by id), `GET /conversations`,
+  `GET /conversations/{id}`, `GET/POST /conversations/{id}/messages`, `GET /automation-runs`
+  (`automation_id`, `result`), `GET /openapi.json`. Responses are the app's schemas where they fit
+  (`ContactList`, `ContactRecord`, `TagList`, `MessageList`, `AutomationRunList`) and lean ones where
+  the app's carry internals (`PublicConversation`: no AI analysis, suggestion or summary).
+  - *Create a contact* adds a customer to a **WhatsApp** account by phone number (the app's E.164
+    rules; 409 for a number already there; 422 for an Instagram account, a phone without a country
+    code or an email or field that doesn't fit). Instagram contacts exist only once they message or
+    comment, so they cannot be added. `contact.created` is raised like for any new contact.
+  - *Custom fields set* is `PATCH /contacts/{id}` with `fields` (merge, null removes), the app's
+    validation and its `contact.updated` event.
+  - *Send a message* is text only, through `sending.queue_outbound` with the app's rules and errors:
+    409 `reply_window_closed` outside the window, 409 for an account that needs reconnecting, 402 for
+    an account the plan made read-only. The message is "human" with no sender (`sent_by` null).
+    `Idempotency-Key` is optional (the app's is required): the same key and body again returns the
+    first response; a derived `client_id` also stops a double send when Valkey is down.
+  - `GET /contacts` gains `sort=created` (newest contact first, for polling lists) in the service
+    (`services/contacts.list_contacts(sort=)`); the app's own list is unchanged.
+    `queries.list_runs` takes no `automation_id` for the workspace-wide list.
+  - Errors are the app's problem+json, one format.
+- **The document.** The public routes are **not** in the app's OpenAPI document (it is for the
+  generated web client; `problem_openapi` leaves the public routers out). `api/public_openapi.py`
+  builds a separate one: only `/public/v1`, bearer security, each operation's `x-required-scope`
+  (also in its description), problem responses, and the scope list. It is served without sign-in at
+  `GET /public/v1/openapi.json` (60 a minute per IP) and cached on the app.
+- **Docs page.** `/developers/api` in the marketing group, server-rendered from that JSON and
+  revalidated hourly: how to authenticate, the scopes, then each operation (method, path, scope,
+  parameters, body fields, responses, a curl line). No viewer library (nothing in `package.json`
+  renders OpenAPI); `lib/marketing/public-api.ts` reads the document with zod and builds the page's
+  model. When the API can't be reached the page says so. *Not added to the sitemap or footer* (the
+  sitemap test lists its pages exactly); one line in `PUBLIC_PATHS` adds it.
+- **Not built.** An audit log of key use beyond the access log's `api_key_id`; an IP allow list; key
+  expiry; a per-key rate limit setting; the webhook event catalogue in the document (GR-04's).
+- **Tests.** Unit `test_public_api.py` (hashing and shape, scope check, limit numbers, entitlement
+  values, the public document: every operation has a known scope, strings bounded, no credential
+  names, nothing public in the app's document). Integration `test_public_api.py` (key management and
+  roles, shown once and stored as a hash, Pro/Max gating both ways, 401s, the done-when read key
+  lists and is 403 on a write, each scope, each endpoint, the window and idempotency, the per-key
+  and sends limits, last used, revoke, tenancy with two workspaces). Tenancy: the `api_keys` table,
+  `key_id`, the create body, and `test_public_routes_hide_other_workspaces` (a workspace A key
+  calls every public route with B's ids: 404 and B unchanged). Vitest: `ApiKeysSection.test.tsx`,
+  `public-api.test.ts`, `ApiReference.test.tsx`. E2E: `gr25-public-api.spec.ts` (the stack gets a
+  `PUT /__e2e/workspaces/{wid}/plan` seed route).
+- **For the coordinator:** regenerate the client (`ApiKey`, `ApiKeyWithKey`, `ApiKeyList`,
+  `ApiKeyCreate`, `ApiScope`, the three `/api-keys` operations; the public routes are not in it);
+  the web types are aliases waiting for it. `alembic check` should be clean (the partial index on
+  `webhook_endpoints.api_key_id` is in the model). Migration 0035 is chained on 0030; re-chain it.
+
+## C-110 · Zapier app (GR-26, feature/gr-25-26-api-zapier)
+
+- **Plan gate (PD-6, decided 2026-10-24, see C-109):** Zapier is Pro and Max only, because it runs on
+  the public API. The REST hooks Zapier subscribes stop receiving events when the workspace is no
+  longer on a plan with `public_api` (the plan is read only when a hook is among the endpoints an
+  event would go to), and work again when it comes back. A member's own webhook endpoints are
+  untouched: outbound webhooks stay on every plan.
+- **REST hooks** (`api/public_hooks.py`, `services/api_hooks.py`, scope `webhooks:subscribe`):
+  `POST /public/v1/hooks {trigger, target_url}` (201: id, trigger, address, status and the
+  `signing_secret`, once), `GET /public/v1/hooks`, `DELETE /public/v1/hooks/{id}` (204).
+  - *Backed by GR-04, not beside it.* A subscription is a `webhook_endpoints` row with the new
+    `api_key_id` (migration 0035 (after 0034), `ON DELETE CASCADE`, partial index), described as "Zapier: new
+    contact" and subscribed to one event. So delivery, Standard Webhooks signing, the retry schedule,
+    the delivery log, turning an endpoint off after repeated failures (with its Activity reason and
+    notification) and replays are GR-04's code, unchanged. The hooks show in Settings > Integrations
+    beside the member's endpoints.
+  - **Triggers to events:** `new_contact` is `contact.created`, `lead_captured` is `lead.captured`,
+    `tag_added` is `contact.tagged`, `new_message` is `message.received`, `run_completed` is
+    `automation.run.completed`. *"Tag added" gets removals too (one event carries `action`); the
+    Zapier trigger drops them, so there is no per-endpoint filter on the server.*
+  - **Rules.** The address follows the endpoint rules (https, no user name, not a private address;
+    `WEBHOOKS_ALLOW_PRIVATE` allows a local one in development and e2e). Hooks do not count against
+    the plan's `webhook_endpoints` (Zapier can have one per Zap); a workspace holds at most 100.
+    Unsubscribing removes only a hook a key made (404 for a member's endpoint), and any key with the
+    scope in the workspace may do it (Zapier unsubscribes with the connection's key, which may have
+    been replaced). Revoking a key removes its hooks (C-109).
+  - `GET /public/v1/me` (any valid key) returns the workspace's name, the key and its scopes: the
+    Zapier connection test and its label.
+- **Polling fallbacks** (Zapier uses them to test a trigger and fetch a sample; nothing new in the API
+  beyond `sort=created`): new contact is `GET /contacts?sort=created`, lead captured is the same with
+  `has_email=true`, tag added is `GET /contacts?tag_id=…&sort=created`, new message is `GET
+  /conversations`, run completed is `GET /automation-runs`. *They are approximations of the event
+  (a contact's email is not stamped with when it was captured), good enough for a sample; the real
+  trigger is the hook.* Each polled item has the shape of a delivery, with an `id` per event.
+- **The integration** is Zapier Platform CLI source in `integrations/zapier/` (not in the pnpm
+  workspace, which lists `apps/web` and `packages/*`; no lock file, so nothing changes `pnpm-lock.yaml`).
+  `package.json` (`zapier-platform-core` 16, jest and nock), `index.js`, `authentication.js` (a custom
+  `api_key` field; the test call is `GET /me`, the label is the workspace's name), five hook triggers
+  and two hidden ones for dropdowns (`tag`, `contact_field`), four actions (Add Tag, Remove Tag, Set
+  Contact Field, Send Message), samples and output fields on each, `lib/` helpers, and jest tests in
+  the CLI's pattern (`createAppTester`, nock). *Written, not installed or run.*
+  - **Send Message** sends an `Idempotency-Key` from the conversation, the text and a five-minute
+    window, so Zapier retrying a step does not message a customer twice; outside the 24-hour window
+    the API's `reply_window_closed` text is the Zap's error.
+  - **Set Contact Field** sets one custom field (empty clears it) through the same validation as the
+    app.
+  - Errors from the API (problem+json) become the Zap's error with the API's own words; a 401 says to
+    make a new key.
+- **README** (`integrations/zapier/README.md`): what it does, scopes, first run (`npm install`, `npm
+  test`, `zapier validate`), pushing a private version, the manual test (captured leads to a Google
+  Sheet, step by step), and the directory submission steps for the owner. The 256 px `icon.png` is
+  not in the repo (resize `icon-512.png`); `zapier register` writes `.zapierapprc`.
+- **Make:** *follows with the same building blocks* (the API key and scopes, the REST hooks, the
+  polling lists); its own app definition is not started.
+- **Not built.** Searches ("Find Contact") and "Create Contact" as Zapier actions (the API has them:
+  `GET /contacts?q=`, `POST /contacts`); a per-hook event filter on the server; verifying the
+  delivery signature inside the Zap (Zapier's hook URL is unguessable; the signature is there for
+  other receivers).
+- **Tests.** Unit `test_zapier_hooks.py` (trigger mapping, the hook routes and their scope in the
+  public document, the signing secret only in the subscribe response). Integration
+  `test_zapier_hooks.py` (subscribe and unsubscribe for each trigger, address rules, scope, no slot
+  from the plan's endpoints, workspace isolation, a member's endpoint is never removed, revoking a key
+  removes its hooks, a signed `message.received` through the real deliver step, only the trigger's
+  event, retries, stopping and resuming with the plan, a member's endpoint on Free, the polling
+  lists). The public tenancy walk (C-109) also calls `DELETE /hooks/{id}` with B's hook. E2E:
+  `gr26-zapier.spec.ts` (subscribe a local receiver, a signed `contact.created`, the polling list,
+  unsubscribe, scope, plan). Jest in `integrations/zapier/test/` (for the owner's first run).
+- **Unsure / for the coordinator:** nothing to regenerate beyond C-109's (the public routes are not in
+  the app's document). The jest tests and `zapier validate` have never run: expect small fixes on the
+  first `npm test` (Zapier's `bundle` shapes are written from the docs). The `API_BASE_URL` default
+  `https://api.socialhood.com` is a guess at the production host.
+
+## C-111 · Website chat widget (GR-28, feature/gr-28-widget)
+
+Decided by the owner on 2026-10-24: **PD-7**. The widget is on every plan. Free shows "Powered by
+Social Hood" (a small link in the widget); Pro and Max turn it off in the widget settings. The abuse
+limits below apply to all plans. *The plan's recommended option was "Pro and Max, with the link on
+Free"; the owner chose to give the widget itself to every plan.* The PD table in the plan says so.
+
+- **A `web` platform, one widget per workspace.** A widget is a `social_accounts` row of platform
+  `web` (its `platform_account_id` is the public widget id, `wgt_` and 22 random characters) and a
+  `widget_settings` row. One per workspace (a partial unique index), not one per site: several
+  sites share it through the allowed-domains list. The first time an owner or admin opens Settings →
+  Website chat, the web account is made (`GET …/widget` writes once); a disconnected one comes back
+  with the same id. Visitors are contacts of that account and chats are ordinary conversations
+  (platform `web`), so the inbox, filters, search, AI, analysis, leads, webhooks and the Needs you
+  queue need nothing special. The account is listed with the others; Connections hides it (it is
+  not a connection) and AI rules and takeover shows it like any account, so the AI mode is set
+  there, not copied. Migration `0036` (after 0035): `web` in the
+  platform check, `widget` in the consent source check, the unique index and `widget_settings`.
+- **Adapter** (`platforms/web/adapter.py`). Capability `dm_send` only. `send_message` mints an id
+  (`web_<uuid>`): the reply is already in the conversation and the widget reads it from there.
+  Everything a platform with posts, comments, tokens or profiles does is `capability_unavailable`.
+  Replies go through the normal send pipeline (queue, job, `sent`), so scheduled messages, AI
+  replies and automations that send text work. Text limit 2,000 characters. No buttons or quick
+  replies (the web has no template for them), no attachments.
+- **No reply window** (`services/reply_window.py`): a page can stay open for days and nothing is
+  sent through a platform that could refuse a late reply. Always `open`, so Auto mode, scheduled
+  messages and automations are never blocked by a closed window. *Recorded as the plan asked.*
+- **The embed and its isolation.** `<script src="https://<api>/widget.js" data-widget="wgt_…" async>`
+  (`data-workspace` is accepted as an alias: the plan's name, though the value is the widget id, not
+  the workspace id). The API serves three plain files from `socialhood/widget/assets/`: `loader.js`
+  (2.9 KB, 1.2 KB gzipped), `frame.js` (16.2 KB, 5.1 KB) and `frame.css` (5.9 KB, 1.9 KB), about 9 KB
+  over the wire in all. No framework and no build step: *not TypeScript compiled by the repo's
+  toolchain*, because a new build target could not be tried here and a 16 KB script does not need
+  one; they are checked with `node --check` and the e2e test. The loader adds one **iframe** from
+  the API's own origin and resizes it; the chat lives inside it. *Iframe, not a shadow DOM:* a
+  frame isolates scripts and CSS both ways, keeps the visitor's session out of the host page, and
+  its `Content-Security-Policy` can name the sites allowed to frame it. The host page's CSP only
+  needs `frame-src` for the API origin. The widget never loads the app's CSS: it has its own small
+  stylesheet, its accent colour from the settings, and light and dark from `prefers-color-scheme`.
+- **Allowed domains are required** (`services/widget/origin.py`). Host names without scheme or port
+  (`example.com`, `*.example.com`; a pasted address is cleaned; `www.` of a bare domain is included;
+  `localhost` and IPs work for testing). A new widget allows nothing, so it shows nowhere until a
+  domain is added. Enforced three ways: the frame page is served only when the loader's `h`
+  (`location.hostname`) is allowed and carries `frame-ancestors` naming the allowed sites, which the
+  browser enforces; the session endpoint checks the same host; the visitor token carries that host and
+  every call checks it again, so removing a domain or switching the widget off stops live sessions
+  within one poll. *Honest limit:* the API is public, so a script outside a browser can call it with
+  any host; what stops it is the rate limits and the abuse rules, not the domain list. Browser calls
+  from another site are refused (`Origin` must be this server's own).
+- **Visitors and tokens** (`security/widget_tokens.py`). The frame keeps a random *visitor key* in
+  its own storage; the contact is keyed by `v_` and 24 hex characters of its SHA-256, so the id in
+  the inbox and exports cannot read the chat. `POST /v1/widget/session` turns the key into a signed
+  *session key* (6 hours; HMAC with a key derived from `TOKEN_ENCRYPTION_KEYS`, like the digest
+  unsubscribe links, so no new secret and rotation works), which the frame holds in memory and sends
+  as a bearer. No secret is in the page. The public routes avoid `token`, `secret` and `password` in
+  field names (SEC-02), so they are `session_key` and `visitor_key`. Nothing is stored for a visitor
+  who never writes; the contact and conversation are made by the first message.
+- **Public API** (`/v1/widget/*`, not in the OpenAPI document): `POST /session`, `GET /messages`
+  (a long poll: `version` and `wait` up to 20 s, rechecked every 1.5 s on a query that holds no
+  connection while sleeping), `POST /messages` (`client_id` makes a retry idempotent), `POST /email`.
+  *Real time is a long poll, not SSE or the inbox stream:* the workspace's Redis stream belongs to
+  members and carries more than a visitor may see; a long poll needs nothing new, works through any
+  proxy and delivers a reply within about 1.5 s of it being sent. The frame stops polling in a
+  hidden tab and before the visitor has written.
+- **Email and consent.** The email form is `off`, `optional` (after the first message, skippable) or
+  `required` (before the first message; the API refuses a message without it). The address is
+  normalised like a flow's question, set on the contact (`email_source = widget`, unverified),
+  qualifies a new lead (GR-18) and fires `contact.updated`/`contact.created`. *`lead.captured` is
+  not fired: it names an automation run, and there is none.* With "Ask for marketing consent" on, an
+  unticked box is shown; ticked, a granted **email** consent is recorded (source `widget`, new)
+  with the exact words shown, the site's host, the address and the time as evidence, as GR-14 does.
+  Unticked records nothing (silence is not a refusal). Consent is for email, the channel the
+  address is for.
+- **Abuse limits, all plans.** Per IP a minute: 120 frame loads, 20 sessions, 40 sends, 240 polls,
+  10 email forms. Per visitor: 10 sends a minute, 300 sends a day, 60 polls a minute. Message
+  length 1,000 characters (the API schema allows 2,000 so the sentence comes from the rules, not a
+  422 with no words). Rules (`services/widget/abuse.py`, new: the app has no DM spam detection to
+  reuse; comment spam is the AI's sentiment): no control characters, at most 2 links, no run of 30
+  of one character, no fourth identical message in a row. **New chats a day, by plan**
+  (`widget_conversations_daily`): Free 50, Pro 500, Max 5,000; over it a visitor sees "try again in a
+  little while" (429 with `Retry-After`), open chats carry on. *The numbers are proposals.*
+- **Plan rules.** New entitlement `widget_remove_branding` (Free false, Pro and Max true).
+  `PUT …/widget` with `show_branding: false` on Free is 402 `entitlement_required`; the choice
+  stays stored across a downgrade and the visitor sees the link again (`show_branding` in the
+  response is what is shown, `can_remove_branding` says whether the switch is locked).
+- **Settings routes** (`GET`/`PUT /v1/w/{wid}/widget`): owners and admins. *Waiting on GR-19:* both
+  should move to `require_permission` when the matrix lands (TODO in `api/v1/widget.py`).
+- **Web.** Settings → Website chat (owners and admins): sites (chips), the embed code with Copy, an
+  on/off switch, title, greeting, accent colour from six brand hues (`widgetAccents` in
+  `styles/tokens.ts`: the widget runs on the visitor's page and needs hex values), position, a
+  preview, the email form and consent, branding (locked on Free, with the upgrade dialog) and a link to
+  the AI settings. One new token, `--color-web` (`#0F766E`, 5.5:1 with white), for the platform
+  badge; a globe glyph; "Website" in the inbox's platform strip, the thread header, the contacts
+  filter, the contact drawer and the AI settings. A website visitor has no profile elsewhere, so
+  "Open in …" is hidden for them. *The theme refactor is pending: the token is one line in
+  `globals.css` and `tokens.ts` to port.*
+- **Not built.** Attachments, a typing indicator, read receipts and a visitor's "seen"; a page URL
+  or title on the conversation (the entry source is `organic`); push or email to the visitor when
+  they close the page (the email they gave could carry it later); several widgets per workspace;
+  per-page rules; a custom domain for the embed; `lead.captured` for the widget form; a custom
+  colour picker (only the six hues, plus an API-set colour shown as "Current colour"); minifying
+  the three files.
+- **Tests.** Unit: `test_widget_origin.py`, `test_widget_tokens.py`, `test_widget_abuse.py`,
+  `test_web_adapter.py` (adapter, registry, window, text limit); `test_account_purge_tables.py`
+  lists `widget_settings`. Integration: `test_website_widget.py` (settings and roles, the branding
+  rule per plan, sessions and sites, a removed domain, the same-origin guard, expired and forged
+  keys, start and receive, idempotency, email and consent, required email, spam rules, the daily
+  cap, per-visitor and per-IP limits, an inbox reply reaching the widget, a waiting poll, the AI
+  answer from knowledge, an escalation to Needs you, the served files and the frame policy).
+  Tenancy: `tests/tenancy/test_widget_tenancy.py` (public routes across two workspaces: same
+  visitor key, forged tokens, widget ids on the wrong site, deleting workspaces) and the settings
+  route and `widget_settings` in `test_isolation.py`; the account deletion test seeds a row. Vitest:
+  `WidgetSettingsPage.test.tsx`, `lib/widget/form.test.ts`, `PlatformGlyph.test.tsx`, a Website
+  segment in `PlatformStrip.test.tsx`; the settings tab lists. E2E: `gr28-widget.spec.ts` (a test
+  page served by the test on `http://localhost`, the chat to the inbox with the AI's draft, the
+  reply back to the open widget, the unread badge, email, keyboard, phone width, a site not on the
+  list, the settings page).
+- **Unsure / for the coordinator:** regenerate the client (`WidgetSettingsOut`, `WidgetSettingsUpdate`,
+  `get_widget_settings`, `update_widget_settings`, `web` in `platform` literals and `widget` in
+  `ConsentSourceName`); the web types are aliases waiting for it. Migration 0036 re-chains and it
+  edits the `ck_contact_consents_source` check: any other branch that recreates it must keep
+  `widget`. The e2e stack needs `TOKEN_ENCRYPTION_KEYS` (it has one) and its rate limits may stay on.
+  `frame-ancestors` for `localhost` allows any port over http and https.
+
+## C-112 · WhatsApp broadcasts (GR-23, feature/gr-23-broadcasts)
+
+- **Owner decisions (2026-10-24), recorded as decided.**
+  - **PD-3, who pays Meta: the business, directly.** Each WhatsApp Business Account carries its own
+    payment method (set up in Embedded Signup); no markup, no money through Social Hood. The cost on
+    a broadcast is an estimate from Meta's rate card and the pages say Meta bills the account
+    directly. Nothing in the product charges for a message.
+  - **PD-4, plans: Pro and Max with a monthly recipient quota, none on Free.** The entitlement
+    `broadcast_recipients_monthly` in `billing/plans.py`: Free 0, Pro 2,500, Max 25,000 (one line to
+    change each). The 402 is the app's own: `entitlement_required` ("WhatsApp broadcasts are part of
+    Pro.") on a plan with 0, `quota_exceeded` with the plan's limit and the numbers otherwise.
+  - **O-11, the legal check of marketing consent in India (TRAI TCCCPR, DPDP Act): not done.** So
+    GR-23 ships behind the server setting **`BROADCASTS_ENABLED`, off by default** (like GR-38's
+    `AGENT_VISUALS_ENABLED`; in `.env.example` as false, on in the e2e stack and in the tests'
+    fixture). Off: every broadcast route except `GET /broadcasts/availability` answers 404 "Broadcasts
+    aren't available yet.", the dispatch and sweeper jobs do nothing, and the web shows nothing (the
+    Automations and Activity pages hide their Broadcasts link and filter; the broadcast pages show
+    one plain notice). *Turn it on in production only after O-11.*
+- **A broadcast** (`broadcasts`): one approved template (marketing or utility; an authentication
+  template is a one-time code and is refused) from one connected WhatsApp number to a saved segment
+  (GR-17). The template's name, language, category and body are copied when it is made, so the
+  preview and the estimate need no call to Meta. Each variable `{{n}}` is a contact field (first
+  name, name, username, email, phone or a custom field's key) with an optional text to write when
+  the person has none, or a fixed text. `first_name` falls back to "there". A field with no value
+  and no fallback leaves that person out (skipped as "missing value") rather than sending a hole.
+  WhatsApp's parameter rules are applied (no line breaks or tabs, no run of four spaces, at most
+  1,024 characters; *unverified*). A draft can be changed (`PATCH`) and deleted; a started one can
+  be paused, resumed and cancelled.
+- **The audience** (`services/broadcasts/audience`). The segment's own filter, with its platform and
+  number replaced by the broadcast's (*a segment saved for Instagram still means "these people, on
+  this number"*), then each contact's **latest WhatsApp marketing record** decides (GR-02, latest
+  `occurred_at` wins): `granted` is sent to; `revoked` is skipped as `opted_out`; no record is
+  skipped as `no_consent` (not knowing is not agreeing). Skipped contacts are rows with their
+  reason, counted on the page and never sent. The audience is fixed when the broadcast **starts**
+  (up to 30,000 contacts; a bigger segment is refused), and each person's consent is checked again at
+  their turn, so a STOP between the two still wins.
+- **Preview** (`POST /broadcasts/preview`): the counts (matching, eligible, opted out, no consent,
+  missing value), the cost, the quota left, the number's daily limit and how many days that means,
+  the message drawn with a sample contact, and the sentences that stop it being sent. It is the same
+  audience code the send uses.
+- **Cost estimate** (`services/broadcasts/rates.py`): Meta's rate card as data (India, INR, per
+  message by category: marketing 0.7846, utility and authentication 0.1150) with its `as_of` date
+  and `verified = False`. **The figures are unverified**: typed in by hand, not read from Meta,
+  and Meta revises its rates. Update `RATE_CARD` when its pricing page changes; the pages say "typed in
+  by hand, not yet checked against Meta" while it is unverified. An unknown category is priced as
+  marketing (the dearest). The estimate is stored on the broadcast when it starts.
+- **Schedule.** `POST /broadcasts/{id}/start` with no time sends now; with `scheduled_at` (a time
+  zone is required, at least a minute and at most 90 days ahead) it schedules, and the quota is
+  checked then too. The minutely job `run_broadcasts` starts the ones that are due: it fixes the
+  audience, and a broadcast whose number or segment is gone, or that has no one left to send to,
+  becomes `failed` with the reason and tells the owners and admins. A scheduled broadcast does not
+  call Meta when it starts: a template withdrawn since then fails each message with WhatsApp's own
+  reason.
+- **Sending and throttling** (`services/broadcasts/dispatch`, `throttle`, job `dispatch_broadcast`).
+  - A batch hands up to 60 waiting people to the normal send queue (`sending.queue_outbound` with
+    the template, source `broadcast`, so the send job, token bucket, retries, statuses, inbox and
+    realtime all work as for any message), then the job queues itself a minute later: about 40
+    minutes for 2,500 people. *Source `broadcast` is new on `messages` (migration widens the check),
+    so the inbox says "Sent as part of a broadcast" and Activity words it.*
+  - **Idempotent per recipient**: the message's client id is derived from the recipient's id, rows are
+    locked (SKIP LOCKED) while a batch works, and the state of each recipient is the progress, so a
+    retried or stalled job sends nobody twice and a lost job is picked up by the minutely sweeper.
+  - **Pacing to the tier**: the number's daily limit by messaging tier (50, 250, 1,000, 10,000,
+    100,000, unlimited), 90% of it usable, less the people already messaged by broadcasts in the last
+    24 hours (the room is counted from `dispatched_at`; WhatsApp counts unique people in a rolling 24
+    hours, *unverified*). At the limit the next batch waits until the oldest message leaves the
+    window. **When the tier is not known the default is 250** (conservative), and the preview says
+    so. The tier and quality come from `whatsapp_number_health`, read from the number
+    (`adapter.get_number_health`: `quality_rating`, `messaging_limit_tier`; *unverified*) when it
+    has not been read for 30 minutes, and from the webhook below. An unknown rating never replaces a
+    known one.
+  - **Pause on a quality drop**: the `phone_number_quality_update` webhook (FLAGGED, UNFLAGGED,
+    UPGRADE, DOWNGRADE, ONBOARDING; *unverified*) names the WhatsApp Business Account, not the number
+    (no `metadata.phone_number_id`), so it is routed by `social_accounts.waba_id`
+    (`webhooks/routing.resolve_waba_accounts`) to each of its numbers connected here. FLAGGED is rating
+    Low (red); UNFLAGGED is taken as Medium until the number is read again. A sending broadcast
+    **pauses with a plain reason** when the rating falls to Medium or Low, when it is Low at a batch,
+    or when the tier is lowered. The owners and admins get an in-app notification
+    (`broadcast_paused`) and Activity shows it with a link. **The owner resumes**; resuming while the
+    rating is Low is refused (409) with the reason.
+  - Other pauses, each with its own sentence and code: `member` (the owner paused), `plan` (the plan no
+    longer has broadcasts), `limit` (the month's recipients ran out), `account` (the number needs
+    reconnecting or cannot send templates). A recipient the queue refuses for its own reason is
+    marked failed with the reason and the batch carries on.
+- **Per-recipient status.** Not stored twice: a recipient shows queued, sent, delivered, read,
+  failed or skipped **from its message** (`repositories/broadcasts.status_expr`), so WhatsApp's
+  delivery statuses (`whatsapp_status.apply_status`, which never moves a status backwards) are the
+  only thing that changes it. A failure's reason is the existing mapped wording (a number that is
+  not on WhatsApp is "This person can't receive messages right now."); an unmapped code shows
+  WhatsApp's own reason. `replied_at` and `stopped_at` are set by ingest. The detail page has the
+  counts at each stage, a progress bar, and the audience in pages of 25 with a status filter; it
+  polls every 5 seconds while sending.
+- **STOP** (`services/broadcasts/stop`, `inbound`). A WhatsApp text that is **only** a stop phrase
+  revokes marketing consent: a `revoked` record, source `stop_reply`, evidence `{message_id, text}`.
+  It is recorded even when the contact had no consent on file, and a record in the same second as a
+  grant still wins (WhatsApp stamps messages to the second). The list, in one place (the module's
+  docstring and `PHRASES`): English (stop, stop all, unsubscribe, unsub, opt out, optout, cancel, end,
+  quit, remove me, no more messages, do not / dont message me or contact me, stop messaging me),
+  Hinglish (band karo, band kar do, mat bhejo, msg mat bhejo, bhejna band karo, nahi chahiye ...)
+  and Hindi (the same in Devanagari), after lower-casing, dropping punctuation, emoji and polite
+  fillers (please, pls, kindly, thanks, kripya ...). The whole message must match, so "please don't
+  stop the delivery" does not. *The list is the usual set, not a legal one (O-11 covers wording).* No
+  confirmation message is sent back. A message within seven days after a broadcast message counts as
+  a reply to it.
+- **Quota rule**: a recipient counts when its message is handed to the send queue in the current
+  billing period (the subscription's anchor day, as for credits), failures after that included,
+  skipped contacts and hand-over failures never. Starting or scheduling a broadcast that would not
+  fit is refused with the numbers; one that runs out while sending pauses (`limit`).
+- **Activity (GR-05).** Failed broadcast messages are Activity's "A broadcast message to X wasn't
+  sent" with the reason; a new `broadcast` kind lists paused and failed-to-start broadcasts with the
+  reason and an action to open the broadcast. **Contact timeline (GR-17)**: "Received broadcast X"
+  with how far it got (Sent, Delivered, Read, Couldn't be delivered).
+- **Sandbox WhatsApp number** (`platforms/sandbox/whatsapp.py`). `POST /dev/sandbox/accounts?platform=whatsapp`
+  connects a fake number (`sandbox_` phone number id, `sandbox_waba_` business account) whose
+  adapter lists four approved templates (two marketing, one utility, one authentication), records
+  template sends (a parameter containing `[sandbox:fail=<code>]` fails that send) and reports its
+  tier. `POST /dev/sandbox/inbound` takes, for such a number, `dm` (a customer's WhatsApp message),
+  `status` (a delivery status for the last message sent to `from_id`: `delivery_status`,
+  `error_code`, `error_text`) and `quality` (`quality_event`, `tier`), as the webhook bodies Meta
+  would deliver, through the real intake. The e2e stack has a seed route to put a workspace on a plan.
+- **API** (owners and admins, through GR-19's automations permission for reads and
+  writes): `GET /broadcasts/availability`, `GET /broadcasts`,
+  `POST /broadcasts/preview`, `POST /broadcasts`, `GET|PATCH|DELETE /broadcasts/{id}`,
+  `GET /broadcasts/{id}/recipients?status=&limit=&offset=`, `POST /broadcasts/{id}/start|pause|resume|cancel`.
+  A number, segment or broadcast of another workspace is 404 `not_found` before any plan check.
+- **Migration 0037** (after 0036), expand-only: `messages.source` accepts
+  `broadcast`; tables `broadcasts`, `broadcast_recipients` (`uq_broadcast_recipients_broadcast_id_contact_id`)
+  and `whatsapp_number_health` (`uq_whatsapp_number_health_social_account_id`). All three reference the
+  account, so the account purge deletes them (children first); the purge test's list, the
+  account-deletion seed and the tenancy test's table list and seeds include them.
+- **Web.** `/w/{slug}/broadcasts` (list with the month's quota meter, a note that Meta bills the
+  account directly), `/new` (the composer: number, segment, approved template, a row per variable,
+  send now or schedule in the workspace's time zone, a live preview with the audience, the skipped
+  and why, the sample message, the estimate and the number's daily limit, and a confirmation) and
+  `/{id}` (counts, progress, the reason it paused with Resume, Pause, Cancel and Delete, the
+  message and its mapping, the estimate, and the people with their status). Shown only through a
+  "Broadcasts" button on Automations when the setting is on. Owners and admins. Stacked cards and
+  rows, so it works at 375 px.
+- **Not built.** An outbound webhook event for broadcasts (GR-04's catalogue); a STOP
+  acknowledgement message; a re-engagement of people with no consent record; a template's media
+  header, buttons with variables and named parameters (the same limits as the template picker);
+  editing a broadcast after it started; a CSV of the results; Instagram broadcasts (no API).
+- **Unverified (Meta), everything above that says so:** the rate card's figures; the messaging tier
+  names and limits and that the limit is unique people in a rolling 24 hours; the quality rating and
+  tier fields of the phone number; the `phone_number_quality_update` event names and its routing by
+  business account; that FLAGGED means rating Low; WhatsApp's parameter rules. Only a real number
+  settles them.
+- **Tests.** Unit: `test_broadcast_stop.py`, `test_broadcast_throttle.py`, `test_broadcast_rules.py`
+  (variables, the rate card, the plan's numbers), the purge list. Contract: `test_whatsapp_health.py`
+  (the health parsers and the sandbox bodies through the real WhatsApp parsers). Integration:
+  `test_broadcasts.py` (the setting off, the plan, preview, create, schedule, the sandbox broadcast
+  to three with each status and the opted-out one skipped, STOP, pacing, the quality pause and resume,
+  the month's recipients, Activity and the timeline, roles, the job). Tenancy: the new routes, bodies
+  and tables in `test_isolation.py` (the walk turns the setting on). Vitest: `BroadcastComposer`,
+  `BroadcastDetailPage`, `BroadcastsPage`, `lib/broadcasts/format`. E2E: `gr23-broadcasts.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (the new schemas, 10 operations, the
+  `broadcast` message source, activity kind and timeline kind, the `platform` query on
+  `create_sandbox_account`, and `status` and `quality` plus four fields on `SandboxInbound`); the web
+  types are aliases waiting for it, and the web calls the paths through the typed client, so typecheck
+  after regenerating. Decimal fields (`per_message`, `total`, the rate card) arrive as strings and the
+  web formats them. For production the Meta app's WhatsApp webhook needs the
+  `phone_number_quality_update` field subscribed (*unverified* that it is delivered to the same
+  callback as `messages`). `BROADCASTS_ENABLED` belongs on in staging only until
+  O-11.
+
+## C-113 · Combined GR batch E: integration fixes between the GRs (feature/gr-batch-e)
+
+Each GR was written on its own base, so these only showed once they were stacked. None changes a
+migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was never altered.
+
+- **Widget frame policy (GR-28 against the security headers).** The outermost middleware replaced
+  every response's `Content-Security-Policy` with `frame-ancestors 'none'`, which erased the widget
+  frame's own list of allowed sites. The middleware now keeps the app's policy on `/widget/frame`
+  when the route set one (a refusal without one still gets `'none'`); every other route keeps `'none'`.
+- **Private reply length (GR-29).** `PrivateReplyCreate.text` was capped at 1,000 characters in the
+  schema, so a Page's 2,000-character limit never reached the service's per-platform check. The schema
+  now only bounds the body (4,096) and the service enforces the account's own limit. The OpenAPI
+  `maxLength` of that body changes, so the client is regenerated.
+- **A re-delivered Messenger message is `processed`, not `ignored`.** The Facebook handler gives the
+  same status as Instagram's for a replay (ingest stores nothing and records no reason), so the
+  GR-29 test expected the wrong status; it still asserts that nothing new is stored.
+- **A Page's webhook payloads are deleted with its data.** The purge (C-067) deletes `webhook_events`
+  routed to the account whatever the provider; the GR-29 test asserted they remained. Now it asserts
+  none do.
+- **Tests, not behaviour.** `Ws.call` merges extra headers instead of passing `headers` twice;
+  `make_run` borrows a message when a seed names no trigger (the one-trigger check holds);
+  the sheets `capture_email` helper picks the still-queued question when called twice in a test; a
+  public-API send outside the window uses 8 days because the sandbox account has Human Agent (7 days);
+  the DM keyword test sends the message the run queues; a Page test needs Pro for four active
+  automations (Free includes three); the tenancy walk lists `/public/v1/me` with the other routes that
+  name no id (it still must show none of B's data); Idempotency-Key needs 8 characters.
+
+## C-114 · Instagram Story scheduling (GR-39, feature/gr-39-30-stories-fb-publishing)
+
+- **A Story is a choice, not a shape.** One image or one video could be an image post, a Reel or a
+  Story, so the composer sends `kind: "story"` (`ScheduledPostDraft.kind`, default `post`) and the
+  stored `scheduled_posts.format` becomes `story` (`derive_format(..., story=True)`). Exactly one
+  image or video makes a Story; two or more files are refused ("A Story is one image or one
+  video."), so a Story can't be a carousel. Duplicate keeps the format.
+- **No caption.** The caption and first comment stay on the draft (switching back to Post brings
+  them back) but are never sent: `_caption` returns "" for a Story, the container body has none, and
+  no first comment job is queued. The checklist replaces the caption, hashtag and mention checks with
+  one passing line, "Stories are published without a caption".
+- **Container.** `POST /{ig}/media` with `{media_type: "STORIES", image_url | video_url}`, then the
+  same status polling (videos process like Reels, images are FINISHED) and `media_publish`. A lost
+  publish answer is found again in `GET /me/stories` by time (`/me/media` does not list stories; a
+  Story has no caption to match on), and the new Story is read back with the story fields only
+  (`id,media_type,media_url,thumbnail_url,permalink,timestamp`). New adapter method
+  `create_story_container`; `get_published_media` and `find_published_media` take `story`.
+- **Validation.** Videos 3 to 60 seconds (refused outside, even though a Reel may run 90 s); image
+  size and format as for posts; any shape passes, with a note on the media line when the file is not
+  about 9:16 ("9:16 fits a Story best. Instagram may crop or add bars to this file."). A Facebook Page
+  target of a Story is refused on `targets.{i}` ("can't publish Stories"). Quota: a Story is a
+  scheduled post like any other (`scheduled_posts_monthly`, once per billing period, C-043) and
+  counts in the 24 hour publishing limit the checklist shows.
+- **Errors.** `STORY_REASONS` re-words 2207004, 2207005, 2207009, 2207026 and 2207052 for a Story
+  (size, format, shape, link); every other known subcode keeps its reason from C-043 and an unknown
+  one falls back to the generic reason. The processing timeout names the account's platform
+  ("Instagram took too long to process the video"). The failure notification says "Your Story".
+- **After publishing.** The `media_items` row has `media_type = story` (no "next post" automation
+  links to it, as before). The live-stories route (`GET /stories`, the story-reply picker) reads
+  Instagram, so the new Story appears there on its own; the sandbox now lists its published stories
+  (24 hours) before the two seeded ones, and keeps them out of feed posts. Each published Story target
+  carries `expires_at` (published time + 24 hours), which the composer's banner shows ("Disappears
+  Wed 10:00").
+- **Web.** A "Type" section (Post | Story) in the composer; with Story chosen the caption and first
+  comment sections are hidden, the media tray stops asking for crops and checks 3 to 60 s, the
+  preview becomes a 9:16 phone ("Story preview") and the format pill says Story. The List, Agenda and
+  calendar show a "Story" badge, and name the post "Story" instead of "No caption yet".
+- **Story insights: not built.** The insight metrics for stories exist (`STORY_METRICS`), but
+  `snapshot_post_metrics` leaves stories out on purpose (the windows are 1 h to 72 h, a Story is gone
+  after 24 h) and the analytics reads skip them. Fetching reach and replies needs its own early
+  windows; left for a follow-up.
+- **WhatsApp Status** has no API, so it is out of scope.
+- **Unverified (Meta), until a real account publishes a Story:** that `media_type: STORIES` with
+  `image_url` or `video_url` is accepted under Instagram Login; that images must be JPEG and at most
+  8 MB; the video limits (3 to 60 seconds, 100 MB, MP4 or MOV) and that 9:16 is recommended, not
+  required; whether Stories count against `content_publishing_limit`; whether `GET /{id}` takes the
+  story field list and `GET /me/stories` lists a Story right after publishing; the Story-specific
+  error subcodes (we know no subcode that is only for Stories, so `STORY_REASONS` re-words general
+  ones); that `me/stories` timestamps allow the time match used for a lost answer.
+- **Migration 0038** (after 0037), expand-only: `ck_scheduled_posts_format` accepts `story`
+  (downgrade turns stories back into drafts without a format).
+- **Tests.** Unit: `test_story_scheduling.py` (format, checklist, container bodies, error wording,
+  the lost-answer lookup, the sandbox lifecycle and the expiry). Integration:
+  `test_story_publishing.py` (kind and format, the carousel and length refusals, the Facebook Page
+  refusal, the plan quota, schedule to publish to media item, the video wait, a failed Story and its
+  notification, a lost answer, the live story list). Vitest: the checklist, the composer's Story
+  mode, the preview. E2E: `gr39-story-scheduling.spec.ts`.
+- **For the coordinator:** regenerate the client (`PostFormatName` gains `story`,
+  `ScheduledPostDraft.kind`, `ScheduledPostTarget.expires_at`); the web reads `kind` and `expires_at`
+  from the generated types.
+- *Added in the combined batch:* the composer's choice is stored as `scheduled_posts.kind` (`post` or `story`, default `post`, in migration 0038) instead of being read from `format`. A Story draft with the wrong media has no format yet and was checked as a carousel once saved; now it keeps its Story checks, duplicating a Story copies the kind, and a check ties `format = 'story'` to `kind = 'story'`. Responses carry `kind`; the web reads it.
+
+## C-115 · Facebook publishing and best posting times (GR-30, feature/gr-39-30-stories-fb-publishing)
+
+- **One composer, Pages included.** A Facebook Page shows in the composer's Accounts beside
+  Instagram accounts (tagged "Facebook Page"); choosing both posts to both at once (the composer
+  already took up to 10 accounts; the preview gets an account switcher when the platforms differ and
+  a Facebook-style preview for a Page). Pages also appear in the Schedule page's account filter and
+  colours. The publish jobs, states, retries, failure reasons and notifications are the same ones
+  (`services/post_publishing`); only the platform calls differ.
+- **Permission.** The Page connect now asks for `pages_manage_posts` (`oauth.SCOPES`). A Page
+  gets `Capability.PUBLISH` only if that scope is on the account, so a Page connected before this
+  must be reconnected ("Reconnect to allow publishing", the same wording as Instagram). Sandbox Pages
+  can always publish. `read_insights` is still not asked for.
+- **Containers are references** (`platforms/facebook/publishing.py`): Facebook has none, so the
+  adapter returns `photo:{id}` (an unpublished `POST /me/photos`), `photos:{id,id}` (the parent of 2
+  to 10 photos, no call), `video:{id}` (an unpublished `POST /me/videos` with `file_url`, polled with
+  `GET /{id}?fields=status`) or `text:post`; `publish_container` then posts it: photos as
+  `POST /me/feed` with `attached_media`, a video with `POST /{id}` `{published: true}`, text as
+  `POST /me/feed` `{message, link?}` (the first URL in the text becomes `link`). The adapter
+  protocol gained `create_text_container`, and `publish_container` takes the post's `caption` (the
+  jobs pass it; Instagram ignores it).
+- **Our scheduler, not Meta's.** Every call publishes at once; `scheduled_publish_time` is not used,
+  so Social Hood's states, retries, calendar and Activity stay the one source of truth and a Page
+  post can be moved or canceled until the moment it publishes. *No good reason found to use Meta's.*
+- **Formats.** The same derived formats (one photo, one video, 2 to 10 photos), plus **text**
+  (`scheduled_posts.format = text`, migration 0039): no media, a caption, only when every account is
+  a Page. A Page video is a normal Page video (media item type `video`, not a Reel). The checklist is
+  per platform (`TargetFacts.platform`): a Page takes any photo shape (4:5 to 1.91:1 is Instagram's),
+  refuses photos mixed with a video ("A Facebook post can have several photos or one video, not
+  both."), has no hashtag or mention limit and no publishing limit; text for a post that also goes
+  to Instagram is refused ("Add an image or video."); a Story cannot go to a Page. *Deviation:* the
+  2,200 character caption limit stays for Pages too (the column check and the API schemas share it);
+  Facebook allows far more, so lifting it is a later change.
+- **Lost answers are not retried on a Page.** Instagram can tell from the container's `PUBLISHED`
+  status that a lost publish answer went out; a Page post has no such state, so a `delivery_unknown`
+  ends the target as unconfirmed ("We couldn't confirm Facebook published this post. Check ...
+  before trying again.") instead of publishing again. A worker that dies between Facebook accepting
+  the post and our storing it could still publish twice on the sweeper's retry (a window of
+  milliseconds; no cheap fix). Reasons are mapped for Facebook error codes 200, 324, 368 and 506;
+  anything else falls back to the generic reason.
+- **Not built: Page Stories** (`/photo_stories`, `/video_stories`). They need their own two step
+  upload, and there is no read API to list them for the story picker. The composer says Pages can't
+  publish Stories. Also not built: Facebook Reels, Meta's own scheduling, post insights for Pages
+  (`get_media_insights` still raises `capability_unavailable`).
+- **Best times.** `GET /social-accounts/{id}/best-times` (owners and admins, like posting times;
+  another workspace's account is 404) returns a suggested hour per weekday (`BestTimes`). It is
+  computed in `services/scheduled_posts/best_times.py`, cached in Valkey for 6 hours per account, and
+  never by an AI model. **Method:** the account's last 90 posts of the last 180 days (stories left
+  out) with a known engagement (the latest snapshot's likes + comments + shares + saves, else the
+  live like and comment counts, so a Page without insights works); each post is scored against the
+  account's median post; posts are grouped by weekday and hour in the workspace time zone; an hour
+  needs 2 posts, and a weekday gets the hour with the best median score (the earlier on a tie);
+  fewer than 10 scored posts: `enough_history` false and no suggestion ("not enough history").
+  `lift_percent` is how far the hour beats a typical post (null when the median is 0). The
+  constants are at the top of the module.
+- **Web.** The time picker shows the best time for the chosen weekday with a "Use 18:00" button (or
+  the top three days to start from, before a day is chosen) and says when there is not enough
+  history; the Posting times drawer lists the suggestion per weekday with an "Add" button. Both read
+  the cached route.
+- **Migration 0039** (after 0038), expand-only: `ck_scheduled_posts_format` accepts `text`
+  (downgrade turns text posts back into drafts without a format). No new tables; the best times
+  need none.
+- **Unverified (Meta), until a real Page publishes:** JSON bodies on `/photos`, `/videos` and
+  `/feed` (Meta's examples are form encoded, and `attached_media` is documented as a list of JSON
+  strings); `file_url` on `graph.facebook.com` rather than `graph-video.facebook.com`; that an
+  unpublished video is published by `POST /{id}` with `published: true`; the `status.video_status`
+  values (`ready`, `processing`, `uploading`, `error`, `expired`); that `GET /{post-id}` and the video
+  fields in `VIDEO_FIELDS` return a permalink (a video's is relative); the `link` field's preview
+  behaviour; the error codes 200, 324, 368 and 506 and their reasons; that `pages_manage_posts` is
+  enough (App Review: O-10); that a post id has `_` and a video id is a bare number (how the read
+  back tells them apart); `POST /{id}/comments` for a Page's own first comment.
+- **Tests.** Unit: `test_facebook_publishing.py` (the permission gate, every call body, the video
+  status, errors, the read back, the per-platform checklist, the best-times arithmetic with the
+  zone, the minimum bucket, too little data and a zero median); `test_facebook_platform.py` updated
+  (Pages publish, no insights). Integration: `test_facebook_publishing.py` (text, photos, video,
+  no limit, first comment, a refused post and its notification, a lost answer never published twice,
+  a Page without the permission; the composer API per platform; the best-times route: too little
+  history, the busy weekday, a Page from its counts, the time zone and the cache, 401 and 404);
+  `test_facebook_connect.py` updated. Tenancy: the new route has an account id, so the walk covers
+  it. Vitest: the best-times helpers and components, the Page checklist, the account picker, the
+  preview, the composer. E2E: `gr30-facebook-publishing.spec.ts`.
+- **For the coordinator:** regenerate the client (`BestTimes`, `BestTimeDay`, the `get_best_times`
+  operation, `PostFormatName` gains `text`); the web types are aliases waiting for it. The Meta app
+  needs `pages_manage_posts` added to the Facebook Login permissions for production (O-10). Roles:
+  the route uses the same `Admin` dependency as posting times; there is no member-role integration
+  test for it (none exists for posting times either).

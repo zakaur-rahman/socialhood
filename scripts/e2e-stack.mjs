@@ -250,6 +250,7 @@ async function main() {
     WEBHOOKS_ALLOW_PRIVATE: "true", // GR-04: the e2e receiver is local
     CRAWL_ALLOW_PRIVATE: "true", // GR-35: the e2e site crawl reads a local fixture site
     AGENT_VISUALS_ENABLED: "true", // GR-38: runs carry their visuals
+    BROADCASTS_ENABLED: "true", // GR-23: broadcasts are off by default (O-11)
     // Every test signs in as the one e2e user, from 3 workers at once: together they pass the
     // per-user 300 a minute (TR-API-07), which tests/integration/test_rate_limits.py covers.
     RATE_LIMITS_ENABLED: "false",
@@ -260,6 +261,9 @@ async function main() {
     DODO_PRODUCT_MAX_MONTHLY: "prod_e2e_max",
     EMAIL_PROVIDER: "fake",
     PUSH_PROVIDER: "fake",
+    CLERK_INVITATIONS_PROVIDER: "fake",
+    GOOGLE_PROVIDER: "fake", // GR-27: sheets live in Redis, shared by the API and the worker
+    GOOGLE_REDIRECT_URI: `${apiUrl}/v1/oauth/google/callback`,
     E2E_SEED_TOKEN: randomBytes(24).toString("hex"),
     PYTHONUNBUFFERED: "1",
     PYTHONIOENCODING: "utf-8",

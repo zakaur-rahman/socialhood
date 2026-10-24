@@ -73,6 +73,10 @@ async def set_last_workspace(
     )
 
 
+async def clear_last_workspace(session: AsyncSession, user_id: uuid.UUID) -> None:
+    await session.execute(update(User).where(User.id == user_id).values(last_workspace_id=None))
+
+
 async def touch_last_seen(session: AsyncSession, user_id: uuid.UUID, at: datetime) -> None:
     await session.execute(update(User).where(User.id == user_id).values(last_seen_at=at))
 

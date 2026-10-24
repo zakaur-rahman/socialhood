@@ -70,6 +70,7 @@ function report(overrides: Partial<WeeklyReport> = {}): WeeklyReport {
         lower_is_better: true,
         series: series([null, null, null, null, null, null, null, null]),
       }),
+      metric("captures", "Leads captured", { value: 14, previous: 10, change_pct: 40, direction: "up" }),
       metric("leads_won", "Leads won", { value: 2, previous: 0, change_pct: null, direction: "up", series: series([null, null, 0, 0, 1, 0, 0, 2]) }),
     ],
     account_metrics: [
@@ -140,7 +141,6 @@ function report(overrides: Partial<WeeklyReport> = {}): WeeklyReport {
     needs_you: 3,
     open_questions: 4,
     top_questions: [{ topic: "Do you ship to Dubai?", asked: 5 }],
-    notes: ["captures_not_built"],
     ...overrides,
   };
 }
@@ -220,9 +220,9 @@ describe("the weekly report page (GR-34)", () => {
     expect(accountItem("views")).toHaveTextContent("No readings in these weeks.");
   });
 
-  it("says what isn't counted yet, and shows intents, posts and what is open now", async () => {
+  it("shows intents, posts and what is open now", async () => {
     setup();
-    expect(await screen.findByTestId("report-note")).toHaveTextContent("Emails and phone numbers collected in flows aren't counted here yet.");
+    await screen.findByTestId("weekly-report");
     expect(screen.getByText("Pricing")).toBeInTheDocument();
     expect(screen.getByText("32 messages")).toBeInTheDocument();
     const post = screen.getByRole("link", { name: "New autumn cakes are here" });
@@ -233,10 +233,15 @@ describe("the weekly report page (GR-34)", () => {
     expect(screen.getByText("Do you ship to Dubai?")).toBeInTheDocument();
   });
 
-  it("leaves the note out once captures are counted", async () => {
-    setup({ data: report({ notes: [] }) });
+  it("counts the leads captured in flows, against the week before, with no note about it", async () => {
+    setup();
     await screen.findByTestId("weekly-report");
+    const captured = item("captures");
+    expect(captured).toHaveTextContent("Leads captured");
+    expect(captured).toHaveTextContent("14");
+    expect(within(captured).getByTestId("trend")).toHaveTextContent("+40");
     expect(screen.queryByTestId("report-note")).toBeNull();
+    expect(screen.queryByText(/aren't counted here yet/)).toBeNull();
   });
 });
 

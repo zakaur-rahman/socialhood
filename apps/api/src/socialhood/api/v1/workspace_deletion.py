@@ -12,7 +12,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from socialhood.auth.deps import Owner, Session
+from socialhood.auth.deps import CanDeleteWorkspace, Session
 from socialhood.schemas.workspace_deletion import WorkspaceDeletion
 from socialhood.services import workspace_deletion as service
 
@@ -21,7 +21,7 @@ router = APIRouter(prefix="/v1/w/{wid}", tags=["workspaces"])
 
 @router.delete("", status_code=202, operation_id="delete_workspace")
 async def delete_workspace(
-    ctx: Owner,
+    ctx: CanDeleteWorkspace,
     session: Session,
     confirm_name: Annotated[str, Query(min_length=1, max_length=200)],
 ) -> WorkspaceDeletion:

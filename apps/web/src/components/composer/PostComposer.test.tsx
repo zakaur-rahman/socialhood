@@ -24,6 +24,7 @@ import {
   type Call,
 } from "@/test/api";
 import {
+  bestTimes,
   hashtagGroup,
   mediaAsset,
   postAsset,
@@ -174,6 +175,7 @@ describe("PostComposer autosave (F-13)", () => {
       caption: "Hello",
       first_comment: null,
       publish_at: null,
+      kind: "post",
     });
     await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
   });
@@ -186,6 +188,86 @@ describe("PostComposer autosave (F-13)", () => {
     await user.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(screen.getByTestId("save-status")).toHaveTextContent("Saved"));
     expect(puts).toHaveLength(2);
+  });
+});
+
+describe("PostComposer Story mode (GR-39)", () => {
+  it("choosing Story hides the caption and first comment, shows the Story preview and saves kind story", async () => {
+    const user = userEvent.setup();
+    const { puts } = renderComposer({ initial: readyPost() });
+    expect(await screen.findByRole("textbox", { name: "Caption" })).toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Feed preview" })).toBeInTheDocument();
+
+    await user.click(within(screen.getByRole("region", { name: "Type" })).getByRole("radio", { name: "Story" }));
+
+    expect(screen.queryByRole("textbox", { name: "Caption" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "First comment" })).not.toBeInTheDocument();
+    expect(screen.getByRole("article", { name: "Story preview" })).toBeInTheDocument();
+    expect(screen.getByTestId("post-format")).toHaveTextContent("Story");
+    expect(screen.getByTestId("story-hint")).toHaveTextContent("disappear after 24 hours");
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 3000 });
+    expect(puts[0].body).toMatchObject({ kind: "story", caption: "New linen dresses are here #linen" });
+  });
+
+  it("a stored Story opens in Story mode, and Post brings the caption back", async () => {
+    const user = userEvent.setup();
+    renderComposer({ initial: readyPost({ format: "story" }) });
+    expect(await screen.findByRole("article", { name: "Story preview" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Caption" })).not.toBeInTheDocument();
+    await user.click(within(screen.getByRole("region", { name: "Type" })).getByRole("radio", { name: "Post" }));
+    expect(await screen.findByRole("textbox", { name: "Caption" })).toHaveValue("New linen dresses are here #linen");
+  });
+
+  it("a published Story says when it disappears", async () => {
+    renderComposer({
+      initial: readyPost({
+        format: "story",
+        status: "published",
+        published_at: "2026-09-28T10:00:00Z",
+        targets: [
+          target({
+            status: "published",
+            published_at: "2026-09-28T10:00:00Z",
+            expires_at: "2026-09-29T10:00:00Z",
+            permalink: "https://www.instagram.com/stories/maple/1/",
+          }),
+        ],
+      }),
+    });
+    expect(await screen.findByTestId("story-expiry")).toHaveTextContent(/Disappears|Expired after 24 hours/);
+  });
+});
+
+describe("PostComposer Facebook Pages (GR-30)", () => {
+  const page = account({ id: "p1", platform: "facebook", username: "maple.page", display_name: "Maple Page", capabilities: ["publish"] });
+
+  it("offers Pages beside Instagram accounts; text alone is a post for a Page, and the preview is Facebook's", async () => {
+    const user = userEvent.setup();
+    const { puts } = renderComposer({
+      initial: scheduledPost({ targets: [target({ social_account_id: "p1" })] }),
+      accounts: [maple, page],
+    });
+    await user.type(await screen.findByRole("textbox", { name: "Caption" }), "Open late tonight");
+    expect(await screen.findByRole("article", { name: "Facebook preview" })).toHaveTextContent("Open late tonight");
+    expect(screen.getByTestId("post-format")).toHaveTextContent("Text");
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 3000 });
+    expect(puts[0].body).toMatchObject({ caption: "Open late tonight", asset_ids: [], kind: "post" });
+    expect(screen.queryByText("Add a photo or video.")).not.toBeInTheDocument();
+  });
+
+  it("a Page can't be a Story: the Story option is off with the reason", async () => {
+    renderComposer({ initial: scheduledPost({ targets: [target({ social_account_id: "p1" })] }), accounts: [maple, page] });
+    const type = await screen.findByRole("region", { name: "Type" });
+    expect(await within(type).findByTestId("story-blocked")).toHaveTextContent("@maple.page is a Facebook Page");
+    expect(within(type).getByRole("radio", { name: "Story" })).toBeDisabled();
+  });
+
+  it("shows the best time for the picked day beside the time picker", async () => {
+    renderComposer({
+      initial: readyPost({ publish_at: "2026-10-26T12:30:00Z" }),
+      handlers: { "GET /v1/w/:wid/social-accounts/:id/best-times": () => json(bestTimes()) },
+    });
+    expect(await screen.findByText(/Best time for @maple.bakery on Mondays/)).toHaveTextContent("18:00");
   });
 });
 

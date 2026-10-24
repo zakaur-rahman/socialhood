@@ -7,6 +7,7 @@ import {
   Clock,
   ExternalLink,
   LoaderCircle,
+  Megaphone,
   Sparkles,
   Zap,
   type LucideIcon,
@@ -27,6 +28,14 @@ import { cn } from "@/lib/utils";
 import { AttachmentView } from "./AttachmentView";
 import { ContactAvatar } from "./ContactAvatar";
 import { SystemNote } from "./DateSeparator";
+
+/** Where a message in a format we can't show can be seen in the platform's own inbox. */
+const UNSUPPORTED_LINK: Partial<Record<Platform, string>> = {
+  instagram: "https://www.instagram.com/direct/inbox/",
+  whatsapp: "https://web.whatsapp.com/",
+  facebook: "https://business.facebook.com/latest/inbox/messenger",
+  // A website chat has no inbox outside Social Hood, so it has no link.
+};
 
 const STATUS: Partial<Record<MessageStatus, { icon: LucideIcon; label: string; className?: string }>> = {
   queued: { icon: Clock, label: "Queued" },
@@ -117,15 +126,19 @@ export function MessageBubble({
         ? message.automation
           ? `Sent by an automation: ${message.automation.name}`
           : "Sent by an automation"
-        : null;
+        : outbound && message.source === "broadcast"
+          ? "Sent as part of a broadcast"
+          : null;
   // D-07: "Sent by AI" for an auto reply; "Automation · {name}" for an automation. The API doesn't say
   // whether an automation step was an AI reply, so "AI" never appears on those.
   const assistedLabel =
     message.source === "ai_auto"
       ? "Sent by AI"
-      : message.automation
-        ? `Automation · ${message.automation.name}`
-        : "Automation";
+      : message.source === "broadcast"
+        ? "Broadcast"
+        : message.automation
+          ? `Automation · ${message.automation.name}`
+          : "Automation";
   const label = nativeApp ? `Sent from ${platformName}` : null;
 
   const statusInfo = outbound && status ? STATUS[status] : undefined;
@@ -184,17 +197,19 @@ export function MessageBubble({
               data-testid="unsupported-card"
             >
               <span className={outbound && !nativeApp ? "text-on-brand" : "text-fg-secondary"}>Unsupported message format</span>
-              <a
-                href={platform === "instagram" ? "https://www.instagram.com/direct/inbox/" : "https://web.whatsapp.com/"}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(
-                  "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline",
-                  outbound && !nativeApp ? "" : "text-brand-fg",
-                )}
-              >
-                View in {platformName} <ExternalLink className="size-3" aria-hidden />
-              </a>
+              {UNSUPPORTED_LINK[platform] ? (
+                <a
+                  href={UNSUPPORTED_LINK[platform]}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline",
+                    outbound && !nativeApp ? "" : "text-brand-fg",
+                  )}
+                >
+                  View in {platformName} <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : null}
             </div>
           ) : message.kind === "location" && !message.text ? (
             <p>Shared a location</p>
@@ -254,6 +269,8 @@ export function MessageBubble({
                 <span className="ml-1 inline-flex min-w-0 items-center gap-0.5 font-medium text-brand-fg">
                   {message.source === "automation" ? (
                     <Zap className="size-3" aria-hidden />
+                  ) : message.source === "broadcast" ? (
+                    <Megaphone className="size-3" aria-hidden />
                   ) : (
                     <Sparkles className="size-3" aria-hidden />
                   )}
@@ -318,5 +335,6 @@ function variantName(message: Message): string {
   if (message.source === "native_app") return "native_app";
   if (message.source === "ai_auto") return "ai_auto";
   if (message.source === "automation") return "automation";
+  if (message.source === "broadcast") return "automation"; // GR-23: styled like the other sends we write
   return "human";
 }

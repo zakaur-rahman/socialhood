@@ -6,6 +6,7 @@ import type {
   DisplayStatus,
   MatchMode,
   OverlapWarning,
+  Platform,
   QueueInfo,
   RunResult,
   SurgeOrder,
@@ -44,6 +45,12 @@ export const TRIGGER_LABEL_IG: Record<TriggerName, string> = {
   first_message: "First message (welcome)",
   default_reply: "Any other message (default reply)",
 };
+
+/** The same labels said for the account's platform (GR-29): a Facebook Page's say Facebook. */
+export function triggerLabel(trigger: TriggerName, platform?: Platform | null): string {
+  const label = TRIGGER_LABEL_IG[trigger];
+  return platform === "facebook" ? label.replace("Instagram", "Facebook") : label;
+}
 
 export const MATCH_LABEL: Record<MatchMode, string> = {
   word: "Whole word",

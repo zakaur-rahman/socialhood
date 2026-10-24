@@ -15,7 +15,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request, Response
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import Admin, Session
+from socialhood.auth.deps import Admin, CanManageKnowledge, Session
 from socialhood.billing.entitlements import credits_gate
 from socialhood.schemas.knowledge import (
     ExcludePath,
@@ -29,6 +29,7 @@ from socialhood.schemas.knowledge import (
     KnowledgeTestResult,
     SitePageList,
 )
+from socialhood.services import audit
 from socialhood.services.knowledge import answer, gaps, sites, sources
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["knowledge"])
@@ -42,7 +43,7 @@ async def list_knowledge_sources(ctx: Admin, session: Session) -> KnowledgeSourc
 
 @router.post("/knowledge-sources", status_code=201, operation_id="create_knowledge_source")
 async def create_knowledge_source(
-    request: Request, body: KnowledgeSourceCreate, ctx: Admin, session: Session
+    request: Request, body: KnowledgeSourceCreate, ctx: CanManageKnowledge, session: Session
 ) -> KnowledgeSource:
     """FR-KB-01: an FAQ (question, body), note (title, body), web page (url) or file
     (file_asset_id). 422 lists missing or foreign fields; 402 quota_exceeded over
@@ -57,6 +58,7 @@ async def create_knowledge_source(
         allow_private=request.app.state.settings.crawl_allow_private,
     )
     out = await sources.view(session, source)
+    await audit.record(session, ctx, "knowledge.created", "knowledge_source", source.id)
     await session.commit()
     await sources.enqueue_ingest(source)
     return out
@@ -71,11 +73,12 @@ async def get_knowledge_source(
 
 @router.patch("/knowledge-sources/{source_id}", operation_id="update_knowledge_source")
 async def update_knowledge_source(
-    source_id: uuid.UUID, body: KnowledgeSourcePatch, ctx: Admin, session: Session
+    source_id: uuid.UUID, body: KnowledgeSourcePatch, ctx: CanManageKnowledge, session: Session
 ) -> KnowledgeSource:
     """Any change (or ``reingest``) adds 1 to the version and ingests the source again."""
     source, reingest = await sources.update(session, source_id, body)
     out = await sources.view(session, source)
+    await audit.record(session, ctx, "knowledge.updated", "knowledge_source", source_id)
     await session.commit()
     if reingest:
         await sources.enqueue_ingest(source)
@@ -85,15 +88,18 @@ async def update_knowledge_source(
 @router.delete(
     "/knowledge-sources/{source_id}", status_code=204, operation_id="delete_knowledge_source"
 )
-async def delete_knowledge_source(source_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_knowledge_source(
+    source_id: uuid.UUID, ctx: CanManageKnowledge, session: Session
+) -> Response:
     await sources.delete(session, source_id)
+    await audit.record(session, ctx, "knowledge.deleted", "knowledge_source", source_id)
     await session.commit()
     return Response(status_code=204)
 
 
 @router.post("/knowledge/test", operation_id="test_knowledge", dependencies=[ratelimit.AI])
 async def test_knowledge(
-    request: Request, body: KnowledgeTest, ctx: Admin, session: Session
+    request: Request, body: KnowledgeTest, ctx: CanManageKnowledge, session: Session
 ) -> KnowledgeTestResult:
     """FR-KB-03: the answer a suggestion would draft, with its sources, or can_answer false
     ("Not in your knowledge"). 1 credit; nothing is stored or sent. 402 quota_exceeded without
@@ -119,7 +125,9 @@ async def list_knowledge_gaps(
 
 
 @router.post("/knowledge-gaps/{gap_id}/dismiss", operation_id="dismiss_knowledge_gap")
-async def dismiss_knowledge_gap(gap_id: uuid.UUID, ctx: Admin, session: Session) -> KnowledgeGap:
+async def dismiss_knowledge_gap(
+    gap_id: uuid.UUID, ctx: CanManageKnowledge, session: Session
+) -> KnowledgeGap:
     """Hidden until a customer asks again (FR-KB-06); 409 conflict once answered."""
     out = await gaps.dismiss(session, gap_id, now=datetime.now(UTC))
     await session.commit()
@@ -151,33 +159,44 @@ async def list_site_pages(
     operation_id="remove_site_page",
 )
 async def remove_site_page(
-    source_id: uuid.UUID, page_id: uuid.UUID, ctx: Admin, session: Session
+    source_id: uuid.UUID, page_id: uuid.UUID, ctx: CanManageKnowledge, session: Session
 ) -> Response:
     """The page's knowledge is deleted and later crawls leave the address out."""
     await sites.remove_page(session, source_id, page_id)
+    await audit.record(
+        session, ctx, "knowledge.updated", "knowledge_source", source_id, page_removed=True
+    )
     await session.commit()
     return Response(status_code=204)
 
 
 @router.post("/knowledge-sources/{source_id}/excluded-paths", operation_id="exclude_site_path")
 async def exclude_site_path(
-    source_id: uuid.UUID, body: ExcludePath, ctx: Admin, session: Session
+    source_id: uuid.UUID, body: ExcludePath, ctx: CanManageKnowledge, session: Session
 ) -> KnowledgeSource:
     """Pages at this path or below it (``/blog`` holds ``/blog/a``) are removed now and left out
     of later crawls. 422 for a path that is only "/" and past 50 excluded paths."""
     source = await sites.exclude_path(session, source_id, body.path)
     out = await sources.view(session, source)
+    await audit.record(
+        session, ctx, "knowledge.updated", "knowledge_source", source_id, path_excluded=True
+    )
     await session.commit()
     return out
 
 
 @router.post("/knowledge-sources/{source_id}/recrawl", operation_id="recrawl_site")
-async def recrawl_site(source_id: uuid.UUID, ctx: Admin, session: Session) -> KnowledgeSource:
+async def recrawl_site(
+    source_id: uuid.UUID, ctx: CanManageKnowledge, session: Session
+) -> KnowledgeSource:
     """Crawl the site again now. One crawl runs at a time: while one is queued or running this
     changes nothing and returns the site as it is. 404 for any other source."""
     source = await sites.site_or_404(session, source_id)
     queued = await sites.request_crawl(session, source)
     out = await sources.view(session, source)
+    await audit.record(
+        session, ctx, "knowledge.updated", "knowledge_source", source_id, recrawl=True
+    )
     await session.commit()
     if queued:
         await sources.enqueue_ingest(source)

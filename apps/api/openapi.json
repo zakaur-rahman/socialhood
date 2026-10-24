@@ -11,7 +11,9 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook",
+              "web"
             ],
             "title": "Platform",
             "type": "string"
@@ -365,7 +367,8 @@
               "flow_step",
               "message",
               "webhook_delivery",
-              "account"
+              "account",
+              "broadcast"
             ],
             "title": "Kind",
             "type": "string"
@@ -550,6 +553,11 @@
       "AgentApproval": {
         "description": "A write waiting for a person: exactly what will happen (recipients, text, scope, count).",
         "properties": {
+          "can_decide": {
+            "default": false,
+            "title": "Can Decide",
+            "type": "boolean"
+          },
           "created_at": {
             "format": "date-time",
             "title": "Created At",
@@ -577,6 +585,13 @@
               }
             ]
           },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ApprovalEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          },
           "expires_at": {
             "format": "date-time",
             "title": "Expires At",
@@ -591,6 +606,34 @@
             "title": "Label",
             "type": "string"
           },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "match_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Count"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApprovalOutcome"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "payload": {
             "additionalProperties": true,
             "title": "Payload",
@@ -599,6 +642,16 @@
           "request": {
             "title": "Request",
             "type": "string"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "run_id": {
             "format": "uuid",
@@ -615,6 +668,17 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "step_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Count"
           },
           "step_id": {
             "format": "uuid",
@@ -899,8 +963,10 @@
               "discriminator": {
                 "mapping": {
                   "automation_draft": "#/components/schemas/AutomationDraftAction",
+                  "flow_proposal": "#/components/schemas/FlowProposalAction",
                   "reply_to_comment": "#/components/schemas/CommentReplyAction",
-                  "schedule_message": "#/components/schemas/ScheduleMessageAction"
+                  "schedule_message": "#/components/schemas/ScheduleMessageAction",
+                  "segment_proposal": "#/components/schemas/SegmentProposalAction"
                 },
                 "propertyName": "kind"
               },
@@ -913,6 +979,12 @@
                 },
                 {
                   "$ref": "#/components/schemas/AutomationDraftAction"
+                },
+                {
+                  "$ref": "#/components/schemas/FlowProposalAction"
+                },
+                {
+                  "$ref": "#/components/schemas/SegmentProposalAction"
                 }
               ]
             },
@@ -1117,8 +1189,10 @@
               "discriminator": {
                 "mapping": {
                   "automation_draft": "#/components/schemas/AutomationDraftAction",
+                  "flow_proposal": "#/components/schemas/FlowProposalAction",
                   "reply_to_comment": "#/components/schemas/CommentReplyAction",
-                  "schedule_message": "#/components/schemas/ScheduleMessageAction"
+                  "schedule_message": "#/components/schemas/ScheduleMessageAction",
+                  "segment_proposal": "#/components/schemas/SegmentProposalAction"
                 },
                 "propertyName": "kind"
               },
@@ -1131,6 +1205,12 @@
                 },
                 {
                   "$ref": "#/components/schemas/AutomationDraftAction"
+                },
+                {
+                  "$ref": "#/components/schemas/FlowProposalAction"
+                },
+                {
+                  "$ref": "#/components/schemas/SegmentProposalAction"
                 }
               ]
             },
@@ -1153,6 +1233,13 @@
               "$ref": "#/components/schemas/AnswerRef"
             },
             "title": "Answer Refs",
+            "type": "array"
+          },
+          "approvals": {
+            "items": {
+              "$ref": "#/components/schemas/AgentApproval"
+            },
+            "title": "Approvals",
             "type": "array"
           },
           "completed_at": {
@@ -1335,7 +1422,8 @@
           "visuals",
           "credits",
           "created_at",
-          "steps"
+          "steps",
+          "approvals"
         ],
         "title": "AgentRunDetail",
         "type": "object"
@@ -2142,6 +2230,249 @@
         "title": "AnswerRef",
         "type": "object"
       },
+      "ApiKey": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_prefix": {
+            "title": "Key Prefix",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "scopes": {
+            "items": {
+              "enum": [
+                "contacts:read",
+                "contacts:write",
+                "tags:read",
+                "tags:write",
+                "conversations:read",
+                "messages:send",
+                "automations:read",
+                "webhooks:subscribe"
+              ],
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "key_prefix",
+          "scopes",
+          "created_at"
+        ],
+        "title": "ApiKey",
+        "type": "object"
+      },
+      "ApiKeyCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "scopes": {
+            "items": {
+              "enum": [
+                "contacts:read",
+                "contacts:write",
+                "tags:read",
+                "tags:write",
+                "conversations:read",
+                "messages:send",
+                "automations:read",
+                "webhooks:subscribe"
+              ],
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "scopes"
+        ],
+        "title": "ApiKeyCreate",
+        "type": "object"
+      },
+      "ApiKeyList": {
+        "properties": {
+          "active_limit": {
+            "title": "Active Limit",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApiKey"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "scopes": {
+            "items": {
+              "$ref": "#/components/schemas/ApiScope"
+            },
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "scopes",
+          "active_limit"
+        ],
+        "title": "ApiKeyList",
+        "type": "object"
+      },
+      "ApiKeyWithKey": {
+        "description": "Create only: the key itself, shown this once. Only its hash is kept.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "key_prefix": {
+            "title": "Key Prefix",
+            "type": "string"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "scopes": {
+            "items": {
+              "enum": [
+                "contacts:read",
+                "contacts:write",
+                "tags:read",
+                "tags:write",
+                "conversations:read",
+                "messages:send",
+                "automations:read",
+                "webhooks:subscribe"
+              ],
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "key_prefix",
+          "scopes",
+          "created_at",
+          "key"
+        ],
+        "title": "ApiKeyWithKey",
+        "type": "object"
+      },
+      "ApiScope": {
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "contacts:read",
+              "contacts:write",
+              "tags:read",
+              "tags:write",
+              "conversations:read",
+              "messages:send",
+              "automations:read",
+              "webhooks:subscribe"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "description"
+        ],
+        "title": "ApiScope",
+        "type": "object"
+      },
       "ApprovalApprove": {
         "additionalProperties": false,
         "description": "Approve as shown, or with edited arguments (Edit): the edit replaces the payload and is\nchecked by the gateway again (TR-AGT-04).",
@@ -2160,6 +2491,124 @@
           }
         },
         "title": "ApprovalApprove",
+        "type": "object"
+      },
+      "ApprovalEvent": {
+        "description": "One line of an approval's audit trail (GR-36): who did what, and when.",
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Actor"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "event": {
+            "enum": [
+              "proposed",
+              "approved",
+              "rejected",
+              "expired",
+              "executed",
+              "failed"
+            ],
+            "title": "Event",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "event",
+          "detail",
+          "created_at"
+        ],
+        "title": "ApprovalEvent",
+        "type": "object"
+      },
+      "ApprovalOutcome": {
+        "description": "What approving did (GR-36). ``ok`` false: the service refused it, nothing was saved, and\nthe approval is still pending so the member can edit it or reject it.",
+        "properties": {
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "resource_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "automation",
+                  "segment"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Kind"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "summary"
+        ],
+        "title": "ApprovalOutcome",
         "type": "object"
       },
       "AskStep": {
@@ -2399,6 +2848,141 @@
           "url"
         ],
         "title": "Attachment",
+        "type": "object"
+      },
+      "AudienceCounts": {
+        "properties": {
+          "eligible": {
+            "title": "Eligible",
+            "type": "integer"
+          },
+          "matching": {
+            "title": "Matching",
+            "type": "integer"
+          },
+          "missing_value": {
+            "title": "Missing Value",
+            "type": "integer"
+          },
+          "no_consent": {
+            "title": "No Consent",
+            "type": "integer"
+          },
+          "opted_out": {
+            "title": "Opted Out",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "matching",
+          "eligible",
+          "opted_out",
+          "no_consent",
+          "missing_value"
+        ],
+        "title": "AudienceCounts",
+        "type": "object"
+      },
+      "AuditEvent": {
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "actor_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor Name"
+          },
+          "actor_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor User Id"
+          },
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          },
+          "target_type": {
+            "title": "Target Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "actor_user_id",
+          "actor_name",
+          "action",
+          "target_type",
+          "target_id",
+          "detail"
+        ],
+        "title": "AuditEvent",
+        "type": "object"
+      },
+      "AuditEventList": {
+        "properties": {
+          "actions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Actions",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEvent"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items",
+          "has_more",
+          "actions"
+        ],
+        "title": "AuditEventList",
         "type": "object"
       },
       "Automation": {
@@ -4098,6 +4682,102 @@
         "title": "Baseline",
         "type": "object"
       },
+      "BestTimeDay": {
+        "description": "One weekday's suggestion. ``local_time`` is None when the account's history is too thin for\nthis day (``posts`` is how many posts the suggested hour is based on, else 0).",
+        "properties": {
+          "lift_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lift Percent"
+          },
+          "local_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Time"
+          },
+          "posts": {
+            "default": 0,
+            "title": "Posts",
+            "type": "integer"
+          },
+          "weekday": {
+            "title": "Weekday",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "weekday"
+        ],
+        "title": "BestTimeDay",
+        "type": "object"
+      },
+      "BestTimes": {
+        "description": "GET \u2026/social-accounts/{id}/best-times: a suggested posting time per weekday, worked out\nfrom the account's own posts (never by an AI model). ``enough_history`` is false, and every\nday empty, until the account has ``min_posts`` posts with known engagement. Cached for a few\nhours.",
+        "properties": {
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/BestTimeDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "enough_history": {
+            "title": "Enough History",
+            "type": "boolean"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "min_posts": {
+            "title": "Min Posts",
+            "type": "integer"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "social_account_id",
+          "timezone",
+          "enough_history",
+          "sample_size",
+          "min_posts",
+          "method",
+          "days",
+          "computed_at"
+        ],
+        "title": "BestTimes",
+        "type": "object"
+      },
       "BillingPrice": {
         "properties": {
           "amount_minor": {
@@ -4334,6 +5014,556 @@
           "id"
         ],
         "title": "BranchStep",
+        "type": "object"
+      },
+      "Broadcast": {
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "audience_size": {
+            "title": "Audience Size",
+            "type": "integer"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CostEstimate"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/BroadcastCounts"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "paused_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused Code"
+          },
+          "paused_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paused Reason"
+          },
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          },
+          "segment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Id"
+          },
+          "segment_name": {
+            "title": "Segment Name",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "scheduled",
+              "sending",
+              "paused",
+              "completed",
+              "cancelled",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "template": {
+            "$ref": "#/components/schemas/BroadcastTemplate"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/VariableOut"
+            },
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "social_account_id",
+          "segment_name",
+          "template",
+          "variables",
+          "audience_size",
+          "counts",
+          "created_at"
+        ],
+        "title": "Broadcast",
+        "type": "object"
+      },
+      "BroadcastAvailability": {
+        "description": "Whether the web shows broadcasts at all (the BROADCASTS_ENABLED setting), and what the plan\nallows.",
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "monthly_limit": {
+            "default": 0,
+            "title": "Monthly Limit",
+            "type": "integer"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "plan_allowed": {
+            "default": false,
+            "title": "Plan Allowed",
+            "type": "boolean"
+          },
+          "rate_card": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RateCardOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "used_this_period": {
+            "default": 0,
+            "title": "Used This Period",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "BroadcastAvailability",
+        "type": "object"
+      },
+      "BroadcastCounts": {
+        "properties": {
+          "delivered": {
+            "title": "Delivered",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "queued": {
+            "title": "Queued",
+            "type": "integer"
+          },
+          "read": {
+            "title": "Read",
+            "type": "integer"
+          },
+          "replied": {
+            "title": "Replied",
+            "type": "integer"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "stopped": {
+            "title": "Stopped",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total",
+          "queued",
+          "sent",
+          "delivered",
+          "read",
+          "failed",
+          "skipped",
+          "replied",
+          "stopped"
+        ],
+        "title": "BroadcastCounts",
+        "type": "object"
+      },
+      "BroadcastCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "segment_id": {
+            "format": "uuid",
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "template_language": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Template Language",
+            "type": "string"
+          },
+          "template_name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Template Name",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/VariableSpec"
+            },
+            "maxItems": 10,
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "social_account_id",
+          "segment_id",
+          "template_name",
+          "template_language",
+          "name"
+        ],
+        "title": "BroadcastCreate",
+        "type": "object"
+      },
+      "BroadcastDraft": {
+        "additionalProperties": false,
+        "description": "What a broadcast says and who gets it; the preview takes only this.",
+        "properties": {
+          "segment_id": {
+            "format": "uuid",
+            "title": "Segment Id",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "template_language": {
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Template Language",
+            "type": "string"
+          },
+          "template_name": {
+            "maxLength": 512,
+            "minLength": 1,
+            "title": "Template Name",
+            "type": "string"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/VariableSpec"
+            },
+            "maxItems": 10,
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "social_account_id",
+          "segment_id",
+          "template_name",
+          "template_language"
+        ],
+        "title": "BroadcastDraft",
+        "type": "object"
+      },
+      "BroadcastList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Broadcast"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "BroadcastList",
+        "type": "object"
+      },
+      "BroadcastPreview": {
+        "properties": {
+          "audience": {
+            "$ref": "#/components/schemas/AudienceCounts"
+          },
+          "cost": {
+            "$ref": "#/components/schemas/CostEstimate"
+          },
+          "number": {
+            "$ref": "#/components/schemas/NumberInfo"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "quota": {
+            "$ref": "#/components/schemas/QuotaInfo"
+          },
+          "sample": {
+            "$ref": "#/components/schemas/SamplePreview"
+          }
+        },
+        "required": [
+          "audience",
+          "cost",
+          "quota",
+          "number",
+          "sample"
+        ],
+        "title": "BroadcastPreview",
+        "type": "object"
+      },
+      "BroadcastStart": {
+        "additionalProperties": false,
+        "description": "Send now, or at ``scheduled_at`` (at least a minute from now).",
+        "properties": {
+          "scheduled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scheduled At"
+          }
+        },
+        "title": "BroadcastStart",
+        "type": "object"
+      },
+      "BroadcastTemplate": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "language",
+          "category",
+          "body"
+        ],
+        "title": "BroadcastTemplate",
+        "type": "object"
+      },
+      "BroadcastUpdate": {
+        "additionalProperties": false,
+        "description": "Change a draft or a scheduled broadcast. Everything is optional; a changed number,\nsegment or template must still fit the others.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "segment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment Id"
+          },
+          "social_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Account Id"
+          },
+          "template_language": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Language"
+          },
+          "template_name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Name"
+          },
+          "variables": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VariableSpec"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variables"
+          }
+        },
+        "title": "BroadcastUpdate",
         "type": "object"
       },
       "BulkPause": {
@@ -4805,7 +6035,9 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook",
+              "web"
             ],
             "title": "Platform",
             "type": "string"
@@ -5546,7 +6778,8 @@
               "flow",
               "stop_reply",
               "member",
-              "import"
+              "import",
+              "widget"
             ],
             "title": "Source",
             "type": "string"
@@ -5840,7 +7073,9 @@
               {
                 "enum": [
                   "instagram",
-                  "whatsapp"
+                  "whatsapp",
+                  "facebook",
+                  "web"
                 ],
                 "type": "string"
               },
@@ -6019,7 +7254,9 @@
               {
                 "enum": [
                   "instagram",
-                  "whatsapp"
+                  "whatsapp",
+                  "facebook",
+                  "web"
                 ],
                 "type": "string"
               },
@@ -6746,6 +7983,7 @@
                   "human",
                   "ai_auto",
                   "automation",
+                  "broadcast",
                   "native_app",
                   "system"
                 ],
@@ -6820,7 +8058,9 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook",
+              "web"
             ],
             "title": "Platform",
             "type": "string"
@@ -7193,6 +8433,7 @@
                   "human",
                   "ai_auto",
                   "automation",
+                  "broadcast",
                   "native_app",
                   "system"
                 ],
@@ -7247,7 +8488,9 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook",
+              "web"
             ],
             "title": "Platform",
             "type": "string"
@@ -7389,6 +8632,52 @@
           "updated_at"
         ],
         "title": "ConversationSummary",
+        "type": "object"
+      },
+      "CostEstimate": {
+        "description": "Meta's rate card times the people to send to. Information, not a charge: the business pays\nMeta directly (PD-3). The card is typed in by hand and unverified.",
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "per_message": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Per Message",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "currency",
+          "category",
+          "per_message",
+          "total",
+          "as_of",
+          "source",
+          "verified"
+        ],
+        "title": "CostEstimate",
         "type": "object"
       },
       "DailyRuns": {
@@ -7883,6 +9172,135 @@
         "title": "ExcludePath",
         "type": "object"
       },
+      "FacebookConnectPages": {
+        "additionalProperties": false,
+        "description": "The Pages to connect, picked from the list the same nonce returned.",
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          },
+          "page_ids": {
+            "items": {
+              "maxLength": 64,
+              "minLength": 1,
+              "type": "string"
+            },
+            "maxItems": 25,
+            "minItems": 1,
+            "title": "Page Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "nonce",
+          "page_ids"
+        ],
+        "title": "FacebookConnectPages",
+        "type": "object"
+      },
+      "FacebookPageList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FacebookPageOption"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "FacebookPageList",
+        "type": "object"
+      },
+      "FacebookPageOption": {
+        "properties": {
+          "can_connect": {
+            "default": true,
+            "title": "Can Connect",
+            "type": "boolean"
+          },
+          "connected": {
+            "default": false,
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "picture_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Picture Url"
+          },
+          "problem": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Problem"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "FacebookPageOption",
+        "type": "object"
+      },
+      "FacebookPagesRequest": {
+        "additionalProperties": false,
+        "description": "The nonce the OAuth callback put in the Connections page's URL (?facebook=\u2026).",
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "FacebookPagesRequest",
+        "type": "object"
+      },
       "FieldCondition": {
         "additionalProperties": false,
         "description": "``equals`` ignores case; ``set`` is any value.",
@@ -8356,6 +9774,79 @@
         "title": "FlowPreviewStep",
         "type": "object"
       },
+      "FlowProposalAction": {
+        "properties": {
+          "approval_id": {
+            "format": "uuid",
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "automation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Automation Id"
+          },
+          "kind": {
+            "const": "flow_proposal",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Lines",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "route",
+          "approval_id",
+          "title",
+          "lines",
+          "kind",
+          "step_count"
+        ],
+        "title": "FlowProposalAction",
+        "type": "object"
+      },
       "FollowsCondition": {
         "additionalProperties": false,
         "description": "Whether they follow the account, read when the step runs; unknown counts as neither.",
@@ -8473,6 +9964,161 @@
           "consents"
         ],
         "title": "FunnelStep",
+        "type": "object"
+      },
+      "GoogleConnectComplete": {
+        "additionalProperties": false,
+        "description": "The nonce the OAuth callback put in the Integrations page's URL (?google=\u2026).",
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "GoogleConnectComplete",
+        "type": "object"
+      },
+      "GoogleConnectStart": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "GoogleConnectStart",
+        "type": "object"
+      },
+      "GoogleSheetsStatus": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/SheetColumnOut"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "entitled": {
+            "title": "Entitled",
+            "type": "boolean"
+          },
+          "failed_rows": {
+            "default": 0,
+            "title": "Failed Rows",
+            "type": "integer"
+          },
+          "fields": {
+            "items": {
+              "$ref": "#/components/schemas/SheetFieldOption"
+            },
+            "title": "Fields",
+            "type": "array"
+          },
+          "google_email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Google Email"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_failure_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Failure At"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "pending_rows": {
+            "default": 0,
+            "title": "Pending Rows",
+            "type": "integer"
+          },
+          "recent": {
+            "items": {
+              "$ref": "#/components/schemas/SheetRowOut"
+            },
+            "title": "Recent",
+            "type": "array"
+          },
+          "sheet": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SheetOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "needs_reconnect"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "required": [
+          "available",
+          "entitled",
+          "connected"
+        ],
+        "title": "GoogleSheetsStatus",
         "type": "object"
       },
       "HandOff": {
@@ -8881,6 +10527,112 @@
           "count"
         ],
         "title": "IntentCount",
+        "type": "object"
+      },
+      "Invitation": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invited_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invited By Name"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "expired",
+              "accepted",
+              "revoked"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "email",
+          "role",
+          "status",
+          "invited_by_name",
+          "expires_at",
+          "created_at"
+        ],
+        "title": "Invitation",
+        "type": "object"
+      },
+      "InvitationCreate": {
+        "additionalProperties": false,
+        "description": "Owners invite admins or agents; admins invite agents only.",
+        "properties": {
+          "email": {
+            "maxLength": 254,
+            "minLength": 3,
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email",
+            "type": "string"
+          },
+          "role": {
+            "enum": [
+              "admin",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "role"
+        ],
+        "title": "InvitationCreate",
+        "type": "object"
+      },
+      "InvitationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Invitation"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "InvitationList",
         "type": "object"
       },
       "KnowledgeGap": {
@@ -10017,6 +11769,122 @@
         "title": "MediaAssetOut",
         "type": "object"
       },
+      "Member": {
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "is_you": {
+            "title": "Is You",
+            "type": "boolean"
+          },
+          "joined_at": {
+            "format": "date-time",
+            "title": "Joined At",
+            "type": "string"
+          },
+          "last_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Seen At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "role": {
+            "enum": [
+              "owner",
+              "admin",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "email",
+          "avatar_url",
+          "role",
+          "last_seen_at",
+          "joined_at",
+          "is_you"
+        ],
+        "title": "Member",
+        "type": "object"
+      },
+      "MemberList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "seats": {
+            "$ref": "#/components/schemas/Seats"
+          }
+        },
+        "required": [
+          "items",
+          "seats"
+        ],
+        "title": "MemberList",
+        "type": "object"
+      },
+      "MemberRolePatch": {
+        "additionalProperties": false,
+        "description": "Admin or agent. Ownership moves only through the transfer route.",
+        "properties": {
+          "role": {
+            "enum": [
+              "admin",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "MemberRolePatch",
+        "type": "object"
+      },
       "MentionContact": {
         "properties": {
           "display_name": {
@@ -10249,6 +12117,7 @@
               "human",
               "ai_auto",
               "automation",
+              "broadcast",
               "native_app",
               "system"
             ],
@@ -10933,6 +12802,46 @@
         "title": "NotifyTeam",
         "type": "object"
       },
+      "NumberInfo": {
+        "properties": {
+          "daily_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Limit"
+          },
+          "days_to_send": {
+            "title": "Days To Send",
+            "type": "integer"
+          },
+          "limit_known": {
+            "title": "Limit Known",
+            "type": "boolean"
+          },
+          "quality_rating": {
+            "enum": [
+              "green",
+              "yellow",
+              "red",
+              "unknown"
+            ],
+            "title": "Quality Rating",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quality_rating",
+          "limit_known",
+          "days_to_send"
+        ],
+        "title": "NumberInfo",
+        "type": "object"
+      },
       "OverlapWarning": {
         "properties": {
           "automation_id": {
@@ -11035,7 +12944,9 @@
             "items": {
               "enum": [
                 "instagram",
-                "whatsapp"
+                "whatsapp",
+                "facebook",
+                "web"
               ],
               "type": "string"
             },
@@ -11407,6 +13318,29 @@
         "title": "OverviewPost",
         "type": "object"
       },
+      "OwnershipTransfer": {
+        "additionalProperties": false,
+        "description": "Hand the workspace to another member. The previous owner becomes an admin. Type the\nworkspace's name to confirm.",
+        "properties": {
+          "confirm_name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Confirm Name",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "confirm_name"
+        ],
+        "title": "OwnershipTransfer",
+        "type": "object"
+      },
       "PaymentList": {
         "properties": {
           "items": {
@@ -11620,7 +13554,8 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook"
             ],
             "title": "Platform",
             "type": "string"
@@ -12600,7 +14535,9 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook",
+              "web"
             ],
             "title": "Platform",
             "type": "string"
@@ -12667,10 +14604,10 @@
       },
       "PrivateReplyCreate": {
         "additionalProperties": false,
-        "description": "POST \u2026/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's\nprivate replies carry no attachments). Instagram's limit is 1,000 bytes; the service checks\nbytes.",
+        "description": "POST \u2026/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's\nprivate replies carry no attachments). Instagram's limit is 1,000 bytes and a Facebook Page's\n2,000 characters (GR-29); the service checks the account's own limit; this only bounds the body\nsize.",
         "properties": {
           "text": {
-            "maxLength": 1000,
+            "maxLength": 4096,
             "minLength": 1,
             "title": "Text",
             "type": "string"
@@ -13014,6 +14951,46 @@
         "title": "QuickReplyOut",
         "type": "object"
       },
+      "QuotaInfo": {
+        "properties": {
+          "fits": {
+            "title": "Fits",
+            "type": "boolean"
+          },
+          "limit": {
+            "title": "Limit",
+            "type": "integer"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "remaining": {
+            "title": "Remaining",
+            "type": "integer"
+          },
+          "used": {
+            "title": "Used",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "limit",
+          "used",
+          "remaining",
+          "fits"
+        ],
+        "title": "QuotaInfo",
+        "type": "object"
+      },
       "RandomizeStep": {
         "additionalProperties": false,
         "description": "An A/B split: each run takes one path, at random by weight.",
@@ -13203,6 +15180,48 @@
         "title": "RankedPostsVisual",
         "type": "object"
       },
+      "RateCardOut": {
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "country": {
+            "title": "Country",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "rates": {
+            "additionalProperties": {
+              "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+              "type": "string"
+            },
+            "title": "Rates",
+            "type": "object"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "verified": {
+            "title": "Verified",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "currency",
+          "country",
+          "as_of",
+          "source",
+          "verified",
+          "rates"
+        ],
+        "title": "RateCardOut",
+        "type": "object"
+      },
       "Reaction": {
         "properties": {
           "at": {
@@ -13229,6 +15248,121 @@
           "at"
         ],
         "title": "Reaction",
+        "type": "object"
+      },
+      "Recipient": {
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "dispatched_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatched At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "replied": {
+            "title": "Replied",
+            "type": "boolean"
+          },
+          "status": {
+            "enum": [
+              "queued",
+              "sent",
+              "delivered",
+              "read",
+              "failed",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "stopped": {
+            "title": "Stopped",
+            "type": "boolean"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "contact_id",
+          "contact_name",
+          "status",
+          "replied",
+          "stopped"
+        ],
+        "title": "Recipient",
+        "type": "object"
+      },
+      "RecipientList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Recipient"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "RecipientList",
         "type": "object"
       },
       "RemoveTag": {
@@ -13379,6 +15513,7 @@
               "story_mentions",
               "conversations_from_links",
               "conversations_from_ads",
+              "captures",
               "leads_qualified",
               "leads_won"
             ],
@@ -13620,9 +15755,51 @@
         "title": "RunError",
         "type": "object"
       },
+      "SamplePreview": {
+        "properties": {
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "SamplePreview",
+        "type": "object"
+      },
+      "SandboxAccountCreate": {
+        "additionalProperties": false,
+        "description": "Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)\nor a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.",
+        "properties": {
+          "platform": {
+            "default": "instagram",
+            "enum": [
+              "instagram",
+              "facebook",
+              "whatsapp"
+            ],
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "title": "SandboxAccountCreate",
+        "type": "object"
+      },
       "SandboxInbound": {
         "additionalProperties": false,
-        "description": "A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry\nlink opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live\ncomment; a DM can carry an ad referral (its first message from an ad). GR-06 and GR-07 add a\nstory reply, a story like (the heart) and a story mention.",
+        "description": "A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).\nGR-01 adds a referral without a message (an entry link opened, or an ad tapped), a tapped\npostback (an ice breaker), an opt-in and a Live comment; a DM can carry an ad referral (its\nfirst message from an ad). GR-06 and GR-07 add a\nstory reply, a story like (the heart) and a story mention. A Facebook Page takes a DM, a\ncomment on a post, a referral, a postback and an opt-in; the kinds it doesn't have are\nrefused (GR-29).\n\nGR-23 adds two kinds for a sandbox WhatsApp number, and lets a ``dm`` be a WhatsApp customer's\nmessage (``from_id`` is their number): ``status`` is a delivery status for the last message we\nsent that contact (``delivery_status``, with ``error_code`` and ``error_text`` for a failure),\nand ``quality`` a ``phone_number_quality_update`` (``quality_event``, ``tier``).",
         "properties": {
           "account_id": {
             "format": "uuid",
@@ -13666,6 +15843,48 @@
             ],
             "title": "Age Seconds"
           },
+          "delivery_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "sent",
+                  "delivered",
+                  "read",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Status"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "maximum": 999999.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "error_text": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Text"
+          },
           "from_id": {
             "anyOf": [
               {
@@ -13700,7 +15919,9 @@
               "optin",
               "story_reply",
               "story_like",
-              "story_mention"
+              "story_mention",
+              "status",
+              "quality"
             ],
             "title": "Kind",
             "type": "string"
@@ -13716,6 +15937,24 @@
               }
             ],
             "title": "Postback Payload"
+          },
+          "quality_event": {
+            "anyOf": [
+              {
+                "enum": [
+                  "ONBOARDING",
+                  "UPGRADE",
+                  "DOWNGRADE",
+                  "FLAGGED",
+                  "UNFLAGGED"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality Event"
           },
           "quick_reply_payload": {
             "anyOf": [
@@ -13780,6 +16019,18 @@
               }
             ],
             "title": "Text"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
           }
         },
         "required": [
@@ -14144,7 +16395,9 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook",
+              "web"
             ],
             "title": "Platform",
             "type": "string"
@@ -14340,7 +16593,9 @@
                 "enum": [
                   "image",
                   "carousel",
-                  "reel"
+                  "reel",
+                  "story",
+                  "text"
                 ],
                 "type": "string"
               },
@@ -14353,6 +16608,15 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "post",
+            "enum": [
+              "post",
+              "story"
+            ],
+            "title": "Kind",
             "type": "string"
           },
           "publish_at": {
@@ -14467,6 +16731,15 @@
             ],
             "title": "First Comment"
           },
+          "kind": {
+            "default": "post",
+            "enum": [
+              "post",
+              "story"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "publish_at": {
             "anyOf": [
               {
@@ -14540,7 +16813,9 @@
                 "enum": [
                   "image",
                   "carousel",
-                  "reel"
+                  "reel",
+                  "story",
+                  "text"
                 ],
                 "type": "string"
               },
@@ -14553,6 +16828,15 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "post",
+            "enum": [
+              "post",
+              "story"
+            ],
+            "title": "Kind",
             "type": "string"
           },
           "publish_at": {
@@ -14652,6 +16936,18 @@
               }
             ]
           },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
           "first_comment": {
             "anyOf": [
               {
@@ -14731,6 +17027,37 @@
           "status"
         ],
         "title": "ScheduledPostTarget",
+        "type": "object"
+      },
+      "Seats": {
+        "description": "Members plus pending invitations against the plan's ``members`` limit (null: unlimited).",
+        "properties": {
+          "limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Limit"
+          },
+          "members": {
+            "title": "Members",
+            "type": "integer"
+          },
+          "pending_invitations": {
+            "title": "Pending Invitations",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "members",
+          "pending_invitations",
+          "limit"
+        ],
+        "title": "Seats",
         "type": "object"
       },
       "Segment": {
@@ -14826,6 +17153,67 @@
           }
         },
         "title": "SegmentPatch",
+        "type": "object"
+      },
+      "SegmentProposalAction": {
+        "properties": {
+          "approval_id": {
+            "format": "uuid",
+            "title": "Approval Id",
+            "type": "string"
+          },
+          "kind": {
+            "const": "segment_proposal",
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Lines",
+            "type": "array"
+          },
+          "match_count": {
+            "title": "Match Count",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "route": {
+            "title": "Route",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "route",
+          "approval_id",
+          "title",
+          "lines",
+          "kind",
+          "match_count"
+        ],
+        "title": "SegmentProposalAction",
         "type": "object"
       },
       "SendMessage": {
@@ -15317,6 +17705,241 @@
         "title": "SetField",
         "type": "object"
       },
+      "SheetColumn": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Field",
+            "type": "string"
+          },
+          "header": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Header",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "header"
+        ],
+        "title": "SheetColumn",
+        "type": "object"
+      },
+      "SheetColumnOut": {
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "header": {
+            "title": "Header",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "header"
+        ],
+        "title": "SheetColumnOut",
+        "type": "object"
+      },
+      "SheetCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "default": "Social Hood leads",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "title": "SheetCreate",
+        "type": "object"
+      },
+      "SheetFieldOption": {
+        "properties": {
+          "custom": {
+            "title": "Custom",
+            "type": "boolean"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "label",
+          "custom"
+        ],
+        "title": "SheetFieldOption",
+        "type": "object"
+      },
+      "SheetMappingPut": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/SheetColumn"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          }
+        },
+        "required": [
+          "columns"
+        ],
+        "title": "SheetMappingPut",
+        "type": "object"
+      },
+      "SheetOut": {
+        "properties": {
+          "spreadsheet_id": {
+            "title": "Spreadsheet Id",
+            "type": "string"
+          },
+          "tab": {
+            "title": "Tab",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "spreadsheet_id",
+          "title",
+          "url",
+          "tab"
+        ],
+        "title": "SheetOut",
+        "type": "object"
+      },
+      "SheetRowOut": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt At"
+          },
+          "next_attempt_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Attempt At"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "succeeded",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "attempts",
+          "created_at"
+        ],
+        "title": "SheetRowOut",
+        "type": "object"
+      },
+      "SheetSelect": {
+        "additionalProperties": false,
+        "properties": {
+          "link": {
+            "maxLength": 300,
+            "minLength": 1,
+            "title": "Link",
+            "type": "string"
+          }
+        },
+        "required": [
+          "link"
+        ],
+        "title": "SheetSelect",
+        "type": "object"
+      },
+      "SheetTestResult": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok"
+        ],
+        "title": "SheetTestResult",
+        "type": "object"
+      },
       "SiteCrawlInfo": {
         "description": "GR-35: where a site source's crawl is. Counts are of this site's pages.",
         "properties": {
@@ -15718,7 +18341,9 @@
           "platform": {
             "enum": [
               "instagram",
-              "whatsapp"
+              "whatsapp",
+              "facebook",
+              "web"
             ],
             "title": "Platform",
             "type": "string"
@@ -16562,7 +19187,8 @@
               "story_mention",
               "consent",
               "tag",
-              "lead_stage"
+              "lead_stage",
+              "broadcast"
             ],
             "title": "Kind",
             "type": "string"
@@ -16812,6 +19438,111 @@
           "used"
         ],
         "title": "UsageMeter",
+        "type": "object"
+      },
+      "VariableOut": {
+        "properties": {
+          "fallback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "source": {
+            "enum": [
+              "field",
+              "fixed"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "VariableOut",
+        "type": "object"
+      },
+      "VariableSpec": {
+        "additionalProperties": false,
+        "description": "One template variable: a contact field (with the text to use when the person has none) or\na fixed text. ``field`` is first_name, name, username, email, phone or a custom field's key.",
+        "properties": {
+          "fallback": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fallback"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "source": {
+            "enum": [
+              "field",
+              "fixed"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "title": "VariableSpec",
         "type": "object"
       },
       "VisualPeriod": {
@@ -17469,14 +20200,6 @@
             "title": "Needs You",
             "type": "integer"
           },
-          "notes": {
-            "items": {
-              "const": "captures_not_built",
-              "type": "string"
-            },
-            "title": "Notes",
-            "type": "array"
-          },
           "open_questions": {
             "title": "Open Questions",
             "type": "integer"
@@ -17544,8 +20267,7 @@
           "top_posts",
           "needs_you",
           "open_questions",
-          "top_questions",
-          "notes"
+          "top_questions"
         ],
         "title": "WeeklyReport",
         "type": "object"
@@ -17607,6 +20329,285 @@
           "items"
         ],
         "title": "WhatsAppTemplateList",
+        "type": "object"
+      },
+      "WidgetSettingsOut": {
+        "properties": {
+          "accent_color": {
+            "title": "Accent Color",
+            "type": "string"
+          },
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "ai_mode": {
+            "enum": [
+              "off",
+              "suggest",
+              "auto"
+            ],
+            "title": "Ai Mode",
+            "type": "string"
+          },
+          "allowed_domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Allowed Domains",
+            "type": "array"
+          },
+          "can_remove_branding": {
+            "title": "Can Remove Branding",
+            "type": "boolean"
+          },
+          "conversations_daily_limit": {
+            "title": "Conversations Daily Limit",
+            "type": "integer"
+          },
+          "conversations_today": {
+            "title": "Conversations Today",
+            "type": "integer"
+          },
+          "email_capture": {
+            "enum": [
+              "off",
+              "optional",
+              "required"
+            ],
+            "title": "Email Capture",
+            "type": "string"
+          },
+          "email_prompt": {
+            "title": "Email Prompt",
+            "type": "string"
+          },
+          "embed_snippet": {
+            "title": "Embed Snippet",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "greeting": {
+            "title": "Greeting",
+            "type": "string"
+          },
+          "marketing_consent_enabled": {
+            "title": "Marketing Consent Enabled",
+            "type": "boolean"
+          },
+          "marketing_consent_text": {
+            "title": "Marketing Consent Text",
+            "type": "string"
+          },
+          "position": {
+            "enum": [
+              "right",
+              "left"
+            ],
+            "title": "Position",
+            "type": "string"
+          },
+          "script_url": {
+            "title": "Script Url",
+            "type": "string"
+          },
+          "show_branding": {
+            "title": "Show Branding",
+            "type": "boolean"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "widget_id": {
+            "title": "Widget Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "widget_id",
+          "enabled",
+          "allowed_domains",
+          "accent_color",
+          "title",
+          "greeting",
+          "position",
+          "email_capture",
+          "email_prompt",
+          "marketing_consent_enabled",
+          "marketing_consent_text",
+          "show_branding",
+          "can_remove_branding",
+          "ai_mode",
+          "script_url",
+          "embed_snippet",
+          "conversations_today",
+          "conversations_daily_limit",
+          "updated_at"
+        ],
+        "title": "WidgetSettingsOut",
+        "type": "object"
+      },
+      "WidgetSettingsUpdate": {
+        "additionalProperties": false,
+        "properties": {
+          "accent_color": {
+            "anyOf": [
+              {
+                "maxLength": 7,
+                "pattern": "^#[0-9A-Fa-f]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accent Color"
+          },
+          "allowed_domains": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 253,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Domains"
+          },
+          "email_capture": {
+            "anyOf": [
+              {
+                "enum": [
+                  "off",
+                  "optional",
+                  "required"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Capture"
+          },
+          "email_prompt": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email Prompt"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "greeting": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Greeting"
+          },
+          "marketing_consent_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marketing Consent Enabled"
+          },
+          "marketing_consent_text": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Marketing Consent Text"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "enum": [
+                  "right",
+                  "left"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "show_branding": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Show Branding"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "WidgetSettingsUpdate",
         "type": "object"
       },
       "WinningAutomation": {
@@ -17862,6 +20863,33 @@
           }
         },
         "title": "WorkspacePatch",
+        "type": "object"
+      },
+      "WorkspacePermissions": {
+        "description": "What the signed-in member may do here. The web app's can() reads this list; it never\nkeeps a copy of the matrix.",
+        "properties": {
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "role": {
+            "enum": [
+              "owner",
+              "admin",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "permissions"
+        ],
+        "title": "WorkspacePermissions",
         "type": "object"
       },
       "WorkspaceSummary": {
@@ -18438,7 +21466,8 @@
                     "flow_step",
                     "message",
                     "webhook_delivery",
-                    "account"
+                    "account",
+                    "broadcast"
                   ],
                   "type": "string"
                 },
@@ -18553,7 +21582,7 @@
     },
     "/v1/w/{wid}/agent/approvals": {
       "get": {
-        "description": "R2: approvals across runs; a member sees the ones they may decide (their own runs' writes\ntheir role allows), owners and admins all.",
+        "description": "The writes the agent proposed, soonest to expire first (\"Waiting for you\"): owners and\nadmins see every approval, a member those of their own runs. ``status`` ``all`` keeps every\nstatus; ``run_id`` one run's. Approvals past their time are marked expired first.",
         "operationId": "list_agent_approvals",
         "parameters": [
           {
@@ -18577,10 +21606,28 @@
                 "approved",
                 "rejected",
                 "expired",
-                "superseded"
+                "superseded",
+                "all"
               ],
               "title": "Status",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "run_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Run Id"
             }
           },
           {
@@ -18648,13 +21695,12 @@
         "summary": "List Agent Approvals",
         "tags": [
           "agent"
-        ],
-        "x-pending": "R2"
+        ]
       }
     },
     "/v1/w/{wid}/agent/approvals/{approval_id}/approve": {
       "post": {
-        "description": "R2: run the write as shown, or with edited ``args`` (re-checked by the gateway). The\ncaller's role must allow the tool (403 forbidden); 409 when it is no longer pending.",
+        "description": "Run the write as proposed, or with edited ``args``, through the normal service (what the\nscreen would do by hand). 403 forbidden when the caller's role couldn't do it by hand; 404\nwhen it isn't the caller's to see; 409 when it is no longer pending (decided or expired); 422\nfor edited arguments that don't fit. When the service refuses it (a name taken since, a plan\nlimit) nothing is saved, the approval stays pending and its ``outcome`` says why.",
         "operationId": "approve_agent_approval",
         "parameters": [
           {
@@ -18723,13 +21769,12 @@
         "summary": "Approve Agent Approval",
         "tags": [
           "agent"
-        ],
-        "x-pending": "R2"
+        ]
       }
     },
     "/v1/w/{wid}/agent/approvals/{approval_id}/reject": {
       "post": {
-        "description": "R2: cancel the write; the step is skipped and the run continues without it. 409 when it\nis no longer pending.",
+        "description": "Say no: nothing is saved. 404 when it isn't the caller's to see; 409 when it is no longer\npending.",
         "operationId": "reject_agent_approval",
         "parameters": [
           {
@@ -18788,8 +21833,7 @@
         "summary": "Reject Agent Approval",
         "tags": [
           "agent"
-        ],
-        "x-pending": "R2"
+        ]
       }
     },
     "/v1/w/{wid}/agent/policy": {
@@ -20319,6 +23363,332 @@
         "summary": "List Top Posts",
         "tags": [
           "analytics"
+        ]
+      }
+    },
+    "/v1/w/{wid}/api-keys": {
+      "get": {
+        "description": "Newest first, revoked keys included, with every scope a key can carry.",
+        "operationId": "list_api_keys",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Api Keys",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "post": {
+        "description": "The key is in this response only. 402 entitlement_required on Free (the public API is part\nof Pro); 409 at 20 active keys.",
+        "operationId": "create_api_key",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApiKeyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKeyWithKey"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Api Key",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/api-keys/{key_id}": {
+      "delete": {
+        "description": "Stops the key working at once and removes the REST hooks it subscribed. Revoking a revoked\nkey changes nothing.",
+        "operationId": "revoke_api_key",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Key Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiKey"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Revoke Api Key",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/audit-events": {
+      "get": {
+        "description": "Who sent, edited or deleted what, newest first. ``until`` is exclusive.",
+        "operationId": "list_audit_events",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "member",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Member"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 60,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEventList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Audit Events",
+        "tags": [
+          "team"
         ]
       }
     },
@@ -22048,6 +25418,856 @@
         ]
       }
     },
+    "/v1/w/{wid}/broadcasts": {
+      "get": {
+        "description": "Newest first, each with its counts.",
+        "operationId": "list_broadcasts",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "scheduled",
+                    "sending",
+                    "paused",
+                    "completed",
+                    "cancelled",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Broadcasts",
+        "tags": [
+          "broadcasts"
+        ]
+      },
+      "post": {
+        "description": "Save a draft. Nothing is sent until it is started.",
+        "operationId": "create_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Broadcast"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/availability": {
+      "get": {
+        "description": "Whether broadcasts are switched on, what the plan allows this month and Meta's rate card.",
+        "operationId": "get_broadcast_availability",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastAvailability"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Broadcast Availability",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/preview": {
+      "post": {
+        "description": "Who would get it, who is skipped and why, what Meta's rate card says it costs, whether it\nfits the plan's recipients and the number's daily limit, and the message with a sample\ncontact. 402 on a plan without broadcasts; 404 for a number or segment of another workspace;\n422 names what doesn't fit the template.",
+        "operationId": "preview_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastDraft"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Preview Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/{broadcast_id}": {
+      "delete": {
+        "description": "Delete a draft, a cancelled or a failed broadcast; 409 for one that was sent.",
+        "operationId": "delete_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      },
+      "get": {
+        "operationId": "get_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Broadcast"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      },
+      "patch": {
+        "description": "Change a draft or scheduled broadcast; 409 once it has started.",
+        "operationId": "update_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Broadcast"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/cancel": {
+      "post": {
+        "description": "Stop for good: everyone still waiting is skipped. Messages already handed over still go.",
+        "operationId": "cancel_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Broadcast"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Cancel Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/pause": {
+      "post": {
+        "operationId": "pause_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Broadcast"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Pause Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/recipients": {
+      "get": {
+        "description": "The audience, by position, with each person's status; failed and skipped ones say why.",
+        "operationId": "list_broadcast_recipients",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "queued",
+                    "sent",
+                    "delivered",
+                    "read",
+                    "failed",
+                    "skipped"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 1000000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipientList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Broadcast Recipients",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/resume": {
+      "post": {
+        "description": "Resume a paused broadcast; 409 while the number's quality is Low.",
+        "operationId": "resume_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Broadcast"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Resume Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/start": {
+      "post": {
+        "description": "Send now, or at ``scheduled_at``. 402 without the plan or past the month's recipients, 409\nif it has already finished, 422 when no one can be sent to.",
+        "operationId": "start_broadcast",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "broadcast_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Broadcast Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BroadcastStart"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Broadcast"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Broadcast",
+        "tags": [
+          "broadcasts"
+        ]
+      }
+    },
     "/v1/w/{wid}/business-hours": {
       "get": {
         "description": "The workspace's schedule (in its time zone), and each account's own when it differs.",
@@ -23240,7 +27460,9 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp"
+                    "whatsapp",
+                    "facebook",
+                    "web"
                   ],
                   "type": "string"
                 },
@@ -23652,7 +27874,9 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp"
+                    "whatsapp",
+                    "facebook",
+                    "web"
                   ],
                   "type": "string"
                 },
@@ -23971,7 +28195,9 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp"
+                    "whatsapp",
+                    "facebook",
+                    "web"
                   ],
                   "type": "string"
                 },
@@ -24716,7 +28942,9 @@
                 {
                   "enum": [
                     "instagram",
-                    "whatsapp"
+                    "whatsapp",
+                    "facebook",
+                    "web"
                   ],
                   "type": "string"
                 },
@@ -25659,7 +29887,7 @@
     },
     "/v1/w/{wid}/dev/sandbox/accounts": {
       "post": {
-        "description": "Connect a fake Instagram account for local development.",
+        "description": "Connect a fake Instagram account for local development: with ``platform: facebook`` a fake\nFacebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved\ntemplates (GR-23).",
         "operationId": "create_sandbox_account",
         "parameters": [
           {
@@ -25673,6 +29901,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/SandboxAccountCreate"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "content": {
@@ -26481,6 +30726,702 @@
         "summary": "Update Hashtag Group",
         "tags": [
           "publishing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/google-sheets": {
+      "delete": {
+        "description": "Revoke Google's access and remove the connection and the rows still waiting.",
+        "operationId": "disconnect_google_sheets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Disconnect Google Sheets",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "get": {
+        "description": "The connection, its sheet and column mapping, the fields a column can hold and the latest\nrows with their results.",
+        "operationId": "get_google_sheets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleSheetsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Google Sheets",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/google-sheets/complete": {
+      "post": {
+        "description": "Finish a connect with the nonce the OAuth callback redirected with. Only the member who\nstarted it, in the workspace they started it in, can finish it; the nonce works once and for 10\nminutes. 404 when it expired or was used, 403 when someone else started it, 502 when Google\nfails.",
+        "operationId": "complete_google_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoogleConnectComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleSheetsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Complete Google Connect",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/google-sheets/connect": {
+      "post": {
+        "description": "Google's authorize URL (the narrow drive.file scope). 402 without Sheets sync on the plan,\n503 when Google isn't set up on this server.",
+        "operationId": "start_google_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleConnectStart"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Google Connect",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/google-sheets/mapping": {
+      "put": {
+        "description": "Which field goes in which column, in order. A sheet Social Hood made gets its header row\nupdated; a sheet that was already yours is not touched.",
+        "operationId": "save_google_sheet_mapping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SheetMappingPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleSheetsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Save Google Sheet Mapping",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/google-sheets/sheet": {
+      "post": {
+        "description": "Make a new sheet in the connected Google account, with a header row from the mapping.",
+        "operationId": "create_google_sheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SheetCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleSheetsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Google Sheet",
+        "tags": [
+          "integrations"
+        ]
+      },
+      "put": {
+        "description": "Use a sheet by its link. With the narrow scope Google lets Social Hood open only sheets it\nmade or was granted: any other gives 422 on ``link``.",
+        "operationId": "select_google_sheet",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SheetSelect"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoogleSheetsStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Select Google Sheet",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/google-sheets/test": {
+      "post": {
+        "description": "Add a sample row now. 409 with the reason in plain words when Google refuses it.",
+        "operationId": "send_google_sheet_test",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SheetTestResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Send Google Sheet Test",
+        "tags": [
+          "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/invitations": {
+      "get": {
+        "description": "Pending invitations, with the ones past their expiry marked expired.",
+        "operationId": "list_invitations",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvitationList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Invitations",
+        "tags": [
+          "team"
+        ]
+      },
+      "post": {
+        "description": "Invite by email. 402 when the plan's seats (members and pending invitations) are full;\n409 for a member or an open invitation; 403 when an admin invites an admin.",
+        "operationId": "create_invitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvitationCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Invitation",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/w/{wid}/invitations/{invitation_id}": {
+      "delete": {
+        "operationId": "revoke_invitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Revoke Invitation",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/w/{wid}/invitations/{invitation_id}/resend": {
+      "post": {
+        "operationId": "resend_invitation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invitation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Invitation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Resend Invitation",
+        "tags": [
+          "team"
         ]
       }
     },
@@ -27726,6 +32667,189 @@
         ]
       }
     },
+    "/v1/w/{wid}/members": {
+      "get": {
+        "description": "Members with role and last active, and the seats the plan allows.",
+        "operationId": "list_members",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Members",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/w/{wid}/members/{user_id}": {
+      "delete": {
+        "description": "Their past messages and changes stay attributed to them.",
+        "operationId": "remove_member",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Remove Member",
+        "tags": [
+          "team"
+        ]
+      },
+      "patch": {
+        "description": "Admin or agent. 409 for the owner of record: transfer ownership instead.",
+        "operationId": "update_member_role",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberRolePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Member Role",
+        "tags": [
+          "team"
+        ]
+      }
+    },
     "/v1/w/{wid}/message-analyses/{analysis_id}": {
       "patch": {
         "description": "FR-AI-04: change a message's intent or sentiment. The answer shows the corrected values\nwith ``corrected: true``; the conversation's chips follow a correction of its latest\nanalysis (conversation.updated).",
@@ -28287,6 +33411,124 @@
         "summary": "Get Overview",
         "tags": [
           "workspaces"
+        ]
+      }
+    },
+    "/v1/w/{wid}/ownership-transfer": {
+      "post": {
+        "description": "Make another member the owner; the caller becomes an admin. Needs the workspace name.",
+        "operationId": "transfer_ownership",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnershipTransfer"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Transfer Ownership",
+        "tags": [
+          "team"
+        ]
+      }
+    },
+    "/v1/w/{wid}/permissions": {
+      "get": {
+        "description": "The caller's role and permissions here; the web app hides what they can't do from it.",
+        "operationId": "get_workspace_permissions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspacePermissions"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Workspace Permissions",
+        "tags": [
+          "team"
         ]
       }
     },
@@ -30155,6 +35397,188 @@
         ]
       }
     },
+    "/v1/w/{wid}/social-accounts/facebook/connect": {
+      "post": {
+        "description": "Facebook's authorize URL. 503 until Facebook connections are configured, 402 over\naccounts_per_platform.",
+        "operationId": "start_facebook_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConnectStart"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Facebook Connect",
+        "tags": [
+          "facebook"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/facebook/connect-pages": {
+      "post": {
+        "description": "Connect the picked Pages. 422 page_ids for a Page that wasn't listed or that the person\ncan't answer messages for, 409 account_in_use when a Page is connected to another workspace,\n402 over accounts_per_platform (nothing is added, the nonce stays valid), 404 when it\nexpired.",
+        "operationId": "connect_facebook_pages",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FacebookConnectPages"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SocialAccountList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Connect Facebook Pages",
+        "tags": [
+          "facebook"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/facebook/pages": {
+      "post": {
+        "description": "The Pages the person who started the connect manages, from the nonce the OAuth callback\nredirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it\nexpired (10 minutes), 502 when Facebook fails. Asking again returns the same list.",
+        "operationId": "list_facebook_pages",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FacebookPagesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FacebookPageList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Facebook Pages",
+        "tags": [
+          "facebook"
+        ]
+      }
+    },
     "/v1/w/{wid}/social-accounts/instagram/complete": {
       "post": {
         "description": "Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only\nthe member who started the connect, in the workspace they started it in, can finish it; the\nnonce works once and for 10 minutes. 404 when it expired or was used, 403 when someone else\nstarted it, 422 ig_not_professional, 409 account_in_use, 402 over accounts_per_platform,\n502 when Instagram fails.",
@@ -30489,6 +35913,70 @@
         "summary": "Update Social Account",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/{account_id}/best-times": {
+      "get": {
+        "description": "GR-30: a suggested posting hour per weekday from the account's own posts (the method is in\nthe answer). Worked out by a service, cached for a few hours, never by an AI model; an account\nwith too little history says so (``enough_history`` false).",
+        "operationId": "get_best_times",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BestTimes"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Best Times",
+        "tags": [
+          "publishing"
         ]
       }
     },
@@ -32217,6 +37705,122 @@
         "summary": "List Webhook Events",
         "tags": [
           "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/widget": {
+      "get": {
+        "description": "The widget's settings and its embed code.",
+        "operationId": "get_widget_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Widget Settings",
+        "tags": [
+          "widget"
+        ]
+      },
+      "put": {
+        "description": "Change the fields sent; the others stay as they are.",
+        "operationId": "update_widget_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WidgetSettingsUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WidgetSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Widget Settings",
+        "tags": [
+          "widget"
         ]
       }
     },

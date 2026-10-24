@@ -21,6 +21,8 @@ export type Draft = {
   caption: string;
   first_comment: string | null;
   publish_at: string | null;
+  /** "story": the one photo or video publishes as an Instagram Story, without a caption (GR-39). */
+  kind: "post" | "story";
 };
 
 /** The editable fields of a stored post, assets in their order. */
@@ -34,6 +36,7 @@ export function toDraft(post: ScheduledPost): Draft {
     caption: post.caption,
     first_comment: post.first_comment ?? null,
     publish_at: post.publish_at ?? null,
+    kind: post.kind ?? "post",
   };
 }
 
@@ -45,6 +48,7 @@ export function toRequest(draft: Draft): ScheduledPostDraft {
     caption: draft.caption,
     first_comment: draft.first_comment?.trim() ? draft.first_comment : null,
     publish_at: draft.publish_at,
+    kind: draft.kind,
   };
 }
 
@@ -58,6 +62,7 @@ export function sameDraft(a: Draft, b: Draft): boolean {
   const x = toRequest(a);
   const y = toRequest(b);
   return (
+    x.kind === y.kind &&
     x.caption === y.caption &&
     x.first_comment === y.first_comment &&
     instant(x.publish_at ?? null) === instant(y.publish_at ?? null) &&

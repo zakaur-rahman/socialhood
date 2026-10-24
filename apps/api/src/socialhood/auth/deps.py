@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.clerk import ClerkClient, ClerkUnavailable, InvalidToken, verify_session_token
+from socialhood.auth.permissions import Permission, has_permission
 from socialhood.db.session import get_session
 from socialhood.db.tenancy import current_workspace_id
 from socialhood.errors import ApiError
@@ -133,3 +134,68 @@ def require_role(minimum: Role) -> Callable[..., Awaitable[WorkspaceContext]]:
 AnyMember = Annotated[WorkspaceContext, Depends(workspace_ctx)]
 Admin = Annotated[WorkspaceContext, Depends(require_role(Role.ADMIN))]
 Owner = Annotated[WorkspaceContext, Depends(require_role(Role.OWNER))]
+
+
+def require_permission(permission: Permission) -> Callable[..., Awaitable[WorkspaceContext]]:
+    """The route needs ``permission`` (GR-19); other roles get 403. The permission is kept on the
+    dependency so tests/unit/test_permission_routes.py can find it in the OpenAPI route walk."""
+
+    async def dependency(
+        ctx: Annotated[WorkspaceContext, Depends(workspace_ctx)],
+    ) -> WorkspaceContext:
+        if not has_permission(ctx.role, permission):
+            raise ApiError("forbidden")
+        return ctx
+
+    dependency.permission = permission  # type: ignore[attr-defined]
+    return dependency
+
+
+# One alias per permission, so a route reads ``ctx: CanReply``.
+CanSelf = Annotated[WorkspaceContext, Depends(require_permission(Permission.SELF))]
+CanReply = Annotated[WorkspaceContext, Depends(require_permission(Permission.REPLY))]
+CanTag = Annotated[WorkspaceContext, Depends(require_permission(Permission.TAG))]
+CanAssign = Annotated[WorkspaceContext, Depends(require_permission(Permission.ASSIGN))]
+CanAsk = Annotated[WorkspaceContext, Depends(require_permission(Permission.ASK))]
+CanManageAutomations = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.AUTOMATIONS_MANAGE))
+]
+CanManageKnowledge = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.KNOWLEDGE_MANAGE))
+]
+CanManageSettings = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.SETTINGS_MANAGE))
+]
+CanManageContacts = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.CONTACTS_MANAGE))
+]
+CanManageChannels = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.CHANNELS_MANAGE))
+]
+CanManageIntegrations = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.INTEGRATIONS_MANAGE))
+]
+CanManagePublishing = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.PUBLISHING_MANAGE))
+]
+CanDeleteComments = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.COMMENTS_DELETE))
+]
+CanReadAudit = Annotated[WorkspaceContext, Depends(require_permission(Permission.AUDIT_READ))]
+CanReadMembers = Annotated[WorkspaceContext, Depends(require_permission(Permission.MEMBERS_READ))]
+CanInviteMembers = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.MEMBERS_INVITE))
+]
+CanManageMembers = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.MEMBERS_MANAGE))
+]
+CanTransferOwnership = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.OWNERSHIP_TRANSFER))
+]
+CanManageBilling = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.BILLING_MANAGE))
+]
+CanDeleteWorkspace = Annotated[
+    WorkspaceContext, Depends(require_permission(Permission.WORKSPACE_DELETE))
+]
+CanUseDevSandbox = Annotated[WorkspaceContext, Depends(require_permission(Permission.DEV_SANDBOX))]

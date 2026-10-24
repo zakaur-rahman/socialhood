@@ -501,7 +501,7 @@ describe("Schedule page: Week (UX-SCR-04, FR-PUB-08)", () => {
 
     await user.click(day("Wednesday 30 September").querySelector('[data-row="36"]')!); // 18:00
     await waitFor(() => expect(callsTo(calls, "POST", /scheduled-posts$/)).toHaveLength(1));
-    expect(callsTo(calls, "POST", /scheduled-posts$/)[0].body).toEqual({ caption: "", publish_at: "2026-09-30T12:30:00.000Z" });
+    expect(callsTo(calls, "POST", /scheduled-posts$/)[0].body).toEqual({ caption: "", kind: "post", publish_at: "2026-09-30T12:30:00.000Z" });
     await waitFor(() => expect(nav.push).toHaveBeenCalledWith("/w/maple/schedule/new1"));
   });
 

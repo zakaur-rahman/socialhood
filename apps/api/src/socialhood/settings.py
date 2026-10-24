@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     clerk_issuer: str | None = None
     clerk_authorized_parties: CommaList = Field(default_factory=list)
     clerk_webhook_secret: SecretStr | None = None
+    # fake: keep team invitations in memory (auth/invitations.py); refused in production. Tests
+    # swap the sender with auth.invitations.use_invitation_sender whatever this says.
+    clerk_invitations_provider: Literal["clerk", "fake"] = "clerk"
 
     token_encryption_keys: CommaList = Field(default_factory=list)
 
@@ -112,6 +115,12 @@ class Settings(BaseSettings):
 
     meta_app_id: str | None = None
     meta_app_secret: SecretStr | None = None
+    # GR-29 Facebook Pages: Facebook Login's redirect URI (api/v1/oauth/facebook/callback) and the
+    # verify token of the Page webhook (/webhooks/facebook, signed with META_APP_SECRET). Neither
+    # set: Facebook connections are off. Messenger's 7-day HUMAN_AGENT window follows
+    # IG_HUMAN_AGENT_ENABLED: Meta approves Human Agent once for the app.
+    fb_redirect_uri: str | None = None
+    fb_webhook_verify_token: SecretStr | None = None
     whatsapp_config_id: str | None = None
     whatsapp_webhook_verify_token: SecretStr | None = None
 
@@ -127,6 +136,10 @@ class Settings(BaseSettings):
     # GR-38: Ask Social Hood's runs expose typed visuals (cards, ranked posts, sentiment) beside
     # the answer. Off: ``visuals`` is always empty and the prompt doesn't mention them.
     agent_visuals_enabled: bool = False
+    # GR-23: WhatsApp broadcasts. Off by default until the legal check of marketing consent in
+    # India (O-11) is done: off, the routes answer 404 "not available yet" (except the availability
+    # check the web asks), nothing is dispatched and the web shows nothing.
+    broadcasts_enabled: bool = False
     # Thinking level per model id, JSON (TR-AI-03); unset: "minimal" for Flash-Lite, else "low".
     ai_thinking_levels: dict[str, str] = Field(default_factory=dict)
     ai_daily_spend_limit_usd: float = 100.0
@@ -156,6 +169,14 @@ class Settings(BaseSettings):
     vapid_subject: str = "mailto:support@socialhood.com"
     # fake: keep pushes in memory (notify/push_fake.py); refused in production.
     push_provider: Literal["webpush", "fake"] = "webpush"
+
+    # GR-27: Google Sheets sync. The OAuth client of the "drive.file" scope (not required: the
+    # card says "not set up" without them). fake: keep sheets in memory, or in Redis where the API
+    # and the worker are separate processes (google/fake.py); refused in production.
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    google_redirect_uri: str | None = None
+    google_provider: Literal["google", "fake"] = "google"
 
     sandbox_platform_enabled: bool = False
     # GR-04: outbound webhooks may go to private and local addresses (development and e2e, which
@@ -220,7 +241,14 @@ class Settings(BaseSettings):
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
         if not self.rate_limits_enabled:
             unsafe.append("RATE_LIMITS_ENABLED must be true in production")
-        for name in ("ai_provider", "dodo_provider", "email_provider", "push_provider"):
+        for name in (
+            "ai_provider",
+            "dodo_provider",
+            "email_provider",
+            "push_provider",
+            "clerk_invitations_provider",
+            "google_provider",
+        ):
             if getattr(self, name) == "fake":
                 unsafe.append(f"{name.upper()} must not be fake in production")
         problems = []

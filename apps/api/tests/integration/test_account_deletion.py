@@ -269,6 +269,12 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         a=account_id,
     )
+    await execute(  # GR-28: the website chat's settings
+        engine,
+        "INSERT INTO widget_settings (workspace_id, social_account_id) VALUES (:w, :a)",
+        w=wid,
+        a=account_id,
+    )
     await execute(  # GR-07: a story mention
         engine,
         "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id, message_id,"
@@ -282,6 +288,26 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         engine,
         "INSERT INTO entry_links (workspace_id, social_account_id, code, name)"
         " VALUES (:w, :a, 'spring', 'Spring')",
+        w=wid,
+        a=account_id,
+    )
+    await execute(  # GR-23: a broadcast from the account, a recipient and the number's health
+        engine,
+        "WITH b AS (INSERT INTO broadcasts (workspace_id, social_account_id, name, segment_name,"
+        " template_name, template_language, template_category, template_body)"
+        " VALUES (:w, :a, 'Diwali', 'Everyone', 'sale_offer', 'en', 'marketing', 'Hi')"
+        " RETURNING id)"
+        " INSERT INTO broadcast_recipients (workspace_id, broadcast_id, contact_id, position,"
+        " state, message_id) SELECT :w, id, :c, 0, 'dispatched', :m FROM b",
+        w=wid,
+        a=account_id,
+        c=thread.contact_id,
+        m=thread.message_ids[0],
+    )
+    await execute(
+        engine,
+        "INSERT INTO whatsapp_number_health (workspace_id, social_account_id, quality_rating,"
+        " checked_at) VALUES (:w, :a, 'green', now())",
         w=wid,
         a=account_id,
     )

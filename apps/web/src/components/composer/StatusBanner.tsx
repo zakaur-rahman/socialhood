@@ -10,10 +10,15 @@ import type { ScheduledPost, ScheduledPostTarget } from "@/lib/publishing/types"
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
+/** The platform's name in the words the banner uses. */
+function platformName(account: SocialAccount | undefined): string {
+  return account?.platform === "facebook" ? "Facebook" : "Instagram";
+}
+
 const TARGET_LABEL: Record<ScheduledPostTarget["status"], string> = {
   pending: "Waiting",
   publishing: "Publishing",
-  container_created: "Instagram is processing it",
+  container_created: "Processing",
   published: "Published",
   failed: "Failed",
   canceled: "Cancelled",
@@ -40,7 +45,7 @@ function TargetRows({ targets, accounts, timeZone, now }: { targets: ScheduledPo
           <li key={target.social_account_id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
             <span className="font-medium">{handleOf(account)}</span>
             <span className={cn(target.status === "failed" ? "text-danger-fg" : "text-fg-secondary")}>
-              {TARGET_LABEL[target.status]}
+              {target.status === "container_created" ? `${platformName(account)} is processing it` : TARGET_LABEL[target.status]}
               {target.status === "published" && target.published_at ? ` ${formatDayTime(target.published_at, timeZone, now)}` : ""}
               {target.status === "failed" && target.error ? `: ${target.error.message}` : ""}
             </span>
@@ -51,9 +56,16 @@ function TargetRows({ targets, accounts, timeZone, now }: { targets: ScheduledPo
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-brand-fg underline-offset-4 hover:underline"
               >
-                View on Instagram <ExternalLink className="size-3.5" aria-hidden />
+                View on {platformName(account)} <ExternalLink className="size-3.5" aria-hidden />
                 <span className="sr-only">(opens in a new tab)</span>
               </a>
+            ) : null}
+            {target.expires_at ? (
+              <span className="text-fg-secondary" data-testid="story-expiry">
+                {new Date(target.expires_at).getTime() > now.getTime()
+                  ? `Disappears ${formatDayTime(target.expires_at, timeZone, now)}`
+                  : "Expired after 24 hours"}
+              </span>
             ) : null}
             <FirstCommentLine target={target} />
           </li>

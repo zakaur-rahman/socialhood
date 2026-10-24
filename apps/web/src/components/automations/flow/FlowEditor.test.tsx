@@ -283,6 +283,29 @@ describe("the flow editor (GR-13)", () => {
     expect(cards[0]).toHaveAttribute("data-state", "complete");
   });
 
+  it("marks a message that still says [price] and tells what to replace (C-105)", async () => {
+    const user = userEvent.setup();
+    renderEditor({ initial: [send("a", "Hello"), send("b", "The small one is [price]. Reply to order.")] });
+    const second = screen.getAllByRole("textbox", { name: "Message" })[1];
+    // Problems show once a step has been touched, as with every other check.
+    expect(screen.queryByTestId("flow-attention")).toBeNull();
+    await user.type(second, "!");
+    const summary = await screen.findByTestId("flow-attention");
+    expect(summary).toHaveTextContent("One step needs attention");
+    expect(summary).toHaveTextContent("Replace [price] with your price.");
+    expect(second).toHaveAttribute("aria-invalid", "true");
+    expect(second).toHaveAccessibleDescription(expect.stringContaining("Replace [price] with your price."));
+    expect(screen.getAllByRole("region")[0]).toHaveAttribute("data-state", "complete");
+  });
+
+  it("shows the API's placeholder error on the step it names", () => {
+    renderEditor({
+      initial: [send("a", "Your code is [code]")],
+      activationErrors: { a: { text: "Replace [code] with your code." } },
+    });
+    expect(screen.getByTestId("flow-attention")).toHaveTextContent("Replace [code] with your code.");
+  });
+
   it("jumps to the step an error names", async () => {
     const user = userEvent.setup();
     renderEditor({

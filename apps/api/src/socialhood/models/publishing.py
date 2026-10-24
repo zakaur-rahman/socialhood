@@ -59,6 +59,12 @@ CALENDAR_MAX_DAYS = 42  # six weeks: a month grid (§2.15 …/calendar)
 # content_publishing_limit (quota_total) is authoritative; this is the fallback when it can't be
 # read. Verify at T0.9.
 DEFAULT_PUBLISHING_LIMIT = 100
+# Instagram Stories (GR-39, C-114; limits from Meta's Content Publishing guide, unverified until a
+# real account publishes one): a story is one image or one video, live for 24 hours, with no
+# caption. Story videos run 3 to 60 seconds; 9:16 is the shape Meta recommends.
+STORY_LIFETIME = dt.timedelta(hours=24)
+STORY_VIDEO_MIN_S = 3
+STORY_VIDEO_MAX_S = 60
 
 # ---------------------------------------------------------------- publish job timing (T7.3)
 
@@ -69,7 +75,8 @@ POLL_FAST_COUNT = 5
 POLL_FAST_DELAY = dt.timedelta(seconds=60)
 POLL_SLOW_DELAY = dt.timedelta(minutes=5)
 POLL_MAX = 10
-PROCESSING_TIMEOUT_MESSAGE = "Instagram took too long to process the video"
+PROCESSING_TIMEOUT_SUFFIX = " took too long to process the video"
+PROCESSING_TIMEOUT_MESSAGE = "Instagram" + PROCESSING_TIMEOUT_SUFFIX
 
 
 class ScheduledPostStatus(StrEnum):
@@ -88,6 +95,16 @@ class PostFormat(StrEnum):
     IMAGE = "image"  # exactly 1 image
     CAROUSEL = "carousel"  # 2 to 10 images and videos
     REEL = "reel"  # exactly 1 video (Instagram publishes single videos as Reels)
+    STORY = "story"  # exactly 1 image or video, chosen as a Story (GR-39); no caption
+    TEXT = "text"  # no media, a caption: a text or link post on Facebook Pages only (GR-30)
+
+
+class PostKind(StrEnum):
+    """What the owner chose in the composer (GR-39). Stored, not derived: a Story draft with the
+    wrong media has no format yet, and must still be checked as a Story."""
+
+    POST = "post"
+    STORY = "story"
 
 
 class TargetStatus(StrEnum):
@@ -104,6 +121,7 @@ class ScheduledPost(IdMixin, TimestampMixin, TenantScoped, Base):
 
     status: Mapped[str] = mapped_column(Text, server_default=sql("'draft'"))
     format: Mapped[str | None] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(Text, server_default=sql("'post'"))
     caption: Mapped[str] = mapped_column(Text, server_default=sql("''"))
     first_comment: Mapped[str | None] = mapped_column(Text)
     # A draft may hold the time it was started at (a calendar click); a scheduled post always has
@@ -128,6 +146,9 @@ class ScheduledPost(IdMixin, TimestampMixin, TenantScoped, Base):
         ),
         CheckConstraint(_in("status", ScheduledPostStatus), name="status"),
         CheckConstraint(f"format IS NULL OR {_in('format', PostFormat)}", name="format"),
+        CheckConstraint(_in("kind", PostKind), name="kind"),
+        # A story format only comes from a Story choice (GR-39).
+        CheckConstraint("format IS DISTINCT FROM 'story' OR kind = 'story'", name="story_kind"),
         CheckConstraint(f"char_length(caption) <= {CAPTION_MAX_CHARS}", name="caption_length"),
         CheckConstraint(
             "first_comment IS NULL OR char_length(first_comment) BETWEEN 1 AND "

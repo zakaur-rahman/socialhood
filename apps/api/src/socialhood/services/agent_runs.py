@@ -46,6 +46,7 @@ from socialhood.models.identity import Role
 from socialhood.repositories import agent as repo
 from socialhood.schemas import agent as schemas
 from socialhood.schemas.inbox import Actor
+from socialhood.services import agent_actions
 from socialhood.services.conversations import decode_cursor, encode_cursor
 
 THREAD_TITLE_CHARS = 80
@@ -165,14 +166,22 @@ async def runs_out(
 
 
 async def detail_out(
-    session: AsyncSession, row: AgentRun, *, with_visuals: bool = False
+    session: AsyncSession,
+    row: AgentRun,
+    *,
+    with_visuals: bool = False,
+    role: Role | None = None,
 ) -> schemas.AgentRunDetail:
     [base] = await runs_out(session, [row], with_visuals=with_visuals)
     steps = await repo.steps_of(session, row.id)
+    approvals = await agent_actions.approvals_out(
+        session, role, await repo.approvals_of_runs(session, [row.id])
+    )
     return schemas.AgentRunDetail.model_validate(
         {
             **base.model_dump(),
             "steps": [step_out(s) for s in steps],
+            "approvals": [a.model_dump() for a in approvals],
             "plan": row.plan,
             "model": row.model,
             "prompt_version": row.prompt_version,

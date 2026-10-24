@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import type { AccountStatus, AiMode, Plan, SocialAccount, SocialAccountPatch } from "@/lib/api/types";
 import { accountStatusLabel } from "@/lib/copy";
+import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import type { Tone } from "@/lib/ui/tone";
 import { relativeTime } from "@/lib/time";
 import { useNow } from "@/lib/use-browser-state";
@@ -38,7 +39,12 @@ const AI_MODES: { value: AiMode; label: string; hint: string }[] = [
 ];
 
 /** The API the account is connected through, for the card's footer. */
-const API_NAME = { instagram: "Instagram API", whatsapp: "WhatsApp Cloud API" } as const;
+const API_NAME = {
+  instagram: "Instagram API",
+  whatsapp: "WhatsApp Cloud API",
+  facebook: "Facebook Pages API",
+  web: "Website chat widget",
+} as const;
 
 export type AccountActions = {
   onChange: (patch: SocialAccountPatch) => void;
@@ -87,7 +93,7 @@ export function AccountCard({
 }) {
   const now = useNow();
   const whatsapp = account.platform === "whatsapp";
-  const platformName = whatsapp ? "WhatsApp" : "Instagram";
+  const platformName = PLATFORM_LABEL[account.platform];
   const handle = account.username ? `@${account.username}` : (account.display_name ?? account.phone_number ?? "this account");
   const name = account.display_name ?? account.username ?? `${platformName} account`;
   const subtitle = account.username ? `@${account.username}` : (account.phone_number ?? platformName);

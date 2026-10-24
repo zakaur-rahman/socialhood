@@ -33,8 +33,9 @@ PREVIEW_CHARS = 200
 
 
 def human_agent_allowed(acct: SocialAccount, *, ig_human_agent_enabled: bool) -> bool:
-    """Human Agent applies to Instagram only, once Meta has approved it (IG_HUMAN_AGENT_ENABLED)."""
-    return ig_human_agent_enabled and acct.platform == "instagram"
+    """Human Agent applies to Instagram and Facebook, once Meta has approved it
+    (IG_HUMAN_AGENT_ENABLED)."""
+    return ig_human_agent_enabled and acct.platform in ("instagram", "facebook")
 
 
 def closing_soon(conv: Conversation, *, now: datetime, window_closes_at: datetime | None) -> bool:

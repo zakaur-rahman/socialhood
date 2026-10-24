@@ -30,13 +30,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useBulkScheduledPosts, useScheduledPostList } from "@/lib/api/queries/calendar";
 import type { BulkScheduledPostRequest, ScheduledPostSummary, ScheduledPostView } from "@/lib/api/types";
 import { emptyStates } from "@/lib/copy";
-import { bulkResultMessage, captionLine, STATUS_GROUPS } from "@/lib/schedule/format";
+import { bulkResultMessage, postLine, STATUS_GROUPS } from "@/lib/schedule/format";
 import { toastError } from "@/lib/toast-error";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 
 import { postLabel } from "./CalendarPostCard";
-import { PostMenu, PostThumbnail, StatusChip, TargetAvatars } from "./post-parts";
+import { PostMenu, PostThumbnail, StatusChip, StoryBadge, TargetAvatars } from "./post-parts";
 import { useSchedule } from "./schedule-context";
 
 const EMPTY: Record<ScheduledPostView, { title: string; body: string }> = {
@@ -258,13 +258,13 @@ function ListRow({
       <Checkbox
         checked={selected}
         onCheckedChange={(value) => onSelectedChange(value === true)}
-        aria-label={`Select ${captionLine(post.caption)}`}
+        aria-label={`Select ${postLine(post)}`}
         className="after:-inset-3"
       />
       <Link href={schedule.composerHref(post)} aria-label={postLabel(post, timeZone, now)} className="flex min-w-0 flex-1 items-center gap-3">
         <PostThumbnail post={post} size={48} />
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">{captionLine(post.caption)}</span>
+          <span className="block truncate text-sm font-medium">{postLine(post)}</span>
           <span className="block text-xs text-fg-secondary tabular-nums">
             {when ? formatDayTime(when, timeZone, now) : "No time yet"}
           </span>
@@ -274,6 +274,7 @@ function ListRow({
       <span className="hidden sm:flex">
         <TargetAvatars post={post} />
       </span>
+      <StoryBadge post={post} className="hidden sm:inline-flex" />
       <StatusChip post={post} className="hidden sm:inline-flex" />
       <PostMenu post={post} size="lg" />
     </li>

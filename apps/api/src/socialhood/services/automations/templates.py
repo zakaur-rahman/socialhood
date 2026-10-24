@@ -12,10 +12,17 @@ and the message settings are not used. Every flow template stays within the Free
 (``flow_steps``, 5, PD-5 pending), keeps its questions to an email or a phone (saved to the
 contact, so no custom field has to exist), and leaves its link as "https://" and its prices and
 codes in [brackets], to be filled before activation.
+
+``PLACEHOLDERS`` is the one list of those bracket tokens. Activation refuses a flow or a message
+whose send text still holds one (``unfilled``, used by validation.py and flows.py), with
+"Replace [price] with your price." on the step. Only the tokens listed count, so other brackets in
+a user's text ("[Free shipping]", "[1]") are left alone. The web editor mirrors the list
+(lib/automations/flow.ts, PLACEHOLDERS): add a token in both places and use it in a template.
 """
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from socialhood.schemas.automations import (
@@ -37,6 +44,21 @@ from socialhood.schemas.flows import (
 )
 
 LINK_PLACEHOLDER = "https://"
+# The bracket tokens the templates leave for the user to fill: token -> what goes there.
+PLACEHOLDERS: dict[str, str] = {"[price]": "your price", "[code]": "your code"}
+_PLACEHOLDER = re.compile("|".join(re.escape(token) for token in PLACEHOLDERS), re.IGNORECASE)
+
+
+def unfilled(text: str) -> list[str]:
+    """The placeholder tokens still in ``text`` (lower case, each once, in order of appearance)."""
+    return list(dict.fromkeys(found.lower() for found in _PLACEHOLDER.findall(text or "")))
+
+
+def unfilled_copy(token: str) -> str:
+    """The error for a token left in a message, e.g. "Replace [price] with your price."."""
+    return f"Replace {token} with {PLACEHOLDERS[token]}."
+
+
 # FR-AUT-21 and FR-AUT-22 defaults. The opening asks for a reply too: quick replies are not shown
 # on desktop, and an opening Instagram refuses with its quick reply goes out as text.
 OPENING_TEXT = (

@@ -42,7 +42,8 @@ from socialhood.schemas.inbox import ErrorInfo, MediaAssetOut, ScheduledMessage
 ScheduledPostStatusName = Literal[
     "draft", "scheduled", "publishing", "published", "partially_published", "failed", "canceled"
 ]
-PostFormatName = Literal["image", "carousel", "reel"]
+PostFormatName = Literal["image", "carousel", "reel", "story", "text"]
+PostKind = Literal["post", "story"]
 TargetStatusName = Literal[
     "pending", "publishing", "container_created", "published", "failed", "canceled"
 ]
@@ -59,7 +60,7 @@ FirstCommentStatus = Literal["pending", "posted", "failed"]
 # The composer's checklist (FR-PUB-10, UX-SCR-13), in this order:
 # - accounts: at least one account; each is connected and can publish (Capability.PUBLISH)
 # - media: at least one asset, and the assets make a format (1 image; 1 video, a Reel; 2 to 10
-#   images and videos, a carousel)
+#   images and videos, a carousel; ``kind: story`` makes one image or video a Story)
 # - media_files: each asset's type, size, aspect ratio and video length (TR-MED-02)
 # - caption: the caption and each per-account caption up to 2,200 characters
 # - hashtags: at most 30 hashtags in each caption
@@ -126,6 +127,8 @@ class ScheduledPostTarget(ResponseModel):
     status: TargetStatusName
     platform_media_id: str | None = None
     permalink: str | None = None  # View on Instagram
+    # A published Story only: when Instagram takes it down (24 hours after it went up).
+    expires_at: datetime | None = None
     post_id: uuid.UUID | None = None  # the media_items row once published (Comments, analytics)
     published_at: datetime | None = None
     error: ErrorInfo | None = None  # Instagram's reason when failed (FR-PUB-06)
@@ -139,6 +142,9 @@ class ScheduledPostSummary(ResponseModel):
     id: uuid.UUID
     status: ScheduledPostStatusName
     format: PostFormatName | None = None  # derived from the assets on save
+    kind: PostKind = (
+        "post"  # the composer's choice (GR-39): a Story draft keeps it before its media fits
+    )
     caption: str
     # A draft's time, if it has one (a calendar click); always set once scheduled.
     publish_at: datetime | None = None
@@ -209,6 +215,9 @@ class ScheduledPostDraft(RequestModel):
     first_comment: str | None = Field(default=None, max_length=FIRST_COMMENT_MAX_CHARS)
     # A draft may keep a time (a calendar click); a scheduled post's time.
     publish_at: datetime | None = None
+    # ``story``: the one image or video is published as an Instagram Story (GR-39), without the
+    # caption or first comment (both are kept on the draft but never sent).
+    kind: PostKind = "post"
 
 
 class ScheduleRequest(RequestModel):
@@ -310,6 +319,36 @@ class PostingSlots(ResponseModel):
     timezone: str
     slots: list[PostingSlot]  # by weekday, then time
     next_free_at: list[datetime]  # the next 5 free times, soonest first ("Add to queue" preview)
+
+
+# ---- best times (GR-30, C-115)
+
+
+class BestTimeDay(ResponseModel):
+    """One weekday's suggestion. ``local_time`` is None when the account's history is too thin for
+    this day (``posts`` is how many posts the suggested hour is based on, else 0)."""
+
+    weekday: int  # 0 = Monday … 6 = Sunday
+    local_time: time | None = None  # workspace time zone, on the hour
+    posts: int = 0
+    # How much better than the account's typical post the posts at this time did, in percent.
+    lift_percent: int | None = None
+
+
+class BestTimes(ResponseModel):
+    """GET …/social-accounts/{id}/best-times: a suggested posting time per weekday, worked out
+    from the account's own posts (never by an AI model). ``enough_history`` is false, and every
+    day empty, until the account has ``min_posts`` posts with known engagement. Cached for a few
+    hours."""
+
+    social_account_id: uuid.UUID
+    timezone: str
+    enough_history: bool
+    sample_size: int  # posts used
+    min_posts: int  # posts needed
+    method: str  # one sentence saying how the times were chosen
+    days: list[BestTimeDay]  # seven, Monday first
+    computed_at: datetime
 
 
 # ---- hashtag groups (FR-PUB-12, UX-SCR-14)

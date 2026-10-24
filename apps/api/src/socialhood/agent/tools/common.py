@@ -41,7 +41,7 @@ from socialhood.agent.timeparse import (
 from socialhood.auth.deps import ROLE_RANK
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.agent import RiskTier
-from socialhood.models.connections import SocialAccount
+from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.identity import Role
 from socialhood.models.inbox import Contact
 from socialhood.models.media import MediaItem
@@ -56,8 +56,8 @@ LABEL_CHARS = 60
 TEXT_CHARS = 280  # a message, comment or caption in a result
 ADMIN_ONLY = "Only owners and admins can use this, as in the app."
 FACEBOOK_NOT_CONNECTED = (
-    "Facebook isn't connected: Facebook Pages arrive in a later release, so only Instagram "
-    "(and WhatsApp for messages) is covered."
+    "Facebook isn't connected: connect a Facebook Page in Settings to include it, so for now "
+    "only Instagram (and WhatsApp for messages) is covered."
 )
 
 PlatformName = Literal["instagram", "whatsapp", "facebook"]
@@ -297,8 +297,19 @@ async def find_account(ctx: ToolContext, account: str | None) -> SocialAccount |
 
 
 def facebook_asked(*values: str | None) -> bool:
-    """Whether the member asked about Facebook, which isn't connected in R1 (FR-AGT-06)."""
+    """Whether the member asked about Facebook (FR-AGT-06)."""
     return any((v or "").strip().lower() in ("facebook", "fb", "facebook page") for v in values)
+
+
+async def facebook_unconnected(ctx: ToolContext, *values: str | None) -> bool:
+    """The member asked about Facebook and the workspace has no Facebook Page connected
+    (FR-AGT-06; Pages connect since GR-29)."""
+    if not facebook_asked(*values):
+        return False
+    accounts = await social_accounts.list_all(ctx.session)
+    return not any(
+        a.platform == "facebook" and a.status != AccountStatus.DISCONNECTED for a in accounts
+    )
 
 
 def analytics_view(ctx: ToolContext) -> View:

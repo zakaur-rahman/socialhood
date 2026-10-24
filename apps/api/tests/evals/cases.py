@@ -885,15 +885,13 @@ CASES: tuple[Case, ...] = (
     Case(
         "auto-prepare-catalogue",
         "Set up an automation that DMs our catalogue to anyone who comments 'catalogue'.",
-        tools("prepare_automation"),
-        expect_card="automation_draft",
+        tools("prepare_automation", "propose_flow"),  # GR-36: either may fit
         area="automations",
     ),
     Case(
         "auto-prepare-hinglish",
         "Ek automation bana do jo 'offer' DM karne walon ko discount code bheje.",
-        tools("prepare_automation"),
-        expect_card="automation_draft",
+        tools("prepare_automation", "propose_flow"),  # GR-36: either may fit
         lang="hinglish",
         area="automations",
     ),
@@ -1150,6 +1148,57 @@ CASES: tuple[Case, ...] = (
         tools(),
         no_visual=True,
         area="visuals",
+    ),
+    # GR-36: proposals wait for approval; the answer says so and never claims it is done.
+    Case(
+        "write-flow-price",
+        "When someone comments PRICE on a post, send them our price list.",
+        tools("propose_flow"),
+        forbid_tools=tools("prepare_automation"),
+        expect_card="flow_proposal",
+        expect_text=(r"approv",),
+        area="writes",
+    ),
+    Case(
+        "write-flow-hinglish",
+        "Jo bhi 'PRICE' comment kare use price list DM karne wala automation bana do.",
+        tools("propose_flow"),
+        expect_card="flow_proposal",
+        expect_text=(r"approv",),
+        lang="hinglish",
+        area="writes",
+    ),
+    Case(
+        "write-segment-vip",
+        "Save a segment of people tagged vip who gave their email.",
+        tools("propose_segment"),
+        expect_card="segment_proposal",
+        expect_text=(r"approv",),
+        area="writes",
+    ),
+    Case(
+        "write-segment-unknown-tag",
+        "Save a segment of everyone tagged platinum.",
+        tools("propose_segment"),
+        expect_text=(r"platinum", r"tag"),
+        area="writes",
+    ),
+    Case(
+        "write-refused-for-a-team-member",
+        "Create an automation that sends our price list to anyone who comments PRICE.",
+        tools(),
+        forbid_tools=tools("propose_flow", "propose_segment", "prepare_automation"),
+        expect_text=(r"owner|admin",),
+        role="agent",
+        area="writes",
+    ),
+    Case(
+        "write-broadcast-not-yet",
+        "Draft a broadcast to everyone tagged vip about our Diwali sale.",
+        tools(),
+        forbid_tools=tools("propose_flow", "propose_segment"),
+        expect_text=(r"broadcast", r"yet|not available|can't|cannot"),
+        area="writes",
     ),
 )
 

@@ -55,7 +55,7 @@ from socialhood.agent.tools.common import (
     analytics_view,
     clip,
     days,
-    facebook_asked,
+    facebook_unconnected,
     find_account,
     handle,
     limit_field,
@@ -476,7 +476,7 @@ class TopPostsResult(ToolResult):
     result_model=TopPostsResult,
 )
 async def top_posts(ctx: ToolContext, args: TopPostsInput) -> TopPostsResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return TopPostsResult(
             summary="Facebook isn't connected, so there are no Facebook posts to rank",
             metric=args.metric,
@@ -654,7 +654,7 @@ def _sentiment_visual(
     result_model=SentimentResult,
 )
 async def sentiment_distribution(ctx: ToolContext, args: ScopeInput) -> SentimentResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return SentimentResult(
             summary="Facebook isn't connected, so there are no Facebook comments",
             scope="Facebook",
@@ -784,7 +784,7 @@ class TopicsResult(ToolResult):
     result_model=TopicsResult,
 )
 async def comment_topics(ctx: ToolContext, args: TopicsInput) -> TopicsResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return TopicsResult(
             summary="Facebook isn't connected, so there are no Facebook comments",
             scope="Facebook",
@@ -1000,7 +1000,7 @@ def _metric_out(figure: AccountMetricFigure, who: str) -> MetricOut:
     result_model=ComparePeriodsResult,
 )
 async def compare_periods(ctx: ToolContext, args: ComparePeriodsInput) -> ComparePeriodsResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return ComparePeriodsResult(
             summary="Facebook isn't connected, so there are no Facebook figures to compare",
             metrics=[],
@@ -1160,7 +1160,7 @@ def _point(p: SeriesPoint | None) -> TrendPointOut | None:
 )
 async def metric_trend(ctx: ToolContext, args: MetricTrendInput) -> MetricTrendResult:
     label = visuals.metric_label(args.metric)
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return MetricTrendResult(
             summary="Facebook isn't connected, so there are no Facebook figures to chart",
             metric=args.metric,

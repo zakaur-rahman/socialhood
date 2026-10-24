@@ -167,6 +167,7 @@ def test_the_numbers_are_the_ones_the_digest_stores() -> None:
         conversations_from_links=3,
         leads_qualified=2,
         leads_won=1,
+        captures=6,
     )
     values = reports.stats_values(found)
     assert set(values) == {d.key for d in reports.COUNT_METRICS}
@@ -204,7 +205,6 @@ def report_with(
         needs_you=0,
         open_questions=0,
         top_questions=[],
-        notes=["captures_not_built"],
     )
 
 
@@ -253,9 +253,11 @@ def test_the_digest_extras_keep_gaps_as_gaps() -> None:
     assert (extras["account"][1]["days_known"], extras["account"][1]["value"]) == (5, 1250.0)
 
 
-def test_captures_are_noted_as_not_built_until_a_source_exists() -> None:
-    assert "captures_not_built" in reports.NOTES
-    assert all("capture" not in d.key for d in reports.COUNT_METRICS)
+def test_captures_are_a_count_metric_next_to_the_leads() -> None:
+    keys = [d.key for d in reports.COUNT_METRICS]
+    assert "captures" in keys
+    assert keys.index("captures") < keys.index("leads_qualified")
+    assert not hasattr(reports, "NOTES")
 
 
 def test_the_account_comparison_is_the_ask_visual_with_its_gap_words() -> None:

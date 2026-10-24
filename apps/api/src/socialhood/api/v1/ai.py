@@ -13,7 +13,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Request, Response
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import Admin, AnyMember, CanManageSettings, CanReply, CanTag, Session
 from socialhood.billing.entitlements import credits_gate
 from socialhood.errors import ApiError
 from socialhood.realtime.events import commit_and_publish
@@ -29,7 +29,7 @@ from socialhood.schemas.ai import (
     PolishResult,
 )
 from socialhood.schemas.inbox import MessageAnalysis, Suggestion
-from socialhood.services import ai_settings, analysis, conversations, polish, summaries
+from socialhood.services import ai_settings, analysis, audit, conversations, polish, summaries
 from socialhood.services.suggestions import service as suggestions
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["ai"])
@@ -49,9 +49,12 @@ async def get_ai_settings(ctx: Admin, session: Session) -> AiSettings:
 
 
 @router.put("/ai-settings", operation_id="update_ai_settings")
-async def update_ai_settings(body: AiSettingsUpdate, ctx: Admin, session: Session) -> AiSettings:
+async def update_ai_settings(
+    body: AiSettingsUpdate, ctx: CanManageSettings, session: Session
+) -> AiSettings:
     """Replace the whole settings object."""
     row = await ai_settings.replace(session, body)
+    await audit.record(session, ctx, "settings.updated", "ai_settings")
     await session.commit()
     return ai_settings.out(row)
 
@@ -61,7 +64,7 @@ async def correct_message_analysis(
     request: Request,
     analysis_id: uuid.UUID,
     body: AnalysisCorrection,
-    ctx: AnyMember,
+    ctx: CanTag,
     session: Session,
 ) -> MessageAnalysis:
     """FR-AI-04: change a message's intent or sentiment. The answer shows the corrected values
@@ -86,7 +89,7 @@ async def correct_message_analysis(
     dependencies=[ratelimit.AI],
 )
 async def regenerate_suggestion(
-    conversation_id: uuid.UUID, ctx: AnyMember, session: Session
+    conversation_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Response:
     """F-08 Regenerate: up to 5 per message; suggestion.created carries the result. 409 when
     the conversation's AI mode is off, there is no customer message, or the 5 are used; 402
@@ -102,7 +105,7 @@ async def regenerate_suggestion(
 
 @router.post("/suggestions/{suggestion_id}/dismiss", operation_id="dismiss_suggestion")
 async def dismiss_suggestion(
-    request: Request, suggestion_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, suggestion_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Suggestion:
     """F-08 Dismiss: a pending suggestion becomes dismissed (suggestion.updated); any other is
     returned as it is."""
@@ -121,7 +124,7 @@ async def dismiss_suggestion(
     operation_id="refresh_summary",
     dependencies=[ratelimit.AI],
 )
-async def refresh_summary(conversation_id: uuid.UUID, ctx: AnyMember, session: Session) -> Response:
+async def refresh_summary(conversation_id: uuid.UUID, ctx: CanReply, session: Session) -> Response:
     """FR-AI-03 on request; conversation.updated carries the new summary (its ``summary`` key).
     402 quota_exceeded without credits; 409 when AI analysis is off for the account."""
     conv = await conversations.get_or_404(session, conversation_id)
@@ -139,7 +142,7 @@ async def polish_reply(
     request: Request,
     conversation_id: uuid.UUID,
     body: PolishRequest,
-    ctx: AnyMember,
+    ctx: CanReply,
     session: Session,
 ) -> PolishResult:
     """AI Polish (C-063): the member's draft with its grammar and clarity fixed, in the same
@@ -168,7 +171,7 @@ async def get_ai_decision(message_id: uuid.UUID, ctx: AnyMember, session: Sessio
 
 @router.post("/ai-decisions/{decision_id}/feedback", operation_id="give_ai_decision_feedback")
 async def give_ai_decision_feedback(
-    decision_id: uuid.UUID, body: AiDecisionFeedback, ctx: AnyMember, session: Session
+    decision_id: uuid.UUID, body: AiDecisionFeedback, ctx: CanReply, session: Session
 ) -> AiDecision:
     """Mark an auto reply "should not have sent" ("bad"), or clear the mark (null). Only a
     decision that sent a reply takes feedback (409 otherwise)."""

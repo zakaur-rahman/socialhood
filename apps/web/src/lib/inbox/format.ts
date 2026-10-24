@@ -13,7 +13,12 @@ import type {
 import { IDENTITIES, identityFor } from "@/lib/ui/identity";
 import type { Tone } from "@/lib/ui/tone";
 
-export const PLATFORM_LABEL: Record<Platform, string> = { instagram: "Instagram", whatsapp: "WhatsApp" };
+export const PLATFORM_LABEL: Record<Platform, string> = {
+  instagram: "Instagram",
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  web: "Website",
+};
 
 export function contactName(contact: Pick<ContactSummary, "display_name" | "username">, platform: Platform): string {
   return contact.display_name?.trim() || contact.username || `${PLATFORM_LABEL[platform]} user`;
@@ -31,6 +36,8 @@ export function previewPrefix(item: Pick<ConversationListItem, "last_message_dir
       return "AI: ";
     case "automation":
       return "Automation: ";
+    case "broadcast":
+      return "Broadcast: ";
     case "human":
     case "native_app":
       return "You: ";
@@ -231,11 +238,16 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-/** Where "Open in Instagram" or "Open in WhatsApp" goes for a contact. */
+/**
+ * Where "Open in Instagram", "Open in WhatsApp" or "Open in Messenger" goes for a contact. A
+ * Messenger person has no public profile for us to link to, so their chat opens in the Page's inbox;
+ * a website visitor has no profile.
+ */
 export function platformContactUrl(
   platform: Platform,
   contact: { username?: string | null; platform_user_id?: string | null },
 ): string {
+  if (platform === "facebook") return "https://business.facebook.com/latest/inbox/messenger";
   if (platform === "whatsapp") {
     const number = contact.platform_user_id?.replace(/\D/g, "");
     return number ? `https://wa.me/${number}` : "https://web.whatsapp.com/";

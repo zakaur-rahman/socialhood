@@ -7,7 +7,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
 
-from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanSelf, Session
 from socialhood.schemas.accounts import MarkRead, NotificationList, NotificationOut
 from socialhood.services import notifications as service
 
@@ -31,7 +31,7 @@ async def list_notifications(
 
 
 @router.post("/notifications/read", status_code=204, operation_id="mark_notifications_read")
-async def mark_notifications_read(body: MarkRead, ctx: AnyMember, session: Session) -> Response:
+async def mark_notifications_read(body: MarkRead, ctx: CanSelf, session: Session) -> Response:
     await service.mark_read(session, ctx.user.id, None if body.all else (body.ids or []))
     await session.commit()
     return Response(status_code=204)

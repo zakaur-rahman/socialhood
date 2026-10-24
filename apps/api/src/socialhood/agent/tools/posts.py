@@ -24,7 +24,7 @@ from socialhood.agent.tools.common import (
     FACEBOOK_NOT_CONNECTED,
     Period,
     clip,
-    facebook_asked,
+    facebook_unconnected,
     find_account,
     handle,
     limit_field,
@@ -149,7 +149,7 @@ class GetPostsInput(_Input):
     result_model=PostsResult,
 )
 async def get_posts(ctx: ToolContext, args: GetPostsInput) -> PostsResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return _facebook("posts")
     acct = await find_account(ctx, args.account)
     span = period(ctx, args.range, default=None)
@@ -204,7 +204,7 @@ class LatestPostResult(ToolResult):
     result_model=LatestPostResult,
 )
 async def get_latest_post(ctx: ToolContext, args: GetLatestPostInput) -> LatestPostResult:
-    if facebook_asked(args.platform, args.account):
+    if await facebook_unconnected(ctx, args.platform, args.account):
         return LatestPostResult(
             summary="Facebook isn't connected, so there is no Facebook post",
             caveats=[FACEBOOK_NOT_CONNECTED],
@@ -251,7 +251,7 @@ class SearchPostsInput(_Input):
     result_model=PostsResult,
 )
 async def search_posts(ctx: ToolContext, args: SearchPostsInput) -> PostsResult:
-    if facebook_asked(args.account):
+    if await facebook_unconnected(ctx, args.account):
         return _facebook("posts")
     acct = await find_account(ctx, args.account)
     span = period(ctx, args.range, default=None)

@@ -9,12 +9,13 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request
 from sqlalchemy import func, select
 
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanManageSettings, Session
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.billing import Subscription
 from socialhood.models.identity import WorkspaceMember
 from socialhood.repositories import users
 from socialhood.schemas.workspaces import Overview, OverviewPreset, WorkspaceOut, WorkspacePatch
+from socialhood.services import audit
 from socialhood.services import overview as overview_service
 from socialhood.services import workspaces as service
 
@@ -52,8 +53,19 @@ async def get_workspace(ctx: AnyMember, session: Session) -> WorkspaceOut:
 
 
 @router.patch("", operation_id="update_workspace")
-async def update_workspace(body: WorkspacePatch, ctx: Admin, session: Session) -> WorkspaceOut:
+async def update_workspace(
+    body: WorkspacePatch, ctx: CanManageSettings, session: Session
+) -> WorkspaceOut:
     await service.update_workspace(session, ctx.workspace, body)
+    await audit.record(
+        session,
+        ctx,
+        "settings.updated",
+        "workspace",
+        ctx.workspace_id,
+        fields=sorted(body.model_fields_set),
+    )
+    await session.commit()
     return await _out(session, ctx)
 
 

@@ -29,7 +29,7 @@ class SocialAccountOut(ResponseModel):
     """Never the token itself (SEC-02)."""
 
     id: uuid.UUID
-    platform: Literal["instagram", "whatsapp"]
+    platform: Literal["instagram", "whatsapp", "facebook", "web"]
     display_name: str | None = None
     username: str | None = None
     profile_picture_url: str | None = None
@@ -72,11 +72,26 @@ class InstagramConnectComplete(RequestModel):
     nonce: str = Field(min_length=1, max_length=128)
 
 
+class SandboxAccountCreate(RequestModel):
+    """Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)
+    or a WhatsApp number with approved templates (GR-23). No body makes an Instagram one."""
+
+    platform: Literal["instagram", "facebook", "whatsapp"] = "instagram"
+
+
 class SandboxInbound(RequestModel):
-    """A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
-    link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
-    comment; a DM can carry an ad referral (its first message from an ad). GR-06 and GR-07 add a
-    story reply, a story like (the heart) and a story mention."""
+    """A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).
+    GR-01 adds a referral without a message (an entry link opened, or an ad tapped), a tapped
+    postback (an ice breaker), an opt-in and a Live comment; a DM can carry an ad referral (its
+    first message from an ad). GR-06 and GR-07 add a
+    story reply, a story like (the heart) and a story mention. A Facebook Page takes a DM, a
+    comment on a post, a referral, a postback and an opt-in; the kinds it doesn't have are
+    refused (GR-29).
+
+    GR-23 adds two kinds for a sandbox WhatsApp number, and lets a ``dm`` be a WhatsApp customer's
+    message (``from_id`` is their number): ``status`` is a delivery status for the last message we
+    sent that contact (``delivery_status``, with ``error_code`` and ``error_text`` for a failure),
+    and ``quality`` a ``phone_number_quality_update`` (``quality_event``, ``tier``)."""
 
     account_id: uuid.UUID
     kind: Literal[
@@ -89,6 +104,8 @@ class SandboxInbound(RequestModel):
         "story_reply",
         "story_like",
         "story_mention",
+        "status",
+        "quality",
     ]
     # The message, comment, story reply or postback title. A referral, an opt-in, a story like and
     # a story mention have none.
@@ -109,9 +126,22 @@ class SandboxInbound(RequestModel):
     # A comment or Live comment that is this many seconds old when it arrives (a late webhook):
     # GR-10 uses it to show a Live comment arriving after the broadcast ended.
     age_seconds: int | None = Field(default=None, ge=0, le=7 * 86400)
+    # GR-23, WhatsApp only: a delivery status for the last message sent to ``from_id``.
+    delivery_status: Literal["sent", "delivered", "read", "failed"] | None = None
+    error_code: int | None = Field(default=None, ge=1, le=999999)
+    error_text: str | None = Field(default=None, max_length=300)
+    # GR-23, WhatsApp only: a number's quality or tier change.
+    quality_event: Literal["ONBOARDING", "UPGRADE", "DOWNGRADE", "FLAGGED", "UNFLAGGED"] | None = (
+        None
+    )
+    tier: str | None = Field(default=None, max_length=32)
 
     @model_validator(mode="after")
     def _needs_text(self) -> SandboxInbound:
+        if self.kind == "status" and (not self.from_id or self.delivery_status is None):
+            raise ValueError("from_id and delivery_status are required for a status")
+        if self.kind == "quality" and self.quality_event is None:
+            raise ValueError("quality_event is required for a quality update")
         if (
             self.kind in ("dm", "comment", "live_comment", "postback", "story_reply")
             and not self.text

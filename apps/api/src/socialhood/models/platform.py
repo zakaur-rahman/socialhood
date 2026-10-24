@@ -30,6 +30,7 @@ from socialhood.models.identity import _in
 class WebhookProvider(StrEnum):
     INSTAGRAM = "instagram"
     WHATSAPP = "whatsapp"
+    FACEBOOK = "facebook"
     DODO = "dodo"
     CLERK = "clerk"
 

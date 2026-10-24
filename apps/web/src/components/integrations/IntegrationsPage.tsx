@@ -1,9 +1,11 @@
 "use client";
 
 import { Check, Copy, Plus, RotateCcw, Send, Trash2, Webhook } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { toast } from "sonner";
 
+import { GoogleSheetsCard } from "@/components/integrations/GoogleSheetsCard";
+import { ApiKeysSection } from "@/components/integrations/ApiKeysSection";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
 import { EmptyState } from "@/components/states/EmptyState";
@@ -65,7 +67,8 @@ const DELIVERY: Record<WebhookDelivery["status"], { label: string; tone: "succes
 /**
  * Settings › Integrations (GR-04): webhook endpoints that receive Social Hood's events as they
  * happen. Add one (its signing secret is shown once), turn it on or off, send a test event, see
- * each delivery's last attempt and replay one. Owners and admins.
+ * each delivery's last attempt and replay one. Above them, the Google Sheets card (GR-27) adds
+ * every captured lead to a sheet. Owners and admins.
  */
 export function IntegrationsPage() {
   const { id: wid } = useCurrentWorkspace();
@@ -90,6 +93,9 @@ export function IntegrationsPage() {
         />
       }
     >
+      <Suspense fallback={<Skeleton className="h-40 w-full" />}>
+        <GoogleSheetsCard wid={wid} />
+      </Suspense>
       {endpoints.isPending ? (
         <Skeleton className="h-40 w-full" />
       ) : items.length === 0 ? (
@@ -126,6 +132,7 @@ export function IntegrationsPage() {
         }}
       />
       <SecretDialog secret={secret} onClose={() => setSecret(null)} />
+      <ApiKeysSection />
     </SettingsFrame>
   );
 }

@@ -65,6 +65,7 @@ import {
   fromPostAsset,
   handleOf,
   isEditable,
+  pagesOnlyText,
   MAX_ASSETS,
   MIN_SCHEDULE_LEAD_MS,
   publishingAccounts,
@@ -88,6 +89,7 @@ import { MediaLibraryDialog } from "./MediaLibraryDialog";
 import { MEDIA_ADD_ID, mediaTileId, MediaTray, moveItem, type TrayEntry } from "./MediaTray";
 import { PostChecklist } from "./PostChecklist";
 import { PostPreview } from "./PostPreview";
+import { PostTypeSection } from "./PostTypeSection";
 import { StatusBanner } from "./StatusBanner";
 import { toRequest, usePostDraft, type Draft, type PostSaveStatus } from "./use-post-draft";
 import { useMediaUploads, type Uploader } from "./use-media-uploads";
@@ -293,16 +295,24 @@ function Composer({
     replacing: uploads.items.find((item) => item.replaces === id) ?? null,
   }));
   const postAssets = entries.map((entry) => entry.asset);
-  const format = deriveFormat(postAssets);
+  // Before the format: a text post needs to know whether every chosen account is a Page (GR-30).
+  const selectedIds = draft.targets.map((target) => target.social_account_id);
+  const selectedAccounts = selectedIds
+    .map((accountId) => allAccounts.find((account) => account.id === accountId))
+    .filter((account): account is NonNullable<typeof account> => Boolean(account));
+  const isStory = draft.kind === "story";
+  const format = isStory
+    ? postAssets.length === 1
+      ? "story"
+      : null
+    : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
+      ? "text"
+      : deriveFormat(postAssets);
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
   const cropAsset = cropId ? assets[cropId] : undefined;
 
   // ---- accounts and captions (per account when switched on)
   const [perAccount, setPerAccount] = useState(() => initial.targets.some((target) => target.caption_override != null));
-  const selectedIds = draft.targets.map((target) => target.social_account_id);
-  const selectedAccounts = selectedIds
-    .map((accountId) => allAccounts.find((account) => account.id === accountId))
-    .filter((account): account is NonNullable<typeof account> => Boolean(account));
 
   const toggleAccount = (accountId: string) => {
     const removing = draft.targets.some((target) => target.social_account_id === accountId);
@@ -638,6 +648,15 @@ function Composer({
               onToggle={toggleAccount}
               slug={slug}
             />
+            <PostTypeSection
+              value={draft.kind}
+              onChange={(kind) => change({ kind })}
+              storyBlockedBy={
+                selectedAccounts.find((account) => account.platform !== "instagram")
+                  ? handleOf(selectedAccounts.find((account) => account.platform !== "instagram"))
+                  : null
+              }
+            />
             <MediaTray
               entries={entries}
               uploads={newUploads}
@@ -652,6 +671,8 @@ function Composer({
               onRetryUpload={uploads.retry}
               onRemoveUpload={uploads.remove}
             />
+            {isStory ? null : (
+            <>
             <CaptionEditor
               wid={wid}
               slug={slug}
@@ -682,6 +703,8 @@ function Composer({
               value={draft.first_comment ?? ""}
               onChange={(value) => change({ first_comment: value })}
             />
+            </>
+            )}
             <AutomationSection
               wid={wid}
               slug={slug}
@@ -705,6 +728,9 @@ function Composer({
                 allowQueue={isDraft}
                 slug={slug}
                 now={now}
+                bestFor={
+                  selectedAccounts[0] ? { wid, accountId: selectedAccounts[0].id, handle: handleOf(selectedAccounts[0]) } : null
+                }
               />
             ) : null}
           </fieldset>

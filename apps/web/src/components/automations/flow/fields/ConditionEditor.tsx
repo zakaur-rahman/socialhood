@@ -4,7 +4,7 @@ import { useId } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { FlowCondition, FlowFieldDefinition, FlowTag, LeadStage } from "@/lib/api/types";
+import type { FlowCondition, FlowFieldDefinition, FlowTag, LeadStage, Platform } from "@/lib/api/types";
 import { LEAD_STAGES, STAGE_LABEL } from "@/lib/leads/stages";
 
 import { NativeSelect } from "../NativeSelect";
@@ -21,6 +21,7 @@ type Choice =
   | "follows"
   | "not_follows"
   | "instagram"
+  | "facebook"
   | "whatsapp"
   | "lead_score"
   | "lead_stage";
@@ -36,6 +37,7 @@ const LABEL: Record<Choice, string> = {
   follows: "They follow you",
   not_follows: "They don't follow you",
   instagram: "They're on Instagram",
+  facebook: "They're on Facebook",
   whatsapp: "They're on WhatsApp",
   lead_score: "Lead score is at least",
   lead_stage: "Lead stage is",
@@ -85,6 +87,7 @@ export function conditionFor(choice: Choice, previous: FlowCondition, tags: Flow
     case "not_follows":
       return { kind: "follows_business", follows: choice === "follows" };
     case "instagram":
+    case "facebook":
     case "whatsapp":
       return { kind: "platform", platform: choice };
     case "lead_score":
@@ -105,6 +108,7 @@ export function ConditionEditor({
   fields,
   label,
   problem,
+  platform,
 }: {
   when: FlowCondition;
   onChange: (when: FlowCondition) => void;
@@ -112,9 +116,12 @@ export function ConditionEditor({
   fields: FlowFieldDefinition[];
   label: string;
   problem?: string;
+  /** GR-29: on a Facebook Page, Messenger can't say who follows it, so those two choices go. */
+  platform?: Platform;
 }) {
   const id = useId();
   const choice = choiceOf(when);
+  const choices = ORDER.filter((item) => platform !== "facebook" || choice === item || (item !== "follows" && item !== "not_follows"));
   return (
     <div className="space-y-2">
       <NativeSelect
@@ -124,7 +131,7 @@ export function ConditionEditor({
         onChange={(value) => onChange(conditionFor(value as Choice, when, tags, fields))}
         invalid={Boolean(problem)}
       >
-        {ORDER.map((item) => (
+        {choices.map((item) => (
           <option key={item} value={item}>
             {LABEL[item]}
           </option>

@@ -33,6 +33,7 @@ from socialhood.models.ai import AiSettings, MessageAnalysis
 from socialhood.models.automations import AutomationRun, Comment
 from socialhood.models.billing import Subscription
 from socialhood.models.connections import SocialAccount
+from socialhood.models.contacts import Tag
 from socialhood.models.identity import User, Workspace, WorkspaceMember
 from socialhood.models.inbox import Contact, Conversation, Message
 from socialhood.models.media import MediaItem
@@ -1302,6 +1303,7 @@ async def seed(engine: AsyncEngine) -> Seeded:
     )
     await _schedules(engine, seeded)
     await _knowledge(engine, seeded)
+    await _tags(engine, seeded)
     await _account_days(engine, seeded)
     return seeded
 
@@ -1577,6 +1579,14 @@ async def _knowledge(engine: AsyncEngine, seeded: Seeded) -> None:
             status=gap.status,
             dismissed_at=gap.last_seen_at if gap.status == "dismissed" else None,
         )
+
+
+async def _tags(engine: AsyncEngine, seeded: Seeded) -> None:
+    """GR-36: the tags a proposed flow or segment may name (the agent never invents a tag)."""
+    with workspace_scope(seeded.workspace_id):
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            session.add_all([Tag(name="vip", color=1), Tag(name="wholesale", color=2)])
+            await session.commit()
 
 
 # ---------------------------------------------------------------- the answers, from the data

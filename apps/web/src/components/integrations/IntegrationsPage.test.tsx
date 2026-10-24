@@ -55,6 +55,9 @@ function delivery(values: Partial<WebhookDelivery> = {}): WebhookDelivery {
 function setup({ endpoints = [] as WebhookEndpoint[], deliveries = [] as WebhookDelivery[], create }: { endpoints?: WebhookEndpoint[]; deliveries?: WebhookDelivery[]; create?: (call: Call) => Response } = {}) {
   return renderWithApi(<IntegrationsPage />, {
     handlers: {
+      "GET /v1/w/:wid/integrations/google-sheets": () =>
+        json({ available: true, entitled: true, connected: false, columns: [], fields: [], pending_rows: 0, failed_rows: 0, recent: [] }),
+      "GET /v1/w/:wid/api-keys": () => json({ items: [], scopes: [], active_limit: 20 }),
       "GET /v1/w/:wid/webhook-events": () => json({ items: EVENTS }),
       "GET /v1/w/:wid/webhook-endpoints": () => json({ items: endpoints, limit: 1 }),
       "GET /v1/w/:wid/webhook-endpoints/:id/deliveries": () => json({ items: deliveries, next_cursor: null }),

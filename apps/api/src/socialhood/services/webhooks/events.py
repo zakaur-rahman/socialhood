@@ -14,6 +14,8 @@ its id, platform, @username and name; an email or phone only in the events about
 subscribed to it, each with its deliver_webhook job (services/webhooks/delivery.py). Nothing is
 written when no endpoint wants the event. Backfilled history emits nothing.
 
+A ``lead.captured`` also queues a row for the workspace's Google Sheet (services/sheets.py).
+
 ``conversation.assigned`` (GR-20) and ``broadcast.finished`` (GR-23) are in the catalogue so
 endpoints can subscribe now; they're emitted once those features exist.
 """
@@ -28,6 +30,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.billing.plans import current_plan, entitlement
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.connections import SocialAccount
 from socialhood.models.inbox import Contact, Message
@@ -107,7 +110,14 @@ async def _endpoints(session: AsyncSession, event_type: str) -> list[WebhookEndp
             WebhookEndpoint.events.contains([event_type]),
         )
     )
-    return list(rows.all())
+    found = list(rows.all())
+    # A Zapier REST hook (GR-26) works while the plan has the public API (PD-6); the plan is
+    # looked up only when a hook is among the endpoints.
+    if any(e.api_key_id is not None for e in found) and not entitlement(
+        await current_plan(session), "public_api"
+    ):
+        found = [e for e in found if e.api_key_id is None]
+    return found
 
 
 async def wanted(session: AsyncSession, event_type: str) -> bool:
@@ -249,16 +259,21 @@ async def lead_captured(
     automation_name: str,
     run_id: uuid.UUID,
 ) -> None:
+    platform = await _platform(session, contact)
     await emit(
         session,
         "lead.captured",
         {
-            "contact": contact_ref(contact, await _platform(session, contact)),
+            "contact": contact_ref(contact, platform),
             "captured": {"kind": kind, "field_key": field_key, "value": value},
             "automation": {"id": str(automation_id), "name": automation_name},
             "run_id": str(run_id),
         },
     )
+    # GR-27: the workspace's Google Sheet gets a row for the same capture.
+    from socialhood.services import sheets
+
+    await sheets.queue_lead(session, contact, platform=platform, automation_name=automation_name)
 
 
 async def lead_stage_changed(

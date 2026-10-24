@@ -86,9 +86,14 @@ from socialhood.services.reply_window import (
 
 log = get_logger(__name__)
 
-OutboundSource = Literal["human", "ai_auto", "automation"]
+OutboundSource = Literal["human", "ai_auto", "automation", "broadcast"]
 
-PLATFORM_NAMES = {"instagram": "Instagram", "whatsapp": "WhatsApp"}
+PLATFORM_NAMES = {
+    "instagram": "Instagram",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "web": "Website",
+}
 DEFAULT_TAKEOVER_MINUTES = 120
 # ai_paused_until = 'infinity' means "until resumed" (§5.4); asyncpg writes datetime.max as that.
 UNTIL_RESUMED = datetime.max.replace(tzinfo=UTC)
@@ -111,6 +116,8 @@ class TextLimit:
 TEXT_LIMITS: dict[str, TextLimit] = {
     "instagram": TextLimit(1000, "bytes"),
     "whatsapp": TextLimit(4096, "characters"),
+    "facebook": TextLimit(2000, "characters"),  # Messenger's text limit (unverified, GR-29)
+    "web": TextLimit(2000, "characters"),  # GR-28: the widget shows short chat bubbles
 }
 KB = 1024
 MB = 1024 * KB
@@ -134,6 +141,13 @@ SEND_RULES: dict[str, dict[str, SendRule]] = {
         "audio": SendRule("Audio files", 25 * MB, frozenset({"aac", "m4a", "wav", "mp4"})),
         "file": SendRule("Files", 25 * MB, frozenset({"pdf"})),
     },
+    # Messenger takes attachments by URL up to 25 MB (unverified, GR-29); no built-in stickers.
+    "facebook": {
+        "image": SendRule("Images", 25 * MB),
+        "video": SendRule("Videos", 25 * MB),
+        "audio": SendRule("Audio files", 25 * MB),
+        "file": SendRule("Files", 25 * MB),
+    },
     "whatsapp": {
         "image": SendRule("Images", 5 * MB),
         "video": SendRule("Videos", 16 * MB),
@@ -150,17 +164,22 @@ SEND_RULES: dict[str, dict[str, SendRule]] = {
 }
 # Link buttons (FR-AUT-13) are Instagram's button template: its text is at most 640 characters
 # (Meta's docs, checked 2026-09-29; T0.9 item 10). Platforms not listed have no link buttons.
-BUTTON_TEXT_LIMITS: dict[str, int] = {"instagram": 640}
+BUTTON_TEXT_LIMITS: dict[str, int] = {"instagram": 640, "facebook": 640}
 MAX_BUTTONS = 3
 # Quick replies (FR-AUT-21): Instagram takes up to 13 with a text message (Meta's docs, checked
 # 2026-09-29). Platforms not listed have none.
-QUICK_REPLY_LIMITS: dict[str, int] = {"instagram": 13}
+QUICK_REPLY_LIMITS: dict[str, int] = {"instagram": 13, "facebook": 13}
 HEART = "\u2764\ufe0f"  # Instagram's built-in heart sticker, stored as its emoji
 STICKER_SIZE = 512  # WhatsApp stickers are 512 x 512
 
 
 def platform_name(platform: str) -> str:
     return PLATFORM_NAMES.get(platform, platform.capitalize())
+
+
+def say(text: str, platform: str) -> str:
+    """Copy written for Instagram, said for the account's platform (GR-29)."""
+    return text.replace("Instagram", platform_name(platform)) if platform != "instagram" else text
 
 
 def text_size(platform: str, text: str) -> int:
@@ -876,7 +895,9 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
 def _bucket(platform: str, *, media: bool) -> Bucket:
     if platform == "whatsapp":
         return Bucket.WA_SEND
-    # Images share the 10/s media bucket until T0.9 confirms their limit (TR-PL-09).
+    # Images share the 10/s media bucket until T0.9 confirms their limit (TR-PL-09). A Facebook
+    # Page uses the same buckets (they are per account); Messenger's own limits are higher
+    # (unverified, GR-29), so these only pace us.
     return Bucket.IG_SEND_MEDIA if media else Bucket.IG_SEND
 
 

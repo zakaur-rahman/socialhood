@@ -23,6 +23,7 @@ import {
   useAutomations,
   useAutomationsSummary,
   useAutomationTemplates,
+  useBroadcastAvailability,
   useBulkPause,
   useDeleteAutomation,
   useDuplicateAutomation,
@@ -32,7 +33,7 @@ import {
   type AutomationFilters,
 } from "@/lib/api/queries";
 import type { Automation, AutomationSort, AutomationStatus, SocialAccount, TriggerName } from "@/lib/api/types";
-import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import { accountLabel, automationAccounts } from "@/lib/automations/accounts";
 import { etaText, formatCount, TRIGGER_LABEL_IG } from "@/lib/automations/format";
 import { emptyStates, errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
@@ -121,6 +122,8 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const wid = workspace.id;
   const router = useRouter();
   const now = useNow();
+  // GR-23: the Broadcasts link shows only when the server setting is on (a failed call hides it).
+  const broadcastsOn = useBroadcastAvailability(wid).data?.enabled === true;
 
   // ---- filters (FR-AUT-19)
   const [text, setText] = useState("");
@@ -141,7 +144,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const summary = useAutomationsSummary(wid);
   const templates = useAutomationTemplates(wid);
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
   // UI-064: no Instagram account (WhatsApp only, or nothing connected) hears that first.
   const noInstagram = allAccounts.isSuccess && accounts.length === 0;
   const canConnect = workspace.role !== "agent";
@@ -359,6 +362,11 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           <Button asChild variant="secondary" size="lg">
             <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
           </Button>
+          {broadcastsOn ? (
+            <Button asChild variant="secondary" size="lg">
+              <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
+            </Button>
+          ) : null}
           <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
             <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
           </Button>

@@ -69,6 +69,8 @@ def describe_account(account: SocialAccount) -> str:
     if platform == Platform.WHATSAPP:
         name = account.display_name or account.phone_number or "WhatsApp number"
         described = f"WhatsApp {name}"
+    elif platform == Platform.WEB:
+        described = "Website chat widget"
     else:
         handle = f"@{account.username}" if account.username else account.display_name or "account"
         described = f"{platform.capitalize()} {handle}"

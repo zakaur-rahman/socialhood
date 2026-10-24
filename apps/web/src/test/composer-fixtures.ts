@@ -1,7 +1,7 @@
 /** Publishing fixtures for the composer's tests (P7). */
 import type { MediaAsset } from "@/lib/api/types";
 import type { AssetInfo } from "@/lib/publishing/rules";
-import type { ChecklistItem, HashtagGroup, PostAsset, ScheduledPost, ScheduledPostTarget } from "@/lib/publishing/types";
+import type { BestTimes, ChecklistItem, HashtagGroup, PostAsset, ScheduledPost, ScheduledPostTarget } from "@/lib/publishing/types";
 
 export function postAsset(overrides: Partial<PostAsset> = {}): PostAsset {
   return {
@@ -81,6 +81,7 @@ export function scheduledPost(overrides: Partial<ScheduledPost> = {}): Scheduled
     id: "sp1",
     status: "draft",
     format: null,
+    kind: overrides.format === "story" ? "story" : "post",
     caption: "",
     publish_at: null,
     published_at: null,
@@ -120,6 +121,24 @@ export function hashtagGroup(overrides: Partial<HashtagGroup> = {}): HashtagGrou
     hashtags: ["summer", "linen", "ootd"],
     created_at: "2026-09-20T10:00:00Z",
     updated_at: "2026-09-20T10:00:00Z",
+    ...overrides,
+  };
+}
+
+/** GET …/best-times: Monday 18:00 and Wednesday 12:00 stand out (GR-30). */
+export function bestTimes(overrides: Partial<BestTimes> = {}): BestTimes {
+  const days: BestTimes["days"] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, local_time: null, posts: 0, lift_percent: null }));
+  days[0] = { weekday: 0, local_time: "18:00:00", posts: 12, lift_percent: 34 };
+  days[2] = { weekday: 2, local_time: "12:00:00", posts: 6, lift_percent: 12 };
+  return {
+    social_account_id: "a1",
+    timezone: "Asia/Kolkata",
+    enough_history: true,
+    sample_size: 40,
+    min_posts: 10,
+    method: "The hour whose posts did best on each weekday.",
+    days,
+    computed_at: "2026-10-24T10:00:00Z",
     ...overrides,
   };
 }

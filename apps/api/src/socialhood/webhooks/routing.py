@@ -36,6 +36,22 @@ async def resolve_account(
     return RoutedAccount(account_id=row[0], workspace_id=row[1]) if row else None
 
 
+async def resolve_waba_accounts(session: AsyncSession, waba_id: str) -> list[RoutedAccount]:
+    """The live WhatsApp numbers of one WhatsApp Business Account: events about the account
+    (a number's quality or tier) arrive under its id, not a phone number's (GR-23)."""
+    with tenant_bypass_scope():
+        rows = (
+            await session.execute(
+                select(SocialAccount.id, SocialAccount.workspace_id).where(
+                    SocialAccount.platform == "whatsapp",
+                    SocialAccount.waba_id == waba_id,
+                    SocialAccount.status != AccountStatus.DISCONNECTED,
+                )
+            )
+        ).all()
+    return [RoutedAccount(account_id=r[0], workspace_id=r[1]) for r in rows]
+
+
 async def accounts_for_platform_user(
     session: AsyncSession, platform_user_id: str
 ) -> list[RoutedAccount]:

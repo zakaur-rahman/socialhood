@@ -12,7 +12,8 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { FlowButton } from "@/lib/api/types";
 import type { SendNode } from "@/lib/automations/flow";
 import { formatCount } from "@/lib/automations/format";
-import { MAX_BUTTONS, MESSAGE_LIMIT_BYTES, MESSAGE_MAX_CHARS, worstCaseBytes } from "@/lib/automations/render";
+import { messageLimit, messageSize } from "@/lib/automations/limits";
+import { MAX_BUTTONS, MESSAGE_MAX_CHARS } from "@/lib/automations/render";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -29,8 +30,9 @@ export function SendFields({ node }: { node: SendNode }) {
   const env = useFlowEnv();
   const problems = env.problemsOf(node.id);
   const textarea = useRef<HTMLTextAreaElement>(null);
-  const bytes = worstCaseBytes(node.text, env.disclosure);
-  const over = bytes > MESSAGE_LIMIT_BYTES;
+  const size = messageSize(node.text, env.disclosure, env.platform);
+  const { limit, unit } = messageLimit(env.platform);
+  const over = size > limit;
   const textProblem = problems.text?.message;
   const imageProblem = problems.image_asset_id?.message;
   // A comment's first message is a private reply: text and link buttons only (C-030).
@@ -119,7 +121,7 @@ export function SendFields({ node }: { node: SendNode }) {
             {env.disclosure ? " The disclosure line is added at the end and counts toward the limit." : ""}
           </p>
           <p className={cn("shrink-0 tabular-nums", over ? "text-danger-fg" : "text-fg-secondary")}>
-            {formatCount(bytes)} / {formatCount(MESSAGE_LIMIT_BYTES)} bytes
+            {formatCount(size)} / {formatCount(limit)} {unit}
           </p>
         </div>
         {textProblem ? (
@@ -173,7 +175,8 @@ export function SendFields({ node }: { node: SendNode }) {
                 <X aria-hidden />
               </Button>
             </div>
-          ) : (
+          ) : env.platform === "facebook" ? null : (
+            // The profile button opens the account's Instagram profile; a Page has none (GR-29).
             <Button
               variant="ghost"
               size="sm"

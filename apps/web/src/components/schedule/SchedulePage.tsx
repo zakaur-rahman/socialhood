@@ -48,7 +48,7 @@ import {
   useUnschedulePost,
 } from "@/lib/api/queries/calendar";
 import type { ScheduledPostSummary, ScheduledPostView } from "@/lib/api/types";
-import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import { accountLabel } from "@/lib/automations/accounts";
 import { isPlanLimitError } from "@/lib/api/errors";
 import { minWidth } from "@/lib/breakpoints";
 import { emptyStates } from "@/lib/copy";
@@ -77,6 +77,7 @@ import {
   POST_STATUS,
   STATUS_GROUPS,
 } from "@/lib/schedule/format";
+import { publishingAccounts } from "@/lib/publishing/rules";
 import { formatDayTime } from "@/lib/tz";
 import { useMediaQuery, useNow, useStoredString } from "@/lib/use-browser-state";
 import { cn } from "@/lib/utils";
@@ -142,7 +143,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
 
   // ---- data
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => publishingAccounts(allAccounts.data ?? []), [allAccounts.data]);
   // Read in the List view too: the right rail's figures come from it.
   const calendar = useCalendar(wid, range.from, range.to);
   const drafts = useScheduledPostList(wid, "drafts");

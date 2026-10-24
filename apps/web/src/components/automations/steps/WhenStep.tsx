@@ -21,7 +21,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { AutomationDefinition, SocialAccount, TriggerName } from "@/lib/api/types";
 import { accountLabel } from "@/lib/automations/accounts";
 import { errorsFor, triggerPatch, type FieldErrors } from "@/lib/automations/definition";
-import { TRIGGER_LABEL_IG } from "@/lib/automations/format";
+import { triggerLabel } from "@/lib/automations/format";
 
 import { StepCard, type StepState } from "../StepCard";
 
@@ -50,7 +50,27 @@ const TRIGGERS: { value: TriggerName; icon: typeof Send; hint: string }[] = [
   },
 ];
 
-/** UX-SCR-03 When: the Instagram account and the trigger. */
+/** What a Facebook Page has no trigger for (Messenger has no stories), and why (GR-29). */
+const FACEBOOK_UNAVAILABLE: Partial<Record<TriggerName, string>> = {
+  story_reply: "Facebook Pages have no story replies.",
+  story_mention: "Facebook Pages have no story mentions.",
+};
+
+/** The trigger's hint, said for the account's platform. */
+function hintFor(trigger: TriggerName | null | undefined, platform: string | undefined): string {
+  if (!trigger) return "Choose what starts this automation.";
+  const base = TRIGGERS.find((item) => item.value === trigger)?.hint ?? "Choose what starts this automation.";
+  if (platform !== "facebook") return base;
+  const unavailable = FACEBOOK_UNAVAILABLE[trigger];
+  if (unavailable) return `${unavailable} Choose another trigger.`;
+  if (trigger === "ad_click") return "Someone opens a chat from a Click-to-Messenger ad. Answer any ad, or only the ads you list.";
+  if (trigger === "entry_link") {
+    return "Someone opens a chat from one of your m.me links or QR codes. Make the links on the Entry links page.";
+  }
+  return base.replace("Instagram", "Facebook");
+}
+
+/** UX-SCR-03 When: the account (an Instagram account or a Facebook Page) and the trigger. */
 export function WhenStep({
   draft,
   change,
@@ -68,8 +88,10 @@ export function WhenStep({
 }) {
   const accountError = errorsFor(errors, "social_account_id")[0];
   const triggerError = errorsFor(errors, "trigger")[0];
-  const hint = TRIGGERS.find((trigger) => trigger.value === draft.trigger)?.hint ?? "Choose what starts this automation.";
-  const known = accounts.some((account) => account.id === draft.social_account_id);
+  const chosen = accounts.find((account) => account.id === draft.social_account_id);
+  const platform = chosen?.platform;
+  const hint = hintFor(draft.trigger, platform);
+  const known = Boolean(chosen);
 
   const setTrigger = (value: TriggerName) => change(triggerPatch(draft, value));
 
@@ -77,16 +99,16 @@ export function WhenStep({
     <StepCard id="when" label="When" state={state} errors={[accountError, triggerError].filter(Boolean) as string[]}>
       <div className="space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="automation-account">Instagram account</Label>
+          <Label htmlFor="automation-account">Account</Label>
           {accounts.length === 0 ? (
             <p className="text-sm text-fg-secondary">
-              Connect an Instagram account to use automations.{" "}
+              Connect an Instagram account or a Facebook Page to use automations.{" "}
               {/* Underlined at rest: in a line of text, colour alone doesn't mark a link (WCAG 1.4.1). */}
               <Link
                 href={`/w/${slug}/settings/connections` as Route}
                 className="text-brand-fg underline underline-offset-4"
               >
-                Connect Instagram
+                Connect an account
               </Link>
             </p>
           ) : (
@@ -137,9 +159,13 @@ export function WhenStep({
             className="flex-col @2xl:flex-row @2xl:flex-wrap"
           >
             {TRIGGERS.map(({ value, icon: Icon }) => (
-              <ToggleGroupItem key={value} value={value}>
+              <ToggleGroupItem
+                key={value}
+                value={value}
+                disabled={platform === "facebook" && Boolean(FACEBOOK_UNAVAILABLE[value])}
+              >
                 <Icon className="size-4" aria-hidden />
-                {TRIGGER_LABEL_IG[value]}
+                {triggerLabel(value, platform)}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>

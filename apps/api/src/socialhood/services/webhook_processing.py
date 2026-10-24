@@ -17,7 +17,14 @@ from socialhood.observability.logging import get_logger
 from socialhood.realtime import events
 from socialhood.repositories import webhook_events
 from socialhood.services import clerk_sync
-from socialhood.services.webhook_handlers import Handler, Outcome, dodo, instagram, whatsapp
+from socialhood.services.webhook_handlers import (
+    Handler,
+    Outcome,
+    dodo,
+    facebook,
+    instagram,
+    whatsapp,
+)
 
 __all__ = ["HANDLERS", "Outcome", "process_event"]
 
@@ -34,6 +41,7 @@ HANDLERS: dict[str, Handler] = {
     WebhookProvider.DODO: dodo.handle,  # T8.3
     WebhookProvider.INSTAGRAM: instagram.handle,
     WebhookProvider.WHATSAPP: whatsapp.handle,
+    WebhookProvider.FACEBOOK: facebook.handle,  # GR-29
 }
 
 

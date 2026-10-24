@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardInset } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import type { PostDetail, SocialAccount } from "@/lib/api/types";
+import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { accountLabel } from "@/lib/automations/accounts";
 import { analysingText, formatCount, isAnalysing } from "@/lib/comments/format";
 import { formatDayTime } from "@/lib/tz";
@@ -95,7 +96,7 @@ export function PostPanel({
                 rel="noreferrer"
                 className="inline-flex items-center gap-1 text-xs text-brand-fg hover:underline pointer-coarse:min-h-10"
               >
-                Open in Instagram <ExternalLink className="size-3" aria-hidden />
+                Open in {account ? PLATFORM_LABEL[account.platform] : "Instagram"} <ExternalLink className="size-3" aria-hidden />
               </a>
             ) : null}
           </div>

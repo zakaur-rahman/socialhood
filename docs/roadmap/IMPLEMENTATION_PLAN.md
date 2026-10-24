@@ -67,7 +67,7 @@ weeks, **L** a month or more.
 | O-8 | **WhatsApp billing currency:** keep each business account in INR | Before 2026-12-31 | Meta stops delivering for Indian accounts not moved to INR from 2027-01-01 |
 | O-9 | **Pricing:** set the Pro price in Dodo; take the plan decisions in section C | Before launch | My suggestion is ₹1,500 to ₹2,500 (competitors.md) |
 | O-10 | **Later submissions:** Facebook Pages permissions (GR-29); Google OAuth verification if Sheets is native (GR-27); a Shopify app listing (GR-31) | When those waves start | |
-| O-11 | **Legal check:** WhatsApp marketing consent in India (TRAI's TCCCPR rules, the DPDP Act) before broadcasts go live | Before GR-23 ships | One vendor claims DLT-style consent rules apply; confirm with a professional |
+| O-11 | **Legal check:** WhatsApp marketing consent in India (TRAI's TCCCPR rules, the DPDP Act) before broadcasts go live | Before GR-23 ships | One vendor claims DLT-style consent rules apply; confirm with a professional. **Not done (2026-10-24):** GR-23 is built and merged behind the server setting `BROADCASTS_ENABLED`, off by default; turn it on in production only after this check |
 
 ---
 
@@ -77,13 +77,13 @@ The recommended option is first. Each goes in CONFLICTS.md when taken, as the UI
 
 | ID | Decision | Options | Needed by |
 |---|---|---|---|
-| PD-1 | Team seats per plan | **Free 1, Pro 3, Max 10** (today Free 1, Pro 1, Max 10) · Pro 5 | GR-19 |
+| PD-1 | Team seats per plan | **Decided 2026-10-24 ("for now"): Free 1, Pro 3, Max 10** (was Free 1, Pro 1, Max 10; the alternative was Pro 5) | GR-19 |
 | PD-2 | Contacts metering | **Never meter contacts; flat plans** (the competitive edge) · a soft cap | GR-02 |
-| PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell | GR-23 |
-| PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only | GR-23 |
+| PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell. **Decided 2026-10-24: the first.** The cost shown on a broadcast is an estimate from Meta's rate card, not a charge | GR-23 |
+| PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only. **Decided 2026-10-24: the first**: Pro 2,500 recipients a month, Max 25,000, none on Free (`broadcast_recipients_monthly` in `billing/plans.py`) | GR-23 |
 | PD-5 | Flow branching by plan | **All plans, with a step cap on Free** (for example 5 steps) · Pro only | GR-13 |
-| PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Pro and Max** · webhooks on Free too | GR-04 |
-| PD-7 | Website chat widget | **Pro and Max, with "Powered by Social Hood" on Free** · paid only | GR-28 |
+| PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Decided 2026-10-24 ("for now"): webhooks on all plans (Free 1, Pro 5, Max 20 endpoints); Sheets, API and Zapier on Pro and Max** | GR-04 |
+| PD-7 | Website chat widget | **Decided 2026-10-24 (C-111): on every plan; Free shows "Powered by Social Hood", Pro and Max can turn it off; abuse limits on all plans.** Was: Pro and Max with the link on Free · paid only | GR-28 |
 | PD-8 | Commerce (catalogue, payments) | **Pro and Max** · Max only | GR-31 |
 | PD-9 | Max plan contents at launch | **Team, broadcasts and higher quotas, so Max goes on sale** (today "Coming soon") · keep Max hidden | Wave 4 |
 | PD-10 | Contacts across channels | **One contact per channel identity; link them by hand later** (P6 decides automatic matching) · automatic matching by phone or email now | GR-02 |
@@ -453,7 +453,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - Automations may require "inside hours" as a condition.
 - **Done when:** a message at 23:00 gets the away reply once and the Auto setting is respected.
 
-#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4
+#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4 · built 2026-10-24 behind `BROADCASTS_ENABLED` (C-112)
 - **Platform:**
   - Only approved templates, and only to contacts with marketing opt-in.
   - Meta prices per message by category (marketing, utility); India is billed in INR from 2026.
@@ -509,7 +509,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
   webhook machinery.
 - **Done when:** a capture appears as a row within a minute.
 
-#### GR-28 · Website chat widget · L · needs PD-7
+#### GR-28 · Website chat widget · L · PD-7 decided (C-110)
 - **Why:** Spur, respond.io and Tidio have one. We already own the inbox, the knowledge-based AI,
   the analysis and realtime, so a web channel reuses all of it.
 - **Do:**
@@ -529,10 +529,21 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Adds:** every wave 2 to 4 trigger and step works on Messenger where Meta allows (verify each).
 - It needs the second App Review submission (O-10).
 
+#### GR-39 · Instagram Story scheduling · S–M · owner request 2026-10-24
+- A "Story" post type for Instagram accounts beside image, Reel and carousel: one image or one
+  video, no caption, published through the Content Publishing API (`media_type: STORIES`), scheduled,
+  retried and reported like any post. After publishing it shows in the live stories the story-reply
+  picker lists, with its 24 hour expiry.
+- **Out of scope:** WhatsApp Status has no API; Facebook Page Stories (see GR-30).
+- **Done when:** a Story scheduled from the composer publishes on the sandbox, appears in the story
+  picker and says when it disappears.
+
 #### GR-30 · Facebook publishing and best posting times · M · needs GR-29
 - Publish to Pages from the composer.
 - **"Best times" (R2 in the spec):** from each account's own post insights, a suggested slot per
   weekday, shown in the composer and the Posting times drawer.
+- **Built as:** photos, several photos, a video and text posts through our own scheduler; best
+  times from the account's own post engagement (see C-115). Page Stories are not built.
 
 ### Wave 6: commerce
 

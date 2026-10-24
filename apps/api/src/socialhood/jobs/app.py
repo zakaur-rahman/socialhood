@@ -40,6 +40,7 @@ TASK_MODULES = [
     "socialhood.jobs.tasks.activity",
     "socialhood.jobs.tasks.analysis",
     "socialhood.jobs.tasks.leads",
+    "socialhood.jobs.tasks.broadcasts",
     "socialhood.jobs.tasks.suggestions",
     "socialhood.jobs.tasks.knowledge",
     "socialhood.jobs.tasks.comments",

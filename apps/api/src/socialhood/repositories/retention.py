@@ -21,7 +21,7 @@ from socialhood.models.automations import StoryMention
 from socialhood.models.billing import AiUsageEvent, Subscription
 from socialhood.models.identity import Workspace, WorkspaceStatus
 from socialhood.models.inbox import Conversation, Message
-from socialhood.models.integrations import DeliveryStatus, WebhookDelivery
+from socialhood.models.integrations import DeliveryStatus, SheetRow, WebhookDelivery
 from socialhood.models.notifications import Notification
 from socialhood.models.platform import WebhookEvent
 
@@ -52,6 +52,18 @@ async def webhook_deliveries_before(session: AsyncSession, cutoff: datetime, *, 
         limit,
         WebhookDelivery.created_at < cutoff,
         WebhookDelivery.status != DeliveryStatus.PENDING,
+    )
+
+
+async def sheet_rows_before(session: AsyncSession, cutoff: datetime, *, limit: int) -> int:
+    """GR-27: finished rows for the Google Sheet (a pending one is still being tried); they hold
+    the lead's name, email and phone, so they go with the webhook deliveries' window."""
+    return await _delete(
+        session,
+        SheetRow.id,
+        limit,
+        SheetRow.created_at < cutoff,
+        SheetRow.status != DeliveryStatus.PENDING,
     )
 
 

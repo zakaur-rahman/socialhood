@@ -356,6 +356,11 @@ class PlatformAdapter(Protocol):
         its id. The video processes on the platform: poll ``get_container_status``."""
         ...
 
+    async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        """A Story's container (GR-39): one image or video, no caption; returns its id. A video
+        processes on the platform: poll ``get_container_status``. Instagram only."""
+        ...
+
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
         """One child of a carousel, image or video; returns its id. Children are created in
         order, before the carousel."""
@@ -373,17 +378,28 @@ class PlatformAdapter(Protocol):
         """A container's processing state (at most one call a minute per container)."""
         ...
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        """A post with only text (GR-30; Facebook Pages): the text goes with ``publish_container``.
+        Returns its reference."""
+        ...
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
         """Publish a FINISHED container; returns the new post's platform media id. After
         delivery_unknown, ``get_container_status`` tells whether it went out (PUBLISHED: find the
-        post with ``find_published_media``; FINISHED: publishing again is safe)."""
+        post with ``find_published_media``; FINISHED: publishing again is safe on Instagram).
+        ``caption`` is the post's text for platforms that take it at publish time (Facebook
+        Pages); Instagram has it on the container already. A Facebook Page can't tell from the
+        status whether a lost answer published, so the jobs never retry it there."""
         ...
 
     async def get_published_media(
-        self, acct: SocialAccount, media_ref: str
+        self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
         """The post just published, read back: its permalink and the fields media_items stores.
-        None when the platform does not return it (yet)."""
+        None when the platform does not return it (yet). A Story is read with the fields Stories
+        have."""
         ...
 
     async def find_published_media(
@@ -393,9 +409,11 @@ class PlatformAdapter(Protocol):
         *,
         caption: str,
         published_after: datetime,
+        story: bool = False,
     ) -> PlatformMedia | None:
         """The post a PUBLISHED container became, when the publish answer was lost: the account's
-        recent posts matched on caption and time. None when it is not found."""
+        recent posts matched on caption and time (a Story: the account's live stories, matched on
+        time alone). None when it is not found."""
         ...
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:

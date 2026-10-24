@@ -44,7 +44,7 @@ import {
   useUpdateEntryLink,
 } from "@/lib/api/queries";
 import type { Automation, EntryLink, QrFormat } from "@/lib/api/types";
-import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import { accountLabel, automationAccounts } from "@/lib/automations/accounts";
 import { formatCount } from "@/lib/comments/format";
 import { emptyStates } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
@@ -138,7 +138,7 @@ export function EntryLinksPage() {
     >
       <div className="space-y-4">
         <p className="max-w-prose text-sm text-fg-secondary">
-          An entry link opens a chat with your Instagram account and starts the automation you choose. Share it as a
+          An entry link opens a chat with your Instagram account or Facebook Page and starts the automation you choose. Share it as a
           link or print the QR code.
         </p>
         {content}
@@ -293,7 +293,7 @@ function CreateDialog({
 }) {
   const create = useCreateEntryLink(wid);
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
   const [name, setName] = useState("");
   const [accountId, setAccountId] = useState<string | null>(null);
   const [automationId, setAutomationId] = useState<string | null>(null);
@@ -391,7 +391,7 @@ function CreateDialog({
           </DialogFooter>
         </form>
         {accounts.length === 0 && allAccounts.isSuccess ? (
-          <p className="text-sm text-fg-secondary">Connect an Instagram account to make entry links.</p>
+          <p className="text-sm text-fg-secondary">Connect an Instagram account or a Facebook Page to make entry links.</p>
         ) : null}
       </DialogContent>
     </Dialog>

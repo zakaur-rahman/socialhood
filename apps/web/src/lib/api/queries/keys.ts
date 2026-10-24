@@ -38,6 +38,9 @@ export type ActivityFilters = {
   accountId: string | null;
 };
 
+/** Filters of the audit log (GR-19). Part of its query key. */
+export type AuditFilters = { member: string | null; action: string | null; since: string | null; page: number };
+
 /** Query keys (TR-FE-03): everything workspace-scoped starts with ["w", workspaceId]. */
 export const keys = {
   me: ["me"] as const,
@@ -47,8 +50,10 @@ export const keys = {
   overview: (wid: string, range: string) => ["w", wid, "overview", range] as const,
   accounts: (wid: string) => ["w", wid, "social-accounts"] as const,
   notifications: (wid: string) => ["w", wid, "notifications"] as const,
+  apiKeys: (wid: string) => ["w", wid, "api-keys"] as const,
   webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
   webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
+  googleSheets: (wid: string) => ["w", wid, "google-sheets"] as const,
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
   /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
   activityLists: (wid: string) => ["w", wid, "activity"] as const,
@@ -89,7 +94,18 @@ export const keys = {
   flowFields: (wid: string) => ["w", wid, "flow-fields"] as const,
   entryLinks: (wid: string) => ["w", wid, "entry-links"] as const, // GR-08
   savedReplies: (wid: string) => ["w", wid, "saved-replies"] as const, // GR-21
+  permissions: (wid: string) => ["w", wid, "permissions"] as const, // GR-19
+  members: (wid: string) => ["w", wid, "members"] as const,
+  invitations: (wid: string) => ["w", wid, "invitations"] as const,
+  auditEvents: (wid: string, filters: AuditFilters) => ["w", wid, "audit-events", filters] as const,
+  broadcastAvailability: (wid: string) => ["w", wid, "broadcasts", "availability"] as const, // GR-23
+  broadcastLists: (wid: string) => ["w", wid, "broadcasts", "list"] as const,
+  broadcast: (wid: string, id: string) => ["w", wid, "broadcasts", "one", id] as const,
+  broadcastRecipients: (wid: string, id: string, status: string | null, page: number) =>
+    ["w", wid, "broadcasts", "one", id, "recipients", status, page] as const,
+  broadcastPreview: (wid: string, draft: unknown) => ["w", wid, "broadcasts", "preview", draft] as const,
   businessHours: (wid: string) => ["w", wid, "business-hours"] as const, // GR-22
+  widget: (wid: string) => ["w", wid, "widget"] as const, // GR-28
   // stories and mentions (GR-06, GR-07)
   stories: (wid: string, accountId: string | null) => ["w", wid, "stories", accountId] as const,
   iceBreakers: (wid: string, accountId: string) => ["w", wid, "ice-breakers", accountId] as const,
@@ -133,6 +149,7 @@ export const keys = {
   scheduledPosts: (wid: string, view: ScheduledPostView, accountIds: readonly string[] | null) =>
     ["w", wid, "scheduled-posts", view, accountIds] as const,
   postingSlots: (wid: string, accountId: string) => ["w", wid, "posting-slots", accountId] as const,
+  bestTimes: (wid: string, accountId: string) => ["w", wid, "best-times", accountId] as const,
   hashtagGroups: (wid: string) => ["w", wid, "hashtag-groups"] as const,
   // Ask Social Hood (PA): run lists (a thread's runs, the admin history) share one prefix
   agentRunLists: (wid: string) => ["w", wid, "agent", "runs"] as const,
@@ -144,4 +161,8 @@ export const keys = {
   agentRun: (wid: string, runId: string) => ["w", wid, "agent", "run", runId] as const,
   agentThreads: (wid: string) => ["w", wid, "agent", "threads"] as const,
   agentPolicy: (wid: string) => ["w", wid, "agent", "policy"] as const,
+  /** GR-36: the agent's proposed writes; every list shares one prefix. */
+  agentApprovalLists: (wid: string) => ["w", wid, "agent", "approvals"] as const,
+  agentApprovals: (wid: string, status: string, runId: string | null) =>
+    ["w", wid, "agent", "approvals", { status, runId }] as const,
 };

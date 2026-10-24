@@ -8,11 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { handOff } from "@/lib/agent/handoff";
 import { actionPath, workspaceHref } from "@/lib/agent/routes";
-import type { ActionCard, ActionKind } from "@/lib/api/types";
+import { isProposal } from "@/lib/agent/cards";
+import type { ActionCard, PreparedCard, PreparedKind } from "@/lib/api/types";
 import { TRIGGER_LABEL } from "@/lib/automations/format";
 import { formatDayTime } from "@/lib/tz";
 
-const KIND: Record<ActionKind, { icon: LucideIcon; title: string; hint: string }> = {
+import { ProposalCardView } from "./ProposalCardView";
+
+const KIND: Record<PreparedKind, { icon: LucideIcon; title: string; hint: string }> = {
   schedule_message: {
     icon: CalendarClock,
     title: "Scheduled message",
@@ -38,7 +41,7 @@ function quote(text: string | null | undefined): string | null {
 }
 
 /** The one-line summary of what the card prepared, in plain words. */
-export function actionSummary(card: ActionCard, timeZone: string, now: Date): string {
+export function actionSummary(card: PreparedCard, timeZone: string, now: Date): string {
   switch (card.kind) {
     case "schedule_message": {
       const { text, send_at: sendAt, window_closes_at: closesAt } = card.prefill;
@@ -75,16 +78,40 @@ export function actionSummary(card: ActionCard, timeZone: string, now: Date): st
  */
 export function ActionCardView({
   card,
+  runId,
+  wid,
   slug,
   timeZone,
   now,
   onOpen,
 }: {
   card: ActionCard;
+  /** The run the card came from; a proposal reads its approval through it (GR-36). */
+  runId?: string;
+  wid?: string;
   slug: string;
   timeZone: string;
   now: Date;
   /** Leaving the panel: the caller closes it. */
+  onOpen?: () => void;
+}) {
+  if (isProposal(card)) {
+    return <ProposalCardView card={card} wid={wid} runId={runId} slug={slug} timeZone={timeZone} now={now} onOpen={onOpen} />;
+  }
+  return <PreparedCardView card={card} slug={slug} timeZone={timeZone} now={now} onOpen={onOpen} />;
+}
+
+function PreparedCardView({
+  card,
+  slug,
+  timeZone,
+  now,
+  onOpen,
+}: {
+  card: PreparedCard;
+  slug: string;
+  timeZone: string;
+  now: Date;
   onOpen?: () => void;
 }) {
   const router = useRouter();

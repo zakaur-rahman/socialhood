@@ -10,25 +10,37 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.auth.deps import Admin, AnyMember, Owner, Session
+from socialhood.auth.deps import (
+    AnyMember,
+    CanManageChannels,
+    CanUseDevSandbox,
+    Session,
+)
 from socialhood.billing.plans import current_plan
-from socialhood.errors import ApiError
+from socialhood.errors import ApiError, FieldError
+from socialhood.models.connections import SocialAccount
 from socialhood.models.platform import WebhookProvider
 from socialhood.platforms.deps import PlatformDeps, deps_from
+from socialhood.platforms.facebook.webhooks import split_payload as split_facebook
 from socialhood.platforms.instagram.webhooks import split_payload
+from socialhood.platforms.sandbox import whatsapp as sandbox_whatsapp
 from socialhood.platforms.sandbox.adapter import is_sandbox
+from socialhood.platforms.whatsapp.webhooks import split_payload as whatsapp_split
+from socialhood.repositories import messages as messages_repo
 from socialhood.repositories import social_accounts as accounts
 from socialhood.schemas.accounts import (
     ConnectStart,
     InstagramConnectComplete,
+    SandboxAccountCreate,
     SandboxInbound,
     SandboxInboundResult,
     SocialAccountList,
     SocialAccountOut,
     SocialAccountPatch,
 )
-from socialhood.services import account_deletion
+from socialhood.services import account_deletion, audit
 from socialhood.services import connections as service
 from socialhood.services.webhook_intake import store_and_enqueue
 
@@ -49,7 +61,9 @@ async def list_social_accounts(
 
 
 @router.post("/social-accounts/instagram/connect", operation_id="start_instagram_connect")
-async def start_instagram_connect(request: Request, ctx: Admin, session: Session) -> ConnectStart:
+async def start_instagram_connect(
+    request: Request, ctx: CanManageChannels, session: Session
+) -> ConnectStart:
     url = await service.start_instagram_connect(
         session,
         request.app.state.redis,
@@ -64,7 +78,7 @@ async def start_instagram_connect(request: Request, ctx: Admin, session: Session
 
 @router.post("/social-accounts/instagram/complete", operation_id="complete_instagram_connect")
 async def complete_instagram_connect(
-    request: Request, body: InstagramConnectComplete, ctx: Admin, session: Session
+    request: Request, body: InstagramConnectComplete, ctx: CanManageChannels, session: Session
 ) -> SocialAccountOut:
     """Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only
     the member who started the connect, in the workspace they started it in, can finish it; the
@@ -86,10 +100,16 @@ async def complete_instagram_connect(
 
 @router.patch("/social-accounts/{account_id}", operation_id="update_social_account")
 async def update_social_account(
-    request: Request, account_id: uuid.UUID, body: SocialAccountPatch, ctx: Admin, session: Session
+    request: Request,
+    account_id: uuid.UUID,
+    body: SocialAccountPatch,
+    ctx: CanManageChannels,
+    session: Session,
 ) -> SocialAccountOut:
     acct = await service.get_or_404(session, account_id)
     acct = await service.update_account(session, acct, body, plan=await current_plan(session))
+    await audit.record(session, ctx, "social_account.updated", "social_account", account_id)
+    await session.commit()
     return service.account_out(acct, _deps(request))
 
 
@@ -99,7 +119,7 @@ async def update_social_account(
 async def disconnect_social_account(
     request: Request,
     account_id: uuid.UUID,
-    ctx: Admin,
+    ctx: CanManageChannels,
     session: Session,
     delete_data: Annotated[bool, Query()] = False,
     confirm: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
@@ -130,12 +150,22 @@ async def disconnect_social_account(
         )
     else:
         await service.disconnect(session, request.app.state.redis, acct)
+    await audit.record(
+        session,
+        ctx,
+        "social_account.removed"
+        if delete_data or confirm is not None
+        else "social_account.disconnected",
+        "social_account",
+        account_id,
+    )
+    await session.commit()
     return Response(status_code=204)
 
 
 @router.post("/social-accounts/{account_id}/resubscribe", operation_id="resubscribe_social_account")
 async def resubscribe_social_account(
-    request: Request, account_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, account_id: uuid.UUID, ctx: CanManageChannels, session: Session
 ) -> SocialAccountOut:
     """Retry the webhook subscription after it failed (F-03 edge case)."""
     acct = await service.get_or_404(session, account_id)
@@ -157,27 +187,78 @@ def _require_sandbox(request: Request) -> None:
 
 @router.post("/dev/sandbox/accounts", status_code=201, operation_id="create_sandbox_account")
 async def create_sandbox_account(
-    request: Request, ctx: Owner, session: Session
+    request: Request,
+    ctx: CanUseDevSandbox,
+    session: Session,
+    body: SandboxAccountCreate | None = None,
 ) -> SocialAccountOut:
-    """Connect a fake Instagram account for local development."""
+    """Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
+    Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
+    templates (GR-23)."""
     _require_sandbox(request)
     acct = await service.connect_sandbox(
-        session, _deps(request), user_id=ctx.user.id, plan=await current_plan(session)
+        session,
+        _deps(request),
+        user_id=ctx.user.id,
+        plan=await current_plan(session),
+        platform=body.platform if body is not None else "instagram",
     )
     return service.account_out(acct, _deps(request))
 
 
 @router.post("/dev/sandbox/inbound", operation_id="sandbox_inbound")
 async def sandbox_inbound(
-    request: Request, body: SandboxInbound, ctx: Owner, session: Session
+    request: Request, body: SandboxInbound, ctx: CanUseDevSandbox, session: Session
 ) -> SandboxInboundResult:
     """Inject a fake DM or comment. It goes through the same intake as a real webhook."""
     _require_sandbox(request)
     acct = await service.get_or_404(session, body.account_id)
     if not is_sandbox(acct):
         raise ApiError("conflict", "Only sandbox accounts accept injected events.")
+    if acct.platform == "facebook":
+        events = split_facebook(_sandbox_facebook_payload(acct.platform_account_id, body))
+        stored = await store_and_enqueue(session, WebhookProvider.FACEBOOK, events)
+        return SandboxInboundResult(stored=len(stored))
+    if acct.platform == "whatsapp":
+        return await _sandbox_whatsapp(session, acct, body)
+    if body.kind in ("status", "quality"):
+        raise ApiError("conflict", "Statuses and quality updates are for WhatsApp numbers.")
     payload = _sandbox_payload(acct.platform_account_id, body)
     stored = await store_and_enqueue(session, WebhookProvider.INSTAGRAM, split_payload(payload))
+    return SandboxInboundResult(stored=len(stored))
+
+
+async def _sandbox_whatsapp(
+    session: AsyncSession, acct: SocialAccount, body: SandboxInbound
+) -> SandboxInboundResult:
+    """A sandbox WhatsApp number's inbound event, as the webhook body Meta would send."""
+    if body.kind == "dm":
+        sender = body.from_id or f"9198{secrets.randbelow(10**8):08d}"
+        payload = sandbox_whatsapp.message(
+            acct,
+            sender=sender,
+            name=body.from_username or "Sandbox customer",
+            text=body.text or "",
+        )
+    elif body.kind == "status":
+        wamid = await messages_repo.last_outbound_platform_id(session, acct.id, body.from_id or "")
+        if wamid is None:
+            raise ApiError("conflict", "Nothing has been sent to that number yet.")
+        payload = sandbox_whatsapp.status(
+            acct,
+            wamid=wamid,
+            recipient=body.from_id or "",
+            state=body.delivery_status or "sent",
+            error_code=body.error_code,
+            error_text=body.error_text,
+        )
+    elif body.kind == "quality":
+        payload = sandbox_whatsapp.quality(
+            acct, event=body.quality_event or "UPGRADE", tier=body.tier
+        )
+    else:
+        raise ApiError("conflict", "A WhatsApp number takes DMs, statuses and quality updates.")
+    stored = await store_and_enqueue(session, WebhookProvider.WHATSAPP, whatsapp_split(payload))
     return SandboxInboundResult(stored=len(stored))
 
 
@@ -272,3 +353,82 @@ def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object
         item["optin"] = {"type": "notification_messages", "notification_messages_status": "resume"}
     entry = {"id": account_ref, "time": now_ms // 1000, "messaging": [item]}
     return {"object": "instagram", "entry": [entry]}
+
+
+FACEBOOK_REFUSED = {
+    "live_comment": "Live comments on Facebook aren't supported yet.",
+    "story_reply": "Facebook Pages have no story replies.",
+    "story_like": "Facebook Pages have no story likes.",
+    "story_mention": "Facebook Pages have no story mentions.",
+}
+
+
+def _sandbox_facebook_referral(body: SandboxInbound) -> dict[str, object]:
+    """Messenger's referral object: a click-to-Messenger ad, or an m.me link with ?ref=."""
+    if body.referral_source == "ad":
+        referral: dict[str, object] = {
+            "source": "ADS",
+            "type": "OPEN_THREAD",
+            "ad_id": body.ad_id or "sandbox_ad_1",
+        }
+        if body.ref:
+            referral["ref"] = body.ref
+        if body.ad_title:
+            referral["ads_context_data"] = {"ad_title": body.ad_title}
+        return referral
+    return {"ref": body.ref or "sandbox", "source": "SHORTLINK", "type": "OPEN_THREAD"}
+
+
+def _sandbox_facebook_payload(page_ref: str, body: SandboxInbound) -> dict[str, object]:
+    """A Page webhook body (GR-29): Messenger events under ``messaging``, a comment as a ``feed``
+    change. Shapes follow Meta's docs and are unverified until a real Page confirms them."""
+    if body.kind in FACEBOOK_REFUSED:
+        raise ApiError("validation_error", errors=[FieldError("kind", FACEBOOK_REFUSED[body.kind])])
+    sender = body.from_id or f"sandbox_user_{secrets.token_hex(3)}"
+    now_ms = int(time.time() * 1000)
+    if body.kind == "comment":
+        post_id = f"{page_ref}_post_0"  # a post the sandbox lists for the Page
+        created = datetime.now(UTC) - timedelta(seconds=body.age_seconds or 0)
+        value: dict[str, object] = {
+            "from": {"id": sender, "name": body.from_username or "Sandbox customer"},
+            "post_id": post_id,
+            "comment_id": f"{post_id}_{secrets.token_hex(6)}",
+            "parent_id": post_id,
+            "created_time": int(created.timestamp()),
+            "message": body.text,
+            "item": "comment",
+            "verb": "add",
+        }
+        entry: dict[str, object] = {
+            "id": page_ref,
+            "time": now_ms // 1000,
+            "changes": [{"field": "feed", "value": value}],
+        }
+        return {"object": "page", "entry": [entry]}
+    item: dict[str, object] = {
+        "sender": {"id": sender},
+        "recipient": {"id": page_ref},
+        "timestamp": now_ms,
+    }
+    if body.kind == "dm":
+        message: dict[str, object] = {
+            "mid": f"sandbox_mid_{secrets.token_hex(8)}",
+            "text": body.text,
+        }
+        if body.quick_reply_payload:
+            message["quick_reply"] = {"payload": body.quick_reply_payload}
+        if body.referral_source:
+            message["referral"] = _sandbox_facebook_referral(body)
+        item["message"] = message
+    elif body.kind == "postback":
+        item["postback"] = {
+            "mid": f"sandbox_mid_{secrets.token_hex(8)}",
+            "title": body.text,
+            "payload": body.postback_payload or "SANDBOX_POSTBACK",
+        }
+    elif body.kind == "referral":
+        item["referral"] = _sandbox_facebook_referral(body)
+    else:  # optin
+        item["optin"] = {"type": "notification_messages", "notification_messages_status": "resume"}
+    entry = {"id": page_ref, "time": now_ms // 1000, "messaging": [item]}
+    return {"object": "page", "entry": [entry]}

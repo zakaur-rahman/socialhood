@@ -10,7 +10,7 @@ from typing import Annotated
 from fastapi import APIRouter, Header, Request
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.deps import CanReply, Session
 from socialhood.errors import ApiError
 from socialhood.platforms.base import OutboundTemplate
 from socialhood.platforms.deps import PlatformDeps, deps_from
@@ -18,7 +18,7 @@ from socialhood.realtime import events
 from socialhood.repositories import inbox
 from socialhood.repositories import messages as messages_repo
 from socialhood.schemas.inbox import Message, SendMessage
-from socialhood.services import idempotency, sending
+from socialhood.services import audit, idempotency, sending
 from socialhood.services.inbox_views import message_out
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["inbox"])
@@ -41,7 +41,7 @@ async def send_message(
     conversation_id: uuid.UUID,
     body: SendMessage,
     idempotency_key: IdempotencyKey,
-    ctx: AnyMember,
+    ctx: CanReply,
     session: Session,
 ) -> Message:
     """Queue a reply; it is sent by the worker and progress arrives as message.updated events.
@@ -88,6 +88,9 @@ async def send_message(
             suggestion_id=body.suggestion_id,
             deps=_deps(request),
         )
+        await audit.record(
+            session, ctx, "message.sent", "message", msg.id, conversation_id=conversation_id
+        )
         await events.commit_and_publish(session, redis)
     except BaseException:
         await claim.release()
@@ -104,7 +107,7 @@ async def send_message(
     dependencies=[ratelimit.SENDS],
 )
 async def retry_message(
-    request: Request, message_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, message_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Message:
     """Send a failed message again (the same row). A message already queued or sending is
     returned as it is, so a second click never sends it twice. 402 as for ``send_message`` from

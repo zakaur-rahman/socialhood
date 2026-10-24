@@ -1,4 +1,4 @@
-"""Conversation starters, called ice breakers on Instagram (GR-11).
+"""Conversation starters, called ice breakers on Instagram and Messenger (GR-11, GR-29).
 
 An Instagram account has up to 4 questions that show at the top of a new chat in the mobile app.
 Each one is mapped to an automation on the ``ice_breaker`` trigger, or to "answer with AI". The
@@ -13,7 +13,7 @@ whatever is there.
 - A tap arrives as a postback (GR-01 stores its payload). ``tapped`` finds the starter it names on
   the account that received it; the DM runtime starts the mapped automation, and an AI starter
   leaves the message to the inbox AI (nothing marks it handled).
-- Only Instagram accounts have starters.
+- Only Instagram and Facebook accounts have starters (Messenger's ice breakers).
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ PAYLOAD_PREFIX = "ib:"
 TRIGGER = "ice_breaker"
 
 COPY = {
-    "platform": "Conversation starters are for Instagram accounts.",
+    "platform": "Conversation starters are for Instagram and Facebook accounts.",
     "question_empty": "Write the question.",
     "question_long": "Keep the question to 80 characters.",
     "question_twice": "Each question must be different.",
@@ -50,7 +50,7 @@ COPY = {
     "automation_trigger": "Choose an automation that starts from a conversation starter.",
     "automation_account": "Choose an automation that runs on this account.",
     "both": "Choose an automation or answer with AI, not both.",
-    "too_many": "Instagram allows up to 4 conversation starters.",
+    "too_many": "Instagram and Messenger allow up to 4 conversation starters.",
 }
 
 
@@ -100,7 +100,7 @@ async def _problems(
     session: AsyncSession, acct: SocialAccount, items: Sequence[StarterIn]
 ) -> list[FieldError]:
     errors: list[FieldError] = []
-    if acct.platform != "instagram":
+    if acct.platform not in ("instagram", "facebook"):
         return [FieldError("account_id", COPY["platform"])]
     if len(items) > MAX_STARTERS:
         return [FieldError("items", COPY["too_many"])]

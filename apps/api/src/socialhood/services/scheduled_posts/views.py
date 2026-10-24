@@ -24,6 +24,9 @@ from socialhood.models.connections import SocialAccount
 from socialhood.models.media import MediaAsset
 from socialhood.models.publishing import (
     DEFAULT_PUBLISHING_LIMIT,
+    STORY_LIFETIME,
+    PostFormat,
+    PostKind,
     ScheduledPostAsset,
     ScheduledPostTarget,
     TargetStatus,
@@ -115,7 +118,11 @@ def _first_comment(target: ScheduledPostTarget, first_comment: str | None) -> Fi
 
 
 def target_out(
-    target: ScheduledPostTarget, first_comment: str | None, post_id: uuid.UUID | None
+    target: ScheduledPostTarget,
+    first_comment: str | None,
+    post_id: uuid.UUID | None,
+    *,
+    story: bool = False,
 ) -> TargetOut:
     published = target.status == TargetStatus.PUBLISHED
     return TargetOut.model_validate(
@@ -125,6 +132,11 @@ def target_out(
             "status": target.status,
             "platform_media_id": target.platform_media_id,
             "permalink": target.permalink,
+            "expires_at": (
+                target.published_at + STORY_LIFETIME
+                if story and published and target.published_at
+                else None
+            ),
             "post_id": post_id,
             "published_at": target.published_at,
             "error": (
@@ -147,13 +159,17 @@ def _summary(loaded: Loaded, items: dict[uuid.UUID, uuid.UUID]) -> ScheduledPost
             "id": post.id,
             "status": post.status,
             "format": post.format,
+            "kind": post.kind,
             "caption": post.caption,
             "publish_at": post.publish_at,
             "published_at": post.published_at,
             "thumbnail_url": thumbnail_url(first[1]) if first else None,
             "asset_count": len(loaded.assets),
             "targets": [
-                target_out(t, post.first_comment, items.get(t.id)) for t, _ in loaded.targets
+                target_out(
+                    t, post.first_comment, items.get(t.id), story=post.format == PostFormat.STORY
+                )
+                for t, _ in loaded.targets
             ],
             "created_at": post.created_at,
             "updated_at": post.updated_at,
@@ -196,6 +212,7 @@ class Draft:
     publish_at: datetime | None
     targets: Sequence[tuple[SocialAccount, str | None]]  # the account and its own caption
     assets: Sequence[MediaAsset]
+    story: bool = False  # chosen as an Instagram Story (GR-39)
 
     @classmethod
     def of(cls, loaded: Loaded) -> Draft:
@@ -207,6 +224,7 @@ class Draft:
             publish_at=post.publish_at,
             targets=[(account, target.caption_override) for target, account in loaded.targets],
             assets=[asset for _, asset in loaded.assets],
+            story=post.kind == PostKind.STORY,
         )
 
 
@@ -243,6 +261,7 @@ def facts(
         targets=[
             rules.TargetFacts(
                 handle=rules.handle(account.username, account.display_name),
+                platform=account.platform,
                 status=account.status,
                 can_publish=can_publish(account, deps),
                 caption_override=override,
@@ -265,6 +284,7 @@ def facts(
         caption=draft.caption,
         first_comment=draft.first_comment,
         publish_at=draft.publish_at,
+        story=draft.story,
     )
 
 

@@ -4,7 +4,7 @@
  */
 import type { Route } from "next";
 
-import type { ActionCard, AnswerRef } from "@/lib/api/types";
+import type { AnswerRef, PreparedCard } from "@/lib/api/types";
 
 /**
  * The screen a cited record opens. A comment and a scheduled message have no screen of their own:
@@ -34,7 +34,7 @@ export function refPath(ref: AnswerRef): string {
 const SAFE_PATH = /^[A-Za-z0-9_-]+(\/[A-Za-z0-9_-]+)*(\?[A-Za-z0-9_\-=&%.,:+]*)?$/;
 
 /** The card's route when it is a plain workspace path, else the screen its prefill names. */
-export function actionPath(card: ActionCard): string {
+export function actionPath(card: PreparedCard): string {
   const route = card.route.trim().replace(/^\/+/, "");
   if (SAFE_PATH.test(route)) return route;
   switch (card.kind) {

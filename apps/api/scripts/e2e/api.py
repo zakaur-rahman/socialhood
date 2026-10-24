@@ -16,10 +16,19 @@ It is the normal app (``socialhood.main``) plus two things the suite needs:
     metrics for the last ``days`` days and the ``days`` before them, and the run's
     compare_periods step holds the visual the real service and builder make from them, so the
     spec can check the cards against GET …/analytics/account-metrics;
+  - ``POST /__e2e/workspaces/{wid}/plan {plan}`` (GR-19, GR-23, GR-25, GR-27): the workspace's
+    plan, without Dodo's checkout (F-15 covers that), for specs that need Pro or Max;
+  - ``GET /__e2e/google-sheets/{sheet_id}`` and ``POST …/{sheet_id}/delete`` (GR-27): the header
+    and rows the fake Google holds for a sheet (GOOGLE_PROVIDER=fake keeps them in Redis, which the
+    API and the worker share), and deleting it as the person would in Google Drive;
+  - ``POST /__e2e/workspaces/{wid}/agent-proposals`` (GR-36): a finished Ask run whose draft step
+    called propose_flow or propose_segment through the real tool and gateway (the fake model
+    calls no tools), so the spec has a pending approval and its card to decide in the browser;
   - ``DELETE /__e2e/users/{clerk_user_id}``: a signed-up user's workspaces (every tenant row
     cascades) and row (F-01). Other test data goes when the launcher drops the database.
 
-It refuses to start unless the sandbox is on, Dodo is the fake and the app is not in production.
+It refuses to start unless the sandbox is on, Dodo and Google are fakes and the app is not in
+production.
 """
 
 from __future__ import annotations
@@ -29,23 +38,29 @@ import os
 import secrets
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any, Literal
+from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import delete
 
 from socialhood.agent import visuals
+from socialhood.agent.registry import Principal, ToolContext
+from socialhood.agent.tools import load_tools
 from socialhood.auth.deps import CurrentUser, Owner, Session
 from socialhood.billing.registry import _process_fake
 from socialhood.errors import ApiError
+from socialhood.google.registry import process_fake
 from socialhood.main import create_app
 from socialhood.models.agent import AgentRun, AgentStep
 from socialhood.models.analytics import AccountDailyMetric
-from socialhood.models.identity import User, Workspace
+from socialhood.models.billing import Subscription
+from socialhood.models.identity import Role, User, Workspace
 from socialhood.models.media import AssetPurpose, MediaAsset, ResourceType
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import social_accounts, users, workspaces
+from socialhood.repositories.base import scoped_update
 from socialhood.services.analytics import account_metrics
 from socialhood.services.analytics.common import View
 from socialhood.services.provisioning import slugify
@@ -57,11 +72,12 @@ if (
     settings.is_production
     or not settings.sandbox_platform_enabled
     or settings.dodo_provider != "fake"
+    or settings.google_provider != "fake"
     or len(SEED_TOKEN) < 16
 ):
     raise RuntimeError(
         "The e2e API needs SANDBOX_PLATFORM_ENABLED=true, DODO_PROVIDER=fake, "
-        "E2E_SEED_TOKEN and a non-production APP_ENV"
+        "GOOGLE_PROVIDER=fake, E2E_SEED_TOKEN and a non-production APP_ENV"
     )
 
 dodo = _process_fake()
@@ -113,6 +129,19 @@ async def create_workspace(body: WorkspaceIn, user: CurrentUser, session: Sessio
     await users.set_last_workspace(session, user.id, workspace.id)
     await session.commit()
     return WorkspaceOut(id=workspace.id, slug=workspace.slug, name=workspace.name)
+
+
+class PlanIn(BaseModel):
+    plan: str = Field(pattern="^(free|pro|max)$", max_length=4)
+
+
+@router.post("/workspaces/{wid}/plan", status_code=204)
+async def set_plan(body: PlanIn, ctx: Owner, session: Session) -> None:
+    """GR-19: put the workspace on a plan, so a second seat exists without a checkout."""
+    await session.execute(
+        scoped_update(Subscription, workspace_id=ctx.workspace_id).values(plan=body.plan)
+    )
+    await session.commit()
 
 
 @router.post("/workspaces/{wid}/media-assets", status_code=201)
@@ -216,7 +245,7 @@ async def create_agent_run(body: AgentRunIn, ctx: Owner, session: Session) -> Ag
         answer=body.answer,
         answer_refs=[],
         model="e2e",
-        prompt_version="agent.v3",
+        prompt_version="agent.v4",
         credits=1,
         started_at=now - timedelta(seconds=3),
         completed_at=now,
@@ -243,6 +272,108 @@ async def create_agent_run(body: AgentRunIn, ctx: Owner, session: Session) -> Ag
         )
     await session.commit()
     return AgentRunOut(id=run.id, thread_id=run.thread_id)
+
+
+@router.get("/google-sheets/{sheet_id}")
+async def google_sheet(sheet_id: str, request: Request) -> dict[str, Any]:
+    fake = process_fake(settings, request.app.state.redis)
+    return {"header": await fake.header(sheet_id), "rows": await fake.rows(sheet_id)}
+
+
+@router.post("/google-sheets/{sheet_id}/delete", status_code=204)
+async def delete_google_sheet(sheet_id: str, request: Request) -> None:
+    await process_fake(settings, request.app.state.redis).delete_sheet(sheet_id)
+
+
+class ProposalIn(BaseModel):
+    request: str = Field(min_length=1, max_length=500)
+    kind: Literal["flow", "segment"]
+    name: str = Field(min_length=1, max_length=60)
+    keyword: str = Field(default="PRICE", min_length=1, max_length=40)  # flows: the comment trigger
+    tag: str = Field(default="vip", min_length=1, max_length=40)  # segments: must exist
+
+
+class ProposalOut(BaseModel):
+    run_id: uuid.UUID
+    thread_id: uuid.UUID
+    approval_id: uuid.UUID
+
+
+@router.post("/workspaces/{wid}/agent-proposals", status_code=201)
+async def create_agent_proposal(
+    request: Request, body: ProposalIn, ctx: Owner, session: Session
+) -> ProposalOut:
+    now = datetime.now(UTC)
+    tool_name = "propose_flow" if body.kind == "flow" else "propose_segment"
+    args: dict[str, object] = (
+        {
+            "request": body.request,
+            "name": body.name,
+            "trigger": "comment_keyword",
+            "keywords": [body.keyword],
+            "steps": [{"type": "send", "text": "Here is our price list: example.com/prices"}],
+        }
+        if body.kind == "flow"
+        else {"name": body.name, "tags": [body.tag], "has_email": True}
+    )
+    run_id = uuid.uuid4()
+    run = AgentRun(
+        id=run_id,
+        thread_id=run_id,
+        requested_by_user_id=ctx.user.id,
+        request=body.request,
+        mode="read_only",
+        status="succeeded",
+        answer="I've drafted this and it is waiting for your approval. Nothing is saved yet.",
+        answer_refs=[],
+        model="e2e",
+        prompt_version="agent.v4",
+        credits=1,
+        started_at=now - timedelta(seconds=3),
+        completed_at=now,
+    )
+    session.add(run)
+    await session.flush()
+    step = AgentStep(
+        run_id=run.id,
+        ordinal=0,
+        idempotency_key=f"{run.id}:0",
+        kind="tool",
+        tool=tool_name,
+        tier="draft",
+        args=args,
+        status="running",
+        attempts=1,
+        latency_ms=40,
+        started_at=now - timedelta(seconds=2),
+    )
+    session.add(step)
+    await session.flush()
+    spec = load_tools().get(tool_name)
+    if spec is None:
+        raise ApiError("not_found")
+    tool_ctx = ToolContext(
+        session=session,
+        sessionmaker=request.app.state.sessionmaker,
+        platform=None,  # type: ignore[arg-type]  # the proposal tools make no platform calls
+        workspace_id=ctx.workspace_id,
+        timezone=ZoneInfo(ctx.workspace.timezone),
+        now=now,
+        principal=Principal(user_id=ctx.user.id, role=Role.OWNER),
+        run_id=run.id,
+        step_id=step.id,
+        step_key=step.idempotency_key,
+    )
+    result = await spec.handler(tool_ctx, spec.input_model.model_validate(args))
+    step.status = "succeeded"
+    step.result = result.model_dump(mode="json")
+    step.completed_at = now
+    await session.commit()
+    return ProposalOut(
+        run_id=run.id,
+        thread_id=run.thread_id,
+        approval_id=result.approval_id,  # type: ignore[attr-defined]
+    )
 
 
 @router.delete("/users/{clerk_user_id}", status_code=204)

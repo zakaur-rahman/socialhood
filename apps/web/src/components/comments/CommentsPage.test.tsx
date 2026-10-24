@@ -187,7 +187,7 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
 
   it("empty: with an account connected it says posts appear once they sync", async () => {
     setup({ items: [] });
-    expect(await screen.findByText("Your Instagram posts and their comments appear here once they sync.")).toBeInTheDocument();
+    expect(await screen.findByText("Your posts and their comments appear here once they sync.")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Connect Instagram" })).not.toBeInTheDocument();
   });
 

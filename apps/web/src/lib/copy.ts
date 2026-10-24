@@ -22,7 +22,7 @@ export const emptyStates = {
   },
   connections: {
     title: "Connect an account",
-    body: "Messages from Instagram and WhatsApp will appear here.",
+    body: "Messages from Instagram, Facebook and WhatsApp will appear here.",
   },
   inboxNoConversations: {
     title: "No conversations yet",
@@ -74,12 +74,15 @@ export const emptyStates = {
   },
 } as const;
 
-/** UI-064: automations answer comments and DMs on Instagram only; said first when there is no account. */
+/**
+ * UI-064: automations answer comments and DMs on Instagram and Facebook (GR-29); said first when
+ * the workspace has neither.
+ */
 export const instagramOnly = {
-  title: "Automations work on Instagram",
-  body: "They reply to Instagram comments and DMs, and WhatsApp isn't supported yet. Connect an Instagram account to create one.",
-  action: "Connect Instagram",
-  ask: "Ask an owner or admin to connect Instagram.",
+  title: "Automations work on Instagram and Facebook",
+  body: "They reply to comments and DMs on Instagram and on Facebook Pages, and WhatsApp isn't supported yet. Connect an Instagram account or a Facebook Page to create one.",
+  action: "Connect an account",
+  ask: "Ask an owner or admin to connect an account.",
 } as const;
 
 /** "All caught up" when a view or search has no results (§4.7). */
@@ -95,8 +98,8 @@ export function scheduledPlatformEmpty(platformLabel: string): { title: string; 
 // ---- sending (§4.7 error codes, F-07)
 
 type SendContext = {
-  platform: "instagram" | "whatsapp";
-  /** @username on Instagram; the display name or number on WhatsApp. */
+  platform: "instagram" | "whatsapp" | "facebook" | "web";
+  /** @username on Instagram and Facebook; the display name or number on WhatsApp; the widget's name on the website. */
   handle?: string | null;
 };
 
@@ -110,7 +113,12 @@ export type SendFailure = {
   chooseTemplate?: boolean;
 };
 
-const PLATFORM_NAME = { instagram: "Instagram", whatsapp: "WhatsApp" } as const;
+const PLATFORM_NAME = {
+  instagram: "Instagram",
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  web: "The website chat",
+} as const;
 
 /**
  * The reason under a failed bubble, from the message's error code (message.error) or the
@@ -121,7 +129,7 @@ export function sendFailure(
   context: SendContext,
 ): SendFailure {
   const name = PLATFORM_NAME[context.platform];
-  const handle = context.handle ? (context.platform === "instagram" ? `@${context.handle}` : context.handle) : "This account";
+  const handle = context.handle ? (context.platform === "whatsapp" ? context.handle : `@${context.handle}`) : "This account";
   const detail = error.message?.trim();
   switch (error.code) {
     case "network":
@@ -135,7 +143,7 @@ export function sendFailure(
             retry: false,
             chooseTemplate: true,
           }
-        : { message: "Instagram allows replies for 24 hours after the customer's last message.", retry: false };
+        : { message: `${name} allows replies for 24 hours after the customer's last message.`, retry: false };
     case "account_needs_reconnect":
       return { message: `${handle} needs reconnecting before you can send from it.`, retry: false, reconnect: true };
     case "capability_unavailable":
@@ -237,6 +245,27 @@ function plural(count: number, one: string, many: string): string {
 
 export function instagramConnected(username?: string | null): ConnectResult {
   return { kind: "success", message: username ? `Instagram connected: @${username}` : "Instagram connected" };
+}
+
+/** GR-29: Pages were connected from Facebook Login's list. */
+export function facebookConnected(names: string[]): string {
+  if (names.length === 1) return `Facebook connected: ${names[0]}`;
+  return `${names.length} Facebook Pages connected: ${names.join(", ")}`;
+}
+
+/**
+ * GR-29: why the list of Pages didn't load. The nonce lives 10 minutes (404 after) and belongs to
+ * the member who started the connect (403, X-1); anything else is Facebook not answering.
+ */
+export function facebookListError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 404) return "That connection link expired. Close this and connect Facebook again.";
+    if (error.status === 403) {
+      return "This Facebook connection was started by someone else, so it wasn't added. To connect your own Pages, use Connect Facebook.";
+    }
+    if (error.status === 422 && error.detail) return error.detail;
+  }
+  return "Facebook didn't respond. Close this and connect Facebook again.";
 }
 
 /** The toast for the ?connected= / ?error= the callback redirected with, or null for none. */
@@ -445,6 +474,18 @@ const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
   ai_reply_automations: {
     feature: "AI replies in automations",
     body: "On Pro, an automation can answer with AI from your knowledge instead of a fixed message.",
+  },
+  sheets_sync: {
+    feature: "Google Sheets sync",
+    body: "On Pro, every lead you capture is added to a Google Sheet as a new row.",
+  },
+  public_api: {
+    feature: "Public API access",
+    body: "On Pro, make API keys to connect your own tools, and use the Social Hood app in Zapier.",
+  },
+  widget_remove_branding: {
+    feature: "Hiding \"Powered by Social Hood\"",
+    body: "On Pro, you can turn off the \"Powered by Social Hood\" link in your website chat.",
   },
 };
 

@@ -40,6 +40,8 @@ type TestFixtures = {
   workspace: Workspace;
   /** ``workspace`` with a sandbox Instagram account connected (TR-PL-07). */
   sandbox: { workspace: Workspace; account: SandboxAccount };
+  /** GR-29: ``workspace`` with a sandbox Facebook Page connected. */
+  facebook: { workspace: Workspace; account: SandboxAccount };
 };
 
 type WorkerFixtures = { api: Api };
@@ -72,6 +74,11 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
 
   sandbox: async ({ api, workspace }, provide) => {
     const account = await api.connectSandbox(workspace.id);
+    await provide({ workspace, account });
+  },
+
+  facebook: async ({ api, workspace }, provide) => {
+    const account = await api.connectSandbox(workspace.id, "facebook");
     await provide({ workspace, account });
   },
 });
