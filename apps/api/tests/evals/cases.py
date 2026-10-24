@@ -1183,6 +1183,15 @@ CASES: tuple[Case, ...] = (
         area="writes",
     ),
     Case(
+        "write-flow-assign",
+        "When someone DMs HELP, send our support hours, then give the chat to the next available "
+        "teammate.",
+        tools("propose_flow"),
+        expect_card="flow_proposal",
+        expect_text=(r"approv",),
+        area="writes",
+    ),
+    Case(
         "write-segment-vip",
         "Save a segment of people tagged vip who gave their email.",
         tools("propose_segment"),

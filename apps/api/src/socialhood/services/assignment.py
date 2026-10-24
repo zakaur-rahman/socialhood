@@ -144,6 +144,45 @@ async def _require_member(session: AsyncSession, user_id: uuid.UUID) -> Workspac
     return member
 
 
+@dataclass(frozen=True)
+class Roster:
+    """The workspace's members, to name one: label (their name, else the part of their email before
+    the @), email and id, in the order they joined."""
+
+    members: list[tuple[uuid.UUID, str, str | None]]
+
+    def find(self, wanted: str) -> set[uuid.UUID]:
+        """Everyone whose name, label or email is ``wanted`` (ignoring case). More than one means
+        the name is ambiguous."""
+        key = wanted.strip().casefold()
+        return {
+            user_id
+            for user_id, label, email in self.members
+            if key and key in (label.casefold(), (email or "").casefold())
+        }
+
+    @property
+    def labels(self) -> list[str]:
+        return [label for _, label, _ in self.members]
+
+    def label_of(self, user_id: uuid.UUID) -> str | None:
+        return next((label for found, label, _ in self.members if found == user_id), None)
+
+
+async def roster(session: AsyncSession) -> Roster:
+    """Who can be named in a flow's assign step or by Ask (GR-36): the workspace's members."""
+    rows = (
+        await session.execute(
+            select(User.id, User.name, User.email)
+            .join(WorkspaceMember, WorkspaceMember.user_id == User.id)
+            .order_by(WorkspaceMember.created_at, WorkspaceMember.id)
+        )
+    ).all()
+    return Roster(
+        [(user_id, member_label(name, email) or "A member", email) for user_id, name, email in rows]
+    )
+
+
 async def overview(session: AsyncSession, you: uuid.UUID) -> AssignmentOverview:
     """Who can be assigned, and the round-robin setting."""
     open_count = (

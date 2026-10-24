@@ -3,7 +3,9 @@ flow or a segment, a member approves it, and only then is it saved. Owners and a
 UI (``min_role`` admin).
 
 - propose_flow: a new automation with a flow (trigger, keywords, steps, branches), or a new flow
-  for an existing automation. Approving saves a DRAFT automation; it is never switched on.
+  for an existing automation. Approving saves a DRAFT automation; it is never switched on. An
+  action step can add or remove a tag, set a field, notify the team, hand off to a person, or
+  assign the conversation (a named member, the next available one in turn, or nobody).
 - propose_segment: a saved contact segment from a description (tags, platform, email, lead stage,
   activity, fields), with the number of people it matches.
 - propose_broadcast: the slot for broadcast drafts (GR-23). Registered for R2 so the model never
@@ -42,6 +44,7 @@ from socialhood.schemas.flows import (
     AddTag,
     AiReplyStep,
     AskStep,
+    Assign,
     BranchRule,
     BranchStep,
     Condition,
@@ -62,7 +65,7 @@ from socialhood.schemas.flows import (
     Step,
     TagCondition,
 )
-from socialhood.services import agent_actions, contacts
+from socialhood.services import agent_actions, assignment, contacts
 
 MAX_PROPOSED_STEPS = 30
 FlowTrigger = Literal[
@@ -122,10 +125,24 @@ class ProposedStep(_Input):
     quick_replies: list[ProposedQuickReply] = Field(default_factory=list, max_length=6)
     expect: Literal["text", "email", "phone"] = Field(default="text", description="ask only.")
     field_key: str | None = Field(default=None, max_length=40, description="ask: custom field.")
-    action: Literal["add_tag", "remove_tag", "set_field", "notify_team", "hand_off"] | None = None
+    action: (
+        Literal["add_tag", "remove_tag", "set_field", "notify_team", "hand_off", "assign"] | None
+    ) = None
     tag: str | None = Field(default=None, max_length=40, description="add_tag/remove_tag name.")
     value: str | None = Field(default=None, max_length=200, description="set_field value.")
     note: str | None = Field(default=None, max_length=200, description="notify_team note.")
+    assign_to: Literal["member", "round_robin", "nobody"] | None = Field(
+        default=None,
+        description=(
+            "assign: a named member, the next available member in turn (round_robin), or nobody "
+            "(clears the assignee)."
+        ),
+    )
+    member: str | None = Field(
+        default=None,
+        max_length=100,
+        description="assign_to member: the member's name or email, as listed in the workspace.",
+    )
     seconds: int | None = Field(default=None, ge=1, le=23 * 3600, description="delay only.")
     instructions: str | None = Field(default=None, max_length=2000, description="ai_reply only.")
     rules: list[ProposedRule] = Field(default_factory=list, max_length=10, description="branch.")
@@ -169,7 +186,40 @@ def _condition(c: ProposedCondition, names: dict[str, uuid.UUID], where: str) ->
             return LeadStageCondition(stages=c.stages)
 
 
-def _action(s: ProposedStep, names: dict[str, uuid.UUID], where: str) -> Action:
+def _member_id(roster: assignment.Roster, name: str | None, where: str) -> uuid.UUID:
+    """The team member a step names, by name or email. The editor's rule: a member must be on this
+    workspace's team; the model is told who is, so it can correct itself."""
+    if not (name or "").strip():
+        raise _invalid(where, "Assigning to a member needs the member's name or email.")
+    found = roster.find(name or "")
+    if not found:
+        have = ", ".join(roster.labels) or "none"
+        raise _invalid(
+            where,
+            f"There's no team member called “{name}”. Members of this workspace: {have}. "
+            "Use one of those, or assign in turn (round_robin) or to nobody.",
+        )
+    if len(found) > 1:
+        raise _invalid(
+            where, f"More than one member is called “{name}”. Use their email address instead."
+        )
+    return next(iter(found))
+
+
+def _assign(s: ProposedStep, roster: assignment.Roster, where: str) -> Assign:
+    mode = s.assign_to or ("member" if s.member else None)
+    if mode is None:
+        raise _invalid(where, "An assign step needs assign_to: member, round_robin or nobody.")
+    if mode != "member":
+        if s.member:
+            raise _invalid(where, "A member is only named when assign_to is member.")
+        return Assign(mode=mode)
+    return Assign(mode="member", user_id=_member_id(roster, s.member, where))
+
+
+def _action(
+    s: ProposedStep, names: dict[str, uuid.UUID], where: str, roster: assignment.Roster
+) -> Action:
     match s.action:
         case "add_tag":
             return AddTag(tag_id=_tag_id(names, s.tag, where))
@@ -183,14 +233,21 @@ def _action(s: ProposedStep, names: dict[str, uuid.UUID], where: str) -> Action:
             return NotifyTeam(note=s.note or "")
         case "hand_off":
             return HandOff()
+        case "assign":
+            return _assign(s, roster, where)
         case _:
             raise _invalid(where, "An action step needs an action.")
 
 
-def build_flow(steps: list[ProposedStep], tags: dict[str, uuid.UUID]) -> FlowDefinition:
+def build_flow(
+    steps: list[ProposedStep],
+    tags: dict[str, uuid.UUID],
+    roster: assignment.Roster | None = None,
+) -> FlowDefinition:
     """The typed flow for the steps in order (module docstring). Raises ``validation_error`` that
     names the step and what to fix, so the model can correct it and call again. Nothing about the
     graph's soundness is checked here: ``flows.graph`` does that, in the gateway."""
+    roster = roster or assignment.Roster([])
     ids = [s.id or f"s{i + 1}" for i, s in enumerate(steps)]
     if len(set(ids)) != len(ids):
         raise _invalid("steps", "Two steps have the same id. Give each step its own.")
@@ -234,7 +291,7 @@ def build_flow(steps: list[ProposedStep], tags: dict[str, uuid.UUID]) -> FlowDef
                     )
                 )
             case "action":
-                built.append(ActionStep(id=sid, action=_action(s, tags, where), next=nxt))
+                built.append(ActionStep(id=sid, action=_action(s, tags, where, roster), next=nxt))
             case "delay":
                 if s.seconds is None:
                     raise _invalid(f"{where}.seconds", "A delay step needs seconds.")
@@ -318,10 +375,10 @@ class ProposeFlowResult(ProposalResult):
     label="Drafting an automation for your approval",
     description=(
         "Propose a new automation with its flow (trigger, keywords, steps, branches), or a new "
-        "flow for an existing one (automation_id). Steps run in order: send, ask, action, delay, "
-        "branch, ai_reply, end. Name tags, never ids. Nothing is saved until the member approves; "
-        "an approved flow is a draft, not switched on. Use it to create or change an automation; "
-        "prepare_automation only to open the editor for the member to fill in."
+        "flow for an existing one (automation_id). Steps: send, ask, action (tag, field, notify, "
+        "hand off, assign), delay, branch, ai_reply, end. Name tags and team members, never ids. "
+        "Nothing is saved until the member approves; an approved flow is a draft, not switched "
+        "on. prepare_automation only opens the editor."
     ),
     input_model=ProposeFlowInput,
     result_model=ProposeFlowResult,
@@ -337,7 +394,7 @@ async def propose_flow(ctx: ToolContext, args: ProposeFlowInput) -> ProposeFlowR
             if a.platform == "instagram" and a.status != AccountStatus.DISCONNECTED
         ]
         acct = live[0] if len(live) == 1 else None
-    flow = build_flow(args.steps, await _tags(ctx))
+    flow = build_flow(args.steps, await _tags(ctx), await assignment.roster(ctx.session))
     keywords = _clean_keywords(args.keywords)
     name = args.name or clip(args.request, 80) or "New automation"
     proposed = actions.FlowActionArgs(
