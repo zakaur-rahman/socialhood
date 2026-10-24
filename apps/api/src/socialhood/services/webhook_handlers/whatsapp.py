@@ -21,9 +21,10 @@ from socialhood.repositories import social_accounts as accounts
 from socialhood.repositories.webhook_events import MAX_ATTEMPTS
 from socialhood.services import ingest, whatsapp_status
 from socialhood.services.webhook_handlers import Outcome
-from socialhood.webhooks.routing import resolve_account
+from socialhood.webhooks.routing import resolve_account, resolve_waba_accounts
 
 HANDLED = frozenset({"message", "reaction", "status"})
+QUALITY_UPDATE = "phone_number_quality_update"  # GR-23: a number's quality or tier changed
 STATUS_RETRY_WINDOW = timedelta(minutes=10)
 
 
@@ -37,9 +38,32 @@ def _retry_status(event: WebhookEvent, status: DeliveryStatus) -> bool:
     return recent and not last_attempt
 
 
+async def _quality_update(session: AsyncSession, event: WebhookEvent) -> Outcome:
+    """GR-23: a number's quality rating or messaging tier changed. The event names the
+    WhatsApp Business Account, so it applies to each of its numbers connected here; a drop
+    pauses the number's sending broadcasts (services/broadcasts/health)."""
+    from socialhood.platforms.whatsapp.health import parse_quality_event
+    from socialhood.services.broadcasts import health
+
+    parsed = parse_quality_event((event.payload or {}).get("item"))
+    if parsed is None:
+        return Outcome("ignored", "quality update without an event")
+    routed = await resolve_waba_accounts(session, event.platform_account_id or "")
+    if not routed:
+        return Outcome("ignored", "unknown or disconnected account")
+    for target in routed:
+        with workspace_scope(target.workspace_id):
+            acct = await accounts.get(session, target.account_id)
+            if acct is not None:
+                await health.apply_event(session, acct, parsed)
+    return Outcome("processed", workspace_id=routed[0].workspace_id)
+
+
 async def handle(session: AsyncSession, event: WebhookEvent) -> Outcome:
     if event.event_type == "invalid":
         return Outcome("ignored", "unreadable payload")
+    if event.event_type == QUALITY_UPDATE:
+        return await _quality_update(session, event)
     if event.event_type not in HANDLED:
         return Outcome("ignored", f"{event.event_type} events are not used")
     routed = await resolve_account(session, "whatsapp", event.platform_account_id or "")

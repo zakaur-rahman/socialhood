@@ -136,6 +136,10 @@ class Settings(BaseSettings):
     # GR-38: Ask Social Hood's runs expose typed visuals (cards, ranked posts, sentiment) beside
     # the answer. Off: ``visuals`` is always empty and the prompt doesn't mention them.
     agent_visuals_enabled: bool = False
+    # GR-23: WhatsApp broadcasts. Off by default until the legal check of marketing consent in
+    # India (O-11) is done: off, the routes answer 404 "not available yet" (except the availability
+    # check the web asks), nothing is dispatched and the web shows nothing.
+    broadcasts_enabled: bool = False
     # Thinking level per model id, JSON (TR-AI-03); unset: "minimal" for Flash-Lite, else "low".
     ai_thinking_levels: dict[str, str] = Field(default_factory=dict)
     ai_daily_spend_limit_usd: float = 100.0

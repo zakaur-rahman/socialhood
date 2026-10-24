@@ -344,10 +344,11 @@ async def connect_sandbox(
     plan: str,
     platform: str = Platform.INSTAGRAM,
 ) -> SocialAccount:
-    """A sandbox Instagram account, or (GR-29) a sandbox Facebook Page, for local development
-    (TR-PL-07)."""
+    """A sandbox Instagram account, a sandbox Facebook Page (GR-29) or a sandbox WhatsApp number
+    with approved templates (GR-23), for local development (TR-PL-07)."""
     if not deps.settings.sandbox_platform_enabled:
         raise ApiError("not_found")
+    whatsapp = platform == Platform.WHATSAPP
     limit = await _at_capacity(session, platform, plan)
     if limit is not None:
         raise _quota_error(limit, platform)
@@ -357,13 +358,26 @@ async def connect_sandbox(
     acct = SocialAccount(
         platform=platform,
         platform_account_id=f"{SANDBOX_PREFIX}{suffix}",
-        username=f"sandbox.page.{suffix[:4]}" if facebook else f"sandbox.shop.{suffix[:4]}",
-        display_name="Sandbox page" if facebook else "Sandbox shop",
+        waba_id=f"{SANDBOX_PREFIX}waba_{suffix}" if whatsapp else None,
+        username=(
+            f"sandbox.wa.{suffix[:4]}"
+            if whatsapp
+            else f"sandbox.page.{suffix[:4]}"
+            if facebook
+            else f"sandbox.shop.{suffix[:4]}"
+        ),
+        display_name=(
+            "Sandbox WhatsApp shop" if whatsapp else "Sandbox page" if facebook else "Sandbox shop"
+        ),
         access_token_enc=deps.cipher.encrypt(f"sandbox-{secrets.token_hex(8)}"),
         token_expires_at=None if facebook else now + timedelta(days=60),
         token_refreshed_at=now,
         scopes=(
-            list(facebook_oauth.SCOPES) if facebook else [*oauth.BASE_SCOPES, oauth.INSIGHTS_SCOPE]
+            []
+            if whatsapp
+            else list(facebook_oauth.SCOPES)
+            if facebook
+            else [*oauth.BASE_SCOPES, oauth.INSIGHTS_SCOPE]
         ),
         status=AccountStatus.ACTIVE,
         connected_at=now,
@@ -373,7 +387,8 @@ async def connect_sandbox(
     session.add(acct)
     await session.commit()
     await session.refresh(acct)
-    await start_initial_sync(acct)
+    if not whatsapp:  # a WhatsApp number has no posts or history to read
+        await start_initial_sync(acct)
     return acct
 
 

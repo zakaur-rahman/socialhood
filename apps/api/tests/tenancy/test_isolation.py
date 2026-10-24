@@ -38,6 +38,7 @@ from tests.support.analytics import make_account_day, make_comment_analysis, mak
 from tests.support.api import Clerk, sign_in
 from tests.support.automations import make_automation, make_comment, make_media_item
 from tests.support.billing import make_payment
+from tests.support.broadcasts import make_broadcast_row
 from tests.support.inbox import make_asset, make_scheduled, make_thread
 from tests.support.notify import (
     make_email_delivery,
@@ -84,6 +85,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "invitation_id": "invitation_id",
     "key_id": "api_key_id",  # GR-25
     "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
+    "broadcast_id": "broadcast_id",  # GR-23
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -197,6 +199,24 @@ EXAMPLE_BODIES.update(
         ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/business-hours"): HOURS_OFF,
         # GR-28: B's website chat settings (its public routes are in test_widget_tenancy.py).
         ("PUT", "/v1/w/{wid}/widget"): {"enabled": False},
+    }
+)
+
+# GR-23: broadcasts. The walk turns BROADCASTS_ENABLED on (it is off by default); with it off every
+# route is a plain 404 and proves nothing.
+BROADCAST_DRAFT = {
+    "social_account_id": "{account_id}",
+    "segment_id": "{segment_id}",
+    "template_name": "sale_offer",
+    "template_language": "en",
+    "variables": [],
+}
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/broadcasts"): {**BROADCAST_DRAFT, "name": "Taken over"},
+        ("POST", "/v1/w/{wid}/broadcasts/preview"): BROADCAST_DRAFT,
+        ("PATCH", "/v1/w/{wid}/broadcasts/{broadcast_id}"): {"name": "Taken over"},
+        ("POST", "/v1/w/{wid}/broadcasts/{broadcast_id}/start"): {},
     }
 )
 
@@ -380,6 +400,9 @@ B_TABLES = (
     "saved_replies",
     "business_hours",
     "widget_settings",  # GR-28
+    "broadcasts",  # GR-23
+    "broadcast_recipients",
+    "whatsapp_number_health",
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -446,6 +469,7 @@ class Seed:
     invitation_id: str = ""
     api_key_id: str = ""  # GR-25
     hook_id: str = ""  # GR-26: a REST hook that key subscribed
+    broadcast_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -760,6 +784,16 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                 {"w": wid},
             )
         ).scalar_one()
+    broadcast = (
+        await make_broadcast_row(  # GR-23: a broadcast, its recipient and the number's health
+            engine,
+            workspace_id=wid,
+            account_id=account_id,
+            segment_id=segment.json()["id"],
+            contact_id=thread.contact_id,
+            message_id=thread.message_ids[0],
+        )
+    )
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -793,12 +827,18 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         invitation_id=str(invitation),
         api_key_id=str(api_key),
         hook_id=str(rest_hook),
+        broadcast_id=broadcast,
     )
 
 
 async def test_every_route_with_a_path_id_hides_other_workspaces(
-    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
+    app: FastAPI,
+    client: httpx.AsyncClient,
+    clerk: Clerk,
+    engine: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(app.state.settings, "broadcasts_enabled", True)  # GR-23
     member_a, a = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
     seed = await seed_workspace_b(client, clerk, engine)
     own = replace(seed, workspace_id=a["workspaces"][0]["id"])

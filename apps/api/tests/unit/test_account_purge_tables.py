@@ -26,6 +26,8 @@ EXPECTED = {
     "automation_run_steps",
     "automation_runs",
     "automations",
+    "broadcast_recipients",
+    "broadcasts",
     "business_hours",
     "comment_analyses",
     "comments",
@@ -48,6 +50,7 @@ EXPECTED = {
     "tracked_links",
     "link_clicks",
     "widget_settings",  # GR-28
+    "whatsapp_number_health",
 }
 
 

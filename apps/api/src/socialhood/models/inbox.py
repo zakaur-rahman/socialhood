@@ -61,6 +61,7 @@ class MessageSource(StrEnum):
     HUMAN = "human"
     AI_AUTO = "ai_auto"
     AUTOMATION = "automation"
+    BROADCAST = "broadcast"  # a WhatsApp broadcast (GR-23)
     NATIVE_APP = "native_app"  # sent from the Instagram app (FR-INB-09)
     SYSTEM = "system"
 

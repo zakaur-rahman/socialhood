@@ -12,7 +12,14 @@ from sqlalchemy import and_, case, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.automations import Comment
-from socialhood.models.inbox import Message, MessageSource, MessageStatus
+from socialhood.models.inbox import (
+    Contact,
+    Conversation,
+    Direction,
+    Message,
+    MessageSource,
+    MessageStatus,
+)
 from socialhood.repositories.base import scoped_update
 
 IN_FLIGHT = (MessageStatus.QUEUED, MessageStatus.SENDING)
@@ -161,3 +168,23 @@ async def in_flight(
         .limit(limit)
     )
     return [InFlight(r[0], r[1], r[2], str(r[3]), r[4]) for r in rows.all()]
+
+
+async def last_outbound_platform_id(
+    session: AsyncSession, account_id: uuid.UUID, contact_platform_id: str
+) -> str | None:
+    """The platform id of the newest message sent to one contact (by their platform id) on an
+    account: the sandbox injects a delivery status for it."""
+    return await session.scalar(
+        select(Message.platform_message_id)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .join(Contact, Contact.id == Conversation.contact_id)
+        .where(
+            Message.social_account_id == account_id,
+            Message.direction == Direction.OUTBOUND,
+            Message.platform_message_id.is_not(None),
+            Contact.platform_user_id == contact_platform_id,
+        )
+        .order_by(Message.occurred_at.desc())
+        .limit(1)
+    )

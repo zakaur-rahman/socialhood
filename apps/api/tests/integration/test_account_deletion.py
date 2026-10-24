@@ -291,6 +291,26 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         a=account_id,
     )
+    await execute(  # GR-23: a broadcast from the account, a recipient and the number's health
+        engine,
+        "WITH b AS (INSERT INTO broadcasts (workspace_id, social_account_id, name, segment_name,"
+        " template_name, template_language, template_category, template_body)"
+        " VALUES (:w, :a, 'Diwali', 'Everyone', 'sale_offer', 'en', 'marketing', 'Hi')"
+        " RETURNING id)"
+        " INSERT INTO broadcast_recipients (workspace_id, broadcast_id, contact_id, position,"
+        " state, message_id) SELECT :w, id, :c, 0, 'dispatched', :m FROM b",
+        w=wid,
+        a=account_id,
+        c=thread.contact_id,
+        m=thread.message_ids[0],
+    )
+    await execute(
+        engine,
+        "INSERT INTO whatsapp_number_health (workspace_id, social_account_id, quality_rating,"
+        " checked_at) VALUES (:w, :a, 'green', now())",
+        w=wid,
+        a=account_id,
+    )
     return Seeded(
         conversation_id=thread.conversation_id,
         message_ids=thread.message_ids,

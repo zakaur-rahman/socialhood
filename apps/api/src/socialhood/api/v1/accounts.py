@@ -7,9 +7,10 @@ import secrets
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request, Response
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.deps import (
     AnyMember,
@@ -19,11 +20,15 @@ from socialhood.auth.deps import (
 )
 from socialhood.billing.plans import current_plan
 from socialhood.errors import ApiError, FieldError
+from socialhood.models.connections import SocialAccount
 from socialhood.models.platform import WebhookProvider
 from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.platforms.facebook.webhooks import split_payload as split_facebook
 from socialhood.platforms.instagram.webhooks import split_payload
+from socialhood.platforms.sandbox import whatsapp as sandbox_whatsapp
 from socialhood.platforms.sandbox.adapter import is_sandbox
+from socialhood.platforms.whatsapp.webhooks import split_payload as whatsapp_split
+from socialhood.repositories import messages as messages_repo
 from socialhood.repositories import social_accounts as accounts
 from socialhood.schemas.accounts import (
     ConnectStart,
@@ -187,8 +192,9 @@ async def create_sandbox_account(
     session: Session,
     body: SandboxAccountCreate | None = None,
 ) -> SocialAccountOut:
-    """Connect a fake Instagram account (or, with ``platform: facebook``, a fake Facebook Page)
-    for local development."""
+    """Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
+    Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
+    templates (GR-23)."""
     _require_sandbox(request)
     acct = await service.connect_sandbox(
         session,
@@ -213,8 +219,46 @@ async def sandbox_inbound(
         events = split_facebook(_sandbox_facebook_payload(acct.platform_account_id, body))
         stored = await store_and_enqueue(session, WebhookProvider.FACEBOOK, events)
         return SandboxInboundResult(stored=len(stored))
+    if acct.platform == "whatsapp":
+        return await _sandbox_whatsapp(session, acct, body)
+    if body.kind in ("status", "quality"):
+        raise ApiError("conflict", "Statuses and quality updates are for WhatsApp numbers.")
     payload = _sandbox_payload(acct.platform_account_id, body)
     stored = await store_and_enqueue(session, WebhookProvider.INSTAGRAM, split_payload(payload))
+    return SandboxInboundResult(stored=len(stored))
+
+
+async def _sandbox_whatsapp(
+    session: AsyncSession, acct: SocialAccount, body: SandboxInbound
+) -> SandboxInboundResult:
+    """A sandbox WhatsApp number's inbound event, as the webhook body Meta would send."""
+    if body.kind == "dm":
+        sender = body.from_id or f"9198{secrets.randbelow(10**8):08d}"
+        payload = sandbox_whatsapp.message(
+            acct,
+            sender=sender,
+            name=body.from_username or "Sandbox customer",
+            text=body.text or "",
+        )
+    elif body.kind == "status":
+        wamid = await messages_repo.last_outbound_platform_id(session, acct.id, body.from_id or "")
+        if wamid is None:
+            raise ApiError("conflict", "Nothing has been sent to that number yet.")
+        payload = sandbox_whatsapp.status(
+            acct,
+            wamid=wamid,
+            recipient=body.from_id or "",
+            state=body.delivery_status or "sent",
+            error_code=body.error_code,
+            error_text=body.error_text,
+        )
+    elif body.kind == "quality":
+        payload = sandbox_whatsapp.quality(
+            acct, event=body.quality_event or "UPGRADE", tier=body.tier
+        )
+    else:
+        raise ApiError("conflict", "A WhatsApp number takes DMs, statuses and quality updates.")
+    stored = await store_and_enqueue(session, WebhookProvider.WHATSAPP, whatsapp_split(payload))
     return SandboxInboundResult(stored=len(stored))
 
 

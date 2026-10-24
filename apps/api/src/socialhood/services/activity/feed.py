@@ -42,7 +42,7 @@ from socialhood.services.activity import reasons
 from socialhood.services.automations.results import PRIVATE_PREFIX, PUBLIC_PREFIX
 from socialhood.services.sending import platform_name
 
-Kind = Literal["automation_run", "flow_step", "message", "webhook_delivery", "account"]
+Kind = Literal["automation_run", "flow_step", "message", "webhook_delivery", "account", "broadcast"]
 
 # What a run that is not a failure did, for its title.
 RUN_VERBS: dict[str, str] = {
@@ -63,6 +63,7 @@ SOURCE_LABELS = {
     "automation": "An automation message",
     "ai_auto": "An AI reply",
     "human": "A message",
+    "broadcast": "A broadcast message",
 }
 REASON_MAX = 400
 
@@ -308,6 +309,26 @@ def _account_item(row: Any) -> ActivityItem:
     )
 
 
+def _broadcast_item(row: Any) -> ActivityItem:
+    """A broadcast that stopped by itself (quality, plan, a number to reconnect) or could not
+    start. The reason is the one the broadcast page shows; the action opens that page."""
+    label = account_label(row.account_username, row.account_display_name, row.platform)
+    failed = row.status == "failed"
+    return ActivityItem(
+        id=row.id,
+        kind="broadcast",
+        outcome="failed" if failed else "attention",
+        occurred_at=row.at,
+        title=f"{row.name} couldn't start" if failed else f"{row.name} was paused",
+        reason=_clip(row.paused_reason),
+        error_code=row.paused_code,
+        social_account_id=row.account_id,
+        account_label=label,
+        platform=row.platform,
+        action=ActivityAction(label="Open the broadcast", href=f"/broadcasts/{row.id}"),
+    )
+
+
 def encode_cursor(at: datetime, row_id: uuid.UUID) -> str:
     raw = json.dumps([at.isoformat(), str(row_id)]).encode()
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
@@ -332,13 +353,20 @@ async def feed(
     limit: int,
 ) -> ActivityList:
     """The newest ``limit`` items. A filter on an automation leaves out the sources that have
-    none (sends, webhooks, accounts); a filter on an account leaves out webhooks."""
+    none (sends, webhooks, accounts, broadcasts); a filter on an account leaves out webhooks."""
     before = decode_cursor(cursor) if cursor else None
     take = limit + 1
     wanted: set[ActivityKindName] = (
         {kind}
         if kind
-        else {"automation_run", "flow_step", "message", "webhook_delivery", "account"}
+        else {
+            "automation_run",
+            "flow_step",
+            "message",
+            "webhook_delivery",
+            "account",
+            "broadcast",
+        }
     )
     if automation_id is not None:
         wanted &= {"automation_run", "flow_step"}
@@ -369,6 +397,11 @@ async def feed(
     if "account" in wanted:
         rows = await repo.broken_accounts(session, before=before, limit=take, account_id=account_id)
         items += [_account_item(r) for r in rows]
+    if "broadcast" in wanted:
+        rows = await repo.stopped_broadcasts(
+            session, before=before, limit=take, account_id=account_id
+        )
+        items += [_broadcast_item(r) for r in rows]
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     more = len(items) > limit
     items = items[:limit]

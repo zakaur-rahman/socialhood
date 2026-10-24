@@ -272,7 +272,14 @@ class SegmentPatch(RequestModel):
 # ---- timeline
 
 TimelineKind = Literal[
-    "conversation", "comment", "automation_run", "story_mention", "consent", "tag", "lead_stage"
+    "conversation",
+    "comment",
+    "automation_run",
+    "story_mention",
+    "consent",
+    "tag",
+    "lead_stage",
+    "broadcast",
 ]
 
 

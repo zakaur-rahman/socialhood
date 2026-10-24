@@ -32,6 +32,9 @@ from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.events import InboundMediaRef
 from socialhood.platforms.facebook.adapter import CAPABILITIES as FACEBOOK_CAPABILITIES
 from socialhood.platforms.instagram.adapter import CAPABILITIES
+from socialhood.platforms.whatsapp.adapter import CAPABILITIES as WHATSAPP_CAPABILITIES
+from socialhood.platforms.whatsapp.health import NumberHealth
+from socialhood.platforms.whatsapp.templates import MessageTemplate
 
 SANDBOX_PREFIX = "sandbox_"
 
@@ -47,11 +50,29 @@ class SandboxAdapter:
         self.deps = deps
 
     def capabilities_for(self, acct: SocialAccount) -> frozenset[Capability]:
-        """An Instagram-like account, or (GR-29) a Facebook Page: what the real adapters offer,
-        with Human Agent on and without the settings that gate insights."""
+        """An Instagram-like account, a Facebook Page (GR-29) or a WhatsApp number that can send
+        templates (GR-23): what the real adapters offer, with Human Agent on and without the
+        settings that gate insights."""
         if acct.platform == "facebook":
             return FACEBOOK_CAPABILITIES | {Capability.HUMAN_AGENT}
+        if acct.platform == "whatsapp":
+            return WHATSAPP_CAPABILITIES
         return CAPABILITIES
+
+    async def list_templates(self, acct: SocialAccount) -> list[MessageTemplate]:
+        """The sandbox WhatsApp number's approved templates (platforms/sandbox/whatsapp.py)."""
+        from socialhood.platforms.sandbox import whatsapp
+
+        return whatsapp.templates()
+
+    async def get_number_health(self, acct: SocialAccount) -> NumberHealth:
+        """What ``outbox.set_number_health`` set in this process, else a rating nobody knows yet
+        and the 1,000 a day tier. (Quality updates arrive as webhooks, which the worker stores.)"""
+        from socialhood.platforms.sandbox import outbox
+
+        return outbox.NUMBER_HEALTH.get(acct.platform_account_id) or NumberHealth(
+            "unknown", "TIER_1K"
+        )
 
     async def refresh_token(self, acct: SocialAccount) -> TokenGrant:
         return TokenGrant(f"sandbox-{secrets.token_hex(8)}", datetime.now(UTC) + timedelta(days=60))

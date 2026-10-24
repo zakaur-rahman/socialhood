@@ -63,6 +63,11 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # to bound abuse (services/widget/chat.py); the cap counts new visitors, not messages.
     "widget_remove_branding": {"free": False, "pro": True, "max": True},
     "widget_conversations_daily": {"free": 50, "pro": 500, "max": 5000},
+    # Recipients a workspace may send WhatsApp broadcasts to in a billing period (GR-23, PD-4:
+    # Pro and Max, not Free; decided 2026-10-24). 0 means the plan has no broadcasts: the 402 is
+    # then entitlement_required, otherwise quota_exceeded. A recipient counts when its message is
+    # handed to the send queue (an attempt), failures included, skipped contacts never.
+    "broadcast_recipients_monthly": {"free": 0, "pro": 2500, "max": 25000},
 }
 
 

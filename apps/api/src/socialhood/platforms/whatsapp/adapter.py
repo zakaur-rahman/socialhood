@@ -36,6 +36,7 @@ from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.events import InboundMediaRef
 from socialhood.platforms.whatsapp.graph import WhatsAppHttp
+from socialhood.platforms.whatsapp.health import NumberHealth, parse_health
 from socialhood.platforms.whatsapp.templates import MessageTemplate, parse_template
 
 CAPABILITIES = frozenset(
@@ -232,6 +233,19 @@ class WhatsAppAdapter:
             if not after:
                 break
         return sorted(found, key=lambda t: (t.name, t.language))
+
+    async def get_number_health(self, acct: SocialAccount) -> NumberHealth:
+        """The number's quality rating and messaging tier (GR-23 broadcasts pace themselves by
+        them). *Unverified against a live number*: the fields are quality_rating and
+        messaging_limit_tier (platforms/whatsapp/health.py)."""
+        body = await self.wa.request(
+            "GET",
+            acct.platform_account_id,
+            endpoint="phone_number.health",
+            token=self._token(acct),
+            params={"fields": "quality_rating,messaging_limit_tier"},
+        )
+        return parse_health(body)
 
     async def list_media(self, acct: SocialAccount, *, limit: int = 25) -> list[PlatformMedia]:
         return []  # WhatsApp numbers have no posts

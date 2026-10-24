@@ -19,6 +19,7 @@ from socialhood.models.automations import (
     RunResult,
     StepStatus,
 )
+from socialhood.models.broadcasts import Broadcast, BroadcastStatus
 from socialhood.models.connections import AccountStatus, SocialAccount
 from socialhood.models.inbox import (
     Contact,
@@ -39,7 +40,12 @@ FAILURE_RESULTS = (
     RunResult.SKIPPED_EXPIRED,
     RunResult.SKIPPED_READ_ONLY,
 )
-MESSAGE_SOURCES = (MessageSource.AUTOMATION, MessageSource.HUMAN, MessageSource.AI_AUTO)
+MESSAGE_SOURCES = (
+    MessageSource.AUTOMATION,
+    MessageSource.HUMAN,
+    MessageSource.AI_AUTO,
+    MessageSource.BROADCAST,
+)
 ACCOUNT_PROBLEMS = (AccountStatus.NEEDS_RECONNECT, AccountStatus.ERROR)
 
 
@@ -177,6 +183,36 @@ async def failed_messages(
         query = query.where(Message.social_account_id == account_id)
     query = _after(query, Message.occurred_at, Message.id, before)
     query = _newest(query, Message.occurred_at, Message.id, limit)
+    return list((await session.execute(query)).all())
+
+
+async def stopped_broadcasts(
+    session: AsyncSession, *, before: Before | None, limit: int, account_id: uuid.UUID | None
+) -> list[Any]:
+    """Broadcasts that are paused, or failed to start, with the reason (GR-23)."""
+    query = (
+        select(
+            Broadcast.id,
+            Broadcast.updated_at.label("at"),
+            Broadcast.name,
+            Broadcast.status,
+            Broadcast.paused_code,
+            Broadcast.paused_reason,
+            Broadcast.social_account_id.label("account_id"),
+            SocialAccount.platform,
+            SocialAccount.username.label("account_username"),
+            SocialAccount.display_name.label("account_display_name"),
+        )
+        .join(SocialAccount, SocialAccount.id == Broadcast.social_account_id)
+        .where(
+            Broadcast.status.in_((BroadcastStatus.PAUSED, BroadcastStatus.FAILED)),
+            Broadcast.paused_reason.is_not(None),
+        )
+    )
+    if account_id is not None:
+        query = query.where(Broadcast.social_account_id == account_id)
+    query = _after(query, Broadcast.updated_at, Broadcast.id, before)
+    query = _newest(query, Broadcast.updated_at, Broadcast.id, limit)
     return list((await session.execute(query)).all())
 
 

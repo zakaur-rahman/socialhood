@@ -86,7 +86,7 @@ from socialhood.services.reply_window import (
 
 log = get_logger(__name__)
 
-OutboundSource = Literal["human", "ai_auto", "automation"]
+OutboundSource = Literal["human", "ai_auto", "automation", "broadcast"]
 
 PLATFORM_NAMES = {
     "instagram": "Instagram",
