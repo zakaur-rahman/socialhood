@@ -2863,7 +2863,6 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
   config.
 
-<<<<<<< HEAD
 ## C-106 · Team members and roles (GR-19, feature/gr-19-team)
 
 - **Permission matrix, in one place.** `auth/permissions.py` has a `Permission` enum and a
@@ -3367,8 +3366,8 @@ words (`validation.py`, `flows.py`; copy shared with the web):
 - Meta's behaviour: see `docs/verification.md` item 36. The risky ones: the commenter id, whether
   private replies take buttons and quick replies, ice breakers without a Get Started button, the
   `tasks` field, and the Messenger text limit.
-=======
-## C-107 · Public API and API keys (GR-25, feature/gr-25-26-api-zapier)
+
+## C-109 · Public API and API keys (GR-25, feature/gr-25-26-api-zapier)
 
 - **Owner decision PD-6 (decided 2026-10-24):** outbound webhooks stay on every plan (Free 1, Pro 5,
   Max 20 endpoints, GR-04); the public API, API keys and the Zapier app are **Pro and Max only**.
@@ -3378,7 +3377,7 @@ words (`validation.py`, `flows.py`; copy shared with the web):
   and revoking keys stay open, so a workspace that downgraded can clean up. A key made on Pro stops
   working (402, same body) the moment the workspace is on Free again, and works again if it comes
   back. *Decided, not pending.*
-- **Keys.** `api_keys` (migration 0035, shared with C-108's column): name (1 to 80), the first 12
+- **Keys.** `api_keys` (migration 0035 (after 0034), shared with C-110's column): name (1 to 80), the first 12
   characters (`key_prefix`, `shk_` and 8 more), the SHA-256 of the whole key (`key_hash`, unique),
   scopes, `last_used_at`, `revoked_at`, who made it. A key is `shk_` and 43 random characters
   (`secrets.token_urlsafe(32)`), shown once in the create response (`ApiKeyWithKey.key`) and never
@@ -3386,7 +3385,7 @@ words (`validation.py`, `flows.py`; copy shared with the web):
   nothing to guess.* A key never changes after it is made (no edit; make another); revoking sets
   `revoked_at` and is the end of it. At most 20 unrevoked keys per workspace (409 over it).
 - **Scopes** (`schemas/api_keys.py`): `contacts:read`, `contacts:write`, `tags:read`, `tags:write`,
-  `conversations:read`, `messages:send`, `automations:read`, `webhooks:subscribe` (C-108's REST
+  `conversations:read`, `messages:send`, `automations:read`, `webhooks:subscribe` (C-110's REST
   hooks). The key form starts read-only (`contacts:read` ticked). A route needs exactly one scope;
   a key without it gets 403 `forbidden`, naming the scope.
 - **Managing keys** (owners and admins, `/v1/w/{wid}/api-keys`): list (with the scope catalogue),
@@ -3456,4 +3455,75 @@ words (`validation.py`, `flows.py`; copy shared with the web):
   `ApiKeyCreate`, `ApiScope`, the three `/api-keys` operations; the public routes are not in it);
   the web types are aliases waiting for it. `alembic check` should be clean (the partial index on
   `webhook_endpoints.api_key_id` is in the model). Migration 0035 is chained on 0030; re-chain it.
->>>>>>> 94ae5e5 (GR-25: workspace API keys and the public API (backend))
+
+## C-110 · Zapier app (GR-26, feature/gr-25-26-api-zapier)
+
+- **Plan gate (PD-6, decided 2026-10-24, see C-109):** Zapier is Pro and Max only, because it runs on
+  the public API. The REST hooks Zapier subscribes stop receiving events when the workspace is no
+  longer on a plan with `public_api` (the plan is read only when a hook is among the endpoints an
+  event would go to), and work again when it comes back. A member's own webhook endpoints are
+  untouched: outbound webhooks stay on every plan.
+- **REST hooks** (`api/public_hooks.py`, `services/api_hooks.py`, scope `webhooks:subscribe`):
+  `POST /public/v1/hooks {trigger, target_url}` (201: id, trigger, address, status and the
+  `signing_secret`, once), `GET /public/v1/hooks`, `DELETE /public/v1/hooks/{id}` (204).
+  - *Backed by GR-04, not beside it.* A subscription is a `webhook_endpoints` row with the new
+    `api_key_id` (migration 0035 (after 0034), `ON DELETE CASCADE`, partial index), described as "Zapier: new
+    contact" and subscribed to one event. So delivery, Standard Webhooks signing, the retry schedule,
+    the delivery log, turning an endpoint off after repeated failures (with its Activity reason and
+    notification) and replays are GR-04's code, unchanged. The hooks show in Settings > Integrations
+    beside the member's endpoints.
+  - **Triggers to events:** `new_contact` is `contact.created`, `lead_captured` is `lead.captured`,
+    `tag_added` is `contact.tagged`, `new_message` is `message.received`, `run_completed` is
+    `automation.run.completed`. *"Tag added" gets removals too (one event carries `action`); the
+    Zapier trigger drops them, so there is no per-endpoint filter on the server.*
+  - **Rules.** The address follows the endpoint rules (https, no user name, not a private address;
+    `WEBHOOKS_ALLOW_PRIVATE` allows a local one in development and e2e). Hooks do not count against
+    the plan's `webhook_endpoints` (Zapier can have one per Zap); a workspace holds at most 100.
+    Unsubscribing removes only a hook a key made (404 for a member's endpoint), and any key with the
+    scope in the workspace may do it (Zapier unsubscribes with the connection's key, which may have
+    been replaced). Revoking a key removes its hooks (C-109).
+  - `GET /public/v1/me` (any valid key) returns the workspace's name, the key and its scopes: the
+    Zapier connection test and its label.
+- **Polling fallbacks** (Zapier uses them to test a trigger and fetch a sample; nothing new in the API
+  beyond `sort=created`): new contact is `GET /contacts?sort=created`, lead captured is the same with
+  `has_email=true`, tag added is `GET /contacts?tag_id=…&sort=created`, new message is `GET
+  /conversations`, run completed is `GET /automation-runs`. *They are approximations of the event
+  (a contact's email is not stamped with when it was captured), good enough for a sample; the real
+  trigger is the hook.* Each polled item has the shape of a delivery, with an `id` per event.
+- **The integration** is Zapier Platform CLI source in `integrations/zapier/` (not in the pnpm
+  workspace, which lists `apps/web` and `packages/*`; no lock file, so nothing changes `pnpm-lock.yaml`).
+  `package.json` (`zapier-platform-core` 16, jest and nock), `index.js`, `authentication.js` (a custom
+  `api_key` field; the test call is `GET /me`, the label is the workspace's name), five hook triggers
+  and two hidden ones for dropdowns (`tag`, `contact_field`), four actions (Add Tag, Remove Tag, Set
+  Contact Field, Send Message), samples and output fields on each, `lib/` helpers, and jest tests in
+  the CLI's pattern (`createAppTester`, nock). *Written, not installed or run.*
+  - **Send Message** sends an `Idempotency-Key` from the conversation, the text and a five-minute
+    window, so Zapier retrying a step does not message a customer twice; outside the 24-hour window
+    the API's `reply_window_closed` text is the Zap's error.
+  - **Set Contact Field** sets one custom field (empty clears it) through the same validation as the
+    app.
+  - Errors from the API (problem+json) become the Zap's error with the API's own words; a 401 says to
+    make a new key.
+- **README** (`integrations/zapier/README.md`): what it does, scopes, first run (`npm install`, `npm
+  test`, `zapier validate`), pushing a private version, the manual test (captured leads to a Google
+  Sheet, step by step), and the directory submission steps for the owner. The 256 px `icon.png` is
+  not in the repo (resize `icon-512.png`); `zapier register` writes `.zapierapprc`.
+- **Make:** *follows with the same building blocks* (the API key and scopes, the REST hooks, the
+  polling lists); its own app definition is not started.
+- **Not built.** Searches ("Find Contact") and "Create Contact" as Zapier actions (the API has them:
+  `GET /contacts?q=`, `POST /contacts`); a per-hook event filter on the server; verifying the
+  delivery signature inside the Zap (Zapier's hook URL is unguessable; the signature is there for
+  other receivers).
+- **Tests.** Unit `test_zapier_hooks.py` (trigger mapping, the hook routes and their scope in the
+  public document, the signing secret only in the subscribe response). Integration
+  `test_zapier_hooks.py` (subscribe and unsubscribe for each trigger, address rules, scope, no slot
+  from the plan's endpoints, workspace isolation, a member's endpoint is never removed, revoking a key
+  removes its hooks, a signed `message.received` through the real deliver step, only the trigger's
+  event, retries, stopping and resuming with the plan, a member's endpoint on Free, the polling
+  lists). The public tenancy walk (C-109) also calls `DELETE /hooks/{id}` with B's hook. E2E:
+  `gr26-zapier.spec.ts` (subscribe a local receiver, a signed `contact.created`, the polling list,
+  unsubscribe, scope, plan). Jest in `integrations/zapier/test/` (for the owner's first run).
+- **Unsure / for the coordinator:** nothing to regenerate beyond C-109's (the public routes are not in
+  the app's document). The jest tests and `zapier validate` have never run: expect small fixes on the
+  first `npm test` (Zapier's `bundle` shapes are written from the docs). The `API_BASE_URL` default
+  `https://api.socialhood.com` is a guess at the production host.
