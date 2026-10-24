@@ -6,7 +6,8 @@ test event, the delivery log and replays. Owners and admins; nothing here commit
   resolves is checked at every delivery (security/ssrf.py).
 - Its signing secret ("whsec_" and a base64 key) is shown once, when it's made or rotated, and
   stored encrypted. Rotating replaces it at once.
-- The plan caps the number of endpoints (``webhook_endpoints``).
+- The plan caps the number of endpoints (``webhook_endpoints``); the REST hooks a Zapier trigger
+  subscribes (services/api_hooks.py) are endpoints too and don't count.
 - A replay sends the same event (same ``webhook-id``) again as a new delivery; the endpoint must
   be on.
 """
@@ -113,7 +114,11 @@ async def create(
     url = _url(body.url, allow_private=allow_private)
     limit = entitlement(await current_plan(session), "webhook_endpoints")
     if limit is not None:
-        count = await session.scalar(select(func.count()).select_from(WebhookEndpoint))
+        count = await session.scalar(  # a Zapier REST hook (GR-26) takes no slot
+            select(func.count())
+            .select_from(WebhookEndpoint)
+            .where(WebhookEndpoint.api_key_id.is_(None))
+        )
         if (count or 0) >= limit:
             raise quota_error("webhook_endpoints", limit)
     secret = new_secret()

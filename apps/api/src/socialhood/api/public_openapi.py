@@ -46,9 +46,14 @@ def public_openapi(app: FastAPI) -> dict[str, Any]:
     cached: dict[str, Any] | None = getattr(app.state, "public_openapi_schema", None)
     if cached is not None:
         return cached
-    from socialhood.api import public
+    from socialhood.api import public, public_hooks
 
-    routes = [r for r in public.router.routes if isinstance(r, APIRoute)]
+    routes = [
+        r
+        for router in (public.router, public_hooks.router)
+        for r in router.routes
+        if isinstance(r, APIRoute)
+    ]
     schema = describe_problems(
         get_openapi(
             title="Social Hood public API",

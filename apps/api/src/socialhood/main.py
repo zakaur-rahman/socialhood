@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from socialhood import __version__
-from socialhood.api import health, public
+from socialhood.api import health, public, public_hooks
 from socialhood.api import v1 as api_v1
 from socialhood.api.middleware import BodyLimitMiddleware, RequestContextMiddleware
 from socialhood.api.openapi_errors import problem_openapi
@@ -67,12 +67,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     install_problem_handlers(app)
     # The public API (GR-25) has its own document, api/public_openapi.py.
-    app.openapi = lambda: problem_openapi(app, (public.router,))  # type: ignore[method-assign]
+    app.openapi = lambda: problem_openapi(app, (public.router, public_hooks.router))  # type: ignore[method-assign]
     app.include_router(health.router)
     app.include_router(observability_http.router)  # /metrics behind METRICS_TOKEN (SEC-12)
     for router in api_v1.ROUTERS:
         app.include_router(router)
     app.include_router(public.router)  # GR-25: /public/v1, authenticated by an API key
+    app.include_router(public_hooks.router)  # GR-26: the REST hooks Zapier triggers use
     app.include_router(clerk_webhook.router)
     app.include_router(dodo_webhook.router)
     app.include_router(instagram_webhook.router)
