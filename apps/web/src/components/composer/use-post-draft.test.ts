@@ -19,6 +19,7 @@ describe("sameDraft (UI-032: an undone edit is not unsaved)", () => {
     expect(sameDraft({ ...stored, publish_at: null }, stored)).toBe(false);
     expect(sameDraft({ ...stored, first_comment: "#linen" }, stored)).toBe(false);
     expect(sameDraft({ ...stored, asset_ids: [] }, stored)).toBe(false);
+    expect(sameDraft({ ...stored, kind: "story" }, stored)).toBe(false);
     expect(
       sameDraft({ ...stored, targets: stored.targets.map((t) => ({ ...t, caption_override: stored.caption })) }, stored),
     ).toBe(false);

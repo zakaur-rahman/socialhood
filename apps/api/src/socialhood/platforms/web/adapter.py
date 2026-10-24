@@ -149,6 +149,9 @@ class WebAdapter:
     ) -> str:
         raise _unavailable(NO_POSTS)
 
+    async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        raise _unavailable(NO_POSTS)
+
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
         raise _unavailable(NO_POSTS)
 
@@ -166,7 +169,7 @@ class WebAdapter:
         raise _unavailable(NO_POSTS)
 
     async def get_published_media(
-        self, acct: SocialAccount, media_ref: str
+        self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
         raise _unavailable(NO_POSTS)
 
@@ -177,6 +180,7 @@ class WebAdapter:
         *,
         caption: str,
         published_after: datetime,
+        story: bool = False,
     ) -> PlatformMedia | None:
         raise _unavailable(NO_POSTS)
 

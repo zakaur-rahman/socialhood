@@ -72,8 +72,15 @@ export function captionLine(caption: string | null | undefined): string {
   return line || "No caption yet";
 }
 
+/** What names a post in a list: its caption's first line; a Story has no caption, so it is "Story". */
+export function postLine(post: Pick<ScheduledPostSummary, "format" | "caption">): string {
+  return post.format === "story" ? "Story" : captionLine(post.caption);
+}
+
 export function postFormatLabel(post: Pick<ScheduledPostSummary, "format" | "asset_count">): string {
   switch (post.format) {
+    case "story":
+      return "Story";
     case "reel":
       return "Reel";
     case "carousel":

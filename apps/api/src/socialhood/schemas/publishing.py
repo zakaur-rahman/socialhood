@@ -42,7 +42,8 @@ from socialhood.schemas.inbox import ErrorInfo, MediaAssetOut, ScheduledMessage
 ScheduledPostStatusName = Literal[
     "draft", "scheduled", "publishing", "published", "partially_published", "failed", "canceled"
 ]
-PostFormatName = Literal["image", "carousel", "reel"]
+PostFormatName = Literal["image", "carousel", "reel", "story"]
+PostKind = Literal["post", "story"]
 TargetStatusName = Literal[
     "pending", "publishing", "container_created", "published", "failed", "canceled"
 ]
@@ -59,7 +60,7 @@ FirstCommentStatus = Literal["pending", "posted", "failed"]
 # The composer's checklist (FR-PUB-10, UX-SCR-13), in this order:
 # - accounts: at least one account; each is connected and can publish (Capability.PUBLISH)
 # - media: at least one asset, and the assets make a format (1 image; 1 video, a Reel; 2 to 10
-#   images and videos, a carousel)
+#   images and videos, a carousel; ``kind: story`` makes one image or video a Story)
 # - media_files: each asset's type, size, aspect ratio and video length (TR-MED-02)
 # - caption: the caption and each per-account caption up to 2,200 characters
 # - hashtags: at most 30 hashtags in each caption
@@ -126,6 +127,8 @@ class ScheduledPostTarget(ResponseModel):
     status: TargetStatusName
     platform_media_id: str | None = None
     permalink: str | None = None  # View on Instagram
+    # A published Story only: when Instagram takes it down (24 hours after it went up).
+    expires_at: datetime | None = None
     post_id: uuid.UUID | None = None  # the media_items row once published (Comments, analytics)
     published_at: datetime | None = None
     error: ErrorInfo | None = None  # Instagram's reason when failed (FR-PUB-06)
@@ -209,6 +212,9 @@ class ScheduledPostDraft(RequestModel):
     first_comment: str | None = Field(default=None, max_length=FIRST_COMMENT_MAX_CHARS)
     # A draft may keep a time (a calendar click); a scheduled post's time.
     publish_at: datetime | None = None
+    # ``story``: the one image or video is published as an Instagram Story (GR-39), without the
+    # caption or first comment (both are kept on the draft but never sent).
+    kind: PostKind = "post"
 
 
 class ScheduleRequest(RequestModel):

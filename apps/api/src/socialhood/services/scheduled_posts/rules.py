@@ -27,6 +27,8 @@ from socialhood.models.publishing import (
     MAX_HASHTAGS,
     MAX_MENTIONS,
     MIN_SCHEDULE_LEAD,
+    STORY_VIDEO_MAX_S,
+    STORY_VIDEO_MIN_S,
     PostFormat,
 )
 from socialhood.schemas.publishing import ChecklistItem, ChecklistKey
@@ -64,6 +66,13 @@ MIN_ASPECT = 4 / 5
 MAX_ASPECT = 1.91
 ASPECT_SLACK = 0.005
 
+# A Story is shown full screen, 9:16; other shapes are cropped or letterboxed by Instagram, so
+# they pass with a note (unverified: Meta states 9:16 as the recommendation, C-114).
+STORY_ASPECT = 9 / 16
+STORY_ASPECT_TOLERANCE = 0.05
+STORY_ONE_FILE = "A Story is one image or one video."
+STORY_NO_CAPTION = "Stories are published without a caption"
+
 PUBLISHING_STARTED = "Publishing started."
 ALREADY_PUBLISHED = "This post was already published."
 NOT_SCHEDULED = "This post isn't scheduled."
@@ -73,11 +82,13 @@ TIME_TOO_SOON = "Pick a time at least 5 minutes from now."
 # ---------------------------------------------------------------- format (§5.7)
 
 
-def derive_format(resource_types: Sequence[str]) -> PostFormat | None:
-    """1 image: an image post; 1 video: a Reel; 2 to 10 images and videos: a carousel. Nothing
-    else makes a post."""
+def derive_format(resource_types: Sequence[str], *, story: bool = False) -> PostFormat | None:
+    """1 image: an image post; 1 video: a Reel; 2 to 10 images and videos: a carousel. Chosen as a
+    Story (GR-39), exactly 1 image or video is a Story. Nothing else makes a post."""
     if any(kind not in ("image", "video") for kind in resource_types):
         return None
+    if story:
+        return PostFormat.STORY if len(resource_types) == 1 else None
     if len(resource_types) == 1:
         return PostFormat.IMAGE if resource_types[0] == "image" else PostFormat.REEL
     if CAROUSEL_MIN_ASSETS <= len(resource_types) <= CAROUSEL_MAX_ASSETS:
@@ -85,7 +96,7 @@ def derive_format(resource_types: Sequence[str]) -> PostFormat | None:
     return None
 
 
-FORMAT_LABELS = {PostFormat.IMAGE: "Image post", PostFormat.REEL: "Reel"}
+FORMAT_LABELS = {PostFormat.IMAGE: "Image post", PostFormat.REEL: "Reel", PostFormat.STORY: "Story"}
 
 
 def format_label(fmt: PostFormat, count: int) -> str:
@@ -138,6 +149,7 @@ class TargetFacts:
     caption_override: str | None
     # The account's other posts published or due in the 24 hours up to the post's time.
     recent_posts: int
+    platform: str = "instagram"  # "instagram", "facebook", ...
 
 
 @dataclass(frozen=True)
@@ -157,6 +169,7 @@ class PostFacts:
     caption: str
     first_comment: str | None
     publish_at: datetime | None
+    story: bool = False  # chosen as an Instagram Story (GR-39)
 
 
 def handle(username: str | None, display_name: str | None = None) -> str:
@@ -165,25 +178,28 @@ def handle(username: str | None, display_name: str | None = None) -> str:
     return display_name or "This account"
 
 
-def _account_problem(target: TargetFacts) -> str | None:
+def _account_problem(target: TargetFacts, *, story: bool = False) -> str | None:
     if target.status == AccountStatus.DISCONNECTED:
         return f"{target.handle} is disconnected. Reconnect it or remove it from this post."
     if target.status != AccountStatus.ACTIVE:
         return f"{target.handle} needs reconnecting before it can publish."
     if not target.can_publish:
         return f"{target.handle} can't publish posts."
+    if story and target.platform != "instagram":
+        return f"{target.handle} can't publish Stories. Remove it or choose a post."
     return None
 
 
-def asset_problem(asset: AssetFacts) -> str | None:
-    """TR-MED-02: type, size, aspect ratio and video length."""
+def asset_problem(asset: AssetFacts, *, story: bool = False) -> str | None:
+    """TR-MED-02: type, size, aspect ratio and video length. A Story takes any image shape (9:16
+    is only recommended) and a video of 3 to 60 seconds."""
     fmt = (asset.format or "").lower()
     if asset.resource_type == "image":
         if fmt and fmt not in IMAGE.formats:
             return "Use a JPEG, PNG, WEBP or HEIC image."
         if asset.bytes > IMAGE.max_bytes:
             return f"Images can be up to {IMAGE.max_bytes // MB} MB."
-        if asset.width and asset.height:
+        if asset.width and asset.height and not story:
             ratio = asset.width / asset.height
             if ratio < MIN_ASPECT - ASPECT_SLACK or ratio > MAX_ASPECT + ASPECT_SLACK:
                 return "Crop this image to between 4:5 (portrait) and 1.91:1 (landscape)."
@@ -193,9 +209,11 @@ def asset_problem(asset: AssetFacts) -> str | None:
             return "Use an MP4 or MOV video."
         if asset.bytes > POST_VIDEO.max_bytes:
             return f"Videos can be up to {POST_VIDEO.max_bytes // MB} MB."
-        limit = POST_VIDEO.max_duration_s
+        limit = STORY_VIDEO_MAX_S if story else POST_VIDEO.max_duration_s
         if limit is not None and asset.duration_s is not None and asset.duration_s > limit:
-            return f"Videos can be up to {limit:.0f} seconds."
+            return f"{'Story videos' if story else 'Videos'} can be up to {limit:.0f} seconds."
+        if story and asset.duration_s is not None and asset.duration_s < STORY_VIDEO_MIN_S:
+            return f"Story videos must be at least {STORY_VIDEO_MIN_S} seconds."
         return None
     return "Posts can only use images and videos."
 
@@ -210,6 +228,16 @@ def asset_facts(
     duration_s: float | None,
 ) -> AssetFacts:
     return AssetFacts(resource_type, file_format(fmt, public_id), size, width, height, duration_s)
+
+
+def story_shape_note(asset: AssetFacts) -> str | None:
+    """A passing Story file that is not 9:16: Instagram crops or letterboxes it."""
+    if not (asset.width and asset.height):
+        return None
+    ratio = asset.width / asset.height
+    if abs(ratio - STORY_ASPECT) <= STORY_ASPECT_TOLERANCE * STORY_ASPECT:
+        return None
+    return "9:16 fits a Story best. Instagram may crop or add bars to this file."
 
 
 def _item(
@@ -232,59 +260,9 @@ def _texts(post: PostFacts, *, first_comment: bool) -> list[tuple[str, str | Non
     return texts
 
 
-def checklist(
-    post: PostFacts,
-    *,
-    now: datetime,
-    publishing_limit: int,
-    check_time: bool = True,
-) -> list[ChecklistItem]:
-    """FR-PUB-10 in CHECKLIST_KEYS order. A passing check is one item; a failing check is one
-    item per failing element, ``field`` naming it. ``check_time`` False leaves out the 5-minute
-    rule (Publish now)."""
+def _text_items(post: PostFacts) -> list[ChecklistItem]:
+    """The caption, hashtags and mentions checks (FR-PUB-10) of a post that has a caption."""
     items: list[ChecklistItem] = []
-
-    # accounts
-    if not post.targets:
-        items.append(_item("accounts", "Choose at least one account.", ok=False, field="targets"))
-    else:
-        failing = [
-            _item("accounts", problem, ok=False, field=f"targets.{i}")
-            for i, t in enumerate(post.targets)
-            if (problem := _account_problem(t)) is not None
-        ]
-        count = len(post.targets)
-        items += failing or [
-            _item(
-                "accounts",
-                f"Publishing to {post.targets[0].handle}"
-                if count == 1
-                else f"Publishing to {count} accounts",
-            )
-        ]
-
-    # media and media_files
-    fmt = derive_format([a.resource_type for a in post.assets])
-    if not post.assets:
-        items.append(_item("media", "Add an image or video.", ok=False, field="asset_ids"))
-    elif fmt is None:
-        items.append(
-            _item(
-                "media",
-                "Use 1 image, 1 video, or 2 to 10 images and videos.",
-                ok=False,
-                field="asset_ids",
-            )
-        )
-    else:
-        items.append(_item("media", format_label(fmt, len(post.assets))))
-    failing = [
-        _item("media_files", problem, ok=False, field=f"asset_ids.{i}")
-        for i, a in enumerate(post.assets)
-        if (problem := asset_problem(a)) is not None
-    ]
-    items += failing or [_item("media_files", "Media meets Instagram's requirements")]
-
     # caption: lengths
     failing = []
     for field, text in _texts(post, first_comment=True):
@@ -330,6 +308,71 @@ def checklist(
                 )
             )
     items += failing or [_item("mentions", f"Up to {MAX_MENTIONS} @mentions")]
+    return items
+
+
+def checklist(
+    post: PostFacts,
+    *,
+    now: datetime,
+    publishing_limit: int,
+    check_time: bool = True,
+) -> list[ChecklistItem]:
+    """FR-PUB-10 in CHECKLIST_KEYS order. A passing check is one item; a failing check is one
+    item per failing element, ``field`` naming it. ``check_time`` False leaves out the 5-minute
+    rule (Publish now)."""
+    items: list[ChecklistItem] = []
+
+    # accounts
+    if not post.targets:
+        items.append(_item("accounts", "Choose at least one account.", ok=False, field="targets"))
+    else:
+        failing = [
+            _item("accounts", problem, ok=False, field=f"targets.{i}")
+            for i, t in enumerate(post.targets)
+            if (problem := _account_problem(t, story=post.story)) is not None
+        ]
+        count = len(post.targets)
+        items += failing or [
+            _item(
+                "accounts",
+                f"Publishing to {post.targets[0].handle}"
+                if count == 1
+                else f"Publishing to {count} accounts",
+            )
+        ]
+
+    # media and media_files
+    fmt = derive_format([a.resource_type for a in post.assets], story=post.story)
+    if not post.assets:
+        items.append(_item("media", "Add an image or video.", ok=False, field="asset_ids"))
+    elif fmt is None:
+        items.append(
+            _item(
+                "media",
+                STORY_ONE_FILE
+                if post.story
+                else "Use 1 image, 1 video, or 2 to 10 images and videos.",
+                ok=False,
+                field="asset_ids",
+            )
+        )
+    else:
+        items.append(_item("media", format_label(fmt, len(post.assets))))
+    failing = [
+        _item("media_files", problem, ok=False, field=f"asset_ids.{i}")
+        for i, a in enumerate(post.assets)
+        if (problem := asset_problem(a, story=post.story)) is not None
+    ]
+    note = story_shape_note(post.assets[0]) if post.story and len(post.assets) == 1 else None
+    items += failing or [_item("media_files", note or "Media meets Instagram's requirements")]
+
+    if post.story:
+        # A Story has no caption, hashtags or mentions: whatever the draft holds is kept but
+        # never sent, so there is nothing to check.
+        items.append(_item("caption", STORY_NO_CAPTION))
+    else:
+        items += _text_items(post)
 
     # publishing_limit: this post plus the account's others in the 24 hours up to its time
     failing = [

@@ -254,7 +254,9 @@ async def _write(
     post.caption = body.caption
     post.first_comment = body.first_comment or None
     post.publish_at = utc(body.publish_at) if body.publish_at else None
-    post.format = rules.derive_format([a.resource_type for a in checked.assets])
+    post.format = rules.derive_format(
+        [a.resource_type for a in checked.assets], story=body.kind == "story"
+    )
     post.updated_at = now
     current = [row.media_asset_id for row, _ in await repo.assets_for(session, [post.id])]
     if current != list(body.asset_ids):
@@ -295,6 +297,7 @@ async def replace(
                 for t in body.targets
             ],
             assets=checked.assets,
+            story=body.kind == "story",
         )
         await _require_ready(session, draft, env)
     retry = post.status in RETRYABLE

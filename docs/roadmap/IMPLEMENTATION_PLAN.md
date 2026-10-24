@@ -529,6 +529,15 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Adds:** every wave 2 to 4 trigger and step works on Messenger where Meta allows (verify each).
 - It needs the second App Review submission (O-10).
 
+#### GR-39 · Instagram Story scheduling · S–M · owner request 2026-10-24
+- A "Story" post type for Instagram accounts beside image, Reel and carousel: one image or one
+  video, no caption, published through the Content Publishing API (`media_type: STORIES`), scheduled,
+  retried and reported like any post. After publishing it shows in the live stories the story-reply
+  picker lists, with its 24 hour expiry.
+- **Out of scope:** WhatsApp Status has no API; Facebook Page Stories (see GR-30).
+- **Done when:** a Story scheduled from the composer publishes on the sandbox, appears in the story
+  picker and says when it disappears.
+
 #### GR-30 · Facebook publishing and best posting times · M · needs GR-29
 - Publish to Pages from the composer.
 - **"Best times" (R2 in the spec):** from each account's own post insights, a suggested slot per

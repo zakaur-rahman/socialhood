@@ -157,6 +157,9 @@ export function PostPreview({
           </CardAction>
         ) : null}
       </CardHeader>
+      {format === "story" ? (
+        <StoryPreview account={account} identity={identity} asset={assets[0]} />
+      ) : (
       <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
         <TabsList aria-label="Preview">
           <TabsTrigger value="feed">Feed</TabsTrigger>
@@ -179,8 +182,45 @@ export function PostPreview({
           <GridPreview wid={wid} account={account} identity={identity} assets={assets} format={format} />
         </TabsContent>
       </Tabs>
+      )}
      </section>
     </Card>
+  );
+}
+
+/** GR-39: the Story as the phone shows it, full screen at 9:16 with no caption. */
+function StoryPreview({
+  account,
+  identity,
+  asset,
+}: {
+  account: SocialAccount | null;
+  identity?: AccountColor;
+  asset: AssetInfo | undefined;
+}) {
+  const name = account?.username ?? account?.display_name ?? "your.account";
+  return (
+    <div>
+      <article aria-label="Story preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
+        {asset ? <Media asset={asset} /> : <NoMedia>Add one photo or video to see the Story.</NoMedia>}
+        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-scrim/60 to-transparent p-3" aria-hidden>
+          <div className="h-0.5 w-full rounded-full bg-line-strong">
+            <div className="h-full w-1/3 rounded-full bg-fg" />
+          </div>
+          <div className="flex items-center gap-2">
+            <AccountPicture account={account} identity={identity} size={24} />
+            <span className="truncate text-sm font-semibold">{name}</span>
+            <span className="text-xs text-fg-secondary">Now</span>
+          </div>
+        </div>
+        <div className="absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-full border border-line-strong px-3 py-2 text-sm text-fg-secondary" aria-hidden>
+          <span className="flex-1">Send message</span>
+          <Heart className="size-4" />
+          <Send className="size-4" />
+        </div>
+      </article>
+      <p className="mt-2 text-center text-xs text-fg-secondary">Disappears 24 hours after it is published.</p>
+    </div>
   );
 }
 

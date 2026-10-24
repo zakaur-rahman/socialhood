@@ -88,6 +88,7 @@ import { MediaLibraryDialog } from "./MediaLibraryDialog";
 import { MEDIA_ADD_ID, mediaTileId, MediaTray, moveItem, type TrayEntry } from "./MediaTray";
 import { PostChecklist } from "./PostChecklist";
 import { PostPreview } from "./PostPreview";
+import { PostTypeSection } from "./PostTypeSection";
 import { StatusBanner } from "./StatusBanner";
 import { toRequest, usePostDraft, type Draft, type PostSaveStatus } from "./use-post-draft";
 import { useMediaUploads, type Uploader } from "./use-media-uploads";
@@ -293,7 +294,8 @@ function Composer({
     replacing: uploads.items.find((item) => item.replaces === id) ?? null,
   }));
   const postAssets = entries.map((entry) => entry.asset);
-  const format = deriveFormat(postAssets);
+  const isStory = draft.kind === "story";
+  const format = isStory ? (postAssets.length === 1 ? "story" : null) : deriveFormat(postAssets);
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
   const cropAsset = cropId ? assets[cropId] : undefined;
 
@@ -638,6 +640,7 @@ function Composer({
               onToggle={toggleAccount}
               slug={slug}
             />
+            <PostTypeSection value={draft.kind} onChange={(kind) => change({ kind })} />
             <MediaTray
               entries={entries}
               uploads={newUploads}
@@ -652,6 +655,8 @@ function Composer({
               onRetryUpload={uploads.retry}
               onRemoveUpload={uploads.remove}
             />
+            {isStory ? null : (
+            <>
             <CaptionEditor
               wid={wid}
               slug={slug}
@@ -682,6 +687,8 @@ function Composer({
               value={draft.first_comment ?? ""}
               onChange={(value) => change({ first_comment: value })}
             />
+            </>
+            )}
             <AutomationSection
               wid={wid}
               slug={slug}

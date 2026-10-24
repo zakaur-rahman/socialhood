@@ -6,10 +6,10 @@ post and the target again (post first) and checks nothing moved before writing.
 publish_target: the account must still be connected and able to publish (else the target fails,
 or is canceled when the account was disconnected); the quota is read first (none left: failed
 "Instagram's daily publishing limit reached"); then the containers are created from the assets'
-delivery URLs: one for an image or a Reel, the children in order for a carousel (Meta refuses a
-carousel whose children are still processing, so poll_container creates the carousel itself
-once they are FINISHED). The target becomes ``container_created`` and poll 1 is queued at once.
-Retryable errors retry while the job will (the target stays ``publishing``); the last try or a
+delivery URLs: one for an image, a Reel or a Story, the children in order for a carousel (Meta
+refuses a carousel whose children are still processing, so poll_container creates the carousel
+itself once they are FINISHED). The target becomes ``container_created`` and poll 1 is queued at
+once. Retryable errors retry while the job will (the target stays ``publishing``); the last try or a
 refusal fails the target.
 
 poll_container(n): one round of status reads, never more than one per container a minute.
@@ -49,7 +49,7 @@ from socialhood.models.publishing import (
     POLL_FAST_DELAY,
     POLL_MAX,
     POLL_SLOW_DELAY,
-    PROCESSING_TIMEOUT_MESSAGE,
+    PROCESSING_TIMEOUT_SUFFIX,
     PostFormat,
     ScheduledPost,
     ScheduledPostStatus,
@@ -112,7 +112,9 @@ def _handle(acct: SocialAccount | None) -> str:
 def _specific(error: PlatformError) -> bool:
     """An unavailable error with a reason of its own (a publishing subcode Instagram explained,
     or the processing timeout) rather than a bare outage."""
-    return "/" in (error.platform_code or "") or error.message == PROCESSING_TIMEOUT_MESSAGE
+    return "/" in (error.platform_code or "") or (error.message or "").endswith(
+        PROCESSING_TIMEOUT_SUFFIX
+    )
 
 
 def reason_for(error: PlatformError, acct: SocialAccount) -> str:
@@ -175,6 +177,10 @@ def _adapter(acct: SocialAccount, deps: PlatformDeps) -> PlatformAdapter | _Stop
 
 
 def _caption(post: ScheduledPost, target: ScheduledPostTarget) -> str:
+    """The text that goes with the post. A Story has none: a caption kept on the draft is never
+    sent (GR-39)."""
+    if post.format == PostFormat.STORY:
+        return ""
     return target.caption_override if target.caption_override is not None else post.caption
 
 
@@ -191,6 +197,8 @@ def container_media(post: ScheduledPost, assets: Sequence[MediaAsset]) -> list[C
     if post.format == PostFormat.IMAGE and kinds == ["image"]:
         return media
     if post.format == PostFormat.REEL and kinds == ["video"]:
+        return media
+    if post.format == PostFormat.STORY and len(kinds) == 1:
         return media
     if post.format == PostFormat.CAROUSEL and (
         CAROUSEL_MIN_ASSETS <= len(media) <= CAROUSEL_MAX_ASSETS
@@ -211,8 +219,11 @@ async def _notify_failure(
         lines.append(f"{_handle(acct)}: {target.error_message or 'no reason given'}")
     if len(missed) > 3:
         lines.append(f"and {len(missed) - 3} more")
-    excerpt = post.caption.strip().splitlines()[0][:40] if post.caption.strip() else ""
-    subject = f'"{excerpt}"' if excerpt else "Your post"
+    story = post.format == PostFormat.STORY
+    excerpt = (
+        post.caption.strip().splitlines()[0][:40] if post.caption.strip() and not story else ""
+    )
+    subject = f'"{excerpt}"' if excerpt else "Your Story" if story else "Your post"
     failed = post.status == ScheduledPostStatus.FAILED
     body = (
         f"{subject} didn't publish. " if failed else f"{subject} published on some accounts only. "
@@ -478,6 +489,8 @@ async def _create(
 ) -> tuple[str | None, list[str]]:
     """(container id, children): a carousel's children only, its parent comes once they are
     FINISHED (poll_container)."""
+    if post_format == PostFormat.STORY:
+        return await adapter.create_story_container(acct, media[0]), []
     if post_format == PostFormat.CAROUSEL:
         return None, [await adapter.create_carousel_item(acct, m) for m in media]
     if post_format == PostFormat.REEL:
@@ -632,7 +645,10 @@ async def _next_poll(p: _Poll, *, processing: bool, error: PlatformError | None 
     if p.n >= (POLL_MAX if processing else POLL_MAX + EXTRA_POLLS):
         if error is None:
             error = (
-                PlatformError("platform_unavailable", message=PROCESSING_TIMEOUT_MESSAGE)
+                PlatformError(
+                    "platform_unavailable",
+                    message=f"{platform_label(p.acct)}{PROCESSING_TIMEOUT_SUFFIX}",
+                )
                 if processing
                 else _unconfirmed()
             )
@@ -673,7 +689,11 @@ async def _recover(p: _Poll, container_id: str) -> Outcome:
     published_after = (p.target.claimed_at or p.now) - CLOCK_SKEW
     try:
         media = await p.adapter.find_published_media(
-            p.acct, container_id, caption=p.caption, published_after=published_after
+            p.acct,
+            container_id,
+            caption=p.caption,
+            published_after=published_after,
+            story=p.post.format == PostFormat.STORY,
         )
     except PlatformError as error:
         return await _later(p, error, processing=False)
@@ -688,17 +708,21 @@ async def _read_back(p: _Poll, media_id: str) -> PlatformMedia:
     """The new post's fields and permalink; what we know when Instagram won't say yet (sync
     fills the rest later)."""
     try:
-        media = await p.adapter.get_published_media(p.acct, media_id)
+        media = await p.adapter.get_published_media(
+            p.acct, media_id, story=p.post.format == PostFormat.STORY
+        )
     except PlatformError as error:
         log.warning("published_media_read_failed", target_id=str(p.target_id), error=error.code)
         media = None
     if media is not None and media.platform_media_id == media_id:
         return media
-    media_type: Literal["image", "carousel", "reel"] = (
+    media_type: Literal["image", "carousel", "reel", "story"] = (
         "carousel"
         if p.post.format == PostFormat.CAROUSEL
         else "reel"
         if p.post.format == PostFormat.REEL
+        else "story"
+        if p.post.format == PostFormat.STORY
         else "image"
     )
     return PlatformMedia(
@@ -740,7 +764,8 @@ async def _published(p: _Poll, media: PlatformMedia) -> Outcome:
         if item.media_type != MediaType.STORY:
             await automation_posts.link_next_posts(session, p.acct.id)
         await settle(session, post, target, TargetStatus.PUBLISHED, media=media)
-        first_comment = bool(post.first_comment)
+        # A Story takes no comment of its own (GR-39).
+        first_comment = bool(post.first_comment) and post.format != PostFormat.STORY
         await commit_and_publish(session, p.redis)
     if first_comment:
         await enqueue_first_comment(p.target_id, p.workspace_id)

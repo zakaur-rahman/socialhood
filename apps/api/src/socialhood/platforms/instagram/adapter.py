@@ -351,6 +351,13 @@ class InstagramAdapter:
             share_to_feed=share_to_feed,
         )
 
+    async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        from socialhood.platforms.instagram import publishing
+
+        return await publishing.create_story_container(
+            self.http, self._graph, self._token(acct), acct, media
+        )
+
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
         from socialhood.platforms.instagram import publishing
 
@@ -384,12 +391,12 @@ class InstagramAdapter:
         )
 
     async def get_published_media(
-        self, acct: SocialAccount, media_ref: str
+        self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
         from socialhood.platforms.instagram import publishing
 
         return await publishing.published_media(
-            self.http, self._graph, self._token(acct), media_ref
+            self.http, self._graph, self._token(acct), media_ref, story=story
         )
 
     async def find_published_media(
@@ -399,6 +406,7 @@ class InstagramAdapter:
         *,
         caption: str,
         published_after: datetime,
+        story: bool = False,
     ) -> PlatformMedia | None:
         from socialhood.platforms.instagram import publishing
 
@@ -410,6 +418,7 @@ class InstagramAdapter:
             container_ref,
             caption=caption,
             published_after=published_after,
+            story=story,
         )
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:

@@ -250,6 +250,11 @@ class SandboxAdapter:
             acct, video_url=video_url, caption=caption, share_to_feed=share_to_feed
         )
 
+    async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.create_story_container(acct, media)
+
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
         from socialhood.platforms.sandbox import publishing
 
@@ -275,7 +280,7 @@ class SandboxAdapter:
         return publishing.publish_container(acct, container_ref)
 
     async def get_published_media(
-        self, acct: SocialAccount, media_ref: str
+        self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
         from socialhood.platforms.sandbox import publishing
 
@@ -288,11 +293,12 @@ class SandboxAdapter:
         *,
         caption: str,
         published_after: datetime,
+        story: bool = False,
     ) -> PlatformMedia | None:
         from socialhood.platforms.sandbox import publishing
 
         return publishing.find_published_media(
-            acct, container_ref, caption=caption, published_after=published_after
+            acct, container_ref, caption=caption, published_after=published_after, story=story
         )
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:

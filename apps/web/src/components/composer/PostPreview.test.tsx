@@ -72,6 +72,22 @@ describe("PostPreview (FR-PUB-03, UX-CMP-02)", () => {
     expect(within(reel).getByLabelText("Video")).toBeInTheDocument();
   });
 
+  it("Story: a 9:16 phone with the account, no caption and no tabs (GR-39)", () => {
+    renderPreview({ assets: [assetInfo({ width: 1080, height: 1920 })], format: "story" });
+    const story = screen.getByRole("article", { name: "Story preview" });
+    expect(within(story).getByText("maple.bakery")).toBeInTheDocument();
+    expect(story).not.toHaveTextContent("Fresh #linen");
+    expect(screen.queryByRole("tab", { name: "Feed" })).not.toBeInTheDocument();
+    expect(screen.getByText("Disappears 24 hours after it is published.")).toBeInTheDocument();
+  });
+
+  it("Story without media says what to add", () => {
+    renderPreview({ assets: [], format: null });
+    expect(screen.getByRole("tab", { name: "Feed" })).toBeInTheDocument();
+    renderPreview({ assets: [], format: "story" });
+    expect(screen.getByText("Add one photo or video to see the Story.")).toBeInTheDocument();
+  });
+
   it("explains the Reel tab when the post isn't a single video", async () => {
     const user = userEvent.setup();
     renderPreview();

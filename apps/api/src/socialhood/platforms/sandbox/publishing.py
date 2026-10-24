@@ -48,6 +48,7 @@ from socialhood.platforms.errors import PlatformError
 
 PublishStep = Literal["quota", "container", "status", "publish", "read", "find", "comment"]
 ContainerKind = Literal["image", "video", "carousel"]
+STORY_LIFETIME = timedelta(hours=24)
 
 DEFAULT_PROCESSING_READS = 2
 QUOTA_WINDOW = timedelta(hours=24)
@@ -65,6 +66,7 @@ class SandboxContainer:
     caption: str | None = None
     children: tuple[str, ...] = ()
     share_to_feed: bool = True
+    story: bool = False
     reads_left: int = 0  # status reads still IN_PROGRESS
     status_code: ContainerStatusCode = "IN_PROGRESS"
     detail: str | None = None
@@ -199,6 +201,7 @@ def _new_container(
     caption: str | None = None,
     children: tuple[str, ...] = (),
     share_to_feed: bool = True,
+    story: bool = False,
 ) -> str:
     _injected("container")
     container_id = f"sandbox_container_{secrets.token_hex(8)}"
@@ -211,6 +214,7 @@ def _new_container(
         caption=caption,
         children=children,
         share_to_feed=share_to_feed,
+        story=story,
         reads_left=STATE.processing_reads if kind == "video" else 0,
         status_code="IN_PROGRESS" if kind == "video" else "FINISHED",
     )
@@ -236,6 +240,11 @@ def create_reel_container(
         caption=caption,
         share_to_feed=share_to_feed,
     )
+
+
+def create_story_container(acct: SocialAccount, media: ContainerMedia) -> str:
+    """A Story: one image (FINISHED at once) or video (processes like a Reel), no caption."""
+    return _new_container(acct, media.kind, carousel_item=False, url=media.url, story=True)
 
 
 def create_carousel_item(acct: SocialAccount, media: ContainerMedia) -> str:
@@ -298,8 +307,14 @@ def publish_container(
     if _quota(acct.platform_account_id, at).remaining <= 0:
         raise _rejected(LIMIT_REACHED)
     media_id = f"sandbox_media_{secrets.token_hex(8)}"
-    media_type: Literal["image", "carousel", "reel"] = (
-        "carousel" if row.kind == "carousel" else "reel" if row.kind == "video" else "image"
+    media_type: Literal["image", "carousel", "reel", "story"] = (
+        "story"
+        if row.story
+        else "carousel"
+        if row.kind == "carousel"
+        else "reel"
+        if row.kind == "video"
+        else "image"
     )
     first_url = row.url
     if row.kind == "carousel" and row.children:
@@ -312,7 +327,11 @@ def publish_container(
             caption=row.caption or None,
             media_url=first_url,
             thumbnail_url=None,
-            permalink=f"https://www.instagram.com/p/{media_id[-11:]}/",
+            permalink=(
+                f"https://www.instagram.com/stories/{acct.username or 'sandbox'}/{media_id[-11:]}/"
+                if row.story
+                else f"https://www.instagram.com/p/{media_id[-11:]}/"
+            ),
             posted_at=at.replace(microsecond=0),
             like_count=0,
             comments_count=0,
@@ -335,13 +354,31 @@ def published_media(acct: SocialAccount, media_ref: str) -> PlatformMedia | None
     return next((m for m in posts if m.platform_media_id == media_ref), None)
 
 
+def stories(acct_ref: str, *, now: datetime | None = None) -> list[PlatformMedia]:
+    """The account's published sandbox stories still live (the last 24 hours), newest first."""
+    at = now or datetime.now(UTC)
+    return [
+        m
+        for m in published(acct_ref)
+        if m.media_type == "story" and m.posted_at + STORY_LIFETIME > at
+    ]
+
+
 def find_published_media(
-    acct: SocialAccount, container_ref: str, *, caption: str, published_after: datetime
+    acct: SocialAccount,
+    container_ref: str,
+    *,
+    caption: str,
+    published_after: datetime,
+    story: bool = False,
 ) -> PlatformMedia | None:
-    """Like Instagram's: matched on caption and time among the account's recent posts."""
-    from socialhood.platforms.instagram.publishing import match_published
+    """Like Instagram's: matched on caption and time among the account's recent posts (a Story:
+    among its live stories, on time alone)."""
+    from socialhood.platforms.instagram.publishing import match_published, match_story
 
     _injected("find")
+    if story:
+        return match_story(stories(acct.platform_account_id), published_after=published_after)
     return match_published(
         published(acct.platform_account_id), caption=caption, published_after=published_after
     )

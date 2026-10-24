@@ -9,6 +9,10 @@ is a comma-separated string, not a JSON array.
   [{"quota_usage": n, "config": {"quota_total": 100, "quota_duration": 86400}}]}``
 - image: ``POST /{ig}/media`` {image_url, caption} (JPEG only; our delivery URL converts)
 - Reel: ``POST /{ig}/media`` {media_type: REELS, video_url, caption, share_to_feed}
+- Story (GR-39): ``POST /{ig}/media`` {media_type: STORIES, image_url} or {media_type: STORIES,
+  video_url}; no caption. Then the same status polling and ``media_publish`` as any container. A
+  story is read back with the story fields and found again (lost answer) in ``GET /me/stories``
+  by time, since ``/me/media`` does not list stories.
 - carousel child: ``POST /{ig}/media`` {image_url, is_carousel_item: true} or {media_type: VIDEO,
   video_url, is_carousel_item: true}; Reels can't be carousel items
 - carousel: ``POST /{ig}/media`` {media_type: CAROUSEL, children: "id1,id2,…", caption}. Meta
@@ -30,7 +34,10 @@ limit) is already ``platform_rejected`` and 2207008 retryable in ``platforms.err
 publishing subcodes Meta calls temporary (2207001, 2207003, 2207027, 2207032, 2207053) are made
 retryable here, and every known subcode gets a readable reason (FR-PUB-06).
 
-Unverified until a real account publishes (T0.9, docs/verification.md): the quota answer's shape
+Unverified until a real account publishes (T0.9, docs/verification.md; Stories: C-114): the
+Story limits (image 8 MB JPEG, video 3 to 60 s, 9:16 recommended), whether Stories count against
+the publishing quota, the Story-specific error subcodes (STORY_REASONS reuses the general
+subcodes with Story wording), the quota answer's shape
 under Instagram Login and whether ``since`` is needed; the exact ``status`` text of an ERROR;
 JSON bodies for ``/comments``; the caption normalisation Instagram applies (the lost-answer match
 compares captions with whitespace collapsed).
@@ -58,7 +65,13 @@ from socialhood.platforms.base import (
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.http import PlatformHttp
 from socialhood.platforms.instagram import parse
-from socialhood.platforms.instagram.reads import GRAPH_ID, MEDIA_FIELDS, list_media
+from socialhood.platforms.instagram.reads import (
+    GRAPH_ID,
+    MEDIA_FIELDS,
+    STORY_FIELDS,
+    list_media,
+    list_stories,
+)
 from socialhood.platforms.outcome import DELIVERY_UNKNOWN, for_write
 
 QUOTA_FIELDS = "quota_usage,config"
@@ -94,6 +107,15 @@ REASONS: dict[int, str] = {
     2207053: "Instagram had an unknown upload error.",
     2207057: "The video's cover frame is outside the video.",
 }
+# The same subcodes with wording for a Story (GR-39). Meta documents no Story-only subcodes that we
+# could check, so an unknown one falls back to REASONS and then to the generic reason.
+STORY_REASONS: dict[int, str] = {
+    2207004: "The image is too large for an Instagram Story (the limit is 8 MB).",
+    2207005: "Instagram doesn't support this image format for a Story.",
+    2207009: "Instagram doesn't accept this Story's shape. Use a 9:16 image or video.",
+    2207026: "Instagram doesn't support this video format for a Story.",
+    2207052: "Instagram couldn't fetch the Story's media from its link.",
+}
 _SUBCODE = re.compile(r"\b(22070\d\d)\b")
 _SPACES = re.compile(r"\s+")
 
@@ -107,16 +129,17 @@ def _subcode(error: PlatformError) -> int | None:
     return int(sub) if sub.isdigit() else None
 
 
-def _refine(error: PlatformError) -> PlatformError:
+def _refine(error: PlatformError, *, story: bool = False) -> PlatformError:
     """A publishing error with its readable reason; Meta's temporary subcodes become retryable."""
     sub = _subcode(error)
     if sub is None or sub not in REASONS:
         return error
+    reason = STORY_REASONS.get(sub, REASONS[sub]) if story else REASONS[sub]
     code = "platform_unavailable" if sub in TRANSIENT_SUBCODES else error.code
     refined = PlatformError(
         code,
         platform_code=error.platform_code,
-        message=REASONS[sub],
+        message=reason,
         retry_after_s=error.retry_after_s,
     )
     refined.__cause__ = error.__cause__
@@ -156,6 +179,7 @@ async def _create(
     body: dict[str, Any],
     *,
     endpoint: str,
+    story: bool = False,
 ) -> str:
     """``POST /{ig}/media``: a container. Safe to retry, so failures keep their mapped code."""
     try:
@@ -163,7 +187,7 @@ async def _create(
             "POST", graph(f"{_ig(acct)}/media"), endpoint=endpoint, token=token, json=body
         )
     except PlatformError as error:
-        raise _refine(error) from error.__cause__
+        raise _refine(error, story=story) from error.__cause__
     container_id = parse.created_id(answer)
     if not container_id:
         raise PlatformError("platform_unavailable", message="Instagram returned no container id")
@@ -221,6 +245,20 @@ async def create_reel_container(
     return await _create(
         http, graph, token, acct, _captioned(body, caption), endpoint="media.create.reel"
     )
+
+
+async def create_story_container(
+    http: PlatformHttp,
+    graph: Callable[[str], str],
+    token: str,
+    acct: SocialAccount,
+    media: ContainerMedia,
+) -> str:
+    """A Story's container: ``media_type: STORIES`` with ``image_url`` or ``video_url``. A Story
+    has no caption, so none is sent."""
+    body: dict[str, Any] = {"media_type": "STORIES"}
+    body["video_url" if media.kind == "video" else "image_url"] = media.url
+    return await _create(http, graph, token, acct, body, endpoint="media.create.story", story=True)
 
 
 async def create_carousel_item(
@@ -301,10 +339,15 @@ async def publish_container(
 
 
 async def published_media(
-    http: PlatformHttp, graph: Callable[[str], str], token: str, media_ref: str
+    http: PlatformHttp,
+    graph: Callable[[str], str],
+    token: str,
+    media_ref: str,
+    *,
+    story: bool = False,
 ) -> PlatformMedia | None:
-    """The new post's fields, permalink included. A refusal (not visible yet) is None; retryable
-    errors and a dead token raise."""
+    """The new post's fields, permalink included (a Story: the fields Stories have). A refusal
+    (not visible yet) is None; retryable errors and a dead token raise."""
     url = graph(_id(media_ref, "media"))
     try:
         body = await http.request(
@@ -312,13 +355,15 @@ async def published_media(
             url,
             endpoint="media.published",
             token=token,
-            params={"fields": MEDIA_FIELDS},
+            params={"fields": STORY_FIELDS if story else MEDIA_FIELDS},
         )
     except PlatformError as error:
         if error.retryable or error.code == "account_needs_reconnect":
             raise
         return None
-    return parse.media_item(body) if isinstance(body, dict) else None
+    if not isinstance(body, dict):
+        return None
+    return parse.story_item(body) if story else parse.media_item(body)
 
 
 def normalized_caption(caption: str | None) -> str:
@@ -341,6 +386,15 @@ def match_published(
     return min(candidates, key=lambda post: post.posted_at, default=None)
 
 
+def match_story(
+    stories: Sequence[PlatformMedia], *, published_after: datetime
+) -> PlatformMedia | None:
+    """The earliest live story at or after ``published_after`` (a Story has no caption to match
+    on; unverified, C-114)."""
+    candidates = [s for s in stories if s.posted_at >= published_after]
+    return min(candidates, key=lambda s: s.posted_at, default=None)
+
+
 async def find_published_media(
     http: PlatformHttp,
     graph: Callable[[str], str],
@@ -350,8 +404,11 @@ async def find_published_media(
     *,
     caption: str,
     published_after: datetime,
+    story: bool = False,
 ) -> PlatformMedia | None:
     _id(container_ref, "container")
+    if story:
+        return match_story(await list_stories(http, graph, token), published_after=published_after)
     posts = await list_media(http, graph, token, limit=FIND_LIMIT)
     return match_published(posts, caption=caption, published_after=published_after)
 

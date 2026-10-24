@@ -27,6 +27,8 @@ import {
   MAX_HASHTAGS,
   MAX_MENTIONS,
   MIN_SCHEDULE_LEAD_MS,
+  storyShapeOff,
+  storyVideoProblem,
   videoTooLong,
   type AssetInfo,
 } from "./rules";
@@ -94,6 +96,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const items: ChecklistItem[] = [];
   const targets = draft.targets ?? [];
   const assetIds = draft.asset_ids ?? [];
+  const story = draft.kind === "story";
 
   // accounts: at least one, each connected and able to publish
   if (targets.length === 0) {
@@ -104,7 +107,12 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       const account = accounts.find((item) => item.id === target.social_account_id);
       if (!account) return; // not loaded yet, or gone: the API says which
       const reason = cannotPublishReason(account);
-      if (!reason) return;
+      if (!reason) {
+        if (story && account.platform !== "instagram") {
+          problems.push(fail("accounts", `${handleOf(account)} can't publish Stories. Remove it or choose a post.`, `targets.${index}`));
+        }
+        return;
+      }
       const handle = handleOf(account);
       const message =
         account.status === "needs_reconnect"
@@ -124,6 +132,8 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const known = assetIds.map((id) => assets[id]).filter((asset): asset is AssetInfo => Boolean(asset));
   if (assetIds.length === 0) {
     items.push(fail("media", "Add a photo or video.", "asset_ids"));
+  } else if (story) {
+    items.push(assetIds.length === 1 ? pass("media", "Story") : fail("media", "A Story is one photo or one video.", "asset_ids"));
   } else if (assetIds.length > MAX_ASSETS) {
     items.push(fail("media", `A carousel can have up to ${MAX_ASSETS} photos and videos.`, "asset_ids"));
   } else if (assetIds.length > 1) {
@@ -138,11 +148,14 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     const asset = assets[id];
     if (!asset) return;
     const label = assetLabel(asset, index);
-    const crop = cropNeeded(asset);
-    if (crop) {
+    const crop = story ? null : cropNeeded(asset);
+    const storyProblem = story ? storyVideoProblem(asset) : null;
+    if (storyProblem) {
+      fileProblems.push(fail("media_files", `${label}: ${storyProblem}`, `asset_ids.${index}`));
+    } else if (crop) {
       const shape = crop === "tall" ? "taller than 4:5" : "wider than 1.91:1";
       fileProblems.push(fail("media_files", `${label} is ${shape}. Crop it to 1:1, 4:5 or 1.91:1.`, `asset_ids.${index}`));
-    } else if (videoTooLong(asset)) {
+    } else if (!story && videoTooLong(asset)) {
       fileProblems.push(
         fail(
           "media_files",
@@ -152,8 +165,22 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       );
     }
   });
+  const offShape = story && assetIds.length === 1 && assets[assetIds[0]] && storyShapeOff(assets[assetIds[0]]);
   if (fileProblems.length) items.push(...fileProblems);
-  else if (assetIds.length) items.push(pass("media_files", "Photos and videos fit Instagram's sizes"));
+  else if (assetIds.length) {
+    items.push(
+      pass(
+        "media_files",
+        offShape ? "9:16 fits a Story best. Instagram may crop or add bars to this file." : "Photos and videos fit Instagram's sizes",
+      ),
+    );
+  }
+
+  // A Story has no caption, hashtags or mentions: what the draft holds is kept but never sent.
+  if (story) {
+    items.push(pass("caption", "Stories are published without a caption"));
+    return finishChecklist(items, draft, now);
+  }
 
   // caption, hashtags, mentions: every caption, and the first comment's length and hashtags
   const slots = captionSlots(draft, accounts);
@@ -202,7 +229,11 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   items.push(...(hashtagProblems.length ? hashtagProblems : [pass("hashtags", `Up to ${MAX_HASHTAGS} hashtags`)]));
   items.push(...(mentionProblems.length ? mentionProblems : [pass("mentions", `Up to ${MAX_MENTIONS} mentions`)]));
 
-  // publish_at: only when the post has a time
+  return finishChecklist(items, draft, now);
+}
+
+/** publish_at: only when the post has a time. */
+function finishChecklist(items: ChecklistItem[], draft: ScheduledPostDraft, now: Date): ChecklistItem[] {
   if (draft.publish_at) {
     const at = new Date(draft.publish_at).getTime();
     items.push(

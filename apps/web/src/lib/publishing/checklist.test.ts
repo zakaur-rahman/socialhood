@@ -28,6 +28,57 @@ function input(overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<
 
 const failures = (items: ChecklistItem[]) => items.filter((item) => !item.ok).map((item) => [item.key, item.field, item.message]);
 
+describe("localChecklist as a Story (GR-39)", () => {
+  const story = (overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<Omit<ChecklistInput, "draft">> = {}) =>
+    input({ kind: "story", caption: "kept, never sent #a #b", ...overrides }, extra);
+
+  it("passes one photo, and skips the caption, hashtag and mention checks", () => {
+    const items = localChecklist(story());
+    expect(failures(items)).toEqual([]);
+    expect(items.map((item) => item.key)).toEqual(["accounts", "media", "media_files", "caption"]);
+    expect(items.find((item) => item.key === "media")?.message).toBe("Story");
+    expect(items.find((item) => item.key === "caption")?.message).toBe("Stories are published without a caption");
+  });
+
+  it("is one photo or video, never a carousel", () => {
+    expect(failures(localChecklist(story({ asset_ids: ["as1", "as2"] }, { assets: { as1: assetInfo(), as2: assetInfo({ id: "as2" }) } })))).toEqual([
+      ["media", "asset_ids", "A Story is one photo or one video."],
+    ]);
+  });
+
+  it("takes a tall photo without a crop, with a note about 9:16", () => {
+    const tall = assetInfo({ width: 1000, height: 2400 });
+    const wide = assetInfo({ width: 1600, height: 900 });
+    expect(failures(localChecklist(story({}, { assets: { as1: tall } })))).toEqual([]);
+    const note = localChecklist(story({}, { assets: { as1: wide } })).find((item) => item.key === "media_files");
+    expect(note).toMatchObject({ ok: true, message: expect.stringContaining("9:16") });
+  });
+
+  it.each([
+    [2, "Photo 1: Story videos must be at least 3 seconds."],
+    [75, "Photo 1: Story videos can be up to 60 seconds."],
+  ])("a %i second video fails", (duration, message) => {
+    const video = assetInfo({ resource_type: "video", width: 1080, height: 1920, duration_s: duration });
+    expect(failures(localChecklist(story({}, { assets: { as1: video } })))).toEqual([["media_files", "asset_ids.0", message.replace("Photo", "Video")]]);
+  });
+
+  it("a 75 second video is still fine as a Reel", () => {
+    const video = assetInfo({ resource_type: "video", width: 1080, height: 1920, duration_s: 75 });
+    expect(failures(localChecklist(input({}, { assets: { as1: video } }))).map((row) => row[0])).toEqual([]);
+  });
+
+  it("refuses a Facebook Page as a Story target", () => {
+    const page = account({ id: "p1", username: "maple.page", platform: "facebook", capabilities: ["publish"] });
+    const items = localChecklist(
+      story(
+        { targets: [{ social_account_id: "a1", caption_override: null }, { social_account_id: "p1", caption_override: null }] },
+        { accounts: [ready, page] },
+      ),
+    );
+    expect(failures(items)).toEqual([["accounts", "targets.1", "@maple.page can't publish Stories. Remove it or choose a post."]]);
+  });
+});
+
 describe("localChecklist (FR-PUB-10)", () => {
   it("passes a complete post, one line per check", () => {
     const items = localChecklist(input());

@@ -3843,3 +3843,64 @@ migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was
   the DM keyword test sends the message the run queues; a Page test needs Pro for four active
   automations (Free includes three); the tenancy walk lists `/public/v1/me` with the other routes that
   name no id (it still must show none of B's data); Idempotency-Key needs 8 characters.
+
+## C-114 · Instagram Story scheduling (GR-39, feature/gr-39-30-stories-fb-publishing)
+
+- **A Story is a choice, not a shape.** One image or one video could be an image post, a Reel or a
+  Story, so the composer sends `kind: "story"` (`ScheduledPostDraft.kind`, default `post`) and the
+  stored `scheduled_posts.format` becomes `story` (`derive_format(..., story=True)`). Exactly one
+  image or video makes a Story; two or more files are refused ("A Story is one image or one
+  video."), so a Story can't be a carousel. Duplicate keeps the format.
+- **No caption.** The caption and first comment stay on the draft (switching back to Post brings
+  them back) but are never sent: `_caption` returns "" for a Story, the container body has none, and
+  no first comment job is queued. The checklist replaces the caption, hashtag and mention checks with
+  one passing line, "Stories are published without a caption".
+- **Container.** `POST /{ig}/media` with `{media_type: "STORIES", image_url | video_url}`, then the
+  same status polling (videos process like Reels, images are FINISHED) and `media_publish`. A lost
+  publish answer is found again in `GET /me/stories` by time (`/me/media` does not list stories; a
+  Story has no caption to match on), and the new Story is read back with the story fields only
+  (`id,media_type,media_url,thumbnail_url,permalink,timestamp`). New adapter method
+  `create_story_container`; `get_published_media` and `find_published_media` take `story`.
+- **Validation.** Videos 3 to 60 seconds (refused outside, even though a Reel may run 90 s); image
+  size and format as for posts; any shape passes, with a note on the media line when the file is not
+  about 9:16 ("9:16 fits a Story best. Instagram may crop or add bars to this file."). A Facebook Page
+  target of a Story is refused on `targets.{i}` ("can't publish Stories"). Quota: a Story is a
+  scheduled post like any other (`scheduled_posts_monthly`, once per billing period, C-043) and
+  counts in the 24 hour publishing limit the checklist shows.
+- **Errors.** `STORY_REASONS` re-words 2207004, 2207005, 2207009, 2207026 and 2207052 for a Story
+  (size, format, shape, link); every other known subcode keeps its reason from C-043 and an unknown
+  one falls back to the generic reason. The processing timeout names the account's platform
+  ("Instagram took too long to process the video"). The failure notification says "Your Story".
+- **After publishing.** The `media_items` row has `media_type = story` (no "next post" automation
+  links to it, as before). The live-stories route (`GET /stories`, the story-reply picker) reads
+  Instagram, so the new Story appears there on its own; the sandbox now lists its published stories
+  (24 hours) before the two seeded ones, and keeps them out of feed posts. Each published Story target
+  carries `expires_at` (published time + 24 hours), which the composer's banner shows ("Disappears
+  Wed 10:00").
+- **Web.** A "Type" section (Post | Story) in the composer; with Story chosen the caption and first
+  comment sections are hidden, the media tray stops asking for crops and checks 3 to 60 s, the
+  preview becomes a 9:16 phone ("Story preview") and the format pill says Story. The List, Agenda and
+  calendar show a "Story" badge, and name the post "Story" instead of "No caption yet".
+- **Story insights: not built.** The insight metrics for stories exist (`STORY_METRICS`), but
+  `snapshot_post_metrics` leaves stories out on purpose (the windows are 1 h to 72 h, a Story is gone
+  after 24 h) and the analytics reads skip them. Fetching reach and replies needs its own early
+  windows; left for a follow-up.
+- **WhatsApp Status** has no API, so it is out of scope.
+- **Unverified (Meta), until a real account publishes a Story:** that `media_type: STORIES` with
+  `image_url` or `video_url` is accepted under Instagram Login; that images must be JPEG and at most
+  8 MB; the video limits (3 to 60 seconds, 100 MB, MP4 or MOV) and that 9:16 is recommended, not
+  required; whether Stories count against `content_publishing_limit`; whether `GET /{id}` takes the
+  story field list and `GET /me/stories` lists a Story right after publishing; the Story-specific
+  error subcodes (we know no subcode that is only for Stories, so `STORY_REASONS` re-words general
+  ones); that `me/stories` timestamps allow the time match used for a lost answer.
+- **Migration 0038** (after 0037), expand-only: `ck_scheduled_posts_format` accepts `story`
+  (downgrade turns stories back into drafts without a format).
+- **Tests.** Unit: `test_story_scheduling.py` (format, checklist, container bodies, error wording,
+  the lost-answer lookup, the sandbox lifecycle and the expiry). Integration:
+  `test_story_publishing.py` (kind and format, the carousel and length refusals, the Facebook Page
+  refusal, the plan quota, schedule to publish to media item, the video wait, a failed Story and its
+  notification, a lost answer, the live story list). Vitest: the checklist, the composer's Story
+  mode, the preview. E2E: `gr39-story-scheduling.spec.ts`.
+- **For the coordinator:** regenerate the client (`PostFormatName` gains `story`,
+  `ScheduledPostDraft.kind`, `ScheduledPostTarget.expires_at`); the web reads `kind` and `expires_at`
+  from the generated types.

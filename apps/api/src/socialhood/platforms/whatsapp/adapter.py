@@ -320,6 +320,9 @@ class WhatsAppAdapter:
     ) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
+    async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
@@ -337,7 +340,7 @@ class WhatsAppAdapter:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
     async def get_published_media(
-        self, acct: SocialAccount, media_ref: str
+        self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
@@ -348,6 +351,7 @@ class WhatsAppAdapter:
         *,
         caption: str,
         published_after: datetime,
+        story: bool = False,
     ) -> PlatformMedia | None:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
