@@ -26,6 +26,7 @@ describe("newDraftBody (F-13)", () => {
       targets: [{ social_account_id: "a1", caption_override: null }],
       asset_ids: [],
       caption: "",
+      kind: "post",
       first_comment: null,
       publish_at: "2026-09-30T12:30:00.000Z",
     });

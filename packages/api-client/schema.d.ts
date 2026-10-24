@@ -3412,6 +3412,28 @@ export interface paths {
         patch: operations["update_social_account"];
         trace?: never;
     };
+    "/v1/w/{wid}/social-accounts/{account_id}/best-times": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Best Times
+         * @description GR-30: a suggested posting hour per weekday from the account's own posts (the method is in
+         *     the answer). Worked out by a service, cached for a few hours, never by an AI model; an account
+         *     with too little history says so (``enough_history`` false).
+         */
+        get: operations["get_best_times"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/social-accounts/{account_id}/business-hours": {
         parameters: {
             query?: never;
@@ -5419,6 +5441,55 @@ export interface components {
             since?: string | null;
             /** Until */
             until?: string | null;
+        };
+        /**
+         * BestTimeDay
+         * @description One weekday's suggestion. ``local_time`` is None when the account's history is too thin for
+         *     this day (``posts`` is how many posts the suggested hour is based on, else 0).
+         */
+        BestTimeDay: {
+            /** Lift Percent */
+            lift_percent?: number | null;
+            /** Local Time */
+            local_time?: string | null;
+            /**
+             * Posts
+             * @default 0
+             */
+            posts: number;
+            /** Weekday */
+            weekday: number;
+        };
+        /**
+         * BestTimes
+         * @description GET …/social-accounts/{id}/best-times: a suggested posting time per weekday, worked out
+         *     from the account's own posts (never by an AI model). ``enough_history`` is false, and every
+         *     day empty, until the account has ``min_posts`` posts with known engagement. Cached for a few
+         *     hours.
+         */
+        BestTimes: {
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Days */
+            days: components["schemas"]["BestTimeDay"][];
+            /** Enough History */
+            enough_history: boolean;
+            /** Method */
+            method: string;
+            /** Min Posts */
+            min_posts: number;
+            /** Sample Size */
+            sample_size: number;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Timezone */
+            timezone: string;
         };
         /** BillingPrice */
         BillingPrice: {
@@ -8932,8 +9003,9 @@ export interface components {
         /**
          * PrivateReplyCreate
          * @description POST …/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's
-         *     private replies carry no attachments). Instagram's limit is 1,000 bytes; the service checks
-         *     bytes.
+         *     private replies carry no attachments). Instagram's limit is 1,000 bytes and a Facebook Page's
+         *     2,000 characters (GR-29); the service checks the account's own limit; this only bounds the body
+         *     size.
          */
         PrivateReplyCreate: {
             /** Text */
@@ -9665,7 +9737,7 @@ export interface components {
             /** First Comment */
             first_comment?: string | null;
             /** Format */
-            format?: ("image" | "carousel" | "reel") | null;
+            format?: ("image" | "carousel" | "reel" | "story" | "text") | null;
             /**
              * Id
              * Format: uuid
@@ -9713,6 +9785,12 @@ export interface components {
             caption: string;
             /** First Comment */
             first_comment?: string | null;
+            /**
+             * Kind
+             * @default post
+             * @enum {string}
+             */
+            kind: "post" | "story";
             /** Publish At */
             publish_at?: string | null;
             /** Targets */
@@ -9740,7 +9818,7 @@ export interface components {
              */
             created_at: string;
             /** Format */
-            format?: ("image" | "carousel" | "reel") | null;
+            format?: ("image" | "carousel" | "reel" | "story" | "text") | null;
             /**
              * Id
              * Format: uuid
@@ -9773,6 +9851,8 @@ export interface components {
             /** Caption Override */
             caption_override?: string | null;
             error?: components["schemas"]["ErrorInfo"] | null;
+            /** Expires At */
+            expires_at?: string | null;
             first_comment?: components["schemas"]["FirstCommentResult"] | null;
             /** Permalink */
             permalink?: string | null;
@@ -19762,6 +19842,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_best_times: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BestTimes"];
                 };
             };
             /** @description Validation error */

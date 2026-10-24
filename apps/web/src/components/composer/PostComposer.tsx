@@ -295,6 +295,11 @@ function Composer({
     replacing: uploads.items.find((item) => item.replaces === id) ?? null,
   }));
   const postAssets = entries.map((entry) => entry.asset);
+  // Before the format: a text post needs to know whether every chosen account is a Page (GR-30).
+  const selectedIds = draft.targets.map((target) => target.social_account_id);
+  const selectedAccounts = selectedIds
+    .map((accountId) => allAccounts.find((account) => account.id === accountId))
+    .filter((account): account is NonNullable<typeof account> => Boolean(account));
   const isStory = draft.kind === "story";
   const format = isStory
     ? postAssets.length === 1
@@ -308,10 +313,6 @@ function Composer({
 
   // ---- accounts and captions (per account when switched on)
   const [perAccount, setPerAccount] = useState(() => initial.targets.some((target) => target.caption_override != null));
-  const selectedIds = draft.targets.map((target) => target.social_account_id);
-  const selectedAccounts = selectedIds
-    .map((accountId) => allAccounts.find((account) => account.id === accountId))
-    .filter((account): account is NonNullable<typeof account> => Boolean(account));
 
   const toggleAccount = (accountId: string) => {
     const removing = draft.targets.some((target) => target.social_account_id === accountId);

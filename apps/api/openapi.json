@@ -4682,6 +4682,102 @@
         "title": "Baseline",
         "type": "object"
       },
+      "BestTimeDay": {
+        "description": "One weekday's suggestion. ``local_time`` is None when the account's history is too thin for\nthis day (``posts`` is how many posts the suggested hour is based on, else 0).",
+        "properties": {
+          "lift_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lift Percent"
+          },
+          "local_time": {
+            "anyOf": [
+              {
+                "format": "time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Local Time"
+          },
+          "posts": {
+            "default": 0,
+            "title": "Posts",
+            "type": "integer"
+          },
+          "weekday": {
+            "title": "Weekday",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "weekday"
+        ],
+        "title": "BestTimeDay",
+        "type": "object"
+      },
+      "BestTimes": {
+        "description": "GET \u2026/social-accounts/{id}/best-times: a suggested posting time per weekday, worked out\nfrom the account's own posts (never by an AI model). ``enough_history`` is false, and every\nday empty, until the account has ``min_posts`` posts with known engagement. Cached for a few\nhours.",
+        "properties": {
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/BestTimeDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "enough_history": {
+            "title": "Enough History",
+            "type": "boolean"
+          },
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "min_posts": {
+            "title": "Min Posts",
+            "type": "integer"
+          },
+          "sample_size": {
+            "title": "Sample Size",
+            "type": "integer"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "timezone": {
+            "title": "Timezone",
+            "type": "string"
+          }
+        },
+        "required": [
+          "social_account_id",
+          "timezone",
+          "enough_history",
+          "sample_size",
+          "min_posts",
+          "method",
+          "days",
+          "computed_at"
+        ],
+        "title": "BestTimes",
+        "type": "object"
+      },
       "BillingPrice": {
         "properties": {
           "amount_minor": {
@@ -14508,10 +14604,10 @@
       },
       "PrivateReplyCreate": {
         "additionalProperties": false,
-        "description": "POST \u2026/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's\nprivate replies carry no attachments). Instagram's limit is 1,000 bytes; the service checks\nbytes.",
+        "description": "POST \u2026/comments/{comment_id}/private-reply: a DM to the commenter, text only (Instagram's\nprivate replies carry no attachments). Instagram's limit is 1,000 bytes and a Facebook Page's\n2,000 characters (GR-29); the service checks the account's own limit; this only bounds the body\nsize.",
         "properties": {
           "text": {
-            "maxLength": 1000,
+            "maxLength": 4096,
             "minLength": 1,
             "title": "Text",
             "type": "string"
@@ -16497,7 +16593,9 @@
                 "enum": [
                   "image",
                   "carousel",
-                  "reel"
+                  "reel",
+                  "story",
+                  "text"
                 ],
                 "type": "string"
               },
@@ -16624,6 +16722,15 @@
             ],
             "title": "First Comment"
           },
+          "kind": {
+            "default": "post",
+            "enum": [
+              "post",
+              "story"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "publish_at": {
             "anyOf": [
               {
@@ -16697,7 +16804,9 @@
                 "enum": [
                   "image",
                   "carousel",
-                  "reel"
+                  "reel",
+                  "story",
+                  "text"
                 ],
                 "type": "string"
               },
@@ -16808,6 +16917,18 @@
                 "type": "null"
               }
             ]
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
           },
           "first_comment": {
             "anyOf": [
@@ -35774,6 +35895,70 @@
         "summary": "Update Social Account",
         "tags": [
           "accounts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/social-accounts/{account_id}/best-times": {
+      "get": {
+        "description": "GR-30: a suggested posting hour per weekday from the account's own posts (the method is in\nthe answer). Worked out by a service, cached for a few hours, never by an AI model; an account\nwith too little history says so (``enough_history`` false).",
+        "operationId": "get_best_times",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BestTimes"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Best Times",
+        "tags": [
+          "publishing"
         ]
       }
     },

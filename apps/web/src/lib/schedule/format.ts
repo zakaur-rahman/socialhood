@@ -109,7 +109,9 @@ export function accountColors(accounts: Pick<SocialAccount, "id">[]): Map<string
  * Facebook Pages (GR-30), in order. Schedule and the post composer both read this, so an account looks the same in both.
  */
 export function instagramAccountColors(accounts: SocialAccount[]): Map<string, AccountColor> {
-  return accountColors(accounts.filter((a) => a.platform === "instagram" || a.platform === "facebook"));
+  return accountColors(
+    accounts.filter((a) => (a.platform === "instagram" || a.platform === "facebook") && a.status !== "disconnected"),
+  );
 }
 
 /** An account the page doesn't know (disconnected): a neutral ring, no identity. */

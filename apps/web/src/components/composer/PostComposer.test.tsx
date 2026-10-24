@@ -258,7 +258,7 @@ describe("PostComposer Facebook Pages (GR-30)", () => {
   it("a Page can't be a Story: the Story option is off with the reason", async () => {
     renderComposer({ initial: scheduledPost({ targets: [target({ social_account_id: "p1" })] }), accounts: [maple, page] });
     const type = await screen.findByRole("region", { name: "Type" });
-    expect(await within(type).findByTestId("story-blocked")).toHaveTextContent("Maple Page is a Facebook Page");
+    expect(await within(type).findByTestId("story-blocked")).toHaveTextContent("@maple.page is a Facebook Page");
     expect(within(type).getByRole("radio", { name: "Story" })).toBeDisabled();
   });
 

@@ -15,6 +15,7 @@ function input(overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<
       targets: [{ social_account_id: "a1", caption_override: null }],
       asset_ids: ["as1"],
       caption: "Hello",
+      kind: "post",
       first_comment: null,
       publish_at: null,
       ...overrides,

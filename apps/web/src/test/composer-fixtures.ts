@@ -126,7 +126,7 @@ export function hashtagGroup(overrides: Partial<HashtagGroup> = {}): HashtagGrou
 
 /** GET …/best-times: Monday 18:00 and Wednesday 12:00 stand out (GR-30). */
 export function bestTimes(overrides: Partial<BestTimes> = {}): BestTimes {
-  const days = Array.from({ length: 7 }, (_, weekday) => ({ weekday, local_time: null, posts: 0, lift_percent: null }));
+  const days: BestTimes["days"] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, local_time: null, posts: 0, lift_percent: null }));
   days[0] = { weekday: 0, local_time: "18:00:00", posts: 12, lift_percent: 34 };
   days[2] = { weekday: 2, local_time: "12:00:00", posts: 6, lift_percent: 12 };
   return {
