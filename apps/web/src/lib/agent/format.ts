@@ -79,6 +79,7 @@ export const REF_KIND_LABEL: Record<AnswerRefKind, string> = {
   knowledge_source: "Knowledge",
   product: "Product",
   order: "Order",
+  contact: "Contact",
 };
 
 export type PromptArea = "inbox" | "comments" | "posts" | "automations";
@@ -102,6 +103,7 @@ const FOLLOW_UPS: Record<AnswerRefKind, readonly string[]> = {
   knowledge_source: ["What questions couldn't the AI answer this week?"],
   product: ["Which products are out of stock?"],
   order: ["Which orders are still unpaid?"],
+  contact: ["Which leads haven't I replied to?"],
 };
 const GENERAL_FOLLOW_UPS = ["Which posts beat my average this month?", "What are people complaining about this week?"];
 

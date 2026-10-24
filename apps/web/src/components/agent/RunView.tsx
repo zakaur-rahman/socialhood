@@ -12,7 +12,7 @@ import { answerToPlainText } from "@/lib/agent/answer";
 import { creditsText, followUpsFor, isActive, runOutcome, workedFor, type RunOutcome } from "@/lib/agent/format";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useAgentRun } from "@/lib/api/queries";
-import type { AgentRun, AgentRunDetail, Role } from "@/lib/api/types";
+import type { AgentRun, AgentRunDetail, Role, Visual } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
@@ -70,8 +70,11 @@ export function RunView({ run: listed, context, latest = false }: { run: AgentRu
           <Sparkles className="size-3.5" />
         </span>
         {isActive(run.status) ? (
-          <div className="min-w-0 flex-1 pt-0.5" aria-busy="true">
+          <div className="min-w-0 flex-1 space-y-3 pt-0.5" aria-busy="true">
             <WorkingSteps steps={detail.data?.steps ?? []} status={run.status} askedAt={run.created_at} />
+            {/* VIS-10: a step that produced a visual refetched the run (lib/agent/cache), so the
+                visual is here before the answer is written. Links work; the follow-up doesn't yet. */}
+            <RunVisuals visuals={detail.data?.visuals ?? []} context={context} />
           </div>
         ) : (
           <Finished run={run} detail={detail.data} context={context} latest={latest} />
@@ -122,13 +125,7 @@ function Finished({
           <Skeleton className="h-3 w-2/3" />
         </div>
       ) : null}
-      {visuals.length > 0 ? (
-        <div className="space-y-3" data-testid="run-visuals">
-          {visuals.map((visual, index) => (
-            <VisualView key={`${visual.kind}:${index}`} visual={visual} slug={slug} onNavigate={onNavigate} />
-          ))}
-        </div>
-      ) : null}
+      <RunVisuals visuals={visuals} context={context} askable={latest} />
       {run.action_cards.length > 0 ? (
         <div className="space-y-2">
           {run.action_cards.map((card, index) => (
@@ -162,6 +159,28 @@ function Finished({
           ))}
         </ul>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * GR-38: the run's visuals, in step order. `askable` (the latest answer of a finished run) lets a
+ * visual ask a follow-up in the thread, as the lead list's "Prepare replies" does (VIS-12).
+ */
+function RunVisuals({ visuals, context, askable = false }: { visuals: Visual[]; context: RunContext; askable?: boolean }) {
+  if (visuals.length === 0) return null;
+  return (
+    <div className="space-y-3" data-testid="run-visuals">
+      {visuals.map((visual, index) => (
+        <VisualView
+          key={`${visual.kind}:${index}`}
+          visual={visual}
+          slug={context.slug}
+          onNavigate={context.onNavigate}
+          onAsk={askable ? context.onAsk : undefined}
+          busy={context.busy}
+        />
+      ))}
     </div>
   );
 }

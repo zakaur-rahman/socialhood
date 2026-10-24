@@ -31,6 +31,8 @@ export function refPath(ref: AnswerRef): string {
       return "products";
     case "order":
       return "orders";
+    case "contact":
+      return "contacts"; // VIS-08: a contact with no conversation has no screen of its own
   }
 }
 
@@ -49,6 +51,12 @@ export function actionPath(card: PreparedCard): string {
     case "automation_draft":
       return "automations/new";
   }
+}
+
+/** A link a visual carries (its "+N more" page): the workspace path when it is a plain one, else null. */
+export function visualPath(route: string | null | undefined): string | null {
+  const path = route?.trim().replace(/^\/+/, "") ?? "";
+  return path !== "" && SAFE_PATH.test(path) ? path : null;
 }
 
 /** Typed routes can't check a path built at run time; workspace links are cast here, once. */
