@@ -458,6 +458,16 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     includes: (n) => `comment analysis on the ${counted(n, "most recent post", "most recent posts")}`,
     unlimited: "comment analysis",
   },
+  catalogue_products: {
+    limitTitle: "Product limit reached",
+    includes: (n) => counted(n, "product", "products"),
+    unlimited: "products",
+  },
+  catalogue_import_rows: {
+    limitTitle: "Import size limit reached",
+    includes: (n) => `${counted(n, "row", "rows")} in one import`,
+    unlimited: "rows in one import",
+  },
   message_history_days: {
     limitTitle: "Message history limit reached",
     includes: (n) => `${counted(n, "day", "days")} of message history`,
@@ -482,6 +492,10 @@ const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
   public_api: {
     feature: "Public API access",
     body: "On Pro, make API keys to connect your own tools, and use the Social Hood app in Zapier.",
+  },
+  commerce: {
+    feature: "The product catalogue",
+    body: "On Pro, add products with prices and stock, import them from a CSV file or Shopify, and let the AI answer product questions.",
   },
   widget_remove_branding: {
     feature: "Hiding \"Powered by Social Hood\"",

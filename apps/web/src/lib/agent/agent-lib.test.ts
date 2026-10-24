@@ -113,6 +113,7 @@ describe("where citations and action cards lead (FR-AGT-01, FR-AGT-03)", () => {
     expect(refPath(ref("automation"))).toBe("automations/x1");
     expect(refPath(ref("scheduled_post"))).toBe("schedule/x1");
     expect(refPath(ref("knowledge_source"))).toBe("knowledge");
+    expect(refPath(ref("product"))).toBe("products");
     // A comment opens its post and a scheduled message its conversation (the parent)…
     expect(refPath({ ...ref("comment"), parent_id: "p1" })).toBe("comments/p1");
     expect(refPath({ ...ref("scheduled_message"), parent_id: "c1" })).toBe("inbox/c1");

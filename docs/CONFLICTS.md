@@ -3991,3 +3991,186 @@ migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was
   needs `pages_manage_posts` added to the Facebook Login permissions for production (O-10). Roles:
   the route uses the same `Admin` dependency as posting times; there is no member-role integration
   test for it (none exists for posting times either).
+
+## C-116 · Product catalogue (GR-31, feature/gr-31-catalogue)
+
+Products with variants, added by hand, by CSV or from Shopify; the AI answers price, stock and link
+questions from them; a flow step sends a product. **PD-8 is decided: commerce is on Pro and Max, not
+Free.** *Every Shopify behaviour below was written from Shopify's documentation and none has run
+against a real store: it waits for the owner's Partner account and app listing (O-10). Each one is
+marked unverified and listed in `docs/verification.md` item 37.*
+
+### Decisions
+- **PD-8 in code.** `ENTITLEMENTS["commerce"]` in `billing/plans.py` (Free off, Pro and Max on; one
+  line to change). Adding, changing, deleting, importing and syncing products, connecting Shopify and
+  saving a flow with a product step are refused with 402 `entitlement_required` ("The product
+  catalogue is part of Pro."). **Reading is never refused**: the list, a product and the Shopify
+  status answer on Free, and products that exist still answer customers and run in flows after a
+  downgrade (a flow's *saving* needs Pro; a saved one keeps working). Webhooks from Shopify are
+  ignored on a plan without the catalogue.
+- **Caps** (proposed, `billing/plans.py`; one line each): `catalogue_products` Pro 1,000, Max 20,000
+  (counted live; a Shopify sync skips what doesn't fit and says so), `catalogue_import_rows` Pro 500,
+  Max 5,000 lines in one CSV file (402 `quota_exceeded` before anything is read further). A file is
+  at most 900,000 characters (the API's 1 MB body limit), sent as JSON text.
+- **Money.** An ISO 4217 code per product and integer minor units (`services/catalogue/money.py`:
+  0, 2 and 3 decimal currencies). The default currency is the connected Shopify store's, else the
+  newest product's, else INR (the workspace has no currency of its own). Requests carry prices as
+  text ("799.50", checked against the currency); responses give `price_minor` and the same text. The
+  web formats with Intl.
+- **Stock.** `null` means "not recorded", which is not 0. The AI is told "stock not recorded" and
+  must say it doesn't know; a flow's message mentions stock only when it is recorded; the list says
+  "Not tracked". Shopify variants whose inventory isn't tracked are stored as not recorded.
+- **Where it lives in the app.** A **Products** page under **Grow**, after Knowledge (owners and
+  admins, like Knowledge; a direct link from an agent explains). The Shopify card is on that page
+  (`/w/{slug}/products?shopify=<nonce>` is the OAuth return), not in Integrations: it is about
+  products. Without the plan the page says so and Add, Import and Connect open the upgrade dialog.
+- **Permissions (GR-19).** Writes use `CanManageKnowledge` (products are what the AI may say);
+  the Shopify connect, complete, sync and disconnect use `CanManageIntegrations`. Reads use `Admin`.
+  No new permission.
+- **No prompt version bump.** The catalogue is a `PRODUCTS` section next to `KNOWLEDGE` in the
+  contents, with its own rules in its header (quote exactly as listed, only for what is listed,
+  "stock not recorded" means you don't know), so `suggest.v3` and the tests that pin it are
+  unchanged. The existing rule "never state a price, stock level... or link not in KNOWLEDGE" covers
+  it.
+
+### Data (migration 0040, after 0039, expand-only)
+- `products` (name, description, SKU, currency, `price_minor`, `stock`, `url`, `image_asset_id`,
+  `image_url`, `active`, `source` manual/csv/shopify, `external_id`, `search_text`), `product_variants`
+  (title, `options` JSON up to 3, SKU, `price_minor`, `stock`, `position`, `external_id`) and
+  `shopify_connections` (one per workspace, one store per workspace: unique `shop_domain`; the token
+  encrypted like every platform token). Unique: SKU per workspace on products and on variants, Shopify
+  id per workspace, variant title per product. `webhook_events.provider` accepts `shopify`.
+- A product with variants is priced per variant; its own price and stock are only the form's default.
+  A product may have up to 100 variants (the rest of a Shopify product's are counted and dropped).
+- *No table references `social_accounts` or contacts, so the account purge, `seed_account` and the
+  purge tables test need no change.* The tenancy walk got a seeded product, variant and store, three
+  `B_TABLES` and the example bodies of the new routes.
+
+### Routes (all `/v1/w/{wid}`, `api/v1/catalogue.py`)
+`GET/POST /products`, `GET/PATCH/DELETE /products/{product_id}`, `POST /products/import/preview`,
+`POST /products/import`, `GET /integrations/shopify`, `POST .../connect`, `POST .../complete`,
+`POST .../sync` (202), `DELETE /integrations/shopify?keep_products=`. Public: `GET
+/v1/oauth/shopify/callback` and `POST /webhooks/shopify`. A request naming another workspace's
+picture or product is a 404 *before* any plan check, so the isolation walk (a Free workspace) proves
+isolation. A `PATCH` replaces the variant list: a variant with its id is kept (so a flow step that
+names it keeps working), one without is new, one left out is removed.
+
+### CSV import
+- **Header row** (any order and case; `name` and `price` required, other columns ignored and
+  listed): `name, description, sku, variant, option1_name, option1_value, option2_name,
+  option2_value, option3_name, option3_value, price, currency, stock, url, image_url, active`. The
+  starter file is downloadable from the dialog; the dialog and `csv_import.py` document the rules.
+- One line is a product or one variant of it; lines with the same name (ignoring case) are one
+  product. **Upsert** by SKU (a product's or a variant's), else by product name and variant name; a
+  match is updated, the rest created. A blank cell never clears a value; variants the file doesn't
+  mention stay. A variant's SKU on a line with no variant is an error, a currency different from the
+  saved product's is an error ("change it in the product first"), a SKU twice in a file is an error.
+- **Preview before saving** (`POST /products/import/preview`): every line is New, Update or Left
+  out with the reason (first 500 shown, the counts cover all). The import re-reads the same text, so
+  the preview can't go stale. Lines with problems are skipped; the rest are saved. Semicolon and tab
+  files and a byte order mark are read.
+
+### The AI
+- `services/catalogue/facts.py`: a question is matched to products by words (no embeddings): lower
+  case, a plural "s" dropped, filler removed (English and the Hinglish customers write: price,
+  kitna, hai...). A product matches when a question word is in its name or is its SKU; the variants
+  whose title, options or SKU hold the most question words are marked "matches the question".
+  Up to 3 products, 20 variants each, active products only. Candidates come from `products.search_text`
+  (a lower-case column kept by the service), ranked in Python (`rank` is pure and unit tested).
+- It feeds the suggest prompt (`drafting.render_contents`), the Knowledge test box and Ask Social
+  Hood's answer_from_knowledge. The model cites `p1`..: the product's id is stored in
+  `reply_suggestions.used_chunk_ids` (the column has no foreign key) and `top_similarity` becomes
+  1.0, so **Auto mode treats a cited product as grounded** (check 11) and re-checks the reply's links
+  against the product's lines (`knowledge_port.product_texts`). A reply may quote a product's link
+  (the output filter's allowed texts include the lines offered); an invented link is still
+  withheld. *The filter checks links, emails and phone numbers, not prices*: a wrong price is
+  prevented by exact lines and the prompt rule, not by a check. *Not built:* a price check in the
+  output filter (it would flag a price the customer typed, or a discount in knowledge).
+- Ask: `search_products` (admin role, read) returns each product's variants with price, stock text
+  and link, marking the variants the words name; it falls back to a plain text search (switched-off
+  products included, labelled) and says when nothing matches. New answer-ref kind `product` (opens
+  Products).
+- E2E worker (`apps/api/scripts/e2e/worker.py`): the fake AI answers from the marked PRODUCTS line,
+  as a faithful model would. The done-when ("price of the blue kurta in M?" gets INR 799.00 and the
+  link, from Suggest or Auto) is `tests/integration/test_catalogue_ai.py` and `gr31-catalogue.spec.ts`.
+
+### Flow step "send product"
+`type: "product"` (`product_id`, optional `variant_id`, `intro` up to 300 characters, `next`). It
+reads the catalogue when it runs and sends one message: the intro, then `Name - Variant`, the price
+(`INR 799.00`), "In stock" or "Out of stock" only when stock is recorded, and the link. With no
+variant chosen it sends the product (its price, or up to six variants with prices). Cut to 900
+bytes for Instagram. The product's uploaded picture goes as the message's attachment.
+- *Deviations from "name, price, image and link as the send step does":* the link is in the text, not
+  a button (the text always carries it, and buttons differ per platform); a picture that is only an
+  address (Shopify, CSV) can't be attached (attachments are media-library files), so the link in the
+  text stands in for it. WhatsApp catalogue messages are GR-33.
+- Fails with a plain reason ("The product was deleted or switched off, so nothing was sent." /
+  "...variant was deleted...") like a deleted saved reply: the step is logged failed and the run ends.
+- Activation checks the product exists, is on, and that the variant belongs to it; saving needs the
+  plan. A product step after a comment's private reply is refused like any message. The editor adds a
+  **Product** step with a product picker (read from the catalogue) and a variant picker.
+
+### Shopify (built like GR-29 Facebook and GR-27 Sheets)
+- **Off by default.** `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET` (also signs webhooks and the install
+  redirect), `SHOPIFY_REDIRECT_URI`, `SHOPIFY_SCOPES` (default `read_products`), `SHOPIFY_API_VERSION`
+  (default 2025-07); unset, connecting answers 503 "Shopify isn't set up on this server." and the
+  webhook route 503. `SHOPIFY_PROVIDER=fake` is a built-in store (a kurta with colour and size
+  variants, a scarf with untracked stock, a draft jacket) for development and the e2e stack, its
+  products in Redis; refused in production.
+- **Connect.** `POST .../connect {shop}` (only `*.myshopify.com` is ever called; "my-store" works)
+  returns the install address with a single-use state; the public callback checks Shopify's `hmac`
+  over the sorted query (not for the built-in store), parks the code under a one-time nonce bound to
+  the member and workspace (X-1, as Instagram and Google) and redirects to Products with `?shopify=`;
+  `POST .../complete` exchanges it, saves the connection (token encrypted), subscribes the webhooks
+  and starts the first sync. A store belongs to one workspace (409 `account_in_use`).
+- **Sync** (`sync_shopify_products`, bulk lane, recovery RETRY): Admin GraphQL, 50 products a page;
+  each is saved by Shopify id with variants (a single "Default Title" variant is a plain product);
+  a product no longer in the store is removed after a pass that read them all; a SKU another product
+  uses is dropped (Shopify allows duplicates); a picture uploaded here is kept; prices are in the
+  store's currency. A pass beyond the plan's products skips the rest and says so on the card.
+- **Webhooks** (`products/create|update|delete`, `app/uninstalled`, and the mandatory privacy
+  topics `customers/data_request`, `customers/redact`, `shop/redact`): `POST /webhooks/shopify`
+  verifies `X-Shopify-Hmac-Sha256` over the raw bytes, stores the event once (`shopify:{webhook id}`)
+  and a job applies it through the same save the sync uses (`services/webhook_handlers/shopify.py`).
+  `app/uninstalled` marks the store "needs reconnect"; `shop/redact` deletes the store and its
+  products; the customer topics change nothing (no customer data is held).
+- **Disconnect** revokes the token (best effort) and removes the store and, unless asked to keep
+  them, the products it made: a price no longer kept in step must not be quoted.
+- **Unverified (Shopify), until a real store connects:** the install and token endpoints and the
+  `hmac` rule (sorted decoded parameters, hex); that `read_products` is enough for stock (it may need
+  `read_inventory`); the GraphQL fields (`products`, `variants`, `inventoryQuantity`,
+  `inventoryItem.tracked`, `onlineStoreUrl`, `selectedOptions`, `shop.primaryDomain`) and API
+  version; `webhookSubscriptionCreate` with these topics and how it reports an existing subscription
+  (read here as an error containing "already"); the webhook payload shape (`variants[].option1..3`,
+  `options[].name`, `inventory_quantity`, `inventory_management`) and headers; that a listed app
+  must answer the three privacy topics this way; `DELETE /admin/api_permissions/current.json` to
+  revoke; the storefront link built from `handle` (`onlineStoreUrl` when GraphQL gives it; a custom
+  domain comes from `shop.primaryDomain`); whether `app/uninstalled` arrives for a custom app.
+
+### Tests
+Unit: `test_catalogue_money_csv.py` (money, header, per-line problems, grouping, currency),
+`test_catalogue_facts.py` (words, ranking, the prompt lines, the output filter with a product link,
+the drafting prompt, the flow message), `test_shopify.py` (store address, both signatures, both
+product shapes, the mapping, the built-in store, the flow step's activation); registry test updated.
+Integration: `test_catalogue.py` (plan gate, caps, money, variants by id, SKUs, search, roles, a
+foreign picture, audit), `test_catalogue_import.py` (preview, import, upsert by SKU and by name and
+variant, blank cells, caps), `test_catalogue_ai.py` (Suggest, Auto, an invented link, a switched off
+product, the test box, `search_products`), `test_flow_product.py` (running, saving, activating),
+`test_shopify.py` (connect, nonce, signatures, sync, caps, webhooks, disconnect); tenancy updated.
+Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCard`, the sidebar. E2E:
+`gr31-catalogue.spec.ts`. *The integration, tenancy, vitest and e2e tests were written but not run
+(the coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `ProductOut`, `VariantOut`, `VariantIn`, `ProductList`,
+  `ProductCreate`, `ProductPatch`, `CatalogueLimits`, `ImportPreview`, `ImportRowOut`,
+  `ImportResult`, `CsvImport`, `ShopifyStatus`, `ShopifyConnectRequest`, `ShopifyConnectStart`,
+  `ShopifyConnectComplete`, `ProductStep` in the flow step union, `product` in `AnswerRefKind`, and
+  the operations `list_products`, `create_product`, `get_product`, `update_product`,
+  `delete_product`, `preview_product_import`, `import_products`, `get_shopify`,
+  `start_shopify_connect`, `complete_shopify_connect`, `sync_shopify`, `disconnect_shopify`. The web
+  types are aliases waiting for it (`lib/api/types.ts`).
+- `alembic check` for 0040 (after 0039). The e2e stack gained `SHOPIFY_*` env and
+  `/__e2e/shopify/sign`.
+- Owner track O-10: the Shopify Partner account, the app listing, the callback and webhook
+  addresses, and the three privacy webhooks' wording. `.env.example` has the new settings.

@@ -392,6 +392,21 @@ export type GoogleSheetInfo = Schemas["SheetOut"];
 export type GoogleSheetMappingPut = Schemas["SheetMappingPut"];
 export type GoogleSheetTestResult = Schemas["SheetTestResult"];
 
+// ---- product catalogue (GR-31)
+
+export type Product = Schemas["ProductOut"];
+export type ProductVariant = Schemas["VariantOut"];
+export type ProductList = Schemas["ProductList"];
+export type ProductCreate = Schemas["ProductCreate"];
+export type ProductPatch = Schemas["ProductPatch"];
+export type ProductVariantInput = Schemas["VariantIn"];
+export type ProductSource = Product["source"];
+export type CatalogueLimits = Schemas["CatalogueLimits"];
+export type CsvImportPreview = Schemas["ImportPreview"];
+export type CsvImportRow = Schemas["ImportRowOut"];
+export type CsvImportResult = Schemas["ImportResult"];
+export type ShopifyStatus = Schemas["ShopifyStatus"];
+
 // ---- API keys (GR-25)
 
 export type ApiKey = Schemas["ApiKey"];

@@ -86,6 +86,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "key_id": "api_key_id",  # GR-25
     "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
     "broadcast_id": "broadcast_id",  # GR-23
+    "product_id": "product_id",  # GR-31
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -199,6 +200,23 @@ EXAMPLE_BODIES.update(
         ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/business-hours"): HOURS_OFF,
         # GR-28: B's website chat settings (its public routes are in test_widget_tenancy.py).
         ("PUT", "/v1/w/{wid}/widget"): {"enabled": False},
+    }
+)
+
+# GR-31: the catalogue. A picture of B's is a 404 before any plan check, so the walk (a Free
+# workspace A) still proves isolation; the other bodies name nothing of B's.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/products"): {
+            "name": "Into B",
+            "price": "1",
+            "image_asset_id": "{asset_id}",
+        },
+        ("PATCH", "/v1/w/{wid}/products/{product_id}"): {"name": "Taken over"},
+        ("POST", "/v1/w/{wid}/products/import/preview"): {"csv": "name,price\nA,1\n"},
+        ("POST", "/v1/w/{wid}/products/import"): {"csv": "name,price\nA,1\n"},
+        ("POST", "/v1/w/{wid}/integrations/shopify/connect"): {"shop": "into-b"},
+        ("POST", "/v1/w/{wid}/integrations/shopify/complete"): {"nonce": "n" * 16},
     }
 )
 
@@ -400,6 +418,9 @@ B_TABLES = (
     "saved_replies",
     "business_hours",
     "widget_settings",  # GR-28
+    "products",  # GR-31
+    "product_variants",
+    "shopify_connections",
     "broadcasts",  # GR-23
     "broadcast_recipients",
     "whatsapp_number_health",
@@ -470,6 +491,7 @@ class Seed:
     api_key_id: str = ""  # GR-25
     hook_id: str = ""  # GR-26: a REST hook that key subscribed
     broadcast_id: str = ""
+    product_id: str = ""  # GR-31
 
 
 @dataclass(frozen=True)
@@ -794,6 +816,31 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             message_id=thread.message_ids[0],
         )
     )
+    async with engine.begin() as conn:  # GR-31: a product with a variant, and a Shopify store
+        product = (
+            await conn.execute(
+                text(
+                    "INSERT INTO products (workspace_id, name, currency, price_minor, source,"
+                    " search_text) VALUES (:w, 'B kurta', 'INR', 79900, 'manual', 'b kurta')"
+                    " RETURNING id"
+                ),
+                {"w": wid},
+            )
+        ).scalar_one()
+        await conn.execute(
+            text(
+                "INSERT INTO product_variants (workspace_id, product_id, title, price_minor)"
+                " VALUES (:w, :p, 'M', 79900)"
+            ),
+            {"w": wid, "p": product},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO shopify_connections (workspace_id, shop_domain, token_enc,"
+                " connected_at) VALUES (:w, 'b-store.myshopify.com', :t, now())"
+            ),
+            {"w": wid, "t": b"not-a-real-token"},
+        )
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -828,6 +875,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         api_key_id=str(api_key),
         hook_id=str(rest_hook),
         broadcast_id=broadcast,
+        product_id=str(product),
     )
 
 

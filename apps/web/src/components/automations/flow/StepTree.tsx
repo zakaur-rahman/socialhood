@@ -40,6 +40,7 @@ import { KindMenu } from "./KindMenu";
 import { ConditionEditor } from "./fields/ConditionEditor";
 import { AskFields } from "./fields/AskFields";
 import { ActionFields, AiFields, DelayFields } from "./fields/OtherFields";
+import { ProductFields } from "./fields/ProductFields";
 import { SendFields } from "./fields/SendFields";
 import { NativeSelect } from "./NativeSelect";
 
@@ -346,6 +347,7 @@ function FlowStepCard({
 function summary(node: EditorStep): string {
   if (node.kind === "send" && node.saved) return "A saved reply";
   if (node.kind === "send" || node.kind === "ask") return node.text.trim() || "Nothing written yet";
+  if (node.kind === "product") return node.intro.trim() || (node.product_id ? "A product from your catalogue" : "No product chosen yet");
   if (node.kind === "ai") return node.instructions.trim() || "No instructions yet";
   if (node.kind === "branch") return node.rules.map((rule) => describeCondition(rule.when)).join(", ");
   return "";
@@ -355,6 +357,8 @@ function Body({ node }: { node: EditorStep }) {
   switch (node.kind) {
     case "send":
       return <SendFields node={node} />;
+    case "product":
+      return <ProductFields node={node} />;
     case "ask":
       return <AskFields node={node} />;
     case "action":

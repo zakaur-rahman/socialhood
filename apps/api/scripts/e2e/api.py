@@ -34,6 +34,7 @@ production.
 from __future__ import annotations
 
 import hmac
+import json
 import os
 import secrets
 import uuid
@@ -65,6 +66,8 @@ from socialhood.services.analytics import account_metrics
 from socialhood.services.analytics.common import View
 from socialhood.services.provisioning import slugify
 from socialhood.settings import get_settings
+from socialhood.shopify.registry import webhook_secret
+from socialhood.shopify.signatures import sign_webhook
 
 settings = get_settings()
 SEED_TOKEN = os.environ.get("E2E_SEED_TOKEN", "")
@@ -73,11 +76,12 @@ if (
     or not settings.sandbox_platform_enabled
     or settings.dodo_provider != "fake"
     or settings.google_provider != "fake"
+    or settings.shopify_provider != "fake"
     or len(SEED_TOKEN) < 16
 ):
     raise RuntimeError(
         "The e2e API needs SANDBOX_PLATFORM_ENABLED=true, DODO_PROVIDER=fake, "
-        "GOOGLE_PROVIDER=fake, E2E_SEED_TOKEN and a non-production APP_ENV"
+        "GOOGLE_PROVIDER=fake, SHOPIFY_PROVIDER=fake, E2E_SEED_TOKEN and a non-production APP_ENV"
     )
 
 dodo = _process_fake()
@@ -283,6 +287,36 @@ async def google_sheet(sheet_id: str, request: Request) -> dict[str, Any]:
 @router.post("/google-sheets/{sheet_id}/delete", status_code=204)
 async def delete_google_sheet(sheet_id: str, request: Request) -> None:
     await process_fake(settings, request.app.state.redis).delete_sheet(sheet_id)
+
+
+class ShopifyWebhookIn(BaseModel):
+    topic: str = Field(min_length=1, max_length=80)
+    shop: str = Field(min_length=3, max_length=100)
+    body: dict[str, Any]
+    webhook_id: str = Field(min_length=1, max_length=80)
+
+
+class ShopifyWebhookOut(BaseModel):
+    raw: str
+    headers: dict[str, str]
+
+
+@router.post("/shopify/sign")
+async def sign_shopify_webhook(body: ShopifyWebhookIn) -> ShopifyWebhookOut:
+    """GR-31: a Shopify webhook signed with the app's secret, for the suite to post to
+    /webhooks/shopify as Shopify would (the secret never leaves the API's environment)."""
+    raw = json.dumps(body.body)
+    secret = webhook_secret(settings)
+    return ShopifyWebhookOut(
+        raw=raw,
+        headers={
+            "X-Shopify-Hmac-Sha256": sign_webhook(raw.encode(), secret),
+            "X-Shopify-Topic": body.topic,
+            "X-Shopify-Shop-Domain": body.shop,
+            "X-Shopify-Webhook-Id": body.webhook_id,
+            "Content-Type": "application/json",
+        },
+    )
 
 
 class ProposalIn(BaseModel):

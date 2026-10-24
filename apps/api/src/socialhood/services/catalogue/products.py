@@ -250,7 +250,10 @@ async def get(session: AsyncSession, product_id: uuid.UUID) -> Product:
 
 async def check_asset(session: AsyncSession, asset_id: uuid.UUID | None) -> None:
     """404 for a picture that isn't this workspace's (the session filters by workspace)."""
-    if asset_id is not None and await session.get(MediaAsset, asset_id) is None:
+    if asset_id is None:
+        return
+    found = await session.scalar(select(MediaAsset.id).where(MediaAsset.id == asset_id))
+    if found is None:
         raise ApiError("not_found")
 
 
@@ -349,7 +352,6 @@ async def save(
 ) -> Product:
     """Create the product, or make the existing one ``data`` (variants included). The caller has
     checked the plan and that ``data`` is valid; the database's unique SKU is the last word."""
-    creating = product is None
     if product is None:
         product = Product(source=source)
         session.add(product)
@@ -369,8 +371,7 @@ async def save(
     variants = await sync_variants(session, product, data.variants)
     refresh_search_text(product, variants)
     await session.flush()
-    if creating:
-        await session.refresh(product)
+    await session.refresh(product)  # server-side defaults and updated_at, read by the view
     return product
 
 

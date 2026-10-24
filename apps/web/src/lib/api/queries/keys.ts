@@ -31,6 +31,9 @@ export type AutomationFilters = {
   sort: AutomationSort;
 };
 
+/** The Products page's list filters (GR-31). Part of its query key. */
+export type ProductFilters = { q: string; active: boolean | null };
+
 export type ActivityFilters = {
   failuresOnly: boolean;
   kind: ActivityKind | null;
@@ -54,6 +57,9 @@ export const keys = {
   webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
   webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
   googleSheets: (wid: string) => ["w", wid, "google-sheets"] as const,
+  products: (wid: string) => ["w", wid, "products"] as const,
+  productList: (wid: string, filters: ProductFilters) => ["w", wid, "products", "list", filters] as const,
+  shopify: (wid: string) => ["w", wid, "shopify"] as const,
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
   /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
   activityLists: (wid: string) => ["w", wid, "activity"] as const,

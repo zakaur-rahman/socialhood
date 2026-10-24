@@ -227,6 +227,7 @@ async def finish_connect(
     await session.flush()
     await _subscribe(conn, client, grant.access_token, webhook_address)
     await session.flush()
+    await session.refresh(conn)  # server-side defaults, read by the status
     return conn
 
 

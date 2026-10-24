@@ -27,6 +27,8 @@ export function refPath(ref: AnswerRef): string {
       return `schedule/${ref.id}`;
     case "knowledge_source":
       return "knowledge";
+    case "product":
+      return "products";
   }
 }
 

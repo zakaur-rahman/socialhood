@@ -55,7 +55,7 @@ describe("AppSidebar (UX-SH-01)", () => {
   it("shows labels, the workspace, the plan and every section for an owner when expanded", () => {
     renderSidebar({ userName: "Priya Nair", userEmail: "priya@aria.example" });
     const nav = mainNav();
-    for (const label of ["Home", "Inbox", "Comments", "Contacts", "Leads", "Schedule", "Automations", "Knowledge", "Settings", "Help"]) {
+    for (const label of ["Home", "Inbox", "Comments", "Contacts", "Leads", "Schedule", "Automations", "Knowledge", "Products", "Settings", "Help"]) {
       expect(within(nav).getByText(label)).toBeInTheDocument();
     }
     expect(within(nav).getByText("Social Hood")).toBeInTheDocument();
@@ -107,7 +107,7 @@ describe("navigation groups by role", () => {
       const engage = screen.getByRole("group", { name: "Engage" });
       const grow = screen.getByRole("group", { name: "Grow" });
       expect(linkNames(engage)).toEqual(["Inbox", "Comments", "Contacts", "Leads"]);
-      expect(linkNames(grow)).toEqual(["Schedule", "Automations", "Knowledge"]);
+      expect(linkNames(grow)).toEqual(["Schedule", "Automations", "Knowledge", "Products"]);
       const home = screen.getByRole("link", { name: "Home" });
       expect(home.closest('[role="group"]')).toBeNull();
       expect(home.compareDocumentPosition(engage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -122,7 +122,7 @@ describe("navigation groups by role", () => {
     expect(linkNames(screen.getByRole("group", { name: "Engage" }))).toEqual(["Inbox", "Comments", "Contacts", "Leads"]);
     expect(screen.queryByRole("group", { name: "Grow" })).not.toBeInTheDocument();
     expect(within(nav).queryByText("Grow")).not.toBeInTheDocument();
-    for (const hidden of ["Automations", "Schedule", "Knowledge"]) {
+    for (const hidden of ["Automations", "Schedule", "Knowledge", "Products"]) {
       expect(within(nav).queryByText(hidden)).not.toBeInTheDocument();
     }
   });
