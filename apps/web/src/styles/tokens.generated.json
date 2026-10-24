@@ -60,7 +60,14 @@
     "instagram": "#BE185D",
     "whatsapp": "#16A34A",
     "facebook": "#2563EB",
-    "linkedin": "#1E40AF"
+    "linkedin": "#1E40AF",
+    "web": "#0F766E",
+    "instagram-logo-1": "#F58529",
+    "instagram-logo-2": "#DD2A7B",
+    "instagram-logo-3": "#8134AF",
+    "instagram-logo-4": "#515BD4",
+    "facebook-logo": "#0866FF",
+    "whatsapp-logo": "#25D366"
   },
   "colorsLight": {
     "canvas": "#F5F6FB",
@@ -123,7 +130,14 @@
     "instagram": "#BE185D",
     "whatsapp": "#16A34A",
     "facebook": "#2563EB",
-    "linkedin": "#1E40AF"
+    "linkedin": "#1E40AF",
+    "web": "#0F766E",
+    "instagram-logo-1": "#F58529",
+    "instagram-logo-2": "#DD2A7B",
+    "instagram-logo-3": "#8134AF",
+    "instagram-logo-4": "#515BD4",
+    "facebook-logo": "#0866FF",
+    "whatsapp-logo": "#25D366"
   },
   "themed": [
     "color:canvas",
@@ -240,6 +254,7 @@
     "brand": "linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%)",
     "brand-decor": "linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%)",
     "shell": "linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%)",
+    "instagram-logo": "linear-gradient(45deg, var(--color-instagram-logo-1) 0%, var(--color-instagram-logo-2) 35%, var(--color-instagram-logo-3) 70%, var(--color-instagram-logo-4) 100%)",
     "glow-brand": "radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%)",
     "glow-brand-top": "radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%)",
     "ambient": "radial-gradient(60rem 38rem at 0% -12%, var(--color-ambient-1), transparent 62%), radial-gradient(48rem 32rem at 100% -4%, var(--color-ambient-2), transparent 60%), radial-gradient(64rem 40rem at 55% 115%, var(--color-ambient-3), transparent 65%)"

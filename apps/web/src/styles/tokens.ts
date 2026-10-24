@@ -85,7 +85,14 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   whatsapp: { use: "WhatsApp", swatch: "bg-whatsapp" },
   facebook: { use: "Facebook", swatch: "bg-facebook" },
   linkedin: { use: "LinkedIn", swatch: "bg-linkedin" },
-  web: { use: "Website chat", swatch: "bg-web" },
+  web: { use: "Website chat (GR-28)", swatch: "bg-web" },
+  // The platforms' own logo colours: logo tiles only, never under text
+  "instagram-logo-1": { use: "Instagram logo gradient, first stop", swatch: "bg-instagram-logo-1" },
+  "instagram-logo-2": { use: "Instagram logo gradient, second stop", swatch: "bg-instagram-logo-2" },
+  "instagram-logo-3": { use: "Instagram logo gradient, third stop", swatch: "bg-instagram-logo-3" },
+  "instagram-logo-4": { use: "Instagram logo gradient, last stop", swatch: "bg-instagram-logo-4" },
+  "facebook-logo": { use: "Facebook logo tile", swatch: "bg-facebook-logo" },
+  "whatsapp-logo": { use: "WhatsApp logo tile", swatch: "bg-whatsapp-logo" },
 };
 
 /**
@@ -106,6 +113,13 @@ export const themeInvariant: Record<string, string> = {
   whatsapp: "A third party's brand colour",
   facebook: "A third party's brand colour",
   linkedin: "A third party's brand colour",
+  web: "The website chat's badge fill: white on it is 5.5:1 in both themes",
+  "instagram-logo-1": "A third party's logo colour",
+  "instagram-logo-2": "A third party's logo colour",
+  "instagram-logo-3": "A third party's logo colour",
+  "instagram-logo-4": "A third party's logo colour",
+  "facebook-logo": "A third party's logo colour",
+  "whatsapp-logo": "A third party's logo colour",
 };
 
 /** The colour tokens, in the order of globals.css, with their values from the generated file. */
@@ -164,6 +178,7 @@ const gradientMeta = [
   { name: "bg-brand-gradient", key: "brand", use: "Primary buttons, outgoing bubbles, count badges; on-brand text" },
   { name: "bg-brand-gradient-decor", key: "brand-decor", use: "Meters, progress fills, decorative icon tiles; never under text" },
   { name: "bg-shell-gradient", key: "shell", use: "Logo tile and Upgrade only" },
+  { name: "bg-instagram-logo-gradient", key: "instagram-logo", use: "Instagram's logo tile (Add account); never under text" },
   { name: "bg-glow-brand", key: "glow-brand", use: "One per view at most: the plan hero" },
   { name: "bg-ambient", key: "ambient", use: "The light behind the glass, fixed on the body; not for components" },
   { name: "bg-glow-brand-top", key: "glow-brand-top", use: "The marketing glow at the top of a section: the hero, the illustration cards" },

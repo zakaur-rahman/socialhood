@@ -125,6 +125,14 @@
   --color-facebook: #2563EB;
   --color-linkedin: #1E40AF;
   --color-web: #0F766E;  /* the website chat widget (GR-28): 5.5:1 with on-brand */
+  /* The platforms' own logo colours, for logo tiles only (Add account): the fills above are
+     darkened so white text on them passes 4.5:1; a logo tile carries no text. */
+  --color-instagram-logo-1: #F58529;
+  --color-instagram-logo-2: #DD2A7B;
+  --color-instagram-logo-3: #8134AF;
+  --color-instagram-logo-4: #515BD4;
+  --color-facebook-logo: #0866FF;
+  --color-whatsapp-logo: #25D366;
 
   /* Charts (COLOR_SYSTEM §11.6, C-075): aliases, no new hues. Every chart reads these, so a
      series' colour is set in one place; the legend, numbers and an sr-only table carry the values. */
@@ -192,6 +200,7 @@
   --gradient-brand: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand-strong) 100%);
   --gradient-brand-decor: linear-gradient(135deg, var(--color-brand-deep) 0%, var(--color-brand) 100%);
   --gradient-shell: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%);
+  --gradient-instagram-logo: linear-gradient(45deg, var(--color-instagram-logo-1) 0%, var(--color-instagram-logo-2) 35%, var(--color-instagram-logo-3) 70%, var(--color-instagram-logo-4) 100%);
   --gradient-glow-brand: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%);
   --gradient-glow-brand-top: radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%);
   /* The light behind the glass (C-101), fixed to the viewport on the body; the glows are the
@@ -204,6 +213,7 @@
 @utility bg-brand-gradient { background-image: var(--gradient-brand); }
 @utility bg-brand-gradient-decor { background-image: var(--gradient-brand-decor); }
 @utility bg-shell-gradient { background-image: var(--gradient-shell); }
+@utility bg-instagram-logo-gradient { background-image: var(--gradient-instagram-logo); }
 @utility bg-glow-brand { background-image: var(--gradient-glow-brand); }
 @utility bg-glow-brand-top { background-image: var(--gradient-glow-brand-top); }
 @utility bg-ambient { background-image: var(--gradient-ambient); }
