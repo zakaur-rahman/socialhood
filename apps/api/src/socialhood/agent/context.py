@@ -2,7 +2,8 @@
 
 No separate vector memory: what the agent knows comes from what Social Hood already stores.
 
-- Business: the knowledge base through the search_knowledge tool; the brand voice (ai_settings)
+- Business: the knowledge base through the search_knowledge tool and the product catalogue through
+  search_products (GR-31); the brand voice (ai_settings)
   in the system prompt as trusted settings.
 - Customer: the contact, conversation summary (FR-AI-03), latest analysis and lead score through
   get_customer and get_conversation.

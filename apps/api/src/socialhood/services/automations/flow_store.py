@@ -24,8 +24,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.billing.entitlements import quota_error
-from socialhood.billing.plans import entitlement
+from socialhood.billing.entitlements import allows, entitlement_error, quota_error
+from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.automations import (
     Automation,
@@ -34,19 +34,23 @@ from socialhood.models.automations import (
     AutomationStatus,
 )
 from socialhood.models.contacts import ContactFieldDefinition, Tag
+from socialhood.models.identity import WorkspaceMember
 from socialhood.models.media import ResourceType
 from socialhood.models.replies import SavedReply
 from socialhood.repositories import automations as repo
+from socialhood.repositories import catalogue as catalogue_repo
 from socialhood.repositories import social_accounts
 from socialhood.schemas.flows import (
     ActionStep,
     AddTag,
     AiReplyStep,
     AskStep,
+    Assign,
     BranchStep,
     Flow,
     FlowDefinition,
     FlowSource,
+    ProductStep,
     RemoveTag,
     SendStep,
     SetField,
@@ -86,11 +90,17 @@ async def _context_parts(
     return fields, tags
 
 
+async def _member_ids(session: AsyncSession) -> frozenset[uuid.UUID]:
+    """GR-20: the workspace's members, for an "assign to a member" action."""
+    return frozenset((await session.scalars(select(WorkspaceMember.user_id))).all())
+
+
 async def reference_errors(session: AsyncSession, definition: FlowDefinition) -> list[FieldError]:
     """The tags and custom fields a flow names that this workspace doesn't have (the agent checks
     a proposed flow with it, GR-36). A draft may be incomplete, so this is all it checks of
     activation's references."""
     fields, tags = await _context_parts(session)
+    members = await _member_ids(session)
     errors: list[FieldError] = []
     for i, step in enumerate(definition.steps):
         if isinstance(step, AskStep) and step.field_key and step.field_key not in fields:
@@ -103,6 +113,15 @@ async def reference_errors(session: AsyncSession, definition: FlowDefinition) ->
             action = step.action
             if isinstance(action, AddTag | RemoveTag) and action.tag_id not in tags:
                 errors.append(FieldError(flows.path(i, "action.tag_id"), flows.COPY["tag_missing"]))
+            elif isinstance(action, Assign) and action.mode == "member":
+                if action.user_id is None:
+                    errors.append(
+                        FieldError(flows.path(i, "action.user_id"), flows.COPY["member_needed"])
+                    )
+                elif action.user_id not in members:
+                    errors.append(
+                        FieldError(flows.path(i, "action.user_id"), flows.COPY["member_missing"])
+                    )
             elif isinstance(action, SetField) and action.key not in fields:
                 errors.append(
                     FieldError(
@@ -127,6 +146,17 @@ async def _saved_replies(session: AsyncSession) -> dict[uuid.UUID, str]:
     return {reply_id: body for reply_id, body in rows.all()}
 
 
+async def _products(
+    session: AsyncSession,
+) -> dict[uuid.UUID, tuple[bool, frozenset[uuid.UUID]]]:
+    """GR-31: the workspace's products, id to (switched on, variant ids)."""
+    rows, _ = await catalogue_repo.list_products(
+        session, q=None, active=None, source=None, limit=5000, offset=0
+    )
+    variants = await catalogue_repo.variants_of(session, [p.id for p in rows])
+    return {p.id: (p.active, frozenset(v.id for v in variants.get(p.id, []))) for p in rows}
+
+
 async def context(
     session: AsyncSession, automation: Automation, disclosure: str | None
 ) -> flows.Context:
@@ -143,6 +173,9 @@ async def context(
         tag_ids=tags,
         saved_replies=await _saved_replies(session),
         platform=acct.platform if acct is not None else "instagram",
+        products=await _products(session),
+        commerce=allows(await current_plan(session), "commerce"),
+        member_ids=await _member_ids(session),
     )
 
 
@@ -210,6 +243,10 @@ async def save(
     except flows.FlowError as error:
         raise ApiError("validation_error", errors=error.errors) from error
     check_step_cap(definition, plan)
+    if any(isinstance(step, ProductStep) for step in definition.steps) and not allows(
+        plan, "commerce"
+    ):
+        raise entitlement_error("commerce", "Sending products is part of Pro.")
     if errors := await _image_errors(session, definition):
         raise ApiError("validation_error", errors=errors)
     if automation.status == AutomationStatus.ACTIVE:
@@ -283,6 +320,9 @@ async def problems(
     stored = await repo.flows_at(session, flowing)
     parts = await _context_parts(session) if flowing else ({}, frozenset())
     replies = await _saved_replies(session) if flowing else {}
+    shop = await _products(session) if flowing else {}
+    commerce = allows(await current_plan(session), "commerce") if flowing else True
+    member_ids = await _member_ids(session) if flowing else frozenset()
     out: dict[uuid.UUID, list[FieldError]] = {}
     for a in automations:
         d = (definitions_by_id or {}).get(a.id) or await definitions.stored_definition(session, a)
@@ -299,6 +339,9 @@ async def problems(
                 tag_ids=parts[1],
                 saved_replies=replies,
                 platform=d.platform or "instagram",
+                products=shop,
+                commerce=commerce,
+                member_ids=member_ids,
             )
             errors += flows.activation_errors(flows.parse(row.definition), ctx)
         out[a.id] = errors

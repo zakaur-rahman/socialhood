@@ -61,6 +61,7 @@ FEATURES = {
     "sheets_sync": "Google Sheets sync is part of Pro.",
     "public_api": "The public API, API keys and Zapier are part of Pro.",
     "broadcast_recipients_monthly": "WhatsApp broadcasts are part of Pro.",
+    "commerce": "The product catalogue is part of Pro.",
 }
 # §4.7 quota_exceeded: "Your plan includes {limit} {thing}."
 THINGS = {
@@ -74,6 +75,10 @@ THINGS = {
     "flow_steps": "steps in a flow",
     "crawl_pages": "pages in a website crawl",
     "broadcast_recipients_monthly": "broadcast recipients a month",
+    "catalogue_products": "products",
+    "catalogue_import_rows": "rows in one import",
+    "active_sequences": "active sequences",
+    "sequence_steps": "steps in a sequence",
 }
 
 

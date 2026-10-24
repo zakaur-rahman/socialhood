@@ -68,6 +68,7 @@ ApprovalStatusName = Literal["pending", "approved", "rejected", "expired", "supe
 # - scheduled_message: a scheduled message, in its conversation
 # - scheduled_post: a scheduled post, in the composer
 # - knowledge_source: a knowledge source (FAQ, note, page or file)
+# - product: a catalogue product (GR-31), on the Products page
 AnswerRefKind = Literal[
     "post",
     "conversation",
@@ -76,6 +77,7 @@ AnswerRefKind = Literal[
     "scheduled_message",
     "scheduled_post",
     "knowledge_source",
+    "product",
 ]
 ActionKind = Literal[
     "schedule_message",

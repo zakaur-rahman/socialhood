@@ -16,9 +16,11 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.db.tenancy import workspace_scope
+from socialhood.models.identity import User
 from socialhood.models.inbox import Contact, Conversation, Message
 from socialhood.observability.logging import get_logger
-from socialhood.services.inbox_views import list_item, message_out
+from socialhood.schemas.inbox import Assignee
+from socialhood.services.inbox_views import list_item, member_label, message_out
 
 log = get_logger(__name__)
 
@@ -159,7 +161,16 @@ async def queue_conversation(
     contact = contact or await session.get(Contact, conv.contact_id)
     if contact is None:
         return
-    item = list_item(conv, contact, now=now, human_agent=human_agent)
+    assignee = None
+    if conv.assignee_user_id is not None:  # GR-20: name the member, so a live row needs no refetch
+        user = await session.get(User, conv.assignee_user_id)
+        if user is not None:
+            assignee = Assignee(
+                user_id=user.id,
+                name=member_label(user.name, user.email),
+                avatar_url=user.avatar_url,
+            )
+    item = list_item(conv, contact, now=now, human_agent=human_agent, assignee=assignee)
     queue(
         session,
         conv.workspace_id,

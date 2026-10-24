@@ -280,6 +280,8 @@ TimelineKind = Literal[
     "tag",
     "lead_stage",
     "broadcast",
+    "assignment",
+    "sequence",
 ]
 
 

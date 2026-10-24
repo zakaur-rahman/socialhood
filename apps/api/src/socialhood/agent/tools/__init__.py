@@ -33,7 +33,9 @@ TOOL_MODULES = (
     "socialhood.agent.tools.automations",
     "socialhood.agent.tools.proposals",
     "socialhood.agent.tools.knowledge",
+    "socialhood.agent.tools.catalogue",
     "socialhood.agent.tools.integrations",
+    "socialhood.agent.tools.sequences",
     "socialhood.agent.tools.activity",
 )
 

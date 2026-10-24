@@ -58,6 +58,16 @@ export type SendNode = {
   saved?: boolean;
   saved_reply_id?: string | null;
 };
+/** GR-31: send a product from the catalogue (name, price, stock when recorded, picture and link, read when the step runs). */
+export type ProductNode = {
+  kind: "product";
+  id: string;
+  product_id: string | null;
+  /** One variant (size, colour…), or null for the product: its price, or a short list of its variants. */
+  variant_id: string | null;
+  /** A line of your own above it. */
+  intro: string;
+};
 export type AskNode = {
   kind: "ask";
   id: string;
@@ -81,12 +91,13 @@ export type SplitNode = { kind: "split"; id: string; paths: SplitPath[] };
 export type AiNode = { kind: "ai"; id: string; instructions: string };
 export type EndNode = { kind: "end"; id: string };
 
-export type EditorStep = SendNode | AskNode | BranchNode | ActionNode | DelayNode | SplitNode | AiNode | EndNode;
+export type EditorStep = SendNode | ProductNode | AskNode | BranchNode | ActionNode | DelayNode | SplitNode | AiNode | EndNode;
 export type StepKind = EditorStep["kind"];
 
 /** What the "Add step" menu offers, in order. AI replies are chosen above the steps. */
 export const ADDABLE: { kind: Exclude<StepKind, "ai">; label: string; hint: string }[] = [
   { kind: "send", label: "Send", hint: "A message, with an image, link buttons or quick replies" },
+  { kind: "product", label: "Product", hint: "Send a product from your catalogue with its price and link" },
   { kind: "ask", label: "Ask", hint: "Ask a question and save the answer" },
   { kind: "branch", label: "Branch", hint: "Go different ways by a tag, a field or who they are" },
   { kind: "action", label: "Action", hint: "Tag them, set a field, tell the team or hand off" },
@@ -97,6 +108,7 @@ export const ADDABLE: { kind: Exclude<StepKind, "ai">; label: string; hint: stri
 
 export const KIND_LABEL: Record<StepKind, string> = {
   send: "Send",
+  product: "Product",
   ask: "Ask",
   branch: "Branch",
   action: "Action",
@@ -132,6 +144,8 @@ export function makeStep(kind: StepKind, taken: ReadonlySet<string> = new Set())
   switch (kind) {
     case "send":
       return { kind, id, text: "", image_asset_id: null, buttons: [], replies: [], typed: { mode: "none" } };
+    case "product":
+      return { kind, id, product_id: null, variant_id: null, intro: "" };
     case "ask":
       return { kind, id, text: "", expect: "email",
         field_key: null,
@@ -367,6 +381,16 @@ export function compile(tree: EditorStep[]): Compiled {
           });
           break;
         }
+        case "product":
+          steps.push({
+            type: "product",
+            id: node.id,
+            product_id: node.product_id ?? "",
+            variant_id: node.variant_id,
+            intro: node.intro,
+            next,
+          });
+          break;
         case "ask":
           steps.push({
             type: "ask",
@@ -435,6 +459,7 @@ export function successors(step: FlowStep): (string | null)[] {
       return step.paths.map((path) => path.next ?? null);
     case "action":
     case "delay":
+    case "product":
       return [step.next ?? null];
     default:
       return [];
@@ -504,6 +529,16 @@ export function decompile(definition: FlowDefinition): EditorStep[] | null {
           break;
         case "delay":
           list.push({ kind: "delay", id: step.id, seconds: step.seconds });
+          current = step.next ?? null;
+          break;
+        case "product":
+          list.push({
+            kind: "product",
+            id: step.id,
+            product_id: step.product_id || null,
+            variant_id: step.variant_id ?? null,
+            intro: step.intro ?? "",
+          });
           current = step.next ?? null;
           break;
         case "end":
@@ -678,6 +713,8 @@ export function describeAction(action: FlowAction, tagName?: (id: string) => str
       return "Notify the team";
     case "hand_off":
       return "Hand off to a person";
+    case "assign":
+      return action.mode === "member" ? "Assign to a team member" : action.mode === "nobody" ? "Remove the assignee" : "Assign to the next available member";
   }
 }
 
@@ -695,6 +732,8 @@ export function stepTitle(node: EditorStep, tagName?: (id: string) => string | u
   switch (node.kind) {
     case "send":
       return node.saved ? "Saved reply" : "Message";
+    case "product":
+      return "Send a product";
     case "ask":
       return node.expect === "email" ? "Ask for an email" : node.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":
@@ -862,6 +901,12 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
       }
       return out;
     }
+    case "product":
+      if (!node.product_id) out.product_id = "Choose a product.";
+      else if (node.intro.trim() && messageSize(node.intro, ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+        out.intro = overLimitCopy(ctx.platform, "it", false);
+      }
+      return out;
     case "ai":
       if (!node.instructions.trim()) out.instructions = "Write the instructions for the AI.";
       return out;
@@ -984,6 +1029,8 @@ function wireTitle(step: FlowStep, tagName?: (id: string) => string | undefined)
   switch (step.type) {
     case "send":
       return step.saved_reply_id ? "Saved reply" : "Message";
+    case "product":
+      return "Send a product";
     case "ask":
       return step.expect === "email" ? "Ask for an email" : step.expect === "phone" ? "Ask for a phone" : "Ask a question";
     case "branch":

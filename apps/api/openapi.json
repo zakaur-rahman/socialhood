@@ -221,6 +221,7 @@
             "discriminator": {
               "mapping": {
                 "add_tag": "#/components/schemas/AddTag",
+                "assign": "#/components/schemas/Assign",
                 "hand_off": "#/components/schemas/HandOff",
                 "notify_team": "#/components/schemas/NotifyTeam",
                 "remove_tag": "#/components/schemas/RemoveTag",
@@ -243,6 +244,9 @@
               },
               {
                 "$ref": "#/components/schemas/HandOff"
+              },
+              {
+                "$ref": "#/components/schemas/Assign"
               }
             ],
             "title": "Action"
@@ -368,7 +372,8 @@
               "message",
               "webhook_delivery",
               "account",
-              "broadcast"
+              "broadcast",
+              "sequence"
             ],
             "title": "Kind",
             "type": "string"
@@ -2200,7 +2205,8 @@
               "automation",
               "scheduled_message",
               "scheduled_post",
-              "knowledge_source"
+              "knowledge_source",
+              "product"
             ],
             "title": "Kind",
             "type": "string"
@@ -2717,6 +2723,201 @@
           "id"
         ],
         "title": "AskStep",
+        "type": "object"
+      },
+      "Assign": {
+        "additionalProperties": false,
+        "description": "Give the conversation to a member (GR-20): a chosen ``member``, the next available member\nin turn (``round_robin``, whatever the workspace's own round-robin setting), or ``nobody``\n(clears the assignment). The member is told, as for any assignment.",
+        "properties": {
+          "kind": {
+            "const": "assign",
+            "default": "assign",
+            "title": "Kind",
+            "type": "string"
+          },
+          "mode": {
+            "default": "round_robin",
+            "enum": [
+              "member",
+              "round_robin",
+              "nobody"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "title": "Assign",
+        "type": "object"
+      },
+      "Assignable": {
+        "description": "A member who can be given a conversation. Any member may list them (the picker), so there\nis no email here: the name is the member's, else the part of their email before the @.",
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "is_you": {
+            "title": "Is You",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "open_conversations": {
+            "title": "Open Conversations",
+            "type": "integer"
+          },
+          "role": {
+            "enum": [
+              "owner",
+              "admin",
+              "agent"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "name",
+          "avatar_url",
+          "role",
+          "available",
+          "open_conversations",
+          "is_you"
+        ],
+        "title": "Assignable",
+        "type": "object"
+      },
+      "Assignee": {
+        "description": "The member who has a conversation (GR-20). The name is the member's at the time of the\nresponse; an assignee with no name shows their email's local part on the web.",
+        "properties": {
+          "avatar_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avatar Url"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "Assignee",
+        "type": "object"
+      },
+      "AssigneeUpdate": {
+        "additionalProperties": false,
+        "description": "PUT \u2026/conversations/{id}/assignee. ``user_id`` null takes the assignment away.",
+        "properties": {
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "AssigneeUpdate",
+        "type": "object"
+      },
+      "AssignmentOverview": {
+        "properties": {
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/Assignable"
+            },
+            "title": "Members",
+            "type": "array"
+          },
+          "round_robin": {
+            "title": "Round Robin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "round_robin",
+          "members"
+        ],
+        "title": "AssignmentOverview",
+        "type": "object"
+      },
+      "AssignmentSettingsPut": {
+        "additionalProperties": false,
+        "properties": {
+          "round_robin": {
+            "title": "Round Robin",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "round_robin"
+        ],
+        "title": "AssignmentSettingsPut",
         "type": "object"
       },
       "Attachment": {
@@ -4615,6 +4816,20 @@
         "title": "AutomationsSummary",
         "type": "object"
       },
+      "AvailabilityPut": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available"
+        ],
+        "title": "AvailabilityPut",
+        "type": "object"
+      },
       "Baseline": {
         "description": "What the post was compared with, as requested and as found.",
         "properties": {
@@ -6156,6 +6371,39 @@
           "caption"
         ],
         "title": "CaptionSuggestion",
+        "type": "object"
+      },
+      "CatalogueLimits": {
+        "properties": {
+          "csv_max_chars": {
+            "title": "Csv Max Chars",
+            "type": "integer"
+          },
+          "default_currency": {
+            "title": "Default Currency",
+            "type": "string"
+          },
+          "entitled": {
+            "title": "Entitled",
+            "type": "boolean"
+          },
+          "import_row_cap": {
+            "title": "Import Row Cap",
+            "type": "integer"
+          },
+          "product_cap": {
+            "title": "Product Cap",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entitled",
+          "product_cap",
+          "import_row_cap",
+          "csv_max_chars",
+          "default_currency"
+        ],
+        "title": "CatalogueLimits",
         "type": "object"
       },
       "Checklist": {
@@ -7783,6 +8031,118 @@
         "title": "ContactRecord",
         "type": "object"
       },
+      "ContactRef": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "ContactRef",
+        "type": "object"
+      },
+      "ContactSequence": {
+        "properties": {
+          "enrolment": {
+            "$ref": "#/components/schemas/Enrolment"
+          },
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/ContactStepRun"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enrolment",
+          "runs"
+        ],
+        "title": "ContactSequence",
+        "type": "object"
+      },
+      "ContactSequenceList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContactSequence"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "ContactSequenceList",
+        "type": "object"
+      },
+      "ContactStepRun": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "sent",
+              "skipped",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "position",
+          "status",
+          "at"
+        ],
+        "title": "ContactStepRun",
+        "type": "object"
+      },
       "ContactSummary": {
         "properties": {
           "display_name": {
@@ -7875,6 +8235,28 @@
               }
             ],
             "title": "Ai Mode Override"
+          },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Assignee"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "awaiting_reply": {
             "title": "Awaiting Reply",
@@ -8348,6 +8730,28 @@
             ],
             "title": "Ai Mode Override"
           },
+          "assigned_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned At"
+          },
+          "assignee": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Assignee"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "awaiting_reply": {
             "title": "Awaiting Reply",
             "type": "boolean"
@@ -8680,6 +9084,22 @@
         "title": "CostEstimate",
         "type": "object"
       },
+      "CsvImport": {
+        "additionalProperties": false,
+        "properties": {
+          "csv": {
+            "maxLength": 900000,
+            "minLength": 1,
+            "title": "Csv",
+            "type": "string"
+          }
+        },
+        "required": [
+          "csv"
+        ],
+        "title": "CsvImport",
+        "type": "object"
+      },
       "DailyRuns": {
         "properties": {
           "date": {
@@ -8925,6 +9345,190 @@
         "title": "EndStep",
         "type": "object"
       },
+      "Enrolment": {
+        "properties": {
+          "contact": {
+            "$ref": "#/components/schemas/ContactRef"
+          },
+          "enrolled_at": {
+            "format": "date-time",
+            "title": "Enrolled At",
+            "type": "string"
+          },
+          "entry_event": {
+            "title": "Entry Event",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_run": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LastRun"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "next_due_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due At"
+          },
+          "next_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Step"
+          },
+          "sequence_id": {
+            "format": "uuid",
+            "title": "Sequence Id",
+            "type": "string"
+          },
+          "sequence_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Name"
+          },
+          "status": {
+            "enum": [
+              "active",
+              "completed",
+              "stopped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "stop_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "reply",
+                  "tag",
+                  "stage",
+                  "member",
+                  "ended"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Reason"
+          },
+          "stop_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stop Text"
+          }
+        },
+        "required": [
+          "id",
+          "sequence_id",
+          "contact",
+          "status",
+          "step_count",
+          "enrolled_at",
+          "entry_event"
+        ],
+        "title": "Enrolment",
+        "type": "object"
+      },
+      "EnrolmentCounts": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "stopped": {
+            "title": "Stopped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "active",
+          "completed",
+          "stopped"
+        ],
+        "title": "EnrolmentCounts",
+        "type": "object"
+      },
+      "EnrolmentList": {
+        "properties": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Enrolment"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "has_more"
+        ],
+        "title": "EnrolmentList",
+        "type": "object"
+      },
       "EntitlementValue": {
         "properties": {
           "key": {
@@ -9135,6 +9739,151 @@
           "name"
         ],
         "title": "EntryLinkUpdate",
+        "type": "object"
+      },
+      "EntryOut": {
+        "properties": {
+          "broadcast_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broadcast Id"
+          },
+          "broadcast_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broadcast Name"
+          },
+          "capture_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "email",
+                  "phone",
+                  "field"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Kind"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "tag_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Id"
+          },
+          "tag_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Name"
+          },
+          "type": {
+            "enum": [
+              "captured",
+              "tagged",
+              "broadcast_replied"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "label"
+        ],
+        "title": "EntryOut",
+        "type": "object"
+      },
+      "EntryRule": {
+        "additionalProperties": false,
+        "description": "What starts the sequence for a contact: a lead captured (any, or an email, a phone or an\nanswer), a tag added (``tag_id``), or a reply to a WhatsApp broadcast (any, or one).",
+        "properties": {
+          "broadcast_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Broadcast Id"
+          },
+          "capture_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "email",
+                  "phone",
+                  "field"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Capture Kind"
+          },
+          "tag_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Id"
+          },
+          "type": {
+            "enum": [
+              "captured",
+              "tagged",
+              "broadcast_replied"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "EntryRule",
         "type": "object"
       },
       "ErrorInfo": {
@@ -9662,6 +10411,7 @@
                   "branch": "#/components/schemas/BranchStep",
                   "delay": "#/components/schemas/DelayStep",
                   "end": "#/components/schemas/EndStep",
+                  "product": "#/components/schemas/ProductStep",
                   "randomize": "#/components/schemas/RandomizeStep",
                   "send": "#/components/schemas/SendStep"
                 },
@@ -9670,6 +10420,9 @@
               "oneOf": [
                 {
                   "$ref": "#/components/schemas/SendStep"
+                },
+                {
+                  "$ref": "#/components/schemas/ProductStep"
                 },
                 {
                   "$ref": "#/components/schemas/AskStep"
@@ -10455,9 +11208,149 @@
         "title": "IceBreakersUpdate",
         "type": "object"
       },
+      "ImportPreview": {
+        "properties": {
+          "columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "create": {
+            "title": "Create",
+            "type": "integer"
+          },
+          "errors": {
+            "title": "Errors",
+            "type": "integer"
+          },
+          "ignored_columns": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Ignored Columns",
+            "type": "array"
+          },
+          "products": {
+            "title": "Products",
+            "type": "integer"
+          },
+          "row_cap": {
+            "title": "Row Cap",
+            "type": "integer"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/ImportRowOut"
+            },
+            "title": "Rows",
+            "type": "array"
+          },
+          "total_rows": {
+            "title": "Total Rows",
+            "type": "integer"
+          },
+          "update": {
+            "title": "Update",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "rows",
+          "total_rows",
+          "create",
+          "update",
+          "errors",
+          "products",
+          "row_cap",
+          "columns",
+          "ignored_columns"
+        ],
+        "title": "ImportPreview",
+        "type": "object"
+      },
+      "ImportResult": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "products": {
+            "title": "Products",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "updated": {
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "created",
+          "updated",
+          "skipped",
+          "products"
+        ],
+        "title": "ImportResult",
+        "type": "object"
+      },
+      "ImportRowOut": {
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "update",
+              "error"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "line": {
+            "title": "Line",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "variant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant"
+          }
+        },
+        "required": [
+          "line",
+          "action",
+          "name"
+        ],
+        "title": "ImportRowOut",
+        "type": "object"
+      },
       "InboxCounts": {
         "description": "The Inbox nav badge (FR-INB-04) and view chips.",
         "properties": {
+          "mine": {
+            "title": "Mine",
+            "type": "integer"
+          },
           "needs_reply": {
             "title": "Needs Reply",
             "type": "integer"
@@ -10474,7 +11367,8 @@
         "required": [
           "unread",
           "needs_reply",
-          "needs_you"
+          "needs_you",
+          "mine"
         ],
         "title": "InboxCounts",
         "type": "object"
@@ -11207,6 +12101,46 @@
           "characters_used"
         ],
         "title": "KnowledgeUsage",
+        "type": "object"
+      },
+      "LastRun": {
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "enum": [
+              "sent",
+              "skipped",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "position",
+          "status",
+          "at"
+        ],
+        "title": "LastRun",
         "type": "object"
       },
       "LeadScoreCondition": {
@@ -14424,6 +15358,56 @@
         "title": "PostingSlotsUpdate",
         "type": "object"
       },
+      "PreviewStep": {
+        "properties": {
+          "after_seconds": {
+            "title": "After Seconds",
+            "type": "integer"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "sends": {
+            "enum": [
+              "text",
+              "template",
+              "nothing"
+            ],
+            "title": "Sends",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "position",
+          "after_seconds",
+          "sends"
+        ],
+        "title": "PreviewStep",
+        "type": "object"
+      },
       "PrioritiesUpdate": {
         "additionalProperties": false,
         "properties": {
@@ -14696,6 +15680,511 @@
           "code"
         ],
         "title": "Problem",
+        "type": "object"
+      },
+      "ProductCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "active": {
+            "default": true,
+            "title": "Active",
+            "type": "boolean"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "pattern": "^[A-Za-z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "image_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Asset Id"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/VariantIn"
+            },
+            "maxItems": 100,
+            "title": "Variants",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "ProductCreate",
+        "type": "object"
+      },
+      "ProductList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/CatalogueLimits"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limits"
+        ],
+        "title": "ProductList",
+        "type": "object"
+      },
+      "ProductOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "image_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Asset Id"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "price_minor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Minor"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "source": {
+            "enum": [
+              "manual",
+              "csv",
+              "shopify"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "variants": {
+            "items": {
+              "$ref": "#/components/schemas/VariantOut"
+            },
+            "title": "Variants",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "currency",
+          "active",
+          "source",
+          "variants",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ProductOut",
+        "type": "object"
+      },
+      "ProductPatch": {
+        "additionalProperties": false,
+        "description": "Only the fields sent change. ``variants`` replaces the whole list (see the module doc).",
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "maxLength": 3,
+                "pattern": "^[A-Za-z]{3}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "image_asset_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Asset Id"
+          },
+          "image_url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Image Url"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "variants": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VariantIn"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variants"
+          }
+        },
+        "title": "ProductPatch",
+        "type": "object"
+      },
+      "ProductStep": {
+        "additionalProperties": false,
+        "description": "Send a product from the catalogue: its name, price, stock (when recorded), picture and\nlink, read when the step runs. With ``variant_id`` that variant; without one, the product's\nprice, or a short list of its variants. ``intro`` is a line of your own above it.",
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "intro": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Intro",
+            "type": "string"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "type": {
+            "const": "product",
+            "default": "product",
+            "title": "Type",
+            "type": "string"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          }
+        },
+        "required": [
+          "id",
+          "product_id"
+        ],
+        "title": "ProductStep",
         "type": "object"
       },
       "PushConfig": {
@@ -17677,6 +19166,249 @@
         "title": "SentimentSummaryVisual",
         "type": "object"
       },
+      "Sequence": {
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "activated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Activated At"
+          },
+          "allow_reentry": {
+            "title": "Allow Reentry",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "enrolments": {
+            "$ref": "#/components/schemas/EnrolmentCounts"
+          },
+          "entry": {
+            "$ref": "#/components/schemas/EntryOut"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "active",
+              "paused"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "step_count": {
+            "title": "Step Count",
+            "type": "integer"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/StepOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          },
+          "stop": {
+            "$ref": "#/components/schemas/StopOut"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "status",
+          "social_account_id",
+          "entry",
+          "stop",
+          "allow_reentry",
+          "step_count",
+          "enrolments",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "Sequence",
+        "type": "object"
+      },
+      "SequenceBody": {
+        "additionalProperties": false,
+        "description": "The whole sequence, as the editor sends it. Saving replaces the steps.",
+        "properties": {
+          "allow_reentry": {
+            "default": false,
+            "title": "Allow Reentry",
+            "type": "boolean"
+          },
+          "entry": {
+            "$ref": "#/components/schemas/EntryRule"
+          },
+          "name": {
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepIn"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Steps",
+            "type": "array"
+          },
+          "stop": {
+            "$ref": "#/components/schemas/StopRules"
+          }
+        },
+        "required": [
+          "name",
+          "social_account_id",
+          "entry",
+          "steps"
+        ],
+        "title": "SequenceBody",
+        "type": "object"
+      },
+      "SequenceList": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "active_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Limit"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Sequence"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "step_limit": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Limit"
+          }
+        },
+        "required": [
+          "items",
+          "active",
+          "active_limit",
+          "step_limit"
+        ],
+        "title": "SequenceList",
+        "type": "object"
+      },
+      "SequencePreview": {
+        "properties": {
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "problems": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contact_name",
+          "steps",
+          "problems"
+        ],
+        "title": "SequencePreview",
+        "type": "object"
+      },
       "SetField": {
         "additionalProperties": false,
         "properties": {
@@ -17938,6 +19670,171 @@
           "ok"
         ],
         "title": "SheetTestResult",
+        "type": "object"
+      },
+      "ShopifyConnectComplete": {
+        "additionalProperties": false,
+        "description": "The nonce the OAuth callback put in the Products page's URL (?shopify=\u2026).",
+        "properties": {
+          "nonce": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Nonce",
+            "type": "string"
+          }
+        },
+        "required": [
+          "nonce"
+        ],
+        "title": "ShopifyConnectComplete",
+        "type": "object"
+      },
+      "ShopifyConnectRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "shop": {
+            "maxLength": 100,
+            "title": "Shop",
+            "type": "string"
+          }
+        },
+        "required": [
+          "shop"
+        ],
+        "title": "ShopifyConnectRequest",
+        "type": "object"
+      },
+      "ShopifyConnectStart": {
+        "properties": {
+          "authorize_url": {
+            "title": "Authorize Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "authorize_url"
+        ],
+        "title": "ShopifyConnectStart",
+        "type": "object"
+      },
+      "ShopifyStatus": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "entitled": {
+            "title": "Entitled",
+            "type": "boolean"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "products_skipped": {
+            "default": 0,
+            "title": "Products Skipped",
+            "type": "integer"
+          },
+          "products_synced": {
+            "default": 0,
+            "title": "Products Synced",
+            "type": "integer"
+          },
+          "shop_domain": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Domain"
+          },
+          "shop_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Shop Name"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "needs_reconnect"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "sync_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Error"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "syncing": {
+            "default": false,
+            "title": "Syncing",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "available",
+          "entitled",
+          "connected"
+        ],
+        "title": "ShopifyStatus",
         "type": "object"
       },
       "SiteCrawlInfo": {
@@ -18569,6 +20466,177 @@
         "title": "SplitResult",
         "type": "object"
       },
+      "StepIn": {
+        "additionalProperties": false,
+        "description": "One message. It waits ``delay_seconds`` from the contact's entry or the step before, then\nsends ``text`` (while the messaging window is open), or on WhatsApp the approved template.",
+        "properties": {
+          "delay_from": {
+            "default": "previous",
+            "enum": [
+              "entry",
+              "previous"
+            ],
+            "title": "Delay From",
+            "type": "string"
+          },
+          "delay_seconds": {
+            "maximum": 2592000.0,
+            "minimum": 0.0,
+            "title": "Delay Seconds",
+            "type": "integer"
+          },
+          "respect_hours": {
+            "default": false,
+            "title": "Respect Hours",
+            "type": "boolean"
+          },
+          "template_language": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Language"
+          },
+          "template_name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Name"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/VariableSpec"
+            },
+            "maxItems": 10,
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "delay_seconds"
+        ],
+        "title": "StepIn",
+        "type": "object"
+      },
+      "StepOut": {
+        "properties": {
+          "delay_from": {
+            "enum": [
+              "entry",
+              "previous"
+            ],
+            "title": "Delay From",
+            "type": "string"
+          },
+          "delay_seconds": {
+            "title": "Delay Seconds",
+            "type": "integer"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "respect_hours": {
+            "title": "Respect Hours",
+            "type": "boolean"
+          },
+          "template_body": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Body"
+          },
+          "template_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Category"
+          },
+          "template_language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Language"
+          },
+          "template_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Name"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "variables": {
+            "items": {
+              "$ref": "#/components/schemas/VariableOut"
+            },
+            "title": "Variables",
+            "type": "array"
+          }
+        },
+        "required": [
+          "position",
+          "delay_seconds",
+          "delay_from",
+          "respect_hours"
+        ],
+        "title": "StepOut",
+        "type": "object"
+      },
       "StepVerification": {
         "description": "R2 (TR-AGT-06): what the verifier read back after a write.",
         "properties": {
@@ -18597,6 +20665,88 @@
           "external_ids"
         ],
         "title": "StepVerification",
+        "type": "object"
+      },
+      "StopOut": {
+        "properties": {
+          "on_reply": {
+            "title": "On Reply",
+            "type": "boolean"
+          },
+          "stages": {
+            "items": {
+              "enum": [
+                "new",
+                "qualified",
+                "follow_up",
+                "won",
+                "lost"
+              ],
+              "type": "string"
+            },
+            "title": "Stages",
+            "type": "array"
+          },
+          "tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Tag Ids",
+            "type": "array"
+          },
+          "tag_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tag Names",
+            "type": "array"
+          }
+        },
+        "required": [
+          "on_reply",
+          "tag_ids",
+          "tag_names",
+          "stages"
+        ],
+        "title": "StopOut",
+        "type": "object"
+      },
+      "StopRules": {
+        "additionalProperties": false,
+        "description": "When to stop: the contact writing (on by default), a tag from the list being added, or\ntheir lead stage becoming one from the list.",
+        "properties": {
+          "on_reply": {
+            "default": true,
+            "title": "On Reply",
+            "type": "boolean"
+          },
+          "stages": {
+            "items": {
+              "enum": [
+                "new",
+                "qualified",
+                "follow_up",
+                "won",
+                "lost"
+              ],
+              "type": "string"
+            },
+            "maxItems": 5,
+            "title": "Stages",
+            "type": "array"
+          },
+          "tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Tag Ids",
+            "type": "array"
+          }
+        },
+        "title": "StopRules",
         "type": "object"
       },
       "Story": {
@@ -19188,7 +21338,9 @@
               "consent",
               "tag",
               "lead_stage",
-              "broadcast"
+              "broadcast",
+              "assignment",
+              "sequence"
             ],
             "title": "Kind",
             "type": "string"
@@ -19543,6 +21695,141 @@
           "source"
         ],
         "title": "VariableSpec",
+        "type": "object"
+      },
+      "VariantIn": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "options": {
+            "additionalProperties": {
+              "maxLength": 80,
+              "type": "string"
+            },
+            "maxProperties": 3,
+            "propertyNames": {
+              "maxLength": 80
+            },
+            "title": "Options",
+            "type": "object"
+          },
+          "price": {
+            "maxLength": 24,
+            "title": "Price",
+            "type": "string"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "maxLength": 80,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "maximum": 10000000.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "title": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "price"
+        ],
+        "title": "VariantIn",
+        "type": "object"
+      },
+      "VariantOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "options": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "object"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "price": {
+            "title": "Price",
+            "type": "string"
+          },
+          "price_minor": {
+            "title": "Price Minor",
+            "type": "integer"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "stock": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stock"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "options",
+          "price_minor",
+          "price",
+          "position"
+        ],
+        "title": "VariantOut",
         "type": "object"
       },
       "VisualPeriod": {
@@ -21467,7 +23754,8 @@
                     "message",
                     "webhook_delivery",
                     "account",
-                    "broadcast"
+                    "broadcast",
+                    "sequence"
                   ],
                   "type": "string"
                 },
@@ -23543,6 +25831,124 @@
         "summary": "Revoke Api Key",
         "tags": [
           "integrations"
+        ]
+      }
+    },
+    "/v1/w/{wid}/assignment": {
+      "get": {
+        "description": "The members who can be assigned (with their availability and open conversations) and\nwhether round-robin is on.",
+        "operationId": "get_assignment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Assignment",
+        "tags": [
+          "assignment"
+        ]
+      }
+    },
+    "/v1/w/{wid}/assignment/settings": {
+      "put": {
+        "description": "Turn round-robin on or off: new conversations nobody has go to the next available member.",
+        "operationId": "update_assignment_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentSettingsPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentOverview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Assignment Settings",
+        "tags": [
+          "assignment"
         ]
       }
     },
@@ -28733,6 +31139,70 @@
         ]
       }
     },
+    "/v1/w/{wid}/contacts/{contact_id}/sequences": {
+      "get": {
+        "description": "The sequences a contact is in or has been in, with what happened at each step.",
+        "operationId": "list_contact_sequences",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactSequenceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Contact Sequences",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
     "/v1/w/{wid}/contacts/{contact_id}/tags": {
       "post": {
         "operationId": "tag_contact",
@@ -28927,6 +31397,8 @@
                 "leads",
                 "closing_soon",
                 "ai_handled",
+                "mine",
+                "unassigned",
                 "archived"
               ],
               "title": "View",
@@ -28970,6 +31442,23 @@
                 }
               ],
               "title": "Account Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "assignee_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignee Id"
             }
           },
           {
@@ -29242,6 +31731,80 @@
         "summary": "Update Conversation",
         "tags": [
           "inbox"
+        ]
+      }
+    },
+    "/v1/w/{wid}/conversations/{conversation_id}/assignee": {
+      "put": {
+        "description": "Give the conversation to a member, or to nobody (``user_id`` null). The member is told, and\nthe change is in the thread, the contact's timeline and the audit log.",
+        "operationId": "assign_conversation",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssigneeUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Assign Conversation",
+        "tags": [
+          "assignment"
         ]
       }
     },
@@ -31190,6 +33753,297 @@
         ]
       }
     },
+    "/v1/w/{wid}/integrations/shopify": {
+      "delete": {
+        "description": "Revoke Shopify's access and remove the connection and, unless ``keep_products``, the\nproducts it made (they would no longer be kept in step).",
+        "operationId": "disconnect_shopify",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "keep_products",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Keep Products",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Disconnect Shopify",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "get": {
+        "description": "The store connection, its last sync, and whether Shopify is set up on this server.",
+        "operationId": "get_shopify",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopifyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Shopify Status",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/shopify/complete": {
+      "post": {
+        "description": "Finish a connect with the nonce the OAuth callback redirected with. Only the member who\nstarted it, in the workspace they started it in, can finish it; the nonce works once and for 10\nminutes. 404 when it expired or was used, 403 when someone else started it, 502 when Shopify\nfails. The first sync starts at once.",
+        "operationId": "complete_shopify_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShopifyConnectComplete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopifyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Complete Shopify Connect",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/shopify/connect": {
+      "post": {
+        "description": "Shopify's install address for the store. 402 without the catalogue on the plan, 503 when\nthe Shopify app isn't set up on this server, 409 for a store another workspace holds.",
+        "operationId": "start_shopify_connect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShopifyConnectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopifyConnectStart"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Start Shopify Connect",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/shopify/sync": {
+      "post": {
+        "description": "Copy the store's products again now. While one sync runs this changes nothing.",
+        "operationId": "sync_shopify",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShopifyStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Sync Shopify",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
     "/v1/w/{wid}/invitations": {
       "get": {
         "description": "Pending invitations, with the ones past their expiry marked expired.",
@@ -32850,6 +35704,78 @@
         ]
       }
     },
+    "/v1/w/{wid}/members/{user_id}/availability": {
+      "put": {
+        "description": "Whether round-robin may hand this member new conversations. Your own, or any member's if\nyou are an owner or admin (403 otherwise).",
+        "operationId": "set_member_availability",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvailabilityPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Set Member Availability",
+        "tags": [
+          "assignment"
+        ]
+      }
+    },
     "/v1/w/{wid}/message-analyses/{analysis_id}": {
       "patch": {
         "description": "FR-AI-04: change a message's intent or sentiment. The answer shows the corrected values\nwith ``corrected: true``; the conversation's chips follow a correction of its latest\nanalysis (conversation.updated).",
@@ -33900,6 +36826,514 @@
         "summary": "Refresh Post Summary",
         "tags": [
           "posts"
+        ]
+      }
+    },
+    "/v1/w/{wid}/products": {
+      "get": {
+        "description": "Newest first, with the plan's limits. ``q`` matches names, SKUs and variant words.",
+        "operationId": "list_products",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Q"
+            }
+          },
+          {
+            "in": "query",
+            "name": "active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 8,
+                  "pattern": "^(manual|csv|shopify)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Products",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "post": {
+        "description": "Name, price (or variants that each have one), stock, picture and link. 402\n``entitlement_required`` without the catalogue on the plan, 402 ``quota_exceeded`` over its\nproducts, 422 on the fields, 404 for a picture that isn't this workspace's.",
+        "operationId": "create_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Product",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/products/import": {
+      "post": {
+        "description": "Save the file's valid lines (the same reading as the preview); lines with problems are\nskipped and counted.",
+        "operationId": "import_products",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CsvImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Import Products",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/products/import/preview": {
+      "post": {
+        "description": "Read the file and say, line by line, what would be created, updated or left out and why.\nSaves nothing. 402 over the plan's rows, 422 for a file with no header row.",
+        "operationId": "preview_product_import",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CsvImport"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Preview Product Import",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/products/{product_id}": {
+      "delete": {
+        "operationId": "delete_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Product",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "get": {
+        "operationId": "get_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Product",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "patch": {
+        "description": "Only the fields sent change; ``variants`` replaces the list (a variant is kept by its id).",
+        "operationId": "update_product",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "product_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Product Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Product",
+        "tags": [
+          "catalogue"
         ]
       }
     },
@@ -35341,6 +38775,687 @@
         "summary": "Unschedule Post",
         "tags": [
           "publishing"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences": {
+      "get": {
+        "description": "Newest first, each with its enrolment counts, and the plan's limits.",
+        "operationId": "list_sequences",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SequenceList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Sequences",
+        "tags": [
+          "sequences"
+        ]
+      },
+      "post": {
+        "description": "A draft. The steps are checked against the account (a template must be approved on the\nnumber) and the plan's step limit.",
+        "operationId": "create_sequence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SequenceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sequence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Sequence",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences/preview": {
+      "post": {
+        "description": "The steps as a sample contact would meet them: when each is due after entry and what it\nwould send. Nothing is saved or sent.",
+        "operationId": "preview_sequence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SequenceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SequencePreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Preview Sequence",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences/{sequence_id}": {
+      "delete": {
+        "description": "With its enrolments and history. Not while it is active (409).",
+        "operationId": "delete_sequence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Delete Sequence",
+        "tags": [
+          "sequences"
+        ]
+      },
+      "get": {
+        "operationId": "get_sequence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sequence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Sequence",
+        "tags": [
+          "sequences"
+        ]
+      },
+      "put": {
+        "description": "Replace the sequence and its steps. Only a draft or paused sequence (409 otherwise).",
+        "operationId": "update_sequence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SequenceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sequence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Update Sequence",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences/{sequence_id}/activate": {
+      "post": {
+        "description": "Start taking people in (and carry on those already in it). 402 past the plan's limit.",
+        "operationId": "activate_sequence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sequence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Activate Sequence",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences/{sequence_id}/enrolments": {
+      "get": {
+        "description": "The people in the sequence, newest first: where each is, when the next step is due, and why\na stopped one stopped.",
+        "operationId": "list_sequence_enrolments",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "completed",
+                    "stopped"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrolmentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Sequence Enrolments",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences/{sequence_id}/enrolments/{enrolment_id}/stop": {
+      "post": {
+        "description": "Take one person out of the sequence.",
+        "operationId": "stop_sequence_enrolment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "enrolment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Enrolment Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Enrolment"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Stop Sequence Enrolment",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences/{sequence_id}/pause": {
+      "post": {
+        "description": "Stop taking people in and sending steps. Those already in it keep their place.",
+        "operationId": "pause_sequence",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Sequence"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Pause Sequence",
+        "tags": [
+          "sequences"
         ]
       }
     },

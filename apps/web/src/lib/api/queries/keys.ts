@@ -31,6 +31,9 @@ export type AutomationFilters = {
   sort: AutomationSort;
 };
 
+/** The Products page's list filters (GR-31). Part of its query key. */
+export type ProductFilters = { q: string; active: boolean | null };
+
 export type ActivityFilters = {
   failuresOnly: boolean;
   kind: ActivityKind | null;
@@ -54,6 +57,9 @@ export const keys = {
   webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
   webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
   googleSheets: (wid: string) => ["w", wid, "google-sheets"] as const,
+  products: (wid: string) => ["w", wid, "products"] as const,
+  productList: (wid: string, filters: ProductFilters) => ["w", wid, "products", "list", filters] as const,
+  shopify: (wid: string) => ["w", wid, "shopify"] as const,
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
   /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
   activityLists: (wid: string) => ["w", wid, "activity"] as const,
@@ -96,6 +102,15 @@ export const keys = {
   savedReplies: (wid: string) => ["w", wid, "saved-replies"] as const, // GR-21
   permissions: (wid: string) => ["w", wid, "permissions"] as const, // GR-19
   members: (wid: string) => ["w", wid, "members"] as const,
+  assignment: (wid: string) => ["w", wid, "assignment"] as const, // GR-20
+  // sequences (GR-24): `sequences(wid)` is the prefix of every list, detail and enrolment page
+  sequences: (wid: string) => ["w", wid, "sequences"] as const,
+  sequenceList: (wid: string) => ["w", wid, "sequences", "list"] as const,
+  sequence: (wid: string, id: string) => ["w", wid, "sequences", "one", id] as const,
+  sequencePeople: (wid: string, id: string, status: string | null, page: number) =>
+    ["w", wid, "sequences", "one", id, "people", status, page] as const,
+  sequencePreview: (wid: string, body: unknown) => ["w", wid, "sequences", "preview", body] as const,
+  contactSequences: (wid: string, contactId: string) => ["w", wid, "sequences", "contact", contactId] as const,
   invitations: (wid: string) => ["w", wid, "invitations"] as const,
   auditEvents: (wid: string, filters: AuditFilters) => ["w", wid, "audit-events", filters] as const,
   broadcastAvailability: (wid: string) => ["w", wid, "broadcasts", "availability"] as const, // GR-23

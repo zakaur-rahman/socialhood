@@ -1,5 +1,5 @@
-"""GET /v1/oauth/instagram/callback (F-03), /facebook/callback (GR-29) and /google/callback
-(GR-27): public; the single-use state proves who started it.
+"""GET /v1/oauth/instagram/callback (F-03), /facebook/callback (GR-29), /google/callback
+(GR-27) and /shopify/callback (GR-31): public; the single-use state proves who started it.
 
 It never connects anything itself (X-1, login CSRF): the browser that brings the code back may
 not belong to the member who started the connect. The code is parked under a one-time nonce and
@@ -21,7 +21,10 @@ from socialhood.repositories import workspaces
 from socialhood.security.crypto import cipher_for
 from socialhood.services import connections as service
 from socialhood.services import sheets
+from socialhood.services.catalogue import shopify as shopify_service
 from socialhood.settings import Settings
+from socialhood.shopify.registry import is_fake, webhook_secret
+from socialhood.shopify.signatures import verify_query
 
 router = APIRouter(prefix="/v1/oauth", tags=["oauth"])
 log = get_logger(__name__)
@@ -123,3 +126,41 @@ async def facebook_callback(
     deps = deps_from(request.app.state.http, settings)
     nonce = await service.hold_instagram_code(request.app.state.redis, deps, data, code)
     return RedirectResponse(f"{target}?facebook={nonce}", status_code=303)
+
+
+@router.get(
+    "/shopify/callback",
+    operation_id="shopify_oauth_callback",
+    dependencies=[ratelimit.OAUTH_CALLBACK],
+    include_in_schema=False,
+)
+async def shopify_callback(
+    request: Request,
+    code: Annotated[str | None, Query(max_length=2048)] = None,
+    state: Annotated[str | None, Query(max_length=128)] = None,
+    shop: Annotated[str | None, Query(max_length=200)] = None,
+    error: Annotated[str | None, Query(max_length=128)] = None,
+) -> RedirectResponse:
+    """GR-31: the same hand-off as Google's. Shopify signs the redirect (``hmac``), which is
+    checked first (the built-in store is not signed); the code is parked under a nonce and the
+    signed-in Products page finishes with POST .../integrations/shopify/complete. *Unverified*
+    against a real install."""
+    settings: Settings = request.app.state.settings
+    params = dict(request.query_params)
+    if not is_fake(settings) and not verify_query(params, webhook_secret(settings)):
+        log.warning("shopify_callback_signature_invalid")
+        return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
+    data = await service.pop_state(request.app.state.redis, state)
+    if data is None or data.get("platform") != "shopify" or data.get("shop") != shop:
+        return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
+    async with request.app.state.sessionmaker() as session:
+        active = await workspaces.is_active(session, uuid.UUID(data["workspace_id"]))
+    if not active:
+        return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
+    target = f"{_web(settings)}/w/{data['slug']}/products"
+    if error or not code:
+        reason = "access_denied" if error in (None, "access_denied") else "connect_failed"
+        return RedirectResponse(f"{target}?error={reason}", status_code=303)
+    cipher = cipher_for(tuple(settings.token_encryption_keys))
+    nonce = await shopify_service.hold_code(request.app.state.redis, cipher, data, code)
+    return RedirectResponse(f"{target}?shopify={nonce}", status_code=303)

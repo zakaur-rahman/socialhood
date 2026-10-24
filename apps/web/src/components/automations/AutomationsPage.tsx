@@ -367,6 +367,9 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
               <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
             </Button>
           ) : null}
+          <Button asChild variant="secondary" size="lg">
+            <Link href={`/w/${workspace.slug}/sequences` as Route}>Sequences</Link>
+          </Button>
           <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
             <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
           </Button>

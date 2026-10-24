@@ -1,5 +1,5 @@
 /** Queries and mutations by area; everything workspace-scoped is keyed ["w", wid, …] (TR-FE-03). */
-export { keys, type ActivityFilters, type AuditFilters, type AutomationFilters, type ConversationFilters } from "./keys";
+export { keys, type ActivityFilters, type AuditFilters, type AutomationFilters, type ConversationFilters, type ProductFilters } from "./keys";
 export { unwrap, expectOk } from "./unwrap";
 export * from "./core";
 export * from "./inbox";
@@ -19,6 +19,7 @@ export * from "./entryLinks";
 export * from "./iceBreakers";
 export * from "./savedReplies";
 export * from "./broadcasts";
+export * from "./sequences";
 export * from "./businessHours";
 export * from "./widget";
 export * from "./analytics";
@@ -26,9 +27,11 @@ export * from "./calendar";
 export * from "./agent";
 export * from "./integrations";
 export * from "./googleSheets";
+export * from "./catalogue";
 export * from "./apiKeys";
 export * from "./activity";
 export * from "./contacts";
 export * from "./leads";
 export * from "./reports";
 export * from "./team";
+export * from "./assignment";

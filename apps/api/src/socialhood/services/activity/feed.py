@@ -42,7 +42,9 @@ from socialhood.services.activity import reasons
 from socialhood.services.automations.results import PRIVATE_PREFIX, PUBLIC_PREFIX
 from socialhood.services.sending import platform_name
 
-Kind = Literal["automation_run", "flow_step", "message", "webhook_delivery", "account", "broadcast"]
+Kind = Literal[
+    "automation_run", "flow_step", "message", "webhook_delivery", "account", "broadcast", "sequence"
+]
 
 # What a run that is not a failure did, for its title.
 RUN_VERBS: dict[str, str] = {
@@ -329,6 +331,34 @@ def _broadcast_item(row: Any) -> ActivityItem:
     )
 
 
+SEQUENCE_OUTCOME: dict[str, ActivityOutcome] = {
+    "sent": "ok",
+    "skipped": "skipped",
+    "failed": "failed",
+}
+
+
+def _sequence_item(row: Any) -> ActivityItem:
+    """A sequence step that was sent, skipped (with why) or failed (GR-24)."""
+    who = _who(row.contact_username, row.contact_display_name)
+    step = f"step {row.position + 1}"
+    to = {"skipped": f" for {who}" if who else ""}.get(row.status, _to(who))
+    verb = {"sent": f"sent {step}", "skipped": f"skipped {step}", "failed": f"couldn't send {step}"}
+    return ActivityItem(
+        id=row.id,
+        kind="sequence",
+        outcome=SEQUENCE_OUTCOME.get(row.status, "ok"),
+        occurred_at=row.at,
+        title=f"{row.sequence_name} {verb.get(row.status, step)}{to}",
+        reason=_clip(row.reason) if row.status != "sent" else None,
+        error_code=row.reason_code if row.status != "sent" else None,
+        social_account_id=row.account_id,
+        account_label=account_label(row.account_username, row.account_display_name, row.platform),
+        platform=row.platform,
+        action=ActivityAction(label="Open the sequence", href=f"/sequences/{row.sequence_id}"),
+    )
+
+
 def encode_cursor(at: datetime, row_id: uuid.UUID) -> str:
     raw = json.dumps([at.isoformat(), str(row_id)]).encode()
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
@@ -366,6 +396,7 @@ async def feed(
             "webhook_delivery",
             "account",
             "broadcast",
+            "sequence",
         }
     )
     if automation_id is not None:
@@ -402,6 +433,11 @@ async def feed(
             session, before=before, limit=take, account_id=account_id
         )
         items += [_broadcast_item(r) for r in rows]
+    if "sequence" in wanted:
+        rows = await repo.sequence_steps(
+            session, before=before, limit=take, failures_only=failures_only, account_id=account_id
+        )
+        items += [_sequence_item(r) for r in rows]
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     more = len(items) > limit
     items = items[:limit]

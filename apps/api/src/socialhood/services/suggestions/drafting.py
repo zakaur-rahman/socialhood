@@ -40,10 +40,14 @@ from socialhood.models.ai import AiSettings, KnowledgeChunk, KnowledgeSource, Me
 from socialhood.models.identity import Workspace
 from socialhood.models.inbox import Direction, Message, MessageKind
 from socialhood.observability.logging import get_logger
+from socialhood.services.catalogue import facts as catalogue
 from socialhood.services.inbox_views import preview_text
 from socialhood.services.sending import TEXT_LIMITS, platform_name, text_size
 from socialhood.services.suggestions.knowledge_port import (
+    PRODUCT_SIMILARITY,
+    ProductFact,
     RetrievedChunk,
+    find_products,
     open_gap_labels,
     retrieve_knowledge,
 )
@@ -240,10 +244,14 @@ async def message_intent(session: AsyncSession, message_id: uuid.UUID) -> str | 
 
 
 def render_contents(
-    lines: Sequence[Line], chunks: Sequence[RetrievedChunk], known_gaps: Sequence[str] = ()
+    lines: Sequence[Line],
+    chunks: Sequence[RetrievedChunk],
+    known_gaps: Sequence[str] = (),
+    products: Sequence[ProductFact] = (),
 ) -> str:
-    """The conversation, the KNOWLEDGE block ("[k1] (source title) text") and the KNOWN GAPS
-    labels a missing_topic should reuse (C-034)."""
+    """The conversation, the KNOWLEDGE block ("[k1] (source title) text"), the PRODUCTS block
+    ("[p1] name | price | stock | link", GR-31) and the KNOWN GAPS labels a missing_topic should
+    reuse (C-034)."""
     out = ["CONVERSATION (oldest first; the message to answer is marked TARGET)"]
     for line in lines:
         who = "Customer" if line.speaker == "customer" else "Business"
@@ -254,6 +262,9 @@ def render_contents(
         out.append("(none)")
     for i, chunk in enumerate(chunks, 1):
         out.append(f"[k{i}] ({chunk.source_title}) {chunk.content}")
+    if products:
+        out.append("")
+        out.append(catalogue.block(products))
     if known_gaps:
         out.append("")
         out.append("KNOWN GAPS (labels for questions the business hasn't answered yet)")
@@ -328,6 +339,7 @@ class Draft:
     latency_ms: int
     chunks: list[RetrievedChunk] = field(default_factory=list)
     blocked: Finding | None = None  # the output filter's finding (the reply was withheld)
+    products: list[ProductFact] = field(default_factory=list)  # GR-31: the catalogue's facts
 
 
 async def draft(
@@ -358,18 +370,19 @@ async def draft(
         async with sessionmaker() as session:
             chunks = await retrieve_knowledge(session, request.query)
             known_gaps = await open_gap_labels(session, datetime.now(UTC))
+            offered = await find_products(session, request.query)
         result: AIResult[SuggestionOut] = await get_provider().generate_json(
             task=TASK,
             schema=SuggestionOut,
             system=system,
-            contents=[Turn("user", render_contents(request.lines, chunks, known_gaps))],
+            contents=[Turn("user", render_contents(request.lines, chunks, known_gaps, offered))],
             model=settings.ai_model_reply,
             max_output_tokens=REPLY_MAX_TOKENS,
             temperature=REPLY_TEMPERATURE,
             timeout_s=REPLY_TIMEOUT_S,
         )
         meter.record(result)
-    return await _finish(sessionmaker, request, brand, result, chunks, version)
+    return await _finish(sessionmaker, request, brand, result, chunks, version, offered)
 
 
 async def _finish(
@@ -379,13 +392,21 @@ async def _finish(
     result: AIResult[SuggestionOut],
     chunks: list[RetrievedChunk],
     version: str,
+    offered: Sequence[ProductFact] = (),
 ) -> Draft:
     out = result.value
     by_id = {f"k{i}": chunk for i, chunk in enumerate(chunks, 1)}
-    unknown = [k for k in out.used_source_ids if k not in by_id]
+    product_by_id = catalogue.keyed(offered)
+    unknown = [k for k in out.used_source_ids if k not in by_id and k not in product_by_id]
     if unknown:
         log.warning("suggestion_unknown_source_ids", ids=unknown[:10])
     used = [by_id[k].chunk_id for k in dict.fromkeys(out.used_source_ids) if k in by_id]
+    # A product the model cited is stored by its id with the chunks (GR-31): Auto mode reads it
+    # back to re-check the reply, and treats it as grounded.
+    used_products = [
+        product_by_id[k].id for k in dict.fromkeys(out.used_source_ids) if k in product_by_id
+    ]
+    used += used_products
     reply = (out.reply or "").strip()
     can_answer = out.can_answer and bool(reply)
     missing_info = (out.missing_info or "").strip() or None
@@ -393,7 +414,12 @@ async def _finish(
     blocked: Finding | None = None
     if can_answer:
         reply = trim_reply(reply, request.platform, reserve=request.reserve)
-        allowed = [c.content for c in chunks] + brand.texts() + list(request.quotable)
+        allowed = (
+            [c.content for c in chunks]
+            + brand.texts()
+            + list(request.quotable)
+            + catalogue.texts(offered)
+        )
         found = output_filter.candidates(reply)
         if found:
             async with sessionmaker() as session:
@@ -412,7 +438,10 @@ async def _finish(
         missing_topic=None if can_answer else missing_topic,
         confidence=min(max(float(out.confidence), 0.0), 1.0),
         used_chunk_ids=used,
-        top_similarity=max((c.similarity for c in chunks), default=None),
+        top_similarity=max(
+            [c.similarity for c in chunks] + ([PRODUCT_SIMILARITY] if used_products else []),
+            default=None,
+        ),
         model=result.model,
         prompt_version=version,
         input_tokens=result.input_tokens,
@@ -420,6 +449,7 @@ async def _finish(
         latency_ms=result.latency_ms,
         chunks=chunks,
         blocked=blocked,
+        products=list(offered),
     )
 
 

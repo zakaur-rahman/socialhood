@@ -67,6 +67,22 @@ class SendStep(RequestModel):
     next: StepId | None = None
 
 
+# ---------------------------------------------------------------- product (GR-31)
+
+
+class ProductStep(RequestModel):
+    """Send a product from the catalogue: its name, price, stock (when recorded), picture and
+    link, read when the step runs. With ``variant_id`` that variant; without one, the product's
+    price, or a short list of its variants. ``intro`` is a line of your own above it."""
+
+    type: Literal["product"] = "product"
+    id: StepId
+    product_id: uuid.UUID
+    variant_id: uuid.UUID | None = None
+    intro: Annotated[str, StringConstraints(max_length=300)] = ""
+    next: StepId | None = None
+
+
 # ---------------------------------------------------------------- ask
 
 
@@ -201,8 +217,18 @@ class HandOff(RequestModel):
     kind: Literal["hand_off"] = "hand_off"
 
 
+class Assign(RequestModel):
+    """Give the conversation to a member (GR-20): a chosen ``member``, the next available member
+    in turn (``round_robin``, whatever the workspace's own round-robin setting), or ``nobody``
+    (clears the assignment). The member is told, as for any assignment."""
+
+    kind: Literal["assign"] = "assign"
+    mode: Literal["member", "round_robin", "nobody"] = "round_robin"
+    user_id: uuid.UUID | None = None  # the member, for mode "member"
+
+
 Action = Annotated[
-    AddTag | RemoveTag | SetField | NotifyTeam | HandOff, Field(discriminator="kind")
+    AddTag | RemoveTag | SetField | NotifyTeam | HandOff | Assign, Field(discriminator="kind")
 ]
 
 
@@ -255,6 +281,7 @@ class EndStep(RequestModel):
 
 Step = Annotated[
     SendStep
+    | ProductStep
     | AskStep
     | BranchStep
     | ActionStep
@@ -264,7 +291,9 @@ Step = Annotated[
     | EndStep,
     Field(discriminator="type"),
 ]
-StepType = Literal["send", "ask", "branch", "action", "delay", "randomize", "ai_reply", "end"]
+StepType = Literal[
+    "send", "product", "ask", "branch", "action", "delay", "randomize", "ai_reply", "end"
+]
 
 
 class FlowDefinition(RequestModel):

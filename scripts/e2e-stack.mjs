@@ -264,6 +264,10 @@ async function main() {
     CLERK_INVITATIONS_PROVIDER: "fake",
     GOOGLE_PROVIDER: "fake", // GR-27: sheets live in Redis, shared by the API and the worker
     GOOGLE_REDIRECT_URI: `${apiUrl}/v1/oauth/google/callback`,
+    SHOPIFY_PROVIDER: "fake", // GR-31: a built-in store, its products in Redis (API and worker share it)
+    SHOPIFY_API_KEY: "e2e-shopify-key",
+    SHOPIFY_API_SECRET: randomBytes(24).toString("hex"), // signs the webhooks the suite sends
+    SHOPIFY_REDIRECT_URI: `${apiUrl}/v1/oauth/shopify/callback`,
     E2E_SEED_TOKEN: randomBytes(24).toString("hex"),
     PYTHONUNBUFFERED: "1",
     PYTHONIOENCODING: "utf-8",

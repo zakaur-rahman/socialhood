@@ -44,6 +44,7 @@ from tests.support.billing import set_subscription
 from tests.support.inbox import make_account, make_asset, make_scheduled, make_thread
 from tests.support.instagram import FakeInstagram, connect
 from tests.support.publishing import make_posting_slot, make_scheduled_post
+from tests.support.sequences import make_sequence_rows
 from tests.tenancy.test_isolation import seed_workspace_b
 
 ACCOUNT_TABLES = [table.name for table in account_tables()]
@@ -310,6 +311,13 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         " checked_at) VALUES (:w, :a, 'green', now())",
         w=wid,
         a=account_id,
+    )
+    await make_sequence_rows(  # GR-24: a sequence on the account, the contact in it, a step run
+        engine,
+        workspace_id=wid,
+        account_id=account_id,
+        contact_id=thread.contact_id,
+        message_id=thread.message_ids[0],
     )
     return Seeded(
         conversation_id=thread.conversation_id,

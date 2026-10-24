@@ -46,6 +46,8 @@ type Props = {
   onMarkUnread: () => void;
   /** The one AI mode control (a compact menu); without it the header shows a read-only chip. */
   aiControl?: ReactNode;
+  /** GR-20: who has the conversation, as a menu to change it. */
+  assigneeControl?: ReactNode;
 };
 
 /**
@@ -69,6 +71,7 @@ export function ThreadHeader({
   onArchive,
   onMarkUnread,
   aiControl,
+  assigneeControl,
 }: Props) {
   const name = contactName(conversation.contact, conversation.platform);
   const platform = PLATFORM_LABEL[conversation.platform];
@@ -140,6 +143,7 @@ export function ThreadHeader({
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {assigneeControl}
           {aiControl ?? (
             <Badge tone={paused ? "warning" : "brand"} size="md">
               {paused ? "AI paused" : AI_LABEL[conversation.ai.effective_mode]}

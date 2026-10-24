@@ -8,6 +8,7 @@ from socialhood.models import (
     automations,
     billing,
     broadcasts,
+    catalogue,
     connections,
     contacts,
     identity,
@@ -18,6 +19,7 @@ from socialhood.models import (
     platform,
     publishing,
     replies,
+    sequences,
     team,
     widget,
 )
@@ -30,6 +32,7 @@ __all__ = [
     "automations",
     "billing",
     "broadcasts",
+    "catalogue",
     "connections",
     "contacts",
     "identity",
@@ -40,6 +43,7 @@ __all__ = [
     "platform",
     "publishing",
     "replies",
+    "sequences",
     "team",
     "widget",
 ]

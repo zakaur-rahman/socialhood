@@ -35,6 +35,11 @@ export type ConversationEntry = Schemas["ConversationEntry"];
 export type ConversationPatch = Schemas["ConversationPatch"];
 export type ContactSummary = Schemas["ContactSummary"];
 export type InboxCounts = Schemas["InboxCounts"];
+// Assignment (GR-20)
+export type Assignee = Schemas["Assignee"];
+export type Assignable = Schemas["Assignable"];
+export type AssignmentOverview = Schemas["AssignmentOverview"];
+export type AssignmentSettingsPut = Schemas["AssignmentSettingsPut"];
 export type ReplyWindow = Schemas["ReplyWindow"];
 export type WindowState = ReplyWindow["state"];
 export type Signal = NonNullable<ConversationListItem["signal"]>;
@@ -131,6 +136,23 @@ export type BroadcastRecipient = Schemas["Recipient"];
 export type BroadcastRecipientList = Schemas["RecipientList"];
 export type RecipientStatus = BroadcastRecipient["status"];
 export type VariableSpec = Schemas["VariableSpec"];
+
+// ---- sequences (GR-24)
+
+export type Sequence = Schemas["Sequence"];
+export type SequenceList = Schemas["SequenceList"];
+export type SequenceBody = Schemas["SequenceBody"];
+export type SequenceStep = Schemas["StepOut"];
+export type SequenceStepIn = Schemas["StepIn"];
+export type SequenceEntry = Schemas["EntryOut"];
+export type SequenceStatus = Sequence["status"];
+export type SequenceEntryType = SequenceEntry["type"];
+export type SequencePreview = Schemas["SequencePreview"];
+export type SequenceEnrolment = Schemas["Enrolment"];
+export type SequenceEnrolmentList = Schemas["EnrolmentList"];
+export type EnrolmentStatus = SequenceEnrolment["status"];
+export type ContactSequence = Schemas["ContactSequence"];
+export type ContactSequenceList = Schemas["ContactSequenceList"];
 export type CostEstimate = Schemas["CostEstimate"];
 export type RateCard = Schemas["RateCardOut"];
 // GR-22: business hours and the away message.
@@ -391,6 +413,21 @@ export type GoogleSheetRow = Schemas["SheetRowOut"];
 export type GoogleSheetInfo = Schemas["SheetOut"];
 export type GoogleSheetMappingPut = Schemas["SheetMappingPut"];
 export type GoogleSheetTestResult = Schemas["SheetTestResult"];
+
+// ---- product catalogue (GR-31)
+
+export type Product = Schemas["ProductOut"];
+export type ProductVariant = Schemas["VariantOut"];
+export type ProductList = Schemas["ProductList"];
+export type ProductCreate = Schemas["ProductCreate"];
+export type ProductPatch = Schemas["ProductPatch"];
+export type ProductVariantInput = Schemas["VariantIn"];
+export type ProductSource = Product["source"];
+export type CatalogueLimits = Schemas["CatalogueLimits"];
+export type CsvImportPreview = Schemas["ImportPreview"];
+export type CsvImportRow = Schemas["ImportRowOut"];
+export type CsvImportResult = Schemas["ImportResult"];
+export type ShopifyStatus = Schemas["ShopifyStatus"];
 
 // ---- API keys (GR-25)
 

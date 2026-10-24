@@ -178,6 +178,18 @@ class Settings(BaseSettings):
     google_redirect_uri: str | None = None
     google_provider: Literal["google", "fake"] = "google"
 
+    # GR-31: the Shopify app (owner track O-10: a Partner account and an app listing). All unset by
+    # default: connecting Shopify then answers 503 "not configured" and the webhook route refuses.
+    # The API key and secret are the app's client credentials (the secret also signs the webhooks
+    # and the install redirect). fake: a built-in store for development and the end-to-end stack
+    # (shopify/fake.py); refused in production.
+    shopify_api_key: str | None = None
+    shopify_api_secret: SecretStr | None = None
+    shopify_redirect_uri: str | None = None
+    shopify_scopes: str = "read_products"
+    shopify_api_version: str = "2025-07"
+    shopify_provider: Literal["shopify", "fake"] = "shopify"
+
     sandbox_platform_enabled: bool = False
     # GR-04: outbound webhooks may go to private and local addresses (development and e2e, which
     # receive them locally); refused in production (security/ssrf.py).
@@ -248,6 +260,7 @@ class Settings(BaseSettings):
             "push_provider",
             "clerk_invitations_provider",
             "google_provider",
+            "shopify_provider",
         ):
             if getattr(self, name) == "fake":
                 unsafe.append(f"{name.upper()} must not be fake in production")

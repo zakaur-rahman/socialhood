@@ -719,7 +719,7 @@ async def change_tags(
                     )
                     changed.append((contact_id, tag_id, True))
     await session.flush()
-    if changed and await events.wanted(session, "contact.tagged"):
+    if changed:  # GR-24: sequences hear about tags whether or not an endpoint wants the event
         people = {
             c.id: c
             for c in (

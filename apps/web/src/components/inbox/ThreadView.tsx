@@ -7,6 +7,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { AiModeMenu } from "@/components/ai/AiModeControl";
+import { AssigneeMenu } from "@/components/assignment/AssigneeMenu";
 import { AnalysisChips } from "@/components/ai/AnalysisChips";
 import { DecisionInfo } from "@/components/ai/DecisionInfo";
 import { useSuggestionSlot } from "@/components/ai/SuggestionSlot";
@@ -239,6 +240,7 @@ function Thread({
         onArchive={(archived) => ui?.archive(conversationId, archived)}
         onMarkUnread={() => ui?.markUnread(conversationId)}
         aiControl={<AiModeMenu conversation={conversation} now={now} />}
+        assigneeControl={<AssigneeMenu conversation={conversation} />}
       />
       <MessageLog
         messages={all}

@@ -30,6 +30,7 @@ from socialhood.models.inbox import (
     MessageStatus,
 )
 from socialhood.models.integrations import DeliveryStatus, WebhookDelivery, WebhookEndpoint
+from socialhood.models.sequences import RunStatus, Sequence, SequenceStepRun
 
 Before = tuple[datetime, uuid.UUID]
 
@@ -213,6 +214,46 @@ async def stopped_broadcasts(
         query = query.where(Broadcast.social_account_id == account_id)
     query = _after(query, Broadcast.updated_at, Broadcast.id, before)
     query = _newest(query, Broadcast.updated_at, Broadcast.id, limit)
+    return list((await session.execute(query)).all())
+
+
+async def sequence_steps(
+    session: AsyncSession,
+    *,
+    before: Before | None,
+    limit: int,
+    failures_only: bool,
+    account_id: uuid.UUID | None,
+) -> list[Any]:
+    """What sequences did at each step: sent, skipped with the reason, failed (GR-24). With
+    ``failures_only`` only the skipped and failed ones."""
+    query = (
+        select(
+            SequenceStepRun.id,
+            SequenceStepRun.ran_at.label("at"),
+            SequenceStepRun.status,
+            SequenceStepRun.position,
+            SequenceStepRun.reason_code,
+            SequenceStepRun.reason,
+            SequenceStepRun.sequence_id,
+            Sequence.name.label("sequence_name"),
+            SequenceStepRun.social_account_id.label("account_id"),
+            SocialAccount.platform,
+            SocialAccount.username.label("account_username"),
+            SocialAccount.display_name.label("account_display_name"),
+            Contact.username.label("contact_username"),
+            Contact.display_name.label("contact_display_name"),
+        )
+        .join(Sequence, Sequence.id == SequenceStepRun.sequence_id)
+        .join(SocialAccount, SocialAccount.id == SequenceStepRun.social_account_id)
+        .join(Contact, Contact.id == SequenceStepRun.contact_id)
+    )
+    if failures_only:
+        query = query.where(SequenceStepRun.status != RunStatus.SENT)
+    if account_id is not None:
+        query = query.where(SequenceStepRun.social_account_id == account_id)
+    query = _after(query, SequenceStepRun.ran_at, SequenceStepRun.id, before)
+    query = _newest(query, SequenceStepRun.ran_at, SequenceStepRun.id, limit)
     return list((await session.execute(query)).all())
 
 

@@ -211,9 +211,22 @@ class Conversation(IdMixin, TimestampMixin, TenantScoped, Base):
     entry_ad_id: Mapped[str | None] = mapped_column(Text)
     entry_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_referral: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # GR-20: the member who has the conversation (null: nobody), and since when. Set to null when
+    # the member is removed (services/team.remove_member) or their account is deleted.
+    assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     __table_args__ = (
         UniqueConstraint("social_account_id", "contact_id"),
+        Index(
+            "ix_conversations_assignee",
+            "workspace_id",
+            "assignee_user_id",
+            sql("last_message_at DESC"),
+            postgresql_where=sql("assignee_user_id IS NOT NULL"),
+        ),
         Index(
             "ix_conversations_list",
             "workspace_id",

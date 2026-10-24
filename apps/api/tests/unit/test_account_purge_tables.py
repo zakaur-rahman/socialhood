@@ -45,6 +45,10 @@ EXPECTED = {
     "posting_slots",
     "reply_suggestions",
     "scheduled_messages",
+    "sequence_enrolments",  # GR-24
+    "sequence_step_runs",
+    "sequence_steps",
+    "sequences",
     "scheduled_post_targets",
     "story_mentions",
     "tracked_links",

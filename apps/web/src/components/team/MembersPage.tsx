@@ -5,6 +5,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { SettingsFrame, SettingsPageHeader } from "@/components/settings/SettingsPageHeader";
+import { AssignmentCard } from "./AssignmentCard";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import {
@@ -180,6 +181,8 @@ export function MembersPage() {
             })}
           </ul>
         </Card>
+
+        <AssignmentCard />
 
         <section aria-labelledby="pending-invitations" className="space-y-3">
           <h2 id="pending-invitations" className="text-base font-semibold">

@@ -52,6 +52,13 @@ export function matchesFilters(item: ConversationListItem, filters: Conversation
     case "ai_handled":
       match = open ? null : false;
       break;
+    case "mine":
+      // Only the server knows who is asking, so a row is kept where it is until the next fetch.
+      match = open ? null : false;
+      break;
+    case "unassigned":
+      match = open && !item.assignee;
+      break;
     case "all":
     default:
       match = open;

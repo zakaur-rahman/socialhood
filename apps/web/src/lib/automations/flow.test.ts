@@ -616,3 +616,42 @@ describe("a Send step that sends a saved reply (GR-21)", () => {
     expect(stepTitle(send("w"))).toBe("Message");
   });
 });
+
+describe("the product step (GR-31)", () => {
+  const product = (id: string, extra: Partial<Extract<EditorStep, { kind: "product" }>> = {}): EditorStep => ({
+    kind: "product",
+    id,
+    product_id: "p1",
+    variant_id: "v1",
+    intro: "Here you go",
+    ...extra,
+  });
+
+  it("is made empty, compiles to the API's product step and reads back", () => {
+    const made = makeStep("product", new Set());
+    expect(made).toMatchObject({ kind: "product", product_id: null, variant_id: null, intro: "" });
+
+    const tree: EditorStep[] = [send("a", "Hi"), product("p"), send("b", "Anything else?")];
+    const { definition } = compile(tree);
+    expect(definition.steps[1]).toEqual({
+      type: "product",
+      id: "p",
+      product_id: "p1",
+      variant_id: "v1",
+      intro: "Here you go",
+      next: "b",
+    });
+    expect(decompile(definition)).toEqual(tree);
+  });
+
+  it("goes to the step below, and ends the flow when last", () => {
+    const { definition } = compile([product("p", { variant_id: null })]);
+    expect(definition.steps[0]).toMatchObject({ type: "product", variant_id: null, next: null });
+  });
+
+  it("needs a product, and is titled for what it does", () => {
+    expect(stepProblems(product("p", { product_id: null }), CTX)).toEqual({ product_id: "Choose a product." });
+    expect(stepProblems(product("p"), CTX)).toEqual({});
+    expect(stepTitle(product("p"))).toBe("Send a product");
+  });
+});

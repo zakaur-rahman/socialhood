@@ -12,8 +12,8 @@ Rules (C-106):
 - A workspace always keeps an owner: the owner of record (``workspaces.owner_user_id``) can't be
   removed or demoted, only replaced by a transfer, which makes the old owner an admin.
 - Removing a member deletes only the membership. The person's past actions (messages sent,
-  automations made, audit rows) keep their user id and name. The inbox has no per-member
-  assignment yet, so there is nothing to clear; when it arrives, clear it here.
+  automations made, audit rows) keep their user id and name. Their conversations go back to
+  nobody (GR-20; services/assignment.clear_for_member).
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ from socialhood.schemas.team import (
     OwnershipTransfer,
     Seats,
 )
-from socialhood.services import audit
+from socialhood.services import assignment, audit
 from socialhood.settings import Settings
 
 log = get_logger(__name__)
@@ -402,6 +402,7 @@ async def remove_member(session: AsyncSession, ctx: WorkspaceContext, user_id: u
     ):
         raise ApiError("conflict", OWNER_NEEDED)
     await session.execute(scoped_delete(WorkspaceMember, id=member.id))
+    unassigned = await assignment.clear_for_member(session, user_id)
     removed = await session.get(User, user_id)
     if removed is not None and removed.last_workspace_id == ctx.workspace_id:
         # So their next sign-in lands on a workspace they still belong to.
@@ -414,6 +415,7 @@ async def remove_member(session: AsyncSession, ctx: WorkspaceContext, user_id: u
         user_id,
         name=removed.name if removed else None,
         role=member.role,
+        unassigned=unassigned,
     )
     await session.flush()
 

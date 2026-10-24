@@ -102,6 +102,14 @@ function renderEditor(props: Parameters<typeof Harness>[0]) {
           ],
         }),
       "DELETE /v1/w/:wid/automations/:id/flow": () => json({}),
+      "GET /v1/w/:wid/assignment": () =>
+        json({
+          round_robin: false,
+          members: [
+            { user_id: "u1", name: "Priya Nair", avatar_url: null, role: "owner", available: true, open_conversations: 0, is_you: true },
+            { user_id: "u2", name: "Sam Rao", avatar_url: null, role: "agent", available: true, open_conversations: 0, is_you: false },
+          ],
+        }),
     },
   });
 }
@@ -130,7 +138,7 @@ describe("the flow editor (GR-13)", () => {
     renderEditor({ initial: [send("a", "Hello")] });
     await user.click(screen.getByRole("button", { name: "Add step" }));
     const kinds = screen.getAllByRole("menuitem").map((item) => item.querySelector("span")?.textContent);
-    expect(kinds).toEqual(["Send", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
+    expect(kinds).toEqual(["Send", "Product", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
 
     await user.click(screen.getByRole("menuitem", { name: /^Delay/ }));
     expect(titles()).toEqual(["1Message", "2Wait 10 minutes"]);
@@ -375,6 +383,27 @@ describe("the flow editor (GR-13)", () => {
     expect(consent).toHaveValue("Want offers?");
     await user.type(screen.getByRole("textbox", { name: "Then confirm with (optional)" }), "Thanks!");
     expect(screen.getByRole("textbox", { name: "Then confirm with (optional)" })).toHaveValue("Thanks!");
+  });
+
+  it("an Assign action hands the conversation to the next available member, a chosen member or nobody (GR-20)", async () => {
+    const user = userEvent.setup();
+    let tree: EditorStep[] = [];
+    renderEditor({
+      initial: [send("a", "Hi"), { kind: "action", id: "x", action: { kind: "assign", mode: "round_robin" } }],
+      onTree: (next) => (tree = next),
+    });
+    expect(titles()).toEqual(["1Message", "2Assign to the next available member"]);
+    expect(screen.getByText(/The next available member in turn/)).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Assign to"), "member");
+    const member = await screen.findByLabelText("Member");
+    await user.selectOptions(member, "u2");
+    expect(tree[1]).toMatchObject({ kind: "action", action: { kind: "assign", mode: "member", user_id: "u2" } });
+    expect(titles()[1]).toBe("2Assign to a team member");
+
+    await user.selectOptions(screen.getByLabelText("Assign to"), "nobody");
+    expect(tree[1]).toMatchObject({ action: { kind: "assign", mode: "nobody" } });
+    expect(screen.queryByLabelText("Member")).not.toBeInTheDocument();
   });
 
   it("asks before going back to one message", async () => {

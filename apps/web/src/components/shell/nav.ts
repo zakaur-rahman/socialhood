@@ -7,6 +7,7 @@ import {
   Inbox,
   MessageSquare,
   Settings,
+  ShoppingBag,
   Users,
   Zap,
   type LucideIcon,
@@ -52,12 +53,14 @@ const SCHEDULE: NavItem = { key: "schedule", label: "Schedule", icon: CalendarDa
 const AUTOMATIONS: NavItem = { key: "automations", label: "Automations", icon: Zap, segment: "automations", roles: ADMINS, href: (s) => route(`/w/${s}/automations`) };
 const KNOWLEDGE: NavItem = { key: "knowledge", label: "Knowledge", icon: BookOpen, segment: "knowledge", roles: ADMINS, href: (s) => route(`/w/${s}/knowledge`) };
 
+const PRODUCTS: NavItem = { key: "products", label: "Products", icon: ShoppingBag, segment: "products", roles: ADMINS, href: (s) => route(`/w/${s}/products`) };
+
 // §3.1's sections, grouped: Home alone; Engage (Inbox, Comments, Contacts, Leads); Grow, for owners and admins.
 // Agents see Home, Inbox, Comments, Contacts and Leads.
 export const NAV_GROUPS: readonly NavGroup[] = [
   { key: "home", label: null, roles: EVERYONE, items: [HOME] },
   { key: "engage", label: "Engage", roles: EVERYONE, items: [INBOX, COMMENTS, CONTACTS, LEADS] },
-  { key: "grow", label: "Grow", roles: ADMINS, items: [SCHEDULE, AUTOMATIONS, KNOWLEDGE] },
+  { key: "grow", label: "Grow", roles: ADMINS, items: [SCHEDULE, AUTOMATIONS, KNOWLEDGE, PRODUCTS] },
 ];
 
 export const PRIMARY_NAV: readonly NavItem[] = NAV_GROUPS.flatMap((group) => group.items);

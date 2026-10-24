@@ -14,6 +14,7 @@ inbound message (never for backfilled history), in the caller's transaction. Not
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime, timedelta
 
 from sqlalchemy import func, select
@@ -41,9 +42,11 @@ EVIDENCE_TEXT = 100
 
 async def on_inbound(
     session: AsyncSession, acct: SocialAccount, contact: Contact, msg: Message, now: datetime
-) -> None:
+) -> list[uuid.UUID]:
+    """Returns the broadcasts this message newly counts as a reply to (GR-24 starts sequences on
+    them)."""
     if acct.platform != ConsentChannel.WHATSAPP or msg.kind != "text":
-        return
+        return []
     at = msg.occurred_at or now
     stopping = stop.is_stop(msg.text)
     since = at - REPLY_WINDOW
@@ -60,15 +63,18 @@ async def on_inbound(
             .with_for_update()
         )
     ).all()
+    replied: list[uuid.UUID] = []
     for recipient in recent:
         if recipient.replied_at is None:
             recipient.replied_at = at
+            replied.append(recipient.broadcast_id)
         if stopping and recipient.stopped_at is None:
             recipient.stopped_at = at
     if stopping:
         await _withdraw(session, contact, msg, at)
     if recent or stopping:
         await session.flush()
+    return replied
 
 
 async def _withdraw(session: AsyncSession, contact: Contact, msg: Message, at: datetime) -> None:

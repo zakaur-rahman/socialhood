@@ -3991,3 +3991,418 @@ migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was
   needs `pages_manage_posts` added to the Facebook Login permissions for production (O-10). Roles:
   the route uses the same `Admin` dependency as posting times; there is no member-role integration
   test for it (none exists for posting times either).
+
+## C-116 · Product catalogue (GR-31, feature/gr-31-catalogue)
+
+Products with variants, added by hand, by CSV or from Shopify; the AI answers price, stock and link
+questions from them; a flow step sends a product. **PD-8 is decided: commerce is on Pro and Max, not
+Free.** *Every Shopify behaviour below was written from Shopify's documentation and none has run
+against a real store: it waits for the owner's Partner account and app listing (O-10). Each one is
+marked unverified and listed in `docs/verification.md` item 37.*
+
+### Decisions
+- **PD-8 in code.** `ENTITLEMENTS["commerce"]` in `billing/plans.py` (Free off, Pro and Max on; one
+  line to change). Adding, changing, deleting, importing and syncing products, connecting Shopify and
+  saving a flow with a product step are refused with 402 `entitlement_required` ("The product
+  catalogue is part of Pro."). **Reading is never refused**: the list, a product and the Shopify
+  status answer on Free, and products that exist still answer customers and run in flows after a
+  downgrade (a flow's *saving* needs Pro; a saved one keeps working). Webhooks from Shopify are
+  ignored on a plan without the catalogue.
+- **Caps** (proposed, `billing/plans.py`; one line each): `catalogue_products` Pro 1,000, Max 20,000
+  (counted live; a Shopify sync skips what doesn't fit and says so), `catalogue_import_rows` Pro 500,
+  Max 5,000 lines in one CSV file (402 `quota_exceeded` before anything is read further). A file is
+  at most 900,000 characters (the API's 1 MB body limit), sent as JSON text.
+- **Money.** An ISO 4217 code per product and integer minor units (`services/catalogue/money.py`:
+  0, 2 and 3 decimal currencies). The default currency is the connected Shopify store's, else the
+  newest product's, else INR (the workspace has no currency of its own). Requests carry prices as
+  text ("799.50", checked against the currency); responses give `price_minor` and the same text. The
+  web formats with Intl.
+- **Stock.** `null` means "not recorded", which is not 0. The AI is told "stock not recorded" and
+  must say it doesn't know; a flow's message mentions stock only when it is recorded; the list says
+  "Not tracked". Shopify variants whose inventory isn't tracked are stored as not recorded.
+- **Where it lives in the app.** A **Products** page under **Grow**, after Knowledge (owners and
+  admins, like Knowledge; a direct link from an agent explains). The Shopify card is on that page
+  (`/w/{slug}/products?shopify=<nonce>` is the OAuth return), not in Integrations: it is about
+  products. Without the plan the page says so and Add, Import and Connect open the upgrade dialog.
+- **Permissions (GR-19).** Writes use `CanManageKnowledge` (products are what the AI may say);
+  the Shopify connect, complete, sync and disconnect use `CanManageIntegrations`. Reads use `Admin`.
+  No new permission.
+- **No prompt version bump.** The catalogue is a `PRODUCTS` section next to `KNOWLEDGE` in the
+  contents, with its own rules in its header (quote exactly as listed, only for what is listed,
+  "stock not recorded" means you don't know), so `suggest.v3` and the tests that pin it are
+  unchanged. The existing rule "never state a price, stock level... or link not in KNOWLEDGE" covers
+  it.
+
+### Data (migration 0040, after 0039, expand-only)
+- `products` (name, description, SKU, currency, `price_minor`, `stock`, `url`, `image_asset_id`,
+  `image_url`, `active`, `source` manual/csv/shopify, `external_id`, `search_text`), `product_variants`
+  (title, `options` JSON up to 3, SKU, `price_minor`, `stock`, `position`, `external_id`) and
+  `shopify_connections` (one per workspace, one store per workspace: unique `shop_domain`; the token
+  encrypted like every platform token). Unique: SKU per workspace on products and on variants, Shopify
+  id per workspace, variant title per product. `webhook_events.provider` accepts `shopify`.
+- A product with variants is priced per variant; its own price and stock are only the form's default.
+  A product may have up to 100 variants (the rest of a Shopify product's are counted and dropped).
+- *No table references `social_accounts` or contacts, so the account purge, `seed_account` and the
+  purge tables test need no change.* The tenancy walk got a seeded product, variant and store, three
+  `B_TABLES` and the example bodies of the new routes.
+
+### Routes (all `/v1/w/{wid}`, `api/v1/catalogue.py`)
+`GET/POST /products`, `GET/PATCH/DELETE /products/{product_id}`, `POST /products/import/preview`,
+`POST /products/import`, `GET /integrations/shopify`, `POST .../connect`, `POST .../complete`,
+`POST .../sync` (202), `DELETE /integrations/shopify?keep_products=`. Public: `GET
+/v1/oauth/shopify/callback` and `POST /webhooks/shopify`. A request naming another workspace's
+picture or product is a 404 *before* any plan check, so the isolation walk (a Free workspace) proves
+isolation. A `PATCH` replaces the variant list: a variant with its id is kept (so a flow step that
+names it keeps working), one without is new, one left out is removed.
+
+### CSV import
+- **Header row** (any order and case; `name` and `price` required, other columns ignored and
+  listed): `name, description, sku, variant, option1_name, option1_value, option2_name,
+  option2_value, option3_name, option3_value, price, currency, stock, url, image_url, active`. The
+  starter file is downloadable from the dialog; the dialog and `csv_import.py` document the rules.
+- One line is a product or one variant of it; lines with the same name (ignoring case) are one
+  product. **Upsert** by SKU (a product's or a variant's), else by product name and variant name; a
+  match is updated, the rest created. A blank cell never clears a value; variants the file doesn't
+  mention stay. A variant's SKU on a line with no variant is an error, a currency different from the
+  saved product's is an error ("change it in the product first"), a SKU twice in a file is an error.
+- **Preview before saving** (`POST /products/import/preview`): every line is New, Update or Left
+  out with the reason (first 500 shown, the counts cover all). The import re-reads the same text, so
+  the preview can't go stale. Lines with problems are skipped; the rest are saved. Semicolon and tab
+  files and a byte order mark are read.
+
+### The AI
+- `services/catalogue/facts.py`: a question is matched to products by words (no embeddings): lower
+  case, a plural "s" dropped, filler removed (English and the Hinglish customers write: price,
+  kitna, hai...). A product matches when a question word is in its name or is its SKU; the variants
+  whose title, options or SKU hold the most question words are marked "matches the question".
+  Up to 3 products, 20 variants each, active products only. Candidates come from `products.search_text`
+  (a lower-case column kept by the service), ranked in Python (`rank` is pure and unit tested).
+- It feeds the suggest prompt (`drafting.render_contents`), the Knowledge test box and Ask Social
+  Hood's answer_from_knowledge. The model cites `p1`..: the product's id is stored in
+  `reply_suggestions.used_chunk_ids` (the column has no foreign key) and `top_similarity` becomes
+  1.0, so **Auto mode treats a cited product as grounded** (check 11) and re-checks the reply's links
+  against the product's lines (`knowledge_port.product_texts`). A reply may quote a product's link
+  (the output filter's allowed texts include the lines offered); an invented link is still
+  withheld. *The filter checks links, emails and phone numbers, not prices*: a wrong price is
+  prevented by exact lines and the prompt rule, not by a check. *Not built:* a price check in the
+  output filter (it would flag a price the customer typed, or a discount in knowledge).
+- Ask: `search_products` (admin role, read) returns each product's variants with price, stock text
+  and link, marking the variants the words name; it falls back to a plain text search (switched-off
+  products included, labelled) and says when nothing matches. New answer-ref kind `product` (opens
+  Products).
+- E2E worker (`apps/api/scripts/e2e/worker.py`): the fake AI answers from the marked PRODUCTS line,
+  as a faithful model would. The done-when ("price of the blue kurta in M?" gets INR 799.00 and the
+  link, from Suggest or Auto) is `tests/integration/test_catalogue_ai.py` and `gr31-catalogue.spec.ts`.
+
+### Flow step "send product"
+`type: "product"` (`product_id`, optional `variant_id`, `intro` up to 300 characters, `next`). It
+reads the catalogue when it runs and sends one message: the intro, then `Name - Variant`, the price
+(`INR 799.00`), "In stock" or "Out of stock" only when stock is recorded, and the link. With no
+variant chosen it sends the product (its price, or up to six variants with prices). Cut to 900
+bytes for Instagram. The product's uploaded picture goes as the message's attachment.
+- *Deviations from "name, price, image and link as the send step does":* the link is in the text, not
+  a button (the text always carries it, and buttons differ per platform); a picture that is only an
+  address (Shopify, CSV) can't be attached (attachments are media-library files), so the link in the
+  text stands in for it. WhatsApp catalogue messages are GR-33.
+- Fails with a plain reason ("The product was deleted or switched off, so nothing was sent." /
+  "...variant was deleted...") like a deleted saved reply: the step is logged failed and the run ends.
+- Activation checks the product exists, is on, and that the variant belongs to it; saving needs the
+  plan. A product step after a comment's private reply is refused like any message. The editor adds a
+  **Product** step with a product picker (read from the catalogue) and a variant picker.
+
+### Shopify (built like GR-29 Facebook and GR-27 Sheets)
+- **Off by default.** `SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET` (also signs webhooks and the install
+  redirect), `SHOPIFY_REDIRECT_URI`, `SHOPIFY_SCOPES` (default `read_products`), `SHOPIFY_API_VERSION`
+  (default 2025-07); unset, connecting answers 503 "Shopify isn't set up on this server." and the
+  webhook route 503. `SHOPIFY_PROVIDER=fake` is a built-in store (a kurta with colour and size
+  variants, a scarf with untracked stock, a draft jacket) for development and the e2e stack, its
+  products in Redis; refused in production.
+- **Connect.** `POST .../connect {shop}` (only `*.myshopify.com` is ever called; "my-store" works)
+  returns the install address with a single-use state; the public callback checks Shopify's `hmac`
+  over the sorted query (not for the built-in store), parks the code under a one-time nonce bound to
+  the member and workspace (X-1, as Instagram and Google) and redirects to Products with `?shopify=`;
+  `POST .../complete` exchanges it, saves the connection (token encrypted), subscribes the webhooks
+  and starts the first sync. A store belongs to one workspace (409 `account_in_use`).
+- **Sync** (`sync_shopify_products`, bulk lane, recovery RETRY): Admin GraphQL, 50 products a page;
+  each is saved by Shopify id with variants (a single "Default Title" variant is a plain product);
+  a product no longer in the store is removed after a pass that read them all; a SKU another product
+  uses is dropped (Shopify allows duplicates); a picture uploaded here is kept; prices are in the
+  store's currency. A pass beyond the plan's products skips the rest and says so on the card.
+- **Webhooks** (`products/create|update|delete`, `app/uninstalled`, and the mandatory privacy
+  topics `customers/data_request`, `customers/redact`, `shop/redact`): `POST /webhooks/shopify`
+  verifies `X-Shopify-Hmac-Sha256` over the raw bytes, stores the event once (`shopify:{webhook id}`)
+  and a job applies it through the same save the sync uses (`services/webhook_handlers/shopify.py`).
+  `app/uninstalled` marks the store "needs reconnect"; `shop/redact` deletes the store and its
+  products; the customer topics change nothing (no customer data is held).
+- **Disconnect** revokes the token (best effort) and removes the store and, unless asked to keep
+  them, the products it made: a price no longer kept in step must not be quoted.
+- **Unverified (Shopify), until a real store connects:** the install and token endpoints and the
+  `hmac` rule (sorted decoded parameters, hex); that `read_products` is enough for stock (it may need
+  `read_inventory`); the GraphQL fields (`products`, `variants`, `inventoryQuantity`,
+  `inventoryItem.tracked`, `onlineStoreUrl`, `selectedOptions`, `shop.primaryDomain`) and API
+  version; `webhookSubscriptionCreate` with these topics and how it reports an existing subscription
+  (read here as an error containing "already"); the webhook payload shape (`variants[].option1..3`,
+  `options[].name`, `inventory_quantity`, `inventory_management`) and headers; that a listed app
+  must answer the three privacy topics this way; `DELETE /admin/api_permissions/current.json` to
+  revoke; the storefront link built from `handle` (`onlineStoreUrl` when GraphQL gives it; a custom
+  domain comes from `shop.primaryDomain`); whether `app/uninstalled` arrives for a custom app.
+
+### Tests
+Unit: `test_catalogue_money_csv.py` (money, header, per-line problems, grouping, currency),
+`test_catalogue_facts.py` (words, ranking, the prompt lines, the output filter with a product link,
+the drafting prompt, the flow message), `test_shopify.py` (store address, both signatures, both
+product shapes, the mapping, the built-in store, the flow step's activation); registry test updated.
+Integration: `test_catalogue.py` (plan gate, caps, money, variants by id, SKUs, search, roles, a
+foreign picture, audit), `test_catalogue_import.py` (preview, import, upsert by SKU and by name and
+variant, blank cells, caps), `test_catalogue_ai.py` (Suggest, Auto, an invented link, a switched off
+product, the test box, `search_products`), `test_flow_product.py` (running, saving, activating),
+`test_shopify.py` (connect, nonce, signatures, sync, caps, webhooks, disconnect); tenancy updated.
+Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCard`, the sidebar. E2E:
+`gr31-catalogue.spec.ts`. *The integration, tenancy, vitest and e2e tests were written but not run
+(the coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `ProductOut`, `VariantOut`, `VariantIn`, `ProductList`,
+  `ProductCreate`, `ProductPatch`, `CatalogueLimits`, `ImportPreview`, `ImportRowOut`,
+  `ImportResult`, `CsvImport`, `ShopifyStatus`, `ShopifyConnectRequest`, `ShopifyConnectStart`,
+  `ShopifyConnectComplete`, `ProductStep` in the flow step union, `product` in `AnswerRefKind`, and
+  the operations `list_products`, `create_product`, `get_product`, `update_product`,
+  `delete_product`, `preview_product_import`, `import_products`, `get_shopify`,
+  `start_shopify_connect`, `complete_shopify_connect`, `sync_shopify`, `disconnect_shopify`. The web
+  types are aliases waiting for it (`lib/api/types.ts`).
+- `alembic check` for 0040 (after 0039). The e2e stack gained `SHOPIFY_*` env and
+  `/__e2e/shopify/sign`.
+- Owner track O-10: the Shopify Partner account, the app listing, the callback and webhook
+  addresses, and the three privacy webhooks' wording. `.env.example` has the new settings.
+- *Fixed in the combined batch:* the Shopify callback checked the install redirect's signature
+  whenever `SHOPIFY_PROVIDER` was not `fake`, even with the built-in store in use; it now asks
+  `registry.is_fake` (the setting or a test override). The built-in store kept a disconnected
+  store's token revoked for ever, so reconnecting failed with "Shopify didn't respond"; installing
+  again now clears the revocation, as a real reinstall gives a fresh token. A one-letter store
+  ("x") passed as a valid address; handles need two characters, and the connect body no longer has
+  a `min_length` so the friendly message (not Pydantic's) is what the person sees. A CSV line whose
+  product name differs from the stored one only by case no longer renames the product. The CSV
+  starter file in the web app had rows with 11 fields under a 16-column header.
+
+## C-117 · Conversation assignment (GR-20, feature/gr-20-24-assign-sequences)
+
+- **Model.** `conversations.assignee_user_id` (null: nobody; `ON DELETE SET NULL`) and `assigned_at`,
+  `workspace_members.available_for_assignment` (default true, per workspace membership),
+  `workspaces.assignment_round_robin` (default false) and `workspaces.assignment_cursor_user_id` (the
+  member who had the last turn; not a foreign key, so a removed member just restarts the turn). Migration
+  `0041` (after `0040`), expand-only, one partial index for the "Assigned to me" view. No new tables.
+- **Who may assign whom (a decision; the plan left it open).** Owners and admins assign any conversation
+  to any member or to nobody. Agents *take* a conversation nobody has (assign it to themselves) and
+  *release or hand on* one they have (to anyone, or to nobody); they cannot give a free conversation to a
+  colleague or take one from a colleague (403 "Agents can take a conversation nobody has, or hand on one
+  they have."). The rule is `assignment.may_assign` and is unit tested; the web menu disables what the API
+  would refuse. The route stays behind GR-19's `assign` permission (`CanAssign`, agent tier). An assignee
+  who is not a member of this workspace is 404 `not_found` (checked before the role rule). Assignment
+  works on every plan (on Free the one member is the only choice).
+- **Every change does the same things, in one transaction** (`services/assignment.apply`): the
+  conversation row is locked, then `assignee_user_id` and `assigned_at` are set; a system note goes in the
+  thread ("Sam assigned this to Priya", "Priya took this conversation", "Assigned to Priya
+  (round-robin)", "An automation assigned this to Priya"); an audit row `conversation.assigned` or
+  `conversation.unassigned` (target the conversation, detail `via` member / round_robin / automation, the
+  names and ids of the new and old assignee); `conversation.updated` for open inboxes; the
+  `conversation.assigned` webhook (now emitted); and a notification to the new assignee. *The note and
+  the audit row are the conversation's activity:* the contact timeline (GR-17) reads the audit rows for
+  the contact's conversations ("Assigned to Priya", "By Sam. From Kim.", "Round-robin", "By an
+  automation"; new timeline kind `assignment`). *Deviation: audit rows from a round-robin turn or a flow
+  step have no member, so `audit.record_system(label, ...)` is new; the actor name is "Round-robin" or
+  "Automation: name".*
+- **Round-robin** (workspace setting, off by default; `PUT /assignment/settings`, admins). With it on, a
+  customer message in a conversation nobody has hands it to the next *available* member (ingest hook
+  `ingest._assign`, after the broadcast hook, with the conversation already locked). Members are taken in
+  the order they joined; a member whose availability is off is skipped; nobody available leaves the
+  conversation unassigned. The turn is read and moved under a `FOR UPDATE` lock on the workspace row, so
+  concurrent inbound messages take different turns (tested with six at once); the lock lasts until the
+  ingest transaction commits. *Accepted:* a workspace being deleted at the same moment could meet it in a
+  lock cycle; the job retries. Manual assignment ignores availability. The flow action can ask for a
+  round-robin turn whatever the setting says.
+- **Availability.** `PUT /members/{user_id}/availability` (`CanSelf`): your own, or anyone's if you can
+  manage settings (403 otherwise; a stranger is 404). Audited when it changes. The switch is in the
+  assignee menu (your own, for agents) and on the Members page (everyone's, for owners and admins).
+- **Notification** (`conversation_assigned`, new type; `notify_user` is new in `services/notifications`).
+  In app always; push when the member's **"needs you" switch is on** (*decided: no new switch, so the
+  notification settings page and its tests stay as they are*; `PUSH_EVENT_OF_TYPE` maps it to `NEEDS_YOU`).
+  No notification when someone assigns a conversation to themselves. Title "Priya Shah was assigned to
+  you", body says who or what handed it over, link `/inbox/{id}`. Never emailed.
+- **Views and filters.** `GET /conversations` gains the views `mine` (open, assigned to the caller) and
+  `unassigned`, and `assignee_id`. `GET /conversations/counts` gains `mine`. Each list item carries
+  `assignee` ({user_id, name, avatar_url}; the name is the member's, else the part of their email before
+  the @) and `assigned_at`. The live event (`conversation.updated`) carries the same, with the name
+  looked up, so an open inbox updates without a refetch. A caller that cannot look the name up still
+  sends the id, and the web falls back to the members it holds.
+- **Removing a member** clears their conversations (`assignment.clear_for_member`, counted in the
+  `member.removed` audit detail); the note in C-106 is closed.
+- **Routes** (`/v1/w/{wid}`): `PUT /conversations/{id}/assignee` (body `{user_id | null}`, returns the
+  conversation), `GET /assignment` (any member: who can be assigned, with availability and open
+  conversations, and the setting), `PUT /assignment/settings`, `PUT /members/{user_id}/availability`.
+- **Flow action `assign`** (`schemas.flows.Assign`): `mode` member (a chosen `user_id`), round_robin or
+  nobody. Activation and the draft check say "Choose who gets the conversation." or "That person isn't on
+  your team any more." (`Context.member_ids`). At run time a member who has left, or nobody available,
+  skips the step with `skipped: member_missing` or `nobody_available` and the flow goes on. A flow's
+  assign step overrides what round-robin did for the same message (two notes, two audit rows, and the
+  last assignee is notified). Its fields are in the flow editor's Action step.
+- **Web.** Inbox: an "Assigned to me" chip (with the count) before Leads; the row shows the assignee's
+  initials or picture (the name for screen readers); the thread header has an assignee menu (Nobody, each
+  member with open conversations and "away", and the caller's own availability); the details panel has
+  the same as a field. Settings, Members: a "Hand out new conversations" card (the round-robin switch and
+  everyone's availability). The contact timeline shows assignments. *Limit:* the cache keeps a row in the
+  "Assigned to me" list until the next fetch when another member takes it away (only the server knows who
+  is asking); assigning from the app refetches the lists.
+- **Not built.** Per-account or per-skill routing; assignment by workload or by business hours;
+  reassigning on a member's availability change; a daily cap per member; an "unassigned" count chip.
+- **Tests.** Unit: `test_assignment_rules.py` (who may assign, the turn, the note, the flow action's
+  checks, the push mapping). Integration: `test_assignment.py` (the rules, the note, audit and timeline,
+  the notification and its channels, the views and counts, round-robin on and off, an away member,
+  nobody available, availability rights, six concurrent messages, removing a member, live events, the
+  flow action in three modes, activation refusing a stranger); `test_conversations.py` counts updated.
+  Tenancy: the two new routes with ids in `test_isolation.py`. Vitest: `AssigneeMenu`, `AssignmentCard`,
+  `ConversationRow`, `lib/inbox/assignee`, `lib/inbox/cache`, the flow editor's assign action. E2E:
+  `gr20-assignment.spec.ts`.
+- **For the coordinator:** regenerate the client (`Assignee`, `Assignable`, `AssignmentOverview`,
+  `AssigneeUpdate`, `AssignmentSettingsPut`, `AvailabilityPut`, `Assign` in the flow action union, the
+  `mine` and `unassigned` views, `assignee_id`, `mine` on `InboxCounts`, `assignment` on `TimelineKind`
+  and the four operations); the web types are aliases waiting for it. `ContactTimeline`'s icon map and
+  `ListHeader`'s chips will not typecheck until then. Migration `0041` follows `0040` (GR-31).
+- *Fixed in the combined batch:* picking the next member took `FOR UPDATE` on the workspace row
+  while ingest already held `KEY SHARE` on it (the new conversation's foreign key), so two messages
+  arriving together deadlocked; it now takes `FOR NO KEY UPDATE` (`with_for_update(key_share=True)`),
+  which waits for the other turn instead. The inbox details panel's "Assigned to" group is a
+  `CardInset` like the others.
+
+## C-118 · Sequences (GR-24, feature/gr-20-24-assign-sequences)
+
+- **What it is.** A sequence is timed messages after an entry event, on one connected account
+  (Instagram, WhatsApp or Messenger). It starts when a lead is captured (GR-14), a tag is added (GR-02)
+  or someone replies to a WhatsApp broadcast (GR-23), and stops on a reply, a tag or a lead stage.
+  Migration `0042` (after `0041`), expand-only: `sequences`, `sequence_steps`, `sequence_enrolments`,
+  `sequence_step_runs` (all reach the account by a foreign key, so the account purge deletes them; the
+  purge test's list, the account-deletion seed and the tenancy tables and seeds include them).
+- **Model.**
+  - `sequences`: account, name, status (draft, active, paused), entry type with `entry_tag_id`,
+    `entry_broadcast_id` (null: any broadcast) and `entry_capture_kind` (email, phone or field; null:
+    any), the stop rules (`stop_on_reply`, `stop_tag_ids`, `stop_stages`), `allow_reentry`.
+  - `sequence_steps`: position, `delay_seconds` (0 to 30 days), `delay_from` (`entry` or `previous`;
+    the first step always counts from entry), a text and/or an approved WhatsApp template (name,
+    language, category and body copied when saved, variables mapped as in a broadcast), and
+    `respect_hours`.
+  - `sequence_enrolments`: contact, `current_step`, `next_due_at`, status (active, completed,
+    stopped), why it started (`entry_event`) and why it stopped (`stop_reason`, `stop_detail`).
+  - `sequence_step_runs`: sent, skipped (with a code and a plain sentence) or failed, one row per
+    (enrolment, step position) by a unique constraint.
+- **Entry events reuse the existing points; nothing new fires them.** `webhooks.events.lead_captured`
+  (a capture step saved an email, phone or answer), `webhooks.events.contacts_tagged` (every way a tag
+  is added: the API, a flow step, the agent) and `webhooks.events.lead_stage_changed` (GR-18) each call
+  `services/sequences/entry`, whether or not a webhook endpoint wants the event. A customer message
+  calls it from `ingest` (after GR-23's broadcast hook, which now returns the broadcasts the message is
+  a reply to). Only an *active* sequence on the contact's own account takes people in.
+- **At most one active enrolment per contact and sequence** (a partial unique index, so two events at
+  once cannot both enter them). *Added by me: `allow_reentry`, off by default.* With it off a contact who
+  finished or was stopped is not taken in again (a "captured" sequence would otherwise start again at
+  every answer); with it on they can enter again once the first is over. The brief said "at most once
+  while active"; this is the same rule plus a setting for the case after it.
+- **Stop rules.** A reply (any customer message, on by default per sequence), one of the sequence's stop
+  tags being added, the lead stage becoming one of its stop stages (stages exist: GR-18, so all three are
+  supported). The reply stops the contact's sequences *before* a reply to a broadcast starts the ones
+  that begin on it, so a message never stops the sequence it started. A stopped enrolment keeps its
+  history and says why ("They replied", "A stop tag was added: Bought", "Their lead stage changed: Won",
+  "Taken out by your team"). A person can be taken out by hand
+  (`POST /sequences/{id}/enrolments/{eid}/stop`).
+- **Sweeper** (`jobs/tasks/sequences.run_sequences`, every minute, bulk lane, one waiting job; recovery
+  class RETRY). It finds up to 100 due enrolments across workspaces (active sequences on accounts that are
+  `active`; an account that needs reconnecting is not picked up at all until it works) and runs each in
+  its own transaction under `FOR UPDATE SKIP LOCKED`. A step is sent **once** however the job is retried
+  or two workers meet: the row lock, the message's client id (`uuid5(enrolment, step)`, so
+  `queue_outbound` returns the message already queued) and the unique step run all agree. The send goes
+  through the normal queue (`sending.queue_outbound`, so the token bucket, retries, statuses, the inbox
+  and realtime are the ones every message uses). *Deviation: no new message source.* A sequence's
+  messages are source `automation` with no run, so the inbox shows them as automation messages and the
+  `messages.source` check is unchanged; Activity tells sequence sends apart through its own kind.
+- **What a step sends** (`services/sequences/rules`, pure, unit tested).
+  - Instagram and Messenger: the text while the 24-hour window is open; otherwise skipped, "The messaging
+    window had closed" (Human Agent never applies to an automated message). A template step is refused
+    at save ("Only WhatsApp has templates.").
+  - WhatsApp inside the window: the text, no consent needed. Outside it: the approved template, only to a
+    contact whose latest WhatsApp marketing record is a grant (GR-23's `dispatch.consent_skip`, now
+    public); no record is skipped as "no consent", a withdrawal as "opted out". A text-only step outside
+    the window is skipped ("has no template"). A template-only step always needs consent.
+  - *WhatsApp templates are marketing messages, so they also wait on `BROADCASTS_ENABLED` (O-11, the
+    legal check of marketing consent); off, such a step is skipped as "marketing_off".* Text inside the
+    window is not affected. Remove the check when O-11 is done.
+  - A skipped or failed step is a finished step: the sequence moves on to the next.
+  - The text is filled like a saved reply (`{first_name}`, fields), with the workspace's automation
+    disclosure line; a template variable with no value and no fallback skips the step ("missing_value").
+- **Limits and holds.**
+  - *Business hours (GR-22):* a step with `respect_hours` waits for the account's next opening (its own
+    hours, else the workspace's; no hours means always open). Hours that never open look again a day later.
+  - *The number's daily limit (GR-23):* template sends count with broadcasts' against the number's tier
+    limit in the rolling 24 hours (`broadcasts/dispatch` now counts sequence template sends too). A
+    sequence step that finds no room waits until a place frees; none is dropped.
+  - *Quality:* while the number's rating is Low a template step waits 30 minutes at a time.
+  - An account error at send time (needs reconnecting, can't send) holds the step 15 minutes.
+  - Template sends do not use the broadcast recipient quota (that is for broadcasts).
+- **Plans (a decision, pending owner confirmation; one line each in `billing/plans.py`).** Two
+  entitlements: `active_sequences` (Free 1, Pro 10, Max 50) and `sequence_steps` (Free 3, Pro 10, Max
+  20; whatever the plan, a sequence has at most 20 steps). Past a limit the write is 402 `quota_exceeded`
+  naming the key, and the page shows the limit. Saving a draft never counts; turning one on does. *Pending
+  the owner:* whether Free gets sequences at all, and the numbers. A template step is still a message
+  Meta bills the business for, and needs marketing consent, so the plan limits how many sequences there
+  are, not how many messages go.
+- **Editing.** Steps and rules change only while the sequence is a draft or paused (409 "Pause the
+  sequence to change it."); a person already in it keeps their place, and a step removed from under them
+  ends it (completed) if no step is left. A sequence with people in it cannot change account. Delete is
+  for a draft or paused sequence and takes its enrolments and history. A deleted start tag is shown as a
+  problem on the sequence and stops it being turned on.
+- **Routes** (`/v1/w/{wid}`, owners and admins through the automations permission, except the contact's
+  list): `GET|POST /sequences`, `POST /sequences/preview`, `GET|PUT|DELETE /sequences/{id}`,
+  `POST /sequences/{id}/activate|pause`, `GET /sequences/{id}/enrolments?status=&limit=&offset=`,
+  `POST /sequences/{id}/enrolments/{eid}/stop`, and `GET /contacts/{id}/sequences` (any member). The
+  preview is the steps as a sample contact ("Priya") would meet them in a straight run: when each is due
+  after entry, what it would send and a plain note (a template needs consent, a text-only WhatsApp step
+  after 24 hours sends nothing); nothing is saved. A tag, broadcast or account of another workspace is 404.
+- **Activity and the contact (GR-05, GR-17).** Activity has a `sequence` kind: each step sent (worked),
+  skipped (with the reason) or failed, with a link to the sequence; "failures only" (the default) shows
+  the skips and failures. The contact's timeline has the same ("Sent step 1 of Three days", "Skipped step
+  2 of ..." with the reason), and the contact drawer has a Sequences section: each sequence they are or
+  were in, the step they are on and when it is due, what happened at each step, and why a stopped one
+  stopped.
+- **Ask.** `list_sequences` (owners and admins; read-only): each sequence's status, what starts it, steps,
+  people in it, finished, stopped, what stops it, and any problem. Never a message.
+- **Web: decided to put Sequences on its own page, `/w/{slug}/sequences`, linked from Automations** (a
+  button beside Broadcasts) rather than a tab: it has its own list, editor and people, like Broadcasts.
+  The list shows the plan's limit; the editor is a form (name and account, what starts it, the steps with
+  their wait, message, WhatsApp template and variables and a business-hours switch, what stops it) with a
+  live preview from the server beside it; a sequence that is on is read-only until paused; the detail
+  page has the people (filter by status, why each stopped, take one out). Agents get a plain notice.
+- **Not built.** Stopping on a tag *removed*, or entering on a stage; branching inside a sequence (use a
+  flow); a send time of day other than business hours; a step that sends an image or buttons; sequence
+  analytics (opens, replies per step); entering existing contacts in bulk; a webhook event for sequences.
+  A sequence's WhatsApp text inside the window ignores consent, as every WhatsApp reply does.
+- **Tests.** Unit: `test_sequence_rules.py` (what a step sends and why not, the due time, business hours,
+  the bodies, the client id, the plan's numbers), the purge list and the tool registry. Integration:
+  `test_sequences.py` (the done-when: a three-day sequence sends day 1 and day 3 to an opted-in sandbox
+  contact and stops when they reply; completion; consent and opt-out skipped with their reasons; text
+  inside the window and skipped outside it; the marketing setting off; Instagram open and closed
+  windows; once at a time and re-entry; paused; stop tag, stage and reply off; a reply to a broadcast
+  starting it; a capture starting it; business hours holding a step; the shared daily limit; low quality;
+  a step sent once; a reconnecting account; validation, editing rules, a deleted tag, the plan's limits,
+  the preview, taking a person out, Activity, the timeline and the contact's list, roles).
+  Tenancy: the new routes, bodies and tables in `test_isolation.py`. Vitest: `lib/sequences/format`,
+  `SequencesPage`, `SequenceForm`, `SequencePeople`, `ContactSequences`. E2E: `gr24-sequences.spec.ts`
+  (a tag starts a sequence, two steps are sent by the worker, a reply stops it, the page says why; the
+  editor saves a draft).
+- **Unsure / for the coordinator:** regenerate the client (the `Sequence*`, `StepIn`, `StepOut`,
+  `EntryRule`, `EntryOut`, `StopRules`, `StopOut`, `Enrolment*`, `ContactSequence*`, `PreviewStep`
+  schemas, 11 operations, the `sequence` activity kind and timeline kind); the web types are aliases
+  waiting for it, and `ContactTimeline`'s icon map will not typecheck until then. Migration `0042` follows
+  `0041` (GR-20), which follows `0040` (GR-31). The e2e spec relies on the worker's minutely sweep
+  running in the e2e stack (the broadcast spec relies on the same). A sequence created while
+  `BROADCASTS_ENABLED` is off still saves; only its template steps are skipped.
+- *Fixed in the combined batch:* a tag added through the contacts API never entered a sequence unless
+  a webhook endpoint wanted `contact.tagged`, because `contacts.py` gated the call to
+  `events.contacts_tagged` (which also feeds sequences) on `wanted`; the gate is gone and
+  `contacts_tagged` still decides whether to emit. The web sequence form and pages read `problems`
+  as possibly absent (the generated type marks defaulted response fields optional).

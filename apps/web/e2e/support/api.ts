@@ -468,6 +468,25 @@ export class Api {
     return response.status;
   }
 
+  /**
+   * GR-31: a Shopify webhook as Shopify sends it. The API signs it with the app's secret (which
+   * never leaves its environment: /__e2e/shopify/sign), and the suite posts it to /webhooks/shopify.
+   */
+  async shopifyWebhook(topic: string, shop: string, body: Record<string, unknown>): Promise<number> {
+    const signed = await this.seed<{ raw: string; headers: Record<string, string> }>("POST", "/shopify/sign", {
+      topic,
+      shop,
+      body,
+      webhook_id: `e2e-${randomUUID()}`,
+    });
+    const response = await fetch(`${this.stack.E2E_API_URL}/webhooks/shopify`, {
+      method: "POST",
+      headers: signed.headers,
+      body: signed.raw,
+    });
+    return response.status;
+  }
+
   get proProduct(): string {
     return this.stack.E2E_DODO_PRO_PRODUCT;
   }

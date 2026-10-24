@@ -16,8 +16,8 @@ written when no endpoint wants the event. Backfilled history emits nothing.
 
 A ``lead.captured`` also queues a row for the workspace's Google Sheet (services/sheets.py).
 
-``conversation.assigned`` (GR-20) and ``broadcast.finished`` (GR-23) are in the catalogue so
-endpoints can subscribe now; they're emitted once those features exist.
+``broadcast.finished`` (GR-23) is in the catalogue so endpoints can subscribe now; it's emitted once
+that feature sends it.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ EVENTS: tuple[EventType, ...] = (
     EventType("lead.captured", 1, "An automation's question saved an email, phone or field."),
     EventType("lead.stage_changed", 1, "A contact's lead stage changed."),
     EventType("message.received", 1, "A customer sent a direct message."),
-    EventType("conversation.assigned", 1, "A conversation was assigned.", emitted=False),
+    EventType("conversation.assigned", 1, "A conversation was assigned or unassigned."),
     EventType("automation.run.completed", 1, "An automation run finished."),
     EventType("broadcast.finished", 1, "A broadcast finished sending.", emitted=False),
 )
@@ -223,7 +223,13 @@ class TagChange:
 
 
 async def contacts_tagged(session: AsyncSession, changes: list[TagChange]) -> None:
-    if not changes or not await wanted(session, "contact.tagged"):
+    if not changes:
+        return
+    # GR-24: a tag added enters and stops sequences, whether or not an endpoint wants the event.
+    from socialhood.services.sequences import entry
+
+    await entry.on_tagged(session, changes)
+    if not await wanted(session, "contact.tagged"):
         return
     platforms = dict(
         (
@@ -260,6 +266,9 @@ async def lead_captured(
     run_id: uuid.UUID,
 ) -> None:
     platform = await _platform(session, contact)
+    from socialhood.services.sequences import entry  # GR-24: a capture can start a sequence
+
+    await entry.on_captured(session, contact, kind=kind)
     await emit(
         session,
         "lead.captured",
@@ -288,6 +297,11 @@ async def lead_stage_changed(
     reason: str | None,
 ) -> None:
     """A lead's stage moved (GR-18), by a member, an automation or a rule."""
+    from socialhood.models.contacts import LeadStage
+    from socialhood.services import leads
+    from socialhood.services.sequences import entry  # GR-24: a stage can stop a sequence
+
+    await entry.on_stage(session, contact, to_stage, leads.STAGE_LABEL[LeadStage(to_stage)])
     if not await wanted(session, "lead.stage_changed"):
         return
     await emit(
@@ -322,6 +336,34 @@ async def message_received(
                 "text": msg.text,
                 "occurred_at": msg.occurred_at.isoformat(),
             },
+        },
+    )
+
+
+async def conversation_assigned(
+    session: AsyncSession,
+    contact: Contact,
+    *,
+    conversation_id: uuid.UUID,
+    platform: str,
+    assignee: dict[str, Any] | None,
+    previous: dict[str, Any] | None,
+    assigned_by: dict[str, Any],
+) -> None:
+    """A conversation was assigned, handed to someone else or unassigned (GR-20). ``assignee`` and
+    ``previous`` are ``{user_id, name}`` or null; ``assigned_by`` is ``{kind, user_id}`` where kind
+    is member, round_robin or automation."""
+    if not await wanted(session, "conversation.assigned"):
+        return
+    await emit(
+        session,
+        "conversation.assigned",
+        {
+            "contact": contact_ref(contact, platform),
+            "conversation_id": str(conversation_id),
+            "assignee": assignee,
+            "previous_assignee": previous,
+            "assigned_by": assigned_by,
         },
     )
 

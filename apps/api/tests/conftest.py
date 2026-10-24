@@ -28,6 +28,7 @@ pytest_plugins = [
     "tests.support.billing",
     "tests.support.notify",
     "tests.support.google",
+    "tests.support.shopify",
     "tests.support.api",
     "tests.support.instagram",
     "tests.support.facebook",

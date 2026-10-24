@@ -440,7 +440,8 @@ export function BroadcastComposer() {
   );
 }
 
-function VariableRow({
+/** One template variable's source (also used by the sequence editor's template steps, GR-24). */
+export function VariableRow({
   number,
   variable,
   customFields,

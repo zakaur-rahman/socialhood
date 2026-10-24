@@ -69,6 +69,7 @@ RECOVERY: dict[str, Recovery] = {
     "check_automation_failures": R,  # notifications dedupe on automation and six-hour bucket
     "dispatch_broadcast": R,  # recipients' state is the progress; a message has a stable client id
     "run_broadcasts": R,  # starts what is due and queues batches; a re-run changes nothing
+    "run_sequences": R,  # GR-24: a step runs once (row lock, client id, unique step run)
     "mark_cold_leads": R,  # a flagged lead is no longer selected; one transaction
     "check_closing_windows": R,  # one transaction: reminded conversations are no longer due
     "dispatch_comment_analysis": R,
@@ -104,6 +105,7 @@ RECOVERY: dict[str, Recovery] = {
     "suggest_reply": R,  # skips a message that already has this generation
     "decide_auto_reply": R,  # one transaction; a stable client id per suggestion, pending only
     "deliver_webhook": R,  # GR-04: at least once; receivers dedupe on webhook-id
+    "sync_shopify_products": R,  # GR-31: a full pass that upserts by Shopify id; re-run is harmless
     "append_sheet_row": R,  # GR-27: re-checks the row's status; doubles only if killed mid-append
     "run_automation": R,  # a run recorded for the event means handled; retried on any error
     "drain_private_replies": R,  # each reply is committed ``sending`` before the call
