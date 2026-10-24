@@ -25,7 +25,8 @@ from socialhood.schemas.posts import PostSummary
 
 # A post's age after publishing: a snapshot window (FR-ANL-01), or "lifetime" (its latest known
 # values, whatever its age).
-AgeName = Literal["1h", "6h", "24h", "72h", "7d", "30d", "lifetime"]
+# "23h" is the last reading of an Instagram Story, which is gone after 24 h.
+AgeName = Literal["1h", "6h", "23h", "24h", "72h", "7d", "30d", "lifetime"]
 MetricName = Literal["reach", "views", "likes", "comments", "shares", "saves", "engagement_rate"]
 # previous: the account's N posts published before this one; range: its posts in since..until.
 BaselineKind = Literal["previous", "range"]
@@ -47,6 +48,19 @@ class PostMetrics(ResponseModel):
     engagement_rate: float | None = None
 
 
+class ExtraMetrics(ResponseModel):
+    """Figures only some posts have, kept apart from ``PostMetrics`` (which every post shares and
+    compares): an Instagram Story's replies and its taps and swipes through the Story, and the
+    clicks on a Facebook Page post. None: not given for this post or not read yet."""
+
+    replies: int | None = None
+    taps_forward: int | None = None
+    taps_back: int | None = None
+    swipes_forward: int | None = None
+    exits: int | None = None  # taps out of the Story
+    clicks: int | None = None
+
+
 class PostPerformance(ResponseModel):
     """GET …/analytics/posts/{post_id}/performance: one post's figures at an age.
 
@@ -64,6 +78,9 @@ class PostPerformance(ResponseModel):
     insights_granted: bool  # False: the account has not granted insights (likes, comments only)
     insights_final: bool  # the 72 h run has re-read the lagging insight values
     metrics: PostMetrics
+    # Story replies and taps, Page post clicks (GR-39, GR-30 follow-ups); None for a post that has
+    # none of these figures.
+    extra_metrics: ExtraMetrics | None = None
 
 
 class MetricComparison(ResponseModel):

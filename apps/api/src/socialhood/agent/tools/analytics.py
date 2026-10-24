@@ -93,7 +93,7 @@ from socialhood.schemas.analytics import (
 from socialhood.schemas.posts import SentimentName
 from socialhood.services.analytics import account_metrics, queries, sentiment
 from socialhood.services.analytics.account_metrics import SeriesPoint
-from socialhood.services.analytics.ages import PROVISIONAL_WINDOWS, format_of
+from socialhood.services.analytics.ages import PROVISIONAL_WINDOWS, WINDOWS, format_of
 from socialhood.services.analytics.common import capabilities_from, load_post
 from socialhood.services.analytics.queries import BaselineQuery
 
@@ -103,6 +103,7 @@ LIFETIME_WORDS = frozenset(
 AGE_WORDS: dict[str, str] = {
     "1h": "1 hour",
     "6h": "6 hours",
+    "23h": "23 hours",
     "24h": "24 hours",
     "72h": "72 hours",
     "7d": "7 days",
@@ -147,7 +148,7 @@ def snapshot_age(phrase: str | None) -> tuple[AgeName | None, str | None]:
         ) from error
     goal = resolved.age.total_seconds()
     window = min(
-        WINDOW_AGES,
+        WINDOWS,  # a Story's 23 h reading is not a window to ask the agent for
         key=lambda w: (abs(math.log(WINDOW_AGES[w].total_seconds() / goal)), WINDOW_AGES[w]),
     )
     if WINDOW_AGES[window] == resolved.age:
@@ -201,7 +202,7 @@ def _age_caveats(ctx: ToolContext, perf: PostPerformance, rule: str | None) -> l
             )
     if perf.captured_at is None:
         caveats.append(f"No figures have been recorded for this post at {AGE_WORDS[perf.age]} yet.")
-    elif perf.age in {w.value for w in LIVE_COUNT_WINDOWS}:
+    elif perf.age in {w.value for w in LIVE_COUNT_WINDOWS} and perf.media_type != "story":
         caveats.append(
             "At 1 and 6 hours only likes and comments are recorded; reach and the other insights "
             "start at 24 hours."

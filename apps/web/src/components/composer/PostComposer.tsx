@@ -636,6 +636,7 @@ function Composer({
         now={now}
         onEditAndRetry={onEditAndRetry}
         retrying={put.isPending}
+        wid={wid}
       />
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">

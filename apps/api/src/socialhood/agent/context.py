@@ -30,6 +30,7 @@ from socialhood.db.tenancy import require_workspace
 from socialhood.models.agent import THREAD_CONTEXT_RUNS, AgentRun
 from socialhood.models.connections import AccountStatus, Platform, SocialAccount
 from socialhood.models.identity import Workspace
+from socialhood.platforms.facebook.oauth import INSIGHTS_SCOPE as FACEBOOK_INSIGHTS_SCOPE
 from socialhood.platforms.instagram.oauth import INSIGHTS_SCOPE
 from socialhood.repositories import agent as repo
 from socialhood.schemas.agent import RunHints
@@ -85,6 +86,8 @@ def describe_account(account: SocialAccount) -> str:
         notes.append(note)
     if platform == Platform.INSTAGRAM and INSIGHTS_SCOPE not in (account.scopes or []):
         notes.append("insights not granted (reach, views and saves aren't available)")
+    if platform == Platform.FACEBOOK and FACEBOOK_INSIGHTS_SCOPE not in (account.scopes or []):
+        notes.append("insights not granted (reach, views and clicks aren't available)")
     return f"{described}: {'; '.join(notes)}" if notes else described
 
 

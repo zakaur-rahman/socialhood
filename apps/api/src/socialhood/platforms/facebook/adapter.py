@@ -4,8 +4,9 @@ The account is one Page: ``platform_account_id`` is the Page id (the webhook ``e
 the token is its Page access token, which does not expire. Calls go to ``graph.facebook.com``
 with ``me`` meaning the Page. A Page can message, take attachments, mark chats seen, backfill
 conversations, read, answer, hide and delete comments, send private replies and (GR-30, with the
-``pages_manage_posts`` permission) publish photos, videos and text posts. It cannot read insights
-yet, so those raise ``capability_unavailable``; the best posting times use post counts instead.
+``pages_manage_posts`` permission) publish photos, videos and text posts. With the ``read_insights``
+permission (C-131) it reads a post's views, reach, clicks and shares; account insights are still
+not built. A Page Story has no insights to read.
 
 Every Meta behaviour here is unverified until a real Page confirms it (docs/verification.md):
 see the CONFLICTS entry for GR-29 for the list.
@@ -61,6 +62,7 @@ CAPABILITIES = frozenset(
         Capability.COMMENTS,
         Capability.PRIVATE_REPLY,
         Capability.PUBLISH,
+        Capability.POST_INSIGHTS,
     }
 )
 
@@ -71,7 +73,7 @@ MAX_BUTTONS = 3
 MAX_QUICK_REPLIES = 13
 NO_QUOTA = "Facebook Pages have no publishing limit to read"
 NO_STORIES = "Facebook Page Stories aren't available yet"
-NO_INSIGHTS = "Insights for Facebook Pages aren't available yet"
+NO_INSIGHTS = "Account insights for Facebook Pages aren't available yet"
 
 
 class FacebookAdapter:
@@ -85,6 +87,8 @@ class FacebookAdapter:
         caps = set(CAPABILITIES)
         if oauth.PUBLISH_SCOPE not in (acct.scopes or []):
             caps.discard(Capability.PUBLISH)  # connected before GR-30: reconnect to allow it
+        if oauth.INSIGHTS_SCOPE not in (acct.scopes or []):
+            caps.discard(Capability.POST_INSIGHTS)  # read_insights not granted (C-131)
         if self.deps.settings.ig_human_agent_enabled:  # one Meta approval covers both (O-10)
             caps.add(Capability.HUMAN_AGENT)
         return frozenset(caps)
@@ -305,7 +309,15 @@ class FacebookAdapter:
     async def get_media_insights(
         self, acct: SocialAccount, media_ref: str, *, media_type: str
     ) -> MediaInsights:
-        raise PlatformError("capability_unavailable", message=NO_INSIGHTS)
+        """A Page post's views, reach, clicks and shares (needs ``read_insights``). A Page Story
+        has none: Facebook gives no read API for it."""
+        from socialhood.platforms.facebook import insights
+
+        if Capability.POST_INSIGHTS not in self.capabilities_for(acct):
+            raise PlatformError("capability_unavailable", message=NO_INSIGHTS)
+        if media_type == "story":
+            return MediaInsights()
+        return await insights.media_insights(self.http, self._graph, self._token(acct), media_ref)
 
     async def get_account_insights(
         self, acct: SocialAccount, day: date, *, tz: str = "UTC"

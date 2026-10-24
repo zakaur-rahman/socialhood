@@ -2,15 +2,24 @@
  * Presentation of post analytics (FR-ANL-02; agent-architecture §6). The numbers are the API's:
  * these functions only format them, never derive new ones. Pure, tested directly.
  */
-import type { AgeName, MetricName, PostComparison, PostPerformance } from "@/lib/api/types";
+import type { AgeName, ExtraMetrics, MetricName, PostComparison, PostPerformance } from "@/lib/api/types";
 import { formatPlural } from "@/lib/comments/format";
 
 /** The age selector's options, youngest first. */
 export const AGES: AgeName[] = ["1h", "6h", "24h", "72h", "7d", "30d", "lifetime"];
 
+/** A Story is read at 1 h, 6 h and 23 h, before it goes down at 24 h (C-131). */
+export const STORY_AGES: AgeName[] = ["1h", "6h", "23h", "lifetime"];
+
+/** The age selector's options for a post of this media type. */
+export function agesFor(mediaType: string | null | undefined): AgeName[] {
+  return mediaType === "story" ? STORY_AGES : AGES;
+}
+
 export const AGE_LABEL: Record<AgeName, string> = {
   "1h": "1 h",
   "6h": "6 h",
+  "23h": "23 h",
   "24h": "24 h",
   "72h": "72 h",
   "7d": "7 d",
@@ -36,6 +45,51 @@ export const METRIC_LABEL: Record<MetricName, string> = {
   engagement_rate: "Engagement rate",
 };
 
+/** A figure only some posts have: Story replies and taps, Page post clicks. */
+export type ExtraMetricName = keyof ExtraMetrics;
+
+export const EXTRA_LABEL: Record<ExtraMetricName, string> = {
+  replies: "Replies",
+  taps_forward: "Taps forward",
+  taps_back: "Taps back",
+  swipes_forward: "Swipes forward",
+  exits: "Exits",
+  clicks: "Clicks",
+};
+
+/** What a Story shows, in order (Meta gives no likes, comments or saves for a Story). */
+export const STORY_FIGURES: (MetricName | ExtraMetricName)[] = [
+  "reach",
+  "views",
+  "shares",
+  "replies",
+  "taps_forward",
+  "taps_back",
+  "swipes_forward",
+  "exits",
+];
+
+export type Figure = { key: MetricName | ExtraMetricName; label: string; value: number | null };
+
+/**
+ * The figures a post's card shows, in order: a Story its own list; every other post the usual
+ * seven, plus the clicks of a Facebook Page post when the API gave them.
+ */
+export function figuresOf(performance: Pick<PostPerformance, "media_type" | "metrics" | "extra_metrics">): Figure[] {
+  const extra: Partial<Record<string, number | null>> = performance.extra_metrics ?? {};
+  const metrics: Partial<Record<string, number | null>> = performance.metrics;
+  const read = (key: string) => metrics[key] ?? extra[key] ?? null;
+  const keys: (MetricName | ExtraMetricName)[] =
+    performance.media_type === "story"
+      ? STORY_FIGURES
+      : [...METRICS, ...(extra.clicks != null ? (["clicks"] as ExtraMetricName[]) : [])];
+  return keys.map((key) => ({
+    key,
+    label: key in EXTRA_LABEL ? EXTRA_LABEL[key as ExtraMetricName] : METRIC_LABEL[key as MetricName],
+    value: read(key),
+  }));
+}
+
 const whole = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
 const MINUS = "−";
 
@@ -43,6 +97,11 @@ const MINUS = "−";
 export function formatMetric(metric: MetricName, value: number | null | undefined): string {
   if (value === null || value === undefined) return "—";
   return metric === "engagement_rate" ? `${whole.format(value)}%` : whole.format(value);
+}
+
+/** A figure from `figuresOf`: engagement rate as a percentage, the rest as whole numbers, "—" when unknown. */
+export function formatFigure(figure: Figure): string {
+  return figure.key === "engagement_rate" ? formatMetric("engagement_rate", figure.value) : formatMetric("reach", figure.value);
 }
 
 /** The API's diff_pct: "+18.4%", "−7%", "0%", or "—" when there is no median to compare with. */

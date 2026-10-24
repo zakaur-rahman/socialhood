@@ -253,6 +253,8 @@ export type PostSort = NonNullable<NonNullable<operations["list_posts"]["paramet
 export type PostPerformance = Schemas["PostPerformance"];
 export type PostComparison = Schemas["PostComparison"];
 export type PostMetrics = Schemas["PostMetrics"];
+/** Story replies and taps, Page post clicks: the figures only some posts have (C-131). */
+export type ExtraMetrics = Schemas["ExtraMetrics"];
 export type MetricComparison = Schemas["MetricComparison"];
 export type Baseline = Schemas["Baseline"];
 /** A post's age after publishing: a snapshot window, or its latest known values. */

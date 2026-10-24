@@ -111,6 +111,9 @@ class Settings(BaseSettings):
     ig_graph_version: str = "v25.0"
     meta_graph_version: str = "v25.0"
     ig_request_insights_scope: bool = False
+    # C-131: ask Facebook Pages for read_insights, which Page post insights need (a Meta App
+    # Review item, O-10). Off: Pages connect without it and show no post insights.
+    fb_request_insights_scope: bool = False
     ig_human_agent_enabled: bool = False
 
     meta_app_id: str | None = None

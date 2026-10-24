@@ -375,7 +375,7 @@ async def connect_sandbox(
         scopes=(
             []
             if whatsapp
-            else list(facebook_oauth.SCOPES)
+            else [*facebook_oauth.SCOPES, facebook_oauth.INSIGHTS_SCOPE]
             if facebook
             else [*oauth.BASE_SCOPES, oauth.INSIGHTS_SCOPE]
         ),

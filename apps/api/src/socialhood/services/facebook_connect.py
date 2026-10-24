@@ -252,7 +252,7 @@ async def connect_pages(
             "access_token_enc": deps.cipher.encrypt(page.access_token),
             "token_expires_at": None,  # a Page token made from a long-lived user token
             "token_refreshed_at": now,
-            "scopes": list(oauth.SCOPES),
+            "scopes": list(oauth.scopes(deps.settings)),
             "status": AccountStatus.ACTIVE,
             "last_error": None,
             "connected_at": now,

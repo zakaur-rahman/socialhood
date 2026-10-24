@@ -45,13 +45,31 @@ MEDIA_METRIC_KEYS: dict[str, str] = {
     "total_interactions": "total_interactions",
     "profile_visits": "profile_visits",
     "follows": "follows",
+    "replies": "replies",
 }
 # Which of them Meta offers per media product type. Feed posts (images, carousels, feed videos)
 # have them all; Reels have no profile_visits or follows; stories have no likes, comments or
 # saved. ``impressions`` and ``plays`` are gone for media created since July 2024 (use views).
-FEED_METRICS = tuple(MEDIA_METRIC_KEYS)
+FEED_METRICS = tuple(name for name in MEDIA_METRIC_KEYS if name != "replies")
 REELS_METRICS = ("reach", "views", "likes", "comments", "shares", "saved", "total_interactions")
-STORY_METRICS = ("reach", "views", "shares", "total_interactions", "follows", "profile_visits")
+STORY_METRICS = (
+    "reach",
+    "views",
+    "shares",
+    "replies",
+    "total_interactions",
+    "follows",
+    "profile_visits",
+)
+# A Story's taps and swipes: the ``navigation`` metric with the story_navigation_action_type
+# breakdown (asked for on its own, like follows_and_unfollows).
+NAVIGATION_METRIC = "navigation"
+NAVIGATION_TYPES = {
+    "tap_forward": "taps_forward",
+    "tap_back": "taps_back",
+    "swipe_forward": "swipes_forward",
+    "tap_exit": "exits",
+}
 METRICS_BY_MEDIA_TYPE: dict[str, tuple[str, ...]] = {
     "image": FEED_METRICS,
     "video": FEED_METRICS,
@@ -214,8 +232,29 @@ async def media_insights(
         endpoint="media.insights",
         token=token,
     )
-    values = {MEDIA_METRIC_KEYS[name]: _value(items.get(name)) for name in wanted}
+    values: dict[str, int | None] = {
+        MEDIA_METRIC_KEYS[name]: _value(items.get(name)) for name in wanted
+    }
+    if media_type == "story":
+        navigation = await _metrics(
+            http,
+            graph(f"{_media_id(media_ref)}/insights"),
+            (NAVIGATION_METRIC,),
+            endpoint="media.insights.navigation",
+            token=token,
+            params={"breakdown": "story_navigation_action_type"},
+        )
+        values.update(_navigation(navigation.get(NAVIGATION_METRIC)))
     return MediaInsights(**values)
+
+
+def _navigation(item: Mapping[str, Any] | None) -> dict[str, int | None]:
+    """The Story's taps and swipes from the breakdown. A breakdown without a row for one kind
+    means none of that kind; a total of 0 comes without any breakdown."""
+    split = _breakdown(item)
+    if not split and not (item is not None and _value(item) == 0):
+        return {key: None for key in NAVIGATION_TYPES.values()}
+    return {key: split.get(dimension, 0) for dimension, key in NAVIGATION_TYPES.items()}
 
 
 # ---------------------------------------------------------------- accounts

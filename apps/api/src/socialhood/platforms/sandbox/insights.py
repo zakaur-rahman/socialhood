@@ -5,7 +5,9 @@ grow with a post's age, so snapshots and comparisons can be developed without Me
 The adapter is not told when a post was published, so a post's age counts from the first time the
 sandbox is asked about it (the posts ``history.posts`` makes up count from their made-up publish
 time). Each post reaches its own final reach, derived from its id; formats get Instagram's metrics
-for them (no likes, comments or saves on stories; no profile visits or follows on Reels).
+for them (no likes, comments or saves on stories, which have replies and taps instead; no profile
+visits or follows on Reels). A Facebook Page post has reactions as likes, comments, shares and
+clicks; a Page Story has none.
 """
 
 from __future__ import annotations
@@ -50,6 +52,8 @@ def _figures(acct: SocialAccount, media_ref: str, now: datetime) -> dict[str, in
         "saves": round(likes * 0.15),
         "profile_visits": round(reach * 0.02),
         "follows": round(reach * 0.004),
+        "replies": round(likes * 0.03),
+        "clicks": round(reach * 0.03),
     }
 
 
@@ -60,6 +64,8 @@ def media_counts(acct: SocialAccount, media_ref: str) -> MediaCounts | None:
 
 def media_insights(acct: SocialAccount, media_ref: str, *, media_type: str) -> MediaInsights:
     figures = _figures(acct, media_ref, datetime.now(UTC))
+    if media_type == "story" and acct.platform == "facebook":
+        return MediaInsights()  # Facebook has no read API for Page Stories (C-131)
     if media_type == "story":
         for name in ("likes", "comments", "saves"):
             figures[name] = 0
@@ -72,6 +78,22 @@ def media_insights(acct: SocialAccount, media_ref: str, *, media_type: str) -> M
             total_interactions=interactions,
             profile_visits=figures["profile_visits"],
             follows=figures["follows"],
+            replies=figures["replies"],
+            taps_forward=round(figures["views"] * 0.7),
+            taps_back=round(figures["views"] * 0.1),
+            swipes_forward=round(figures["views"] * 0.05),
+            exits=round(figures["views"] * 0.08),
+        )
+    if acct.platform == "facebook":
+        # A Page post: reactions as likes, no saves, profile visits or follows; clicks.
+        return MediaInsights(
+            reach=figures["reach"],
+            views=figures["views"],
+            likes=figures["likes"],
+            comments=figures["comments"],
+            shares=figures["shares"],
+            total_interactions=figures["likes"] + figures["comments"] + figures["shares"],
+            clicks=figures["clicks"],
         )
     feed = media_type != "reel"
     return MediaInsights(

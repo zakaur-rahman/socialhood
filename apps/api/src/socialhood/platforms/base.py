@@ -181,6 +181,14 @@ class MediaInsights:
     total_interactions: int | None = None
     profile_visits: int | None = None
     follows: int | None = None
+    # Instagram Stories only: replies and the taps and swipes through the Story.
+    replies: int | None = None
+    taps_forward: int | None = None
+    taps_back: int | None = None
+    swipes_forward: int | None = None
+    exits: int | None = None
+    # Facebook Page posts only: clicks on the post.
+    clicks: int | None = None
 
     def metrics(self) -> dict[str, int]:
         """The known values, as stored in a snapshot's ``metrics``."""

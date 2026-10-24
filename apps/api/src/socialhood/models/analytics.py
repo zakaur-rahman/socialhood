@@ -39,6 +39,7 @@ class SnapshotWindow(StrEnum):
 
     H1 = "1h"
     H6 = "6h"
+    H23 = "23h"  # Stories only: the last reading before a Story goes down at 24 h (GR-39 follow-up)
     H24 = "24h"
     H72 = "72h"
     D7 = "7d"
@@ -49,6 +50,7 @@ class SnapshotWindow(StrEnum):
 WINDOW_AGES: dict[SnapshotWindow, dt.timedelta] = {
     SnapshotWindow.H1: dt.timedelta(hours=1),
     SnapshotWindow.H6: dt.timedelta(hours=6),
+    SnapshotWindow.H23: dt.timedelta(hours=23),
     SnapshotWindow.H24: dt.timedelta(hours=24),
     SnapshotWindow.H72: dt.timedelta(hours=72),
     SnapshotWindow.D7: dt.timedelta(days=7),
@@ -59,6 +61,9 @@ WINDOW_AGES: dict[SnapshotWindow, dt.timedelta] = {
 # (likes, comments); insights start at 24 h, and the 72 h run re-reads the 24 h values and marks
 # both final (FR-ANL-01).
 LIVE_COUNT_WINDOWS = frozenset({SnapshotWindow.H1, SnapshotWindow.H6})
+# A Story lives 24 hours, so its readings are taken at 1 h, 6 h and 23 h and every one of them
+# reads the Story's insights (they are available while it is up). Other posts never get 23 h.
+STORY_WINDOWS = (SnapshotWindow.H1, SnapshotWindow.H6, SnapshotWindow.H23)
 
 
 class PostMetric(StrEnum):
@@ -73,6 +78,14 @@ class PostMetric(StrEnum):
     TOTAL_INTERACTIONS = "total_interactions"
     PROFILE_VISITS = "profile_visits"
     FOLLOWS = "follows"
+    # Story insights (Instagram): replies and the taps and swipes through the Story.
+    REPLIES = "replies"
+    TAPS_FORWARD = "taps_forward"
+    TAPS_BACK = "taps_back"
+    SWIPES_FORWARD = "swipes_forward"
+    EXITS = "exits"
+    # Facebook Page posts: link and other clicks on the post.
+    CLICKS = "clicks"
 
 
 class AccountMetric(StrEnum):
