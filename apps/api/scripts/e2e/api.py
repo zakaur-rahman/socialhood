@@ -16,16 +16,14 @@ It is the normal app (``socialhood.main``) plus two things the suite needs:
     metrics for the last ``days`` days and the ``days`` before them, and the run's
     compare_periods step holds the visual the real service and builder make from them, so the
     spec can check the cards against GET …/analytics/account-metrics;
-  - ``POST /__e2e/workspaces/{wid}/plan {plan}`` (GR-27): the workspace's plan, without Dodo's
-    checkout (F-15 covers that), for specs that need Pro;
+  - ``POST /__e2e/workspaces/{wid}/plan {plan}`` (GR-19, GR-23, GR-25, GR-27): the workspace's
+    plan, without Dodo's checkout (F-15 covers that), for specs that need Pro or Max;
   - ``GET /__e2e/google-sheets/{sheet_id}`` and ``POST …/{sheet_id}/delete`` (GR-27): the header
     and rows the fake Google holds for a sheet (GOOGLE_PROVIDER=fake keeps them in Redis, which the
     API and the worker share), and deleting it as the person would in Google Drive;
   - ``POST /__e2e/workspaces/{wid}/agent-proposals`` (GR-36): a finished Ask run whose draft step
     called propose_flow or propose_segment through the real tool and gateway (the fake model
     calls no tools), so the spec has a pending approval and its card to decide in the browser;
-  - ``PUT /__e2e/workspaces/{wid}/plan {plan}``: the workspace's plan (GR-25: the public API is Pro
-    and Max), without a checkout;
   - ``DELETE /__e2e/users/{clerk_user_id}``: a signed-up user's workspaces (every tenant row
     cascades) and row (F-01). Other test data goes when the launcher drops the database.
 
@@ -45,7 +43,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 
 from socialhood.agent import visuals
 from socialhood.agent.registry import Principal, ToolContext

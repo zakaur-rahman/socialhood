@@ -3651,3 +3651,168 @@ Free"; the owner chose to give the widget itself to every plan.* The PD table in
   edits the `ck_contact_consents_source` check: any other branch that recreates it must keep
   `widget`. The e2e stack needs `TOKEN_ENCRYPTION_KEYS` (it has one) and its rate limits may stay on.
   `frame-ancestors` for `localhost` allows any port over http and https.
+
+## C-112 · WhatsApp broadcasts (GR-23, feature/gr-23-broadcasts)
+
+- **Owner decisions (2026-10-24), recorded as decided.**
+  - **PD-3, who pays Meta: the business, directly.** Each WhatsApp Business Account carries its own
+    payment method (set up in Embedded Signup); no markup, no money through Social Hood. The cost on
+    a broadcast is an estimate from Meta's rate card and the pages say Meta bills the account
+    directly. Nothing in the product charges for a message.
+  - **PD-4, plans: Pro and Max with a monthly recipient quota, none on Free.** The entitlement
+    `broadcast_recipients_monthly` in `billing/plans.py`: Free 0, Pro 2,500, Max 25,000 (one line to
+    change each). The 402 is the app's own: `entitlement_required` ("WhatsApp broadcasts are part of
+    Pro.") on a plan with 0, `quota_exceeded` with the plan's limit and the numbers otherwise.
+  - **O-11, the legal check of marketing consent in India (TRAI TCCCPR, DPDP Act): not done.** So
+    GR-23 ships behind the server setting **`BROADCASTS_ENABLED`, off by default** (like GR-38's
+    `AGENT_VISUALS_ENABLED`; in `.env.example` as false, on in the e2e stack and in the tests'
+    fixture). Off: every broadcast route except `GET /broadcasts/availability` answers 404 "Broadcasts
+    aren't available yet.", the dispatch and sweeper jobs do nothing, and the web shows nothing (the
+    Automations and Activity pages hide their Broadcasts link and filter; the broadcast pages show
+    one plain notice). *Turn it on in production only after O-11.*
+- **A broadcast** (`broadcasts`): one approved template (marketing or utility; an authentication
+  template is a one-time code and is refused) from one connected WhatsApp number to a saved segment
+  (GR-17). The template's name, language, category and body are copied when it is made, so the
+  preview and the estimate need no call to Meta. Each variable `{{n}}` is a contact field (first
+  name, name, username, email, phone or a custom field's key) with an optional text to write when
+  the person has none, or a fixed text. `first_name` falls back to "there". A field with no value
+  and no fallback leaves that person out (skipped as "missing value") rather than sending a hole.
+  WhatsApp's parameter rules are applied (no line breaks or tabs, no run of four spaces, at most
+  1,024 characters; *unverified*). A draft can be changed (`PATCH`) and deleted; a started one can
+  be paused, resumed and cancelled.
+- **The audience** (`services/broadcasts/audience`). The segment's own filter, with its platform and
+  number replaced by the broadcast's (*a segment saved for Instagram still means "these people, on
+  this number"*), then each contact's **latest WhatsApp marketing record** decides (GR-02, latest
+  `occurred_at` wins): `granted` is sent to; `revoked` is skipped as `opted_out`; no record is
+  skipped as `no_consent` (not knowing is not agreeing). Skipped contacts are rows with their
+  reason, counted on the page and never sent. The audience is fixed when the broadcast **starts**
+  (up to 30,000 contacts; a bigger segment is refused), and each person's consent is checked again at
+  their turn, so a STOP between the two still wins.
+- **Preview** (`POST /broadcasts/preview`): the counts (matching, eligible, opted out, no consent,
+  missing value), the cost, the quota left, the number's daily limit and how many days that means,
+  the message drawn with a sample contact, and the sentences that stop it being sent. It is the same
+  audience code the send uses.
+- **Cost estimate** (`services/broadcasts/rates.py`): Meta's rate card as data (India, INR, per
+  message by category: marketing 0.7846, utility and authentication 0.1150) with its `as_of` date
+  and `verified = False`. **The figures are unverified**: typed in by hand, not read from Meta,
+  and Meta revises its rates. Update `RATE_CARD` when its pricing page changes; the pages say "typed in
+  by hand, not yet checked against Meta" while it is unverified. An unknown category is priced as
+  marketing (the dearest). The estimate is stored on the broadcast when it starts.
+- **Schedule.** `POST /broadcasts/{id}/start` with no time sends now; with `scheduled_at` (a time
+  zone is required, at least a minute and at most 90 days ahead) it schedules, and the quota is
+  checked then too. The minutely job `run_broadcasts` starts the ones that are due: it fixes the
+  audience, and a broadcast whose number or segment is gone, or that has no one left to send to,
+  becomes `failed` with the reason and tells the owners and admins. A scheduled broadcast does not
+  call Meta when it starts: a template withdrawn since then fails each message with WhatsApp's own
+  reason.
+- **Sending and throttling** (`services/broadcasts/dispatch`, `throttle`, job `dispatch_broadcast`).
+  - A batch hands up to 60 waiting people to the normal send queue (`sending.queue_outbound` with
+    the template, source `broadcast`, so the send job, token bucket, retries, statuses, inbox and
+    realtime all work as for any message), then the job queues itself a minute later: about 40
+    minutes for 2,500 people. *Source `broadcast` is new on `messages` (migration widens the check),
+    so the inbox says "Sent as part of a broadcast" and Activity words it.*
+  - **Idempotent per recipient**: the message's client id is derived from the recipient's id, rows are
+    locked (SKIP LOCKED) while a batch works, and the state of each recipient is the progress, so a
+    retried or stalled job sends nobody twice and a lost job is picked up by the minutely sweeper.
+  - **Pacing to the tier**: the number's daily limit by messaging tier (50, 250, 1,000, 10,000,
+    100,000, unlimited), 90% of it usable, less the people already messaged by broadcasts in the last
+    24 hours (the room is counted from `dispatched_at`; WhatsApp counts unique people in a rolling 24
+    hours, *unverified*). At the limit the next batch waits until the oldest message leaves the
+    window. **When the tier is not known the default is 250** (conservative), and the preview says
+    so. The tier and quality come from `whatsapp_number_health`, read from the number
+    (`adapter.get_number_health`: `quality_rating`, `messaging_limit_tier`; *unverified*) when it
+    has not been read for 30 minutes, and from the webhook below. An unknown rating never replaces a
+    known one.
+  - **Pause on a quality drop**: the `phone_number_quality_update` webhook (FLAGGED, UNFLAGGED,
+    UPGRADE, DOWNGRADE, ONBOARDING; *unverified*) names the WhatsApp Business Account, not the number
+    (no `metadata.phone_number_id`), so it is routed by `social_accounts.waba_id`
+    (`webhooks/routing.resolve_waba_accounts`) to each of its numbers connected here. FLAGGED is rating
+    Low (red); UNFLAGGED is taken as Medium until the number is read again. A sending broadcast
+    **pauses with a plain reason** when the rating falls to Medium or Low, when it is Low at a batch,
+    or when the tier is lowered. The owners and admins get an in-app notification
+    (`broadcast_paused`) and Activity shows it with a link. **The owner resumes**; resuming while the
+    rating is Low is refused (409) with the reason.
+  - Other pauses, each with its own sentence and code: `member` (the owner paused), `plan` (the plan no
+    longer has broadcasts), `limit` (the month's recipients ran out), `account` (the number needs
+    reconnecting or cannot send templates). A recipient the queue refuses for its own reason is
+    marked failed with the reason and the batch carries on.
+- **Per-recipient status.** Not stored twice: a recipient shows queued, sent, delivered, read,
+  failed or skipped **from its message** (`repositories/broadcasts.status_expr`), so WhatsApp's
+  delivery statuses (`whatsapp_status.apply_status`, which never moves a status backwards) are the
+  only thing that changes it. A failure's reason is the existing mapped wording (a number that is
+  not on WhatsApp is "This person can't receive messages right now."); an unmapped code shows
+  WhatsApp's own reason. `replied_at` and `stopped_at` are set by ingest. The detail page has the
+  counts at each stage, a progress bar, and the audience in pages of 25 with a status filter; it
+  polls every 5 seconds while sending.
+- **STOP** (`services/broadcasts/stop`, `inbound`). A WhatsApp text that is **only** a stop phrase
+  revokes marketing consent: a `revoked` record, source `stop_reply`, evidence `{message_id, text}`.
+  It is recorded even when the contact had no consent on file, and a record in the same second as a
+  grant still wins (WhatsApp stamps messages to the second). The list, in one place (the module's
+  docstring and `PHRASES`): English (stop, stop all, unsubscribe, unsub, opt out, optout, cancel, end,
+  quit, remove me, no more messages, do not / dont message me or contact me, stop messaging me),
+  Hinglish (band karo, band kar do, mat bhejo, msg mat bhejo, bhejna band karo, nahi chahiye ...)
+  and Hindi (the same in Devanagari), after lower-casing, dropping punctuation, emoji and polite
+  fillers (please, pls, kindly, thanks, kripya ...). The whole message must match, so "please don't
+  stop the delivery" does not. *The list is the usual set, not a legal one (O-11 covers wording).* No
+  confirmation message is sent back. A message within seven days after a broadcast message counts as
+  a reply to it.
+- **Quota rule**: a recipient counts when its message is handed to the send queue in the current
+  billing period (the subscription's anchor day, as for credits), failures after that included,
+  skipped contacts and hand-over failures never. Starting or scheduling a broadcast that would not
+  fit is refused with the numbers; one that runs out while sending pauses (`limit`).
+- **Activity (GR-05).** Failed broadcast messages are Activity's "A broadcast message to X wasn't
+  sent" with the reason; a new `broadcast` kind lists paused and failed-to-start broadcasts with the
+  reason and an action to open the broadcast. **Contact timeline (GR-17)**: "Received broadcast X"
+  with how far it got (Sent, Delivered, Read, Couldn't be delivered).
+- **Sandbox WhatsApp number** (`platforms/sandbox/whatsapp.py`). `POST /dev/sandbox/accounts?platform=whatsapp`
+  connects a fake number (`sandbox_` phone number id, `sandbox_waba_` business account) whose
+  adapter lists four approved templates (two marketing, one utility, one authentication), records
+  template sends (a parameter containing `[sandbox:fail=<code>]` fails that send) and reports its
+  tier. `POST /dev/sandbox/inbound` takes, for such a number, `dm` (a customer's WhatsApp message),
+  `status` (a delivery status for the last message sent to `from_id`: `delivery_status`,
+  `error_code`, `error_text`) and `quality` (`quality_event`, `tier`), as the webhook bodies Meta
+  would deliver, through the real intake. The e2e stack has a seed route to put a workspace on a plan.
+- **API** (owners and admins; `TODO(GR-19)` in the module: `broadcasts.view` for the reads,
+  `broadcasts.manage` for the writes): `GET /broadcasts/availability`, `GET /broadcasts`,
+  `POST /broadcasts/preview`, `POST /broadcasts`, `GET|PATCH|DELETE /broadcasts/{id}`,
+  `GET /broadcasts/{id}/recipients?status=&limit=&offset=`, `POST /broadcasts/{id}/start|pause|resume|cancel`.
+  A number, segment or broadcast of another workspace is 404 `not_found` before any plan check.
+- **Migration 0036** (after 0030; the coordinator re-chains), expand-only: `messages.source` accepts
+  `broadcast`; tables `broadcasts`, `broadcast_recipients` (`uq_broadcast_recipients_broadcast_id_contact_id`)
+  and `whatsapp_number_health` (`uq_whatsapp_number_health_social_account_id`). All three reference the
+  account, so the account purge deletes them (children first); the purge test's list, the
+  account-deletion seed and the tenancy test's table list and seeds include them.
+- **Web.** `/w/{slug}/broadcasts` (list with the month's quota meter, a note that Meta bills the
+  account directly), `/new` (the composer: number, segment, approved template, a row per variable,
+  send now or schedule in the workspace's time zone, a live preview with the audience, the skipped
+  and why, the sample message, the estimate and the number's daily limit, and a confirmation) and
+  `/{id}` (counts, progress, the reason it paused with Resume, Pause, Cancel and Delete, the
+  message and its mapping, the estimate, and the people with their status). Shown only through a
+  "Broadcasts" button on Automations when the setting is on. Owners and admins. Stacked cards and
+  rows, so it works at 375 px.
+- **Not built.** An outbound webhook event for broadcasts (GR-04's catalogue); a STOP
+  acknowledgement message; a re-engagement of people with no consent record; a template's media
+  header, buttons with variables and named parameters (the same limits as the template picker);
+  editing a broadcast after it started; a CSV of the results; Instagram broadcasts (no API).
+- **Unverified (Meta), everything above that says so:** the rate card's figures; the messaging tier
+  names and limits and that the limit is unique people in a rolling 24 hours; the quality rating and
+  tier fields of the phone number; the `phone_number_quality_update` event names and its routing by
+  business account; that FLAGGED means rating Low; WhatsApp's parameter rules. Only a real number
+  settles them.
+- **Tests.** Unit: `test_broadcast_stop.py`, `test_broadcast_throttle.py`, `test_broadcast_rules.py`
+  (variables, the rate card, the plan's numbers), the purge list. Contract: `test_whatsapp_health.py`
+  (the health parsers and the sandbox bodies through the real WhatsApp parsers). Integration:
+  `test_broadcasts.py` (the setting off, the plan, preview, create, schedule, the sandbox broadcast
+  to three with each status and the opted-out one skipped, STOP, pacing, the quality pause and resume,
+  the month's recipients, Activity and the timeline, roles, the job). Tenancy: the new routes, bodies
+  and tables in `test_isolation.py` (the walk turns the setting on). Vitest: `BroadcastComposer`,
+  `BroadcastDetailPage`, `BroadcastsPage`, `lib/broadcasts/format`. E2E: `gr23-broadcasts.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (the new schemas, 10 operations, the
+  `broadcast` message source, activity kind and timeline kind, the `platform` query on
+  `create_sandbox_account`, and `status` and `quality` plus four fields on `SandboxInbound`); the web
+  types are aliases waiting for it, and the web calls the paths through the typed client, so typecheck
+  after regenerating. Decimal fields (`per_message`, `total`, the rate card) arrive as strings and the
+  web formats them. Re-chain migration 0036. For production the Meta app's WhatsApp webhook needs the
+  `phone_number_quality_update` field subscribed (*unverified* that it is delivered to the same
+  callback as `messages`). `BROADCASTS_ENABLED` belongs on in staging only until
+  O-11.

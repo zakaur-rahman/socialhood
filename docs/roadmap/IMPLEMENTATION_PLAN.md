@@ -67,7 +67,7 @@ weeks, **L** a month or more.
 | O-8 | **WhatsApp billing currency:** keep each business account in INR | Before 2026-12-31 | Meta stops delivering for Indian accounts not moved to INR from 2027-01-01 |
 | O-9 | **Pricing:** set the Pro price in Dodo; take the plan decisions in section C | Before launch | My suggestion is ₹1,500 to ₹2,500 (competitors.md) |
 | O-10 | **Later submissions:** Facebook Pages permissions (GR-29); Google OAuth verification if Sheets is native (GR-27); a Shopify app listing (GR-31) | When those waves start | |
-| O-11 | **Legal check:** WhatsApp marketing consent in India (TRAI's TCCCPR rules, the DPDP Act) before broadcasts go live | Before GR-23 ships | One vendor claims DLT-style consent rules apply; confirm with a professional |
+| O-11 | **Legal check:** WhatsApp marketing consent in India (TRAI's TCCCPR rules, the DPDP Act) before broadcasts go live | Before GR-23 ships | One vendor claims DLT-style consent rules apply; confirm with a professional. **Not done (2026-10-24):** GR-23 is built and merged behind the server setting `BROADCASTS_ENABLED`, off by default; turn it on in production only after this check |
 
 ---
 
@@ -79,8 +79,8 @@ The recommended option is first. Each goes in CONFLICTS.md when taken, as the UI
 |---|---|---|---|
 | PD-1 | Team seats per plan | **Decided 2026-10-24 ("for now"): Free 1, Pro 3, Max 10** (was Free 1, Pro 1, Max 10; the alternative was Pro 5) | GR-19 |
 | PD-2 | Contacts metering | **Never meter contacts; flat plans** (the competitive edge) · a soft cap | GR-02 |
-| PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell | GR-23 |
-| PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only | GR-23 |
+| PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell. **Decided 2026-10-24: the first.** The cost shown on a broadcast is an estimate from Meta's rate card, not a charge | GR-23 |
+| PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only. **Decided 2026-10-24: the first**: Pro 2,500 recipients a month, Max 25,000, none on Free (`broadcast_recipients_monthly` in `billing/plans.py`) | GR-23 |
 | PD-5 | Flow branching by plan | **All plans, with a step cap on Free** (for example 5 steps) · Pro only | GR-13 |
 | PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Decided 2026-10-24 ("for now"): webhooks on all plans (Free 1, Pro 5, Max 20 endpoints); Sheets, API and Zapier on Pro and Max** | GR-04 |
 | PD-7 | Website chat widget | **Decided 2026-10-24 (C-111): on every plan; Free shows "Powered by Social Hood", Pro and Max can turn it off; abuse limits on all plans.** Was: Pro and Max with the link on Free · paid only | GR-28 |
@@ -453,7 +453,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - Automations may require "inside hours" as a condition.
 - **Done when:** a message at 23:00 gets the away reply once and the Auto setting is respected.
 
-#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4
+#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4 · built 2026-10-24 behind `BROADCASTS_ENABLED` (C-109)
 - **Platform:**
   - Only approved templates, and only to contacts with marketing opt-in.
   - Meta prices per message by category (marketing, utility); India is billed in INR from 2026.
