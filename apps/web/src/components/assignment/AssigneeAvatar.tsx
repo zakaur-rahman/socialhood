@@ -15,7 +15,7 @@ export function AssigneeAvatar({
   return (
     <Avatar size="sm" className={cn("shrink-0", className)} aria-hidden>
       {pictureUrl ? <AvatarImage src={pictureUrl} alt="" /> : null}
-      <AvatarFallback className="text-[10px] font-semibold">{assigneeInitials(name)}</AvatarFallback>
+      <AvatarFallback className="text-2xs font-semibold">{assigneeInitials(name)}</AvatarFallback>
     </Avatar>
   );
 }
