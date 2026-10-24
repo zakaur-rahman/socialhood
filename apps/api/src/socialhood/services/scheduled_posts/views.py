@@ -26,6 +26,7 @@ from socialhood.models.publishing import (
     DEFAULT_PUBLISHING_LIMIT,
     STORY_LIFETIME,
     PostFormat,
+    PostKind,
     ScheduledPostAsset,
     ScheduledPostTarget,
     TargetStatus,
@@ -158,6 +159,7 @@ def _summary(loaded: Loaded, items: dict[uuid.UUID, uuid.UUID]) -> ScheduledPost
             "id": post.id,
             "status": post.status,
             "format": post.format,
+            "kind": post.kind,
             "caption": post.caption,
             "publish_at": post.publish_at,
             "published_at": post.published_at,
@@ -222,7 +224,7 @@ class Draft:
             publish_at=post.publish_at,
             targets=[(account, target.caption_override) for target, account in loaded.targets],
             assets=[asset for _, asset in loaded.assets],
-            story=post.format == PostFormat.STORY,
+            story=post.kind == PostKind.STORY,
         )
 
 

@@ -99,6 +99,14 @@ class PostFormat(StrEnum):
     TEXT = "text"  # no media, a caption: a text or link post on Facebook Pages only (GR-30)
 
 
+class PostKind(StrEnum):
+    """What the owner chose in the composer (GR-39). Stored, not derived: a Story draft with the
+    wrong media has no format yet, and must still be checked as a Story."""
+
+    POST = "post"
+    STORY = "story"
+
+
 class TargetStatus(StrEnum):
     PENDING = "pending"  # a draft's or scheduled post's account, not claimed yet
     PUBLISHING = "publishing"  # claimed by the dispatcher; publish_target is creating containers
@@ -113,6 +121,7 @@ class ScheduledPost(IdMixin, TimestampMixin, TenantScoped, Base):
 
     status: Mapped[str] = mapped_column(Text, server_default=sql("'draft'"))
     format: Mapped[str | None] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(Text, server_default=sql("'post'"))
     caption: Mapped[str] = mapped_column(Text, server_default=sql("''"))
     first_comment: Mapped[str | None] = mapped_column(Text)
     # A draft may hold the time it was started at (a calendar click); a scheduled post always has
@@ -137,6 +146,9 @@ class ScheduledPost(IdMixin, TimestampMixin, TenantScoped, Base):
         ),
         CheckConstraint(_in("status", ScheduledPostStatus), name="status"),
         CheckConstraint(f"format IS NULL OR {_in('format', PostFormat)}", name="format"),
+        CheckConstraint(_in("kind", PostKind), name="kind"),
+        # A story format only comes from a Story choice (GR-39).
+        CheckConstraint("format IS DISTINCT FROM 'story' OR kind = 'story'", name="story_kind"),
         CheckConstraint(f"char_length(caption) <= {CAPTION_MAX_CHARS}", name="caption_length"),
         CheckConstraint(
             "first_comment IS NULL OR char_length(first_comment) BETWEEN 1 AND "

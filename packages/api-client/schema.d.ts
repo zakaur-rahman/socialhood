@@ -9743,6 +9743,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @default post
+             * @enum {string}
+             */
+            kind: "post" | "story";
             /** Publish At */
             publish_at?: string | null;
             /** Published At */
@@ -9824,6 +9830,12 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /**
+             * Kind
+             * @default post
+             * @enum {string}
+             */
+            kind: "post" | "story";
             /** Publish At */
             publish_at?: string | null;
             /** Published At */

@@ -36,7 +36,7 @@ export function toDraft(post: ScheduledPost): Draft {
     caption: post.caption,
     first_comment: post.first_comment ?? null,
     publish_at: post.publish_at ?? null,
-    kind: post.format === "story" ? "story" : "post",
+    kind: post.kind ?? "post",
   };
 }
 

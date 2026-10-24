@@ -26,6 +26,7 @@ export function scheduledPost(overrides: Partial<ScheduledPostSummary> = {}): Sc
     id: `sp${seq}`,
     status: "scheduled",
     format: "image",
+    kind: overrides.format === "story" ? "story" : "post",
     caption: "Linen styles for the weekend",
     publish_at: ist("2026-09-29", "12:00"),
     published_at: null,

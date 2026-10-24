@@ -142,6 +142,9 @@ class ScheduledPostSummary(ResponseModel):
     id: uuid.UUID
     status: ScheduledPostStatusName
     format: PostFormatName | None = None  # derived from the assets on save
+    kind: PostKind = (
+        "post"  # the composer's choice (GR-39): a Story draft keeps it before its media fits
+    )
     caption: str
     # A draft's time, if it has one (a calendar click); always set once scheduled.
     publish_at: datetime | None = None

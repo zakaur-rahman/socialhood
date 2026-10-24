@@ -930,6 +930,7 @@ async def test_list_tabs_orders_filters_and_pages(shop: Shop, engine: AsyncEngin
     assert set(summary) == {
         "id",
         "status",
+        "kind",
         "format",
         "caption",
         "publish_at",

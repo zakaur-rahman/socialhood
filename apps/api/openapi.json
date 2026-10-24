@@ -16610,6 +16610,15 @@
             "title": "Id",
             "type": "string"
           },
+          "kind": {
+            "default": "post",
+            "enum": [
+              "post",
+              "story"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
           "publish_at": {
             "anyOf": [
               {
@@ -16819,6 +16828,15 @@
           "id": {
             "format": "uuid",
             "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "default": "post",
+            "enum": [
+              "post",
+              "story"
+            ],
+            "title": "Kind",
             "type": "string"
           },
           "publish_at": {

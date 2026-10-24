@@ -3904,6 +3904,7 @@ migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was
 - **For the coordinator:** regenerate the client (`PostFormatName` gains `story`,
   `ScheduledPostDraft.kind`, `ScheduledPostTarget.expires_at`); the web reads `kind` and `expires_at`
   from the generated types.
+- *Added in the combined batch:* the composer's choice is stored as `scheduled_posts.kind` (`post` or `story`, default `post`, in migration 0038) instead of being read from `format`. A Story draft with the wrong media has no format yet and was checked as a carousel once saved; now it keeps its Story checks, duplicating a Story copies the kind, and a check ties `format = 'story'` to `kind = 'story'`. Responses carry `kind`; the web reads it.
 
 ## C-115 · Facebook publishing and best posting times (GR-30, feature/gr-39-30-stories-fb-publishing)
 

@@ -81,6 +81,7 @@ export function scheduledPost(overrides: Partial<ScheduledPost> = {}): Scheduled
     id: "sp1",
     status: "draft",
     format: null,
+    kind: overrides.format === "story" ? "story" : "post",
     caption: "",
     publish_at: null,
     published_at: null,

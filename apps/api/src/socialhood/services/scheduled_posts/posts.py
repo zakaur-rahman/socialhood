@@ -258,6 +258,7 @@ async def _write(
     pages_only = bool(body.targets) and all(
         checked.accounts[t.social_account_id].platform == "facebook" for t in body.targets
     )
+    post.kind = body.kind
     post.format = rules.derive_format(
         [a.resource_type for a in checked.assets],
         story=body.kind == "story",
@@ -488,6 +489,7 @@ async def duplicate(
     copy = PostRow(
         status=P.DRAFT,
         format=source.format,
+        kind=source.kind,
         caption=source.caption,
         first_comment=source.first_comment,
         created_by_user_id=user_id,
