@@ -143,27 +143,32 @@ export function CommentsColumn({
   return (
     <Card asChild>
       <section aria-labelledby="post-comments-heading">
-        <CardTitle id="post-comments-heading" ref={headingRef} tabIndex={-1} className="mb-3">
-          Comments
-        </CardTitle>
-        <ToggleGroup
-          variant="chips"
-          aria-label="Filter comments"
-          value={filter}
-          onValueChange={(value) => setFilter(value as CommentFilter)}
-          data-testid="comment-filters"
-        >
-          {COMMENT_FILTERS.map((option) => (
-            <ToggleGroupItem key={option.value} value={option.value}>
-              {option.label}
-              {option.value === "needs_reply" && (post.needs_reply_count ?? 0) > 0 ? (
-                <span className="ml-1 tabular-nums" data-testid="needs-reply-chip-count">
-                  {formatCount(post.needs_reply_count ?? 0)}
-                </span>
-              ) : null}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
+        {/* The heading and the filters stay in view under the page's sticky header while the
+            comments scroll (owner, 2026-10-24). They bleed to the card's edges and top, on the
+            work-pane glass, so the comments blur beneath them. */}
+        <div className="glass-pane sticky top-[calc(3.5rem+var(--page-header-h,0px))] z-10 -mx-(--card-padding) -mt-(--card-padding) rounded-t-xl border-b border-line px-(--card-padding) pt-(--card-padding) pb-3 md:top-(--page-header-h)">
+          <CardTitle id="post-comments-heading" ref={headingRef} tabIndex={-1} className="mb-3">
+            Comments
+          </CardTitle>
+          <ToggleGroup
+            variant="chips"
+            aria-label="Filter comments"
+            value={filter}
+            onValueChange={(value) => setFilter(value as CommentFilter)}
+            data-testid="comment-filters"
+          >
+            {COMMENT_FILTERS.map((option) => (
+              <ToggleGroupItem key={option.value} value={option.value}>
+                {option.label}
+                {option.value === "needs_reply" && (post.needs_reply_count ?? 0) > 0 ? (
+                  <span className="ml-1 tabular-nums" data-testid="needs-reply-chip-count">
+                    {formatCount(post.needs_reply_count ?? 0)}
+                  </span>
+                ) : null}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </div>
         {missing && prepared ? (
           <Alert tone="warning" icon={<AlertTriangle />} className="mt-4" data-testid="prepared-missing">
             <AlertDescription>
@@ -175,7 +180,7 @@ export function CommentsColumn({
             </AlertDescription>
           </Alert>
         ) : null}
-        <CardBleed className="mt-4 border-t border-line">{content}</CardBleed>
+        <CardBleed className="mt-4">{content}</CardBleed>
       </section>
     </Card>
   );

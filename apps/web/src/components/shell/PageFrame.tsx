@@ -1,9 +1,11 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { PAGE_TITLE } from "@/styles/tokens";
 import { ChevronLeft } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 
 /**
  * UX-SH-03: title and optional actions in a header row, content below, max width 1200 px. A page
@@ -42,9 +44,20 @@ export function PageFrame({
   back?: { href: Route; label: string };
   children: ReactNode;
 }) {
+  // The header's height, as --page-header-h on the page, so a sticky bar inside the page (the
+  // comment filters) can sit just under the sticky header.
+  const header = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(0);
+  useEffect(() => {
+    const element = header.current;
+    if (!element || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => setHeaderHeight(element.offsetHeight));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
   return (
-    <div className="w-full p-4 pt-0 md:p-6 md:pt-0">
-      <div className={cn(STICKY_PAGE_HEADER, "mb-6 pt-4 md:pt-6")}>
+    <div className="w-full p-4 pt-0 md:p-6 md:pt-0" style={{ "--page-header-h": `${headerHeight}px` } as CSSProperties}>
+      <div ref={header} className={cn(STICKY_PAGE_HEADER, "mb-6 pt-4 md:pt-6")}>
         {back ? <BackLink {...back} /> : null}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <h1 className={cn("min-w-0 break-words", PAGE_TITLE)}>{title}</h1>
