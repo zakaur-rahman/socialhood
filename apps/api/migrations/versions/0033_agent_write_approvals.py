@@ -7,8 +7,8 @@
 
 Expand-only: nullable columns and a new table; nothing is rewritten.
 
-Revision ID: 0034
-Revises: 0030
+Revision ID: 0033
+Revises: 0032
 Create Date: 2026-10-24 18:00:00.000000+00:00
 """
 
@@ -20,8 +20,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0034"
-down_revision: str | None = "0030"
+revision: str = "0033"
+down_revision: str | None = "0032"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

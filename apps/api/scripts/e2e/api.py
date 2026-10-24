@@ -76,8 +76,8 @@ if (
     or len(SEED_TOKEN) < 16
 ):
     raise RuntimeError(
-        "The e2e API needs SANDBOX_PLATFORM_ENABLED=true, DODO_PROVIDER=fake, GOOGLE_PROVIDER=fake, "
-        "E2E_SEED_TOKEN and a non-production APP_ENV"
+        "The e2e API needs SANDBOX_PLATFORM_ENABLED=true, DODO_PROVIDER=fake, "
+        "GOOGLE_PROVIDER=fake, E2E_SEED_TOKEN and a non-production APP_ENV"
     )
 
 dodo = _process_fake()

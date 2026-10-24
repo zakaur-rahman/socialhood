@@ -78,7 +78,7 @@ ROLE_PERMISSIONS: dict[Role, frozenset[Permission]] = {
     Role.OWNER: frozenset(_OWNER),
 }
 
-# Roles an inviter may hand out: only owners make admins (decision recorded in C-105).
+# Roles an inviter may hand out: only owners make admins (decision recorded in C-106).
 INVITABLE_ROLES: dict[Role, frozenset[Role]] = {
     Role.AGENT: frozenset(),
     Role.ADMIN: frozenset({Role.AGENT}),

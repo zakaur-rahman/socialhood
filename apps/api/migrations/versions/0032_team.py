@@ -5,8 +5,8 @@
 
 Expand-only: two new tables, nothing else changes.
 
-Revision ID: 0033
-Revises: 0030
+Revision ID: 0032
+Revises: 0031
 Create Date: 2026-10-27 09:00:00.000000+00:00
 """
 
@@ -18,8 +18,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0033"
-down_revision: str | None = "0030"
+revision: str = "0032"
+down_revision: str | None = "0031"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -53,7 +53,9 @@ def upgrade() -> None:
             "status IN ('pending', 'accepted', 'revoked')",
             name=op.f("ck_workspace_invitations_status"),
         ),
-        sa.CheckConstraint("role IN ('admin', 'agent')", name=op.f("ck_workspace_invitations_role")),
+        sa.CheckConstraint(
+            "role IN ('admin', 'agent')", name=op.f("ck_workspace_invitations_role")
+        ),
         sa.CheckConstraint(
             "char_length(email) BETWEEN 3 AND 254",
             name=op.f("ck_workspace_invitations_email_length"),

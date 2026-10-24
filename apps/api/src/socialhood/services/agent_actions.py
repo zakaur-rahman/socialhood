@@ -9,7 +9,7 @@ The agent only ever *proposes* (``propose``):
    (``spec.check``), so a proposal that would be refused is refused now, in the model's turn;
 4. a pending approval is stored with an idempotency key (the proposing step's key): a retried
    step finds its approval instead of adding another. It expires after ``APPROVAL_TTL``
-   (24 hours, recorded in C-100), and the step is marked ``approval``;
+   (24 hours, recorded in C-107), and the step is marked ``approval``;
 5. the audit trail gets ``proposed``.
 
 Only a member's explicit approval executes (``approve``): the approval row is locked, must still

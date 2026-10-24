@@ -2934,7 +2934,7 @@ re-reads what changed, and each page listed under its site. It builds on the sin
 - **Unsure / for the coordinator:** regenerate the client (`WorkspacePermissions`, `Member`,
   `MemberList`, `Seats`, `Invitation`, `InvitationList`, `InvitationCreate`, `MemberRolePatch`,
   `OwnershipTransfer`, `AuditEvent`, `AuditEventList` and the new operations); the web types are
-  aliases waiting for it. Migration `0033` (down revision `0030`) needs re-chaining. The e2e stack
+  aliases waiting for it. Migration `0032` follows `0031`. The e2e stack
   needs `CLERK_INVITATIONS_PROVIDER=fake` (added to `scripts/e2e-stack.mjs`).
 
 ## C-103 · Native Google Sheets sync (GR-27, feature/gr-27-sheets-followups)
@@ -3173,7 +3173,7 @@ had (`agent_approvals`, `…/agent/approvals/*`) and on the flow engine (GR-03, 
   an unknown tag, a team member (no tools; the answer names owners and admins), and a broadcast.
   The two earlier `prepare_automation` cases accept either tool. The eval seed gains the tags `vip`
   and `wholesale`.
-- **Migration 0034** (after 0030), expand-only: `agent_approvals.idempotency_key` (unique per
+- **Migration 0033** (after 0032), expand-only: `agent_approvals.idempotency_key` (unique per
   workspace), `outcome`, `executed_at`, an index on pending expiry, and the table
   `agent_approval_events`. The coordinator re-chains it.
 - **API.** `GET …/agent/approvals` (`status` now also takes `all`, plus `run_id`), `POST
@@ -3205,5 +3205,5 @@ had (`agent_approvals`, `…/agent/approvals/*`) and on the flow engine (GR-03, 
 - **Unsure / for the coordinator:** regenerate the client (`FlowProposalAction`,
   `SegmentProposalAction`, `ApprovalOutcome`, `ApprovalEvent`, the new fields of `AgentApproval`
   and `AgentRunDetail.approvals`, `ApprovalListStatus`, `run_id` on the list); the web types are
-  aliases waiting for it. Re-chain migration 0034. Run `alembic check` (the model and migration
+  aliases waiting for it. Run `alembic check` (the model and migration
   declare the same index and unique constraint). The agent eval needs a live key; I did not run it.

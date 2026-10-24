@@ -3,7 +3,7 @@
 Only the narrow ``drive.file`` scope is asked for (plus ``openid email``, to show which Google
 account is connected). With ``drive.file`` the app can touch only files it created or that the
 person opened with it, so a sheet Social Hood makes always works; an existing sheet works only
-if Google has granted the app that file (see docs/CONFLICTS.md, C-100).
+if Google has granted the app that file (see docs/CONFLICTS.md, C-103).
 
 Errors are ``GoogleError`` with a ``kind`` that decides what the sync does:
 

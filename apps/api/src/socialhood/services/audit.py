@@ -2,7 +2,7 @@
 
 - ``record`` adds one row to the caller's session; it never commits, so the row lands with the
   change it describes (or not at all). The handler that knows the member calls it next to its
-  commit (C-105).
+  commit (C-106).
 - Rows hold ids, names and changed field names, never a message body, a secret or a token: the
   detail is filtered and cut to size here, whatever a caller passes.
 - The actor's name is kept on the row, so it still reads right after the member is removed.

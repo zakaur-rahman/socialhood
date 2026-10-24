@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi.routing import APIRoute
+from fastapi.routing import APIRoute, _iter_routes_with_context
 
 from socialhood.auth.permissions import Permission
 from socialhood.main import create_app
@@ -34,12 +34,18 @@ def _permissions(dependant: Any) -> set[Permission]:
 
 
 def _write_routes(app: Any) -> list[tuple[str, str, APIRoute]]:
-    return [
+    """FastAPI 0.141 keeps included routers as `_IncludedRouter` objects in `app.routes`, so the
+    real routes are reached through its route iterator, not by reading `app.routes` directly."""
+    routes = [route for route, _ in _iter_routes_with_context(app.routes)]
+    found = [
         (method, route.path, route)
-        for route in app.routes
+        for route in routes
         if isinstance(route, APIRoute) and route.path.startswith("/v1/")
         for method in sorted(route.methods & WRITE)
     ]
+    # A walk that finds almost nothing passes for the wrong reason (it did, before this check).
+    assert len(found) > 100, f"only {len(found)} write routes found: is the router walk broken?"
+    return found
 
 
 def test_every_workspace_write_route_declares_a_permission(api_settings: Any) -> None:

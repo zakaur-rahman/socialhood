@@ -1,6 +1,6 @@
 """Team members and invitations (GR-19). Nothing here commits; the route does.
 
-Rules (C-105):
+Rules (C-106):
 - Roles: owner, admin, agent. Owners invite admins or agents; admins invite agents only. Only
   owners change a role, remove a member or move ownership.
 - Seats: the plan's ``members`` limit counts members plus pending invitations that haven't
