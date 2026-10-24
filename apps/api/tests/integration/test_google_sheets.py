@@ -415,7 +415,9 @@ async def capture_email(world: World, email: str = "Priya@Example.com") -> None:
     dm = await world.dm(author, "link please")
     assert dm is not None
     assert await world.run("dm", dm) is Outcome.FIRED
-    [question] = await world.rows("SELECT id FROM messages WHERE direction = 'outbound'")
+    [question] = await world.rows(
+        "SELECT id FROM messages WHERE direction = 'outbound' AND status = 'queued'"
+    )
     assert await world.send(question["id"]) is Delivery.SENT
     answer = await world.dm(author, email)
     assert answer is not None

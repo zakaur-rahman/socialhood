@@ -578,7 +578,8 @@ async def test_a_message_outside_the_window_is_refused_like_the_app_does(
         workspace_id=setup.wid,
         account_id=setup.account_id,
         display_name="Late Lata",
-        last_inbound_at=datetime.now(UTC) - timedelta(hours=30),
+        # The sandbox account has Human Agent, so a reply is allowed for 7 days; past that, never.
+        last_inbound_at=datetime.now(UTC) - timedelta(days=8),
     )
     key, _ = await make_key(client, setup, "messages:send")
     url = f"/public/v1/conversations/{old.conversation_id}/messages"

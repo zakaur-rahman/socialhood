@@ -966,6 +966,7 @@ PUBLIC_LISTS = {
     "/public/v1/automation-runs",
     "/public/v1/contact-fields",
     "/public/v1/hooks",
+    "/public/v1/me",  # the key's own workspace: it names no id at all
     "/public/v1/openapi.json",
 }
 

@@ -230,7 +230,7 @@ async def test_a_message_to_the_page_starts_a_facebook_conversation(
 
     # A re-delivery stores nothing new.
     again = await deliver_page(maker, redis, page_message(ref, sender=CONTACT, mid="m_1"), copy="x")
-    assert again == [WebhookStatus.IGNORED]
+    assert again == [WebhookStatus.PROCESSED]  # a replay is a no-op, as for Instagram
     assert len(await rows(engine, "SELECT id FROM messages")) == 1
 
     headers = clerk.headers(clerk_id)

@@ -31,7 +31,7 @@ from tests.support.analytics import make_account_day
 from tests.support.api import Clerk, sign_in
 from tests.support.automation_api import Ws, make_run, workspace
 from tests.support.automations import make_automation
-from tests.support.inbox import make_account
+from tests.support.inbox import make_account, make_thread
 from tests.support.notify_team import Team, make_team
 from tests.support.post_metrics import make_instagram_account
 
@@ -244,8 +244,13 @@ async def test_captures_are_the_answers_flows_took_in_each_week(team: Team) -> N
     automation = await make_automation(
         team.engine, workspace_id=team.wid, account_id=seed.account_id, message_text=None
     )
+    thread = await make_thread(team.engine, workspace_id=str(team.wid), account_id=seed.account_id)
     run = await make_run(
-        team.engine, workspace_id=str(team.wid), automation_id=automation, created_at=ist(20, 9)
+        team.engine,
+        workspace_id=str(team.wid),
+        automation_id=automation,
+        created_at=ist(20, 9),
+        trigger_message_id=thread.message_ids[0],
     )
 
     async def step(step_id: str, kind: str, detail: dict[str, Any], at: datetime) -> None:

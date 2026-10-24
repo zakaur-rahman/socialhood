@@ -31,7 +31,7 @@ from socialhood.services.sending import Delivery
 from socialhood.services.webhook_handlers import instagram as instagram_handler
 from socialhood.settings import Settings
 from tests.support.api import Clerk, sign_in
-from tests.support.automation_api import Ws
+from tests.support.automation_api import Ws, set_plan
 from tests.support.automations import make_automation
 from tests.support.facebook import (
     PERSON,
@@ -243,6 +243,8 @@ async def test_a_dm_keyword_automation_answers_a_messenger_message(world: World)
     message_id = await world.dm("7001234500001", "link please")
     assert message_id is not None
     assert await world.run("dm", message_id) is Outcome.FIRED
+    [queued] = await world.rows("SELECT id FROM messages WHERE direction = 'outbound'")
+    assert await world.send(queued["id"]) is Delivery.SENT  # the run queues; the worker sends
     sent = [m for m in outbox.SENT if m.message.text and m.message.text.startswith("We open")]
     assert len(sent) == 1
     [conv] = await world.rows("SELECT platform FROM conversations")
@@ -429,7 +431,10 @@ async def refusals(ws: Ws, **values: Any) -> dict[str, str]:
     return {e["field"]: e["message"] for e in response.json()["errors"]}
 
 
-async def test_the_dm_comment_entry_and_ad_triggers_activate_on_a_page(ws: Ws) -> None:
+async def test_the_dm_comment_entry_and_ad_triggers_activate_on_a_page(
+    ws: Ws, engine: AsyncEngine
+) -> None:
+    await set_plan(engine, ws.wid, "pro")  # four active automations; Free includes three
     for trigger, extra in (
         ("dm_keyword", {}),
         ("comment_keyword", {"public_reply_texts": ["Sent you a message!"]}),
@@ -583,4 +588,5 @@ async def test_disconnecting_a_page_and_deleting_its_data_leaves_nothing_of_it(
     assert result.status == "purged"
     for table in ("social_accounts", "conversations", "messages", "contacts", "comments"):
         assert await _rows(engine, f"SELECT id FROM {table}") == [], table  # noqa: S608
-    assert await _rows(engine, "SELECT id FROM webhook_events WHERE provider = 'facebook'") != []
+    # The Page's stored webhook payloads go too (C-067: they hold the customers' words).
+    assert await _rows(engine, "SELECT id FROM webhook_events WHERE provider = 'facebook'") == []

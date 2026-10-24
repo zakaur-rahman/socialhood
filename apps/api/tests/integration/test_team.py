@@ -288,7 +288,7 @@ async def test_a_message_sent_by_a_member_is_audited_without_its_text(
         "POST",
         f"/conversations/{thread.conversation_id}/messages",
         json={"client_id": "5f0c3c1e-2d7a-4b43-9d35-9d7f0b0c2a11", "text": "Secret text body"},
-        headers={"Idempotency-Key": "k1"},
+        headers={"Idempotency-Key": "k1-audit-0001"},
     )
     assert sent.status_code == 202, sent.text
     events = (await ws.ok("GET", "/audit-events?action=message.sent"))["items"]

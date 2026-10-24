@@ -3816,3 +3816,30 @@ Free"; the owner chose to give the widget itself to every plan.* The PD table in
   `phone_number_quality_update` field subscribed (*unverified* that it is delivered to the same
   callback as `messages`). `BROADCASTS_ENABLED` belongs on in staging only until
   O-11.
+
+## C-113 · Combined GR batch E: integration fixes between the GRs (feature/gr-batch-e)
+
+Each GR was written on its own base, so these only showed once they were stacked. None changes a
+migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was never altered.
+
+- **Widget frame policy (GR-28 against the security headers).** The outermost middleware replaced
+  every response's `Content-Security-Policy` with `frame-ancestors 'none'`, which erased the widget
+  frame's own list of allowed sites. The middleware now keeps the app's policy on `/widget/frame`
+  when the route set one (a refusal without one still gets `'none'`); every other route keeps `'none'`.
+- **Private reply length (GR-29).** `PrivateReplyCreate.text` was capped at 1,000 characters in the
+  schema, so a Page's 2,000-character limit never reached the service's per-platform check. The schema
+  now only bounds the body (4,096) and the service enforces the account's own limit. The OpenAPI
+  `maxLength` of that body changes, so the client is regenerated.
+- **A re-delivered Messenger message is `processed`, not `ignored`.** The Facebook handler gives the
+  same status as Instagram's for a replay (ingest stores nothing and records no reason), so the
+  GR-29 test expected the wrong status; it still asserts that nothing new is stored.
+- **A Page's webhook payloads are deleted with its data.** The purge (C-067) deletes `webhook_events`
+  routed to the account whatever the provider; the GR-29 test asserted they remained. Now it asserts
+  none do.
+- **Tests, not behaviour.** `Ws.call` merges extra headers instead of passing `headers` twice;
+  `make_run` borrows a message when a seed names no trigger (the one-trigger check holds);
+  the sheets `capture_email` helper picks the still-queued question when called twice in a test; a
+  public-API send outside the window uses 8 days because the sandbox account has Human Agent (7 days);
+  the DM keyword test sends the message the run queues; a Page test needs Pro for four active
+  automations (Free includes three); the tenancy walk lists `/public/v1/me` with the other routes that
+  name no id (it still must show none of B's data); Idempotency-Key needs 8 characters.
