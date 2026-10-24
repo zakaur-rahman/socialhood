@@ -52,12 +52,15 @@ def _joined(query: Any) -> Any:
 
 async def counts(session: AsyncSession, broadcast_id: uuid.UUID) -> dict[str, int]:
     """Recipients by status, plus ``replied`` and ``stopped``, for one broadcast."""
+    # Grouped on a subquery's column: the CASE has bound values, and a copy of it in GROUP BY
+    # would not be recognised as the same expression.
+    shown = (
+        _joined(select(status_expr.label("shown")))
+        .where(BroadcastRecipient.broadcast_id == broadcast_id)
+        .subquery()
+    )
     rows = (
-        await session.execute(
-            _joined(select(status_expr, func.count()))
-            .where(BroadcastRecipient.broadcast_id == broadcast_id)
-            .group_by(status_expr)
-        )
+        await session.execute(select(shown.c.shown, func.count()).group_by(shown.c.shown))
     ).all()
     out = {status: 0 for status in STATUSES}
     for status, count in rows:
@@ -86,11 +89,20 @@ async def counts_for(
     }
     if not broadcast_ids:
         return out
+    shown = (
+        _joined(
+            select(
+                BroadcastRecipient.broadcast_id.label("broadcast_id"), status_expr.label("shown")
+            )
+        )
+        .where(BroadcastRecipient.broadcast_id.in_(broadcast_ids))
+        .subquery()
+    )
     rows = (
         await session.execute(
-            _joined(select(BroadcastRecipient.broadcast_id, status_expr, func.count()))
-            .where(BroadcastRecipient.broadcast_id.in_(broadcast_ids))
-            .group_by(BroadcastRecipient.broadcast_id, status_expr)
+            select(shown.c.broadcast_id, shown.c.shown, func.count()).group_by(
+                shown.c.broadcast_id, shown.c.shown
+            )
         )
     ).all()
     for broadcast_id, status, count in rows:

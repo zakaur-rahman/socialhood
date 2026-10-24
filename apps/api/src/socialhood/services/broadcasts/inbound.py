@@ -71,18 +71,24 @@ async def on_inbound(
 
 
 async def _withdraw(session: AsyncSession, contact: Contact, msg: Message, at: datetime) -> None:
-    latest = await session.scalar(
-        select(ContactConsent.status)
-        .where(
-            ContactConsent.contact_id == contact.id,
-            ContactConsent.channel == ConsentChannel.WHATSAPP,
-            ContactConsent.purpose == ConsentPurpose.MARKETING,
+    latest = (
+        await session.execute(
+            select(ContactConsent.status, ContactConsent.occurred_at)
+            .where(
+                ContactConsent.contact_id == contact.id,
+                ContactConsent.channel == ConsentChannel.WHATSAPP,
+                ContactConsent.purpose == ConsentPurpose.MARKETING,
+            )
+            .order_by(ContactConsent.occurred_at.desc(), ContactConsent.created_at.desc())
+            .limit(1)
         )
-        .order_by(ContactConsent.occurred_at.desc(), ContactConsent.created_at.desc())
-        .limit(1)
-    )
-    if latest == ConsentStatus.REVOKED:
-        return  # already withdrawn: one record is enough
+    ).one_or_none()
+    if latest is not None:
+        if latest.status == ConsentStatus.REVOKED:
+            return  # already withdrawn: one record is enough
+        # WhatsApp stamps a message to the second, so a grant recorded in that same second would
+        # otherwise outrank the STOP that followed it: the withdrawal always comes last.
+        at = max(at, latest.occurred_at + timedelta(milliseconds=1))
     await contacts.record_consent(
         session,
         contact.id,

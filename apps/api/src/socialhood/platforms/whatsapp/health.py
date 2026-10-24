@@ -8,7 +8,7 @@ Two sources, both *unverified against a live number*:
 - The ``phone_number_quality_update`` webhook field: ``value.event`` is ONBOARDING, UPGRADE,
   DOWNGRADE, FLAGGED or UNFLAGGED and ``value.current_limit`` the tier after it. FLAGGED means the
   number was flagged for low quality (rating Red), UNFLAGGED that it recovered (we only know it is
-  no longer Red, so the rating is read again from the API).
+  no longer Red, so it is taken as Medium until the rating is read again from the API).
 
 This webhook field has no ``metadata.phone_number_id``: it arrives under the WhatsApp Business
 Account id (``entry[].id``) with the number as ``display_phone_number``, so it is routed by the
@@ -21,7 +21,9 @@ from dataclasses import dataclass
 from typing import Any
 
 RATINGS = {"GREEN": "green", "YELLOW": "yellow", "RED": "red"}
-EVENT_RATINGS = {"FLAGGED": "red"}
+# FLAGGED: rated Low. UNFLAGGED: no longer Low; we do not know whether Medium or High until the
+# rating is read again, so it is Medium (the cautious one) for now.
+EVENT_RATINGS = {"FLAGGED": "red", "UNFLAGGED": "yellow"}
 
 
 @dataclass(frozen=True)
@@ -35,7 +37,7 @@ class QualityEvent:
     event: str  # ONBOARDING, UPGRADE, DOWNGRADE, FLAGGED or UNFLAGGED
     messaging_tier: str | None
     display_phone_number: str | None
-    quality_rating: str | None  # what the event itself says: red for FLAGGED, else None
+    quality_rating: str | None  # what the event says: red for FLAGGED, yellow for UNFLAGGED
 
 
 def parse_health(body: Any) -> NumberHealth:

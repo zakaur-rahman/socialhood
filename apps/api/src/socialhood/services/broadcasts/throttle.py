@@ -61,11 +61,11 @@ def room(daily_limit: int | None, messaged_last_24h: int) -> int | None:
 
 
 def batch_size(
-    *, room_now: int | None, waiting: int, quota_left: int | None, size: int = BATCH_SIZE
+    *, room_now: int | None, waiting: int, quota_left: int | None, size: int | None = None
 ) -> int:
     """How many recipients to hand over this time: the batch size, cut to the room under the
     daily limit, the plan's monthly quota and the people still waiting."""
-    n = min(size, waiting)
+    n = min(size or BATCH_SIZE, waiting)
     if room_now is not None:
         n = min(n, room_now)
     if quota_left is not None:
