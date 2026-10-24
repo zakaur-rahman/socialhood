@@ -25,7 +25,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from tests.support.agent import make_agent_approval, make_agent_run
+from tests.support.agent import make_agent_approval, make_agent_run, make_approval_event
 from tests.support.ai import (
     make_analysis,
     make_decision,
@@ -387,6 +387,7 @@ B_TABLES = (
     "agent_runs",
     "agent_steps",
     "agent_approvals",
+    "agent_approval_events",
     "agent_policies",
     "payments",
     "email_deliveries",
@@ -695,6 +696,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
     approval = await make_agent_approval(
         engine, workspace_id=wid, run_id=waiting.id, step_id=waiting.step_ids[0]
     )
+    await make_approval_event(engine, workspace_id=wid, approval_id=approval)
     await make_payment(engine, workspace_id=wid)
     notification = await make_notification(engine, workspace_id=wid, user_id=b["id"])
     await make_email_delivery(

@@ -37,7 +37,20 @@ from socialhood.models.contacts import ContactFieldDefinition, Tag
 from socialhood.models.media import ResourceType
 from socialhood.models.replies import SavedReply
 from socialhood.repositories import automations as repo
-from socialhood.schemas.flows import AiReplyStep, Flow, FlowDefinition, FlowSource, SendStep
+from socialhood.schemas.flows import (
+    ActionStep,
+    AddTag,
+    AiReplyStep,
+    AskStep,
+    BranchStep,
+    Flow,
+    FlowDefinition,
+    FlowSource,
+    RemoveTag,
+    SendStep,
+    SetField,
+    TagCondition,
+)
 from socialhood.services.automations import definitions, flows, validation
 
 KEEP_COMPLETE_DETAIL = definitions.KEEP_COMPLETE_DETAIL
@@ -70,6 +83,41 @@ async def _context_parts(
     }
     tags = frozenset((await session.scalars(select(Tag.id))).all())
     return fields, tags
+
+
+async def reference_errors(session: AsyncSession, definition: FlowDefinition) -> list[FieldError]:
+    """The tags and custom fields a flow names that this workspace doesn't have (the agent checks
+    a proposed flow with it, GR-36). A draft may be incomplete, so this is all it checks of
+    activation's references."""
+    fields, tags = await _context_parts(session)
+    errors: list[FieldError] = []
+    for i, step in enumerate(definition.steps):
+        if isinstance(step, AskStep) and step.field_key and step.field_key not in fields:
+            errors.append(
+                FieldError(
+                    flows.path(i, "field_key"), f"There's no field called “{step.field_key}”."
+                )
+            )
+        elif isinstance(step, ActionStep):
+            action = step.action
+            if isinstance(action, AddTag | RemoveTag) and action.tag_id not in tags:
+                errors.append(FieldError(flows.path(i, "action.tag_id"), flows.COPY["tag_missing"]))
+            elif isinstance(action, SetField) and action.key not in fields:
+                errors.append(
+                    FieldError(
+                        flows.path(i, "action.key"), f"There's no field called “{action.key}”."
+                    )
+                )
+        elif isinstance(step, BranchStep):
+            for j, rule in enumerate(step.rules):
+                when = rule.when
+                if isinstance(when, TagCondition) and when.tag_id not in tags:
+                    errors.append(
+                        FieldError(
+                            flows.path(i, f"rules.{j}.when.tag_id"), flows.COPY["tag_missing"]
+                        )
+                    )
+    return errors
 
 
 async def _saved_replies(session: AsyncSession) -> dict[uuid.UUID, str]:

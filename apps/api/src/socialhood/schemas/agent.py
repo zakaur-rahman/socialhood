@@ -77,7 +77,13 @@ AnswerRefKind = Literal[
     "scheduled_post",
     "knowledge_source",
 ]
-ActionKind = Literal["schedule_message", "reply_to_comment", "automation_draft"]
+ActionKind = Literal[
+    "schedule_message",
+    "reply_to_comment",
+    "automation_draft",
+    "flow_proposal",  # GR-36
+    "segment_proposal",  # GR-36
+]
 
 
 # ---- answers
@@ -155,9 +161,35 @@ class AutomationDraftAction(_ActionCardBase):
     prefill: AutomationDraftPrefill
 
 
-# FR-AGT-03: a prepared action the member completes in the existing screen.
+class _ProposalCardBase(_ActionCardBase):
+    """GR-36: a write the agent proposed. Nothing is saved until a member approves it; the card
+    shows what will happen in plain words and the web reads the approval (status, result, who
+    may decide) from …/agent/approvals. ``route`` opens the list the result will appear in."""
+
+    approval_id: uuid.UUID
+    title: str = Field(max_length=120)  # e.g. "New automation: Send the price list"
+    lines: list[str] = Field(max_length=20)  # what will happen, one line each (trigger, steps)
+
+
+class FlowProposalAction(_ProposalCardBase):
+    kind: Literal["flow_proposal"]
+    automation_id: uuid.UUID | None = None  # set when it changes an existing automation's flow
+    step_count: int
+
+
+class SegmentProposalAction(_ProposalCardBase):
+    kind: Literal["segment_proposal"]
+    match_count: int  # contacts that match the filter when it was proposed
+
+
+# FR-AGT-03: a prepared action the member completes in the existing screen (the first three), or
+# a proposed write that waits for the member's approval (GR-36, the last two).
 ActionCard = Annotated[
-    ScheduleMessageAction | CommentReplyAction | AutomationDraftAction,
+    ScheduleMessageAction
+    | CommentReplyAction
+    | AutomationDraftAction
+    | FlowProposalAction
+    | SegmentProposalAction,
     Field(discriminator="kind"),
 ]
 
@@ -353,6 +385,7 @@ class AgentRunDetail(AgentRun):
     """GET …/agent/runs/{run_id}: the run with every step (TR-AGT-08)."""
 
     steps: list[AgentStep]
+    approvals: list[AgentApproval]  # GR-36: the writes it proposed, with their audit events
     plan: dict[str, Any] | None = None  # R2: agent/plan.Plan
     model: str | None = None
     prompt_version: str | None = None
@@ -491,6 +524,33 @@ class AgentPolicyUpdate(RequestModel):
 # ---- approvals (R2; FR-AGT-09)
 
 
+ApprovalListStatus = Literal["pending", "approved", "rejected", "expired", "superseded", "all"]
+ApprovalEventName = Literal["proposed", "approved", "rejected", "expired", "executed", "failed"]
+ApprovalResourceKind = Literal["automation", "segment"]
+
+
+class ApprovalOutcome(ResponseModel):
+    """What approving did (GR-36). ``ok`` false: the service refused it, nothing was saved, and
+    the approval is still pending so the member can edit it or reject it."""
+
+    ok: bool
+    summary: str  # e.g. "Saved the draft automation “Send the price list”."
+    resource_kind: ApprovalResourceKind | None = None
+    resource_id: uuid.UUID | None = None
+    route: str | None = None  # the screen with the result, relative to /w/{slug}/
+    error_code: str | None = None
+
+
+class ApprovalEvent(ResponseModel):
+    """One line of an approval's audit trail (GR-36): who did what, and when."""
+
+    id: uuid.UUID
+    event: ApprovalEventName
+    actor: Actor | None = None  # None: the agent's own proposal for a deleted user, or an expiry
+    detail: dict[str, Any]
+    created_at: datetime
+
+
 class AgentApproval(ResponseModel):
     """A write waiting for a person: exactly what will happen (recipients, text, scope, count)."""
 
@@ -502,11 +562,20 @@ class AgentApproval(ResponseModel):
     label: str  # the tool in plain words
     tier: RiskTierName
     summary: str  # what will happen, in plain words
-    payload: dict[str, Any]  # {tool, args}: the exact call that will run
+    payload: dict[str, Any]  # {tool, args, preview}: the exact call that will run
+    # GR-36: what it said when it was shown, one line each, and the figures beside it.
+    lines: list[str] = Field(default_factory=list)
+    match_count: int | None = None  # segments: people the filter matched when proposed or approved
+    step_count: int | None = None  # flows
     status: ApprovalStatusName
     expires_at: datetime
+    # GR-36: whether the caller's role may decide it (Approve is disabled when false).
+    can_decide: bool = False
+    requested_by: Actor | None = None
     decided_by: Actor | None = None
     decided_at: datetime | None = None
+    outcome: ApprovalOutcome | None = None
+    events: list[ApprovalEvent] = Field(default_factory=list)
     created_at: datetime
 
 

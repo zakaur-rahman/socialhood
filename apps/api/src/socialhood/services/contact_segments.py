@@ -86,9 +86,9 @@ async def _check_spec(session: AsyncSession, spec: ContactFilterSpec) -> None:
             raise ApiError("not_found", "One of those tags wasn't found.")
 
 
-async def create_segment(
-    session: AsyncSession, body: SegmentCreate, *, user_id: uuid.UUID | None
-) -> Segment:
+async def validate_new(session: AsyncSession, body: SegmentCreate) -> None:
+    """Every refusal ``create_segment`` makes, without saving (the agent checks a proposal with it,
+    GR-36): a name in use (409), too many segments (422), a field or tag that isn't there."""
     await _unique_name(session, body.name)
     total = await session.scalar(select(func.count()).select_from(ContactSegment))
     if (total or 0) >= MAX_SEGMENTS:
@@ -102,6 +102,12 @@ async def create_segment(
             ],
         )
     await _check_spec(session, body.filter)
+
+
+async def create_segment(
+    session: AsyncSession, body: SegmentCreate, *, user_id: uuid.UUID | None
+) -> Segment:
+    await validate_new(session, body)
     row = ContactSegment(
         name=body.name.strip(), filter=stored(body.filter), created_by_user_id=user_id
     )

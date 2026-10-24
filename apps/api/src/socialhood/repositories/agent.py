@@ -25,10 +25,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.agent import (
     FINAL_RUN_STATUSES,
+    AgentApproval,
+    AgentApprovalEvent,
     AgentPolicy,
     AgentRun,
     AgentRunStatus,
     AgentStep,
+    ApprovalStatus,
     RiskTier,
     StepStatus,
 )
@@ -340,6 +343,127 @@ def add_policy(session: AsyncSession) -> AgentPolicy:
     row = AgentPolicy(workspace_id=require_workspace())
     session.add(row)
     return row
+
+
+# ---------------------------------------------------------------- approvals (GR-36)
+
+
+async def get_approval(
+    session: AsyncSession, approval_id: uuid.UUID, *, for_update: bool = False
+) -> AgentApproval | None:
+    statement = select(AgentApproval).where(AgentApproval.id == approval_id)
+    if for_update:
+        statement = statement.with_for_update()
+    return await session.scalar(statement)
+
+
+async def approval_for_key(session: AsyncSession, key: str) -> AgentApproval | None:
+    """The approval a step already filed (its idempotency key), so a retried step adds none."""
+    return await session.scalar(select(AgentApproval).where(AgentApproval.idempotency_key == key))
+
+
+def add_approval(session: AsyncSession, **values: Any) -> AgentApproval:
+    row = AgentApproval(**values)
+    session.add(row)
+    return row
+
+
+def add_approval_event(
+    session: AsyncSession,
+    approval_id: uuid.UUID,
+    event: str,
+    *,
+    actor_user_id: uuid.UUID | None,
+    detail: dict[str, Any],
+) -> AgentApprovalEvent:
+    row = AgentApprovalEvent(
+        approval_id=approval_id, event=event, actor_user_id=actor_user_id, detail=detail
+    )
+    session.add(row)
+    return row
+
+
+async def list_approvals(
+    session: AsyncSession,
+    *,
+    requested_by: uuid.UUID | None,
+    status: str | None,
+    run_id: uuid.UUID | None,
+    after: tuple[datetime, uuid.UUID] | None,
+    limit: int,
+) -> list[AgentApproval]:
+    """Soonest to expire first, one more than ``limit``. ``requested_by`` keeps the approvals of
+    one member's runs; ``status`` None keeps every status."""
+    statement = select(AgentApproval).order_by(AgentApproval.expires_at, AgentApproval.id)
+    if requested_by is not None:
+        statement = statement.where(
+            AgentApproval.run_id.in_(
+                select(AgentRun.id).where(AgentRun.requested_by_user_id == requested_by)
+            )
+        )
+    if status is not None:
+        statement = statement.where(AgentApproval.status == status)
+    if run_id is not None:
+        statement = statement.where(AgentApproval.run_id == run_id)
+    if after is not None:
+        statement = statement.where(
+            tuple_(AgentApproval.expires_at, AgentApproval.id)
+            > tuple_(literal(after[0], _TIMESTAMP), literal(after[1], _UUID))
+        )
+    return list((await session.scalars(statement.limit(limit + 1))).all())
+
+
+async def approvals_of_runs(
+    session: AsyncSession, run_ids: Collection[uuid.UUID]
+) -> list[AgentApproval]:
+    if not run_ids:
+        return []
+    rows = await session.scalars(
+        select(AgentApproval)
+        .where(AgentApproval.run_id.in_(run_ids))
+        .order_by(AgentApproval.created_at, AgentApproval.id)
+    )
+    return list(rows.all())
+
+
+async def approval_events(
+    session: AsyncSession, approval_ids: Collection[uuid.UUID]
+) -> dict[uuid.UUID, list[AgentApprovalEvent]]:
+    if not approval_ids:
+        return {}
+    rows = await session.scalars(
+        select(AgentApprovalEvent)
+        .where(AgentApprovalEvent.approval_id.in_(approval_ids))
+        .order_by(AgentApprovalEvent.created_at, AgentApprovalEvent.id)
+    )
+    found: dict[uuid.UUID, list[AgentApprovalEvent]] = {}
+    for row in rows.all():
+        found.setdefault(row.approval_id, []).append(row)
+    return found
+
+
+async def due_approvals(session: AsyncSession, now: datetime) -> list[AgentApproval]:
+    """Pending approvals past their time in the current workspace, locked for the expiry."""
+    rows = await session.scalars(
+        select(AgentApproval)
+        .where(AgentApproval.status == ApprovalStatus.PENDING, AgentApproval.expires_at <= now)
+        .order_by(AgentApproval.expires_at)
+        .with_for_update(skip_locked=True)
+    )
+    return list(rows.all())
+
+
+async def workspaces_with_due_approvals(
+    session: AsyncSession, now: datetime, limit: int
+) -> list[uuid.UUID]:
+    """Across workspaces (jobs/ calls it inside a ``tenant_bypass_scope``)."""
+    rows = await session.scalars(
+        select(AgentApproval.workspace_id)
+        .where(AgentApproval.status == ApprovalStatus.PENDING, AgentApproval.expires_at <= now)
+        .distinct()
+        .limit(limit)
+    )
+    return list(rows.all())
 
 
 # ---------------------------------------------------------------- across workspaces (jobs/)

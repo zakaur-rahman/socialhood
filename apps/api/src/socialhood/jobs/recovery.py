@@ -76,6 +76,7 @@ RECOVERY: dict[str, Recovery] = {
     "dispatch_due_posts": R,
     "sweep_stuck_posts": R,
     "sweep_agent_runs": R,
+    "expire_agent_approvals": R,  # an expired approval is no longer pending
     "reconcile_billing": R,
     "sweep_email_outbox": R,
     "send_weekly_digests": R,  # weekly_digests' unique (workspace, week_start)
