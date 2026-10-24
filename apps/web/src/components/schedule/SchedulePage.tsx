@@ -80,6 +80,7 @@ import {
 import { publishingAccounts } from "@/lib/publishing/rules";
 import { formatDayTime } from "@/lib/tz";
 import { useMediaQuery, useNow, useStoredString } from "@/lib/use-browser-state";
+import { STICKY_PAGE_HEADER } from "@/components/shell/PageFrame";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
@@ -418,7 +419,7 @@ function ScheduleScreen({ fixedNow }: { fixedNow?: Date }) {
           className={cn("w-full p-4 md:p-6", fillsHeight && "flex min-h-0 flex-1 flex-col")}
           data-shell-fill={fillsHeight ? "" : undefined}
         >
-          <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+          <header className={cn(STICKY_PAGE_HEADER, "mb-4 flex flex-wrap items-start justify-between gap-3")}>
             <div>
               <h1 ref={heading} tabIndex={-1} className={cn(PAGE_TITLE, "outline-none")}>
                 Schedule

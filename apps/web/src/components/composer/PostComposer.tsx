@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 import type { ScheduleValue } from "@/components/inbox/ScheduleFields";
 import { LEAVE_WARNING } from "@/components/settings/SaveBar";
-import { BackLink } from "@/components/shell/PageFrame";
+import { BackLink, STICKY_PAGE_HEADER } from "@/components/shell/PageFrame";
 import { BOTTOM_BAR, reserveBottomBar } from "@/components/shell/sticky-bar";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
@@ -589,7 +589,7 @@ function Composer({
     <div className="w-full p-4 md:p-6">
       {/* The title row keeps More beside the title on phones (UI-ISS-115): the status and save
           state wrap inside their own group instead of pushing More onto a line of its own. */}
-      <header className="flex items-center gap-3 border-b border-line pb-4">
+      <header className={cn(STICKY_PAGE_HEADER, "flex items-center gap-3")}>
         <div className="min-w-max flex-1">
           <BackLink href={scheduleHref(slug)} label="Schedule" />
           <h1 className={PAGE_TITLE}>Post</h1>
