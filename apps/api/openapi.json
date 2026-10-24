@@ -47,6 +47,26 @@
         "title": "AccountAttention",
         "type": "object"
       },
+      "AccountBreakdown": {
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/ReportAccount"
+          },
+          "metrics": {
+            "items": {
+              "$ref": "#/components/schemas/BreakdownMetric"
+            },
+            "title": "Metrics",
+            "type": "array"
+          }
+        },
+        "required": [
+          "account",
+          "metrics"
+        ],
+        "title": "AccountBreakdown",
+        "type": "object"
+      },
       "AccountBusinessHours": {
         "description": "An account and its own schedule, when it has one (``override``); otherwise the\nworkspace's applies.",
         "properties": {
@@ -5429,6 +5449,112 @@
           "id"
         ],
         "title": "BranchStep",
+        "type": "object"
+      },
+      "BreakdownMetric": {
+        "description": "One account's count for the week against the week before, with a weekly series. A value\nthe platform can't give is None and ``unavailable`` says why (``insights_not_granted``,\n``no_readings``); a count is never None for that reason.",
+        "properties": {
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Pct"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "key": {
+            "enum": [
+              "messages_received",
+              "conversations",
+              "comments_received",
+              "replies_sent",
+              "automation_runs",
+              "reach",
+              "followers"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous"
+          },
+          "series": {
+            "items": {
+              "$ref": "#/components/schemas/ReportPoint"
+            },
+            "title": "Series",
+            "type": "array"
+          },
+          "unavailable": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable"
+          },
+          "unit": {
+            "default": "count",
+            "enum": [
+              "count",
+              "percent",
+              "seconds"
+            ],
+            "title": "Unit",
+            "type": "string"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "series"
+        ],
+        "title": "BreakdownMetric",
         "type": "object"
       },
       "Broadcast": {
@@ -17834,6 +17960,47 @@
         "title": "ReplyWindow",
         "type": "object"
       },
+      "ReportAccount": {
+        "description": "A connected account, as the picker and the breakdown name it.",
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "platform": {
+            "title": "Platform",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id",
+          "platform",
+          "name",
+          "status"
+        ],
+        "title": "ReportAccount",
+        "type": "object"
+      },
       "ReportAccountMetric": {
         "description": "An account insight (GR-38's service) for the week against the week before, with a weekly\nseries. ``figure`` carries the gap reason and days covered.",
         "properties": {
@@ -23710,6 +23877,16 @@
       "WeeklyReport": {
         "description": "GET \u2026/reports/weekly: the report for one finished week. ``week_start`` is its Monday in\nthe workspace's time zone; ``weeks`` lists the Mondays that can be asked for, newest first.\nThe digest email of that Monday carries the same numbers.",
         "properties": {
+          "account": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReportAccount"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "account_comparison": {
             "$ref": "#/components/schemas/MetricComparisonVisual"
           },
@@ -23719,6 +23896,27 @@
             },
             "title": "Account Metrics",
             "type": "array"
+          },
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ReportAccount"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "breakdown": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AccountBreakdown"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Breakdown"
           },
           "metrics": {
             "items": {
@@ -39598,7 +39796,7 @@
     },
     "/v1/w/{wid}/reports/weekly": {
       "get": {
-        "description": "A finished week against the week before, and the last 8 weeks of each count. ``week`` is\nthe Monday it starts (default: the latest finished week); a day that is not a Monday, a week\nstill running or one over a year back is 422. Gaps are null with the days they cover, never\nzeros.",
+        "description": "A finished week against the week before, and the last 8 weeks of each count. ``week`` is\nthe Monday it starts (default: the latest finished week); a day that is not a Monday, a week\nstill running or one over a year back is 422. Gaps are null with the days they cover, never\nzeros. ``account_id`` makes every figure that connected account's (an account of another\nworkspace is 404); without it the report is workspace-wide and lists each account's own\nnumbers in ``breakdown``.",
         "operationId": "get_weekly_report",
         "parameters": [
           {
@@ -39626,6 +39824,23 @@
                 }
               ],
               "title": "Week"
+            }
+          },
+          {
+            "in": "query",
+            "name": "account_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Account Id"
             }
           }
         ],

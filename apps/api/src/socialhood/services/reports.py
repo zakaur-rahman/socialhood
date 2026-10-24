@@ -26,6 +26,7 @@ Rules:
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
@@ -35,10 +36,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.agent import visuals
 from socialhood.errors import ApiError, FieldError
+from socialhood.models.connections import SocialAccount
 from socialhood.models.identity import Workspace
+from socialhood.repositories import social_accounts
 from socialhood.schemas.agent import MetricComparisonVisual
 from socialhood.schemas.analytics import AccountMetricName, AccountMetrics, ChangeDirection, DaySpan
 from socialhood.schemas.reports import (
+    AccountBreakdown,
+    BreakdownMetric,
+    BreakdownMetricKey,
+    ReportAccount,
     ReportAccountMetric,
     ReportIntent,
     ReportMetric,
@@ -51,7 +58,7 @@ from socialhood.schemas.reports import (
 )
 from socialhood.services import overview_stats as stats
 from socialhood.services.analytics import account_metrics
-from socialhood.services.analytics.common import DateRange, View, zone
+from socialhood.services.analytics.common import DateRange, View, load_account, zone
 
 SERIES_WEEKS: Final = 8
 PICKER_WEEKS: Final = 12
@@ -170,23 +177,25 @@ def stats_values(found: stats.OverviewStats) -> Values:
     }
 
 
-async def week_values(session: AsyncSession, span: DateRange) -> Values:
+async def week_values(
+    session: AsyncSession, span: DateRange, account_id: uuid.UUID | None = None
+) -> Values:
     """The same numbers for another week, without the digest's states and rankings."""
-    inbox = await stats.inbox_stats(session, span)
-    entries = await stats.conversations_by_entry(session, span)
-    qualified, won = await stats.leads_moved(session, span)
+    inbox = await stats.inbox_stats(session, span, account_id)
+    entries = await stats.conversations_by_entry(session, span, account_id)
+    qualified, won = await stats.leads_moved(session, span, account_id)
     return stats_values(
         stats.OverviewStats(
             since=span.since,
             until=span.until,
             inbox=inbox,
-            comments_received=await stats.comments_received(session, span),
-            story_mentions=await stats.story_mentions_received(session, span),
+            comments_received=await stats.comments_received(session, span, account_id),
+            story_mentions=await stats.story_mentions_received(session, span, account_id),
             conversations_from_ads=entries.get("ad", 0),
             conversations_from_links=entries.get("link", 0),
             leads_qualified=qualified,
             leads_won=won,
-            captures=await stats.captures_received(session, span),
+            captures=await stats.captures_received(session, span, account_id),
         )
     )
 
@@ -237,14 +246,18 @@ def _days(span: DateRange) -> DaySpan:
 
 
 async def _week_numbers(
-    session: AsyncSession, workspace: Workspace, monday: date, known: dict[date, Values]
+    session: AsyncSession,
+    workspace: Workspace,
+    monday: date,
+    known: dict[date, Values],
+    account_id: uuid.UUID | None = None,
 ) -> Values:
     """One week's numbers. A week that ended before the workspace was created and has nothing
     recorded is a gap (the workspace did not exist), not a week of zeros."""
     if monday in known:
         return known[monday]
     span = week_span(workspace.timezone, monday)
-    values = await week_values(session, span)
+    values = await week_values(session, span, account_id)
     if span.end <= workspace.created_at and not any(values[key] for key in QUIET_KEYS):
         values = {definition.key: None for definition in COUNT_METRICS}
     known[monday] = values
@@ -257,6 +270,7 @@ async def _account_figures(
     mondays: Sequence[date],
     *,
     with_series: bool,
+    account_id: uuid.UUID | None = None,
 ) -> tuple[list[ReportAccountMetric], AccountMetrics]:
     week = mondays[-1]
     current = _days(week_span(view.timezone, week))
@@ -266,6 +280,7 @@ async def _account_figures(
         view,
         current=current,
         previous=previous,
+        account_id=account_id,
         metrics=[name for name, _ in ACCOUNT_METRICS],
     )
     figures = {figure.metric: figure for figure in found.figures}
@@ -275,7 +290,7 @@ async def _account_figures(
         series: list[ReportPoint] = []
         if with_series:
             points, _ = await account_metrics.metric_series(
-                session, view, metric=name, span=span, weekly=True
+                session, view, metric=name, span=span, weekly=True, account_id=account_id
             )
             by_week = {point.day: point for point in points}
             for monday in mondays:
@@ -292,10 +307,130 @@ async def _account_figures(
     return out, found
 
 
-def account_comparison(found: AccountMetrics) -> MetricComparisonVisual:
+def account_name(account: SocialAccount) -> str:
+    if account.display_name:
+        return account.display_name
+    return f"@{account.username}" if account.username else account.platform.capitalize()
+
+
+def account_ref(account: SocialAccount) -> ReportAccount:
+    return ReportAccount(
+        id=account.id,
+        platform=account.platform,
+        name=account_name(account),
+        username=account.username,
+        status=account.status,
+    )
+
+
+def account_comparison(
+    found: AccountMetrics, account: SocialAccount | None = None
+) -> MetricComparisonVisual:
     """The week's account figures as GR-38's metric comparison, so the page draws them with the
     component Ask uses (tone, gap wording and day coverage are that builder's)."""
-    return visuals.metric_comparison(found, account_label=None, note=ACCOUNT_NOTE)
+    return visuals.metric_comparison(
+        found, account_label=account_name(account) if account else None, note=ACCOUNT_NOTE
+    )
+
+
+BREAKDOWN_COUNTS: Final[tuple[tuple[BreakdownMetricKey, str], ...]] = (
+    ("messages_received", "Messages received"),
+    ("conversations", "People who wrote in"),
+    ("comments_received", "Comments received"),
+    ("replies_sent", "Replies sent"),
+    ("automation_runs", "Automation runs"),
+)
+BREAKDOWN_INSIGHTS: Final[tuple[tuple[AccountMetricName, BreakdownMetricKey, str], ...]] = (
+    ("reach", "reach", "Reach"),
+    ("followers", "followers", "Followers"),
+)
+
+
+async def breakdown(
+    session: AsyncSession,
+    view: View,
+    workspace: Workspace,
+    accounts: Sequence[SocialAccount],
+    mondays: Sequence[date],
+) -> list[AccountBreakdown]:
+    """Each account's own numbers for the week against the week before, and the weeks leading
+    up to it. Counts (messages, people, comments, replies, automation runs) come from the
+    account's own rows. Reach and followers are GR-38's insight readings: None with the reason
+    where the platform or the grant doesn't give them (WhatsApp has no insights). A week before
+    the workspace existed with nothing counted is a gap, as in the workspace-wide series."""
+    tz = workspace.timezone
+    counts: dict[date, dict[uuid.UUID, dict[str, float]]] = {}
+    for monday in mondays:
+        counts[monday] = await stats.counts_by_account(session, week_span(tz, monday))
+    last = mondays[-1]
+    current = _days(week_span(tz, last))
+    previous = _days(week_span(tz, last - timedelta(weeks=1)))
+    series_span = account_metrics.span_of(mondays[0], current.until)
+    out: list[AccountBreakdown] = []
+    for account in accounts:
+        metrics: list[BreakdownMetric] = []
+        for key, label in BREAKDOWN_COUNTS:
+            series: list[ReportPoint] = []
+            for monday in mondays:
+                own = counts[monday].get(account.id, {})
+                before = week_span(tz, monday).end <= workspace.created_at and not any(own.values())
+                series.append(
+                    ReportPoint(week_start=monday, value=None if before else own.get(key, 0.0))
+                )
+            value = series[-1].value
+            prior = series[-2].value if len(series) > 1 else None
+            pct, direction = account_metrics.change(value, prior)
+            metrics.append(
+                BreakdownMetric(
+                    key=key,
+                    label=label,
+                    value=value,
+                    previous=prior,
+                    change_pct=pct,
+                    direction=direction,
+                    series=series,
+                )
+            )
+        found = await account_metrics.account_metrics(
+            session,
+            view,
+            current=current,
+            previous=previous,
+            account_id=account.id,
+            metrics=[name for name, _, _ in BREAKDOWN_INSIGHTS],
+        )
+        figures = {figure.metric: figure for figure in found.figures}
+        for name, key, label in BREAKDOWN_INSIGHTS:
+            figure = figures[name]
+            points, _ = await account_metrics.metric_series(
+                session, view, metric=name, span=series_span, weekly=True, account_id=account.id
+            )
+            by_week = {point.day: point for point in points}
+            insight_series: list[ReportPoint] = []
+            for monday in mondays:
+                point = by_week.get(monday)
+                insight_series.append(
+                    ReportPoint(
+                        week_start=monday,
+                        value=point.value if point else None,
+                        days_known=point.days_known if point else 0,
+                        days_total=point.days_total if point else 7,
+                    )
+                )
+            metrics.append(
+                BreakdownMetric(
+                    key=key,
+                    label=label,
+                    value=figure.current.value,
+                    previous=figure.previous.value if figure.previous else None,
+                    change_pct=figure.change_pct,
+                    direction=figure.direction,
+                    unavailable=figure.current.unavailable,
+                    series=insight_series,
+                )
+            )
+        out.append(AccountBreakdown(account=account_ref(account), metrics=metrics))
+    return out
 
 
 async def build(
@@ -307,23 +442,28 @@ async def build(
     current: stats.OverviewStats | None = None,
     with_series: bool = True,
     validate: bool = True,
+    account_id: uuid.UUID | None = None,
+    with_breakdown: bool = False,
 ) -> WeeklyReport:
     """The report for the week starting ``week_start`` (a finished Monday, see ``check_week``).
     ``current`` is that week's stats when the caller has computed them (the digest), so both
     report one set of numbers. Without ``with_series`` the series are left empty (the digest shows
     the change only). ``validate`` False skips ``check_week`` (the digest's week is the one it was
-    due for, whatever the clock says now)."""
+    due for, whatever the clock says now). With ``account_id`` every figure is that account's (404
+    if it is not this workspace's; ``current`` must then be that account's too); without it the
+    report is workspace-wide and ``with_breakdown`` adds each account side by side."""
+    picked = await load_account(session, account_id) if account_id is not None else None
     tz = workspace.timezone
     if validate:
         check_week(tz, view.now, week_start)
     span = week_span(tz, week_start)
     before = week_start - timedelta(weeks=1)
     if current is None:
-        current = await stats.compute(session, span=span, now=view.now)
+        current = await stats.compute(session, span=span, now=view.now, account_id=account_id)
     mondays = [week_start - timedelta(weeks=i) for i in range(SERIES_WEEKS - 1, -1, -1)]
     known: dict[date, Values] = {week_start: stats_values(current)}
     numbers = {
-        monday: await _week_numbers(session, workspace, monday, known)
+        monday: await _week_numbers(session, workspace, monday, known, account_id)
         for monday in (mondays if with_series else [before, week_start])
     }
 
@@ -345,7 +485,10 @@ async def build(
                 series,
             )
         )
-    account, account_found = await _account_figures(session, view, mondays, with_series=with_series)
+    account, account_found = await _account_figures(
+        session, view, mondays, with_series=with_series, account_id=account_id
+    )
+    every = await social_accounts.list_all(session)
     return WeeklyReport(
         week_start=week_start,
         week=_days(span),
@@ -355,7 +498,7 @@ async def build(
         series_weeks=SERIES_WEEKS,
         metrics=metrics,
         account_metrics=account,
-        account_comparison=account_comparison(account_found),
+        account_comparison=account_comparison(account_found, picked),
         top_intents=[ReportIntent(intent=i.intent, count=i.count) for i in current.top_intents],
         top_posts=[
             ReportPost(
@@ -370,6 +513,13 @@ async def build(
         needs_you=current.needs_you,
         open_questions=current.open_questions,
         top_questions=[ReportQuestion(topic=q.topic, asked=q.asked) for q in current.top_questions],
+        account=account_ref(picked) if picked is not None else None,
+        accounts=[account_ref(a) for a in every],
+        breakdown=(
+            await breakdown(session, view, workspace, every, mondays)
+            if with_breakdown and picked is None and with_series
+            else None
+        ),
     )
 
 

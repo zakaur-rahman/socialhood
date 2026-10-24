@@ -3,12 +3,14 @@ changes worked out in the service, rates compared in points, and gaps that stay 
 
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, date, datetime, timedelta
 from itertools import pairwise
 
 import pytest
 
 from socialhood.errors import ApiError
+from socialhood.models.connections import SocialAccount
 from socialhood.schemas.analytics import (
     AccountMetricFigure,
     AccountMetrics,
@@ -287,3 +289,32 @@ def test_the_account_comparison_is_the_ask_visual_with_its_gap_words() -> None:
     assert "aren't granted" in (by_key["reach"].unavailable or "")
     # More unfollows is bad news, whatever the direction.
     assert (by_key["unfollows"].direction, by_key["unfollows"].tone) == ("up", "bad")
+
+
+@pytest.mark.parametrize(
+    ("display_name", "username", "name"),
+    [
+        ("Maple Bakery", "maple.bakery", "Maple Bakery"),
+        (None, "maple.bakery", "@maple.bakery"),
+        (None, None, "Instagram"),
+    ],
+)
+def test_an_account_is_named_by_display_name_then_handle_then_platform(
+    display_name: str | None, username: str | None, name: str
+) -> None:
+    account = SocialAccount(
+        id=uuid.uuid4(),
+        platform="instagram",
+        platform_account_id="1",
+        display_name=display_name,
+        username=username,
+        status="active",
+    )
+    ref = reports.account_ref(account)
+    assert (ref.name, ref.platform, ref.id) == (name, "instagram", account.id)
+
+
+def test_the_report_without_an_account_has_no_breakdown_until_asked() -> None:
+    assert "breakdown" in WeeklyReport.model_fields
+    assert WeeklyReport.model_fields["breakdown"].default is None
+    assert WeeklyReport.model_fields["account"].default is None

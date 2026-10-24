@@ -73,13 +73,15 @@ async def count_since(
     return int(await session.scalar(statement) or 0)
 
 
-async def count_between(session: AsyncSession, since: datetime, until: datetime) -> int:
-    """Mentions in [since, until), for the Home overview."""
-    return int(
-        await session.scalar(
-            select(func.count())
-            .select_from(StoryMention)
-            .where(StoryMention.mentioned_at >= since, StoryMention.mentioned_at < until)
-        )
-        or 0
+async def count_between(
+    session: AsyncSession, since: datetime, until: datetime, account_id: uuid.UUID | None = None
+) -> int:
+    """Mentions in [since, until), for the Home overview (one account's with ``account_id``)."""
+    statement = (
+        select(func.count())
+        .select_from(StoryMention)
+        .where(StoryMention.mentioned_at >= since, StoryMention.mentioned_at < until)
     )
+    if account_id is not None:
+        statement = statement.where(StoryMention.social_account_id == account_id)
+    return int(await session.scalar(statement) or 0)

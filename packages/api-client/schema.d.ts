@@ -3430,7 +3430,9 @@ export interface paths {
          * @description A finished week against the week before, and the last 8 weeks of each count. ``week`` is
          *     the Monday it starts (default: the latest finished week); a day that is not a Monday, a week
          *     still running or one over a year back is 422. Gaps are null with the days they cover, never
-         *     zeros.
+         *     zeros. ``account_id`` makes every figure that connected account's (an account of another
+         *     workspace is 404); without it the report is workspace-wide and lists each account's own
+         *     numbers in ``breakdown``.
          */
         get: operations["get_weekly_report"];
         put?: never;
@@ -4566,6 +4568,12 @@ export interface components {
             status: "needs_reconnect" | "error";
             /** Username */
             username: string | null;
+        };
+        /** AccountBreakdown */
+        AccountBreakdown: {
+            account: components["schemas"]["ReportAccount"];
+            /** Metrics */
+            metrics: components["schemas"]["BreakdownMetric"][];
         };
         /**
          * AccountBusinessHours
@@ -6372,6 +6380,39 @@ export interface components {
              * @enum {string}
              */
             type: "branch";
+        };
+        /**
+         * BreakdownMetric
+         * @description One account's count for the week against the week before, with a weekly series. A value
+         *     the platform can't give is None and ``unavailable`` says why (``insights_not_granted``,
+         *     ``no_readings``); a count is never None for that reason.
+         */
+        BreakdownMetric: {
+            /** Change Pct */
+            change_pct?: number | null;
+            /** Direction */
+            direction?: ("up" | "down" | "flat") | null;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "messages_received" | "conversations" | "comments_received" | "replies_sent" | "automation_runs" | "reach" | "followers";
+            /** Label */
+            label: string;
+            /** Previous */
+            previous?: number | null;
+            /** Series */
+            series: components["schemas"]["ReportPoint"][];
+            /** Unavailable */
+            unavailable?: string | null;
+            /**
+             * Unit
+             * @default count
+             * @enum {string}
+             */
+            unit: "count" | "percent" | "seconds";
+            /** Value */
+            value?: number | null;
         };
         /** Broadcast */
         Broadcast: {
@@ -10754,6 +10795,25 @@ export interface components {
             state: "open" | "human_agent" | "template_only" | "closed";
         };
         /**
+         * ReportAccount
+         * @description A connected account, as the picker and the breakdown name it.
+         */
+        ReportAccount: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Platform */
+            platform: string;
+            /** Status */
+            status: string;
+            /** Username */
+            username?: string | null;
+        };
+        /**
          * ReportAccountMetric
          * @description An account insight (GR-38's service) for the week against the week before, with a weekly
          *     series. ``figure`` carries the gap reason and days covered.
@@ -12789,9 +12849,14 @@ export interface components {
          *     The digest email of that Monday carries the same numbers.
          */
         WeeklyReport: {
+            account?: components["schemas"]["ReportAccount"] | null;
             account_comparison: components["schemas"]["MetricComparisonVisual"];
             /** Account Metrics */
             account_metrics: components["schemas"]["ReportAccountMetric"][];
+            /** Accounts */
+            accounts?: components["schemas"]["ReportAccount"][];
+            /** Breakdown */
+            breakdown?: components["schemas"]["AccountBreakdown"][] | null;
             /** Metrics */
             metrics: components["schemas"]["ReportMetric"][];
             /** Needs You */
@@ -21791,6 +21856,7 @@ export interface operations {
         parameters: {
             query?: {
                 week?: string | null;
+                account_id?: string | null;
             };
             header?: never;
             path: {
