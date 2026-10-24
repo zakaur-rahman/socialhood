@@ -854,6 +854,11 @@ async def test_every_route_with_a_path_id_hides_other_workspaces(
         # A fresh session token per request: the walk takes about a minute, as long as a token
         # lives (the fake Clerk's 60 s, like Clerk's own).
         headers = clerk.headers(member_a)
+        # One test makes hundreds of requests from 127.0.0.1: empty the per-IP rate-limit windows
+        # (TR-API-07) before each, or a fast runner meets a 429 instead of the 404 under test.
+        stale = [key async for key in app.state.redis.scan_iter("rl:*")]
+        if stale:
+            await app.state.redis.delete(*stale)
         response = await client.request(
             call.method, call.url, json=call.body, headers={**headers, **call.headers}
         )

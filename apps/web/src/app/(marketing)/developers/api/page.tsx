@@ -1,8 +1,10 @@
 import { ApiReference, ApiReferenceUnavailable } from "@/components/marketing/developers/ApiReference";
-import { buildReference, fetchPublicApiDocument, PUBLIC_API_REVALIDATE_SECONDS } from "@/lib/marketing/public-api";
+import { buildReference, fetchPublicApiDocument } from "@/lib/marketing/public-api";
 import { pageMetadata } from "@/lib/marketing/seo";
 
-export const revalidate = PUBLIC_API_REVALIDATE_SECONDS;
+// Next reads segment config at build time, so it must be a literal: keep it equal to
+// PUBLIC_API_REVALIDATE_SECONDS in lib/marketing/public-api.
+export const revalidate = 3600;
 
 export const metadata = pageMetadata({
   title: "Public API",
