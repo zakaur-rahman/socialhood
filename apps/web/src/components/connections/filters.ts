@@ -10,7 +10,7 @@ export const ACCOUNT_FILTERS: readonly { value: AccountFilter; label: string }[]
   { value: "sandbox", label: "Sandboxes" },
 ];
 
-const PLATFORM_WORDS = { instagram: "instagram", whatsapp: "whatsapp", facebook: "facebook" } as const;
+const PLATFORM_WORDS = { instagram: "instagram", whatsapp: "whatsapp", facebook: "facebook", web: "website" } as const;
 
 /** Name, handle, number or platform contains the text (any case). */
 export function matchesSearch(account: SocialAccount, query: string): boolean {

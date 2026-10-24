@@ -91,8 +91,9 @@ export function DetailsPanel({
   const name = contactName(c.contact, c.platform);
   const platform = PLATFORM_LABEL[c.platform];
   const linked = c.social_account.username ? `@${c.social_account.username}` : (c.social_account.display_name ?? platform);
-  // A profile to open: an Instagram username, or a WhatsApp number.
-  const profile = c.platform === "instagram" ? Boolean(c.contact.username) : Boolean(c.contact.platform_user_id);
+  // A profile to open: an Instagram username, or a WhatsApp number. A website visitor has none.
+  const profile =
+    c.platform === "web" ? false : c.platform === "instagram" ? Boolean(c.contact.username) : Boolean(c.contact.platform_user_id);
 
   return (
     <div className="flex flex-col gap-5 p-4">

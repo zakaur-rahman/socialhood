@@ -27,7 +27,12 @@ import { ReplyWindowChip } from "./ReplyWindowChip";
 const AI_LABEL = { off: "AI: Off", suggest: "AI: Suggest", auto: "AI: Auto" } as const;
 
 /** Platform colours are for glyphs and fills, never text (DESIGN_SYSTEM §1.6). */
-const PLATFORM_GLYPH = { instagram: "text-instagram", whatsapp: "text-whatsapp", facebook: "text-facebook" } as const;
+const PLATFORM_GLYPH = {
+  instagram: "text-instagram",
+  whatsapp: "text-whatsapp",
+  facebook: "text-facebook",
+  web: "text-web",
+} as const;
 
 type Props = {
   conversation: Conversation;
@@ -175,11 +180,13 @@ export function ThreadHeader({
               <DropdownMenuItem onSelect={() => onArchive(!archived)}>{archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
               <DropdownMenuItem onSelect={onMarkUnread}>Mark unread</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <a href={platformContactUrl(conversation.platform, conversation.contact)} target="_blank" rel="noreferrer">
-                  Open in {platform}
-                </a>
-              </DropdownMenuItem>
+              {conversation.platform === "web" ? null : (
+                <DropdownMenuItem asChild>
+                  <a href={platformContactUrl(conversation.platform, conversation.contact)} target="_blank" rel="noreferrer">
+                    Open in {platform}
+                  </a>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem
                 onSelect={() => {
                   void navigator.clipboard

@@ -99,6 +99,7 @@ export const keys = {
   invitations: (wid: string) => ["w", wid, "invitations"] as const,
   auditEvents: (wid: string, filters: AuditFilters) => ["w", wid, "audit-events", filters] as const,
   businessHours: (wid: string) => ["w", wid, "business-hours"] as const, // GR-22
+  widget: (wid: string) => ["w", wid, "widget"] as const, // GR-28
   // stories and mentions (GR-06, GR-07)
   stories: (wid: string, accountId: string | null) => ["w", wid, "stories", accountId] as const,
   iceBreakers: (wid: string, accountId: string) => ["w", wid, "ice-breakers", accountId] as const,

@@ -98,8 +98,8 @@ export function scheduledPlatformEmpty(platformLabel: string): { title: string; 
 // ---- sending (§4.7 error codes, F-07)
 
 type SendContext = {
-  platform: "instagram" | "whatsapp" | "facebook";
-  /** @username on Instagram and Facebook; the display name or number on WhatsApp. */
+  platform: "instagram" | "whatsapp" | "facebook" | "web";
+  /** @username on Instagram and Facebook; the display name or number on WhatsApp; the widget's name on the website. */
   handle?: string | null;
 };
 
@@ -113,7 +113,12 @@ export type SendFailure = {
   chooseTemplate?: boolean;
 };
 
-const PLATFORM_NAME = { instagram: "Instagram", whatsapp: "WhatsApp", facebook: "Facebook" } as const;
+const PLATFORM_NAME = {
+  instagram: "Instagram",
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  web: "The website chat",
+} as const;
 
 /**
  * The reason under a failed bubble, from the message's error code (message.error) or the
@@ -477,6 +482,10 @@ const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
   public_api: {
     feature: "Public API access",
     body: "On Pro, make API keys to connect your own tools, and use the Social Hood app in Zapier.",
+  },
+  widget_remove_branding: {
+    feature: "Hiding \"Powered by Social Hood\"",
+    body: "On Pro, you can turn off the \"Powered by Social Hood\" link in your website chat.",
   },
 };
 

@@ -113,7 +113,9 @@ function Connections() {
   if (accounts.isPending) return <PageSkeleton rows={2} />;
   if (accounts.isError) return <ErrorState error={accounts.error} onRetry={() => void accounts.refetch()} />;
 
-  const empty = accounts.data.length === 0;
+  // The website chat is not a connection: its settings are under Website chat (GR-28).
+  const connections = accounts.data.filter((account) => account.platform !== "web");
+  const empty = connections.length === 0;
   const failWhatsApp = (message: string) => setConnectError({ message, retry: "whatsapp" });
   const retryConnect = () => {
     const platform = connectError?.retry;
@@ -176,8 +178,8 @@ function Connections() {
     </>
   ) : null;
 
-  const counts = filterCounts(accounts.data, query);
-  const shown = visibleAccounts(accounts.data, filter, query);
+  const counts = filterCounts(connections, query);
+  const shown = visibleAccounts(connections, filter, query);
 
   return (
     <SettingsFrame

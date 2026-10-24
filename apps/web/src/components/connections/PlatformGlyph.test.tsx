@@ -48,3 +48,24 @@ describe("Connections' search and filters with Pages", () => {
     });
   });
 });
+
+import { PLATFORM_BG, PlatformGlyph } from "./PlatformGlyph";
+
+describe("PlatformGlyph (GR-28)", () => {
+  it("draws a different mark for each platform, all decorative", () => {
+    const marks = (["instagram", "whatsapp", "web"] as const).map((platform) => {
+      const { container, unmount } = render(<PlatformGlyph platform={platform} className="size-4" />);
+      const svg = container.querySelector("svg");
+      expect(svg).toHaveAttribute("aria-hidden", "true");
+      expect(svg).toHaveClass("size-4");
+      const html = svg?.innerHTML ?? "";
+      unmount();
+      return html;
+    });
+    expect(new Set(marks).size).toBe(3);
+  });
+
+  it("fills each platform's badge from its own token", () => {
+    expect(PLATFORM_BG).toEqual({ instagram: "bg-instagram", whatsapp: "bg-whatsapp", facebook: "bg-facebook", web: "bg-web" });
+  });
+});

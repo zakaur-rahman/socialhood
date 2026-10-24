@@ -68,4 +68,10 @@ describe("PlatformStrip, the segmented platform control (UX-INB-02, C-063)", () 
     render(<PlatformStrip platforms={[]} value="all" onChange={() => {}} loading />);
     expect(screen.getByLabelText("Loading platforms")).toHaveAttribute("aria-busy", "true");
   });
+
+  // GR-28: website chats are a platform of their own, with the web mark's colour.
+  it("lists Website beside the others", () => {
+    render(<PlatformStrip platforms={["instagram", "web"]} value="all" onChange={() => {}} />);
+    expect(screen.getByRole("radio", { name: "Website" })).toBeInTheDocument();
+  });
 });

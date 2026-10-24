@@ -19,6 +19,7 @@ export * from "./entryLinks";
 export * from "./iceBreakers";
 export * from "./savedReplies";
 export * from "./businessHours";
+export * from "./widget";
 export * from "./analytics";
 export * from "./calendar";
 export * from "./agent";

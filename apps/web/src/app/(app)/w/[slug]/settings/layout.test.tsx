@@ -30,6 +30,7 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "Workspace",
       "Saved replies",
       "Business hours",
+      "Website chat",
       "Notifications",
       "Billing and usage",
       "Integrations",

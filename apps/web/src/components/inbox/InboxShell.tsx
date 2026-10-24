@@ -42,7 +42,7 @@ import { ScheduledList } from "./ScheduledList";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 import { useInboxShortcuts, useSingleKeyShortcuts } from "./use-inbox-shortcuts";
 
-const PLATFORM_ORDER: Platform[] = ["instagram", "facebook", "whatsapp"];
+const PLATFORM_ORDER: Platform[] = ["instagram", "facebook", "whatsapp", "web"];
 
 function viewFromLink(value: string | null): InboxView {
   return VIEWS.find((option) => option.value === value)?.value ?? "all";

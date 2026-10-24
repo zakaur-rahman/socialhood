@@ -17,6 +17,7 @@ export const PLATFORM_LABEL: Record<Platform, string> = {
   instagram: "Instagram",
   whatsapp: "WhatsApp",
   facebook: "Facebook",
+  web: "Website",
 };
 
 export function contactName(contact: Pick<ContactSummary, "display_name" | "username">, platform: Platform): string {
@@ -237,7 +238,8 @@ export function formatBytes(bytes: number | null | undefined): string {
 
 /**
  * Where "Open in Instagram", "Open in WhatsApp" or "Open in Messenger" goes for a contact. A
- * Messenger person has no public profile for us to link to, so their chat opens in the Page's inbox.
+ * Messenger person has no public profile for us to link to, so their chat opens in the Page's inbox;
+ * a website visitor has no profile.
  */
 export function platformContactUrl(
   platform: Platform,

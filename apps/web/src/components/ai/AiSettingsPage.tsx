@@ -43,7 +43,7 @@ import { AutoConfirmDialog } from "./AiModeDialogs";
 export const ESCALATION_PHRASES_MAX = 20;
 const PHRASE_MAX_CHARS = 120;
 
-const API_NAME = { instagram: "Instagram API", whatsapp: "WhatsApp Cloud API" } as const;
+const API_NAME = { instagram: "Instagram API", whatsapp: "WhatsApp Cloud API", web: "Website chat widget" } as const;
 
 const STATUS_DOT: Record<AccountStatus, string> = {
   active: "bg-success",

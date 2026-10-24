@@ -124,6 +124,12 @@ export type AccountBusinessHours = Schemas["AccountBusinessHours"];
 export type DaySchedule = Schemas["DaySchedule"];
 export type TimeRange = Schemas["TimeRange"];
 export type AutoModeName = BusinessHours["auto_mode"];
+
+// GR-28: the website chat widget's settings.
+export type WidgetSettings = Schemas["WidgetSettingsOut"];
+export type WidgetSettingsUpdate = Schemas["WidgetSettingsUpdate"];
+export type WidgetEmailCapture = WidgetSettings["email_capture"];
+export type WidgetPosition = WidgetSettings["position"];
 // GR-08: entry links (ig.me links with QR codes).
 export type EntryLink = Schemas["EntryLink"];
 export type EntryLinkList = Schemas["EntryLinkList"];

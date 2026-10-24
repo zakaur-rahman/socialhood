@@ -39,7 +39,12 @@ const AI_MODES: { value: AiMode; label: string; hint: string }[] = [
 ];
 
 /** The API the account is connected through, for the card's footer. */
-const API_NAME = { instagram: "Instagram API", whatsapp: "WhatsApp Cloud API", facebook: "Facebook Pages API" } as const;
+const API_NAME = {
+  instagram: "Instagram API",
+  whatsapp: "WhatsApp Cloud API",
+  facebook: "Facebook Pages API",
+  web: "Website chat widget",
+} as const;
 
 export type AccountActions = {
   onChange: (patch: SocialAccountPatch) => void;

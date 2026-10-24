@@ -33,7 +33,7 @@ import {
   useTags,
   useUpdateContact,
 } from "@/lib/api/queries";
-import type { ConsentChannel, ContactConsent, ContactRecord, FieldDefinition } from "@/lib/api/types";
+import type { ConsentChannel, ContactConsent, ContactRecord, FieldDefinition, Platform } from "@/lib/api/types";
 import { buildPatch, editFrom, type ContactEdit } from "@/lib/contacts/edit";
 import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { formatDay } from "@/lib/tz";
@@ -51,6 +51,7 @@ const CONSENT_SOURCE: Record<ContactConsent["source"], string> = {
   stop_reply: "Replied STOP",
   member: "Recorded by your team",
   import: "Imported",
+  widget: "Agreed in the website chat",
 };
 const NONE = "none";
 
@@ -120,11 +121,11 @@ function DrawerBody({ record }: { record: ContactRecord }) {
   return (
     <>
       <SheetHeader className="flex-row items-center gap-3 border-b border-line">
-        <ContactAvatar id={record.id} name={record.name} pictureUrl={record.profile_picture_url} platform={record.platform as "instagram" | "whatsapp"} />
+        <ContactAvatar id={record.id} name={record.name} pictureUrl={record.profile_picture_url} platform={record.platform as Platform} />
         <div className="min-w-0">
           <SheetTitle className="truncate">{record.name}</SheetTitle>
           <SheetDescription className="truncate">
-            {[record.username ? `@${record.username}` : null, PLATFORM_LABEL[record.platform as "instagram" | "whatsapp"]]
+            {[record.username ? `@${record.username}` : null, PLATFORM_LABEL[record.platform as Platform]]
               .filter(Boolean)
               .join(" · ")}
           </SheetDescription>
