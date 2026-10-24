@@ -114,6 +114,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     # GR-20: assignment. B's conversation, B's member as the assignee; B's member's availability.
     ("PUT", "/v1/w/{wid}/conversations/{conversation_id}/assignee"): {"user_id": "{user_id}"},
     ("PUT", "/v1/w/{wid}/members/{user_id}/availability"): {"available": False},
+    ("PUT", "/v1/w/{wid}/assignment/settings"): {"round_robin": True},  # the workspace's own
     ("POST", "/v1/w/{wid}/conversations/{conversation_id}/messages"): {
         "client_id": "5f0c3c1e-2d7a-4b43-9d35-9d7f0b0c2a11",
         "text": "Sent into B",
