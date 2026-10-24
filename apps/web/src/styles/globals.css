@@ -51,10 +51,10 @@
   --color-raised: light-dark(#E8EAF5, #252937);        /* selected row, active segment, focused input, secondary button */
   --color-raised-hover: light-dark(#DEE1F0, #2E3343);
   --color-overlay: light-dark(#FFFFFF, #222633);       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
-  --color-line: light-dark(rgb(20 24 54 / 0.10), rgb(214 219 255 / 0.10));
-  --color-line-subtle: light-dark(rgb(20 24 54 / 0.06), rgb(214 219 255 / 0.05));
-  --color-line-strong: light-dark(rgb(20 24 54 / 0.20), rgb(214 219 255 / 0.20));
-  --color-line-glass: light-dark(rgb(20 24 54 / 0.08), rgb(214 219 255 / 0.08));  /* a card's edge on glass: quieter than line, the top highlight and the drop shadow carry the rest (C-101) */
+  --color-line: light-dark(rgb(20 24 54 / 0.14), rgb(214 219 255 / 0.14));
+  --color-line-subtle: light-dark(rgb(20 24 54 / 0.08), rgb(214 219 255 / 0.08));
+  --color-line-strong: light-dark(rgb(20 24 54 / 0.24), rgb(214 219 255 / 0.24));
+  --color-line-glass: light-dark(rgb(20 24 54 / 0.14), rgb(214 219 255 / 0.16));  /* a card's edge on glass: a clear edge (the owner found 8% invisible), with the top highlight and the drop shadow (C-101) */
   --color-line-control: light-dark(rgb(20 24 54 / 0.55), rgb(214 219 255 / 0.45));  /* edges that identify a control, 3:1 or more on every surface: dark 3.16 (raised-hover) to 3.63, light 3.61 to 3.91; --input (D-01, C-071, C-101, C-102) */
 
   /* States, as overlays so they work on any surface (C-070) */
