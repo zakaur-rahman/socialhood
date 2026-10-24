@@ -22,18 +22,22 @@ Actionable tasks for visual answers (doc 08's decision C). Effort is relative (X
 
 | ID | Task | Files | Depends | Priority | Effort | Acceptance criteria | Tests | Risks |
 |---|---|---|---|---|---|---|---|---|
-| VIS-07 | `trend` visual and `TrendChart` (labelled SVG line, gaps, aria summary) | `api/agent/visuals.py`, `web/components/agent/visuals/TrendChart.tsx` | VIS-02, VIS-05 | P1 | M | Readable at 375; gaps shown; summary for screen readers | Unit, vitest, axe | Needs a second hue for two series (decision) |
-| VIS-08 | `lead_list` visual on `list_contacts` with an `awaiting_reply` filter; `contact` ref kind | `api/agent/tools/conversations.py`, `api/services/contacts.py`, `api/schemas/agent.py` (`AnswerRefKind`), `web/lib/agent/routes.ts` | VIS-05 | P1 | M | Top 10 unanswered by lead score; each opens the conversation | Integration (filter, roles), vitest | GR-18 stages later |
-| VIS-09 | Generic `table` visual with "+N more" route | `api/agent/visuals.py`, `web/components/agent/visuals/DataTableVisual.tsx` | VIS-05 | P2 | S | ≤ 10 rows, ≤ 6 columns, right-aligned figures | Unit, vitest | Overuse; keep it to tools with tabular data |
-| VIS-10 | Progressive visuals: refetch run detail on a visual-producing `agent.step` | `web/lib/agent/cache.ts`, `web/lib/api/queries/agent.ts` | VIS-05 | P2 | S | Visual appears before the prose when its step finishes | Vitest (cache), e2e timing | Extra GETs; debounce |
+| VIS-07 **(built, C-123)** | `trend` visual and `TrendChart` (labelled SVG line, gaps, aria summary) | `api/agent/visuals.py`, `web/components/agent/visuals/TrendChart.tsx` | VIS-02, VIS-05 | P1 | M | Readable at 375; gaps shown; summary for screen readers | Unit, vitest, axe | Needs a second hue for two series (decision) |
+| VIS-08 **(built, C-123)** | `lead_list` visual on `list_contacts` with an `awaiting_reply` filter; `contact` ref kind | `api/agent/tools/conversations.py`, `api/services/contacts.py`, `api/schemas/agent.py` (`AnswerRefKind`), `web/lib/agent/routes.ts` | VIS-05 | P1 | M | Top 10 unanswered by lead score; each opens the conversation | Integration (filter, roles), vitest | GR-18 stages later |
+| VIS-09 **(built, C-123)** | Generic `table` visual with "+N more" route | `api/agent/visuals.py`, `web/components/agent/visuals/DataTableVisual.tsx` | VIS-05 | P2 | S | ≤ 10 rows, ≤ 6 columns, right-aligned figures | Unit, vitest | Overuse; keep it to tools with tabular data |
+| VIS-10 **(built, C-123)** | Progressive visuals: refetch run detail on a visual-producing `agent.step` | `web/lib/agent/cache.ts`, `web/lib/api/queries/agent.ts` | VIS-05 | P2 | S | Visual appears before the prose when its step finishes | Vitest (cache), e2e timing | Extra GETs; debounce |
+
+**Built (C-123, `feature/vis-07-12`):** VIS-07 (one-series `trend` and `TrendChart` on `metric_trend`), VIS-08 (`lead_list` on `list_contacts` with `awaiting_reply`, and the `contact` ref kind), VIS-09 (`table` on `search_conversations` and `list_orders`), VIS-10 (the web refetches the run when a visual-producing step succeeds). Two-series trends stay out of scope until the categorical palette lands. VIS-11 and VIS-13 are not built.
 
 ## Phase 3 · Interactions and reports
 
 | ID | Task | Files | Depends | Priority | Effort | Acceptance criteria | Tests | Risks |
 |---|---|---|---|---|---|---|---|---|
 | VIS-11 | Range and platform controls on visuals, asked as a structured follow-up (re-runs the agent) | `web/components/agent/visuals/*`, `web/components/agent/AskConversation.tsx`, `api/schemas/agent.py` (`AgentRunCreate.hints?`) | VIS-05 | P2 | M | Changing the range gives a new run with the same rules; no direct data query | Integration, e2e | Credit use per toggle (1 run each) |
-| VIS-12 | "Prepare replies for these leads": a draft card per lead via `draft_reply` | `api/agent/tools/conversations.py`, web action cards | VIS-08 | P2 | S | Cards open each conversation with its draft | Integration, e2e | Draft quality; caps (8 tools) |
+| VIS-12 **(built, C-123)** | "Prepare replies for these leads": a draft card per lead via `draft_reply` | `api/agent/tools/conversations.py`, web action cards | VIS-08 | P2 | S | Cards open each conversation with its draft | Integration, e2e | Draft quality; caps (8 tools) |
 | VIS-13 | Weekly report page from the same services and components (GR-34), linked from answers | `web/app/(app)/w/[slug]/reports/*` (new), `api/services/reports.py` | VIS-01, VIS-05 | P2 | L | A shareable page per week; matches the digest email | Integration, e2e, ui-shots | Scope; align with GR-34 |
+
+**Built (C-123):** VIS-12. The lead list carries `reply_ids` (at most 3, the best scores that have a conversation) and a "Prepare replies" button that asks the agent for one `draft_reply` each; the drafts are action cards named after the lead that open the conversation with the draft. Three, not the 8 the tool cap would allow, because each draft costs 2 of a run's 10 credits.
 
 ## Phase 4 · Decision gate
 

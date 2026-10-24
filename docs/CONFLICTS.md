@@ -4748,3 +4748,150 @@ change, no migration. The footer has a "Compare and learn" column, every page is
   offer (Razorpay link to the business's own account, or UPI marked paid by hand; no WhatsApp Pay) and
   the catalogue row says WhatsApp product messages need the owner's Meta catalogue and Meta's approval
   (C-121). The plan matrix shows "Orders a month" under commerce (Pro and Max).
+
+## C-123 · More visual answers in Ask (VIS-07 to VIS-10, VIS-12, feature/vis-07-12)
+
+Backlog items VIS-07 (trend), VIS-08 (lead list), VIS-09 (table), VIS-10 (progressive visuals) and
+VIS-12 (prepare replies for leads), on top of GR-38 (C-089). Option C still holds: the API builds
+every visual from the numbers a tool returned, the model neither writes nor sees one, and
+everything stays behind `AGENT_VISUALS_ENABLED` (off by default). No migration, no new route, no
+new setting. Built on the combined batch G (migrations to 0044).
+
+### What every new visual shares
+- **Closed union, three new kinds:** `trend`, `lead_list`, `table` join `metric_comparison`,
+  `ranked_posts` and `sentiment_summary` in `schemas/agent.py` (`Visual`), `agent/visuals.KINDS`
+  and the web's `VisualView` switch. `kind` is required; an unknown kind draws nothing.
+- **Caps in the types:** 92 trend points, 10 leads, 3 `reply_ids`, 10 table rows, 6 columns, 6
+  cells a row. Each visual at most 8 KB (a test builds the worst case of each). A build that fails
+  or is too big drops only the visual.
+- **Same text answer without visuals.** Each visual repeats numbers the tool result already holds
+  (its `summary`, `contacts`, `points`, `items`), so the answer reads the same with the setting
+  off. The trend carries its own sentence (`summary`) as the chart's aria label and its text
+  fallback.
+- **Links** (`more_route`) carry a pattern in the type (`WORKSPACE_PATH`: plain workspace paths
+  with an optional query, no scheme, host, `..`, `//` or fragment), checked again on the web by
+  the same rule as action cards (`visualPath`).
+- **The tool's role check is the visual's.** A builder runs inside the tool after the role gate
+  and only from the rows the tool returns, so a visual can never show more than the tool does.
+- Prompt: `VISUALS_NOTE` names the new tools so the answer doesn't copy their lists. *The prompt
+  file (`agent.v4`) is unchanged, so no version bump; the eval was not run (no key here).*
+
+### Trend (VIS-07)
+- `metric_trend` builds a `trend` visual when at least one point has a reading; with none, the
+  caveats say why and there is nothing to draw.
+- `TrendChart`: a hand-built SVG in `text-chart-series-1` (the brand chart token), the same recipe
+  as the weekly report's `SeriesChart` (scale from 0). A day or week with no reading breaks the
+  line; a lone reading is a dot; nothing is drawn through a gap or in its place. Under the chart:
+  latest, lowest and highest with their days (text, not the picture), and "N of M days have a
+  reading". The SVG's label is the API's `summary`; an `sr-only` table lists every point, a gap as
+  "No reading". The SVG scales with its column (viewBox 300 x 96, `w-full`), so 375 px and the
+  panel need no special case.
+- **One series only.** *Two-series trends (for example this month against last month on one
+  chart) are out of scope: the categorical palette is still on a local branch, and a second hue
+  without it would break the palette lock.* Revisit when it lands.
+- *The scale starts at 0, so followers (1,000 plus a few) looks flat; the facts under the chart
+  carry the real range. Chosen over a floating axis, which exaggerates small moves.*
+- *A range of more than 92 weekly points (about 21 months) fails the build and drops the
+  visual; the tool result and answer stand. The agent's default is 30 days.*
+
+### Lead list (VIS-08)
+- **Filter:** `ContactFilter.awaiting_reply` (the conversation's `awaiting_reply` flag, the one
+  the inbox's "Needs reply" view uses); `list_contacts` gains `awaiting_reply: bool | None`. A
+  contact with no conversation never matches `True`.
+- **Order:** new `services.contacts.top_leads`: lead score highest first, no score last, then the
+  latest activity, with the total that match. The cursor-paged `list_contacts` stays
+  activity-ordered. With `awaiting_reply` the result also has `total`.
+- **Visual:** top 10 (the tool's `limit` still goes to 25; the visual shows 10 and "+N more"
+  links to `inbox?view=needs_reply`). A row has the name (customer text, drawn as text), the
+  platform, the score ("No score" when none, never 0), the GR-18 lead stage and the last-activity
+  words the tool already returns. A row opens the conversation; a contact who never wrote opens the
+  Contacts page.
+- **`contact` ref kind:** `AnswerRefKind` gains `contact`; `list_contacts` cites a contact with no
+  conversation as `contact` (before, such contacts were left out of `refs`). The web opens
+  `contacts` (*the Contacts page has no per-contact route, so the ref opens the list*), labels it
+  "Contact", and has a follow-up for it.
+- **Roles:** unchanged. `list_contacts` is for any member, as before; `awaiting_reply` shows what
+  the inbox shows them.
+- *Doc 05 had `ref (conversation)` on each lead row. A row holds `conversation_id` and
+  `contact_id` instead, and the web builds the link, as `RankedPosts` does.*
+- *The lead's cold flag (GR-18) is not shown: a lead waiting for us is not cold.*
+
+### Table (VIS-09)
+- Used only for tools whose result is a list of like rows:
+  - `search_conversations` (any member): customer, platform, last message, when, lead score.
+    More: `inbox` or `inbox?view=<view>`.
+  - `list_orders` (owners and admins, like the tool): order, customer, status, total (the money
+    text the tool already formats, right-aligned), date. More: `orders`.
+- Not used for tools whose rows are nested or single records (`search_products` has variants,
+  `get_*` and the knowledge tools return one thing). *The risk the backlog names is overuse; the
+  rule is a tool opts in by calling `visuals.table` with its own rows.*
+- Figures are right-aligned with tabular digits; text cells are clipped to 80 characters and drawn
+  as text; a missing cell is a dash. The table scrolls inside its card at 375 px (`Table` with a
+  scroll label), never the page. "+N more" is a link when the API gave a safe path.
+- *Rows are `{cells: [...]}` in column order, not a dict by column key: smaller, and OpenAPI
+  generates a plain tuple-like list.*
+
+### Progressive visuals (VIS-10)
+- `applyAgentStepEvent` (`lib/agent/cache.ts`): when a step of a tool in `VISUAL_TOOLS` succeeds
+  and the run is open in this browser (it has a cached detail), the run detail is invalidated,
+  debounced at 300 ms (steps that finish together share one fetch; a later step waits again).
+  Events still carry no result: the set of tools is the only signal.
+- `RunView` shows `run-visuals` under the working steps, so the visual appears before the answer
+  is written. When the run finishes it moves to its usual place under the answer.
+- `VISUAL_TOOLS` mirrors the API's tools that have a `visual` in their result. *A DB-free API test
+  (`test_the_web_refetches_for_exactly_the_tools_that_can_carry_a_visual`) reads `cache.ts` and
+  fails when the two differ, so a new visual tool can't ship without it.*
+- *With the setting off a visual-tool step still costs one extra GET that returns `visuals: []`.
+  Left as is: the web can't see the setting, and the fetch is tiny and debounced.*
+
+### Prepare replies for these leads (VIS-12)
+- The lead list shows "Prepare replies" on the latest answer (the same rule as follow-up
+  questions). It asks, in the same thread, for a `draft_reply` on each of the conversations in
+  `reply_ids`: the best-scored leads that have a conversation, **at most 3**, chosen by the API.
+- **The request carries ids only** (no customer name or text goes into a prompt): "Prepare replies
+  for these leads. Use draft_reply once for each of these conversations, one at a time, and send
+  nothing: ... If a reply window is closed, skip that conversation and say so." It is shown as the
+  member's question, ids included. *Cleaner would be a structured hint on the run (VIS-11's
+  `AgentRunCreate.hints`); not built.*
+- **Caps:** a draft is 2 credits and one tool call; a run has 10 credits and 8 tool calls
+  (`RUN_CREDIT_CAP`, `MAX_TOOL_CALLS`). 3 drafts plus the turns that call them fit; 8 would not.
+  *The backlog's "8 tools" is the call cap, but the credit cap binds first.* A unit test checks the
+  arithmetic against both constants.
+- **Never sent:** `draft_reply` is a draft-tier tool; it drafts and returns the text. Nothing in
+  this path sends (a test checks no outbound message exists and that each draft is metered at 2
+  credits).
+- **Cards:** each draft is the existing `schedule_message` card that opens
+  `inbox/<id>?schedule=1` with the text, no time. *Its label is now "Schedule a reply to <name>"
+  (it was "Schedule this reply") so several cards can be told apart.* The name is customer text,
+  clipped and drawn as text.
+- *A lead whose reply window is closed fails its own draft with the tool's usual message and the
+  others go on; the request says to skip and say so. Not pre-filtered: the contacts service
+  doesn't hold the window, and a pre-check would cost one query a lead.*
+
+### Evals and tests
+- Eval: `trend-reach-30` now expects a `trend` visual holding the first and last days' readings;
+  new `visual-leads-waiting` expects a `lead_list` whose scores are the seeded needs-reply
+  conversations'. The visual-number check already requires every figure to be one a tool returned.
+- API unit (run here): builders (gaps, summary, caps, size, links), the credit arithmetic, the
+  `awaiting_reply` SQL, the orders table, the web/API tool list, kinds read back.
+  `tests/unit/test_agent_visuals.py` was updated for the six kinds.
+- API integration (written, not run): `tests/integration/test_agent_visuals_vis.py`: order and
+  total, 10 cap, roles, the setting off, another workspace, the drafts and their credits, the
+  trend from seeded days with a gap, the table, the run API with the new kinds.
+- Web (written, not run): `lib/agent/vis-lib.test.ts` (layout, words, links, cache and debounce),
+  `components/agent/VisualViewVis.test.tsx` (each visual, malicious text, the follow-up, the run
+  while working), fixtures in `src/test/visuals.ts`.
+- E2E `e2e/vis-07-12.spec.ts` (written, not run). The e2e API (`scripts/e2e/api.py`) gains `trend`
+  on `/agent-runs` and `POST /__e2e/workspaces/{wid}/agent-leads`, which sets lead scores and runs
+  the real `list_contacts`, `search_conversations` and (with `drafts`) `draft_reply` as steps,
+  because the fake model calls no tools.
+- **Checked centrally:** regenerate `apps/api/openapi.json` and `packages/api-client`
+  (`TrendVisual`, `LeadListVisual`, `TableVisual`, `TrendPoint`, `LeadRow`, `TableColumn`,
+  `TableRow`, `AnswerRef.kind` with `contact`, `list_contacts` is a tool not a route so no route
+  change); typecheck, build, the integration and tenancy suites, vitest, the e2e spec.
+
+### Left for later
+VIS-11 (range controls), VIS-13 (the report page), VIS-14 (the OpenUI spike), VIS-X2 (quote
+account names in the prompt), VIS-X4 (design-system entries for `TrendChart`, `LeadList` and
+`DataTableVisual`), a two-series trend, a reply-window pre-check for the lead follow-up, and
+localised labels.
