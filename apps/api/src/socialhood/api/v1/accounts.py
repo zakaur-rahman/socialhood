@@ -18,15 +18,17 @@ from socialhood.auth.deps import (
     Session,
 )
 from socialhood.billing.plans import current_plan
-from socialhood.errors import ApiError
+from socialhood.errors import ApiError, FieldError
 from socialhood.models.platform import WebhookProvider
 from socialhood.platforms.deps import PlatformDeps, deps_from
+from socialhood.platforms.facebook.webhooks import split_payload as split_facebook
 from socialhood.platforms.instagram.webhooks import split_payload
 from socialhood.platforms.sandbox.adapter import is_sandbox
 from socialhood.repositories import social_accounts as accounts
 from socialhood.schemas.accounts import (
     ConnectStart,
     InstagramConnectComplete,
+    SandboxAccountCreate,
     SandboxInbound,
     SandboxInboundResult,
     SocialAccountList,
@@ -180,12 +182,20 @@ def _require_sandbox(request: Request) -> None:
 
 @router.post("/dev/sandbox/accounts", status_code=201, operation_id="create_sandbox_account")
 async def create_sandbox_account(
-    request: Request, ctx: CanUseDevSandbox, session: Session
+    request: Request,
+    ctx: CanUseDevSandbox,
+    session: Session,
+    body: SandboxAccountCreate | None = None,
 ) -> SocialAccountOut:
-    """Connect a fake Instagram account for local development."""
+    """Connect a fake Instagram account (or, with ``platform: facebook``, a fake Facebook Page)
+    for local development."""
     _require_sandbox(request)
     acct = await service.connect_sandbox(
-        session, _deps(request), user_id=ctx.user.id, plan=await current_plan(session)
+        session,
+        _deps(request),
+        user_id=ctx.user.id,
+        plan=await current_plan(session),
+        platform=body.platform if body is not None else "instagram",
     )
     return service.account_out(acct, _deps(request))
 
@@ -199,6 +209,10 @@ async def sandbox_inbound(
     acct = await service.get_or_404(session, body.account_id)
     if not is_sandbox(acct):
         raise ApiError("conflict", "Only sandbox accounts accept injected events.")
+    if acct.platform == "facebook":
+        events = split_facebook(_sandbox_facebook_payload(acct.platform_account_id, body))
+        stored = await store_and_enqueue(session, WebhookProvider.FACEBOOK, events)
+        return SandboxInboundResult(stored=len(stored))
     payload = _sandbox_payload(acct.platform_account_id, body)
     stored = await store_and_enqueue(session, WebhookProvider.INSTAGRAM, split_payload(payload))
     return SandboxInboundResult(stored=len(stored))
@@ -295,3 +309,82 @@ def _sandbox_payload(account_ref: str, body: SandboxInbound) -> dict[str, object
         item["optin"] = {"type": "notification_messages", "notification_messages_status": "resume"}
     entry = {"id": account_ref, "time": now_ms // 1000, "messaging": [item]}
     return {"object": "instagram", "entry": [entry]}
+
+
+FACEBOOK_REFUSED = {
+    "live_comment": "Live comments on Facebook aren't supported yet.",
+    "story_reply": "Facebook Pages have no story replies.",
+    "story_like": "Facebook Pages have no story likes.",
+    "story_mention": "Facebook Pages have no story mentions.",
+}
+
+
+def _sandbox_facebook_referral(body: SandboxInbound) -> dict[str, object]:
+    """Messenger's referral object: a click-to-Messenger ad, or an m.me link with ?ref=."""
+    if body.referral_source == "ad":
+        referral: dict[str, object] = {
+            "source": "ADS",
+            "type": "OPEN_THREAD",
+            "ad_id": body.ad_id or "sandbox_ad_1",
+        }
+        if body.ref:
+            referral["ref"] = body.ref
+        if body.ad_title:
+            referral["ads_context_data"] = {"ad_title": body.ad_title}
+        return referral
+    return {"ref": body.ref or "sandbox", "source": "SHORTLINK", "type": "OPEN_THREAD"}
+
+
+def _sandbox_facebook_payload(page_ref: str, body: SandboxInbound) -> dict[str, object]:
+    """A Page webhook body (GR-29): Messenger events under ``messaging``, a comment as a ``feed``
+    change. Shapes follow Meta's docs and are unverified until a real Page confirms them."""
+    if body.kind in FACEBOOK_REFUSED:
+        raise ApiError("validation_error", errors=[FieldError("kind", FACEBOOK_REFUSED[body.kind])])
+    sender = body.from_id or f"sandbox_user_{secrets.token_hex(3)}"
+    now_ms = int(time.time() * 1000)
+    if body.kind == "comment":
+        post_id = f"{page_ref}_post_0"  # a post the sandbox lists for the Page
+        created = datetime.now(UTC) - timedelta(seconds=body.age_seconds or 0)
+        value: dict[str, object] = {
+            "from": {"id": sender, "name": body.from_username or "Sandbox customer"},
+            "post_id": post_id,
+            "comment_id": f"{post_id}_{secrets.token_hex(6)}",
+            "parent_id": post_id,
+            "created_time": int(created.timestamp()),
+            "message": body.text,
+            "item": "comment",
+            "verb": "add",
+        }
+        entry: dict[str, object] = {
+            "id": page_ref,
+            "time": now_ms // 1000,
+            "changes": [{"field": "feed", "value": value}],
+        }
+        return {"object": "page", "entry": [entry]}
+    item: dict[str, object] = {
+        "sender": {"id": sender},
+        "recipient": {"id": page_ref},
+        "timestamp": now_ms,
+    }
+    if body.kind == "dm":
+        message: dict[str, object] = {
+            "mid": f"sandbox_mid_{secrets.token_hex(8)}",
+            "text": body.text,
+        }
+        if body.quick_reply_payload:
+            message["quick_reply"] = {"payload": body.quick_reply_payload}
+        if body.referral_source:
+            message["referral"] = _sandbox_facebook_referral(body)
+        item["message"] = message
+    elif body.kind == "postback":
+        item["postback"] = {
+            "mid": f"sandbox_mid_{secrets.token_hex(8)}",
+            "title": body.text,
+            "payload": body.postback_payload or "SANDBOX_POSTBACK",
+        }
+    elif body.kind == "referral":
+        item["referral"] = _sandbox_facebook_referral(body)
+    else:  # optin
+        item["optin"] = {"type": "notification_messages", "notification_messages_status": "resume"}
+    entry = {"id": page_ref, "time": now_ms // 1000, "messaging": [item]}
+    return {"object": "page", "entry": [entry]}

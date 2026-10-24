@@ -30,6 +30,7 @@ pytest_plugins = [
     "tests.support.google",
     "tests.support.api",
     "tests.support.instagram",
+    "tests.support.facebook",
     "tests.support.ai",
 ]
 

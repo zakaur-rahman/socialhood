@@ -115,6 +115,12 @@ class Settings(BaseSettings):
 
     meta_app_id: str | None = None
     meta_app_secret: SecretStr | None = None
+    # GR-29 Facebook Pages: Facebook Login's redirect URI (api/v1/oauth/facebook/callback) and the
+    # verify token of the Page webhook (/webhooks/facebook, signed with META_APP_SECRET). Neither
+    # set: Facebook connections are off. Messenger's 7-day HUMAN_AGENT window follows
+    # IG_HUMAN_AGENT_ENABLED: Meta approves Human Agent once for the app.
+    fb_redirect_uri: str | None = None
+    fb_webhook_verify_token: SecretStr | None = None
     whatsapp_config_id: str | None = None
     whatsapp_webhook_verify_token: SecretStr | None = None
 

@@ -25,6 +25,7 @@ from socialhood.observability.sentry import init_sentry, instrument_running_loop
 from socialhood.settings import Settings, get_settings
 from socialhood.webhooks import clerk as clerk_webhook
 from socialhood.webhooks import dodo as dodo_webhook
+from socialhood.webhooks import facebook as facebook_webhook
 from socialhood.webhooks import instagram as instagram_webhook
 from socialhood.webhooks import links as links_redirect
 from socialhood.webhooks import meta_privacy
@@ -73,6 +74,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(clerk_webhook.router)
     app.include_router(dodo_webhook.router)
     app.include_router(instagram_webhook.router)
+    app.include_router(facebook_webhook.router)
     app.include_router(meta_privacy.router)
     app.include_router(whatsapp_webhook.router)
     app.include_router(links_redirect.router)  # GR-15: /l/<code>, the tracked link redirect

@@ -1,5 +1,5 @@
-"""GET /v1/oauth/instagram/callback (F-03) and /v1/oauth/google/callback (GR-27): public; the
-single-use state proves who started it.
+"""GET /v1/oauth/instagram/callback (F-03), /facebook/callback (GR-29) and /google/callback
+(GR-27): public; the single-use state proves who started it.
 
 It never connects anything itself (X-1, login CSRF): the browser that brings the code back may
 not belong to the member who started the connect. The code is parked under a one-time nonce and
@@ -45,7 +45,7 @@ async def instagram_callback(
 ) -> RedirectResponse:
     settings: Settings = request.app.state.settings
     data = await service.pop_state(request.app.state.redis, state)
-    if data is None:
+    if data is None or data.get("platform", "instagram") != "instagram":
         # Expired, reused or forged state: we cannot tell which workspace, so /app routes it.
         return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
     async with request.app.state.sessionmaker() as session:
@@ -91,3 +91,35 @@ async def google_callback(
     cipher = cipher_for(tuple(settings.token_encryption_keys))
     nonce = await sheets.hold_code(request.app.state.redis, cipher, data, code)
     return RedirectResponse(f"{target}?google={nonce}", status_code=303)
+
+
+@router.get(
+    "/facebook/callback",
+    operation_id="facebook_oauth_callback",
+    dependencies=[ratelimit.OAUTH_CALLBACK],
+    include_in_schema=False,
+)
+async def facebook_callback(
+    request: Request,
+    code: Annotated[str | None, Query(max_length=2048)] = None,
+    state: Annotated[str | None, Query(max_length=128)] = None,
+    error: Annotated[str | None, Query(max_length=128)] = None,
+) -> RedirectResponse:
+    """GR-29: the same hand-off as Instagram's. The code is parked under a nonce and the signed-in
+    Connections page lists the person's Pages with POST .../social-accounts/facebook/pages."""
+    settings: Settings = request.app.state.settings
+    data = await service.pop_state(request.app.state.redis, state)
+    if data is None or data.get("platform") != "facebook":
+        return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
+    async with request.app.state.sessionmaker() as session:
+        active = await workspaces.is_active(session, uuid.UUID(data["workspace_id"]))
+    if not active:
+        return RedirectResponse(f"{_web(settings)}/app?error=state_invalid", status_code=303)
+    target = f"{_web(settings)}/w/{data['slug']}/settings/connections"
+    if error or not code:
+        reason = "access_denied" if error in (None, "access_denied") else "connect_failed"
+        return RedirectResponse(f"{target}?error={reason}&platform=facebook", status_code=303)
+
+    deps = deps_from(request.app.state.http, settings)
+    nonce = await service.hold_instagram_code(request.app.state.redis, deps, data, code)
+    return RedirectResponse(f"{target}?facebook={nonce}", status_code=303)

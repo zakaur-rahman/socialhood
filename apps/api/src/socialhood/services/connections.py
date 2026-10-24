@@ -19,6 +19,7 @@ from socialhood.models.connections import AccountStatus, AiMode, Platform, Socia
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
+from socialhood.platforms.facebook import oauth as facebook_oauth
 from socialhood.platforms.http import PlatformHttp
 from socialhood.platforms.instagram import oauth
 from socialhood.platforms.registry import adapter_for
@@ -185,6 +186,7 @@ async def hold_instagram_code(
     held = {
         "user_id": state["user_id"],
         "workspace_id": state["workspace_id"],
+        "platform": state.get("platform", "instagram"),  # GR-29: Facebook parks its code too
         "code": deps.cipher.encrypt(code).decode(),
     }
     await redis.set(_held_key(nonce), json.dumps(held), ex=HELD_TTL_S)
@@ -207,6 +209,8 @@ async def finish_instagram_connect(
     if raw is None:
         raise ApiError("not_found", CONNECT_EXPIRED)
     held = json.loads(raw)
+    if held.get("platform", "instagram") != "instagram":
+        raise ApiError("not_found", CONNECT_EXPIRED)
     if held["user_id"] != str(user_id) or held["workspace_id"] != str(workspace_id):
         log.warning(
             "instagram_connect_refused",
@@ -333,25 +337,34 @@ async def subscribe(session: AsyncSession, acct: SocialAccount, deps: PlatformDe
 
 
 async def connect_sandbox(
-    session: AsyncSession, deps: PlatformDeps, *, user_id: uuid.UUID, plan: str
+    session: AsyncSession,
+    deps: PlatformDeps,
+    *,
+    user_id: uuid.UUID,
+    plan: str,
+    platform: str = Platform.INSTAGRAM,
 ) -> SocialAccount:
-    """A sandbox Instagram account for local development (TR-PL-07)."""
+    """A sandbox Instagram account, or (GR-29) a sandbox Facebook Page, for local development
+    (TR-PL-07)."""
     if not deps.settings.sandbox_platform_enabled:
         raise ApiError("not_found")
-    limit = await _at_capacity(session, Platform.INSTAGRAM, plan)
+    limit = await _at_capacity(session, platform, plan)
     if limit is not None:
-        raise _quota_error(limit, Platform.INSTAGRAM)
+        raise _quota_error(limit, platform)
     suffix = secrets.token_hex(4)
     now = datetime.now(UTC)
+    facebook = platform == Platform.FACEBOOK
     acct = SocialAccount(
-        platform=Platform.INSTAGRAM,
+        platform=platform,
         platform_account_id=f"{SANDBOX_PREFIX}{suffix}",
-        username=f"sandbox.shop.{suffix[:4]}",
-        display_name="Sandbox shop",
+        username=f"sandbox.page.{suffix[:4]}" if facebook else f"sandbox.shop.{suffix[:4]}",
+        display_name="Sandbox page" if facebook else "Sandbox shop",
         access_token_enc=deps.cipher.encrypt(f"sandbox-{secrets.token_hex(8)}"),
-        token_expires_at=now + timedelta(days=60),
+        token_expires_at=None if facebook else now + timedelta(days=60),
         token_refreshed_at=now,
-        scopes=[*oauth.BASE_SCOPES, oauth.INSIGHTS_SCOPE],
+        scopes=(
+            list(facebook_oauth.SCOPES) if facebook else [*oauth.BASE_SCOPES, oauth.INSIGHTS_SCOPE]
+        ),
         status=AccountStatus.ACTIVE,
         connected_at=now,
         webhooks_subscribed_at=now,
@@ -491,7 +504,7 @@ async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccou
     )
 
 
-PLATFORM_LABELS = {"instagram": "Instagram", "whatsapp": "WhatsApp"}
+PLATFORM_LABELS = {"instagram": "Instagram", "whatsapp": "WhatsApp", "facebook": "Facebook"}
 
 
 def platform_label(acct: SocialAccount) -> str:

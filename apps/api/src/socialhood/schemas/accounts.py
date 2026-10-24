@@ -29,7 +29,7 @@ class SocialAccountOut(ResponseModel):
     """Never the token itself (SEC-02)."""
 
     id: uuid.UUID
-    platform: Literal["instagram", "whatsapp"]
+    platform: Literal["instagram", "whatsapp", "facebook"]
     display_name: str | None = None
     username: str | None = None
     profile_picture_url: str | None = None
@@ -72,11 +72,21 @@ class InstagramConnectComplete(RequestModel):
     nonce: str = Field(min_length=1, max_length=128)
 
 
+class SandboxAccountCreate(RequestModel):
+    """Which sandbox account to make (dev and e2e): an Instagram account, or a Facebook Page
+    (GR-29). No body makes an Instagram one."""
+
+    platform: Literal["instagram", "facebook"] = "instagram"
+
+
 class SandboxInbound(RequestModel):
-    """A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
-    link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
-    comment; a DM can carry an ad referral (its first message from an ad). GR-06 and GR-07 add a
-    story reply, a story like (the heart) and a story mention."""
+    """A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).
+    GR-01 adds a referral without a message (an entry link opened, or an ad tapped), a tapped
+    postback (an ice breaker), an opt-in and a Live comment; a DM can carry an ad referral (its
+    first message from an ad). GR-06 and GR-07 add a
+    story reply, a story like (the heart) and a story mention. A Facebook Page takes a DM, a
+    comment on a post, a referral, a postback and an opt-in; the kinds it doesn't have are
+    refused (GR-29)."""
 
     account_id: uuid.UUID
     kind: Literal[

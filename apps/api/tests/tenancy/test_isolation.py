@@ -126,6 +126,14 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "phone_number_id": "2",
     },
     ("POST", "/v1/w/{wid}/social-accounts/instagram/complete"): {"nonce": "not-yours"},
+    # GR-29: Facebook Pages connect (the nonce is bound to the member and workspace) and a
+    # sandbox Facebook Page.
+    ("POST", "/v1/w/{wid}/social-accounts/facebook/pages"): {"nonce": "not-yours"},
+    ("POST", "/v1/w/{wid}/social-accounts/facebook/connect-pages"): {
+        "nonce": "not-yours",
+        "page_ids": ["1"],
+    },
+    ("POST", "/v1/w/{wid}/dev/sandbox/accounts"): {"platform": "facebook"},
     # GR-02: contacts, tags, custom fields, consent.
     ("PATCH", "/v1/w/{wid}/contacts/{contact_id}"): {"email": "taken@example.com"},
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/tags"): {"add": ["{tag_id}"]},

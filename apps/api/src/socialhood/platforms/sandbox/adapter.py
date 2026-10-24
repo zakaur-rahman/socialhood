@@ -30,6 +30,7 @@ from socialhood.platforms.capabilities import Capability
 from socialhood.platforms.deps import PlatformDeps
 from socialhood.platforms.errors import PlatformError
 from socialhood.platforms.events import InboundMediaRef
+from socialhood.platforms.facebook.adapter import CAPABILITIES as FACEBOOK_CAPABILITIES
 from socialhood.platforms.instagram.adapter import CAPABILITIES
 
 SANDBOX_PREFIX = "sandbox_"
@@ -40,12 +41,16 @@ def is_sandbox(acct: SocialAccount) -> bool:
 
 
 class SandboxAdapter:
-    platform = "instagram"
+    platform = "instagram"  # a sandbox Facebook Page has acct.platform == "facebook" (GR-29)
 
     def __init__(self, deps: PlatformDeps) -> None:
         self.deps = deps
 
     def capabilities_for(self, acct: SocialAccount) -> frozenset[Capability]:
+        """An Instagram-like account, or (GR-29) a Facebook Page: what the real adapters offer,
+        with Human Agent on and without the settings that gate insights."""
+        if acct.platform == "facebook":
+            return FACEBOOK_CAPABILITIES | {Capability.HUMAN_AGENT}
         return CAPABILITIES
 
     async def refresh_token(self, acct: SocialAccount) -> TokenGrant:
