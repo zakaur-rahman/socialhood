@@ -18,6 +18,7 @@ export * from "./stories";
 export * from "./entryLinks";
 export * from "./iceBreakers";
 export * from "./savedReplies";
+export * from "./broadcasts";
 export * from "./businessHours";
 export * from "./widget";
 export * from "./analytics";

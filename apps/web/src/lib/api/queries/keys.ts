@@ -98,6 +98,12 @@ export const keys = {
   members: (wid: string) => ["w", wid, "members"] as const,
   invitations: (wid: string) => ["w", wid, "invitations"] as const,
   auditEvents: (wid: string, filters: AuditFilters) => ["w", wid, "audit-events", filters] as const,
+  broadcastAvailability: (wid: string) => ["w", wid, "broadcasts", "availability"] as const, // GR-23
+  broadcastLists: (wid: string) => ["w", wid, "broadcasts", "list"] as const,
+  broadcast: (wid: string, id: string) => ["w", wid, "broadcasts", "one", id] as const,
+  broadcastRecipients: (wid: string, id: string, status: string | null, page: number) =>
+    ["w", wid, "broadcasts", "one", id, "recipients", status, page] as const,
+  broadcastPreview: (wid: string, draft: unknown) => ["w", wid, "broadcasts", "preview", draft] as const,
   businessHours: (wid: string) => ["w", wid, "business-hours"] as const, // GR-22
   widget: (wid: string) => ["w", wid, "widget"] as const, // GR-28
   // stories and mentions (GR-06, GR-07)

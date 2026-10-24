@@ -7,6 +7,7 @@ import {
   Clock,
   ExternalLink,
   LoaderCircle,
+  Megaphone,
   Sparkles,
   Zap,
   type LucideIcon,
@@ -124,15 +125,19 @@ export function MessageBubble({
         ? message.automation
           ? `Sent by an automation: ${message.automation.name}`
           : "Sent by an automation"
-        : null;
+        : outbound && message.source === "broadcast"
+          ? "Sent as part of a broadcast"
+          : null;
   // D-07: "Sent by AI" for an auto reply; "Automation · {name}" for an automation. The API doesn't say
   // whether an automation step was an AI reply, so "AI" never appears on those.
   const assistedLabel =
     message.source === "ai_auto"
       ? "Sent by AI"
-      : message.automation
-        ? `Automation · ${message.automation.name}`
-        : "Automation";
+      : message.source === "broadcast"
+        ? "Broadcast"
+        : message.automation
+          ? `Automation · ${message.automation.name}`
+          : "Automation";
   const label = nativeApp ? `Sent from ${platformName}` : null;
 
   const statusInfo = outbound && status ? STATUS[status] : undefined;
@@ -261,6 +266,8 @@ export function MessageBubble({
                 <span className="ml-1 inline-flex min-w-0 items-center gap-0.5 font-medium text-brand-fg">
                   {message.source === "automation" ? (
                     <Zap className="size-3" aria-hidden />
+                  ) : message.source === "broadcast" ? (
+                    <Megaphone className="size-3" aria-hidden />
                   ) : (
                     <Sparkles className="size-3" aria-hidden />
                   )}
@@ -325,5 +332,6 @@ function variantName(message: Message): string {
   if (message.source === "native_app") return "native_app";
   if (message.source === "ai_auto") return "ai_auto";
   if (message.source === "automation") return "automation";
+  if (message.source === "broadcast") return "automation"; // GR-23: styled like the other sends we write
   return "human";
 }

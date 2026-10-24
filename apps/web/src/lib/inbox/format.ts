@@ -36,6 +36,8 @@ export function previewPrefix(item: Pick<ConversationListItem, "last_message_dir
       return "AI: ";
     case "automation":
       return "Automation: ";
+    case "broadcast":
+      return "Broadcast: ";
     case "human":
     case "native_app":
       return "You: ";

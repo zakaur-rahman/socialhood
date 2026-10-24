@@ -23,6 +23,7 @@ import {
   useAutomations,
   useAutomationsSummary,
   useAutomationTemplates,
+  useBroadcastAvailability,
   useBulkPause,
   useDeleteAutomation,
   useDuplicateAutomation,
@@ -121,6 +122,8 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const wid = workspace.id;
   const router = useRouter();
   const now = useNow();
+  // GR-23: the Broadcasts link shows only when the server setting is on (a failed call hides it).
+  const broadcastsOn = useBroadcastAvailability(wid).data?.enabled === true;
 
   // ---- filters (FR-AUT-19)
   const [text, setText] = useState("");
@@ -359,6 +362,11 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           <Button asChild variant="secondary" size="lg">
             <Link href={`/w/${workspace.slug}/automations/starters` as Route}>Conversation starters</Link>
           </Button>
+          {broadcastsOn ? (
+            <Button asChild variant="secondary" size="lg">
+              <Link href={`/w/${workspace.slug}/broadcasts` as Route}>Broadcasts</Link>
+            </Button>
+          ) : null}
           <Button ref={newAutomation} size="lg" onClick={() => showGallery()}>
             <Plus aria-hidden /> New <span className="max-[359px]:sr-only">automation</span>
           </Button>

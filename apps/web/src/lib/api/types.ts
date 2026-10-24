@@ -116,6 +116,23 @@ export type SavedReplyList = Schemas["SavedReplyList"];
 export type SavedReplyCreate = Schemas["SavedReplyCreate"];
 export type SavedReplyUpdate = Schemas["SavedReplyUpdate"];
 export type SavedReplyFilled = Schemas["SavedReplyFilled"];
+// GR-23: WhatsApp broadcasts (aliases of the Pydantic classes; the client is regenerated centrally).
+export type Broadcast = Schemas["Broadcast"];
+export type BroadcastList = Schemas["BroadcastList"];
+export type BroadcastCreate = Schemas["BroadcastCreate"];
+export type BroadcastDraft = Schemas["BroadcastDraft"];
+export type BroadcastUpdate = Schemas["BroadcastUpdate"];
+export type BroadcastStart = Schemas["BroadcastStart"];
+export type BroadcastPreview = Schemas["BroadcastPreview"];
+export type BroadcastAvailability = Schemas["BroadcastAvailability"];
+export type BroadcastCounts = Schemas["BroadcastCounts"];
+export type BroadcastStatus = Broadcast["status"];
+export type BroadcastRecipient = Schemas["Recipient"];
+export type BroadcastRecipientList = Schemas["RecipientList"];
+export type RecipientStatus = BroadcastRecipient["status"];
+export type VariableSpec = Schemas["VariableSpec"];
+export type CostEstimate = Schemas["CostEstimate"];
+export type RateCard = Schemas["RateCardOut"];
 // GR-22: business hours and the away message.
 export type BusinessHours = Schemas["BusinessHours"];
 export type BusinessHoursUpdate = Schemas["BusinessHoursUpdate"];

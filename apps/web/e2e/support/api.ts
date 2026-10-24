@@ -126,7 +126,8 @@ export class Api {
 
   // ---------------------------------------------------------------- the app's own endpoints
 
-  connectSandbox(wid: string, platform: "instagram" | "facebook" = "instagram"): Promise<SandboxAccount> {
+  /** A sandbox Instagram account, a Facebook Page (GR-29) or a WhatsApp number with approved templates (GR-23). */
+  connectSandbox(wid: string, platform: "instagram" | "facebook" | "whatsapp" = "instagram"): Promise<SandboxAccount> {
     return this.call<SandboxAccount>(
       "POST",
       `/v1/w/${wid}/dev/sandbox/accounts`,
@@ -152,7 +153,16 @@ export class Api {
         | "optin"
         | "story_reply"
         | "story_like"
-        | "story_mention";
+        | "story_mention"
+        // GR-23, a sandbox WhatsApp number: a delivery status for the last message sent to
+        // `fromId`, and a number's quality or tier change.
+        | "status"
+        | "quality";
+      deliveryStatus?: "sent" | "delivered" | "read" | "failed";
+      errorCode?: number;
+      errorText?: string;
+      qualityEvent?: "ONBOARDING" | "UPGRADE" | "DOWNGRADE" | "FLAGGED" | "UNFLAGGED";
+      tier?: string;
       /** GR-10: how old a comment or Live comment is when it arrives, in seconds. */
       ageSeconds?: number;
       text?: string;
@@ -182,6 +192,11 @@ export class Api {
       quick_reply_payload: event.quickReplyPayload,
       story_id: event.storyId,
       age_seconds: event.ageSeconds,
+      delivery_status: event.deliveryStatus,
+      error_code: event.errorCode,
+      error_text: event.errorText,
+      quality_event: event.qualityEvent,
+      tier: event.tier,
     });
   }
 
