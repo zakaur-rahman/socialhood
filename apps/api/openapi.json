@@ -1264,6 +1264,16 @@
               }
             ]
           },
+          "hints": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunHints"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1337,9 +1347,12 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "lead_list": "#/components/schemas/LeadListVisual",
                   "metric_comparison": "#/components/schemas/MetricComparisonVisual",
                   "ranked_posts": "#/components/schemas/RankedPostsVisual",
-                  "sentiment_summary": "#/components/schemas/SentimentSummaryVisual"
+                  "sentiment_summary": "#/components/schemas/SentimentSummaryVisual",
+                  "table": "#/components/schemas/TableVisual",
+                  "trend": "#/components/schemas/TrendVisual"
                 },
                 "propertyName": "kind"
               },
@@ -1352,6 +1365,15 @@
                 },
                 {
                   "$ref": "#/components/schemas/SentimentSummaryVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/TrendVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/LeadListVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/TableVisual"
                 }
               ]
             },
@@ -1380,9 +1402,19 @@
         "additionalProperties": false,
         "description": "POST \u2026/agent/runs: a question in plain language (English, Hindi or Hinglish).",
         "properties": {
+          "hints": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunHints"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "request": {
+            "default": "",
             "maxLength": 2000,
-            "minLength": 1,
             "title": "Request",
             "type": "string"
           },
@@ -1399,9 +1431,6 @@
             "title": "Thread Id"
           }
         },
-        "required": [
-          "request"
-        ],
         "title": "AgentRunCreate",
         "type": "object"
       },
@@ -1491,6 +1520,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ErrorInfo"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hints": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunHints"
               },
               {
                 "type": "null"
@@ -1611,9 +1650,12 @@
             "items": {
               "discriminator": {
                 "mapping": {
+                  "lead_list": "#/components/schemas/LeadListVisual",
                   "metric_comparison": "#/components/schemas/MetricComparisonVisual",
                   "ranked_posts": "#/components/schemas/RankedPostsVisual",
-                  "sentiment_summary": "#/components/schemas/SentimentSummaryVisual"
+                  "sentiment_summary": "#/components/schemas/SentimentSummaryVisual",
+                  "table": "#/components/schemas/TableVisual",
+                  "trend": "#/components/schemas/TrendVisual"
                 },
                 "propertyName": "kind"
               },
@@ -1626,6 +1668,15 @@
                 },
                 {
                   "$ref": "#/components/schemas/SentimentSummaryVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/TrendVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/LeadListVisual"
+                },
+                {
+                  "$ref": "#/components/schemas/TableVisual"
                 }
               ]
             },
@@ -2426,7 +2477,9 @@
               "scheduled_post",
               "knowledge_source",
               "product",
-              "order"
+              "order",
+              "contact",
+              "report"
             ],
             "title": "Kind",
             "type": "string"
@@ -2446,6 +2499,18 @@
               }
             ],
             "title": "Parent Id"
+          },
+          "week": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Week"
           }
         },
         "required": [
@@ -6672,6 +6737,23 @@
         "title": "CalendarSlot",
         "type": "object"
       },
+      "CancelOrder": {
+        "additionalProperties": false,
+        "properties": {
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "CancelOrder",
+        "type": "object"
+      },
       "CaptionRequest": {
         "additionalProperties": false,
         "description": "POST \u2026/ai/caption: ``write`` a caption from ``brief`` (what the post is about), or\n``improve`` the ``caption`` given (required then). Written in the workspace's brand voice;\ncosts AI credits (caption_generation).",
@@ -9797,6 +9879,7 @@
                 "enum": [
                   "reply",
                   "tag",
+                  "tag_removed",
                   "stage",
                   "member",
                   "ended"
@@ -10139,6 +10222,24 @@
             "title": "Label",
             "type": "string"
           },
+          "stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "new",
+                  "qualified",
+                  "follow_up",
+                  "won",
+                  "lost"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
           "tag_id": {
             "anyOf": [
               {
@@ -10166,7 +10267,8 @@
             "enum": [
               "captured",
               "tagged",
-              "broadcast_replied"
+              "broadcast_replied",
+              "lead_stage"
             ],
             "title": "Type",
             "type": "string"
@@ -10181,7 +10283,7 @@
       },
       "EntryRule": {
         "additionalProperties": false,
-        "description": "What starts the sequence for a contact: a lead captured (any, or an email, a phone or an\nanswer), a tag added (``tag_id``), or a reply to a WhatsApp broadcast (any, or one).",
+        "description": "What starts the sequence for a contact: a lead captured (any, or an email, a phone or an\nanswer), a tag added (``tag_id``), a reply to a WhatsApp broadcast (any, or one), or the lead\nmoving into a stage (``stage``).",
         "properties": {
           "broadcast_id": {
             "anyOf": [
@@ -10211,6 +10313,24 @@
             ],
             "title": "Capture Kind"
           },
+          "stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "new",
+                  "qualified",
+                  "follow_up",
+                  "won",
+                  "lost"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stage"
+          },
           "tag_id": {
             "anyOf": [
               {
@@ -10227,7 +10347,8 @@
             "enum": [
               "captured",
               "tagged",
-              "broadcast_replied"
+              "broadcast_replied",
+              "lead_stage"
             ],
             "title": "Type",
             "type": "string"
@@ -10272,6 +10393,79 @@
           "path"
         ],
         "title": "ExcludePath",
+        "type": "object"
+      },
+      "ExtraMetrics": {
+        "description": "Figures only some posts have, kept apart from ``PostMetrics`` (which every post shares and\ncompares): an Instagram Story's replies and its taps and swipes through the Story, and the\nclicks on a Facebook Page post. None: not given for this post or not read yet.",
+        "properties": {
+          "clicks": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clicks"
+          },
+          "exits": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exits"
+          },
+          "replies": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replies"
+          },
+          "swipes_forward": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Swipes Forward"
+          },
+          "taps_back": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taps Back"
+          },
+          "taps_forward": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taps Forward"
+          }
+        },
+        "title": "ExtraMetrics",
         "type": "object"
       },
       "FacebookConnectPages": {
@@ -10764,6 +10958,7 @@
                   "branch": "#/components/schemas/BranchStep",
                   "delay": "#/components/schemas/DelayStep",
                   "end": "#/components/schemas/EndStep",
+                  "payment": "#/components/schemas/PaymentStep",
                   "product": "#/components/schemas/ProductStep",
                   "randomize": "#/components/schemas/RandomizeStep",
                   "send": "#/components/schemas/SendStep"
@@ -10776,6 +10971,9 @@
                 },
                 {
                   "$ref": "#/components/schemas/ProductStep"
+                },
+                {
+                  "$ref": "#/components/schemas/PaymentStep"
                 },
                 {
                   "$ref": "#/components/schemas/AskStep"
@@ -10970,6 +11168,36 @@
           }
         },
         "title": "FollowsCondition",
+        "type": "object"
+      },
+      "FulfilOrder": {
+        "additionalProperties": false,
+        "description": "Mark a paid order shipped. ``note`` is shown on the order and in the default message\n(a courier and tracking number, say).",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "FulfilOrder",
         "type": "object"
       },
       "FunnelStep": {
@@ -12523,6 +12751,147 @@
         "title": "LastRun",
         "type": "object"
       },
+      "LeadListVisual": {
+        "description": "Leads waiting for a reply, best score first (list_contacts with awaiting_reply, VIS-08).",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LeadRow"
+            },
+            "maxItems": 10,
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "const": "lead_list",
+            "title": "Kind",
+            "type": "string"
+          },
+          "more_route": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "pattern": "^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*(\\?[A-Za-z0-9_=&-]*)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "More Route"
+          },
+          "reply_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Reply Ids",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "total",
+          "items",
+          "reply_ids"
+        ],
+        "title": "LeadListVisual",
+        "type": "object"
+      },
+      "LeadRow": {
+        "description": "One lead. ``name`` is the customer's own text: render it as text.",
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "last_activity_label": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Activity Label"
+          },
+          "lead_score": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lead Score"
+          },
+          "lead_stage": {
+            "default": "new",
+            "enum": [
+              "new",
+              "qualified",
+              "follow_up",
+              "won",
+              "lost"
+            ],
+            "title": "Lead Stage",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 60,
+            "title": "Name",
+            "type": "string"
+          },
+          "platform": {
+            "maxLength": 20,
+            "title": "Platform",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id",
+          "name",
+          "platform"
+        ],
+        "title": "LeadRow",
+        "type": "object"
+      },
       "LeadScoreCondition": {
         "additionalProperties": false,
         "properties": {
@@ -12820,8 +13189,31 @@
       },
       "MarkPaid": {
         "additionalProperties": false,
-        "description": "For a UPI order: the customer's payment reference, if they shared one.",
+        "description": "A payment a member received by hand (UPI has no webhook): the customer's reference, if they\nshared one, and the amount in minor units when it is less than what is left to pay (blank:\nall of it).",
         "properties": {
+          "amount_minor": {
+            "anyOf": [
+              {
+                "maximum": 1000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "reference": {
             "anyOf": [
               {
@@ -13998,6 +14390,77 @@
         "title": "MetricDelta",
         "type": "object"
       },
+      "NoticeIn": {
+        "additionalProperties": false,
+        "description": "A message to the customer about an order's new status, sent on the order's conversation.\n``message`` replaces the default wording. On WhatsApp after the 24-hour window an approved\nutility template (name and language) carries it; without one it can't be sent.",
+        "properties": {
+          "message": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "template_language": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Language"
+          },
+          "template_name": {
+            "anyOf": [
+              {
+                "maxLength": 512,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Name"
+          }
+        },
+        "title": "NoticeIn",
+        "type": "object"
+      },
+      "NoticeOut": {
+        "description": "What happened to the message asked for with a status change: sent, or why not.",
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "sent"
+        ],
+        "title": "NoticeOut",
+        "type": "object"
+      },
       "NotificationList": {
         "properties": {
           "items": {
@@ -14259,6 +14722,62 @@
         "title": "OrderCreate",
         "type": "object"
       },
+      "OrderEdit": {
+        "additionalProperties": false,
+        "description": "Change an order that is a draft or waiting for payment. Lines are replaced when given (and\nre-priced from the catalogue now); the address and the note are replaced when given (an empty\nnote clears it). ``payment``, when given, sends a new payment request straight after, which\nis what replaces a link the edit made useless.",
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/OrderLineIn"
+                },
+                "maxItems": 50,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Items"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "payment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PaymentRequest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "OrderEdit",
+        "type": "object"
+      },
       "OrderLimits": {
         "properties": {
           "entitled": {
@@ -14433,6 +14952,11 @@
       },
       "OrderOut": {
         "properties": {
+          "accept_partial": {
+            "default": false,
+            "title": "Accept Partial",
+            "type": "boolean"
+          },
           "address": {
             "anyOf": [
               {
@@ -14442,6 +14966,36 @@
                 "type": "null"
               }
             ]
+          },
+          "amount_left": {
+            "default": "0.00",
+            "title": "Amount Left",
+            "type": "string"
+          },
+          "amount_left_minor": {
+            "default": 0,
+            "title": "Amount Left Minor",
+            "type": "integer"
+          },
+          "amount_paid": {
+            "default": "0.00",
+            "title": "Amount Paid",
+            "type": "string"
+          },
+          "amount_paid_minor": {
+            "default": 0,
+            "title": "Amount Paid Minor",
+            "type": "integer"
+          },
+          "amount_refunded": {
+            "default": "0.00",
+            "title": "Amount Refunded",
+            "type": "string"
+          },
+          "amount_refunded_minor": {
+            "default": 0,
+            "title": "Amount Refunded Minor",
+            "type": "integer"
           },
           "cancelled_at": {
             "anyOf": [
@@ -14490,6 +15044,29 @@
             "title": "Currency",
             "type": "string"
           },
+          "fulfilled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fulfilled At"
+          },
+          "fulfilment_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fulfilment Note"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -14524,6 +15101,16 @@
               }
             ],
             "title": "Note"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "number": {
             "title": "Number",
@@ -14589,10 +15176,58 @@
             ],
             "title": "Payment Reference"
           },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/OrderPaymentOut"
+            },
+            "title": "Payments",
+            "type": "array"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "refundable": {
+            "default": "0.00",
+            "title": "Refundable",
+            "type": "string"
+          },
+          "refundable_minor": {
+            "default": 0,
+            "title": "Refundable Minor",
+            "type": "integer"
+          },
+          "refunds": {
+            "items": {
+              "$ref": "#/components/schemas/OrderRefundOut"
+            },
+            "title": "Refunds",
+            "type": "array"
+          },
+          "social_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Account Id"
+          },
           "source": {
             "enum": [
               "inbox",
-              "whatsapp"
+              "whatsapp",
+              "flow"
             ],
             "title": "Source",
             "type": "string"
@@ -14601,7 +15236,10 @@
             "enum": [
               "draft",
               "awaiting_payment",
+              "partially_paid",
               "paid",
+              "fulfilled",
+              "refunded",
               "cancelled",
               "expired"
             ],
@@ -14636,6 +15274,155 @@
           "updated_at"
         ],
         "title": "OrderOut",
+        "type": "object"
+      },
+      "OrderPaymentOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "razorpay",
+              "upi"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "paid_at": {
+            "format": "date-time",
+            "title": "Paid At",
+            "type": "string"
+          },
+          "recorded_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded By Name"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "required": [
+          "id",
+          "amount_minor",
+          "amount",
+          "method",
+          "paid_at"
+        ],
+        "title": "OrderPaymentOut",
+        "type": "object"
+      },
+      "OrderRefundOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "amount_minor": {
+            "title": "Amount Minor",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "failure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "method": {
+            "enum": [
+              "razorpay",
+              "manual"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pending",
+              "processed",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "amount_minor",
+          "amount",
+          "reason",
+          "method",
+          "status",
+          "created_at"
+        ],
+        "title": "OrderRefundOut",
         "type": "object"
       },
       "OverlapWarning": {
@@ -15137,6 +15924,41 @@
         "title": "OwnershipTransfer",
         "type": "object"
       },
+      "PaymentItem": {
+        "additionalProperties": false,
+        "description": "One line of an order a payment step makes: a product (and variant, when it has some).",
+        "properties": {
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "quantity": {
+            "default": 1,
+            "maximum": 99.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          }
+        },
+        "required": [
+          "product_id"
+        ],
+        "title": "PaymentItem",
+        "type": "object"
+      },
       "PaymentList": {
         "properties": {
           "items": {
@@ -15231,6 +16053,11 @@
       "PaymentRequest": {
         "additionalProperties": false,
         "properties": {
+          "allow_partial": {
+            "default": false,
+            "title": "Allow Partial",
+            "type": "boolean"
+          },
           "method": {
             "enum": [
               "razorpay",
@@ -15346,6 +16173,74 @@
           "razorpay_connected"
         ],
         "title": "PaymentSettings",
+        "type": "object"
+      },
+      "PaymentStep": {
+        "additionalProperties": false,
+        "description": "Ask the customer to pay: make an order and send the payment link (Razorpay) or UPI request.\n``source`` ``items`` orders the chosen ``items`` at the catalogue's prices when the step runs;\n``draft`` uses the conversation's latest order that isn't paid yet (a member's draft, or the\ncustomer's WhatsApp cart). ``intro`` is a line of your own above the payment message.",
+        "properties": {
+          "id": {
+            "maxLength": 40,
+            "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "intro": {
+            "default": "",
+            "maxLength": 300,
+            "title": "Intro",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentItem"
+            },
+            "maxItems": 10,
+            "title": "Items",
+            "type": "array"
+          },
+          "method": {
+            "default": "razorpay",
+            "enum": [
+              "razorpay",
+              "upi"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z0-9][a-z0-9_-]{0,39}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next"
+          },
+          "source": {
+            "default": "items",
+            "enum": [
+              "items",
+              "draft"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "type": {
+            "const": "payment",
+            "default": "payment",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "PaymentStep",
         "type": "object"
       },
       "PeriodFigure": {
@@ -15628,6 +16523,7 @@
             "enum": [
               "1h",
               "6h",
+              "23h",
               "24h",
               "72h",
               "7d",
@@ -15937,6 +16833,7 @@
             "enum": [
               "1h",
               "6h",
+              "23h",
               "24h",
               "72h",
               "7d",
@@ -15957,6 +16854,16 @@
               }
             ],
             "title": "Captured At"
+          },
+          "extra_metrics": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtraMetrics"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "insights_final": {
             "title": "Insights Final",
@@ -15989,6 +16896,7 @@
                 "enum": [
                   "1h",
                   "6h",
+                  "23h",
                   "24h",
                   "72h",
                   "7d",
@@ -17820,6 +18728,29 @@
         "title": "Reaction",
         "type": "object"
       },
+      "ReasonCount": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "text",
+          "count"
+        ],
+        "title": "ReasonCount",
+        "type": "object"
+      },
       "Recipient": {
         "properties": {
           "contact_id": {
@@ -17933,6 +18864,46 @@
           "total"
         ],
         "title": "RecipientList",
+        "type": "object"
+      },
+      "RefundCreate": {
+        "additionalProperties": false,
+        "description": "Refund an order. ``amount_minor`` blank refunds everything not yet refunded.",
+        "properties": {
+          "amount_minor": {
+            "anyOf": [
+              {
+                "maximum": 1000000000000.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Minor"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NoticeIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "RefundCreate",
         "type": "object"
       },
       "RemoveTag": {
@@ -18364,6 +19335,56 @@
           "message"
         ],
         "title": "RunError",
+        "type": "object"
+      },
+      "RunHints": {
+        "additionalProperties": false,
+        "description": "VIS-11: a structured follow-up on the run before it, instead of free text from the screen.\n\nTwo kinds, never mixed: ``range_days`` and/or ``platform`` ask the same question again over\nanother range or platform (the controls on a visual); ``reply_conversation_ids`` asks for a\ndraft reply to each of those conversations (VIS-12). Keys and values are whitelisted; the\nserver words the member's question from them and the planner applies them as if the member had\nasked. Conversations must be the workspace's (404 otherwise).",
+        "properties": {
+          "platform": {
+            "anyOf": [
+              {
+                "enum": [
+                  "all",
+                  "instagram",
+                  "facebook",
+                  "whatsapp"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "range_days": {
+            "anyOf": [
+              {
+                "enum": [
+                  7,
+                  30,
+                  90
+                ],
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Days"
+          },
+          "reply_conversation_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 3,
+            "title": "Reply Conversation Ids",
+            "type": "array"
+          }
+        },
+        "title": "RunHints",
         "type": "object"
       },
       "SamplePreview": {
@@ -19276,7 +20297,8 @@
             "default": "post",
             "enum": [
               "post",
-              "story"
+              "story",
+              "reel"
             ],
             "title": "Kind",
             "type": "string"
@@ -19377,7 +20399,7 @@
           },
           "caption": {
             "default": "",
-            "maxLength": 2200,
+            "maxLength": 63206,
             "title": "Caption",
             "type": "string"
           },
@@ -19397,7 +20419,8 @@
             "default": "post",
             "enum": [
               "post",
-              "story"
+              "story",
+              "reel"
             ],
             "title": "Kind",
             "type": "string"
@@ -19496,7 +20519,8 @@
             "default": "post",
             "enum": [
               "post",
-              "story"
+              "story",
+              "reel"
             ],
             "title": "Kind",
             "type": "string"
@@ -20487,6 +21511,107 @@
           "updated_at"
         ],
         "title": "Sequence",
+        "type": "object"
+      },
+      "SequenceAnalytics": {
+        "description": "A sequence's numbers, computed by the server and cached for a few minutes.",
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "completed": {
+            "title": "Completed",
+            "type": "integer"
+          },
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "enrolled": {
+            "title": "Enrolled",
+            "type": "integer"
+          },
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "replied": {
+            "title": "Replied",
+            "type": "integer"
+          },
+          "reply_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Rate"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "sequence_id": {
+            "format": "uuid",
+            "title": "Sequence Id",
+            "type": "string"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "skipped_by": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCount"
+            },
+            "title": "Skipped By",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/StepStats"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "stopped": {
+            "title": "Stopped",
+            "type": "integer"
+          },
+          "stopped_by": {
+            "items": {
+              "$ref": "#/components/schemas/ReasonCount"
+            },
+            "title": "Stopped By",
+            "type": "array"
+          },
+          "window_hours": {
+            "title": "Window Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sequence_id",
+          "window_hours",
+          "computed_at",
+          "enrolled",
+          "active",
+          "completed",
+          "stopped",
+          "stopped_by",
+          "sent",
+          "skipped",
+          "skipped_by",
+          "failed",
+          "replied",
+          "steps"
+        ],
+        "title": "SequenceAnalytics",
         "type": "object"
       },
       "SequenceBody": {
@@ -21836,6 +22961,66 @@
         "title": "StepOut",
         "type": "object"
       },
+      "StepStats": {
+        "description": "One step's numbers. ``reached`` is the people it ran for plus those it is next for; the\nfunnel is ``share`` of everyone who entered.",
+        "properties": {
+          "failed": {
+            "title": "Failed",
+            "type": "integer"
+          },
+          "position": {
+            "title": "Position",
+            "type": "integer"
+          },
+          "reached": {
+            "title": "Reached",
+            "type": "integer"
+          },
+          "replied": {
+            "title": "Replied",
+            "type": "integer"
+          },
+          "reply_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Rate"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          },
+          "share": {
+            "title": "Share",
+            "type": "number"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "waiting": {
+            "title": "Waiting",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "position",
+          "reached",
+          "waiting",
+          "sent",
+          "skipped",
+          "failed",
+          "replied",
+          "share"
+        ],
+        "title": "StepStats",
+        "type": "object"
+      },
       "StepVerification": {
         "description": "R2 (TR-AGT-06): what the verifier read back after a write.",
         "properties": {
@@ -21871,6 +23056,21 @@
           "on_reply": {
             "title": "On Reply",
             "type": "boolean"
+          },
+          "removed_tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Removed Tag Ids",
+            "type": "array"
+          },
+          "removed_tag_names": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Removed Tag Names",
+            "type": "array"
           },
           "stages": {
             "items": {
@@ -21913,12 +23113,21 @@
       },
       "StopRules": {
         "additionalProperties": false,
-        "description": "When to stop: the contact writing (on by default), a tag from the list being added, or\ntheir lead stage becoming one from the list.",
+        "description": "When to stop: the contact writing (on by default), a tag from ``tag_ids`` being added, a tag\nfrom ``removed_tag_ids`` being taken off, or their lead stage becoming one from the list.",
         "properties": {
           "on_reply": {
             "default": true,
             "title": "On Reply",
             "type": "boolean"
+          },
+          "removed_tag_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Removed Tag Ids",
+            "type": "array"
           },
           "stages": {
             "items": {
@@ -22237,6 +23446,138 @@
         "title": "SuggestionSource",
         "type": "object"
       },
+      "TableColumn": {
+        "properties": {
+          "align": {
+            "default": "left",
+            "enum": [
+              "left",
+              "right"
+            ],
+            "title": "Align",
+            "type": "string"
+          },
+          "format": {
+            "default": "text",
+            "enum": [
+              "text",
+              "count",
+              "percent"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "key": {
+            "maxLength": 30,
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 40,
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label"
+        ],
+        "title": "TableColumn",
+        "type": "object"
+      },
+      "TableRow": {
+        "description": "Cells in the order of the table's columns. Text cells may be the customer's own words:\nrender them as text.",
+        "properties": {
+          "cells": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "maxItems": 6,
+            "title": "Cells",
+            "type": "array"
+          }
+        },
+        "required": [
+          "cells"
+        ],
+        "title": "TableRow",
+        "type": "object"
+      },
+      "TableVisual": {
+        "description": "A short table of what a tool listed (VIS-09): at most 10 rows and 6 columns.",
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/TableColumn"
+            },
+            "maxItems": 6,
+            "minItems": 1,
+            "title": "Columns",
+            "type": "array"
+          },
+          "kind": {
+            "const": "table",
+            "title": "Kind",
+            "type": "string"
+          },
+          "more_route": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "pattern": "^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*(\\?[A-Za-z0-9_=&-]*)?$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "More Route"
+          },
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/TableRow"
+            },
+            "maxItems": 10,
+            "title": "Rows",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "total": {
+            "minimum": 0.0,
+            "title": "Total",
+            "type": "integer"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "columns",
+          "rows",
+          "total"
+        ],
+        "title": "TableVisual",
+        "type": "object"
+      },
       "Tag": {
         "properties": {
           "color": {
@@ -22395,7 +23736,7 @@
           "caption_override": {
             "anyOf": [
               {
-                "maxLength": 2200,
+                "maxLength": 63206,
                 "type": "string"
               },
               {
@@ -22597,6 +23938,7 @@
             "enum": [
               "1h",
               "6h",
+              "23h",
               "24h",
               "72h",
               "7d",
@@ -22653,6 +23995,7 @@
             "enum": [
               "1h",
               "6h",
+              "23h",
               "24h",
               "72h",
               "7d",
@@ -22682,6 +24025,220 @@
           "items"
         ],
         "title": "TopPosts",
+        "type": "object"
+      },
+      "TrendPoint": {
+        "properties": {
+          "day": {
+            "format": "date",
+            "title": "Day",
+            "type": "string"
+          },
+          "days_known": {
+            "maximum": 7.0,
+            "minimum": 0.0,
+            "title": "Days Known",
+            "type": "integer"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "day",
+          "days_known"
+        ],
+        "title": "TrendPoint",
+        "type": "object"
+      },
+      "TrendVisual": {
+        "description": "One series over time (metric_trend, VIS-07). One series only: a second hue waits for the\ncategorical palette (C-123). Every value, the extremes and the change come from the tool.",
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Change Pct"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "enum": [
+                  "up",
+                  "down",
+                  "flat"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "first": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrendPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "format": {
+            "enum": [
+              "count",
+              "percent"
+            ],
+            "title": "Format",
+            "type": "string"
+          },
+          "granularity": {
+            "enum": [
+              "day",
+              "week"
+            ],
+            "title": "Granularity",
+            "type": "string"
+          },
+          "highest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrendPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "const": "trend",
+            "title": "Kind",
+            "type": "string"
+          },
+          "known_points": {
+            "minimum": 0.0,
+            "title": "Known Points",
+            "type": "integer"
+          },
+          "last": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrendPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lowest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrendPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "metric_key": {
+            "enum": [
+              "reach",
+              "views",
+              "accounts_engaged",
+              "interactions",
+              "followers",
+              "follows",
+              "unfollows",
+              "profile_link_taps"
+            ],
+            "title": "Metric Key",
+            "type": "string"
+          },
+          "metric_label": {
+            "maxLength": 40,
+            "title": "Metric Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "period": {
+            "$ref": "#/components/schemas/VisualPeriod"
+          },
+          "points": {
+            "items": {
+              "$ref": "#/components/schemas/TrendPoint"
+            },
+            "maxItems": 92,
+            "title": "Points",
+            "type": "array"
+          },
+          "summary": {
+            "maxLength": 300,
+            "title": "Summary",
+            "type": "string"
+          },
+          "title": {
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind",
+          "title",
+          "metric_key",
+          "metric_label",
+          "format",
+          "granularity",
+          "period",
+          "points",
+          "known_points",
+          "summary"
+        ],
+        "title": "TrendVisual",
         "type": "object"
       },
       "UpiSave": {
@@ -23511,7 +25068,12 @@
                 "automation.run.completed",
                 "broadcast.finished",
                 "order.created",
-                "order.paid"
+                "order.paid",
+                "order.refunded",
+                "sequence.enrolled",
+                "sequence.step_sent",
+                "sequence.completed",
+                "sequence.stopped"
               ],
               "type": "string"
             },
@@ -23604,7 +25166,12 @@
                 "automation.run.completed",
                 "broadcast.finished",
                 "order.created",
-                "order.paid"
+                "order.paid",
+                "order.refunded",
+                "sequence.enrolled",
+                "sequence.step_sent",
+                "sequence.completed",
+                "sequence.stopped"
               ],
               "type": "string"
             },
@@ -23684,7 +25251,12 @@
                     "automation.run.completed",
                     "broadcast.finished",
                     "order.created",
-                    "order.paid"
+                    "order.paid",
+                    "order.refunded",
+                    "sequence.enrolled",
+                    "sequence.step_sent",
+                    "sequence.completed",
+                    "sequence.stopped"
                   ],
                   "type": "string"
                 },
@@ -23774,7 +25346,12 @@
                 "automation.run.completed",
                 "broadcast.finished",
                 "order.created",
-                "order.paid"
+                "order.paid",
+                "order.refunded",
+                "sequence.enrolled",
+                "sequence.step_sent",
+                "sequence.completed",
+                "sequence.stopped"
               ],
               "type": "string"
             },
@@ -23866,7 +25443,12 @@
               "automation.run.completed",
               "broadcast.finished",
               "order.created",
-              "order.paid"
+              "order.paid",
+              "order.refunded",
+              "sequence.enrolled",
+              "sequence.step_sent",
+              "sequence.completed",
+              "sequence.stopped"
             ],
             "title": "Type",
             "type": "string"
@@ -26694,6 +28276,7 @@
                   "enum": [
                     "1h",
                     "6h",
+                    "23h",
                     "24h",
                     "72h",
                     "7d",
@@ -26793,6 +28376,7 @@
                   "enum": [
                     "1h",
                     "6h",
+                    "23h",
                     "24h",
                     "72h",
                     "7d",
@@ -27058,6 +28642,7 @@
               "enum": [
                 "1h",
                 "6h",
+                "23h",
                 "24h",
                 "72h",
                 "7d",
@@ -38286,7 +39871,10 @@
                   "enum": [
                     "draft",
                     "awaiting_payment",
+                    "partially_paid",
                     "paid",
+                    "fulfilled",
+                    "refunded",
                     "cancelled",
                     "expired"
                   ],
@@ -38502,11 +40090,83 @@
         "tags": [
           "orders"
         ]
+      },
+      "patch": {
+        "description": "Change a draft or waiting order: the lines (re-priced from the catalogue now), the address,\nthe note. A new total cancels the payment link and returns the order to a draft; ``payment``\nasks for a new request straight after. 422 once the order has a payment or is closed.",
+        "operationId": "edit_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderEdit"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Edit Order",
+        "tags": [
+          "orders"
+        ]
       }
     },
     "/v1/w/{wid}/orders/{order_id}/cancel": {
       "post": {
-        "description": "Cancel an order that isn't paid, and its Razorpay link. 422 for a paid order.",
+        "description": "Cancel an order nobody has paid, and its Razorpay link. 422 once there is a payment:\nrefund it first.",
         "operationId": "cancel_order",
         "parameters": [
           {
@@ -38530,6 +40190,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CancelOrder"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -38568,9 +40245,83 @@
         ]
       }
     },
+    "/v1/w/{wid}/orders/{order_id}/fulfil": {
+      "post": {
+        "description": "Mark a paid order shipped, with a note (a courier and tracking number, say) that shows on\nthe order. 422 for an order that is not paid, or already shipped.",
+        "operationId": "fulfil_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FulfilOrder"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Fulfil Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
     "/v1/w/{wid}/orders/{order_id}/mark-paid": {
       "post": {
-        "description": "A member says the order was paid: for UPI, which has no webhook. Who and when are kept on\nthe order and in the audit trail. 422 when it is already paid or cancelled.",
+        "description": "A member says a payment arrived: for UPI, which has no webhook. All that is left, or\n``amount_minor`` of it (the order is then partly paid; send another request for the rest).\nWho, when and how much are kept on the order and in the audit trail. 422 when it is already\npaid or cancelled, or the amount is more than what is left.",
         "operationId": "mark_order_paid",
         "parameters": [
           {
@@ -38644,7 +40395,7 @@
     },
     "/v1/w/{wid}/orders/{order_id}/payment-request": {
       "post": {
-        "description": "Make a Razorpay payment link or a UPI request for the order and, unless ``send`` is false,\nsend it as a message on the order's conversation. 409 when the method isn't set up (\"Razorpay\nisn't set up for this workspace\"), 409 ``reply_window_closed`` when the message can't go,\n422 for an order that is paid or cancelled.",
+        "description": "Make a Razorpay payment link or a UPI request for what is left to pay and, unless ``send``\nis false, send it as a message on the order's conversation. ``allow_partial`` lets the\ncustomer pay a Razorpay link in parts (rupees only). 409 when the method isn't set up\n(\"Razorpay isn't set up for this workspace\"), 409 ``reply_window_closed`` when the message\ncan't go, 422 for an order that is paid or cancelled.",
         "operationId": "request_order_payment",
         "parameters": [
           {
@@ -38711,6 +40462,80 @@
           }
         },
         "summary": "Request Payment",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/orders/{order_id}/refunds": {
+      "post": {
+        "description": "Refund an order in full or in part, with a reason. A Razorpay payment is refunded through\nthe business's own keys (the refund is pending until Razorpay says it is processed); a UPI\npayment is returned by the business, which records it here. 422 for an order without\npayments, too large an amount or no reason; 409 when Razorpay isn't set up.",
+        "operationId": "refund_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Refund Order",
         "tags": [
           "orders"
         ]
@@ -41708,6 +43533,70 @@
           }
         },
         "summary": "Activate Sequence",
+        "tags": [
+          "sequences"
+        ]
+      }
+    },
+    "/v1/w/{wid}/sequences/{sequence_id}/analytics": {
+      "get": {
+        "description": "Who entered, how it went per step (sent, skipped and why, failed, replied) and the funnel.\nComputed on the server; cached for a few minutes.",
+        "operationId": "get_sequence_analytics",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sequence_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sequence Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SequenceAnalytics"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Sequence Analytics",
         "tags": [
           "sequences"
         ]

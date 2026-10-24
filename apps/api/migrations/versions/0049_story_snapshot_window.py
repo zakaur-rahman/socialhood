@@ -32,15 +32,11 @@ def _condition(values: Sequence[str]) -> str:
 
 def upgrade() -> None:
     op.drop_constraint(op.f(WINDOW_CHECK), "post_metric_snapshots", type_="check")
-    op.create_check_constraint(
-        op.f(WINDOW_CHECK), "post_metric_snapshots", _condition(NEW_WINDOWS)
-    )
+    op.create_check_constraint(op.f(WINDOW_CHECK), "post_metric_snapshots", _condition(NEW_WINDOWS))
 
 
 def downgrade() -> None:
     # A Story's 23 h reading can't stay under the old check.
-    op.execute('DELETE FROM post_metric_snapshots WHERE "window" = \'23h\'')
+    op.execute("DELETE FROM post_metric_snapshots WHERE \"window\" = '23h'")
     op.drop_constraint(op.f(WINDOW_CHECK), "post_metric_snapshots", type_="check")
-    op.create_check_constraint(
-        op.f(WINDOW_CHECK), "post_metric_snapshots", _condition(OLD_WINDOWS)
-    )
+    op.create_check_constraint(op.f(WINDOW_CHECK), "post_metric_snapshots", _condition(OLD_WINDOWS))
