@@ -90,8 +90,8 @@ describe("the editor's state", () => {
     expect(body).toEqual({
       name: "Three days",
       social_account_id: "a1",
-      entry: { type: "tagged", tag_id: "t1", broadcast_id: null, capture_kind: null },
-      stop: { on_reply: true, tag_ids: [], stages: [] },
+      entry: { type: "tagged", tag_id: "t1", broadcast_id: null, capture_kind: null, stage: null },
+      stop: { on_reply: true, tag_ids: [], removed_tag_ids: [], stages: [] },
       allow_reentry: false,
       steps: [
         {
@@ -114,6 +114,21 @@ describe("the editor's state", () => {
         },
       ],
     });
+  });
+
+  it("starts on a lead stage and carries the tags whose removal stops it", () => {
+    const state = { ...ready(), entryType: "lead_stage" as const, entryStage: null, stopRemovedTagIds: ["t7"] };
+    expect(missingFor(state)).toContain("Choose the stage that starts it.");
+    expect(toBody(state)).toBeNull();
+    const body = toBody({ ...state, entryStage: "qualified" });
+    expect(body?.entry).toEqual({
+      type: "lead_stage",
+      tag_id: null,
+      broadcast_id: null,
+      capture_kind: null,
+      stage: "qualified",
+    });
+    expect(body?.stop?.removed_tag_ids).toEqual(["t7"]);
   });
 
   it("counts the first step from entry whatever the editor held, and drops variables without a template", () => {

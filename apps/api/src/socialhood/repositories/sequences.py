@@ -4,14 +4,14 @@ sweeper calls inside ``tenant_bypass_scope`` to find work across workspaces."""
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.connections import AccountStatus, SocialAccount
-from socialhood.models.inbox import Contact
+from socialhood.models.inbox import Contact, Conversation, Direction, Message
 from socialhood.models.sequences import (
     EnrolmentStatus,
     RunStatus,
@@ -31,6 +31,10 @@ async def get(
     if lock:
         query = query.with_for_update().execution_options(populate_existing=True)
     return await session.scalar(query)
+
+
+async def name_of(session: AsyncSession, sequence_id: uuid.UUID) -> str:
+    return await session.scalar(select(Sequence.name).where(Sequence.id == sequence_id)) or ""
 
 
 async def steps_of(session: AsyncSession, sequence_id: uuid.UUID) -> list[SequenceStep]:
@@ -122,12 +126,23 @@ async def stop_matching(
     detail: str | None,
     now: datetime,
     sequence_ids: Any,
-) -> int:
+) -> list[tuple[uuid.UUID, uuid.UUID]]:
     """Stop the contact's active enrolments in the sequences ``sequence_ids`` selects (a column
-    subquery); returns how many."""
-    result = await session.execute(
+    subquery); returns (enrolment, sequence) of each, for the ``sequence.stopped`` event."""
+    found = (
+        await session.execute(
+            select(SequenceEnrolment.id, SequenceEnrolment.sequence_id).where(
+                SequenceEnrolment.contact_id == contact_id,
+                SequenceEnrolment.status == EnrolmentStatus.ACTIVE,
+                SequenceEnrolment.sequence_id.in_(sequence_ids),
+            )
+        )
+    ).all()
+    if not found:
+        return []
+    await session.execute(
         scoped_update(SequenceEnrolment, contact_id=contact_id, status=EnrolmentStatus.ACTIVE)
-        .where(SequenceEnrolment.sequence_id.in_(sequence_ids))
+        .where(SequenceEnrolment.id.in_([enrolment_id for enrolment_id, _ in found]))
         .values(
             status=EnrolmentStatus.STOPPED,
             stop_reason=reason,
@@ -136,7 +151,7 @@ async def stop_matching(
             next_due_at=None,
         )
     )
-    return int(getattr(result, "rowcount", 0) or 0)
+    return [(enrolment_id, sequence_id) for enrolment_id, sequence_id in found]
 
 
 async def get_enrolment(
@@ -215,3 +230,74 @@ async def stop_all_of_sequence(
 
 async def contact_of(session: AsyncSession, contact_id: uuid.UUID) -> Contact | None:
     return await session.scalar(select(Contact).where(Contact.id == contact_id))
+
+
+async def run_counts(
+    session: AsyncSession, sequence_id: uuid.UUID
+) -> list[tuple[int, str, str | None, int]]:
+    """(step position, run status, reason code, count) over every run of the sequence."""
+    rows = await session.execute(
+        select(
+            SequenceStepRun.position,
+            SequenceStepRun.status,
+            SequenceStepRun.reason_code,
+            func.count(),
+        )
+        .where(SequenceStepRun.sequence_id == sequence_id)
+        .group_by(SequenceStepRun.position, SequenceStepRun.status, SequenceStepRun.reason_code)
+    )
+    return [(int(p), str(s), c, int(n)) for p, s, c, n in rows.all()]
+
+
+async def replies_per_step(
+    session: AsyncSession, sequence_id: uuid.UUID, window: timedelta
+) -> dict[int, int]:
+    """For each step position, how many *sent* runs were followed by a customer message in the
+    contact's conversation within ``window`` of the run."""
+    answered = (
+        select(Message.id)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(
+            Conversation.contact_id == SequenceStepRun.contact_id,
+            Conversation.social_account_id == SequenceStepRun.social_account_id,
+            Message.direction == Direction.INBOUND,
+            Message.occurred_at > SequenceStepRun.ran_at,
+            Message.occurred_at <= SequenceStepRun.ran_at + window,
+        )
+        .exists()
+    )
+    rows = await session.execute(
+        select(SequenceStepRun.position, func.count())
+        .where(
+            SequenceStepRun.sequence_id == sequence_id,
+            SequenceStepRun.status == RunStatus.SENT,
+            answered,
+        )
+        .group_by(SequenceStepRun.position)
+    )
+    return {int(p): int(n) for p, n in rows.all()}
+
+
+async def waiting_per_step(session: AsyncSession, sequence_id: uuid.UUID) -> dict[int, int]:
+    """Active enrolments by the step they are on."""
+    rows = await session.execute(
+        select(SequenceEnrolment.current_step, func.count())
+        .where(
+            SequenceEnrolment.sequence_id == sequence_id,
+            SequenceEnrolment.status == EnrolmentStatus.ACTIVE,
+        )
+        .group_by(SequenceEnrolment.current_step)
+    )
+    return {int(p): int(n) for p, n in rows.all()}
+
+
+async def stop_reason_counts(session: AsyncSession, sequence_id: uuid.UUID) -> dict[str, int]:
+    rows = await session.execute(
+        select(SequenceEnrolment.stop_reason, func.count())
+        .where(
+            SequenceEnrolment.sequence_id == sequence_id,
+            SequenceEnrolment.status == EnrolmentStatus.STOPPED,
+        )
+        .group_by(SequenceEnrolment.stop_reason)
+    )
+    return {str(r or "unknown"): int(n) for r, n in rows.all()}

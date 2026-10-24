@@ -113,6 +113,7 @@ export const keys = {
   sequence: (wid: string, id: string) => ["w", wid, "sequences", "one", id] as const,
   sequencePeople: (wid: string, id: string, status: string | null, page: number) =>
     ["w", wid, "sequences", "one", id, "people", status, page] as const,
+  sequenceAnalytics: (wid: string, id: string) => ["w", wid, "sequences", "one", id, "analytics"] as const,
   sequencePreview: (wid: string, body: unknown) => ["w", wid, "sequences", "preview", body] as const,
   contactSequences: (wid: string, contactId: string) => ["w", wid, "sequences", "contact", contactId] as const,
   invitations: (wid: string) => ["w", wid, "invitations"] as const,

@@ -7,6 +7,7 @@ import type {
   ContactSequenceList,
   EnrolmentStatus,
   Sequence,
+  SequenceAnalytics,
   SequenceBody,
   SequenceEnrolment,
   SequenceEnrolmentList,
@@ -35,6 +36,21 @@ export function useSequence(wid: string, id: string) {
     queryKey: keys.sequence(wid, id),
     queryFn: () =>
       unwrap(api.GET("/v1/w/{wid}/sequences/{sequence_id}", { params: { path: { wid, sequence_id: id } } })),
+  });
+}
+
+/** The sequence's numbers, computed by the server (cached there for a few minutes). */
+export function useSequenceAnalytics(wid: string, id: string) {
+  const api = useApi();
+  return useQuery<SequenceAnalytics, Error>({
+    queryKey: keys.sequenceAnalytics(wid, id),
+    staleTime: 60_000,
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/w/{wid}/sequences/{sequence_id}/analytics", {
+          params: { path: { wid, sequence_id: id } },
+        }),
+      ),
   });
 }
 

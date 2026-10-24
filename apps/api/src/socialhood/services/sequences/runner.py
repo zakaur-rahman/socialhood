@@ -60,6 +60,7 @@ from socialhood.services.broadcasts import variables as variable_rules
 from socialhood.services.reply_window import reply_window
 from socialhood.services.saved_replies import contact_values, fill
 from socialhood.services.sequences import rules, schedule
+from socialhood.services.webhooks import events
 
 log = get_logger(__name__)
 
@@ -124,6 +125,7 @@ async def run_one(
     if step is None:  # the steps were taken away from under it
         _finish(row, now)
         await session.flush()
+        await _completed(session, row, sequence.name)
         return "completed"
     acct = await accounts.get(session, row.social_account_id)
     contact = await repo.contact_of(session, row.contact_id)
@@ -244,6 +246,18 @@ async def _send(
         )
         return await _advance(session, row, steps, now, outcome="failed")
     await _record(session, row, step, RunStatus.SENT, now, sent_as=action, message_id=message.id)
+    await events.sequence_event(
+        session,
+        "sequence.step_sent",
+        contact,
+        sequence_id=row.sequence_id,
+        sequence_name=await repo.name_of(session, row.sequence_id),
+        enrolment_id=row.id,
+        step=step.position + 1,
+        step_count=len(steps),
+        sent_as=action,
+        message_id=str(message.id),
+    )
     return await _advance(session, row, steps, now, outcome="sent")
 
 
@@ -323,6 +337,21 @@ def _finish(row: SequenceEnrolment, now: datetime) -> None:
     row.next_due_at = None
 
 
+async def _completed(session: AsyncSession, row: SequenceEnrolment, name: str) -> None:
+    """``sequence.completed`` for an enrolment that just reached the end."""
+    contact = await repo.contact_of(session, row.contact_id)
+    if contact is None:
+        return
+    await events.sequence_event(
+        session,
+        "sequence.completed",
+        contact,
+        sequence_id=row.sequence_id,
+        sequence_name=name,
+        enrolment_id=row.id,
+    )
+
+
 async def _advance(
     session: AsyncSession,
     row: SequenceEnrolment,
@@ -338,6 +367,8 @@ async def _advance(
     if upcoming is None:
         _finish(row, now)
         outcome = "completed" if outcome == "advanced" else outcome
+        await session.flush()
+        await _completed(session, row, await repo.name_of(session, row.sequence_id))
     else:
         row.next_due_at = schedule.due_at(
             delay_seconds=upcoming.delay_seconds,

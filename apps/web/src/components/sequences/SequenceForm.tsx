@@ -45,6 +45,7 @@ import {
 import type { Sequence, SocialAccount, WhatsAppTemplate } from "@/lib/api/types";
 import {
   CAPTURE_KINDS,
+  ENTRY_STAGES,
   ENTRY_TYPES,
   SEQUENCE_STATUS,
   STOP_STAGES,
@@ -353,6 +354,20 @@ export function SequenceForm({ sequence, children }: { sequence?: Sequence; chil
                 {problems["entry.tag_id"] ? <p className="text-sm text-danger-fg">{problems["entry.tag_id"]}</p> : null}
               </div>
             ) : null}
+            {state.entryType === "lead_stage" ? (
+              <Select value={state.entryStage ?? ""} onValueChange={(value) => change({ entryStage: value })}>
+                <SelectTrigger aria-label="Lead stage" size="lg" className="w-full">
+                  <SelectValue placeholder="Choose a stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENTRY_STAGES.map((stage) => (
+                    <SelectItem key={stage.value} value={stage.value}>
+                      {stage.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : null}
             {state.entryType === "captured" ? (
               <Select value={state.captureKind} onValueChange={(value) => change({ captureKind: value as EditorState["captureKind"] })}>
                 <SelectTrigger aria-label="What they gave" size="lg" className="w-full">
@@ -440,6 +455,22 @@ export function SequenceForm({ sequence, children }: { sequence?: Sequence; chil
                     <Checkbox
                       checked={state.stopTagIds.includes(tag.id)}
                       onCheckedChange={(on) => change({ stopTagIds: toggle(state.stopTagIds, tag.id, on === true) })}
+                    />
+                    {tag.name}
+                  </label>
+                ))}
+              </fieldset>
+            ) : null}
+            {(tags.data ?? []).length > 0 ? (
+              <fieldset className="space-y-2">
+                <legend className={ITEM_TITLE}>One of these tags is taken off</legend>
+                {(tags.data ?? []).map((tag) => (
+                  <label key={tag.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={state.stopRemovedTagIds.includes(tag.id)}
+                      onCheckedChange={(on) =>
+                        change({ stopRemovedTagIds: toggle(state.stopRemovedTagIds, tag.id, on === true) })
+                      }
                     />
                     {tag.name}
                   </label>

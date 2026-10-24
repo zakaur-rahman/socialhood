@@ -22,6 +22,10 @@ EventName = Literal[
     "broadcast.finished",
     "order.created",
     "order.paid",
+    "sequence.enrolled",
+    "sequence.step_sent",
+    "sequence.completed",
+    "sequence.stopped",
 ]
 EndpointStatusName = Literal["active", "paused", "disabled"]
 DeliveryStatusName = Literal["pending", "succeeded", "failed"]

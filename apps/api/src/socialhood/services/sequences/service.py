@@ -33,7 +33,7 @@ from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.broadcasts import Broadcast
 from socialhood.models.connections import AccountStatus, SocialAccount
-from socialhood.models.contacts import Tag
+from socialhood.models.contacts import LeadStage, Tag
 from socialhood.models.inbox import Contact
 from socialhood.models.sequences import (
     EnrolmentStatus,
@@ -55,9 +55,11 @@ from socialhood.services import contacts as contact_service
 from socialhood.services import whatsapp_templates
 from socialhood.services.automations import actions, render
 from socialhood.services.broadcasts import variables as variable_rules
+from socialhood.services.leads import STAGE_LABEL
 from socialhood.services.saved_replies import fill
 from socialhood.services.sending import text_limit_error
 from socialhood.services.sequences import rules
+from socialhood.services.webhooks import events
 
 KEY_ACTIVE = "active_sequences"
 KEY_STEPS = "sequence_steps"
@@ -69,6 +71,7 @@ ENTRY_WORDS = {
     EntryType.CAPTURED: "A lead is captured",
     EntryType.TAGGED: "A tag is added",
     EntryType.BROADCAST_REPLIED: "Someone replies to a broadcast",
+    EntryType.LEAD_STAGE: "A lead moves into a stage",
 }
 CAPTURE_WORDS = {"email": "an email", "phone": "a phone number", "field": "an answer"}
 
@@ -121,7 +124,9 @@ async def resolve(
         raise _not_found("account")
     if body.entry.tag_id is not None:
         await _tags_exist(session, [body.entry.tag_id])
-    await _tags_exist(session, list(dict.fromkeys(body.stop.tag_ids)))
+    await _tags_exist(
+        session, list(dict.fromkeys([*body.stop.tag_ids, *body.stop.removed_tag_ids]))
+    )
     if body.entry.broadcast_id is not None and (
         await session.scalar(select(Broadcast.id).where(Broadcast.id == body.entry.broadcast_id))
         is None
@@ -233,8 +238,10 @@ def _apply(row: Sequence, body: schemas.SequenceBody) -> None:
     row.entry_tag_id = body.entry.tag_id
     row.entry_broadcast_id = body.entry.broadcast_id
     row.entry_capture_kind = body.entry.capture_kind
+    row.entry_stage = body.entry.stage
     row.stop_on_reply = body.stop.on_reply
     row.stop_tag_ids = list(dict.fromkeys(body.stop.tag_ids))
+    row.stop_removed_tag_ids = list(dict.fromkeys(body.stop.removed_tag_ids))
     row.stop_stages = list(dict.fromkeys(body.stop.stages))
     row.allow_reentry = body.allow_reentry
 
@@ -402,6 +409,8 @@ def entry_label(row: Sequence, tag_name: str | None, broadcast_name: str | None)
         return f"{base}: {tag_name}" if tag_name else base
     if row.entry_type == EntryType.CAPTURED and row.entry_capture_kind:
         return f"{base}: {CAPTURE_WORDS[row.entry_capture_kind]}"
+    if row.entry_type == EntryType.LEAD_STAGE and row.entry_stage:
+        return f"{base}: {STAGE_LABEL[LeadStage(row.entry_stage)]}"
     if row.entry_type == EntryType.BROADCAST_REPLIED and broadcast_name:
         return f"{base}: {broadcast_name}"
     return base
@@ -434,7 +443,12 @@ async def _out_many(
             steps_by[r.id] = await repo.steps_of(session, r.id)
     tags, broadcasts = await _names(
         session,
-        {t for r in rows for t in [r.entry_tag_id, *r.stop_tag_ids] if t is not None},
+        {
+            t
+            for r in rows
+            for t in [r.entry_tag_id, *r.stop_tag_ids, *r.stop_removed_tag_ids]
+            if t is not None
+        },
         {r.entry_broadcast_id for r in rows if r.entry_broadcast_id is not None},
     )
     accts = {a.id: a for a in await accounts.list_all(session)}
@@ -461,6 +475,7 @@ async def _out_many(
                         broadcasts.get(r.entry_broadcast_id) if r.entry_broadcast_id else None
                     ),
                     capture_kind=r.entry_capture_kind,
+                    stage=r.entry_stage,
                     label=entry_label(
                         r,
                         tags.get(r.entry_tag_id) if r.entry_tag_id else None,
@@ -471,6 +486,8 @@ async def _out_many(
                     on_reply=r.stop_on_reply,
                     tag_ids=list(r.stop_tag_ids),
                     tag_names=[tags[t] for t in r.stop_tag_ids if t in tags],
+                    removed_tag_ids=list(r.stop_removed_tag_ids),
+                    removed_tag_names=[tags[t] for t in r.stop_removed_tag_ids if t in tags],
                     stages=list(r.stop_stages),
                 ),
                 allow_reentry=r.allow_reentry,
@@ -743,14 +760,24 @@ async def stop_enrolment(
     row = await repo.get_enrolment(session, enrolment_id, lock=True)
     if row is None or row.sequence_id != sequence_id:
         raise _not_found("person in this sequence")
+    contact = await repo.contact_of(session, row.contact_id)
+    assert contact is not None  # the enrolment cascades with its contact
     if row.status == EnrolmentStatus.ACTIVE:
         row.status = EnrolmentStatus.STOPPED
         row.stop_reason = StopReason.MEMBER
         row.finished_at = now
         row.next_due_at = None
         await session.flush()
-    contact = await repo.contact_of(session, row.contact_id)
-    assert contact is not None  # the enrolment cascades with its contact
+        await events.sequence_event(
+            session,
+            "sequence.stopped",
+            contact,
+            sequence_id=sequence.id,
+            sequence_name=sequence.name,
+            enrolment_id=row.id,
+            reason=StopReason.MEMBER,
+            reason_text=rules.stop_text(StopReason.MEMBER, None),
+        )
     steps = (await repo.step_counts(session, [sequence_id])).get(sequence_id, 0)
     last = (await _last_runs(session, [row.id])).get(row.id)
     return _enrolment_out(row, contact, sequence_name=sequence.name, step_count=steps, last=last)

@@ -43,9 +43,12 @@ class SequencesResult(ToolResult):
     sequences: list[SequenceLine]
 
 
-def _stops(stop_on_reply: bool, tag_names: list[str], stages: list[str]) -> list[str]:
+def _stops(
+    stop_on_reply: bool, tag_names: list[str], stages: list[str], removed_tag_names: list[str]
+) -> list[str]:
     found = ["a reply"] if stop_on_reply else []
     found += [f"the tag {name}" for name in tag_names]
+    found += [f"the tag {name} being removed" for name in removed_tag_names]
     found += [f"the lead stage {stage.replace('_', ' ')}" for stage in stages]
     return found
 
@@ -76,7 +79,9 @@ async def list_sequences(ctx: ToolContext, args: ListSequencesInput) -> Sequence
             people_in=s.enrolments.active,
             completed=s.enrolments.completed,
             stopped=s.enrolments.stopped,
-            stops_on=_stops(s.stop.on_reply, s.stop.tag_names, list(s.stop.stages)),
+            stops_on=_stops(
+                s.stop.on_reply, s.stop.tag_names, list(s.stop.stages), s.stop.removed_tag_names
+            ),
             problems=s.problems,
         )
         for s in rows
