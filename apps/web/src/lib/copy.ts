@@ -468,6 +468,11 @@ const LIMIT_COPY: Record<string, LimitCopy> = {
     includes: (n) => `${counted(n, "row", "rows")} in one import`,
     unlimited: "rows in one import",
   },
+  orders_monthly: {
+    limitTitle: "Order limit reached",
+    includes: (n) => `${counted(n, "order", "orders")} a month`,
+    unlimited: "orders a month",
+  },
   message_history_days: {
     limitTitle: "Message history limit reached",
     includes: (n) => `${counted(n, "day", "days")} of message history`,

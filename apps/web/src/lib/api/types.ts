@@ -429,6 +429,27 @@ export type CsvImportRow = Schemas["ImportRowOut"];
 export type CsvImportResult = Schemas["ImportResult"];
 export type ShopifyStatus = Schemas["ShopifyStatus"];
 
+// ---- orders and payment requests (GR-32)
+
+export type Order = Schemas["OrderOut"];
+export type OrderLine = Schemas["OrderLineOut"];
+export type OrderList = Schemas["OrderList"];
+export type OrderCreate = Schemas["OrderCreate"];
+export type OrderLineInput = Schemas["OrderLineIn"];
+export type OrderAddressInput = Schemas["AddressIn"];
+export type OrderStatus = Order["status"];
+export type OrderPaymentMethod = NonNullable<Order["payment_method"]>;
+export type PaymentSettings = Schemas["PaymentSettings"];
+export type RazorpayConnectInput = Schemas["RazorpayConnect"];
+export type UpiSaveInput = Schemas["UpiSave"];
+
+// ---- WhatsApp catalogue messages (GR-33)
+
+export type WaCatalogueStatus = Schemas["WaCatalogueStatus"];
+export type WaCatalogueConnectInput = Schemas["WaCatalogueConnect"];
+export type ProductMessageSend = Schemas["ProductMessageSend"];
+export type ProductMessageItem = Schemas["ItemRef"];
+
 // ---- API keys (GR-25)
 
 export type ApiKey = Schemas["ApiKey"];

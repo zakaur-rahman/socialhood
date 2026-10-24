@@ -24,6 +24,7 @@ from socialhood.platforms.base import (
     MediaInsights,
     OutboundAttachment,
     OutboundMessage,
+    OutboundProducts,
     OutboundTemplate,
     PlatformMedia,
     PlatformThread,
@@ -91,12 +92,43 @@ def _template(template: OutboundTemplate) -> dict[str, Any]:
     return {"type": "template", "template": body}
 
 
+def _products(products: OutboundProducts, body: str | None) -> dict[str, Any]:
+    """An ``interactive`` product or product_list message (Meta's documented shapes; unverified
+    against a live number, C-121)."""
+    interactive: dict[str, Any] = {"type": products.type}
+    if products.type == "product_list":
+        interactive["header"] = {"type": "text", "text": products.header or ""}
+    if body:
+        interactive["body"] = {"text": body}
+    if products.footer:
+        interactive["footer"] = {"text": products.footer}
+    if products.type == "product":
+        interactive["action"] = {
+            "catalog_id": products.catalog_id,
+            "product_retailer_id": products.retailer_id,
+        }
+    else:
+        interactive["action"] = {
+            "catalog_id": products.catalog_id,
+            "sections": [
+                {
+                    "title": title,
+                    "product_items": [{"product_retailer_id": rid} for rid in retailer_ids],
+                }
+                for title, retailer_ids in products.sections
+            ],
+        }
+    return {"type": "interactive", "interactive": interactive}
+
+
 def outbound_payload(to: str, message: OutboundMessage) -> dict[str, Any]:
     """The POST /{phone_number_id}/messages body for one send (text, one attachment, or a
     template). Text with an image, video or document goes as its caption."""
     if message.sticker is not None:
         raise PlatformError("platform_rejected", message="WhatsApp has no built-in stickers")
-    if message.template is not None:
+    if message.products is not None:
+        content = _products(message.products, message.text)
+    elif message.template is not None:
         content = _template(message.template)
     elif message.attachment is not None:
         content = _media(message.attachment, message.text)

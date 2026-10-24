@@ -38,6 +38,7 @@ from socialhood.api.v1 import (
     notification_settings,
     notifications,
     oauth,
+    orders,
     posts,
     privacy,
     publishing,
@@ -47,6 +48,7 @@ from socialhood.api.v1 import (
     sequences,
     stories,
     team,
+    wa_catalogue,
     whatsapp,
     widget,
     widget_public,
@@ -86,6 +88,8 @@ ROUTERS: tuple[APIRouter, ...] = (
     business_hours.router,
     broadcasts.router,
     catalogue.router,  # GR-31
+    orders.router,  # GR-32
+    wa_catalogue.router,  # GR-33
     sequences.router,
     integrations.router,
     google_sheets.router,

@@ -373,6 +373,7 @@ async def _send_product(
     product is gone or the send is refused (the step is then logged failed with a plain reason)."""
     from socialhood.services import sending  # sending → … → ingest → the runtime
     from socialhood.services.catalogue import message as product_message
+    from socialhood.services.catalogue import wa_send
 
     run = scene.run
     try:
@@ -380,6 +381,34 @@ async def _send_product(
     except product_message.Unavailable as gone:
         await _log(session, run, step, StepStatus.FAILED, error_code=gone.code, error=gone.reason)
         return None
+    # GR-33: on WhatsApp with a catalogue connected, a native product message; otherwise (or when
+    # the item isn't in the catalogue yet) the text and link below.
+    native = await wa_send.native_for_step(
+        session, scene.conv, step.product_id, step.variant_id, step.intro
+    )
+    if native is not None:
+        try:
+            return await sending.queue_outbound(
+                session,
+                scene.conv,
+                source="automation",
+                client_id=actions.client_id_for(run.id, step.id),
+                text=render.with_disclosure(native.text, scene.disclosure),
+                interactive=native.interactive,
+                automation_run_id=run.id,
+                deps=deps,
+                now=now,
+            )
+        except ApiError as error:
+            await _log(
+                session,
+                run,
+                step,
+                StepStatus.FAILED,
+                error_code=error.code,
+                error=actions.api_error_reason(error),
+            )
+            return None
     try:
         return await sending.queue_outbound(
             session,

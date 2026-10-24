@@ -48,6 +48,8 @@ type Props = {
   aiControl?: ReactNode;
   /** GR-20: who has the conversation, as a menu to change it. */
   assigneeControl?: ReactNode;
+  /** GR-32 and GR-33: commerce actions in the More menu (create an order, send a product). */
+  commerceActions?: readonly { key: string; label: string; onSelect: () => void }[];
 };
 
 /**
@@ -72,6 +74,7 @@ export function ThreadHeader({
   onMarkUnread,
   aiControl,
   assigneeControl,
+  commerceActions,
 }: Props) {
   const name = contactName(conversation.contact, conversation.platform);
   const platform = PLATFORM_LABEL[conversation.platform];
@@ -183,6 +186,16 @@ export function ThreadHeader({
               ) : null}
               <DropdownMenuItem onSelect={() => onArchive(!archived)}>{archived ? "Unarchive" : "Archive"}</DropdownMenuItem>
               <DropdownMenuItem onSelect={onMarkUnread}>Mark unread</DropdownMenuItem>
+              {commerceActions && commerceActions.length > 0 ? (
+                <>
+                  <DropdownMenuSeparator />
+                  {commerceActions.map((action) => (
+                    <DropdownMenuItem key={action.key} onSelect={action.onSelect}>
+                      {action.label}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              ) : null}
               <DropdownMenuSeparator />
               {conversation.platform === "web" ? null : (
                 <DropdownMenuItem asChild>

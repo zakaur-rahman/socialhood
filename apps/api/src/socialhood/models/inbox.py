@@ -301,6 +301,9 @@ class Message(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     # The quick reply the customer tapped (its payload; Instagram's message.quick_reply).
     quick_reply_payload: Mapped[str | None] = mapped_column(Text)
+    # GR-33: a WhatsApp product or product-list message (the catalogue id, the retailer ids and
+    # the texts); ``text`` holds its body so the thread shows what was said.
+    interactive: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     # The payload of a tapped postback: an ice breaker or a button (GR-01, GR-11).
     postback_payload: Mapped[str | None] = mapped_column(Text)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

@@ -66,6 +66,19 @@ class OutboundQuickReply:
 
 
 @dataclass(frozen=True, kw_only=True)
+class OutboundProducts:
+    """A WhatsApp product or product-list message (GR-33): the catalogue's id and the retailer ids
+    to show. ``text`` of the message is its body. A list has a header and titled sections."""
+
+    type: Literal["product", "product_list"]
+    catalog_id: str
+    retailer_id: str | None = None  # a product message
+    header: str | None = None  # a list's header (required by WhatsApp)
+    footer: str | None = None
+    sections: tuple[tuple[str, tuple[str, ...]], ...] = ()  # (title, retailer ids)
+
+
+@dataclass(frozen=True, kw_only=True)
 class OutboundMessage:
     """One platform send: text, one attachment, a built-in sticker (Instagram's heart) or
     (WhatsApp) a template."""
@@ -77,6 +90,7 @@ class OutboundMessage:
     buttons: tuple[OutboundButton, ...] = ()  # with text: sent as one button-template message
     quick_replies: tuple[OutboundQuickReply, ...] = ()  # with text, not with buttons
     human_agent: bool = False  # Instagram HUMAN_AGENT tag (TR-PL-04)
+    products: OutboundProducts | None = None  # WhatsApp product messages (GR-33)
 
 
 @dataclass(frozen=True)

@@ -40,10 +40,18 @@ from socialhood.schemas.activity import (
 )
 from socialhood.services.activity import reasons
 from socialhood.services.automations.results import PRIVATE_PREFIX, PUBLIC_PREFIX
+from socialhood.services.catalogue import money
 from socialhood.services.sending import platform_name
 
 Kind = Literal[
-    "automation_run", "flow_step", "message", "webhook_delivery", "account", "broadcast", "sequence"
+    "automation_run",
+    "flow_step",
+    "message",
+    "webhook_delivery",
+    "account",
+    "broadcast",
+    "sequence",
+    "order",
 ]
 
 # What a run that is not a failure did, for its title.
@@ -359,6 +367,33 @@ def _sequence_item(row: Any) -> ActivityItem:
     )
 
 
+def _order_item(row: Any) -> ActivityItem:
+    """An order that was paid, or whose payment link ran out (GR-32)."""
+    who = _who(row.contact_username, row.contact_display_name)
+    paid = row.status == "paid"
+    total = money.label(row.total_minor, row.currency)
+    return ActivityItem(
+        id=row.id,
+        kind="order",
+        outcome="ok" if paid else "attention",
+        occurred_at=row.at,
+        title=(
+            f"Order #{row.number} was paid{_for(who)}"
+            if paid
+            else f"Order #{row.number} expired without payment{_for(who)}"
+        ),
+        reason=total if paid else f"The payment link for {total} ran out. Send a new one.",
+        social_account_id=row.account_id,
+        account_label=account_label(row.account_username, row.account_display_name, row.platform),
+        platform=row.platform,
+        action=ActivityAction(label="Open the order", href=f"/orders?order={row.id}"),
+    )
+
+
+def _for(who: str | None) -> str:
+    return f" from {who}" if who else ""
+
+
 def encode_cursor(at: datetime, row_id: uuid.UUID) -> str:
     raw = json.dumps([at.isoformat(), str(row_id)]).encode()
     return base64.urlsafe_b64encode(raw).rstrip(b"=").decode()
@@ -397,6 +432,7 @@ async def feed(
             "account",
             "broadcast",
             "sequence",
+            "order",
         }
     )
     if automation_id is not None:
@@ -438,6 +474,11 @@ async def feed(
             session, before=before, limit=take, failures_only=failures_only, account_id=account_id
         )
         items += [_sequence_item(r) for r in rows]
+    if "order" in wanted:
+        rows = await repo.orders_settled(
+            session, before=before, limit=take, failures_only=failures_only, account_id=account_id
+        )
+        items += [_order_item(r) for r in rows]
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     more = len(items) > limit
     items = items[:limit]

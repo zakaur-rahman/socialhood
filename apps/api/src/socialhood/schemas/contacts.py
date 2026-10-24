@@ -282,6 +282,7 @@ TimelineKind = Literal[
     "broadcast",
     "assignment",
     "sequence",
+    "order",
 ]
 
 

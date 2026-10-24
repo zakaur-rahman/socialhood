@@ -60,6 +60,7 @@ from socialhood.platforms.base import (
     OutboundAttachment,
     OutboundButton,
     OutboundMessage,
+    OutboundProducts,
     OutboundQuickReply,
     OutboundTemplate,
     PlatformAdapter,
@@ -276,13 +277,15 @@ async def queue_outbound(
     buttons: Sequence[OutboundButton] = (),
     quick_replies: Sequence[OutboundQuickReply] = (),
     automation_run_id: uuid.UUID | None = None,
+    interactive: dict[str, Any] | None = None,
     deps: PlatformDeps | None = None,
     now: datetime | None = None,
 ) -> Message:
     """Insert a queued outbound message and enqueue its send (see the module docstring).
 
     ``buttons`` are link buttons sent with the text (automation DMs, FR-AUT-13);
-    ``quick_replies`` are offered with the text instead (FR-AUT-21). ``deps`` defaults to the
+    ``quick_replies`` are offered with the text instead (FR-AUT-21). ``interactive`` is a WhatsApp
+    product or product-list message (GR-33; ``text`` is its body). ``deps`` defaults to the
     worker's (jobs use that); the API passes its own.
     """
     now = now or datetime.now(UTC)
@@ -367,6 +370,7 @@ async def queue_outbound(
         suggestion_id=suggestion_id,
         buttons=[{"title": b.title, "url": b.url} for b in buttons],
         quick_replies=[{"title": q.title, "payload": q.payload} for q in quick_replies],
+        interactive=interactive,
         automation_run_id=automation_run_id,
         reactions=[],
     )
@@ -831,6 +835,21 @@ def _missing_capability(caps: frozenset[Capability], msg: Message) -> Capability
     return next((c for c in needed if c not in caps), None)
 
 
+def _products_of(stored: dict[str, Any]) -> OutboundProducts:
+    """The product message a ``messages.interactive`` column holds (services/catalogue/wa_send)."""
+    return OutboundProducts(
+        type="product_list" if stored.get("type") == "product_list" else "product",
+        catalog_id=str(stored.get("catalog_id") or ""),
+        retailer_id=str(stored["retailer_id"]) if stored.get("retailer_id") else None,
+        header=stored.get("header") or None,
+        footer=stored.get("footer") or None,
+        sections=tuple(
+            (str(s.get("title") or ""), tuple(str(r) for r in s.get("retailer_ids") or ()))
+            for s in stored.get("sections") or ()
+        ),
+    )
+
+
 def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Part]:
     """The platform messages still to send for this row: each unsent attachment, then the text
     (or the template)."""
@@ -861,7 +880,15 @@ def pending_parts(msg: Message, platform: str, *, human_agent: bool) -> list[Par
             )
         )
         return parts
-    if msg.template:
+    if msg.interactive:
+        parts.append(
+            Part(
+                None,
+                OutboundMessage(text=msg.text, products=_products_of(msg.interactive)),
+                _bucket(platform, media=False),
+            )
+        )
+    elif msg.template:
         template = OutboundTemplate(
             name=str(msg.template["name"]),
             language=str(msg.template["language"]),

@@ -53,6 +53,13 @@ describe("/sitemap.xml", () => {
     const entries = sitemap();
     expect(entries.map((entry) => entry.url)).toEqual([
       "https://socialhood.example/",
+      "https://socialhood.example/pricing",
+      "https://socialhood.example/switch-from-manychat",
+      "https://socialhood.example/compare/manychat",
+      "https://socialhood.example/compare/interakt",
+      "https://socialhood.example/features/comment-intelligence",
+      "https://socialhood.example/features/ai-inbox",
+      "https://socialhood.example/features/publishing",
       "https://socialhood.example/privacy",
       "https://socialhood.example/terms",
       "https://socialhood.example/refunds",

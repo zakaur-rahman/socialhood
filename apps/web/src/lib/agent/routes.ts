@@ -29,6 +29,8 @@ export function refPath(ref: AnswerRef): string {
       return "knowledge";
     case "product":
       return "products";
+    case "order":
+      return "orders";
   }
 }
 

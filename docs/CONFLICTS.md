@@ -4406,3 +4406,345 @@ Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCar
   `events.contacts_tagged` (which also feeds sequences) on `wanted`; the gate is gone and
   `contacts_tagged` still decides whether to emit. The web sequence form and pages read `problems`
   as possibly absent (the generated type marks defaulted response fields optional).
+
+## C-120 · Payment requests and order capture (GR-32, feature/gr-32-33-orders-wa-catalogue)
+
+An order made in a conversation from the catalogue, a payment link or UPI request sent in the chat,
+and a paid order marked by Razorpay's signed webhook. **Payments go to the business's own account,
+never through us.** *Nothing here has run against a real Razorpay account: it is built like Shopify
+(C-116), with a sandbox for development and the end-to-end stack, and listed as unverified in
+`docs/verification.md` item 38.* PD-8 applies: commerce is Pro and Max.
+
+### Decisions
+- **Razorpay with the business's own keys, not partner OAuth.** *Verified from Razorpay's docs
+  (2026-10-25): the OAuth route is for Technology Partners and needs sign-up with Razorpay support
+  before an app can be registered, so it is not available to us by default.* Each workspace saves its
+  own key id and key secret (`payment_connections`, the secrets encrypted with the existing token
+  encryption and never returned). If the owner later becomes a Technology Partner, OAuth can replace
+  the key form without changing orders. Pending the owner: whether to apply for partner status.
+- **Unset means "not configured".** With no keys, asking for a Razorpay link answers 409 "Razorpay
+  isn't set up for this workspace. Add your keys in Integrations first."; with no UPI address, the same
+  for UPI. `RAZORPAY_PROVIDER=fake` is a sandbox that accepts `rzp_test_` keys and hands out
+  `plink_fake_<n>` links; refused in production like the other fakes. There are no app-wide Razorpay
+  credentials.
+- **Connect checks the keys first** (`GET /payment_links?count=1`): refused keys are a 422 "Razorpay
+  doesn't accept these keys", Razorpay not answering is a 502, and nothing is saved either way. The
+  business makes up a **webhook secret** (8 or more characters), enters it here and in its Razorpay
+  dashboard; the card shows the webhook address and the events to turn on, and when the last signed
+  event arrived.
+- **Money** as in GR-31: integer minor units and ISO 4217. The total is computed on the server from the
+  catalogue's prices when the order is made; the lines are a snapshot (name, variant, SKU, unit price),
+  so a later price change does not alter an order. A request carries product ids and quantities, never
+  a price. All lines must share one currency. Stock, when recorded, is checked (more than is left is a
+  422 "Only 4 left of Cotton kurta") **but is not reduced** by an order: the catalogue's stock is a
+  number the business keeps. *Not built:* reserving or reducing stock, delivery fees, tax and discounts
+  (the total is the sum of the lines).
+- **Status:** `draft`, `awaiting_payment`, then `paid`, `cancelled` or `expired`. Asking for payment can
+  be repeated (a new link replaces the old one, which is cancelled with Razorpay as far as it answers).
+  A payment that arrives for a cancelled or expired order still marks it paid, because the money has
+  arrived. A paid order cannot be cancelled. A Razorpay link lasts 3 days (`LINK_TTL`).
+- **UPI has no webhook.** The request is a `upi://pay?pa=<VPA>&pn=<name>&am=<amount>&cu=INR&tn=Order <n>`
+  link plus the VPA in the message ("send it to shop@okbank and tell us when it's done"); only INR.
+  A member marks the order paid ("Mark as paid", with an optional reference); who and when are kept on
+  the order and in the audit row `order.marked_paid`. The Orders sheet, the inbox dialog and the card
+  all say so.
+- **Webhooks** (`POST /webhooks/razorpay/{token}`): the token is a random per-workspace part of the
+  address; an unknown token and a bad signature are both 401. `X-Razorpay-Signature` is the hex
+  HMAC-SHA256 of the raw body with the workspace's webhook secret, checked before the body is read. A
+  verified event is stored once per `X-Razorpay-Event-Id`, then applied by the webhook job
+  (`services/webhook_handlers/razorpay.py`): `payment_link.paid` marks the order paid when the amount
+  paid equals the total (another amount is ignored and logged), `payment_link.expired` expires an
+  order still waiting, everything else is ignored. Idempotent: an order already paid stays as it is.
+- **Plans.** `commerce` (reused) gates making orders, asking for payment, marking paid and saving
+  payment settings (402 `entitlement_required`, "Orders are part of Pro."); reading orders and the
+  settings status is never refused. *Proposed, pending owner confirmation:* `orders_monthly` Free 0,
+  Pro 500, Max 5,000, counted when the order is made (`billing/plans.py`; one line to change). A
+  request naming another workspace's conversation, product or order is a 404 before any plan check.
+- **Permissions.** Any member who can reply (`CanReply`) makes orders, asks for payment, marks paid and
+  cancels; payment settings need `integrations.manage`. Orders are listed for every member (agents see
+  the customer's address in the order they made; the settings card is for owners and admins).
+
+### Data (migration 0043, after 0042, expand-only)
+`payment_connections` (one per workspace: Razorpay key id, encrypted key secret and webhook secret, the
+address token, UPI address and name, last event seen), `orders` (number per workspace, contact,
+conversation, status, source, currency, `total_minor`, address JSON, note, payment method, link id and
+address, reference, `paid_at`, `paid_by_user_id`, `cancelled_at`) and `order_items`; `webhook_events.
+provider` accepts `razorpay`. Orders reference contacts, so they and their lines are account tables
+for the purge (`orders`, `order_items` in the expected list, a seeded row in `seed_account`). The
+tenancy walk got a seeded order, line and payment settings, three `B_TABLES` and the example bodies.
+
+### Routes (all `/v1/w/{wid}`, `api/v1/orders.py`)
+`GET/POST /orders`, `GET /orders/{order_id}`, `POST /orders/{order_id}/payment-request`,
+`.../mark-paid`, `.../cancel`; `GET /integrations/payments`, `PUT/DELETE /integrations/payments/razorpay`,
+`PUT/DELETE /integrations/payments/upi`. Public: `POST /webhooks/razorpay/{token}`. Sending the link
+uses the ordinary send pipeline (reply window, takeover and read-only rules apply; a closed window is
+a 409 and the order keeps its link, which can be sent again).
+
+### Where it shows
+- **Inbox:** More, **Create order** on any conversation: products, variants and quantities from the
+  catalogue (an estimated total is shown while typing; the server's is what counts), the delivery
+  address, a note; then Send Razorpay link or Send UPI request in the same dialog.
+- **Orders page** (Engage, every member): the list with a status filter, an order sheet (lines, address,
+  how it is being paid, send a link, mark paid, cancel), and for owners and admins the **Payments** card.
+- **Events** `order.created` and `order.paid` through GR-04's catalogue (the address is left out of the
+  payload). **Activity** (kind `order`): paid orders, and orders that expired (needs a new link). **Contact
+  timeline** (kind `order`): one entry per order at its latest step ("Order #12 paid. Paid with
+  Razorpay"). **Ask:** the `list_orders` tool (admin tier, read), with paid totals per currency and
+  citations that open the Orders page (answer-ref kind `order`).
+
+### Not built
+- *The flow step "request payment"* (optional in the plan): a flow has no order to attach it to until a
+  cart exists (the WhatsApp cart is GR-33); a payment request needs the member's chosen products and
+  address, which a flow does not collect yet. Recorded as not built.
+- Refunds, partial payments (a payment link is created with `accept_partial: false`), reminders,
+  editing an order's lines after it is made (cancel and make a new one), a customer-facing order page.
+
+### Tests
+Unit: `test_orders.py` (the Razorpay signature, the HTTP client's request and error kinds against a mock
+transport, the sandbox, the UPI link, the payment message, the timeline and Activity wording), the
+purge list, the tool registry and the event catalogue (11 events). Integration: `test_orders.py` (the
+plan, pricing and the snapshot, numbering and refused lines, "not configured", keys checked and stored
+encrypted, **the done-when: a test-mode link marks the order paid** and a replay changes nothing,
+unsigned, forged and unknown webhooks, the wrong amount, expiry then a late payment, UPI marked paid
+by hand and audited, cancelling, events, timeline and Activity). Tenancy: the new routes, bodies and
+tables. Vitest: `lib/orders/format`, `OrdersPage`, the sidebar and the agent route test. E2E:
+`gr32-orders.spec.ts`. *The integration, tenancy, vitest and e2e tests were written but not run (the
+coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `OrderOut`, `OrderLineOut`, `OrderList`, `OrderCreate`,
+  `OrderLineIn`, `AddressIn`, `PaymentSettings`, `RazorpayConnect`, `UpiSave`, the operations
+  `list_orders`, `create_order`, `get_order`, `request_order_payment`, `mark_order_paid`, `cancel_order`,
+  `get_payment_settings`, `connect_razorpay`, `disconnect_razorpay`, `save_upi`, `remove_upi`, the
+  `order` activity, timeline and answer-ref kinds and the two new `EventName`s. The web types are
+  aliases waiting for it (`lib/api/types.ts`); `ContactTimeline`'s icon map will not typecheck until then.
+- `alembic check` for 0043 (after 0042). The e2e stack gained `RAZORPAY_PROVIDER=fake`; the suite signs
+  its own webhooks with the secret it types into the card. Owner track: Razorpay account(s) for a live
+  test, and whether to become a Technology Partner (OAuth).
+
+- *Fixed in the combined batch:* (1) the payment settings showed no webhook address unless
+  `API_BASE_URL` was set; it now falls back to the address the request came to, as the widget snippet does.
+  (2) Asking for a payment link returned 500: `updated_at` was expired by the update and read lazily
+  in the response (`MissingGreenlet`); `orders.views` now refreshes it. (3) Test fixes: the Razorpay
+  webhook column is `razorpay_webhook_secret_enc`; two orders in one workspace reuse one kurta (SKUs are
+  unique per workspace); the Activity feed hides successes unless `failures_only=false`, and names the
+  contact as `@username`. The account-deletion seed adds one catalogue connection per workspace
+  (the table allows one).
+
+## C-121 · WhatsApp catalogue messages (GR-33, feature/gr-32-33-orders-wa-catalogue)
+
+Products copied to a Meta commerce catalogue, product and product-list messages sent from the inbox,
+the flow step "send product" as a native WhatsApp message when it can be one, and a customer's cart
+becoming a GR-32 order. *Nothing here has run against Meta: it is built like Facebook (GR-29) and
+Shopify (GR-31), against a sandbox catalogue for sandbox WhatsApp numbers, and listed as unverified in
+`docs/verification.md` item 39.* PD-8 applies: commerce is Pro and Max.
+
+### What Meta's documentation says (read 2026-10-25) and what is unverified
+Read from Meta's current pages for the Cloud API (Graph v26.0 in the examples; the app uses
+`META_GRAPH_VERSION`, v25.0) and the Catalog API:
+- **Product message** (`messages`, `type: interactive`): `interactive.type = product`, optional `body`
+  and `footer` text, `action.catalog_id` and `action.product_retailer_id`. The retailer id must match
+  an item in the catalogue or the API returns an error and nothing is sent. Free-form: only inside an
+  existing chat (the 24-hour window), no template. A customer on an old WhatsApp version sees a
+  failure and the business gets a delivery-failed webhook.
+- **Product list**: `interactive.type = product_list`; `header` (type `text`) **required**, `body`
+  required, `footer` optional; `action.catalog_id` and `action.sections[]` each with a `title` and
+  `product_items[].product_retailer_id`. Up to 30 products across up to 10 sections. If at least one
+  item matches the catalogue it is sent and unmatched ones are dropped with an error; if none match
+  nothing is sent.
+- **Order webhook**: a message with `type: order` and `order.catalog_id`, `order.text` and
+  `order.product_items[]` with `product_retailer_id`, `quantity`, `item_price` and `currency` (numbers
+  in Meta's examples, quoted strings in one partner's; the parser reads both).
+- **Catalog Batch API**: `POST /{catalog_id}/items_batch` with `item_type` (`PRODUCT_ITEM`) and
+  `requests` (up to 5,000, Meta suggests under 3,000; 28 MB), each `{method: CREATE | UPDATE | DELETE,
+  data: {...}}`; `allow_upsert` defaults to true so `UPDATE` creates a missing item; `DELETE` needs only
+  the identifying `id`; the answer has `handles` and `validation_status[]` (`retailer_id`, `errors`,
+  `warnings`); `GET /{catalog_id}/check_batch_request_status?handle=` reports progress. The older
+  `/batch` endpoint is deprecated (unavailable from API v27), so `items_batch` is used.
+- **Commerce settings**: a phone number's catalogue is shown with `is_catalog_visible` on
+  `POST /{phone_number_id}/whatsapp_commerce_settings` (default false); a catalogue is connected to the
+  WhatsApp Business Account in WhatsApp Manager (one catalogue per business account, shared by its
+  numbers, from the same Business Manager). *Not called by us:* the owner connects it in Meta's tools.
+- **Unverified, in code as written** (`metacatalog/http.py`, `platforms/whatsapp/adapter.py`):
+  the exact fields a commerce catalogue item requires (this sends `id`, `title`, `description`,
+  `availability`, `condition`, `price` as "799.00 INR", `link`, `image_link`, `brand`); that the
+  header limit is 60 and a section title 24 characters (the body's 1,024 is Meta's documented limit);
+  the shape of `check_batch_request_status`; **which permission the Embedded Signup business token
+  carries**: Meta's pages did not name `catalog_management` for these calls, and the token WhatsApp
+  Embedded Signup issues may lack it or `business_management`, in which case connecting answers 409
+  with "Meta doesn't let this number use that catalogue ..." and the owner must grant catalogue access;
+  that the same token that sends messages can call the Catalog API at all (it may need a system-user
+  token); and error codes (190, 200, 100, 803, 80014 are mapped to auth, not found and rate limited).
+  If catalogue access can't come from the number's token, the connection will need its own token
+  (a follow-up; the card and sync already read the token through one function, `token_of`).
+
+### Decisions
+- **Sync** (`services/catalogue/wa_catalogue.py`, job `sync_whatsapp_catalogue`, bulk lane, 3 tries):
+  one catalogue item per variant, or per product without variants; the retailer id is our variant or
+  product id. The job compares what the catalogue should hold with a hash per item
+  (`catalogue_items.content_hash`) and sends only what changed (upserts via `UPDATE`) and deletes what is
+  gone or switched off. Triggered 8 seconds after a product is created, changed, deleted or imported,
+  after a Shopify sync, when Sync now is pressed, and by a 5-minute sweep (`sweep_whatsapp_catalogue`),
+  so a missed trigger heals. Items go in batches of 200. Deletion is found by comparison, not by hooks,
+  so every way a product disappears (Shopify, CSV, the API) is covered.
+- **What an item needs.** Meta needs a price, a link and a picture: a product without them is not sent
+  and the card lists it with the reason ("Add a link to this product. Meta needs one for every catalogue
+  item."). Out of stock only when stock is recorded as 0 (stock not recorded is "in stock", the catalogue
+  has no unknown). The brand is the workspace's name unless the connect request gives one. A picture
+  uploaded here wins over one given as an address.
+- **Per-workspace catalogue** (`catalogue_connections`, one per workspace): the catalogue id, the WhatsApp
+  number it was connected through (its token makes the calls), the brand and the sync state. Connecting
+  checks the catalogue with Meta first (`GET /{catalog_id}`); a catalogue Meta won't show is a 409 with
+  Meta's reason in words, Meta not answering a 502, a non-WhatsApp account a 422, another workspace's
+  account a 404. Reconnecting marks every item to be sent again. Disconnecting forgets the connection
+  and the item records; the Meta catalogue is left as it is.
+- **Sandbox.** A sandbox WhatsApp number (`sandbox_...`, which exists only where the sandbox platform is
+  on) uses the built-in catalogue (`metacatalog/fake.py`); the catalogue id `missing` is refused as not
+  found and `denied` as access refused; a title containing `[fail]` is refused item by item. Tests swap
+  the client with `use_catalogue`. No new setting.
+- **Sending** (`services/catalogue/wa_send.py`, `POST /conversations/{id}/product-message`): "Send
+  product" and "Send product list" in the inbox's More menu on WhatsApp conversations. Every item must
+  be in the catalogue as last synced ("... isn't in the WhatsApp catalogue yet. Wait for the sync, or
+  press Sync now."), the conversation must be on the number the catalogue was connected through (409
+  otherwise), the message is a free-form send (window, takeover and read-only rules of the ordinary
+  send pipeline), and the typed text is the message body and what the thread shows. The message is
+  stored in the new `messages.interactive` JSON column (migration 0044) and sent by
+  `sending.pending_parts` as `OutboundMessage.products`; no change to message kinds.
+- **Flow step "send product"**: on WhatsApp, with a catalogue connected through the conversation's number
+  and every needed item synced, it sends a native message: a product message for a named variant or a
+  product without variants, a product list (one section, up to 30 variants) for a product with variants
+  and none named; the step's intro is the body, else the product's name. Otherwise (another platform, no
+  catalogue, another number, an item not synced yet) it sends the text and link of GR-31, unchanged.
+- **Cart to order.** An `order` message becomes an inbound text ("Sent an order of 3 items") and, with
+  commerce on the plan and room under `orders_monthly`, a GR-32 order for that contact in that
+  conversation with status `awaiting_payment`, source `whatsapp`, priced from the catalogue now (the
+  price the customer saw is not trusted; if it differs, the order's note says so). Items that are gone,
+  switched off, unpriced or in another currency are left out and counted in the note; stock is not
+  enforced for a cart. No usable item or no plan means no order, and the message stays in the thread.
+  The message text is then rewritten to name the order ("... Order #12."). Audit: `order.created` by
+  "WhatsApp cart".
+- **Plan.** Connecting, syncing and sending need `commerce` (PD-8). Reading the status is open to every
+  member (the inbox needs to know a catalogue is connected). A downgrade stops the sync ("The catalogue is
+  part of Pro, so the sync stopped."); what is in Meta stays.
+
+### Data (migration 0044, after 0043, expand-only)
+`catalogue_connections`, `catalogue_items` and a nullable `messages.interactive`. The connection
+references the WhatsApp account with `ON DELETE CASCADE`, so it is an account table for the purge
+(`catalogue_connections` in the expected list, a seeded row in `seed_account`). The tenancy walk got a
+seeded connection and item, two `B_TABLES` and the example bodies of the two routes that name B's
+resources.
+
+### Routes
+`GET/PUT/DELETE /v1/w/{wid}/integrations/whatsapp-catalogue`, `POST .../whatsapp-catalogue/sync` (202),
+`POST /v1/w/{wid}/conversations/{conversation_id}/product-message` (202). The sandbox inbound gained kind
+`order` (with `cart`) for development and the end-to-end stack.
+
+### Not built
+Reading Meta's catalogue back (importing from it), creating a catalogue, setting `is_catalog_visible`
+or connecting the catalogue to the business account (done in Meta's tools), product messages on
+Instagram or Facebook, a "catalogue" or cart request message, order status updates back to the
+customer through WhatsApp's order templates, sending a product message outside the 24-hour window
+(a template would be needed), and per-item sync of a single product (a pass is cheap, it compares
+hashes).
+
+### Tests
+Unit: `test_wa_catalogue.py` (the item built from a variant or product, availability, the link and
+picture rules, the digest, the stored message round trip, Meta's interactive payloads, the cart parsed
+from an `order` webhook, the batch client's requests and error kinds, the sandbox catalogue), the
+purge list and the job recovery table. Integration: `test_wa_catalogue.py` (the plan, the connect
+checks, the sync sending only what changed, deletes, unsendable items with their reasons, Meta
+refusing access, disconnecting, a product and a product-list message and the sandbox receiving them,
+an item not synced yet, the flow step native and fallback, a cart becoming an order, a cart with
+nothing orderable). Tenancy: the new routes, bodies and tables. Vitest: `WhatsAppCatalogueCard`. E2E:
+`gr33-wa-catalogue.spec.ts` (connect, sync, send a product; a cart becomes an order). *The integration,
+tenancy, vitest and e2e tests were written but not run (the coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `WaCatalogueStatus`, `WaCatalogueConnect`, `ProductMessageSend`,
+  `ItemRef`, `SectionIn`, `WaCatalogueProblem`, the operations `get_whatsapp_catalogue`,
+  `connect_whatsapp_catalogue`, `sync_whatsapp_catalogue`, `disconnect_whatsapp_catalogue`,
+  `send_product_message`, and the `order` sandbox-inbound kind with `cart`. The web types are aliases
+  waiting for it.
+- `alembic check` for 0044 (after 0043). New periodic task `sweep_whatsapp_catalogue` (every 5
+  minutes) and task `sync_whatsapp_catalogue`; both are in the recovery table. No new environment
+  setting.
+- Owner track: a real WhatsApp number with a commerce catalogue connected in WhatsApp Manager, and a
+  check of which token can call the Catalog API (item 39).
+
+- *Fixed in the combined batch:* the sync test patched a product's variants without their stock, which
+  clears it and flipped Blue / L to "in stock", so two items were sent instead of one. The test now
+  sends the stock too. (Test only: the sync was right to resend a changed item.)
+
+## C-122 · Go-to-market pages (GR-37, feature/gr-37-gtm-pages)
+
+Seven public pages: Switch from Manychat, Social Hood vs Manychat, Social Hood vs Interakt, three
+feature pages (comment intelligence, the AI inbox, publishing) and Pricing. Web only: no API
+change, no migration. The footer has a "Compare and learn" column, every page is in the sitemap
+(`PUBLIC_PATHS`), and the landing page's pricing links to `/pricing`.
+
+### Pages
+- **Content is data.** `lib/marketing/gtm-pages.ts` holds each page (blocks, the comparison rows,
+  the honesty notes, the sources); `components/marketing/GtmPageView.tsx` renders it; each route is a
+  six-line `page.tsx` using `pageMetadata` (title, description, canonical, Open Graph, Twitter).
+  Static pages, one h1, h2 sections, tables with row headers inside a scrolling box (the page never
+  scrolls sideways), only theme tokens.
+- **Screenshots, not the lazy illustrations.** The pages use the existing `SHOTS` images (the
+  illustrations load on scroll in the browser only).
+- **`/pricing`** reuses the landing page's `Pricing` (prices from Dodo, hourly, `revalidate = 3600`
+  as a literal) with its heading as the page's h1 (`SectionHeading level`), then `PlanMatrix`.
+
+### Pricing without drift
+- **One typed module, one exported table.** `plan-table.json` is `ENTITLEMENTS` and `TRIAL_DAYS`
+  exported from `billing/plans.py`. `tests/unit/test_marketing_plan_table.py` (DB-free) fails when
+  plans.py and the file differ and rewrites the file with `UPDATE_PLAN_TABLE=1`. The web reads the
+  file in two places: `plan-matrix.ts` (the comparison table) and the landing page's offline
+  fallback (`FALLBACK_ENTITLEMENTS`, which used to be a hand-written copy). `plan-matrix.test.ts` fails
+  when an entitlement in the file has no row (or an entry in `NOT_SHOWN`), so a new limit has to be
+  worded before it ships. *Chosen over reading openapi.json, which carries no plan values.*
+- **Plan cards** gain team members, "Public API and Zapier app", "Google Sheets sync" and "Product
+  catalogue" lines (from the API's plan list as before). Broadcasts are not a card line (see below).
+- **Proposed values shown as they are now:** the catalogue caps (C-116) and sequence caps (C-118) are
+  in the table, with a line under it saying they may change. *If the owner changes them, change
+  plans.py, refresh the file, nothing else.*
+- Seats (PD-1), broadcasts (PD-4), webhooks, API, Zapier and Sheets (PD-6), widget branding (PD-7)
+  and commerce (PD-8) are shown as decided in plans.py.
+
+### What waits on the owner, and how it is worded
+- **Broadcasts (O-11):** "Coming soon" with the reason (India's consent rules), in the table and on
+  both comparison pages. *Not on the plan card: the web can't tell whether `BROADCASTS_ENABLED` is on.*
+- **Shopify sync (O-10):** "arrives with our Shopify app listing". The catalogue itself is described
+  as built.
+- **Facebook and the Instagram events that need Advanced Access (C-077, C-108, C-115):** "coming
+  soon" or "with Meta's approval". Story replies and mentions arrive as ordinary messages and are
+  stated plainly.
+- **Not claimed:** payments in chat, contact import, share-to-DM, follow triggers, TikTok, Telegram,
+  SMS, email, a free-form canvas. The Switch page says so in a "what is different" section.
+
+### Competitor claims
+- Only what `docs/competitors.md` and `docs/competitor-manychat.md` record with a source (read
+  2026-10-22), or what was read from the vendor's own page. A comment above every competitor cell
+  names the source and date, and a test (`gtm-pages.test.tsx`) fails if one is missing. Each page
+  lists its sources and when they were read.
+- **Interakt's pricing page was read on 2026-10-25** (WebFetch): Starter 999 rupees (Instagram only),
+  Growth 2,799 and Advanced 3,799, plus taxes; campaigns, a catalogue and unlimited agents on the
+  higher plans (the page is inconsistent about agent roles, and the page says so). Checkout and
+  WhatsApp Pay come only from third-party guides and are worded that way.
+- **Manychat's pages refuse automated reads (403, again on 2026-10-25),** so its column stays on the
+  third-party guides and says so on the page. *Prices are indicative; the owner should check
+  manychat.com and interakt.shop before launch.*
+- A competitor "lacks" something only as "Not found" (a test forbids "Not offered" on their side).
+  No logos, no "best" or "#1" (a test checks the words).
+
+### Tests
+- vitest: `plan-matrix.test.ts`, `app/(marketing)/gtm-pages.test.tsx` (metadata, one h1, links,
+  sources, the status words, the pricing page with and without the API), `app/seo.test.ts` (sitemap),
+  and `plans.test.ts` / `test/plans.ts` for the new card lines.
+- pytest: `tests/unit/test_marketing_plan_table.py`.
+- Playwright: `e2e/gr37-gtm-pages.spec.ts` visits every page signed out, at desktop and phone width.
+- *Written but not run in this session (the coordinator builds and runs the web checks).*
+
+- *Fixed in the combined batch:* the pages said in-chat payments were "Not offered" and the plan
+  table had no row for `orders_monthly` (added by GR-32). The Interakt comparison now says what we
+  offer (Razorpay link to the business's own account, or UPI marked paid by hand; no WhatsApp Pay) and
+  the catalogue row says WhatsApp product messages need the owner's Meta catalogue and Meta's approval
+  (C-121). The plan matrix shows "Orders a month" under commerce (Pro and Max).

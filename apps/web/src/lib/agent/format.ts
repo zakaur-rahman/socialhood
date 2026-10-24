@@ -78,6 +78,7 @@ export const REF_KIND_LABEL: Record<AnswerRefKind, string> = {
   scheduled_post: "Scheduled post",
   knowledge_source: "Knowledge",
   product: "Product",
+  order: "Order",
 };
 
 export type PromptArea = "inbox" | "comments" | "posts" | "automations";
@@ -100,6 +101,7 @@ const FOLLOW_UPS: Record<AnswerRefKind, readonly string[]> = {
   scheduled_post: ["What's scheduled to post this week?", "Which posts beat my average this month?"],
   knowledge_source: ["What questions couldn't the AI answer this week?"],
   product: ["Which products are out of stock?"],
+  order: ["Which orders are still unpaid?"],
 };
 const GENERAL_FOLLOW_UPS = ["Which posts beat my average this month?", "What are people complaining about this week?"];
 

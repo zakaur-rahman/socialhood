@@ -34,7 +34,7 @@ from socialhood.schemas.catalogue import (
 )
 from socialhood.security.crypto import TokenCipher, cipher_for
 from socialhood.services import audit
-from socialhood.services.catalogue import csv_import, products
+from socialhood.services.catalogue import csv_import, products, wa_catalogue
 from socialhood.services.catalogue import shopify as shopify_service
 from socialhood.settings import Settings
 from socialhood.shopify.client import ShopifyClient
@@ -86,6 +86,7 @@ async def create_product(
     out = await products.view(session, product)
     await audit.record(session, ctx, "product.created", "product", product.id, source="manual")
     await session.commit()
+    await wa_catalogue.touch(session, ctx.workspace_id)  # GR-33
     return out
 
 
@@ -103,6 +104,7 @@ async def update_product(
     out = await products.view(session, product)
     await audit.record(session, ctx, "product.updated", "product", product_id)
     await session.commit()
+    await wa_catalogue.touch(session, ctx.workspace_id)  # GR-33
     return out
 
 
@@ -113,6 +115,7 @@ async def delete_product(
     await products.delete(session, product_id)
     await audit.record(session, ctx, "product.deleted", "product", product_id)
     await session.commit()
+    await wa_catalogue.touch(session, ctx.workspace_id)  # GR-33
     return Response(status_code=204)
 
 
@@ -147,6 +150,7 @@ async def import_products(
         skipped=result.skipped,
     )
     await session.commit()
+    await wa_catalogue.touch(session, ctx.workspace_id)  # GR-33
     return result
 
 

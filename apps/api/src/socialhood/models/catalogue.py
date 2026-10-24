@@ -142,3 +142,66 @@ class ShopifyConnection(IdMixin, TimestampMixin, TenantScoped, Base):
         UniqueConstraint("shop_domain"),
         CheckConstraint(_in("status", ShopifyStatus), name="status"),
     )
+
+
+class CatalogueState(StrEnum):
+    PENDING = "pending"  # new or changed here, not yet sent to Meta
+    SYNCED = "synced"  # Meta has it as it is here
+    ERROR = "error"  # Meta refused it, or it can't be sent as it is (``error`` says why)
+
+
+class CatalogueConnection(IdMixin, TimestampMixin, TenantScoped, Base):
+    """The Meta commerce catalogue a workspace's products are copied to for WhatsApp product
+    messages (GR-33). One per workspace. The WhatsApp number's own business token (the account's
+    ``access_token_enc``) makes the calls, so the account is the one the catalogue was connected
+    through; deleting the account removes the connection (the items are then sent again on the next
+    connect)."""
+
+    __tablename__ = "catalogue_connections"
+
+    social_account_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("social_accounts.id", ondelete="CASCADE")
+    )
+    catalog_id: Mapped[str] = mapped_column(Text)  # Meta's catalogue id, from Commerce Manager
+    catalog_name: Mapped[str | None] = mapped_column(Text)
+    brand: Mapped[str] = mapped_column(Text)  # Meta requires a brand on every item
+    status: Mapped[str] = mapped_column(Text, server_default=sql("'active'"))
+    last_error: Mapped[str | None] = mapped_column(Text)
+    connected_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    sync_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    sync_error: Mapped[str | None] = mapped_column(Text)
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id"),
+        CheckConstraint("status IN ('active', 'needs_reconnect')", name="status"),
+    )
+
+
+class CatalogueItem(IdMixin, TimestampMixin, TenantScoped, Base):
+    """One item in the Meta catalogue (GR-33): a variant, or a product without variants. The
+    retailer id is our variant id or product id (Meta's ``product_retailer_id``). ``content_hash``
+    is the hash of what was last sent, so an unchanged item is not sent again; a row whose product
+    or variant is gone (or off) is sent as a delete and then removed."""
+
+    __tablename__ = "catalogue_items"
+
+    retailer_id: Mapped[str] = mapped_column(Text)
+    product_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("products.id", ondelete="SET NULL")
+    )
+    variant_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("product_variants.id", ondelete="SET NULL")
+    )
+    content_hash: Mapped[str | None] = mapped_column(Text)
+    state: Mapped[str] = mapped_column(Text, server_default=sql("'pending'"))
+    error: Mapped[str | None] = mapped_column(Text)
+    synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "retailer_id"),
+        Index("ix_catalogue_items_product_id", "product_id"),
+        CheckConstraint(_in("state", CatalogueState), name="state"),
+    )

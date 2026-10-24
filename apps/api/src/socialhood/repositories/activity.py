@@ -30,6 +30,7 @@ from socialhood.models.inbox import (
     MessageStatus,
 )
 from socialhood.models.integrations import DeliveryStatus, WebhookDelivery, WebhookEndpoint
+from socialhood.models.orders import Order
 from socialhood.models.sequences import RunStatus, Sequence, SequenceStepRun
 
 Before = tuple[datetime, uuid.UUID]
@@ -254,6 +255,44 @@ async def sequence_steps(
         query = query.where(SequenceStepRun.social_account_id == account_id)
     query = _after(query, SequenceStepRun.ran_at, SequenceStepRun.id, before)
     query = _newest(query, SequenceStepRun.ran_at, SequenceStepRun.id, limit)
+    return list((await session.execute(query)).all())
+
+
+async def orders_settled(
+    session: AsyncSession,
+    *,
+    before: Before | None,
+    limit: int,
+    failures_only: bool,
+    account_id: uuid.UUID | None,
+) -> list[Any]:
+    """Orders that were paid, or expired without payment (GR-32). With ``failures_only`` only
+    the expired ones."""
+    at = func.coalesce(Order.paid_at, Order.updated_at)
+    wanted = ("expired",) if failures_only else ("paid", "expired")
+    query = (
+        select(
+            Order.id,
+            at.label("at"),
+            Order.number,
+            Order.status,
+            Order.currency,
+            Order.total_minor,
+            Contact.social_account_id.label("account_id"),
+            SocialAccount.platform,
+            SocialAccount.username.label("account_username"),
+            SocialAccount.display_name.label("account_display_name"),
+            Contact.username.label("contact_username"),
+            Contact.display_name.label("contact_display_name"),
+        )
+        .join(Contact, Contact.id == Order.contact_id)
+        .join(SocialAccount, SocialAccount.id == Contact.social_account_id)
+        .where(Order.status.in_(wanted))
+    )
+    if account_id is not None:
+        query = query.where(Contact.social_account_id == account_id)
+    query = _after(query, at, Order.id, before)
+    query = _newest(query, at, Order.id, limit)
     return list((await session.execute(query)).all())
 
 

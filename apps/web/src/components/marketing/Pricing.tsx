@@ -1,4 +1,5 @@
 import { Check, Coins } from "lucide-react";
+import Link from "next/link";
 import type { CSSProperties } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -122,13 +123,14 @@ function PlanCardBody({ card, featured }: { card: PlanCard; featured: boolean })
  * the API; without one the card says the price is shown at sign-up. Pro's card has the moving
  * border (C-068); Max is "Coming soon".
  */
-export function Pricing({ pricing }: { pricing: PricingData }) {
+export function Pricing({ pricing, headingLevel = 2 }: { pricing: PricingData; headingLevel?: 1 | 2 }) {
   const { free, pro } = pricing.credits;
   return (
     <section id={SECTION_IDS.pricing} aria-labelledby="pricing-title" className="scroll-mt-24 border-t border-line-subtle py-20 sm:py-24">
       <Container>
         <SectionHeading
           id="pricing-title"
+          level={headingLevel}
           eyebrow="Pricing"
           title="Start free, upgrade when you grow"
           intro="Pro adds Auto replies, more accounts, more automations and more AI credits. Cancel anytime: Pro stays until the end of the period you've paid for."
@@ -140,6 +142,14 @@ export function Pricing({ pricing }: { pricing: PricingData }) {
         </ul>
         <p className="mx-auto mt-6 max-w-3xl text-center text-xs leading-relaxed text-fg-secondary">
           {pricing.source === "fallback" ? "Prices couldn't be loaded just now; you'll see the current price when you sign up. " : null}
+          {headingLevel === 2 ? (
+            <>
+              <Link href="/pricing" className="font-medium text-brand-fg underline-offset-4 hover:underline">
+                Compare every plan limit
+              </Link>
+              .{" "}
+            </>
+          ) : null}
           Payments are handled securely by Dodo Payments. Plans don&apos;t include Meta&apos;s WhatsApp messaging fees,
           which Meta charges directly to your business.
         </p>

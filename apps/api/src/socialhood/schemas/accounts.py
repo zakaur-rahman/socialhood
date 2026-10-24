@@ -79,6 +79,12 @@ class SandboxAccountCreate(RequestModel):
     platform: Literal["instagram", "facebook", "whatsapp"] = "instagram"
 
 
+class SandboxCartItem(RequestModel):
+    retailer_id: str = Field(min_length=1, max_length=64)
+    quantity: int = Field(default=1, ge=1, le=999)
+    price: str | None = Field(default=None, max_length=24)
+
+
 class SandboxInbound(RequestModel):
     """A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).
     GR-01 adds a referral without a message (an entry link opened, or an ad tapped), a tapped
@@ -106,6 +112,7 @@ class SandboxInbound(RequestModel):
         "story_mention",
         "status",
         "quality",
+        "order",
     ]
     # The message, comment, story reply or postback title. A referral, an opt-in, a story like and
     # a story mention have none.
@@ -135,6 +142,9 @@ class SandboxInbound(RequestModel):
         None
     )
     tier: str | None = Field(default=None, max_length=32)
+    # GR-33, WhatsApp only: the cart of an ``order`` message (retailer ids are our variant or
+    # product ids) and the customer's note (``text``).
+    cart: list[SandboxCartItem] | None = Field(default=None, max_length=30)
 
     @model_validator(mode="after")
     def _needs_text(self) -> SandboxInbound:
@@ -147,6 +157,8 @@ class SandboxInbound(RequestModel):
             and not self.text
         ):
             raise ValueError("text is required for a DM, a comment, a story reply or a postback")
+        if self.kind == "order" and not self.cart:
+            raise ValueError("cart is required for an order")
         if self.kind == "referral" and self.referral_source is None:
             raise ValueError("referral_source is required for a referral")
         return self

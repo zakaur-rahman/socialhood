@@ -335,6 +335,7 @@ ADMIN_TOOLS: dict[str, dict[str, Any]] = {
     "answer_from_knowledge": {"question": "How much is shipping?"},
     "list_knowledge_gaps": {},
     "search_products": {"q": "kurta"},  # GR-31
+    "list_orders": {},  # GR-32
     "list_webhook_endpoints": {},
     "list_recent_failures": {},
     "list_sequences": {},

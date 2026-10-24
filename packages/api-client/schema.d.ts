@@ -1891,6 +1891,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/conversations/{conversation_id}/product-message": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Product Message
+         * @description Send a WhatsApp product message (one catalogue item) or product list (up to 30 items in up
+         *     to 10 sections) in the conversation. Every item must be in the catalogue as last synced. 402
+         *     without commerce on the plan, 409 when no catalogue is connected, it belongs to another number
+         *     or the reply window is closed, 422 for an item that isn't ready or a list without a header.
+         */
+        post: operations["send_product_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/conversations/{conversation_id}/read": {
         parameters: {
             query?: never;
@@ -2307,6 +2330,71 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/integrations/payments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Payment Settings
+         * @description Whether Razorpay and/or UPI are set up, and the webhook address to add in Razorpay. The
+         *     keys and secrets are never returned.
+         */
+        get: operations["get_payment_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/payments/razorpay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Connect Razorpay
+         * @description Check the keys with Razorpay and save them (encrypted). 402 without commerce on the plan,
+         *     422 when Razorpay refuses the keys, 502 when it doesn't answer.
+         */
+        put: operations["connect_razorpay"];
+        post?: never;
+        /** Disconnect Razorpay */
+        delete: operations["disconnect_razorpay"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/payments/upi": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Upi
+         * @description The UPI address customers pay (a plain UPI request has no webhook: such an order is marked
+         *     paid by hand).
+         */
+        put: operations["save_upi"];
+        post?: never;
+        /** Remove Upi */
+        delete: operations["remove_upi"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/w/{wid}/integrations/shopify": {
         parameters: {
             query?: never;
@@ -2390,6 +2478,58 @@ export interface paths {
          * @description Copy the store's products again now. While one sync runs this changes nothing.
          */
         post: operations["sync_shopify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/whatsapp-catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Whatsapp Catalogue
+         * @description The connection, how many items Meta has, which ones it refused and why. Any member may read
+         *     it (the inbox's "Send product" needs to know a catalogue is connected).
+         */
+        get: operations["get_whatsapp_catalogue"];
+        /**
+         * Connect Whatsapp Catalogue
+         * @description Check Meta shows the catalogue to the number's business account, save the connection and
+         *     start the first sync. 402 without commerce on the plan, 404 for an account that isn't this
+         *     workspace's, 422 for a number that isn't WhatsApp, 409 for a catalogue Meta won't show (not
+         *     found, or not connected to the number's business account), 502 when Meta doesn't answer.
+         */
+        put: operations["connect_whatsapp_catalogue"];
+        post?: never;
+        /**
+         * Disconnect Whatsapp Catalogue
+         * @description Forget the connection. The catalogue itself is left as it is in Meta.
+         */
+        delete: operations["disconnect_whatsapp_catalogue"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/whatsapp-catalogue/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sync Whatsapp Catalogue
+         * @description Send what changed now. While a sync runs this changes nothing.
+         */
+        post: operations["sync_whatsapp_catalogue"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2922,6 +3062,114 @@ export interface paths {
         put?: never;
         /** Mark Notifications Read */
         post: operations["mark_notifications_read"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Orders
+         * @description Newest first, with whether the plan and the payment settings are ready.
+         */
+        get: operations["list_orders"];
+        put?: never;
+        /**
+         * Create Order
+         * @description An order for the conversation's customer, priced from the catalogue now (the request
+         *     never carries a price). 402 without commerce on the plan or over the month's orders, 404
+         *     for a conversation or product that isn't this workspace's, 422 on the lines (a variant
+         *     needed, a product switched off or without a price, more than is in stock).
+         */
+        post: operations["create_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Order */
+        get: operations["get_order"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Order
+         * @description Cancel an order that isn't paid, and its Razorpay link. 422 for a paid order.
+         */
+        post: operations["cancel_order"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/mark-paid": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Order Paid
+         * @description A member says the order was paid: for UPI, which has no webhook. Who and when are kept on
+         *     the order and in the audit trail. 422 when it is already paid or cancelled.
+         */
+        post: operations["mark_order_paid"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/orders/{order_id}/payment-request": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Request Payment
+         * @description Make a Razorpay payment link or a UPI request for the order and, unless ``send`` is false,
+         *     send it as a message on the order's conversation. 409 when the method isn't set up ("Razorpay
+         *     isn't set up for this workspace"), 409 ``reply_window_closed`` when the message can't go,
+         *     422 for an order that is paid or cancelled.
+         */
+        post: operations["request_order_payment"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4417,7 +4665,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast" | "sequence";
+            kind: "automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast" | "sequence" | "order";
             /**
              * Occurred At
              * Format: date-time
@@ -4489,6 +4737,47 @@ export interface components {
              * Format: uuid
              */
             tag_id: string;
+        };
+        /**
+         * AddressIn
+         * @description Where to deliver. Every part is optional (digital orders have none); it is saved as given.
+         */
+        AddressIn: {
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Line1 */
+            line1?: string | null;
+            /** Line2 */
+            line2?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Pincode */
+            pincode?: string | null;
+            /** State */
+            state?: string | null;
+        };
+        /** AddressOut */
+        AddressOut: {
+            /** City */
+            city?: string | null;
+            /** Country */
+            country?: string | null;
+            /** Line1 */
+            line1?: string | null;
+            /** Line2 */
+            line2?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Pincode */
+            pincode?: string | null;
+            /** State */
+            state?: string | null;
         };
         /**
          * AgentApproval
@@ -5069,7 +5358,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source" | "product";
+            kind: "post" | "conversation" | "comment" | "automation" | "scheduled_message" | "scheduled_post" | "knowledge_source" | "product" | "order";
             /** Label */
             label: string;
             /** Parent Id */
@@ -8339,6 +8628,16 @@ export interface components {
             /** Items */
             items: components["schemas"]["Invitation"][];
         };
+        /** ItemRef */
+        ItemRef: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /** Variant Id */
+            variant_id?: string | null;
+        };
         /** KnowledgeGap */
         KnowledgeGap: {
             /** Examples */
@@ -8655,6 +8954,14 @@ export interface components {
             status: "draft" | "active" | "paused";
             /** Trigger */
             trigger?: ("dm_keyword" | "comment_keyword" | "comment_any" | "story_reply" | "story_mention" | "entry_link" | "ad_click" | "ice_breaker" | "first_message" | "default_reply") | null;
+        };
+        /**
+         * MarkPaid
+         * @description For a UPI order: the customer's payment reference, if they shared one.
+         */
+        MarkPaid: {
+            /** Reference */
+            reference?: string | null;
         };
         /** MarkRead */
         MarkRead: {
@@ -9097,6 +9404,151 @@ export interface components {
              */
             quality_rating: "green" | "yellow" | "red" | "unknown";
         };
+        /** OrderContact */
+        OrderContact: {
+            /** Display Name */
+            display_name?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Username */
+            username?: string | null;
+        };
+        /** OrderCreate */
+        OrderCreate: {
+            address?: components["schemas"]["AddressIn"] | null;
+            /**
+             * Conversation Id
+             * Format: uuid
+             */
+            conversation_id: string;
+            /** Items */
+            items: components["schemas"]["OrderLineIn"][];
+            /** Note */
+            note?: string | null;
+        };
+        /** OrderLimits */
+        OrderLimits: {
+            /** Entitled */
+            entitled: boolean;
+            /** Razorpay Ready */
+            razorpay_ready: boolean;
+            /** Upi Ready */
+            upi_ready: boolean;
+        };
+        /** OrderLineIn */
+        OrderLineIn: {
+            /**
+             * Product Id
+             * Format: uuid
+             */
+            product_id: string;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Variant Id */
+            variant_id?: string | null;
+        };
+        /** OrderLineOut */
+        OrderLineOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Line Total */
+            line_total: string;
+            /** Line Total Minor */
+            line_total_minor: number;
+            /** Name */
+            name: string;
+            /** Product Id */
+            product_id?: string | null;
+            /** Quantity */
+            quantity: number;
+            /** Sku */
+            sku?: string | null;
+            /** Unit Price */
+            unit_price: string;
+            /** Unit Price Minor */
+            unit_price_minor: number;
+            /** Variant Id */
+            variant_id?: string | null;
+            /** Variant Title */
+            variant_title?: string | null;
+        };
+        /** OrderList */
+        OrderList: {
+            /** Items */
+            items: components["schemas"]["OrderOut"][];
+            limits: components["schemas"]["OrderLimits"];
+            /** Total */
+            total: number;
+        };
+        /** OrderOut */
+        OrderOut: {
+            address?: components["schemas"]["AddressOut"] | null;
+            /** Cancelled At */
+            cancelled_at?: string | null;
+            contact: components["schemas"]["OrderContact"];
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By Name */
+            created_by_name?: string | null;
+            /** Currency */
+            currency: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["OrderLineOut"][];
+            /** Link Expires At */
+            link_expires_at?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Number */
+            number: number;
+            /** Paid At */
+            paid_at?: string | null;
+            /** Paid By Name */
+            paid_by_name?: string | null;
+            /** Payment Link Url */
+            payment_link_url?: string | null;
+            /** Payment Method */
+            payment_method?: ("razorpay" | "upi") | null;
+            /** Payment Reference */
+            payment_reference?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "inbox" | "whatsapp";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "awaiting_payment" | "paid" | "cancelled" | "expired";
+            /** Total */
+            total: string;
+            /** Total Minor */
+            total_minor: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** OverlapWarning */
         OverlapWarning: {
             /**
@@ -9338,6 +9790,45 @@ export interface components {
              * @enum {string}
              */
             status: "succeeded" | "failed" | "refunded" | "pending";
+        };
+        /** PaymentRequest */
+        PaymentRequest: {
+            /**
+             * Method
+             * @enum {string}
+             */
+            method: "razorpay" | "upi";
+            /**
+             * Send
+             * @default true
+             */
+            send: boolean;
+        };
+        /** PaymentSettings */
+        PaymentSettings: {
+            /** Entitled */
+            entitled: boolean;
+            /** Razorpay Connected */
+            razorpay_connected: boolean;
+            /** Razorpay Error */
+            razorpay_error?: string | null;
+            /** Razorpay Key Id */
+            razorpay_key_id?: string | null;
+            /**
+             * Razorpay Test Mode
+             * @default false
+             */
+            razorpay_test_mode: boolean;
+            /** Upi Name */
+            upi_name?: string | null;
+            /** Upi Vpa */
+            upi_vpa?: string | null;
+            /** Webhook Events */
+            webhook_events?: string[];
+            /** Webhook Seen At */
+            webhook_seen_at?: string | null;
+            /** Webhook Url */
+            webhook_url?: string | null;
         };
         /**
          * PeriodFigure
@@ -9840,6 +10331,27 @@ export interface components {
             /** Total */
             total: number;
         };
+        /**
+         * ProductMessageSend
+         * @description ``product``: one item (``item``). ``product_list``: ``sections`` of items (up to 30 in all,
+         *     in up to 10 sections) under a ``header``, which Meta requires for a list.
+         */
+        ProductMessageSend: {
+            /** Body */
+            body: string;
+            /** Footer */
+            footer?: string | null;
+            /** Header */
+            header?: string | null;
+            item?: components["schemas"]["ItemRef"] | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "product" | "product_list";
+            /** Sections */
+            sections?: components["schemas"]["SectionIn"][];
+        };
         /** ProductOut */
         ProductOut: {
             /** Active */
@@ -10155,6 +10667,15 @@ export interface components {
             /** Verified */
             verified: boolean;
         };
+        /** RazorpayConnect */
+        RazorpayConnect: {
+            /** Key Id */
+            key_id: string;
+            /** Private Key */
+            private_key: string;
+            /** Webhook Key */
+            webhook_key: string;
+        };
         /** Reaction */
         Reaction: {
             /**
@@ -10372,6 +10893,18 @@ export interface components {
              */
             platform: "instagram" | "facebook" | "whatsapp";
         };
+        /** SandboxCartItem */
+        SandboxCartItem: {
+            /** Price */
+            price?: string | null;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+            /** Retailer Id */
+            retailer_id: string;
+        };
         /**
          * SandboxInbound
          * @description A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).
@@ -10399,6 +10932,8 @@ export interface components {
             ad_title?: string | null;
             /** Age Seconds */
             age_seconds?: number | null;
+            /** Cart */
+            cart?: components["schemas"]["SandboxCartItem"][] | null;
             /** Delivery Status */
             delivery_status?: ("sent" | "delivered" | "read" | "failed") | null;
             /** Error Code */
@@ -10413,7 +10948,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin" | "story_reply" | "story_like" | "story_mention" | "status" | "quality";
+            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin" | "story_reply" | "story_like" | "story_mention" | "status" | "quality" | "order";
             /** Postback Payload */
             postback_payload?: string | null;
             /** Quality Event */
@@ -10803,6 +11338,13 @@ export interface components {
             members: number;
             /** Pending Invitations */
             pending_invitations: number;
+        };
+        /** SectionIn */
+        SectionIn: {
+            /** Items */
+            items: components["schemas"]["ItemRef"][];
+            /** Title */
+            title: string;
         };
         /** Segment */
         Segment: {
@@ -11800,7 +12342,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag" | "lead_stage" | "broadcast" | "assignment" | "sequence";
+            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag" | "lead_stage" | "broadcast" | "assignment" | "sequence" | "order";
             /**
              * Occurred At
              * Format: date-time
@@ -11857,6 +12399,13 @@ export interface components {
              * Format: date
              */
             until: string;
+        };
+        /** UpiSave */
+        UpiSave: {
+            /** Name */
+            name: string;
+            /** Vpa */
+            vpa: string;
         };
         /** UploadSignature */
         UploadSignature: {
@@ -11997,6 +12546,72 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** WaCatalogueConnect */
+        WaCatalogueConnect: {
+            /** Brand */
+            brand?: string | null;
+            /** Catalog Id */
+            catalog_id: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+        };
+        /** WaCatalogueProblem */
+        WaCatalogueProblem: {
+            /** Message */
+            message: string;
+            /** Name */
+            name: string;
+        };
+        /** WaCatalogueStatus */
+        WaCatalogueStatus: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Brand */
+            brand?: string | null;
+            /** Catalog Id */
+            catalog_id?: string | null;
+            /** Catalog Name */
+            catalog_name?: string | null;
+            /** Connected */
+            connected: boolean;
+            /** Entitled */
+            entitled: boolean;
+            /**
+             * Items Error
+             * @default 0
+             */
+            items_error: number;
+            /**
+             * Items Pending
+             * @default 0
+             */
+            items_pending: number;
+            /**
+             * Items Synced
+             * @default 0
+             */
+            items_synced: number;
+            /** Last Error */
+            last_error?: string | null;
+            /** Problems */
+            problems?: components["schemas"]["WaCatalogueProblem"][];
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Status */
+            status?: ("active" | "needs_reconnect") | null;
+            /** Sync Error */
+            sync_error?: string | null;
+            /** Synced At */
+            synced_at?: string | null;
+            /**
+             * Syncing
+             * @default false
+             */
+            syncing: boolean;
+        };
         /** WebhookDelivery */
         WebhookDelivery: {
             /** Attempts */
@@ -12064,7 +12679,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -12089,7 +12704,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[];
             /** Url */
             url: string;
         };
@@ -12105,7 +12720,7 @@ export interface components {
             /** Description */
             description?: string | null;
             /** Events */
-            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[] | null;
+            events?: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[] | null;
             /** Status */
             status?: ("active" | "paused") | null;
             /** Url */
@@ -12126,7 +12741,7 @@ export interface components {
             /** Disabled At */
             disabled_at?: string | null;
             /** Events */
-            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished")[];
+            events: ("contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid")[];
             /** Failing Deliveries */
             failing_deliveries: number;
             /**
@@ -12158,7 +12773,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished";
+            type: "contact.created" | "contact.updated" | "contact.tagged" | "lead.captured" | "lead.stage_changed" | "message.received" | "conversation.assigned" | "automation.run.completed" | "broadcast.finished" | "order.created" | "order.paid";
             /** Version */
             version: number;
         };
@@ -12830,7 +13445,7 @@ export interface operations {
         parameters: {
             query?: {
                 failures_only?: boolean;
-                kind?: ("automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast" | "sequence") | null;
+                kind?: ("automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast" | "sequence" | "order") | null;
                 automation_id?: string | null;
                 account_id?: string | null;
                 cursor?: string | null;
@@ -17159,6 +17774,51 @@ export interface operations {
             };
         };
     };
+    send_product_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                conversation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProductMessageSend"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Message"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     mark_conversation_read: {
         parameters: {
             query?: never;
@@ -18294,6 +18954,210 @@ export interface operations {
             };
         };
     };
+    get_payment_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_razorpay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RazorpayConnect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect_razorpay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    save_upi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpiSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSettings"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    remove_upi: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_shopify: {
         parameters: {
             query?: never;
@@ -18480,6 +19344,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShopifyStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaCatalogueStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WaCatalogueConnect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaCatalogueStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_whatsapp_catalogue: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WaCatalogueStatus"];
                 };
             };
             /** @description Validation error */
@@ -19875,6 +20901,267 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_orders: {
+        parameters: {
+            query?: {
+                status?: ("draft" | "awaiting_payment" | "paid" | "cancelled" | "expired") | null;
+                contact_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_order: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    mark_order_paid: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MarkPaid"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    request_order_payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PaymentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
             };
             /** @description Validation error */
             422: {

@@ -312,6 +312,24 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         a=account_id,
     )
+    await execute(  # GR-33: the catalogue connected through the account (one per workspace)
+        engine,
+        "INSERT INTO catalogue_connections (workspace_id, social_account_id, catalog_id, brand)"
+        " VALUES (:w, :a, 'cat-1', 'Maple') ON CONFLICT (workspace_id) DO NOTHING",
+        w=wid,
+        a=account_id,
+    )
+    await execute(  # GR-32: an order for the contact, and a line on it
+        engine,
+        "WITH o AS (INSERT INTO orders (workspace_id, number, contact_id, conversation_id, status,"
+        " currency, total_minor) VALUES (:w, (SELECT coalesce(max(number), 0) + 1 FROM orders"
+        " WHERE workspace_id = :w), :c, :v, 'draft', 'INR', 100) RETURNING id)"
+        " INSERT INTO order_items (workspace_id, order_id, name, quantity, unit_price_minor,"
+        " line_total_minor) SELECT :w, id, 'Kurta', 1, 100, 100 FROM o",
+        w=wid,
+        c=thread.contact_id,
+        v=thread.conversation_id,
+    )
     await make_sequence_rows(  # GR-24: a sequence on the account, the contact in it, a step run
         engine,
         workspace_id=wid,

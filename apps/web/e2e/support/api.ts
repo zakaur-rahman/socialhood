@@ -157,8 +157,11 @@ export class Api {
         // GR-23, a sandbox WhatsApp number: a delivery status for the last message sent to
         // `fromId`, and a number's quality or tier change.
         | "status"
-        | "quality";
+        | "quality"
+        // GR-33, a sandbox WhatsApp number: a customer's cart (retailer ids are variant or product ids).
+        | "order";
       deliveryStatus?: "sent" | "delivered" | "read" | "failed";
+      cart?: { retailerId: string; quantity: number; price?: string }[];
       errorCode?: number;
       errorText?: string;
       qualityEvent?: "ONBOARDING" | "UPGRADE" | "DOWNGRADE" | "FLAGGED" | "UNFLAGGED";
@@ -197,6 +200,7 @@ export class Api {
       error_text: event.errorText,
       quality_event: event.qualityEvent,
       tier: event.tier,
+      cart: event.cart?.map((item) => ({ retailer_id: item.retailerId, quantity: item.quantity, price: item.price })),
     });
   }
 
@@ -483,6 +487,24 @@ export class Api {
       method: "POST",
       headers: signed.headers,
       body: signed.raw,
+    });
+    return response.status;
+  }
+
+  /**
+   * GR-32: a Razorpay webhook as Razorpay sends it, signed with the webhook secret the suite typed
+   * into the Payments card (hex HMAC-SHA256 of the raw body), posted to the workspace's address.
+   */
+  async razorpayWebhook(token: string, secret: string, eventId: string, body: Record<string, unknown>): Promise<number> {
+    const raw = JSON.stringify(body);
+    const response = await fetch(`${this.stack.E2E_API_URL}/webhooks/razorpay/${token}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Razorpay-Signature": createHmac("sha256", secret).update(raw).digest("hex"),
+        "X-Razorpay-Event-Id": eventId,
+      },
+      body: raw,
     });
     return response.status;
   }
