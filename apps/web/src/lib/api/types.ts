@@ -393,3 +393,17 @@ export type ReportPoint = Schemas["ReportPoint"];
 export type ReportIntent = Schemas["ReportIntent"];
 export type ReportQuestion = Schemas["ReportQuestion"];
 export type ReportPost = Schemas["ReportPost"];
+
+// ---- team (GR-19)
+
+export type WorkspacePermissions = Schemas["WorkspacePermissions"];
+export type TeamMember = Schemas["Member"];
+export type TeamMemberList = Schemas["MemberList"];
+export type TeamSeats = Schemas["Seats"];
+export type TeamInvitation = Schemas["Invitation"];
+export type TeamInvitationList = Schemas["InvitationList"];
+export type TeamInvitationCreate = Schemas["InvitationCreate"];
+export type TeamInvitableRole = TeamInvitationCreate["role"];
+export type OwnershipTransfer = Schemas["OwnershipTransfer"];
+export type AuditEvent = Schemas["AuditEvent"];
+export type AuditEventList = Schemas["AuditEventList"];

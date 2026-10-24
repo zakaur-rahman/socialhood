@@ -2862,3 +2862,77 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   it (`KnowledgeCreateType` is `KnowledgeSourceCreate["type"]`). The web calls the new paths through
   the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
   config.
+
+## C-105 · Team members and roles (GR-19, feature/gr-19-team)
+
+- **Permission matrix, in one place.** `auth/permissions.py` has a `Permission` enum and a
+  role-to-permissions map (each role has everything below it). Routes ask for a permission with
+  `require_permission` (`CanReply`, `CanManageAutomations` and the other aliases in `auth/deps.py`),
+  never for a role. The old `Admin`/`Owner`/`AnyMember` aliases stay for read routes. Every write
+  route under `/v1/w/{wid}` now declares a permission; the tiers are the ones the routes already had
+  (agents reply, tag and assign, and use Ask; admins also automations, knowledge, settings, channels,
+  publishing, contact fields, segments, webhooks, the audit log and inviting agents; owners also
+  billing, members, ownership and deleting the workspace). `tests/unit/test_permission_routes.py`
+  walks the app's routes and fails for a workspace write route without a permission, and for a write
+  route outside a workspace that is not in its short, reasoned list.
+- **The web reads the matrix from the API.** `GET /v1/w/{wid}/permissions` returns the caller's role
+  and permission names; `useCan()` (`lib/permissions.ts`) answers `can(name)` and allows nothing
+  while it loads. The TypeScript side holds permission names only. The existing role-based hiding
+  (nav items, settings tabs, page layouts) is left as it was; the new pages and their buttons use
+  `can()`.
+- **Invitations.** Table `workspace_invitations` (email lower-cased, role admin or agent, invited by,
+  status pending, accepted or revoked, expiry, Clerk's invitation id). No token: Clerk sends the email
+  and holds the link. One pending invitation per workspace and email (a partial unique index). They
+  expire after 14 days; "expired" is worked out on read, and a resend starts the 14 days again.
+  *Only owners invite admins; admins invite agents* (a decision; the plan left it open). Routes:
+  `POST/GET /invitations`, `POST /invitations/{id}/resend`, `DELETE /invitations/{id}`.
+- **Clerk is behind an interface** (`auth/invitations.py`): the real sender calls the Backend API's
+  invitations; `CLERK_INVITATIONS_PROVIDER=fake` (refused in production, set in the e2e stack) and
+  `use_invitation_sender` in tests keep it in memory. A person who already has an account is not sent
+  to Clerk (it refuses a known address); they get a plain email from us and join at their next sign-in.
+  If Clerk fails the invitation is not created (503).
+- **Accepting.** `GET /v1/me` and `GET /v1/workspaces` call `auth/accept_invitations.py`: a pending,
+  unexpired invitation for the user's email joins them with the invited role, but only when Clerk says
+  that email is verified (an address typed at sign-up and never confirmed must not open a workspace).
+  Their last workspace becomes the new one, so `/app` lands there. A Clerk outage skips the step and
+  the next call retries. No webhook is needed.
+- **Members.** `GET /members` (with seats), `PATCH /members/{user_id}` (admin or agent; owners only),
+  `DELETE /members/{user_id}` (owners only), `POST /ownership-transfer` (owners only, needs the
+  workspace name; the old owner becomes an admin and the new one the owner of record). The owner of
+  record cannot be demoted or removed (409): transfer first, so a workspace always has an owner. You
+  cannot remove yourself. Removing a member deletes the membership only; their past messages,
+  automations and audit rows keep their user id and name. *The inbox has no per-member assignment yet
+  (GR-20), so there is nothing to clear on removal;* GR-20 adds that to `services/team.remove_member`.
+- **Seats.** `members` entitlement: **Free 1, Pro 3, Max 10, decided by the owner on 2026-10-24
+  ("for now")** (PD-1). Members plus unexpired pending invitations count; one more past the cap is a
+  402 `quota_exceeded` naming `members`. Revoking or an expiry frees the seat.
+- **Audit.** Table `audit_events` (actor, actor name at the time, action, target type and id, small
+  detail JSON, time). `services/audit.record` adds a row to the caller's session, never commits, and
+  drops detail keys that could hold message text or a credential (body, text, content, token, secret,
+  password, key, caption) and long values. *Deviation: rows are written from the route handlers, next
+  to the commit, where the member is known; the service functions do not carry the user.* Recorded:
+  message sent, automation created/updated/deleted/activated/paused, knowledge source
+  created/updated/deleted, settings (workspace, AI, business hours, lead settings, saved replies,
+  webhook endpoints, social accounts), billing (checkout started, cancelled, resumed), members
+  (invited, resent, revoked, joined, role changed, removed, ownership transferred). Not recorded yet:
+  contact tags/fields/segments, comment replies, scheduled posts, plan changes that arrive by Dodo's
+  webhook. `GET /audit-events` (owners and admins) filters by member, action and date, 30 a page with
+  `offset` and `has_more`, and lists the actions present for the filter.
+- **Web.** Settings gains Members and Audit log tabs (owners and admins). Members: list with role and
+  last active, a role select, Remove (asks first), Make owner (type the workspace name), the seat
+  summary, pending invitations with Resend and Revoke, and an Invite dialog (the admin role only for
+  owners). Audit log: member, action and date filters, Newer and Older. Both stack at 375 px.
+- **Tests.** Unit: `test_team_rules.py` (matrix, who invites whom, seat counting, invitation states,
+  audit detail, the fake sender), `test_permission_routes.py`, `test_settings.py`. Integration:
+  `test_team.py` (invite, accept, unverified email, existing account, expiry and resend, revoke,
+  duplicates, Clerk failing, seats on Free and Pro, role changes, the owner rules, transfer, removal
+  keeping attribution, 403s for agents and admins, audit writes, filters and paging, tenancy);
+  tenancy: the new routes, params and tables in `test_isolation.py`; the workspace deletion test seeds
+  an invitation and an audit row. Vitest: `MembersPage`, `AuditLogPage`, `permissions`, the settings
+  tab lists. E2E: `gr19-team.spec.ts` (an invited agent signs up, replies' inbox opens, 403 on
+  automations and billing, the UI hides them; a `plan` seed route in the e2e API).
+- **Unsure / for the coordinator:** regenerate the client (`WorkspacePermissions`, `Member`,
+  `MemberList`, `Seats`, `Invitation`, `InvitationList`, `InvitationCreate`, `MemberRolePatch`,
+  `OwnershipTransfer`, `AuditEvent`, `AuditEventList` and the new operations); the web types are
+  aliases waiting for it. Migration `0033` (down revision `0030`) needs re-chaining. The e2e stack
+  needs `CLERK_INVITATIONS_PROVIDER=fake` (added to `scripts/e2e-stack.mjs`).

@@ -42,10 +42,12 @@ from socialhood.errors import ApiError
 from socialhood.main import create_app
 from socialhood.models.agent import AgentRun, AgentStep
 from socialhood.models.analytics import AccountDailyMetric
+from socialhood.models.billing import Subscription
 from socialhood.models.identity import User, Workspace
 from socialhood.models.media import AssetPurpose, MediaAsset, ResourceType
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import social_accounts, users, workspaces
+from socialhood.repositories.base import scoped_update
 from socialhood.services.analytics import account_metrics
 from socialhood.services.analytics.common import View
 from socialhood.services.provisioning import slugify
@@ -113,6 +115,19 @@ async def create_workspace(body: WorkspaceIn, user: CurrentUser, session: Sessio
     await users.set_last_workspace(session, user.id, workspace.id)
     await session.commit()
     return WorkspaceOut(id=workspace.id, slug=workspace.slug, name=workspace.name)
+
+
+class PlanIn(BaseModel):
+    plan: str = Field(pattern="^(free|pro|max)$", max_length=4)
+
+
+@router.post("/workspaces/{wid}/plan", status_code=204)
+async def set_plan(body: PlanIn, ctx: Owner, session: Session) -> None:
+    """GR-19: put the workspace on a plan, so a second seat exists without a checkout."""
+    await session.execute(
+        scoped_update(Subscription, workspace_id=ctx.workspace_id).values(plan=body.plan)
+    )
+    await session.commit()
 
 
 @router.post("/workspaces/{wid}/media-assets", status_code=201)

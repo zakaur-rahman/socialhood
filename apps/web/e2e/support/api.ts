@@ -53,6 +53,11 @@ export class Api {
     return this.seed<void>("DELETE", `/users/${clerkUserId}`);
   }
 
+  /** GR-19: the workspace on a plan, without a checkout. */
+  setPlan(wid: string, plan: "free" | "pro" | "max"): Promise<void> {
+    return this.seed<void>("POST", `/workspaces/${wid}/plan`, { plan });
+  }
+
   mediaAsset(wid: string, filename = "e2e-post.jpg"): Promise<{ id: string; secure_url: string }> {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }

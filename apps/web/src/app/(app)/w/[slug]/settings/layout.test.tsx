@@ -33,6 +33,8 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "Notifications",
       "Billing and usage",
       "Integrations",
+      "Members",
+      "Audit log",
       "Activity",
       "Ask Social Hood",
     ]);

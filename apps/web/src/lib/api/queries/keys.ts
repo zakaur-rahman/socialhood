@@ -38,6 +38,9 @@ export type ActivityFilters = {
   accountId: string | null;
 };
 
+/** Filters of the audit log (GR-19). Part of its query key. */
+export type AuditFilters = { member: string | null; action: string | null; since: string | null; page: number };
+
 /** Query keys (TR-FE-03): everything workspace-scoped starts with ["w", workspaceId]. */
 export const keys = {
   me: ["me"] as const,
@@ -89,6 +92,10 @@ export const keys = {
   flowFields: (wid: string) => ["w", wid, "flow-fields"] as const,
   entryLinks: (wid: string) => ["w", wid, "entry-links"] as const, // GR-08
   savedReplies: (wid: string) => ["w", wid, "saved-replies"] as const, // GR-21
+  permissions: (wid: string) => ["w", wid, "permissions"] as const, // GR-19
+  members: (wid: string) => ["w", wid, "members"] as const,
+  invitations: (wid: string) => ["w", wid, "invitations"] as const,
+  auditEvents: (wid: string, filters: AuditFilters) => ["w", wid, "audit-events", filters] as const,
   businessHours: (wid: string) => ["w", wid, "business-hours"] as const, // GR-22
   // stories and mentions (GR-06, GR-07)
   stories: (wid: string, accountId: string | null) => ["w", wid, "stories", accountId] as const,
