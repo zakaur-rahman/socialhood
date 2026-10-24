@@ -28,7 +28,7 @@ function SelectGroup({
   return (
     <SelectPrimitive.Group
       data-slot="select-group"
-      className={cn("scroll-my-1 p-1", className)}
+      className={cn("scroll-my-1", className)}
       {...props}
     />
   )
@@ -49,7 +49,7 @@ function SelectValue({
  * replaces the size's.
  */
 const SELECT_TRIGGER =
-  "flex w-fit items-center justify-between gap-1.5 pr-2 whitespace-nowrap select-none data-placeholder:text-fg-secondary *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
+  "flex w-fit items-center justify-between gap-1.5 pr-2 whitespace-nowrap select-none data-placeholder:text-fg-secondary *:data-[slot=select-value]:min-w-0 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
 
 function SelectTrigger({
   className,
@@ -73,14 +73,17 @@ function SelectTrigger({
 }
 
 /**
- * The options, on the floating surface and motion shared with menus and popovers (ui/floating). As
- * wide as the trigger at least. Placed over the trigger (the default), it appears without motion.
+ * The options, on the floating surface and motion shared with menus and popovers (ui/floating).
+ * Popper by default: under the trigger, left edges aligned, at least as wide as it, 4 px off, and
+ * scrolling past 24 rem. `position="item-aligned"` places the chosen option over the trigger
+ * instead, and then appears without motion.
  */
 function SelectContent({
   className,
   children,
-  position = "item-aligned",
-  align = "center",
+  position = "popper",
+  align = "start",
+  sideOffset = 4,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content>) {
   return (
@@ -89,27 +92,23 @@ function SelectContent({
         data-slot="select-content"
         data-align-trigger={position === "item-aligned"}
         className={cn(
-          "relative z-50 max-h-(--radix-select-content-available-height) min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto",
+          "relative z-50 max-h-[min(24rem,var(--radix-select-content-available-height))] min-w-36 origin-(--radix-select-content-transform-origin) overflow-x-hidden overflow-y-auto",
           FLOATING_GROUP,
           FLOATING_SURFACE,
           FLOATING_MOTION,
           "data-[align-trigger=true]:animate-none",
-          position === "popper" &&
-            "data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
           className
         )}
         position={position}
         align={align}
+        sideOffset={position === "popper" ? sideOffset : undefined}
         {...props}
         {...keyboardHighlight(props)}
       >
         <SelectScrollUpButton />
         <SelectPrimitive.Viewport
           data-position={position}
-          className={cn(
-            "data-[position=popper]:h-(--radix-select-trigger-height) data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)",
-            position === "popper" && ""
-          )}
+          className={cn("p-1", "data-[position=popper]:w-full data-[position=popper]:min-w-(--radix-select-trigger-width)")}
         >
           {children}
         </SelectPrimitive.Viewport>
@@ -119,41 +118,62 @@ function SelectContent({
   )
 }
 
+/** A group's heading: small and muted, with an optional leading icon (a platform mark, say). */
 function SelectLabel({
   className,
+  icon,
+  children,
   ...props
-}: React.ComponentProps<typeof SelectPrimitive.Label>) {
+}: React.ComponentProps<typeof SelectPrimitive.Label> & { icon?: React.ReactNode }) {
   return (
     <SelectPrimitive.Label
       data-slot="select-label"
-      className={cn("px-1.5 py-1 text-xs text-fg-secondary", className)}
-      {...props}
-    />
-  )
-}
-
-/** An option: the menu item's highlight (ui/floating), with the tick for the chosen one. */
-function SelectItem({
-  className,
-  children,
-  ...props
-}: React.ComponentProps<typeof SelectPrimitive.Item>) {
-  return (
-    <SelectPrimitive.Item
-      data-slot="select-item"
       className={cn(
-        FLOATING_ITEM,
-        "w-full pr-8 pl-1.5 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "flex items-center gap-1.5 px-2 py-1.5 text-xs font-medium text-fg-secondary [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5",
         className
       )}
       {...props}
     >
-      <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
+      {icon}
+      {children}
+    </SelectPrimitive.Label>
+  )
+}
+
+/**
+ * An option: the menu item's highlight (ui/floating). The tick sits in a fixed slot on the left, so
+ * labels line up chosen or not. Only the label goes inside `ItemText`, which Radix copies into the
+ * trigger; the optional `icon` and one-line `description` stay outside it, so the trigger shows the
+ * label alone (or whatever `SelectValue` is given as children).
+ */
+function SelectItem({
+  className,
+  children,
+  icon,
+  description,
+  ...props
+}: React.ComponentProps<typeof SelectPrimitive.Item> & {
+  icon?: React.ReactNode
+  description?: React.ReactNode
+}) {
+  return (
+    <SelectPrimitive.Item
+      data-slot="select-item"
+      className={cn(FLOATING_ITEM, "w-full py-1.5 pr-2 pl-8", className)}
+      // Radix names an option by its text; an `aria-label` (the full name of a shortened label) wins.
+      {...(props["aria-label"] ? { "aria-labelledby": undefined } : null)}
+      {...props}
+    >
+      <span className="pointer-events-none absolute left-2 flex size-4 items-center justify-center">
         <SelectPrimitive.ItemIndicator>
           <CheckIcon className="pointer-events-none" />
         </SelectPrimitive.ItemIndicator>
       </span>
-      <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+      {icon ? <span className="flex shrink-0 items-center text-fg-secondary">{icon}</span> : null}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+        {description ? <span className="text-xs text-fg-secondary">{description}</span> : null}
+      </span>
     </SelectPrimitive.Item>
   )
 }

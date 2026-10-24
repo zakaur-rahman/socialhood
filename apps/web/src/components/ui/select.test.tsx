@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { FLOATING_MOTION } from "@/components/ui/floating";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { classes, expectReducedMotionCancels } from "@/test/overlays";
 
 beforeAll(() => {
@@ -250,5 +250,45 @@ describe("Select typeahead: consecutive letters", () => {
     await user.keyboard("Mal");
     expect(screen.getByText("Saved: Malayalam")).toBeInTheDocument();
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+});
+
+describe("Select: groups, icons and descriptions", () => {
+  function Grouped() {
+    const [value, setValue] = useState("all");
+    return (
+      <Select value={value} onValueChange={setValue}>
+        <SelectTrigger aria-label="Trigger">
+          <SelectValue>{value === "ig" ? "Instagram comment keyword" : "All triggers"}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All triggers</SelectItem>
+          <SelectSeparator />
+          <SelectGroup>
+            <SelectLabel icon={<svg data-testid="glyph" />}>Instagram</SelectLabel>
+            <SelectItem value="ig" icon={<svg data-testid="item-icon" />} description="On a post" aria-label="Instagram comment keyword">
+              Comment keyword
+            </SelectItem>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    );
+  }
+
+  it("the tick has a fixed slot on the left, and the group label, icon and description render outside the value", async () => {
+    const user = userEvent.setup();
+    render(<Grouped />);
+    const trigger = screen.getByRole("combobox", { name: "Trigger" });
+    expect(trigger).toHaveTextContent("All triggers");
+    await user.click(trigger);
+    const all = await screen.findByRole("option", { name: "All triggers" });
+    expect(all).toHaveClass("pl-8");
+    expect(screen.getByText("Instagram")).toHaveAttribute("data-slot", "select-label");
+    expect(screen.getByTestId("glyph")).toBeInTheDocument();
+    expect(screen.getByText("On a post")).toBeInTheDocument();
+    await user.click(screen.getByRole("option", { name: "Instagram comment keyword" }));
+    await waitFor(() => expect(screen.queryByRole("listbox")).not.toBeInTheDocument());
+    expect(trigger).toHaveTextContent("Instagram comment keyword");
+    expect(trigger).not.toHaveTextContent("On a post");
   });
 });
