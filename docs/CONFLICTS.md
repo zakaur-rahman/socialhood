@@ -3207,3 +3207,162 @@ had (`agent_approvals`, `…/agent/approvals/*`) and on the flow engine (GR-03, 
   and `AgentRunDetail.approvals`, `ApprovalListStatus`, `run_id` on the list); the web types are
   aliases waiting for it. Run `alembic check` (the model and migration
   declare the same index and unique constraint). The agent eval needs a live key; I did not run it.
+
+## C-108 · Facebook Pages, Messenger and comments (GR-29, feature/gr-29-facebook)
+A Facebook Page is a third platform: connect Pages, answer Messenger in the inbox, answer comments
+on Page posts, and run the wave 2 to 4 automations on it where Messenger allows. **Every Meta
+behaviour below was written from Meta's docs and none has been seen on a real Page.** Each one is
+marked *unverified* and listed in `docs/verification.md` item 36. The second App Review submission
+(O-10) is `docs/ops/app-review.md` section 8.
+
+### The platform
+- **Account.** `social_accounts.platform = "facebook"` (the check already allowed it).
+  `platform_account_id` is the Page id (the webhook `entry.id`), `app_scoped_id` the connecting
+  person's Facebook id (so Meta's deauthorize and data-deletion callbacks, which look accounts up by
+  that id, find every Page they connected), `username` the Page's username, `display_name` its name.
+  The Page access token is stored encrypted like every token. *Unverified:* a Page token made from a
+  long-lived user token does not expire, so `token_expires_at` is null and nothing refreshes it
+  (`FacebookAdapter.refresh_token` returns the token as it is).
+- **Adapter** (`platforms/facebook/`): `FacebookAdapter` implements `PlatformAdapter` on
+  `graph.facebook.com` (`me` is the Page). Capabilities: DM send, DM attachments, read receipts,
+  conversation backfill, comments and private reply; Human Agent follows `IG_HUMAN_AGENT_ENABLED`
+  (below). No templates, no heart sticker, no stories. Publishing, post insights and account
+  insights raise `capability_unavailable` until GR-30; `get_account_insights` returns the Page's
+  followers only. Modules mirror Instagram's: `oauth`, `webhooks` (split), `parse`, `reads`
+  (posts, counts, followers, profile, threads), `comments`, `moderation`, `profile` (ice breakers).
+  Messenger's message shapes go through the Instagram parser (they are the same), so only reads,
+  deliveries, postbacks without an id and `feed` comments are parsed here.
+- **Sandbox.** `SandboxAdapter` serves any account with a `sandbox_` id; for a Facebook one it
+  reports the Page's capabilities plus Human Agent. `POST /dev/sandbox/accounts` takes an optional
+  `{platform: "instagram" | "facebook"}`; `POST /dev/sandbox/inbound` on a sandbox Page builds Page
+  webhook bodies (a DM, a comment as a `feed` change on the Page's first sandbox post, a referral
+  with `source: SHORTLINK` or `ADS`, a postback, an opt-in) and stores them as `facebook` events.
+  Live comments and the story kinds are refused there with 422 on `kind`.
+- **Migration 0032.** `webhook_events.provider` accepts `facebook`. Nothing else changes: no new
+  table, so the account purge, tenancy seeds and `B_TABLES` need no change.
+
+### Connect
+- Facebook Login for Pages, in two steps so the person picks which Pages (the plan asks "pick which
+  Pages"). `POST /social-accounts/facebook/connect` returns the authorize URL (state in Valkey, single
+  use, 10 minutes; 503 until `META_APP_ID`, `META_APP_SECRET` and `FB_REDIRECT_URI` are set; 402 over
+  `accounts_per_platform`). The public callback `GET /v1/oauth/facebook/callback` never connects
+  anything (X-1, as Instagram): it parks the code, encrypted, under a one-time nonce bound to the
+  member and workspace, and redirects to Connections with `?facebook=<nonce>` (errors:
+  `?error=…&platform=facebook`).
+- `POST …/facebook/pages {nonce}` exchanges the code, makes a long-lived user token, reads
+  `/me/accounts` and keeps the Page tokens (encrypted, 10 minutes) under the same nonce; it returns
+  each Page with `connected`, `can_connect` and a `problem` (a person without the MESSAGING task
+  can't answer messages). Asking again returns the same list. 403 for another member or workspace,
+  404 when expired, 502 when Facebook fails.
+- `POST …/facebook/connect-pages {nonce, page_ids}` connects the picked Pages: the plan's limit is
+  checked for all of them first (402, nothing added, the nonce stays valid), then each is upserted
+  (a reconnect updates in place; 409 `account_in_use` when another workspace has it live), subscribed
+  to webhooks and queued for the first sync. The nonce is spent only on success. A failed
+  subscription leaves the Page in `error` with Retry, as for Instagram.
+- The Instagram connect now tags the held code with its platform, so a Facebook nonce can't finish an
+  Instagram connect and the reverse.
+- Settings: `fb_redirect_uri`, `fb_webhook_verify_token`. They are not in the production-required
+  list (Facebook is off until set).
+
+### Messenger
+- **Webhook.** `GET/POST /webhooks/facebook`, signed with `META_APP_SECRET`, verify token
+  `FB_WEBHOOK_VERIFY_TOKEN`; events stored once per `fb:` key and processed by a `facebook` handler
+  that routes by Page id exactly like Instagram's (messages and echoes, postbacks, referrals, reads,
+  deliveries, reactions, edits, opt-ins). A delivery receipt names several messages: one event each.
+  A read is a watermark, so every message we sent before it is read. *Unverified:* all payload shapes.
+- **Sending** follows the Instagram pipeline: the 24-hour window, `messaging_type: RESPONSE`;
+  text up to 2,000 characters (`TEXT_LIMITS`), attachments by URL up to 25 MB, quick replies (13),
+  link buttons as the button template (3 buttons, 640 characters). **Message tags:** the app models
+  only HUMAN_AGENT, so a Page gets the same 7-day human window as Instagram when
+  `IG_HUMAN_AGENT_ENABLED` is on (Meta approves Human Agent once for the app, so there is no
+  separate setting); nothing else is sent outside the 24 hours, and the existing
+  `reply_window_closed` error says so with "Facebook". Meta's closed-window error for Messenger
+  (10 / 2018278) maps to the same code. The send buckets are per account, so the Instagram ones are
+  reused (they only pace us; Messenger's limits are higher).
+- **Inbox.** Conversations have `platform: "facebook"`; the platform filter and badges include it.
+  The contact's name and picture come from the Messenger profile; people have no handle.
+- **Backfill** reads `/me/conversations?platform=messenger` through the Instagram thread parser.
+
+### Comments
+- Comments arrive as the `feed` field (`item: comment`, `verb: add`); edits, removals, hides and
+  other items are ignored. Post ids are the Page post ids; a post we don't have is read with
+  `GET /{post_id}` and stored like Instagram's. The Page's own comments are skipped. *Unverified:*
+  the commenter's `from.id` may differ from the Page-scoped id their messages carry; then the
+  comment's contact and the person's Messenger contact are two contacts until they write.
+- Public reply `POST /{comment_id}/comments`; private reply the Send API addressed by
+  `recipient.comment_id` (text, link buttons and quick replies; no attachments, as Instagram);
+  hide and unhide `is_hidden`; delete (already gone counts as done). Backfill reads
+  `/{post_id}/comments` with the replies expansion. The private-reply bucket (750 an hour), the
+  7-day limit and one per comment are shared with Instagram.
+
+### Automations
+Every trigger and step works on a Page except what Messenger lacks, which activation refuses in plain
+words (`validation.py`, `flows.py`; copy shared with the web):
+- **Allowed:** DM keyword, comment keyword and any comment (with public replies and private replies,
+  tap first, link buttons, tracked links), entry link (`https://m.me/<username or id>?ref=<code>`),
+  ad click (a click-to-Messenger ad's `referral` with `source: ADS`), conversation starters
+  (Messenger's `ice_breakers`, the same editor and `ib:{id}` payloads; a tap is a postback),
+  welcome and default reply, AI replies, flows (send, quick replies, ask, branch, action, delay,
+  split, saved replies), data capture, business hours, lead scoring.
+- **Refused:** story reply and story mention ("Facebook Pages have no story replies or story
+  mentions"), Live comments ("Live comments on Facebook aren't supported yet"), the follow message
+  and a flow branch on following (Messenger doesn't say who follows a Page), the flow's profile
+  button (it opens an Instagram profile), and an Ask step's marketing-consent question (there is no
+  Facebook consent channel yet; adding one means a new `contact_consents.channel` value and
+  contact-list column). *Deviation from "every trigger and step": these four groups are the ones
+  Messenger doesn't have; the first two because Pages have no such surface, the last two because the
+  data isn't there.*
+- **Limits.** A message may be 2,000 characters (not 1,000 bytes) in its longest rendering;
+  button-template text stays 640; public replies stay 300 (our own cap). Copy written for Instagram
+  is said with "Facebook" (`validation.localize`).
+- Automations created without an account still pick the workspace's only live **Instagram** account
+  (`live_instagram_accounts`); with a Page and an Instagram account the member chooses.
+
+### Other
+- Ask Social Hood no longer says "Facebook isn't connected" when a Page is; the tools check for a
+  connected Page (`facebook_unconnected`) and treat `facebook` as a platform name like the others.
+  Analytics tools cover a Page's posts and comments; insights are absent until GR-30.
+- Billing: a `facebook_accounts` usage meter (plan limit `accounts_per_platform`, per platform).
+- Webhook health (`check_webhook_health`) still watches Instagram only. *Not built.*
+- Marketing pages, the privacy policy and terms still say Instagram and WhatsApp; they change with
+  the second App Review submission. *Not built, needs the owner's wording.*
+
+### Web
+- `FacebookGlyph`, `PlatformGlyph` and `PLATFORM_BG` (the existing `facebook` colour token);
+  Connections gets **Connect Facebook** (and **Add sandbox Page** in development), a Pages dialog
+  after Facebook's redirect (tick Pages; a Page that can't be connected says why; a refusal keeps the
+  list), Page cards ("Facebook Pages API"), search and filter. The inbox platform strip, thread
+  header, unsupported-message link, attachment rules (25 MB), contact filter, Home, Billing and the
+  send-failure copy include Facebook. Comments, entry links and conversation starters list Pages and
+  say Facebook; the post panel opens the post in Facebook.
+- The automation editor knows the account's platform: Facebook trigger names, the story triggers
+  disabled with the reason, message counters in characters out of 2,000, no follow message, and in
+  flows no follows condition, profile button or consent question.
+- `instagramAccounts` stays for story mentions and publishing; `automationAccounts` (Instagram and
+  Facebook) is what automations, comments, entry links and starters list.
+
+### Tests
+- Unit: `test_facebook_platform.py` (splitting, every parse, send payloads, ice breakers, connect URL,
+  Page list, registry, sandbox payloads), `test_facebook_automations.py` (activation rules and flow
+  rules on a Page). Integration: `test_facebook_connect.py` (the whole connect, X-1, quota, expiry,
+  reconnect, deauthorize), `test_facebook_messenger.py` (webhook route, intake, echo/delivery/read,
+  postback, m.me, ad referral, reply, window, limits), `test_facebook_comments.py` (comment intake,
+  automations on a Page, comment actions, refusals, entry links, starters, purge); tenancy bodies for
+  the three new routes and the sandbox body. Vitest: `FacebookPagesDialog`, `PlatformGlyph`,
+  `facebook-rules`, `steps/facebook`, `upload-facebook`, `inbox/facebook`, additions to the
+  Connections page, platform strip and Billing tests. E2E: `gr29-facebook.spec.ts` on the sandbox.
+- *Existing tests changed:* the automation notice's link is now "Connect an account" and says
+  "Instagram and Facebook"; the empty Connections text names Facebook; `test_entry_triggers.py`'s
+  account stubs carry a platform.
+
+### Unsure / for the coordinator
+- Regenerate the client: `FacebookConnectPages`, `FacebookPageList`, `FacebookPageOption`,
+  `FacebookPagesRequest`, `SandboxAccountCreate`, `facebook` in the platform literals
+  (`SocialAccountOut`, conversations, contacts filters, flow platform condition), the four new
+  operations (`start_facebook_connect`, `list_facebook_pages`, `connect_facebook_pages`, the
+  optional body of `create_sandbox_account`), then typecheck: web code calls them through the typed
+  client and keys several `Record<Platform, …>` by `facebook`.
+- `alembic check` for 0032; re-chain it after the other branches (`down_revision` is 0030).
+- Meta's behaviour: see `docs/verification.md` item 36. The risky ones: the commenter id, whether
+  private replies take buttons and quick replies, ice breakers without a Get Started button, the
+  `tasks` field, and the Messenger text limit.
