@@ -208,6 +208,7 @@ const SHOWN: Record<EditorStep["kind"], RegExp> = {
   action: /^action(\.value)?$/,
   delay: /^$/,
   split: /^$/,
+  product: /^(product_id|variant_id|intro)$/,
   ai: /^instructions$/,
   end: /^$/,
 };

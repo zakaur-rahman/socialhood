@@ -91,7 +91,7 @@ export function ProductFields({ node }: { node: ProductNode }) {
             ? `${chosen.name}, ${variant.title}: ${formatPrice(variant.price_minor, chosen.currency)}, ${stockLabel(variant.stock)}`
             : chosen.variants.length > 0
               ? `${chosen.name}: sends up to six variants with their prices`
-              : `${chosen.name}: ${chosen.price_minor === null ? "No price" : formatPrice(chosen.price_minor, chosen.currency)}, ${stockLabel(chosen.stock)}`}
+              : `${chosen.name}: ${chosen.price_minor == null ? "No price" : formatPrice(chosen.price_minor, chosen.currency)}, ${stockLabel(chosen.stock)}`}
         </p>
       ) : null}
 

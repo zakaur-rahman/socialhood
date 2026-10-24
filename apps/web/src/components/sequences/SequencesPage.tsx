@@ -108,7 +108,7 @@ function SequenceRow({ sequence, slug }: { sequence: Sequence; slug: string }) {
       <p className="text-sm tabular-nums">
         {people.active} in it · {people.completed} finished · {people.stopped} stopped
       </p>
-      {sequence.problems.length > 0 ? <p className="text-sm text-warning">{sequence.problems[0]}</p> : null}
+      {(sequence.problems?.length ?? 0) > 0 ? <p className="text-sm text-warning">{sequence.problems?.[0]}</p> : null}
     </Card>
   );
 }

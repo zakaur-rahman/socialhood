@@ -246,7 +246,7 @@ export function SequenceForm({ sequence, children }: { sequence?: Sequence; chil
             <Button
               variant="secondary"
               size="lg"
-              disabled={busy || sequence.problems.length > 0}
+              disabled={busy || (sequence.problems?.length ?? 0) > 0}
               onClick={() => void run("activate")}
             >
               Turn on
@@ -269,9 +269,9 @@ export function SequenceForm({ sequence, children }: { sequence?: Sequence; chil
               </AlertDescription>
             </Alert>
           ) : null}
-          {sequence && sequence.problems.length > 0 ? (
+          {sequence && (sequence.problems?.length ?? 0) > 0 ? (
             <Alert tone="warning" variant="outline">
-              <AlertDescription>{sequence.problems[0]}</AlertDescription>
+              <AlertDescription>{sequence.problems?.[0]}</AlertDescription>
             </Alert>
           ) : null}
 

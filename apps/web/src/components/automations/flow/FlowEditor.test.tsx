@@ -138,7 +138,7 @@ describe("the flow editor (GR-13)", () => {
     renderEditor({ initial: [send("a", "Hello")] });
     await user.click(screen.getByRole("button", { name: "Add step" }));
     const kinds = screen.getAllByRole("menuitem").map((item) => item.querySelector("span")?.textContent);
-    expect(kinds).toEqual(["Send", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
+    expect(kinds).toEqual(["Send", "Product", "Ask", "Branch", "Action", "Delay", "Split", "End"]);
 
     await user.click(screen.getByRole("menuitem", { name: /^Delay/ }));
     expect(titles()).toEqual(["1Message", "2Wait 10 minutes"]);
@@ -393,7 +393,7 @@ describe("the flow editor (GR-13)", () => {
       onTree: (next) => (tree = next),
     });
     expect(titles()).toEqual(["1Message", "2Assign to the next available member"]);
-    expect(screen.getByText(/the next available member in turn/)).toBeInTheDocument();
+    expect(screen.getByText(/The next available member in turn/)).toBeInTheDocument();
 
     await user.selectOptions(screen.getByLabelText("Assign to"), "member");
     const member = await screen.findByLabelText("Member");

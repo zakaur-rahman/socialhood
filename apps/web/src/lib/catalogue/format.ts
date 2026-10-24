@@ -30,9 +30,9 @@ export const CSV_COLUMNS = [
 /** A starter file: a product with sizes, and a plain one. Downloaded from the import dialog. */
 export const CSV_TEMPLATE = [
   CSV_COLUMNS.join(","),
-  "Cotton kurta,Soft cotton. Straight cut.,KUR-BL-S,Blue / S,Colour,Blue,799,INR,12,https://example.com/kurta,yes",
-  "Cotton kurta,,KUR-BL-M,Blue / M,Colour,Blue,799,INR,5,,",
-  "Silk scarf,Hand dyed,SCARF-1,,,,499,INR,,https://example.com/scarf,yes",
+  "Cotton kurta,Soft cotton. Straight cut.,KUR-BL-S,Blue / S,Colour,Blue,Size,S,,,799,INR,12,https://example.com/kurta,,yes",
+  "Cotton kurta,,KUR-BL-M,Blue / M,Colour,Blue,Size,M,,,799,INR,5,,,",
+  "Silk scarf,Hand dyed,SCARF-1,,,,,,,,499,INR,,https://example.com/scarf,,yes",
 ].join("\n");
 
 /** The API's ceiling on a pasted or uploaded file (schemas/catalogue.CSV_MAX_CHARS). */
@@ -60,7 +60,7 @@ export function formatPrice(minor: number, currency: string, locale?: string): s
 export function priceLabel(product: Pick<Product, "currency" | "price_minor" | "variants">, locale?: string): string {
   const prices = product.variants.map((variant) => variant.price_minor);
   if (prices.length === 0) {
-    return product.price_minor === null ? "No price" : formatPrice(product.price_minor, product.currency, locale);
+    return product.price_minor == null ? "No price" : formatPrice(product.price_minor, product.currency, locale);
   }
   const low = Math.min(...prices);
   const high = Math.max(...prices);
@@ -70,8 +70,8 @@ export function priceLabel(product: Pick<Product, "currency" | "price_minor" | "
 }
 
 /** "12 in stock", "Out of stock", or "Not tracked" (never recorded: the AI says it doesn't know). */
-export function stockLabel(stock: number | null): string {
-  if (stock === null) return "Not tracked";
+export function stockLabel(stock: number | null | undefined): string {
+  if (stock == null) return "Not tracked";
   return stock <= 0 ? "Out of stock" : `${stock.toLocaleString("en")} in stock`;
 }
 

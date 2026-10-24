@@ -240,7 +240,7 @@ function Lines({ rows, total }: { rows: CsvImportRow[]; total: number }) {
                 <TableCell className="break-words">{row.variant ?? ""}</TableCell>
                 <TableCell className="space-y-1">
                   <Badge tone={action.tone}>{action.label}</Badge>
-                  {row.errors.map((message) => (
+                  {(row.errors ?? []).map((message) => (
                     <p key={message} className="text-xs text-danger-fg">
                       {message}
                     </p>

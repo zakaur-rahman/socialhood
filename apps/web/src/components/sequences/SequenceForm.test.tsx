@@ -99,7 +99,7 @@ describe("the sequence form (GR-24)", () => {
 
     // Step 1: a day after they enter, a message and the template that goes after 24 hours.
     const first = (await screen.findAllByTestId("step-card"))[0];
-    await user.type(within(first).getByLabelText("Message"), "Hi {first_name}, thanks for stopping by.");
+    await user.type(within(first).getByLabelText("Message"), "Hi {{first_name}, thanks for stopping by.");
     await pick(user, "Step 1 template", /sale_offer/);
     await user.click(
       within(within(first).getByRole("radiogroup", { name: "Variable 2 comes from" })).getByRole("radio", { name: "The same text" }),

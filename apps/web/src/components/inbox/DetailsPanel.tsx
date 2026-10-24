@@ -157,7 +157,9 @@ export function DetailsPanel({
       </Section>
 
       <Section id="details-assignee" title="Assigned to">
-        <AssigneeMenu conversation={c} variant="panel" />
+        <CardInset padding="compact">
+          <AssigneeMenu conversation={c} variant="panel" />
+        </CardInset>
       </Section>
 
       <Section
