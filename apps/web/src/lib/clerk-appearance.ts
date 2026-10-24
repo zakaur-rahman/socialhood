@@ -10,9 +10,9 @@ const BRAND_TEXT = { color: "var(--color-brand-fg)", "&:hover": { color: "var(--
  * because Clerk computes shades from them and cannot read CSS variables; the element styles
  * below are plain CSS, so they use the variables, the brand gradient and the radii included.
  *
- * Its primary is `brand-strong` (DESIGN_SYSTEM §1.4): white on `brand` is 3.63:1 (UI-ISS-005), on
- * `brand-strong` 4.85:1. Clerk also writes its links in the primary colour, where `brand-strong` is
- * 3.4:1, so links are `brand-fg`, as in the app. The account button gets the app's focus outline
+ * Its primary is `brand-strong` (DESIGN_SYSTEM §1.4): white on `brand` is 4.17:1 (UI-ISS-005), on
+ * `brand-strong` 5.82:1. Clerk also writes its links in the primary colour, where `brand-strong` is
+ * 2.85:1, so links are `brand-fg`, as in the app. The account button gets the app's focus outline
  * (UI-ISS-002): Clerk's buttons set `outline: 0`.
  */
 export const clerkAppearance = {
@@ -39,7 +39,7 @@ export const clerkAppearance = {
   elements: {
     button: {
       // Solid primary buttons (Continue, Save): flat. Clerk's top shine (white 11%) took the label
-      // under 4.5:1 and its hover lightens the fill (3.4:1); hover is the fill at 90%, as the
+      // to 4.67:1 and its hover lightens the fill; hover is the fill at 90%, as the
       // destructive fill's is (DESIGN_SYSTEM §8.3), so the label gets more contrast, not less.
       // They wear the app's primary: the brand gradient (Button `default`), brighter on hover.
       '&[data-variant="solid"][data-color="primary"]': {

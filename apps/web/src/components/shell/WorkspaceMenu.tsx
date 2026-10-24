@@ -26,8 +26,8 @@ export const PLAN_LABEL: Record<Plan, string> = { free: "Free", pro: "Pro", max:
  * The plan as a Badge: `sm` (11 px, the type floor), `tag` corners and the `brand` (info) tone for
  * every plan. It sits inside the workspace menu's trigger and items, whose hover and open fills
  * stack under its own: the `neutral` tone's white 5% on top of them reaches the `pressed` level,
- * where secondary text is 4.46:1 (4.1:1 over the menu's `overlay`), so no neutral badge passes
- * there. `brand-fg` on `brand-soft` stays above 5.4:1 on each of those fills.
+ * where secondary text is 5.0:1 or more (over the menu's `overlay`), kept as the brand tone for
+ * consistency. `brand-fg` on `brand-soft` stays above 5.6:1 on each of those fills.
  */
 export function PlanBadge({ plan, className }: { plan: Plan; className?: string }) {
   return (
@@ -70,7 +70,7 @@ export function WorkspaceMenu({
       aria-label={`Workspace menu: ${workspace.name}`}
       className={cn(
         // Open keeps the hover fill, not `pressed`: the workspace name is secondary text, which is
-        // 4.45:1 on `pressed` (DESIGN_SYSTEM §1.11).
+        // 5.55:1 on `pressed` (DESIGN_SYSTEM §1.11).
         "relative flex w-full items-center gap-2.5 rounded-lg p-1.5 text-left hover:bg-hover data-[state=open]:bg-hover motion-safe:transition-[color,background-color]",
         collapsed && "size-10 justify-center p-0",
       )}

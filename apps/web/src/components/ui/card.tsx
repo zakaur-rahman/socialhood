@@ -6,8 +6,9 @@ import { cn } from "@/lib/utils"
 import { CARD_TITLE } from "@/styles/tokens"
 
 /**
- * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092). Flat `panel` with a 1 px
- * `line` edge and no shadow (§6), `rounded-xl` for every app card (owner decision D-02).
+ * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092). Glass (C-101): `card-glass`,
+ * 68% `panel` with a 16 px blur, a 1 px `line-glass` edge, a top highlight and a soft drop
+ * (`shadow-glass`); `rounded-xl` for every app card (owner decision D-02).
  *
  * - `padding`: `standard` 16 px for data and dashboard cards, `roomy` 20 px on phones and 24 px
  *   from `md` for settings, billing, forms and plan cards (§3).
@@ -32,7 +33,7 @@ import { CARD_TITLE } from "@/styles/tokens"
  *     </section>
  *   </Card>
  */
-const cardVariants = cva("group/card min-w-0 rounded-xl border border-line bg-panel p-(--card-padding) text-fg", {
+const cardVariants = cva("group/card min-w-0 rounded-xl border border-line-glass glass-card shadow-glass p-(--card-padding) text-fg", {
   variants: {
     padding: {
       standard: "[--card-padding:--spacing(4)]",

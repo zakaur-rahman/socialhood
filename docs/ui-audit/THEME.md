@@ -96,6 +96,7 @@ the base changes the shade.
 | `overlay` | What floats: popovers, menus, select options, dialogs, sheets, toasts |
 | `canvas-veil` (shade) | A dimmed cell or inset: days outside the month, a card in a flow |
 | `panel-glass`, `panel-veil` (shades) | Marketing cards over the page glow; the floating marketing nav |
+| `panel-frost`, `card-glass`, `overlay-frost`, `raised-frost`, `frost-outline` (shades) | Glass: work panes (82%), cards (68%), what floats (86%), the secondary button (72%), the outline button (45%); section 5 |
 
 ### States
 
@@ -125,6 +126,7 @@ the base changes the shade.
 | `line` | Card, pane and list edges; the default border colour |
 | `line-subtle` | Row dividers inside a card |
 | `line-strong` | Outline buttons, hover on cards, the chart axis |
+| `line-glass` | A card's edge on glass: 8% cool, quieter than `line` |
 | `line-control` | Edges that identify a control (fields, selects, checkboxes, switches), 3:1 on every surface |
 
 ### Brand
@@ -168,6 +170,7 @@ made of the tokens above.
 | `--gradient-shell`, `bg-shell-gradient` | Logo tile and Upgrade only |
 | `--gradient-glow-brand`, `bg-glow-brand` | One per view: the plan hero |
 | `--gradient-glow-brand-top`, `bg-glow-brand-top` | The glow at the top of a marketing section and illustration card |
+| `--gradient-ambient`, `bg-ambient` | The light behind the glass: three radial glows from the brand tokens, fixed on the body by a base-layer rule |
 
 ### Shadows
 
@@ -176,6 +179,7 @@ made of the tokens above.
 | `shadow-floating` | Level 1: popovers, menus, select options, toasts |
 | `shadow-overlay` | Level 2: dialogs, alert dialogs, sheets over the scrim |
 | `shadow-glow`, `shadow-glow-hover`, `shadow-glow-button` | Marketing: brand-tinted drops under cards, card hover, the primary call to action and the logo mark |
+| `shadow-glass`, `shadow-highlight`, `shadow-button-primary`, `shadow-button-secondary` | Glass (section 5): a card's top highlight and soft drop, the outline button's highlight, the primary button's inner light and indigo glow, the secondary button's inset edge |
 | `shadow-crop-mask` (utility) | The crop box's dimming spread; not an elevation |
 
 ### Radius
@@ -201,6 +205,25 @@ the global error page read these too.
 `lib/breakpoints.ts` reads the generated values.
 
 The live list, with swatches, is the dev page `/dev/tokens`.
+
+---
+
+## 2b. Palette (Midnight, C-101)
+
+Midnight is a charcoal with a cool indigo cast, lifted at the owner's request; the brand is indigo,
+chosen so it can't be mistaken for Facebook or LinkedIn blue or for the status colours. Measured
+(WCAG) on the dark values:
+
+| Pair | Ratio |
+|---|---|
+| `fg` on canvas / panel / overlay / raised-hover | 16.5 / 15.1 / 13.7 / 11.4 |
+| `fg-secondary` on canvas / panel / raised / raised-hover | 7.8 / 7.1 / 6.2 / 5.4 (5.4 or more on every surface) |
+| `line-control` (composited) on canvas / panel / raised / raised-hover | 3.6 / 3.55 / 3.4 / 3.16 |
+| `brand-strong` with `on-brand` | 5.82 |
+| `brand-fg` on panel / raised-hover | 8.6 / 6.5 |
+| `brand` (marks) on panel / raised / raised-hover | 4.0 / 3.5 / 3.0 |
+| `danger-fg` on panel | 8.7 |
+| `fg-disabled` on panel | 3.65 (never readable text) |
 
 ---
 
@@ -238,7 +261,7 @@ Every recipe is: edit `globals.css`, run `pnpm tokens`, commit the generated fil
 - **Primary colour.** Edit `--color-brand` (marks: focus ring, dots, switch), `--color-brand-strong`
   (fills that carry white text: keep it at 4.5:1 with `on-brand`) and `--color-brand-deep` (the
   gradient start). Then the tints: `brand-fg` (text on dark), `brand-soft`, `brand-soft-hover` and
-  `brand-line` (they are `rgb(86 127 248 / …)`; change the three numbers), and the glow shadows follow
+  `brand-line` (they are `rgb(109 106 245 / …)`; change the three numbers), and the glow shadows follow
   by themselves. This changes primary buttons, outgoing bubbles, the focus outline, selected rows'
   bar, Clerk's forms, charts' main series and the marketing glow. The shell colours (`shell-1`,
   `shell-2`) are the logo tile: change them separately, then run `node scripts/generate-icons.mjs`
@@ -266,7 +289,34 @@ Every recipe is: edit `globals.css`, run `pnpm tokens`, commit the generated fil
 - **Add a shadcn component.** `pnpm dlx shadcn add …` writes alias names (`bg-popover`); they
   compile, but rewrite them to the tokens before committing (the lint will name each one).
 
-## 5. Checks
+## 5. Glass
+
+Glass is tokens plus five utilities, all in `globals.css`; there is no override stylesheet. Each
+surface is its solid token at a set strength (`--color-panel-frost` is `panel` at 82%) and a
+`glass-*` utility pairs that colour with a backdrop blur and falls back to the solid token under
+`prefers-reduced-transparency`. The body carries the ambient light (`--gradient-ambient`, fixed), which
+is what the glass blurs.
+
+| Utility | Colour | Blur | Where |
+|---|---|---|---|
+| `glass-pane` | `panel-frost` 82% | 10 px | Work panes: sidebar, inbox list, thread and details panes, headers, composer bar, Ask panes, mobile top bar |
+| `glass-card` | `card-glass` 68% | 16 px | `Card` / `cardVariants` (with `border-line-glass shadow-glass`) |
+| `glass-float` | `overlay-frost` 86% | 22 px | `FLOATING_SURFACE` (popover, menu, select), dialog, alert dialog, sheet, tooltip, toast |
+| `glass-raised` | `raised-frost` 72% | 16 px | Secondary button (with `shadow-button-secondary`) |
+| `glass-outline` | `frost-outline` 45% | 16 px | Outline button (with `shadow-highlight`) |
+
+The primary button adds `shadow-button-primary`. Why work panes are subtler: dense text and many
+rows sit on them, so they keep 82% and a light blur; cards are where the glass is meant to show.
+
+What stays solid on purpose: `bg-panel` itself (small chips, the date pill, marketing cards, `Alert`),
+`bg-overlay` for the Save bar (opaque by test), the tooltip arrow, the select scroll buttons and the
+drag ghost, and `CardInset` (a group inside a card). `cn()` knows the `glass-*` names, so a later
+`bg-field` on a Card replaces the glass colour.
+
+To change the look: the strength is the percentage in the `--color-*-frost` token, the blur is
+`--glass-blur-*` in `:root`, the light is `--gradient-ambient`.
+
+## 6. Checks
 
 `pnpm exec vitest run src/styles` runs the drift test, the token tests and the design lint.
 `pnpm lint` and `pnpm exec tsc --noEmit` cover the rest. GitHub CI runs everything.

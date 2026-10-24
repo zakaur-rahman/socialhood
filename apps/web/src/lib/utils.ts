@@ -11,6 +11,8 @@ import { createCn } from "cn/config";
  * - the elevation shadows are shadow sizes, not colours (`--color-overlay` exists too), so a call
  *   site's `shadow-xl` replaces a primitive's `shadow-floating` instead of stacking on it (C-071);
  *   so are the crop box's `shadow-crop-mask` (C-073) and the marketing `shadow-glow*` family (C-100);
+ * - the glass surfaces (`glass-card` …) are a background colour with a blur: a later `bg-field` or
+ *   `glass-pane` replaces one (C-101), and the new shadows (`shadow-glass` …) are shadow sizes too;
  * - `tracking-eyebrow` and `leading-display` are letter spacing and line height, so a later
  *   `tracking-tight` or `leading-tight` replaces them.
  * Everything, the primitives in `components/ui` included, imports `cn` from here; eslint refuses a
@@ -22,12 +24,14 @@ export const cn = createCn({
       "bg-token-image": [{ bg: ["brand-gradient", "brand-gradient-decor", "shell-gradient", "glow-brand", "glow-brand-top"] }],
       duration: [{ duration: ["fast", "normal", "slow"] }],
       ease: [{ ease: ["standard", "enter", "exit"] }],
-      shadow: [{ shadow: ["floating", "overlay", "crop-mask", "glow", "glow-hover", "glow-button"] }],
+      shadow: [{ shadow: ["floating", "overlay", "crop-mask", "glow", "glow-hover", "glow-button", "glass", "highlight", "button-primary", "button-secondary"] }],
+      glass: [{ glass: ["pane", "card", "float", "raised", "outline"] }],
       tracking: [{ tracking: ["eyebrow"] }],
       leading: [{ leading: ["display"] }],
     },
     conflictingClassGroups: {
-      "bg-color": ["bg-token-image"],
+      "bg-color": ["bg-token-image", "glass"],
+      glass: ["bg-color"],
       "bg-token-image": ["bg-image"],
       "bg-image": ["bg-token-image"],
     },

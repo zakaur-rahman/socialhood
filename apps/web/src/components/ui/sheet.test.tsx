@@ -53,7 +53,7 @@ describe("Sheet (UI-012)", () => {
 
   it("floats on overlay with the overlay shadow (D-12); its edge is the side border", () => {
     render(<Example />);
-    expect(screen.getByRole("dialog")).toHaveClass("bg-overlay", "shadow-overlay", "data-[side=right]:border-l");
+    expect(screen.getByRole("dialog")).toHaveClass("glass-float", "shadow-overlay", "data-[side=right]:border-l");
     expect(screen.getByRole("dialog")).not.toHaveClass("shadow-lg", "shadow-xl");
   });
 

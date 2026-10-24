@@ -96,7 +96,7 @@ export function AppSidebar({
       aria-label="Main"
       data-collapsed={collapsed}
       className={cn(
-        "relative flex h-full flex-col rounded-xl border border-line bg-panel py-3",
+        "relative flex h-full flex-col rounded-xl border border-line glass-pane py-3",
         collapsed ? "w-16 items-center px-2" : "w-[232px] px-2.5",
         className,
       )}

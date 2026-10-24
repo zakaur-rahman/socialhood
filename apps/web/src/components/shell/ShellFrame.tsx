@@ -78,7 +78,7 @@ export function ShellSkeleton() {
   return (
     <ShellFrame
       topBar={
-        <div aria-hidden data-testid="shell-skeleton-topbar" className="sticky top-0 z-40 flex h-14 items-center border-b border-line bg-panel px-4 md:hidden">
+        <div aria-hidden data-testid="shell-skeleton-topbar" className="sticky top-0 z-40 flex h-14 items-center border-b border-line glass-pane px-4 md:hidden">
           <span className="bg-shell-gradient size-8 shrink-0 rounded-lg" />
         </div>
       }
@@ -86,7 +86,7 @@ export function ShellSkeleton() {
         <div
           aria-hidden
           data-testid="shell-skeleton-sidebar"
-          className={cn("h-full rounded-xl border border-line bg-panel", sidebar.collapsed ? "w-16" : "w-[232px]")}
+          className={cn("h-full rounded-xl border border-line glass-pane", sidebar.collapsed ? "w-16" : "w-[232px]")}
         />
       }
     >

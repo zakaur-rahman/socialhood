@@ -16,13 +16,13 @@ const buttonRecipe = cva(
   {
     variants: {
       variant: {
-        default: "bg-brand-gradient text-on-brand hover:brightness-110 active:brightness-95",
-        secondary: "bg-raised text-fg hover:bg-raised-hover aria-expanded:bg-raised-hover",
+        default: "bg-brand-gradient text-on-brand shadow-button-primary hover:brightness-110 active:brightness-95",
+        secondary: "glass-raised text-fg shadow-button-secondary hover:bg-raised-hover aria-expanded:bg-raised-hover",
         outline:
-          "border-line-strong bg-transparent hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
+          "border-line-strong glass-outline shadow-highlight hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
         ghost: "hover:bg-hover hover:text-fg aria-expanded:bg-pressed aria-expanded:text-fg",
         // AI actions and a pressed toggle: the AI pill's brand-soft (DESIGN_SYSTEM §1.4, the selected
-        // chip's colours), brand-fg text 6.83:1, a step stronger on hover and while its menu is open.
+        // chip's colours), brand-fg text 7.21:1, a step stronger on hover and while its menu is open.
         soft: "border-brand-line bg-brand-soft text-brand-fg hover:bg-brand-soft-hover aria-expanded:bg-brand-soft-hover",
         destructive: "bg-danger-fill text-on-brand hover:bg-danger-fill-hover",
         // White on black: the stop button in Ask, the carousel arrows on a photo (C-100). It is

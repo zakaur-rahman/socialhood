@@ -90,7 +90,7 @@ export function ThreadHeader({
   const [detailsInMenu, setDetailsInMenu] = useState(false);
 
   return (
-    <header className="@container/header shrink-0 border-b border-line bg-panel">
+    <header className="@container/header shrink-0 border-b border-line glass-pane">
       <div className="@container/row flex h-16 items-center gap-2 px-4 @md/header:gap-3">
         {backHref ? (
           <Button asChild variant="ghost" size="icon-lg" className="-ml-2 text-fg-secondary">

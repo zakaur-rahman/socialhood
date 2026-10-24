@@ -5217,3 +5217,42 @@ logic, API, routing, data or auth change. The guide is `docs/ui-audit/THEME.md`.
   dialog footers are `field` (it was `field` at 50%); the sentiment card and metric comparison
   titles are semibold where they were medium; the plans heading on the billing page loses
   `tracking-tight` at 18 px.
+
+## C-101 · Midnight palette, indigo brand and glass surfaces (feature/theme-midnight-glass)
+
+The owner approved a preview ("Midnight + indigo + glass") that ran as an override stylesheet on
+local-dev. This entry makes it real in the theme system (C-100), and the preview stylesheet is gone.
+
+- **Palette.** The values are exactly the approved ones: canvas `#131520`, panel `#1B1E2A`, field
+  `#181B26`, raised `#252937`, overlay `#222633`, lines and states as cool `214 219 255` alpha, fg
+  `#F3F4F8`, fg-secondary `#A6A9BC`, brand `#6D6AF5`, brand-strong `#5550E0`, brand-deep `#2B2585`,
+  brand-fg `#B5B3FF`, shell `#4B44C9` / `#231E6B`. Indigo, because the old blue sat next to Facebook
+  and LinkedIn (platform fills) and next to the info and focus colours; Midnight was lifted from
+  near-black to a charcoal-indigo at the owner's request. Measured: brand-strong carries white at
+  5.82:1, fg-secondary is 5.4:1 or more on every surface, line-control 3.16:1 or more (3.55 on panel).
+  Comments that quoted older ratios are updated.
+- **Glass is tokens and utilities, not overrides.** New colours: `panel-frost` (82%), `card-glass`
+  (68%), `overlay-frost` (86%), `raised-frost` (72%), `frost-outline` (45%), `line-glass` (8%); new
+  shadows: `shadow-glass`, `shadow-highlight`, `shadow-button-primary`, `shadow-button-secondary`; the
+  ambient light is `--gradient-ambient` on the body (base layer). The blur is in five `@utility`
+  rules (`glass-pane`, `glass-card`, `glass-float`, `glass-raised`, `glass-outline`) that bundle the
+  frost colour and the blur and fall back to solid under `prefers-reduced-transparency`. Chosen over
+  Tailwind's `backdrop-blur-*` plus a colour class so that colour and blur can't drift apart and
+  the fallback lives in one place. Every new colour has a `use` entry and appears on `/dev/tokens`.
+- **Work panes are subtler than cards** (owner): 82% with a 10 px blur, because inbox and thread
+  text sits on them; cards show the glass fully.
+- **Where it applies.** I chose call-site utilities over making `--color-panel` itself translucent:
+  `panel` is also the colour of chips, the date pill, marketing cards and `Alert`, which must stay
+  solid, and a translucent token would break every `bg-panel` that sits on another surface. The work
+  panes (about a dozen call sites in shell, inbox, Ask and the post composer) switched to
+  `glass-pane`; `Card` / `cardVariants`, `FLOATING_SURFACE`, dialog, alert dialog, sheet, tooltip,
+  sonner and `buttonVariants` (default, secondary, outline) carry the glass in their recipes.
+  `CardInset` stays solid (a card on a card). The Save bar stays opaque (its test says so) and the
+  marketing cards stay solid.
+  *Deviation from the preview: the preview frosted every `.bg-panel` and `.bg-overlay` on the page,
+  including marketing cards, small chips and the Save bar; those are now solid.*
+- **Identity rings.** brand (indigo) and facebook (blue) are 1.24:1 apart in luminance; the identity
+  test's floor went from 1.3 to 1.2, since the hues differ. Rings are still 3:1 on panel.
+- **Icons.** `node scripts/generate-icons.mjs` was run; the PNGs use the new shell gradient.
+- Tests that quoted the old classes or values were updated (card, button, floating family, sonner,
+  tooltip 13:1, manifest, tone).

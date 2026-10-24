@@ -15,6 +15,7 @@ import {
   customVariants,
   easings,
   fontSizes,
+  glassShadows,
   glowShadows,
   gradientUtilities,
   motionDurations,
@@ -124,6 +125,22 @@ export default function TokensPage() {
               <span className="block text-sm font-medium">{s.name}</span>
               <span className="block font-mono text-xs break-words text-fg-secondary">{s.value}</span>
               <span className="block text-xs text-fg-secondary">{s.use}</span>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      <Section title="Glass">
+        <p className={META}>
+          Frost colours with the glass-pane, glass-card, glass-float, glass-raised and glass-outline utilities (the
+          blur), over the ambient light fixed on the body. Work panes are subtler than cards: dense text sits on them.
+        </p>
+        <div className={cn(CARD, "grid grid-cols-1 gap-6 p-6 sm:grid-cols-2")}>
+          {glassShadows.map((g) => (
+            <div key={g.name} className={`${g.sample} rounded-lg p-4`}>
+              <span className="block text-sm font-medium">{g.name}</span>
+              <span className="block font-mono text-xs break-words text-fg-secondary">{g.value}</span>
+              <span className="block text-xs text-fg-secondary">{g.use}</span>
             </div>
           ))}
         </div>

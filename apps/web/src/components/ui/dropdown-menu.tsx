@@ -87,7 +87,7 @@ function DropdownMenuGroup({
 
 /**
  * An item. `variant="destructive"` is for an item that deletes or removes: `danger-fg` text and icon
- * (8.7:1 on the menu) on a `danger-soft` highlight (7.4:1).
+ * (7.9:1 on the menu) on a `danger-soft` highlight (6.9:1).
  */
 function DropdownMenuItem({
   className,

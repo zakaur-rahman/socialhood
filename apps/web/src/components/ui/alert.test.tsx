@@ -155,7 +155,7 @@ describe("Alert", () => {
       const button = screen.getByRole("button", { name: "View billing" })
       expect(button).toHaveAttribute("data-variant", "secondary")
       expect(button).toHaveAttribute("data-size", "sm")
-      expect(button).toHaveClass("bg-raised", "text-fg", "h-7", "pointer-coarse:min-h-10")
+      expect(button).toHaveClass("glass-raised", "text-fg", "h-7", "pointer-coarse:min-h-10")
       expect(button.closest("[data-slot=alert-action]")).not.toBeNull()
       await userEvent.click(button)
       expect(onClick).toHaveBeenCalledOnce()
@@ -176,7 +176,7 @@ describe("Alert", () => {
       )
       const link = screen.getByRole("link", { name: "Manage billing" })
       expect(link).toHaveAttribute("href", "/billing")
-      expect(link).toHaveClass("bg-raised", "h-7")
+      expect(link).toHaveClass("glass-raised", "h-7")
     })
 
     it("sits beside the message from 448 px of alert width and under it below that", () => {

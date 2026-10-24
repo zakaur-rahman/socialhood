@@ -16,13 +16,13 @@ describe("Button variants (DESIGN_SYSTEM §8.2, §8.3)", () => {
     render(<Button>Save</Button>);
     const button = screen.getByRole("button", { name: "Save" });
     expect(button).toHaveAttribute("data-variant", "default");
-    expect(button).toHaveClass("bg-brand-gradient", "text-on-brand", "hover:brightness-110", "active:brightness-95");
+    expect(button).toHaveClass("bg-brand-gradient", "text-on-brand", "shadow-button-primary", "hover:brightness-110", "active:brightness-95");
     // Not the solid `bg-primary` (white on it was 3.63:1) and no colour hover painting under the gradient.
-    expect(classes(button).filter((c) => /primary/.test(c))).toEqual([]);
+    expect(classes(button).filter((c) => /^(bg|text)-primary/.test(c))).toEqual([]);
   });
 
   it.each([
-    ["secondary", ["bg-raised", "text-fg", "hover:bg-raised-hover"]],
+    ["secondary", ["glass-raised", "text-fg", "hover:bg-raised-hover"]],
     ["outline", ["border-line-strong", "hover:bg-hover", "aria-expanded:bg-pressed"]],
     ["ghost", ["hover:bg-hover", "aria-expanded:bg-pressed"]],
     ["soft", ["bg-brand-soft", "text-brand-fg", "border-brand-line", "hover:bg-brand-soft-hover", "aria-expanded:bg-brand-soft-hover"]],

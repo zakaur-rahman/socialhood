@@ -14,6 +14,7 @@ import {
   describedColors,
   easings,
   fontSizes,
+  glassShadows,
   glowShadows,
   gradientUtilities,
   motionDurations,
@@ -57,7 +58,7 @@ const rootAliases = blocks(/:root/)
   .replace(/\/\*[\s\S]*?\*\//g, "")
   .matchAll(/--([a-z-]+):/g);
 // `--motion-*` are durations and `--gradient-*` gradients, not colour aliases.
-const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => !name.startsWith("motion-") && !name.startsWith("gradient-"));
+const rootColorAliases = [...rootAliases].map((m) => m[1]).filter((name) => !name.startsWith("motion-") && !name.startsWith("gradient-") && !name.startsWith("glass-"));
 const themeInline = blocks(/@theme inline/).join("\n");
 /** Every `--color-*` declared in `@theme` (the palette lock, `--color-*`, is not a token). */
 const themeColorNames = [...blocks(/@theme/).join("\n").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]);
@@ -90,7 +91,8 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
 
   it.each(gradientUtilities)("defines the $name utility over $variable", ({ name, variable, value }) => {
     expect(css).toContain(`@utility ${name} { background-image: var(${variable}); }`);
-    expect(css).toMatch(new RegExp(`${variable}:\\s*${escape(value)};`));
+    // a gradient may span lines in globals.css; the generated value has its whitespace collapsed
+    expect(css.replace(/\s+/g, " ")).toMatch(new RegExp(`${variable}:\\s*${escape(value)};`));
   });
 
   it("builds every gradient from tokens, not hex stops (DESIGN_SYSTEM §1.9)", () => {
@@ -131,24 +133,24 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
   });
 
   it("keeps the WCAG fixes from UX-TOK-02", () => {
-    expect(declared("brand-strong")).toBe("#4467E6"); // the gradient ends at 4.85:1 with white, not #567FF8
+    expect(declared("brand-strong")).toBe("#5550E0"); // the gradient ends at 5.82:1 with white, not #6D6AF5
     expect(gradientUtilities[0].value).toContain("var(--color-brand-strong) 100%");
-    expect(declared("brand-fg")).toBe("#9DB5FF");
-    expect(declared("fg-secondary")).toBe("#9B9CA0");
+    expect(declared("brand-fg")).toBe("#B5B3FF");
+    expect(declared("fg-secondary")).toBe("#A6A9BC");
     expect(declared("danger-fill")).toBe("#C53030");
   });
 
   it("applies the owner's token decisions D-01, D-06 and D-12 (C-069, C-071)", () => {
     // D-01: control edges are white 40%, through --input, so every field, select, checkbox and
     // switch edge is 3:1 or more on every surface.
-    expect(declared("line-control")).toBe("rgb(255 255 255 / 0.40)");
+    expect(declared("line-control")).toBe("rgb(214 219 255 / 0.45)");
     expect(css).toMatch(/--input:\s*var\(--color-line-control\);/);
     // D-06: placeholders are fg-secondary (text, 4.5:1), not fg-disabled.
     const base = blocks(/@layer base/).join("\n");
     expect(base).toMatch(/::placeholder \{ color: var\(--color-fg-secondary\); \}/);
     expect(base).not.toMatch(/fg-disabled/);
     // D-12: what floats sits on overlay, lighter than the panel cards beneath it.
-    expect(declared("overlay")).toBe("#262626");
+    expect(declared("overlay")).toBe("#222633");
     expect(css).toMatch(/--popover:\s*var\(--color-overlay\);/);
   });
 
@@ -157,6 +159,10 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(sample.split(" ")).toEqual(expect.arrayContaining(["bg-overlay", "ring-1", "ring-line", name]));
     // Dark shadows only: no hue, and the edge is a ring, not part of the shadow.
     expect(value).toMatch(/^0 \d+px \d+px -\d+px rgb\(0 0 0 \/ 0\.\d+\)$/);
+  });
+
+  it.each(glassShadows)("defines the $name glass shadow from the tokens (C-101)", ({ name, value }) => {
+    expect(css).toMatch(new RegExp(`--${name}:\\s*${escape(value)};`));
   });
 
   it.each(glowShadows)("defines the $name marketing glow from the brand token (C-100)", ({ name, value }) => {
@@ -215,7 +221,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
 
   it("adds the brand-soft hover step between brand-soft and brand-line (C-073)", () => {
     const alpha = (name: string) => Number(declared(name)?.match(/\/ ([\d.]+)\)$/)?.[1]);
-    expect(declared("brand-soft-hover")).toBe("rgb(86 127 248 / 0.25)");
+    expect(declared("brand-soft-hover")).toBe("rgb(109 106 245 / 0.25)");
     expect(alpha("brand-soft")).toBeLessThan(alpha("brand-soft-hover"));
     expect(alpha("brand-soft-hover")).toBeLessThan(alpha("brand-line"));
   });
@@ -278,8 +284,8 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
   });
 
   it("looks colour tokens up by name and refuses unknown ones", () => {
-    expect(colorValue("canvas")).toBe("#000000");
-    expect(colorValue("brand-line")).toBe("rgb(86 127 248 / 0.35)");
+    expect(colorValue("canvas")).toBe("#131520");
+    expect(colorValue("brand-line")).toBe("rgb(109 106 245 / 0.35)");
     expect(() => colorValue("red-500")).toThrow(/Unknown colour token/);
     expect(() => radiusValue("huge")).toThrow(/Unknown radius token/);
   });

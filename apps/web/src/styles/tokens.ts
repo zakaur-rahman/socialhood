@@ -31,7 +31,14 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "canvas-veil": { use: "A dimmed cell or inset: days outside the month, a card in a flow", swatch: "bg-canvas-veil" },
   "panel-glass": { use: "Marketing cards over the page glow", swatch: "bg-panel-glass" },
   "panel-veil": { use: "The floating marketing nav over scrolled content", swatch: "bg-panel-veil" },
+  // Glass (C-101): a surface token at a set strength; the glass-* utilities add the blur
+  "panel-frost": { use: "Work panes on glass: sidebar, inbox panes, headers, composer bar (82% panel, light blur)", swatch: "bg-panel-frost" },
+  "card-glass": { use: "Cards on glass (68% panel, medium blur)", swatch: "bg-card-glass" },
+  "overlay-frost": { use: "What floats on glass: menus, popovers, selects, dialogs, sheets, toasts (86% overlay, strong blur)", swatch: "bg-overlay-frost" },
+  "raised-frost": { use: "The secondary button on glass (72% raised)", swatch: "bg-raised-frost" },
+  "frost-outline": { use: "The outline button on glass (45% panel)", swatch: "bg-frost-outline" },
   // Lines
+  "line-glass": { use: "A card's edge on glass, quieter than line", swatch: "bg-line-glass" },
   line: { use: "Borders", swatch: "bg-line" },
   "line-subtle": { use: "Faint borders", swatch: "bg-line-subtle" },
   "line-strong": { use: "Emphasised borders", swatch: "bg-line-strong" },
@@ -129,6 +136,7 @@ const gradientMeta = [
   { name: "bg-brand-gradient-decor", key: "brand-decor", use: "Meters, progress fills, decorative icon tiles; never under text" },
   { name: "bg-shell-gradient", key: "shell", use: "Logo tile and Upgrade only" },
   { name: "bg-glow-brand", key: "glow-brand", use: "One per view at most: the plan hero" },
+  { name: "bg-ambient", key: "ambient", use: "The light behind the glass, fixed on the body; not for components" },
   { name: "bg-glow-brand-top", key: "glow-brand-top", use: "The marketing glow at the top of a section: the hero, the illustration cards" },
 ] as const;
 export const gradientUtilities = gradientMeta.map(({ name, key, use }) => ({
@@ -156,6 +164,18 @@ const shadowMeta = [
   { name: "shadow-overlay", use: "Level 2, on overlay over the scrim: dialogs, alert dialogs, sheets", sample: "bg-overlay ring-1 ring-line shadow-overlay" },
 ] as const;
 export const shadowTokens = shadowMeta.map((entry) => ({
+  ...entry,
+  value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
+}));
+
+/** The glass family (C-101): a top highlight, a soft drop, the buttons' inner light and glow. */
+const glassShadowMeta = [
+  { name: "shadow-glass", use: "Glass cards: a top highlight and a soft drop (C-101)", sample: "bg-card-glass ring-1 ring-line-glass shadow-glass" },
+  { name: "shadow-highlight", use: "The outline button: the top highlight alone", sample: "bg-frost-outline ring-1 ring-line shadow-highlight" },
+  { name: "shadow-button-primary", use: "The primary button: an inner highlight and an indigo glow", sample: "bg-brand-gradient shadow-button-primary" },
+  { name: "shadow-button-secondary", use: "The secondary button: an inset edge and the highlight", sample: "bg-raised-frost shadow-button-secondary" },
+] as const;
+export const glassShadows = glassShadowMeta.map((entry) => ({
   ...entry,
   value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
 }));

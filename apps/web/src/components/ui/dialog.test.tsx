@@ -49,7 +49,7 @@ describe("Dialog (UI-012)", () => {
   it("floats on overlay with the overlay shadow and a line edge (D-12), and scrolls within the viewport", () => {
     render(<Example />);
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveClass("bg-overlay", "shadow-overlay", "ring-1", "ring-line", "max-h-[calc(100dvh-2rem)]", "overflow-y-auto");
+    expect(dialog).toHaveClass("glass-float", "shadow-overlay", "ring-1", "ring-line", "max-h-[calc(100dvh-2rem)]", "overflow-y-auto");
     expect(dialog).not.toHaveClass("shadow-xl", "ring-foreground/10");
   });
 

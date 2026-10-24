@@ -29,7 +29,7 @@ const TOAST = [
   // The floating surface (DESIGN_SYSTEM §6, level 1; D-12): `bg-overlay` and
   // `shadow-floating`, like ui/floating, with a `line-strong` edge, because a toast lands on any
   // surface, panels included. Errors read in `danger-fg`, icon and text.
-  "rounded-lg border border-line-strong bg-overlay text-fg shadow-floating data-[type=error]:text-danger-fg",
+  "rounded-lg border border-line-strong glass-float text-fg shadow-floating data-[type=error]:text-danger-fg",
   // The toast is focusable (Alt+T, then Tab): the global focus outline, kept over sonner's `outline: 0`,
   // and its own shadow kept over sonner's focus shadow.
   "focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-brand! focus-visible:shadow-floating!",

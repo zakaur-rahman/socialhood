@@ -141,5 +141,5 @@ export const colourExceptions: ColourException[] = [
     match: "#4b5262",
     reason: "A placeholder image drawn for screenshots (an SVG with two greys). A test fixture, not shipped.",
   },
-  { kind: "asset", where: "src/app/manifest.test.ts", match: "#000000", reason: "The test states the canvas value on purpose, so a canvas change has to be a decision." },
+  { kind: "asset", where: "src/app/manifest.test.ts", match: "#131520", reason: "The test states the canvas value on purpose, so a canvas change has to be a decision." },
 ];

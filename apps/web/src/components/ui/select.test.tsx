@@ -114,7 +114,7 @@ describe("Select (UI-013)", () => {
     await user.click(screen.getByRole("combobox", { name: "Time zone" }));
     const listbox = await screen.findByRole("listbox");
     const content = listbox.closest('[data-slot="select-content"]') ?? listbox;
-    expect(content).toHaveClass("shadow-floating", "ring-1", "ring-line", "rounded-lg", "bg-overlay", "min-w-36", ...words(FLOATING_MOTION));
+    expect(content).toHaveClass("shadow-floating", "ring-1", "ring-line", "rounded-lg", "glass-float", "min-w-36", ...words(FLOATING_MOTION));
     expect(content).not.toHaveClass("duration-100", "shadow-md", "shadow-xl");
     expectReducedMotionCancels(content);
     expect(content).toHaveClass("data-[align-trigger=true]:animate-none");
