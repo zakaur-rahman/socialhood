@@ -5296,7 +5296,7 @@ Light mode with a Dark / Light / System switch. Dark stays the default and the m
 - Not verified in a browser (no build or screenshots by brief): Clerk's merge of the per-component
   appearance over the provider's, and iOS status bar in light.
 
-## C-113 · The weekly report per account, and the categorical chart palette (feature/weekly-report-accounts)
+## C-130 · The weekly report per account, and the categorical chart palette (feature/weekly-report-accounts)
 
 Owner: the report did not tell accounts apart and had one chart colour. Decided here, small calls:
 
