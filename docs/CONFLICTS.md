@@ -4258,3 +4258,132 @@ Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCar
   `mine` and `unassigned` views, `assignee_id`, `mine` on `InboxCounts`, `assignment` on `TimelineKind`
   and the four operations); the web types are aliases waiting for it. `ContactTimeline`'s icon map and
   `ListHeader`'s chips will not typecheck until then. Migration `0041` follows `0040` (GR-31).
+
+## C-118 · Sequences (GR-24, feature/gr-20-24-assign-sequences)
+
+- **What it is.** A sequence is timed messages after an entry event, on one connected account
+  (Instagram, WhatsApp or Messenger). It starts when a lead is captured (GR-14), a tag is added (GR-02)
+  or someone replies to a WhatsApp broadcast (GR-23), and stops on a reply, a tag or a lead stage.
+  Migration `0042` (after `0041`), expand-only: `sequences`, `sequence_steps`, `sequence_enrolments`,
+  `sequence_step_runs` (all reach the account by a foreign key, so the account purge deletes them; the
+  purge test's list, the account-deletion seed and the tenancy tables and seeds include them).
+- **Model.**
+  - `sequences`: account, name, status (draft, active, paused), entry type with `entry_tag_id`,
+    `entry_broadcast_id` (null: any broadcast) and `entry_capture_kind` (email, phone or field; null:
+    any), the stop rules (`stop_on_reply`, `stop_tag_ids`, `stop_stages`), `allow_reentry`.
+  - `sequence_steps`: position, `delay_seconds` (0 to 30 days), `delay_from` (`entry` or `previous`;
+    the first step always counts from entry), a text and/or an approved WhatsApp template (name,
+    language, category and body copied when saved, variables mapped as in a broadcast), and
+    `respect_hours`.
+  - `sequence_enrolments`: contact, `current_step`, `next_due_at`, status (active, completed,
+    stopped), why it started (`entry_event`) and why it stopped (`stop_reason`, `stop_detail`).
+  - `sequence_step_runs`: sent, skipped (with a code and a plain sentence) or failed, one row per
+    (enrolment, step position) by a unique constraint.
+- **Entry events reuse the existing points; nothing new fires them.** `webhooks.events.lead_captured`
+  (a capture step saved an email, phone or answer), `webhooks.events.contacts_tagged` (every way a tag
+  is added: the API, a flow step, the agent) and `webhooks.events.lead_stage_changed` (GR-18) each call
+  `services/sequences/entry`, whether or not a webhook endpoint wants the event. A customer message
+  calls it from `ingest` (after GR-23's broadcast hook, which now returns the broadcasts the message is
+  a reply to). Only an *active* sequence on the contact's own account takes people in.
+- **At most one active enrolment per contact and sequence** (a partial unique index, so two events at
+  once cannot both enter them). *Added by me: `allow_reentry`, off by default.* With it off a contact who
+  finished or was stopped is not taken in again (a "captured" sequence would otherwise start again at
+  every answer); with it on they can enter again once the first is over. The brief said "at most once
+  while active"; this is the same rule plus a setting for the case after it.
+- **Stop rules.** A reply (any customer message, on by default per sequence), one of the sequence's stop
+  tags being added, the lead stage becoming one of its stop stages (stages exist: GR-18, so all three are
+  supported). The reply stops the contact's sequences *before* a reply to a broadcast starts the ones
+  that begin on it, so a message never stops the sequence it started. A stopped enrolment keeps its
+  history and says why ("They replied", "A stop tag was added: Bought", "Their lead stage changed: Won",
+  "Taken out by your team"). A person can be taken out by hand
+  (`POST /sequences/{id}/enrolments/{eid}/stop`).
+- **Sweeper** (`jobs/tasks/sequences.run_sequences`, every minute, bulk lane, one waiting job; recovery
+  class RETRY). It finds up to 100 due enrolments across workspaces (active sequences on accounts that are
+  `active`; an account that needs reconnecting is not picked up at all until it works) and runs each in
+  its own transaction under `FOR UPDATE SKIP LOCKED`. A step is sent **once** however the job is retried
+  or two workers meet: the row lock, the message's client id (`uuid5(enrolment, step)`, so
+  `queue_outbound` returns the message already queued) and the unique step run all agree. The send goes
+  through the normal queue (`sending.queue_outbound`, so the token bucket, retries, statuses, the inbox
+  and realtime are the ones every message uses). *Deviation: no new message source.* A sequence's
+  messages are source `automation` with no run, so the inbox shows them as automation messages and the
+  `messages.source` check is unchanged; Activity tells sequence sends apart through its own kind.
+- **What a step sends** (`services/sequences/rules`, pure, unit tested).
+  - Instagram and Messenger: the text while the 24-hour window is open; otherwise skipped, "The messaging
+    window had closed" (Human Agent never applies to an automated message). A template step is refused
+    at save ("Only WhatsApp has templates.").
+  - WhatsApp inside the window: the text, no consent needed. Outside it: the approved template, only to a
+    contact whose latest WhatsApp marketing record is a grant (GR-23's `dispatch.consent_skip`, now
+    public); no record is skipped as "no consent", a withdrawal as "opted out". A text-only step outside
+    the window is skipped ("has no template"). A template-only step always needs consent.
+  - *WhatsApp templates are marketing messages, so they also wait on `BROADCASTS_ENABLED` (O-11, the
+    legal check of marketing consent); off, such a step is skipped as "marketing_off".* Text inside the
+    window is not affected. Remove the check when O-11 is done.
+  - A skipped or failed step is a finished step: the sequence moves on to the next.
+  - The text is filled like a saved reply (`{first_name}`, fields), with the workspace's automation
+    disclosure line; a template variable with no value and no fallback skips the step ("missing_value").
+- **Limits and holds.**
+  - *Business hours (GR-22):* a step with `respect_hours` waits for the account's next opening (its own
+    hours, else the workspace's; no hours means always open). Hours that never open look again a day later.
+  - *The number's daily limit (GR-23):* template sends count with broadcasts' against the number's tier
+    limit in the rolling 24 hours (`broadcasts/dispatch` now counts sequence template sends too). A
+    sequence step that finds no room waits until a place frees; none is dropped.
+  - *Quality:* while the number's rating is Low a template step waits 30 minutes at a time.
+  - An account error at send time (needs reconnecting, can't send) holds the step 15 minutes.
+  - Template sends do not use the broadcast recipient quota (that is for broadcasts).
+- **Plans (a decision, pending owner confirmation; one line each in `billing/plans.py`).** Two
+  entitlements: `active_sequences` (Free 1, Pro 10, Max 50) and `sequence_steps` (Free 3, Pro 10, Max
+  20; whatever the plan, a sequence has at most 20 steps). Past a limit the write is 402 `quota_exceeded`
+  naming the key, and the page shows the limit. Saving a draft never counts; turning one on does. *Pending
+  the owner:* whether Free gets sequences at all, and the numbers. A template step is still a message
+  Meta bills the business for, and needs marketing consent, so the plan limits how many sequences there
+  are, not how many messages go.
+- **Editing.** Steps and rules change only while the sequence is a draft or paused (409 "Pause the
+  sequence to change it."); a person already in it keeps their place, and a step removed from under them
+  ends it (completed) if no step is left. A sequence with people in it cannot change account. Delete is
+  for a draft or paused sequence and takes its enrolments and history. A deleted start tag is shown as a
+  problem on the sequence and stops it being turned on.
+- **Routes** (`/v1/w/{wid}`, owners and admins through the automations permission, except the contact's
+  list): `GET|POST /sequences`, `POST /sequences/preview`, `GET|PUT|DELETE /sequences/{id}`,
+  `POST /sequences/{id}/activate|pause`, `GET /sequences/{id}/enrolments?status=&limit=&offset=`,
+  `POST /sequences/{id}/enrolments/{eid}/stop`, and `GET /contacts/{id}/sequences` (any member). The
+  preview is the steps as a sample contact ("Priya") would meet them in a straight run: when each is due
+  after entry, what it would send and a plain note (a template needs consent, a text-only WhatsApp step
+  after 24 hours sends nothing); nothing is saved. A tag, broadcast or account of another workspace is 404.
+- **Activity and the contact (GR-05, GR-17).** Activity has a `sequence` kind: each step sent (worked),
+  skipped (with the reason) or failed, with a link to the sequence; "failures only" (the default) shows
+  the skips and failures. The contact's timeline has the same ("Sent step 1 of Three days", "Skipped step
+  2 of ..." with the reason), and the contact drawer has a Sequences section: each sequence they are or
+  were in, the step they are on and when it is due, what happened at each step, and why a stopped one
+  stopped.
+- **Ask.** `list_sequences` (owners and admins; read-only): each sequence's status, what starts it, steps,
+  people in it, finished, stopped, what stops it, and any problem. Never a message.
+- **Web: decided to put Sequences on its own page, `/w/{slug}/sequences`, linked from Automations** (a
+  button beside Broadcasts) rather than a tab: it has its own list, editor and people, like Broadcasts.
+  The list shows the plan's limit; the editor is a form (name and account, what starts it, the steps with
+  their wait, message, WhatsApp template and variables and a business-hours switch, what stops it) with a
+  live preview from the server beside it; a sequence that is on is read-only until paused; the detail
+  page has the people (filter by status, why each stopped, take one out). Agents get a plain notice.
+- **Not built.** Stopping on a tag *removed*, or entering on a stage; branching inside a sequence (use a
+  flow); a send time of day other than business hours; a step that sends an image or buttons; sequence
+  analytics (opens, replies per step); entering existing contacts in bulk; a webhook event for sequences.
+  A sequence's WhatsApp text inside the window ignores consent, as every WhatsApp reply does.
+- **Tests.** Unit: `test_sequence_rules.py` (what a step sends and why not, the due time, business hours,
+  the bodies, the client id, the plan's numbers), the purge list and the tool registry. Integration:
+  `test_sequences.py` (the done-when: a three-day sequence sends day 1 and day 3 to an opted-in sandbox
+  contact and stops when they reply; completion; consent and opt-out skipped with their reasons; text
+  inside the window and skipped outside it; the marketing setting off; Instagram open and closed
+  windows; once at a time and re-entry; paused; stop tag, stage and reply off; a reply to a broadcast
+  starting it; a capture starting it; business hours holding a step; the shared daily limit; low quality;
+  a step sent once; a reconnecting account; validation, editing rules, a deleted tag, the plan's limits,
+  the preview, taking a person out, Activity, the timeline and the contact's list, roles).
+  Tenancy: the new routes, bodies and tables in `test_isolation.py`. Vitest: `lib/sequences/format`,
+  `SequencesPage`, `SequenceForm`, `SequencePeople`, `ContactSequences`. E2E: `gr24-sequences.spec.ts`
+  (a tag starts a sequence, two steps are sent by the worker, a reply stops it, the page says why; the
+  editor saves a draft).
+- **Unsure / for the coordinator:** regenerate the client (the `Sequence*`, `StepIn`, `StepOut`,
+  `EntryRule`, `EntryOut`, `StopRules`, `StopOut`, `Enrolment*`, `ContactSequence*`, `PreviewStep`
+  schemas, 11 operations, the `sequence` activity kind and timeline kind); the web types are aliases
+  waiting for it, and `ContactTimeline`'s icon map will not typecheck until then. Migration `0042` follows
+  `0041` (GR-20), which follows `0040` (GR-31). The e2e spec relies on the worker's minutely sweep
+  running in the e2e stack (the broadcast spec relies on the same). A sequence created while
+  `BROADCASTS_ENABLED` is off still saves; only its template steps are skipped.

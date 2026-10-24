@@ -337,6 +337,7 @@ ADMIN_TOOLS: dict[str, dict[str, Any]] = {
     "search_products": {"q": "kurta"},  # GR-31
     "list_webhook_endpoints": {},
     "list_recent_failures": {},
+    "list_sequences": {},
 }
 
 

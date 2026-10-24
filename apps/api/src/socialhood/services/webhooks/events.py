@@ -223,7 +223,13 @@ class TagChange:
 
 
 async def contacts_tagged(session: AsyncSession, changes: list[TagChange]) -> None:
-    if not changes or not await wanted(session, "contact.tagged"):
+    if not changes:
+        return
+    # GR-24: a tag added enters and stops sequences, whether or not an endpoint wants the event.
+    from socialhood.services.sequences import entry
+
+    await entry.on_tagged(session, changes)
+    if not await wanted(session, "contact.tagged"):
         return
     platforms = dict(
         (
@@ -260,6 +266,9 @@ async def lead_captured(
     run_id: uuid.UUID,
 ) -> None:
     platform = await _platform(session, contact)
+    from socialhood.services.sequences import entry  # GR-24: a capture can start a sequence
+
+    await entry.on_captured(session, contact, kind=kind)
     await emit(
         session,
         "lead.captured",
@@ -288,6 +297,11 @@ async def lead_stage_changed(
     reason: str | None,
 ) -> None:
     """A lead's stage moved (GR-18), by a member, an automation or a rule."""
+    from socialhood.models.contacts import LeadStage
+    from socialhood.services import leads
+    from socialhood.services.sequences import entry  # GR-24: a stage can stop a sequence
+
+    await entry.on_stage(session, contact, to_stage, leads.STAGE_LABEL[LeadStage(to_stage)])
     if not await wanted(session, "lead.stage_changed"):
         return
     await emit(

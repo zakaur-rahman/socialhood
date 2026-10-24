@@ -44,6 +44,7 @@ READ = {
     "search_products",  # GR-31
     "list_webhook_endpoints",
     "list_recent_failures",
+    "list_sequences",
 }
 DRAFT = {
     "draft_reply",
@@ -70,6 +71,7 @@ ADMIN = {
     "search_products",  # GR-31
     "list_webhook_endpoints",
     "list_recent_failures",
+    "list_sequences",
 }
 
 

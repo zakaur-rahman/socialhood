@@ -136,6 +136,23 @@ export type BroadcastRecipient = Schemas["Recipient"];
 export type BroadcastRecipientList = Schemas["RecipientList"];
 export type RecipientStatus = BroadcastRecipient["status"];
 export type VariableSpec = Schemas["VariableSpec"];
+
+// ---- sequences (GR-24)
+
+export type Sequence = Schemas["Sequence"];
+export type SequenceList = Schemas["SequenceList"];
+export type SequenceBody = Schemas["SequenceBody"];
+export type SequenceStep = Schemas["StepOut"];
+export type SequenceStepIn = Schemas["StepIn"];
+export type SequenceEntry = Schemas["EntryOut"];
+export type SequenceStatus = Sequence["status"];
+export type SequenceEntryType = SequenceEntry["type"];
+export type SequencePreview = Schemas["SequencePreview"];
+export type SequenceEnrolment = Schemas["Enrolment"];
+export type SequenceEnrolmentList = Schemas["EnrolmentList"];
+export type EnrolmentStatus = SequenceEnrolment["status"];
+export type ContactSequence = Schemas["ContactSequence"];
+export type ContactSequenceList = Schemas["ContactSequenceList"];
 export type CostEstimate = Schemas["CostEstimate"];
 export type RateCard = Schemas["RateCardOut"];
 // GR-22: business hours and the away message.

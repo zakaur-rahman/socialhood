@@ -3,7 +3,8 @@
 Sources today: their conversation, their comments, automation runs on them, story mentions,
 consent records, tags added, lead stage moves (GR-18), the broadcasts they were sent (GR-23:
 "Received broadcast X", with how far it got) and who had their conversation (GR-20, from the audit
-rows ``conversation.assigned`` and ``conversation.unassigned``). (Captured answers have no table
+rows ``conversation.assigned`` and ``conversation.unassigned``) and the steps of the sequences
+they are in (GR-24: sent, skipped with the reason, failed). (Captured answers have no table
 of their own; when they get one it adds a source here.)
 
 Rules:
@@ -42,6 +43,7 @@ from socialhood.models.contacts import (
     Tag,
 )
 from socialhood.models.inbox import Contact, Conversation, EntrySource, Message
+from socialhood.models.sequences import RunStatus, Sequence, SequenceStepRun
 from socialhood.models.team import AuditEvent
 from socialhood.repositories.broadcasts import status_expr
 from socialhood.schemas.contacts import TimelineItem, TimelineKind, TimelineList
@@ -78,6 +80,11 @@ BROADCAST_DETAIL: dict[str, str] = {
 ASSIGNED_BY: dict[str, str] = {
     "round_robin": "Round-robin",
     "automation": "By an automation",
+}
+SEQUENCE_VERB: dict[str, str] = {
+    RunStatus.SENT: "Sent",
+    RunStatus.SKIPPED: "Skipped",
+    RunStatus.FAILED: "Couldn't send",
 }
 CHANNEL_LABEL = {
     "instagram": "Instagram",
@@ -373,6 +380,38 @@ async def timeline(
         )
     ).all()
     items += [_assignment_item(h) for h in handovers]
+
+    steps = (
+        await session.execute(
+            _before(
+                select(
+                    SequenceStepRun.id,
+                    SequenceStepRun.ran_at,
+                    SequenceStepRun.position,
+                    SequenceStepRun.status,
+                    SequenceStepRun.reason,
+                    Sequence.name,
+                )
+                .join(Sequence, Sequence.id == SequenceStepRun.sequence_id)
+                .where(SequenceStepRun.contact_id == contact_id),
+                SequenceStepRun.ran_at,
+                SequenceStepRun.id,
+                after,
+            )
+            .order_by(SequenceStepRun.ran_at.desc(), SequenceStepRun.id.desc())
+            .limit(take)
+        )
+    ).all()
+    items += [
+        _item(
+            i,
+            "sequence",
+            at,
+            f"{SEQUENCE_VERB.get(status, 'Ran')} step {position + 1} of {name}",
+            reason,
+        )
+        for i, at, position, status, reason, name in steps
+    ]
 
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     page = items[:limit]

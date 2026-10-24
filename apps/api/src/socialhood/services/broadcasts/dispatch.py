@@ -59,6 +59,7 @@ from socialhood.platforms.deps import PlatformDeps
 from socialhood.realtime.events import commit_and_publish
 from socialhood.repositories import broadcasts as repo
 from socialhood.repositories import ingest as ingest_rows
+from socialhood.repositories import sequences as sequence_repo
 from socialhood.repositories import social_accounts as accounts
 from socialhood.services import sending
 from socialhood.services.broadcasts import health, lifecycle, service, throttle
@@ -106,7 +107,7 @@ def client_id(recipient_id: uuid.UUID) -> uuid.UUID:
     return uuid.uuid5(NAMESPACE, str(recipient_id))
 
 
-async def _consent_skip(session: AsyncSession, contact_id: uuid.UUID) -> str | None:
+async def consent_skip(session: AsyncSession, contact_id: uuid.UUID) -> str | None:
     """Why this person may not be messaged now, or None when their latest record grants it."""
     status = await session.scalar(
         select(ContactConsent.status)
@@ -177,7 +178,9 @@ async def _batch(
         return Batch(state="paused")
 
     daily_limit, _ = health.daily_limit_of(number)
+    # Sequences' template sends (GR-24) use the same number and the same daily limit.
     recent = await repo.dispatch_times(session, acct.id, now - throttle.WINDOW)
+    recent += await sequence_repo.template_send_times(session, acct.id, now - throttle.WINDOW)
     room = throttle.room(daily_limit, len(recent))
     waiting = await repo.waiting(session, row.id)
     take = throttle.batch_size(room_now=room, waiting=waiting, quota_left=quota_left)
@@ -230,7 +233,7 @@ async def _one(
 ) -> str:
     """Hand one person to the send queue: ``handed``, ``skipped`` or ``failed``; raises
     StopBroadcast for a reason that stops the whole broadcast."""
-    skip = await _consent_skip(session, recipient.contact_id)
+    skip = await consent_skip(session, recipient.contact_id)
     if skip is not None:
         recipient.state = RecipientState.SKIPPED
         recipient.skip_reason = skip

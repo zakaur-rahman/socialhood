@@ -19,6 +19,7 @@ from socialhood.models import (
     platform,
     publishing,
     replies,
+    sequences,
     team,
     widget,
 )
@@ -42,6 +43,7 @@ __all__ = [
     "platform",
     "publishing",
     "replies",
+    "sequences",
     "team",
     "widget",
 ]

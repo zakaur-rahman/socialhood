@@ -8,6 +8,7 @@ import {
   MessageSquare,
   ShieldCheck,
   Tag,
+  ListOrdered,
   UserCheck,
   Zap,
   type LucideIcon,
@@ -32,11 +33,13 @@ const ICON: Record<TimelineKind, LucideIcon> = {
   lead_stage: Flag,
   broadcast: Megaphone,
   assignment: UserCheck,
+  sequence: ListOrdered,
 };
 
 /**
  * A contact's timeline (GR-17), newest first and read-only: their conversation, comments,
- * automation runs, story mentions, consent, tags, lead stage moves, the broadcasts they were sent (GR-23) and who had their conversation (GR-20).
+ * automation runs, story mentions, consent, tags, lead stage moves, the broadcasts they were sent (GR-23),
+ * who had their conversation (GR-20) and the sequence steps they were sent or skipped (GR-24).
  * Older items load on request. Captured answers join when that feature has a table of its own.
  */
 export function ContactTimeline({ contactId }: { contactId: string }) {

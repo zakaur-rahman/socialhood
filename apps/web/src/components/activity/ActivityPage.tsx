@@ -30,6 +30,7 @@ const KINDS: { value: ActivityKind; label: string }[] = [
   { value: "webhook_delivery", label: "Webhooks" },
   { value: "account", label: "Accounts" },
   { value: "broadcast", label: "Broadcasts" }, // GR-23: shown only with broadcasts on
+  { value: "sequence", label: "Sequences" }, // GR-24
 ];
 
 const OUTCOME: Record<ActivityOutcome, { label: string; tone: "success" | "warning" | "danger"; icon: ReactNode }> = {

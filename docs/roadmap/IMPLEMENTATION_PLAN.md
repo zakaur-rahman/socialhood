@@ -426,7 +426,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Done when:** an agent invited in e2e can reply but gets 403 on automations and billing, and the
   UI hides what the role can't do.
 
-#### GR-20 · Assignment · M · needs GR-19
+#### GR-20 · Assignment · M · needs GR-19 · built 2026-10-25 (C-117)
 - **Do:**
   - Assign a conversation to a member, or to nobody.
   - An "Assigned to me" view and filter.
@@ -476,7 +476,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - **Done when:** a sandbox broadcast to 3 opted-in contacts reports each status, skips the
   opted-out one, and a STOP reply revokes consent.
 
-#### GR-24 · Sequences (multi-step follow-ups) · M · needs GR-03 and GR-23 · R3, brought forward
+#### GR-24 · Sequences (multi-step follow-ups) · M · needs GR-03 and GR-23 · R3, brought forward · built 2026-10-25 (C-118)
 - **Do:**
   - A sequence is timed steps after an entry event (captured, tagged, broadcast replied).
   - WhatsApp steps outside the window use templates and need opt-in. Instagram steps run only

@@ -77,6 +77,11 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # decisions: a Shopify sync stops at the product cap and says so.
     "catalogue_products": {"free": 0, "pro": 1000, "max": 20000},
     "catalogue_import_rows": {"free": 0, "pro": 500, "max": 5000},
+    # Sequences (GR-24): sequences that can run at once, and steps in one. Proposed values, pending
+    # the owner's confirmation (C-118): a template step is still a message Meta bills the business
+    # for, and needs the contact's marketing consent, so the plan limits only how many there are.
+    "active_sequences": {"free": 1, "pro": 10, "max": 50},
+    "sequence_steps": {"free": 3, "pro": 10, "max": 20},
 }
 
 

@@ -30,6 +30,9 @@ FR-AUT-21). A tapped quick reply keeps its payload (``quick_reply_payload``). Wi
 for the account it queues ``analyze_conversation`` (4 s, one waiting job per conversation, so a
 burst is analysed once; TR-AI-05).
 
+A new customer message stops the contact's sequences that stop on a reply, and a reply to a
+broadcast can start one (GR-24; services/sequences/entry).
+
 With round-robin on, a new customer message in a conversation nobody has hands it to the next
 available member (GR-20; services/assignment).
 
@@ -213,12 +216,26 @@ async def _story_mention(
 
 async def _broadcasts(
     session: AsyncSession, acct: SocialAccount, contact: Contact, msg: Message, now: datetime
-) -> None:
+) -> list[uuid.UUID]:
     """GR-23: a WhatsApp customer's STOP withdraws their marketing consent, and a message after a
     broadcast counts as its reply."""
     from socialhood.services.broadcasts import inbound
 
-    await inbound.on_inbound(session, acct, contact, msg, now)
+    return await inbound.on_inbound(session, acct, contact, msg, now)
+
+
+async def _sequences(
+    session: AsyncSession,
+    acct: SocialAccount,
+    contact: Contact,
+    msg: Message,
+    replied_broadcasts: list[uuid.UUID],
+) -> None:
+    """GR-24: a customer message stops the contact's sequences that stop on a reply, then starts
+    the ones that begin on a reply to the broadcast it answered."""
+    from socialhood.services.sequences import entry
+
+    await entry.on_inbound(session, acct, contact, msg, replied_broadcasts)
 
 
 async def _assign(
@@ -344,7 +361,8 @@ class _Ingest:
             if not self.backfill:
                 await _webhook_events(self.session, self.acct, contact, msg, new_contact)
                 await _story_mention(self.session, self.acct, contact, msg, self.now)
-                await _broadcasts(self.session, self.acct, contact, msg, self.now)
+                replied = await _broadcasts(self.session, self.acct, contact, msg, self.now)
+                await _sequences(self.session, self.acct, contact, msg, replied)
                 await _assign(self.session, conv, contact, self.now)
                 await _automations(self.session, contact, msg)
                 await _supersede_suggestion(self.session, conv, msg)

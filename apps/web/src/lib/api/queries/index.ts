@@ -19,6 +19,7 @@ export * from "./entryLinks";
 export * from "./iceBreakers";
 export * from "./savedReplies";
 export * from "./broadcasts";
+export * from "./sequences";
 export * from "./businessHours";
 export * from "./widget";
 export * from "./analytics";

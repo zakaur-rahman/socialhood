@@ -48,6 +48,7 @@ from tests.support.notify import (
     push_endpoint,
 )
 from tests.support.publishing import make_hashtag_group, make_posting_slot, make_scheduled_post
+from tests.support.sequences import make_sequence_rows
 
 METHODS = ("get", "post", "put", "patch", "delete")
 
@@ -87,6 +88,8 @@ PARAM_TO_SEED: dict[str, str] = {
     "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
     "broadcast_id": "broadcast_id",  # GR-23
     "product_id": "product_id",  # GR-31
+    "sequence_id": "sequence_id",  # GR-24
+    "enrolment_id": "enrolment_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -237,6 +240,25 @@ EXAMPLE_BODIES.update(
         ("POST", "/v1/w/{wid}/broadcasts"): {**BROADCAST_DRAFT, "name": "Taken over"},
         ("POST", "/v1/w/{wid}/broadcasts/preview"): BROADCAST_DRAFT,
         ("PATCH", "/v1/w/{wid}/broadcasts/{broadcast_id}"): {"name": "Taken over"},
+        # GR-24: B's account in a new sequence, and B's sequence replaced.
+        ("POST", "/v1/w/{wid}/sequences"): {
+            "name": "Into B",
+            "social_account_id": "{account_id}",
+            "entry": {"type": "captured"},
+            "steps": [{"delay_seconds": 60, "text": "Hi"}],
+        },
+        ("POST", "/v1/w/{wid}/sequences/preview"): {
+            "name": "Into B",
+            "social_account_id": "{account_id}",
+            "entry": {"type": "captured"},
+            "steps": [{"delay_seconds": 60, "text": "Hi"}],
+        },
+        ("PUT", "/v1/w/{wid}/sequences/{sequence_id}"): {
+            "name": "Taken over",
+            "social_account_id": "{account_id}",
+            "entry": {"type": "tagged", "tag_id": "{tag_id}"},
+            "steps": [{"delay_seconds": 60, "text": "Hi"}],
+        },
         ("POST", "/v1/w/{wid}/broadcasts/{broadcast_id}/start"): {},
     }
 )
@@ -424,6 +446,10 @@ B_TABLES = (
     "products",  # GR-31
     "product_variants",
     "shopify_connections",
+    "sequences",  # GR-24
+    "sequence_steps",
+    "sequence_enrolments",
+    "sequence_step_runs",
     "broadcasts",  # GR-23
     "broadcast_recipients",
     "whatsapp_number_health",
@@ -495,6 +521,8 @@ class Seed:
     hook_id: str = ""  # GR-26: a REST hook that key subscribed
     broadcast_id: str = ""
     product_id: str = ""  # GR-31
+    sequence_id: str = ""  # GR-24
+    enrolment_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -844,6 +872,13 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             ),
             {"w": wid, "t": b"not-a-real-token"},
         )
+    sequence, enrolment = await make_sequence_rows(  # GR-24
+        engine,
+        workspace_id=wid,
+        account_id=account_id,
+        contact_id=thread.contact_id,
+        message_id=thread.message_ids[0],
+    )
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -879,6 +914,8 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         hook_id=str(rest_hook),
         broadcast_id=broadcast,
         product_id=str(product),
+        sequence_id=sequence,
+        enrolment_id=enrolment,
     )
 
 

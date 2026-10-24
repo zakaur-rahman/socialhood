@@ -41,6 +41,7 @@ import { toastError } from "@/lib/toast-error";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { EYEBROW } from "@/styles/tokens";
 
+import { ContactSequences } from "./ContactSequences";
 import { ContactTimeline } from "./ContactTimeline";
 import { TagChip } from "./TagChip";
 
@@ -155,6 +156,9 @@ function DrawerBody({ record }: { record: ContactRecord }) {
         </Section>
         <Section id="contact-consent" title="Marketing consent">
           <ConsentList record={record} admin={admin} timezone={timezone} />
+        </Section>
+        <Section id="contact-sequences" title="Sequences">
+          <ContactSequences contactId={record.id} />
         </Section>
         <Section id="contact-timeline" title="Timeline">
           <ContactTimeline contactId={record.id} />

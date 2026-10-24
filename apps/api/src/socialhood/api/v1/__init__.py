@@ -44,6 +44,7 @@ from socialhood.api.v1 import (
     reports,
     saved_replies,
     scheduled,
+    sequences,
     stories,
     team,
     whatsapp,
@@ -85,6 +86,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     business_hours.router,
     broadcasts.router,
     catalogue.router,  # GR-31
+    sequences.router,
     integrations.router,
     google_sheets.router,
     api_keys.router,  # GR-25
