@@ -1,8 +1,10 @@
 """GR-16: the templates that carry a flow. Each is a valid graph within the Free plan's step cap
-(PD-5, pending), asks only for what the user must fill in (the link), and has plain copy."""
+(PD-5, pending), asks only for what the user must fill in (the link, a [price] or a [code]), and
+has plain copy. Activation refuses a message that still holds a placeholder (C-105)."""
 
 from __future__ import annotations
 
+import re
 import uuid
 from datetime import UTC, datetime
 
@@ -42,6 +44,24 @@ def link_fields(definition: FlowDefinition) -> list[str]:
     ]
 
 
+def placeholder_fields(definition: FlowDefinition) -> list[str]:
+    return [
+        f"flow.steps.{i}.text"
+        for i, step in enumerate(definition.steps)
+        if isinstance(step, SendStep) and templates.unfilled(step.text)
+    ]
+
+
+def fill(definition: FlowDefinition) -> FlowDefinition:
+    filled = definition.model_copy(deep=True)
+    for step in filled.steps:
+        if isinstance(step, SendStep):
+            step.text = step.text.replace("[price]", "499").replace("[code]", "WELCOME10")
+            for button in step.buttons:
+                button.url = "https://example.com/offer"
+    return filled
+
+
 def test_the_v2_templates_are_in_the_gallery() -> None:
     assert [t.key for t in FLOW_TEMPLATES] == KEYS
     summaries = {t.key: t for t in templates.gallery().items}
@@ -67,22 +87,36 @@ def test_each_flow_template_validates_and_builds(template: templates.Template) -
 
 
 @pytest.mark.parametrize("template", FLOW_TEMPLATES, ids=lambda t: t.key)
-def test_each_flow_template_needs_only_its_link(template: templates.Template) -> None:
+def test_each_flow_template_needs_only_its_link_and_placeholders(
+    template: templates.Template,
+) -> None:
     definition = flow_of(template)
     found = [e.field for e in flows.activation_errors(definition, context(template))]
-    assert sorted(found) == sorted(link_fields(definition))
+    assert sorted(found) == sorted(link_fields(definition) + placeholder_fields(definition))
+
+
+def test_the_price_and_coupon_templates_hold_placeholders_and_the_others_none() -> None:
+    held = {t.key: placeholder_fields(flow_of(t)) for t in FLOW_TEMPLATES}
+    assert held["price_by_option"] == [f"flow.steps.{i}.text" for i in (1, 2, 3)]
+    assert held["entry_link_coupon"] == ["flow.steps.0.text"]
+    assert [k for k, fields in held.items() if not fields] == [
+        "story_giveaway",
+        "lead_magnet",
+        "call_request",
+    ]
+    # Every bracket token a template uses is in the one list.
+    for template in FLOW_TEMPLATES:
+        for step in flow_of(template).steps:
+            if isinstance(step, SendStep):
+                for token in re.findall(r"\[[a-z_ ]+\]", step.text):
+                    assert token in templates.PLACEHOLDERS, token
 
 
 @pytest.mark.parametrize("template", FLOW_TEMPLATES, ids=lambda t: t.key)
 def test_each_flow_template_activates_once_the_link_is_filled(
     template: templates.Template,
 ) -> None:
-    definition = flow_of(template)
-    filled = definition.model_copy(deep=True)
-    for step in filled.steps:
-        if isinstance(step, SendStep):
-            for button in step.buttons:
-                button.url = "https://example.com/offer"
+    filled = fill(flow_of(template))
     assert flows.activation_errors(filled, context(template)) == []
     # The rest of the automation: only an account is chosen, and a post for a comment trigger
     # that needs one (these use "all posts" with a keyword).

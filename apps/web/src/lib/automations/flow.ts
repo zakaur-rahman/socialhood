@@ -744,6 +744,20 @@ export function isHttps(value: string): boolean {
 export type StepProblems = Record<string, string>;
 
 /**
+ * The bracket tokens the flow templates leave for the user to fill (C-105). Activation refuses a
+ * message that still holds one. Keep in step with PLACEHOLDERS in services/automations/templates.py;
+ * only these tokens count, so other brackets in a message are fine.
+ */
+export const PLACEHOLDERS: Record<string, string> = { "[price]": "your price", "[code]": "your code" };
+const PLACEHOLDER = new RegExp(Object.keys(PLACEHOLDERS).map((token) => token.replace(/[[\]]/g, "\\$&")).join("|"), "gi");
+
+/** "Replace [price] with your price." for the first placeholder still in the text, else null. */
+export function placeholderProblem(text: string): string | null {
+  const found = text.match(PLACEHOLDER)?.[0]?.toLowerCase();
+  return found ? `Replace ${found} with ${PLACEHOLDERS[found]}.` : null;
+}
+
+/**
  * Plain-words problems with one step, keyed by the field the API uses for it (``text``,
  * ``buttons.0.url``, ``quick_replies.1.title``...). The API checks the same things and more (what
  * Instagram allows along each path); its answers are merged with these.
@@ -752,6 +766,7 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
   const out: StepProblems = {};
   const textProblems = (text: string, buttons: boolean, what: string) => {
     if (!text.trim()) out.text = `Write the ${what}.`;
+    else if (placeholderProblem(text)) out.text = placeholderProblem(text) ?? "";
     else if (worstCaseBytes(text, ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
       out.text = `Instagram allows ${MESSAGE_LIMIT_BYTES.toLocaleString("en-US")} bytes in a DM, counting the longest name. Shorten it.`;
     } else if (buttons && worstCaseChars(text, ctx.disclosure) > BUTTON_TEXT_MAX_CHARS) {
@@ -793,7 +808,8 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
       textProblems(node.text, false, "question to ask");
       for (const part of ["retry_text", "consent_text", "confirm_text"] as const) {
         if (part === "consent_text" && !node.consent) continue;
-        if (node[part].trim() && worstCaseBytes(node[part], ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
+        if (placeholderProblem(node[part])) out[part] = placeholderProblem(node[part]) ?? "";
+        else if (node[part].trim() && worstCaseBytes(node[part], ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
           out[part] = `Instagram allows ${MESSAGE_LIMIT_BYTES.toLocaleString("en-US")} bytes in a DM. Shorten it.`;
         }
       }

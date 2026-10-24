@@ -345,7 +345,7 @@ def _step_errors(i: int, step: Step, ctx: Context) -> list[FieldError]:
 def _text_errors(where: str, text: str, ctx: Context, *, buttons: bool) -> list[FieldError]:
     size = validation.message_bytes(text, ctx.disclosure)
     limit = validation.INSTAGRAM_MESSAGE_BYTES
-    errors = []
+    errors = validation.placeholder_errors(where, text)
     if size > limit:
         errors.append(
             FieldError(

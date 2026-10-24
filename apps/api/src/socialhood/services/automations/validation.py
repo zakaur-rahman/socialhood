@@ -38,7 +38,7 @@ from datetime import datetime
 from urllib.parse import urlsplit
 
 from socialhood.errors import FieldError
-from socialhood.services.automations import render
+from socialhood.services.automations import render, templates
 
 INSTAGRAM_MESSAGE_BYTES = 1000  # TR-PL-10
 PUBLIC_REPLY_CHARS = 300  # FR-AUT-14
@@ -167,6 +167,11 @@ def message_bytes(text: str, disclosure: str | None) -> int:
     return render.utf8_bytes(render.with_disclosure(render.longest_render(text), disclosure))
 
 
+def placeholder_errors(field: str, text: str | None) -> list[FieldError]:
+    """One error for each template placeholder ("[price]") still in the text."""
+    return [FieldError(field, templates.unfilled_copy(t)) for t in templates.unfilled(text or "")]
+
+
 def activation_errors(d: Definition, *, disclosure: str | None, now: datetime) -> list[FieldError]:
     errors: list[FieldError] = []
     errors += _account_errors(d)
@@ -271,6 +276,7 @@ def _message_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
     if not text:
         errors.append(FieldError("message_text", COPY["message_missing"]))
     else:
+        errors += placeholder_errors("message_text", text)
         size = message_bytes(text, disclosure)
         if size > INSTAGRAM_MESSAGE_BYTES:
             errors.append(
@@ -300,6 +306,7 @@ def _opening_errors(d: Definition, disclosure: str | None) -> list[FieldError]:
     if not text:
         errors.append(FieldError("opening_text", COPY["opening_missing"]))
     else:
+        errors += placeholder_errors("opening_text", text)
         size = message_bytes(text, disclosure)
         if size > INSTAGRAM_MESSAGE_BYTES:
             errors.append(
@@ -320,9 +327,10 @@ def _nudge_errors(d: Definition) -> list[FieldError]:
     disclosure line are added when it is sent)."""
     if not (d.follow_nudge_text or "").strip():
         return [FieldError("follow_nudge_text", COPY["nudge_missing"])]
+    errors = placeholder_errors("follow_nudge_text", d.follow_nudge_text)
     if len(d.follow_nudge_text or "") > NUDGE_CHARS:
-        return [FieldError("follow_nudge_text", COPY["nudge_long"])]
-    return []
+        errors.append(FieldError("follow_nudge_text", COPY["nudge_long"]))
+    return errors
 
 
 def _public_reply_errors(texts: Sequence[str]) -> list[FieldError]:

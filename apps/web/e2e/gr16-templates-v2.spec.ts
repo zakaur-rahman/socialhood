@@ -5,7 +5,7 @@ import { expect, test } from "./support/fixtures";
  * a price by option, call requests and a coupon from an entry link. Each makes a draft saved as a
  * flow that activates once its link is filled in.
  */
-type Flow = { source: string; definition: { steps: Array<{ buttons?: Array<{ url: string | null }> }> }; missing_for_activation: string[] };
+type Flow = { source: string; definition: { steps: Array<{ text?: string; buttons?: Array<{ url: string | null }> }> }; missing_for_activation: string[] };
 type Run = { id: string; result: string };
 
 const FLOW_TEMPLATES = [
@@ -32,9 +32,11 @@ test.describe("GR-16 template gallery, version 2", () => {
       expect(flow.source).toBe("flow");
       expect(flow.definition.steps).toHaveLength(template.steps);
 
-      // The link is the only thing the user must fill in.
+      // The link, the price and the code are what the user must fill in (C-105: activation refuses
+      // a message that still says [price] or [code]).
       for (const step of flow.definition.steps) {
         for (const button of step.buttons ?? []) button.url = "https://example.com/offer";
+        if (step.text) step.text = step.text.replace("[price]", "499").replace("[code]", "WELCOME10");
       }
       const saved = await api.call<Flow>("PUT", `${base}/${draft.id}/flow`, flow.definition);
       expect(saved.missing_for_activation).toEqual([]);

@@ -15,6 +15,8 @@ import {
   newId,
   placeErrors,
   removeStep,
+  PLACEHOLDERS,
+  placeholderProblem,
   stepProblems,
   stepTitle,
   updateList,
@@ -351,6 +353,34 @@ describe("tree changes", () => {
     expect(dropIndex([100, 300], 200)).toBe(1);
     expect(dropIndex([100, 300], 500)).toBe(2);
     expect(dropIndex([], 10)).toBe(0);
+  });
+});
+
+describe("template placeholders (C-105)", () => {
+  it("names the first placeholder still in a message", () => {
+    expect(placeholderProblem("The small one is [price]. Reply here.")).toBe("Replace [price] with your price.");
+    expect(placeholderProblem("Your code is [CODE]")).toBe("Replace [code] with your code.");
+    expect(placeholderProblem("Code [code], price [price]")).toBe("Replace [code] with your code.");
+  });
+
+  it("leaves a user's own brackets alone", () => {
+    for (const text of ["Free shipping [on orders over 999]", "See [1]", "[prices]", "Price: [price tag]", "{price}", ""]) {
+      expect(placeholderProblem(text)).toBeNull();
+    }
+  });
+
+  it("lists the same tokens the API does", () => {
+    expect(PLACEHOLDERS).toEqual({ "[price]": "your price", "[code]": "your code" });
+  });
+
+  it("a message or a question that still has one is a problem on its text", () => {
+    expect(stepProblems(send("s", "That one is [price]."), CTX)).toEqual({ text: "Replace [price] with your price." });
+    expect(stepProblems(send("s", "That one is 499 [incl. GST]."), CTX)).toEqual({});
+    const ask = stepProblems(
+      { kind: "ask", id: "q", text: "Email for your [code]?", expect: "email", field_key: null, retry_text: "", tries: 2, consent: false, consent_text: "", confirm_text: "Your code is [code].", skip: [] },
+      CTX,
+    );
+    expect(ask).toEqual({ text: "Replace [code] with your code.", confirm_text: "Replace [code] with your code." });
   });
 });
 

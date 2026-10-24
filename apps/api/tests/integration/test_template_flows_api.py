@@ -11,13 +11,21 @@ from tests.support.api import Clerk
 from tests.support.automation_api import Ws, set_plan, workspace
 from tests.support.ingest import rows
 
-# key: (trigger, steps, the fields still to fill, whether a link button is among them)
+# key: (trigger, steps, the fields still to fill: links and the [price] / [code] placeholders)
 EXPECTED = {
     "story_giveaway": ("story_mention", 2, []),
     "lead_magnet": ("comment_keyword", 2, ["flow.steps.1.buttons.0.url"]),
-    "price_by_option": ("comment_keyword", 4, []),
+    "price_by_option": (
+        "comment_keyword",
+        4,
+        ["flow.steps.1.text", "flow.steps.2.text", "flow.steps.3.text"],
+    ),
     "call_request": ("dm_keyword", 2, []),
-    "entry_link_coupon": ("entry_link", 1, ["flow.steps.0.buttons.0.url"]),
+    "entry_link_coupon": (
+        "entry_link",
+        1,
+        ["flow.steps.0.text", "flow.steps.0.buttons.0.url"],
+    ),
 }
 
 
@@ -79,8 +87,80 @@ async def test_a_flow_template_activates_once_filled(
     for step in definition["steps"]:
         for button in step.get("buttons", []):
             button["url"] = "https://example.com/offer"
+        if "text" in step:
+            step["text"] = step["text"].replace("[price]", "499").replace("[code]", "WELCOME10")
     saved = await ws.ok("PUT", f"/automations/{created['id']}/flow", json=definition)
     assert saved["missing_for_activation"] == []
     assert saved["source"] == "flow"
     active = await ws.ok("POST", f"/automations/{created['id']}/activate")
+    assert active["status"] == "active"
+
+
+# ---------------------------------------------------------------- placeholders (C-105)
+
+
+async def test_activation_refuses_a_flow_that_still_says_price(ws: Ws) -> None:
+    created = await ws.ok(
+        "POST",
+        "/automations",
+        201,
+        json={"template_key": "price_by_option", "social_account_id": ws.account_id},
+    )
+    refused = await ws.call("POST", f"/automations/{created['id']}/activate")
+    assert refused.status_code == 422
+    errors = [(e["field"], e["message"]) for e in refused.json()["errors"]]
+    assert errors == [
+        (f"flow.steps.{i}.text", "Replace [price] with your price.") for i in (1, 2, 3)
+    ]
+
+    # Filling one is not enough: the others stay refused, each on its own step.
+    flow = await ws.ok("GET", f"/automations/{created['id']}/flow")
+    definition = flow["definition"]
+    definition["steps"][1]["text"] = "The small one is 299 [incl. GST]. Reply here to order."
+    saved = await ws.ok("PUT", f"/automations/{created['id']}/flow", json=definition)
+    assert saved["missing_for_activation"] == ["flow.steps.2.text", "flow.steps.3.text"]
+    again = await ws.call("POST", f"/automations/{created['id']}/activate")
+    assert [e["field"] for e in again.json()["errors"]] == [
+        "flow.steps.2.text",
+        "flow.steps.3.text",
+    ]
+
+    for step in definition["steps"][2:]:
+        step["text"] = step["text"].replace("[price]", "499")
+    await ws.ok("PUT", f"/automations/{created['id']}/flow", json=definition)
+    active = await ws.ok("POST", f"/automations/{created['id']}/activate")
+    assert active["status"] == "active"
+
+
+async def test_the_coupon_template_needs_its_code(ws: Ws) -> None:
+    created = await ws.ok(
+        "POST",
+        "/automations",
+        201,
+        json={"template_key": "entry_link_coupon", "social_account_id": ws.account_id},
+    )
+    flow = await ws.ok("GET", f"/automations/{created['id']}/flow")
+    definition = flow["definition"]
+    definition["steps"][0]["buttons"][0]["url"] = "https://example.com/offer"
+    saved = await ws.ok("PUT", f"/automations/{created['id']}/flow", json=definition)
+    assert saved["missing_for_activation"] == ["flow.steps.0.text"]
+    refused = await ws.call("POST", f"/automations/{created['id']}/activate")
+    assert refused.status_code == 422
+    assert refused.json()["errors"][0]["message"] == "Replace [code] with your code."
+
+
+async def test_a_message_on_the_settings_with_a_placeholder_is_refused(ws: Ws) -> None:
+    draft = await ws.draft(message_text="Hi {first_name}! It is [price].")
+    refused = await ws.call("POST", f"/automations/{draft['id']}/activate")
+    assert refused.status_code == 422
+    assert [(e["field"], e["message"]) for e in refused.json()["errors"]] == [
+        ("message_text", "Replace [price] with your price.")
+    ]
+    fixed = await ws.ok(
+        "PUT",
+        f"/automations/{draft['id']}",
+        json=ws.definition(message_text="Hi {first_name}! It is 499 [incl. GST]."),
+    )
+    assert fixed["missing_for_activation"] == []
+    active = await ws.ok("POST", f"/automations/{draft['id']}/activate")
     assert active["status"] == "active"

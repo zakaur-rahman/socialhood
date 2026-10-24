@@ -3069,3 +3069,33 @@ No migration.
   no `notes`), `test_weekly_digest.py` (the stored stats carry `captures`), `WeeklyReportPage.test.tsx`.
 - **Unsure / for the coordinator:** regenerate the client (`captures` in the metric keys, `notes`
   removed from `WeeklyReport`).
+
+## C-105 · Template placeholders are checked at activation (GR-16 follow-up, feature/gr-27-sheets-followups)
+
+No migration. Closes the open point in C-099: a flow template's `[price]` or `[code]` looked filled
+to activation.
+
+- **One list.** `templates.PLACEHOLDERS` maps each bracket token a template uses to what goes there
+  (`[price]`: your price, `[code]`: your code). `templates.unfilled(text)` finds the tokens still in a
+  text (case-insensitive, each once, in order of appearance) and `unfilled_copy(token)` words the
+  error: "Replace [price] with your price." Only listed tokens count, so a user's own brackets
+  ("[incl. GST]", "[1]", "[prices]", "[Shop link]") never trip it. A unit test checks that every
+  bracket token the templates use is in the list.
+- **Where it refuses.** Activation of a flow (`flows._text_errors`, so a send step's text, a
+  question's text, retry, consent and confirm lines, and the body of a saved reply a step uses) and
+  of an automation on the message settings (`message_text`, the tap-first `opening_text`, the
+  `follow_nudge_text`). The error sits on that field, so the step shows it like any other activation
+  error; two tokens in one text give two errors; `missing_for_activation` lists the field. Button
+  titles, public replies and AI instructions are not send text and aren't checked.
+- **Editor.** The step checker (`stepProblems`) marks the same texts as you type, from a mirror of
+  the list (`PLACEHOLDERS` in `lib/automations/flow.ts`; the comment names the Python list to keep in
+  step). The API's answer is merged as before, so a token the editor doesn't know still shows when
+  activation is refused.
+- **Template tests changed.** The price-by-option and coupon templates now need their price or code
+  as well as their link: `test_template_flows.py` (what each holds, and that they activate once
+  filled), `test_template_flows_api.py` (fields still to fill, 422 per step, filling one at a time),
+  and the GR-16 e2e spec fills them.
+- **Tests.** Unit `test_template_placeholders.py` (the list, the tokens found, ordinary brackets left
+  alone, flows, questions, the message settings, the opening and follow line); integration
+  `test_template_flows_api.py` (refused on each step, the coupon code, a message on the settings);
+  vitest `flow.test.ts`, `FlowEditor.test.tsx`.
