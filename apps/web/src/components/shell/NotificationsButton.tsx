@@ -16,7 +16,7 @@ import { relativeTime } from "@/lib/time";
 import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
-import { sidebarIconClass, sidebarRowClass } from "./sidebar-styles";
+import { sidebarIconClass, sidebarLabelClass, sidebarRowClass } from "./sidebar-styles";
 
 /** UX-SH-04: the bell opens a 360 px panel of the member's notifications (FR-NOT-01). */
 export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
@@ -30,7 +30,7 @@ export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         aria-label={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
-        className={cn(sidebarRowClass({ collapsed }), "data-[state=open]:bg-pressed data-[state=open]:text-fg")}
+        className={cn(sidebarRowClass(), "data-[state=open]:bg-pressed data-[state=open]:text-fg")}
       >
         <span className="relative shrink-0">
           <Bell className={sidebarIconClass()} aria-hidden />
@@ -39,7 +39,9 @@ export function NotificationsButton({ collapsed }: { collapsed: boolean }) {
             <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-brand ring-2 ring-panel" aria-hidden />
           ) : null}
         </span>
-        {collapsed ? null : <span>Notifications</span>}
+        <span aria-hidden={collapsed} className={sidebarLabelClass(collapsed)}>
+          Notifications
+        </span>
       </PopoverTrigger>
       <PopoverContent side="right" align="end" className="w-90 p-0">
         <NotificationsPanel

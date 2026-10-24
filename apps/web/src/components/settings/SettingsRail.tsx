@@ -56,10 +56,7 @@ export function SettingsRail({ slug, groups }: { slug: string; groups: SettingsG
                       <Link
                         href={href as Route}
                         aria-current={active ? "page" : undefined}
-                        className={sidebarRowClass({
-                          active,
-                          collapsed: false,
-                        })}
+                        className={sidebarRowClass({ active })}
                       >
                         <item.icon className="size-4 shrink-0" aria-hidden />
                         <span className="min-w-0 truncate">{item.label}</span>
