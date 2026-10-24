@@ -19,7 +19,8 @@ export const SELECTED_ROW = cn("bg-raised text-fg hover:bg-raised", SELECTION_BA
  */
 export function sidebarRowClass({ active = false }: { active?: boolean } = {}): string {
   return cn(
-    "relative flex h-9 w-full items-center gap-3 overflow-hidden rounded-lg px-3.5 text-sm font-medium whitespace-nowrap text-fg-secondary pointer-coarse:h-10",
+    // text-left: a row that is a <button> (Notifications) would centre its stretched label.
+    "relative flex h-9 w-full items-center gap-3 overflow-hidden rounded-lg px-3.5 text-left text-sm font-medium whitespace-nowrap text-fg-secondary pointer-coarse:h-10",
     // Colours only: transition-colors includes outline-color, which faded the focus outline in from
     // grey (A11Y-023); the outline must appear in brand at once (DESIGN_SYSTEM §7.3).
     "hover:bg-hover hover:text-fg motion-safe:transition-[color,background-color]",
