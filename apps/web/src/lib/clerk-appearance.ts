@@ -93,6 +93,14 @@ function appearanceWithoutBase(theme: Theme) {
       navbar: { backgroundColor: "var(--color-panel)", borderRight: "1px solid var(--color-line) !important" },
       scrollBox: { backgroundColor: "var(--color-overlay)" },
       dividerLine: { backgroundColor: "var(--color-line)" },
+      // The account modal's section rules (Profile, Email addresses, Phone numbers, Connected
+      // accounts) and the page header's underline: Clerk draws them from a faint neutral alpha that
+      // vanished on light. Recoloured to `line`, never added where Clerk draws none.
+      profileSection: { borderColor: "var(--color-line) !important" },
+      profileSectionContent: { borderColor: "var(--color-line) !important" },
+      profileSectionItemList: { borderColor: "var(--color-line) !important" },
+      header: { borderColor: "var(--color-line) !important" },
+      pageScrollBox: { borderColor: "var(--color-line) !important" },
       // Fields, on the app's field recipe: `field` fill, the 40% control edge, `rounded-lg`, and the
       // brand edge on a raised fill when focused.
       formFieldInput: {
