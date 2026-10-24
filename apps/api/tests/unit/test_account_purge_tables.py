@@ -41,6 +41,8 @@ EXPECTED = {
     "media_items",
     "message_analyses",
     "messages",
+    "order_items",  # GR-32
+    "orders",
     "post_metric_snapshots",
     "posting_slots",
     "reply_suggestions",

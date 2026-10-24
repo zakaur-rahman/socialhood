@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from socialhood.db.tenancy import tenant_bypass_scope
 from socialhood.models.catalogue import ShopifyConnection
 from socialhood.models.connections import AccountStatus, SocialAccount
+from socialhood.models.orders import PaymentConnection
 
 
 @dataclass(frozen=True)
@@ -78,5 +79,32 @@ async def shopify_owner(session: AsyncSession, shop_domain: str) -> uuid.UUID | 
         return await session.scalar(
             select(ShopifyConnection.workspace_id).where(
                 ShopifyConnection.shop_domain == shop_domain
+            )
+        )
+
+
+async def razorpay_owner(session: AsyncSession, token: str) -> uuid.UUID | None:
+    """The workspace whose Razorpay webhook address carries this token (GR-32), or None."""
+    if not token:
+        return None
+    with tenant_bypass_scope():
+        return await session.scalar(
+            select(PaymentConnection.workspace_id).where(
+                PaymentConnection.webhook_token == token,
+                PaymentConnection.razorpay_key_id.is_not(None),
+            )
+        )
+
+
+async def razorpay_webhook_secret(session: AsyncSession, token: str) -> bytes | None:
+    """The encrypted webhook secret for this address token (GR-32), or None. The caller decrypts
+    it and checks the post's signature before anything else is read."""
+    if not token:
+        return None
+    with tenant_bypass_scope():
+        return await session.scalar(
+            select(PaymentConnection.razorpay_webhook_secret_enc).where(
+                PaymentConnection.webhook_token == token,
+                PaymentConnection.razorpay_key_id.is_not(None),
             )
         )

@@ -42,6 +42,7 @@ READ = {
     "answer_from_knowledge",
     "list_knowledge_gaps",
     "search_products",  # GR-31
+    "list_orders",  # GR-32
     "list_webhook_endpoints",
     "list_recent_failures",
     "list_sequences",
@@ -69,6 +70,7 @@ ADMIN = {
     "answer_from_knowledge",
     "list_knowledge_gaps",
     "search_products",  # GR-31
+    "list_orders",  # GR-32
     "list_webhook_endpoints",
     "list_recent_failures",
     "list_sequences",

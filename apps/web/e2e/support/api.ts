@@ -487,6 +487,24 @@ export class Api {
     return response.status;
   }
 
+  /**
+   * GR-32: a Razorpay webhook as Razorpay sends it, signed with the webhook secret the suite typed
+   * into the Payments card (hex HMAC-SHA256 of the raw body), posted to the workspace's address.
+   */
+  async razorpayWebhook(token: string, secret: string, eventId: string, body: Record<string, unknown>): Promise<number> {
+    const raw = JSON.stringify(body);
+    const response = await fetch(`${this.stack.E2E_API_URL}/webhooks/razorpay/${token}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Razorpay-Signature": createHmac("sha256", secret).update(raw).digest("hex"),
+        "X-Razorpay-Event-Id": eventId,
+      },
+      body: raw,
+    });
+    return response.status;
+  }
+
   get proProduct(): string {
     return this.stack.E2E_DODO_PRO_PRODUCT;
   }

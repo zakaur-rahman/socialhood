@@ -190,6 +190,11 @@ class Settings(BaseSettings):
     shopify_api_version: str = "2025-07"
     shopify_provider: Literal["shopify", "fake"] = "shopify"
 
+    # GR-32: Razorpay payment links use each business's own keys (stored per workspace, encrypted),
+    # so there are no app-wide credentials. fake: a sandbox that accepts rzp_test_ keys, for
+    # development and the end-to-end stack (razorpay/fake.py); refused in production.
+    razorpay_provider: Literal["razorpay", "fake"] = "razorpay"
+
     sandbox_platform_enabled: bool = False
     # GR-04: outbound webhooks may go to private and local addresses (development and e2e, which
     # receive them locally); refused in production (security/ssrf.py).
@@ -261,6 +266,7 @@ class Settings(BaseSettings):
             "clerk_invitations_provider",
             "google_provider",
             "shopify_provider",
+            "razorpay_provider",
         ):
             if getattr(self, name) == "fake":
                 unsafe.append(f"{name.upper()} must not be fake in production")

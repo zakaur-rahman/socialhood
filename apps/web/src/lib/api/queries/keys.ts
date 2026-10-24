@@ -60,6 +60,9 @@ export const keys = {
   products: (wid: string) => ["w", wid, "products"] as const,
   productList: (wid: string, filters: ProductFilters) => ["w", wid, "products", "list", filters] as const,
   shopify: (wid: string) => ["w", wid, "shopify"] as const,
+  orders: (wid: string) => ["w", wid, "orders"] as const, // GR-32
+  orderList: (wid: string, status: string | null) => ["w", wid, "orders", "list", status] as const,
+  payments: (wid: string) => ["w", wid, "payments"] as const,
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
   /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
   activityLists: (wid: string) => ["w", wid, "activity"] as const,

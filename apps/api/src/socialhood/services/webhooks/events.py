@@ -65,6 +65,8 @@ EVENTS: tuple[EventType, ...] = (
     EventType("conversation.assigned", 1, "A conversation was assigned or unassigned."),
     EventType("automation.run.completed", 1, "An automation run finished."),
     EventType("broadcast.finished", 1, "A broadcast finished sending.", emitted=False),
+    EventType("order.created", 1, "An order was made for a customer."),
+    EventType("order.paid", 1, "An order was paid."),
 )
 BY_NAME = {e.name: e for e in EVENTS}
 TEST_EVENT = "webhook.test"  # "Send test event" (not subscribable)
@@ -317,6 +319,44 @@ async def lead_stage_changed(
                 "rule": rule,
             },
             "reason": reason,
+        },
+    )
+
+
+async def order_event(
+    session: AsyncSession, event_type: str, order: Any, items: list[Any], contact: Contact
+) -> None:
+    """``order.created`` and ``order.paid`` (GR-32): the order, its lines and the contact. The
+    delivery address is left out: an endpoint that needs it reads the order in the app."""
+    from socialhood.services.catalogue import money
+
+    if not await wanted(session, event_type):
+        return
+    await emit(
+        session,
+        event_type,
+        {
+            "contact": contact_ref(contact, await _platform(session, contact)),
+            "order": {
+                "id": str(order.id),
+                "number": order.number,
+                "status": order.status,
+                "currency": order.currency,
+                "total_minor": order.total_minor,
+                "total": money.plain(order.total_minor, order.currency),
+                "payment_method": order.payment_method,
+                "paid_at": order.paid_at.isoformat() if order.paid_at else None,
+                "items": [
+                    {
+                        "name": i.name,
+                        "variant": i.variant_title,
+                        "sku": i.sku,
+                        "quantity": i.quantity,
+                        "unit_price_minor": i.unit_price_minor,
+                    }
+                    for i in items
+                ],
+            },
         },
     )
 

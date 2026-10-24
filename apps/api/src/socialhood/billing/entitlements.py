@@ -77,6 +77,7 @@ THINGS = {
     "broadcast_recipients_monthly": "broadcast recipients a month",
     "catalogue_products": "products",
     "catalogue_import_rows": "rows in one import",
+    "orders_monthly": "orders a month",
     "active_sequences": "active sequences",
     "sequence_steps": "steps in a sequence",
 }

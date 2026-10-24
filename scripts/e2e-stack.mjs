@@ -268,6 +268,7 @@ async function main() {
     SHOPIFY_API_KEY: "e2e-shopify-key",
     SHOPIFY_API_SECRET: randomBytes(24).toString("hex"), // signs the webhooks the suite sends
     SHOPIFY_REDIRECT_URI: `${apiUrl}/v1/oauth/shopify/callback`,
+    RAZORPAY_PROVIDER: "fake", // GR-32: a sandbox that accepts rzp_test_ keys; the suite signs its own webhooks
     E2E_SEED_TOKEN: randomBytes(24).toString("hex"),
     PYTHONUNBUFFERED: "1",
     PYTHONIOENCODING: "utf-8",

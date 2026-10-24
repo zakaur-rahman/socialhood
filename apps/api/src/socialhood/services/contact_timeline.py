@@ -22,7 +22,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Select, Text, and_, cast, or_, select
+from sqlalchemy import Select, Text, and_, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError
@@ -43,11 +43,13 @@ from socialhood.models.contacts import (
     Tag,
 )
 from socialhood.models.inbox import Contact, Conversation, EntrySource, Message
+from socialhood.models.orders import Order, OrderStatus
 from socialhood.models.sequences import RunStatus, Sequence, SequenceStepRun
 from socialhood.models.team import AuditEvent
 from socialhood.repositories.broadcasts import status_expr
 from socialhood.schemas.contacts import TimelineItem, TimelineKind, TimelineList
 from socialhood.services import leads
+from socialhood.services.catalogue import money
 from socialhood.services.contacts import _decode, _encode
 
 DEFAULT_LIMIT = 30
@@ -168,6 +170,32 @@ def _assignment_item(row: Any) -> TimelineItem:
         row.created_at,
         title,
         ". ".join(p for p in parts if p) or None,
+        row.conversation_id,
+    )
+
+
+ORDER_VERB: dict[str, str] = {
+    OrderStatus.DRAFT: "created",
+    OrderStatus.AWAITING_PAYMENT: "waiting for payment",
+    OrderStatus.PAID: "paid",
+    OrderStatus.CANCELLED: "cancelled",
+    OrderStatus.EXPIRED: "expired",
+}
+PAID_VIA = {"razorpay": "Paid with Razorpay", "upi": "Paid by UPI"}
+
+
+def order_item(row: Any) -> TimelineItem:
+    """ "Order #12 paid", with the total and how it was paid (GR-32)."""
+    total = money.label(row.total_minor, row.currency)
+    detail = total
+    if row.status == OrderStatus.PAID and row.payment_method in PAID_VIA:
+        detail = f"{total}. {PAID_VIA[row.payment_method]}"
+    return _item(
+        row.id,
+        "order",
+        row.at,
+        f"Order #{row.number} {ORDER_VERB.get(row.status, row.status)}",
+        detail,
         row.conversation_id,
     )
 
@@ -412,6 +440,31 @@ async def timeline(
         )
         for i, at, position, status, reason, name in steps
     ]
+
+    # GR-32: one entry per order, at the time of its latest step (paid, cancelled, or made).
+    order_at = func.coalesce(Order.paid_at, Order.cancelled_at, Order.created_at)
+    made = (
+        await session.execute(
+            _before(
+                select(
+                    Order.id,
+                    order_at.label("at"),
+                    Order.number,
+                    Order.status,
+                    Order.currency,
+                    Order.total_minor,
+                    Order.payment_method,
+                    Order.conversation_id,
+                ).where(Order.contact_id == contact_id),
+                order_at,
+                Order.id,
+                after,
+            )
+            .order_by(order_at.desc(), Order.id.desc())
+            .limit(take)
+        )
+    ).all()
+    items += [order_item(o) for o in made]
 
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     page = items[:limit]

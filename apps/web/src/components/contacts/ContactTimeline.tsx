@@ -9,6 +9,7 @@ import {
   ShieldCheck,
   Tag,
   ListOrdered,
+  Receipt,
   UserCheck,
   Zap,
   type LucideIcon,
@@ -34,6 +35,7 @@ const ICON: Record<TimelineKind, LucideIcon> = {
   broadcast: Megaphone,
   assignment: UserCheck,
   sequence: ListOrdered,
+  order: Receipt,
 };
 
 /**

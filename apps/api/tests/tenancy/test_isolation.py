@@ -88,6 +88,7 @@ PARAM_TO_SEED: dict[str, str] = {
     "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
     "broadcast_id": "broadcast_id",  # GR-23
     "product_id": "product_id",  # GR-31
+    "order_id": "order_id",  # GR-32
     "sequence_id": "sequence_id",  # GR-24
     "enrolment_id": "enrolment_id",
 }
@@ -224,6 +225,28 @@ EXAMPLE_BODIES.update(
         ("POST", "/v1/w/{wid}/products/import"): {"csv": "name,price\nA,1\n"},
         ("POST", "/v1/w/{wid}/integrations/shopify/connect"): {"shop": "into-b"},
         ("POST", "/v1/w/{wid}/integrations/shopify/complete"): {"nonce": "n" * 16},
+    }
+)
+
+# GR-32: orders. B's conversation and product in a new order are a 404 before any plan check;
+# the other routes name B's order in the path.
+EXAMPLE_BODIES.update(
+    {
+        ("POST", "/v1/w/{wid}/orders"): {
+            "conversation_id": "{conversation_id}",
+            "items": [{"product_id": "{product_id}", "quantity": 1}],
+        },
+        ("POST", "/v1/w/{wid}/orders/{order_id}/payment-request"): {"method": "upi"},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/mark-paid"): {},
+        ("PUT", "/v1/w/{wid}/integrations/payments/razorpay"): {
+            "key_id": "rzp_test_abcdefgh",
+            "private_key": "secretsecret",
+            "webhook_key": "hooksecret1",
+        },
+        ("PUT", "/v1/w/{wid}/integrations/payments/upi"): {
+            "vpa": "shop@okbank",
+            "name": "Shop",
+        },
     }
 )
 
@@ -447,6 +470,9 @@ B_TABLES = (
     "products",  # GR-31
     "product_variants",
     "shopify_connections",
+    "payment_connections",  # GR-32
+    "orders",
+    "order_items",
     "sequences",  # GR-24
     "sequence_steps",
     "sequence_enrolments",
@@ -522,6 +548,7 @@ class Seed:
     hook_id: str = ""  # GR-26: a REST hook that key subscribed
     broadcast_id: str = ""
     product_id: str = ""  # GR-31
+    order_id: str = ""  # GR-32
     sequence_id: str = ""  # GR-24
     enrolment_id: str = ""
 
@@ -873,6 +900,32 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             ),
             {"w": wid, "t": b"not-a-real-token"},
         )
+    async with engine.begin() as conn:  # GR-32: an order for B's contact, a line, payment settings
+        order = (
+            await conn.execute(
+                text(
+                    "INSERT INTO orders (workspace_id, number, contact_id, conversation_id, status,"
+                    " currency, total_minor) VALUES (:w, 1, :c, :v, 'draft', 'INR', 79900)"
+                    " RETURNING id"
+                ),
+                {"w": wid, "c": thread.contact_id, "v": thread.conversation_id},
+            )
+        ).scalar_one()
+        await conn.execute(
+            text(
+                "INSERT INTO order_items (workspace_id, order_id, product_id, name, quantity,"
+                " unit_price_minor, line_total_minor)"
+                " VALUES (:w, :o, :p, 'B kurta', 1, 79900, 79900)"
+            ),
+            {"w": wid, "o": order, "p": product},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO payment_connections (workspace_id, webhook_token, upi_vpa, upi_name)"
+                " VALUES (:w, 'b-webhook-token', 'b@okbank', 'B')"
+            ),
+            {"w": wid},
+        )
     sequence, enrolment = await make_sequence_rows(  # GR-24
         engine,
         workspace_id=wid,
@@ -915,6 +968,7 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         hook_id=str(rest_hook),
         broadcast_id=broadcast,
         product_id=str(product),
+        order_id=str(order),
         sequence_id=sequence,
         enrolment_id=enrolment,
     )

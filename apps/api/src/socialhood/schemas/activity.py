@@ -9,7 +9,14 @@ from typing import Literal
 from socialhood.schemas.common import ResponseModel
 
 ActivityKindName = Literal[
-    "automation_run", "flow_step", "message", "webhook_delivery", "account", "broadcast", "sequence"
+    "automation_run",
+    "flow_step",
+    "message",
+    "webhook_delivery",
+    "account",
+    "broadcast",
+    "sequence",
+    "order",
 ]
 ActivityOutcome = Literal["ok", "failed", "partial", "skipped", "attention"]
 

@@ -4406,3 +4406,118 @@ Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCar
   `events.contacts_tagged` (which also feeds sequences) on `wanted`; the gate is gone and
   `contacts_tagged` still decides whether to emit. The web sequence form and pages read `problems`
   as possibly absent (the generated type marks defaulted response fields optional).
+
+## C-120 · Payment requests and order capture (GR-32, feature/gr-32-33-orders-wa-catalogue)
+
+An order made in a conversation from the catalogue, a payment link or UPI request sent in the chat,
+and a paid order marked by Razorpay's signed webhook. **Payments go to the business's own account,
+never through us.** *Nothing here has run against a real Razorpay account: it is built like Shopify
+(C-116), with a sandbox for development and the end-to-end stack, and listed as unverified in
+`docs/verification.md` item 38.* PD-8 applies: commerce is Pro and Max.
+
+### Decisions
+- **Razorpay with the business's own keys, not partner OAuth.** *Verified from Razorpay's docs
+  (2026-10-25): the OAuth route is for Technology Partners and needs sign-up with Razorpay support
+  before an app can be registered, so it is not available to us by default.* Each workspace saves its
+  own key id and key secret (`payment_connections`, the secrets encrypted with the existing token
+  encryption and never returned). If the owner later becomes a Technology Partner, OAuth can replace
+  the key form without changing orders. Pending the owner: whether to apply for partner status.
+- **Unset means "not configured".** With no keys, asking for a Razorpay link answers 409 "Razorpay
+  isn't set up for this workspace. Add your keys in Integrations first."; with no UPI address, the same
+  for UPI. `RAZORPAY_PROVIDER=fake` is a sandbox that accepts `rzp_test_` keys and hands out
+  `plink_fake_<n>` links; refused in production like the other fakes. There are no app-wide Razorpay
+  credentials.
+- **Connect checks the keys first** (`GET /payment_links?count=1`): refused keys are a 422 "Razorpay
+  doesn't accept these keys", Razorpay not answering is a 502, and nothing is saved either way. The
+  business makes up a **webhook secret** (8 or more characters), enters it here and in its Razorpay
+  dashboard; the card shows the webhook address and the events to turn on, and when the last signed
+  event arrived.
+- **Money** as in GR-31: integer minor units and ISO 4217. The total is computed on the server from the
+  catalogue's prices when the order is made; the lines are a snapshot (name, variant, SKU, unit price),
+  so a later price change does not alter an order. A request carries product ids and quantities, never
+  a price. All lines must share one currency. Stock, when recorded, is checked (more than is left is a
+  422 "Only 4 left of Cotton kurta") **but is not reduced** by an order: the catalogue's stock is a
+  number the business keeps. *Not built:* reserving or reducing stock, delivery fees, tax and discounts
+  (the total is the sum of the lines).
+- **Status:** `draft`, `awaiting_payment`, then `paid`, `cancelled` or `expired`. Asking for payment can
+  be repeated (a new link replaces the old one, which is cancelled with Razorpay as far as it answers).
+  A payment that arrives for a cancelled or expired order still marks it paid, because the money has
+  arrived. A paid order cannot be cancelled. A Razorpay link lasts 3 days (`LINK_TTL`).
+- **UPI has no webhook.** The request is a `upi://pay?pa=<VPA>&pn=<name>&am=<amount>&cu=INR&tn=Order <n>`
+  link plus the VPA in the message ("send it to shop@okbank and tell us when it's done"); only INR.
+  A member marks the order paid ("Mark as paid", with an optional reference); who and when are kept on
+  the order and in the audit row `order.marked_paid`. The Orders sheet, the inbox dialog and the card
+  all say so.
+- **Webhooks** (`POST /webhooks/razorpay/{token}`): the token is a random per-workspace part of the
+  address; an unknown token and a bad signature are both 401. `X-Razorpay-Signature` is the hex
+  HMAC-SHA256 of the raw body with the workspace's webhook secret, checked before the body is read. A
+  verified event is stored once per `X-Razorpay-Event-Id`, then applied by the webhook job
+  (`services/webhook_handlers/razorpay.py`): `payment_link.paid` marks the order paid when the amount
+  paid equals the total (another amount is ignored and logged), `payment_link.expired` expires an
+  order still waiting, everything else is ignored. Idempotent: an order already paid stays as it is.
+- **Plans.** `commerce` (reused) gates making orders, asking for payment, marking paid and saving
+  payment settings (402 `entitlement_required`, "Orders are part of Pro."); reading orders and the
+  settings status is never refused. *Proposed, pending owner confirmation:* `orders_monthly` Free 0,
+  Pro 500, Max 5,000, counted when the order is made (`billing/plans.py`; one line to change). A
+  request naming another workspace's conversation, product or order is a 404 before any plan check.
+- **Permissions.** Any member who can reply (`CanReply`) makes orders, asks for payment, marks paid and
+  cancels; payment settings need `integrations.manage`. Orders are listed for every member (agents see
+  the customer's address in the order they made; the settings card is for owners and admins).
+
+### Data (migration 0043, after 0042, expand-only)
+`payment_connections` (one per workspace: Razorpay key id, encrypted key secret and webhook secret, the
+address token, UPI address and name, last event seen), `orders` (number per workspace, contact,
+conversation, status, source, currency, `total_minor`, address JSON, note, payment method, link id and
+address, reference, `paid_at`, `paid_by_user_id`, `cancelled_at`) and `order_items`; `webhook_events.
+provider` accepts `razorpay`. Orders reference contacts, so they and their lines are account tables
+for the purge (`orders`, `order_items` in the expected list, a seeded row in `seed_account`). The
+tenancy walk got a seeded order, line and payment settings, three `B_TABLES` and the example bodies.
+
+### Routes (all `/v1/w/{wid}`, `api/v1/orders.py`)
+`GET/POST /orders`, `GET /orders/{order_id}`, `POST /orders/{order_id}/payment-request`,
+`.../mark-paid`, `.../cancel`; `GET /integrations/payments`, `PUT/DELETE /integrations/payments/razorpay`,
+`PUT/DELETE /integrations/payments/upi`. Public: `POST /webhooks/razorpay/{token}`. Sending the link
+uses the ordinary send pipeline (reply window, takeover and read-only rules apply; a closed window is
+a 409 and the order keeps its link, which can be sent again).
+
+### Where it shows
+- **Inbox:** More, **Create order** on any conversation: products, variants and quantities from the
+  catalogue (an estimated total is shown while typing; the server's is what counts), the delivery
+  address, a note; then Send Razorpay link or Send UPI request in the same dialog.
+- **Orders page** (Engage, every member): the list with a status filter, an order sheet (lines, address,
+  how it is being paid, send a link, mark paid, cancel), and for owners and admins the **Payments** card.
+- **Events** `order.created` and `order.paid` through GR-04's catalogue (the address is left out of the
+  payload). **Activity** (kind `order`): paid orders, and orders that expired (needs a new link). **Contact
+  timeline** (kind `order`): one entry per order at its latest step ("Order #12 paid. Paid with
+  Razorpay"). **Ask:** the `list_orders` tool (admin tier, read), with paid totals per currency and
+  citations that open the Orders page (answer-ref kind `order`).
+
+### Not built
+- *The flow step "request payment"* (optional in the plan): a flow has no order to attach it to until a
+  cart exists (the WhatsApp cart is GR-33); a payment request needs the member's chosen products and
+  address, which a flow does not collect yet. Recorded as not built.
+- Refunds, partial payments (a payment link is created with `accept_partial: false`), reminders,
+  editing an order's lines after it is made (cancel and make a new one), a customer-facing order page.
+
+### Tests
+Unit: `test_orders.py` (the Razorpay signature, the HTTP client's request and error kinds against a mock
+transport, the sandbox, the UPI link, the payment message, the timeline and Activity wording), the
+purge list, the tool registry and the event catalogue (11 events). Integration: `test_orders.py` (the
+plan, pricing and the snapshot, numbering and refused lines, "not configured", keys checked and stored
+encrypted, **the done-when: a test-mode link marks the order paid** and a replay changes nothing,
+unsigned, forged and unknown webhooks, the wrong amount, expiry then a late payment, UPI marked paid
+by hand and audited, cancelling, events, timeline and Activity). Tenancy: the new routes, bodies and
+tables. Vitest: `lib/orders/format`, `OrdersPage`, the sidebar and the agent route test. E2E:
+`gr32-orders.spec.ts`. *The integration, tenancy, vitest and e2e tests were written but not run (the
+coordinator runs them).*
+
+### For the coordinator
+- Regenerate the client and typecheck: `OrderOut`, `OrderLineOut`, `OrderList`, `OrderCreate`,
+  `OrderLineIn`, `AddressIn`, `PaymentSettings`, `RazorpayConnect`, `UpiSave`, the operations
+  `list_orders`, `create_order`, `get_order`, `request_order_payment`, `mark_order_paid`, `cancel_order`,
+  `get_payment_settings`, `connect_razorpay`, `disconnect_razorpay`, `save_upi`, `remove_upi`, the
+  `order` activity, timeline and answer-ref kinds and the two new `EventName`s. The web types are
+  aliases waiting for it (`lib/api/types.ts`); `ContactTimeline`'s icon map will not typecheck until then.
+- `alembic check` for 0043 (after 0042). The e2e stack gained `RAZORPAY_PROVIDER=fake`; the suite signs
+  its own webhooks with the secret it types into the card. Owner track: Razorpay account(s) for a live
+  test, and whether to become a Technology Partner (OAuth).

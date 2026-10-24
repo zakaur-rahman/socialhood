@@ -6,6 +6,7 @@ import {
   House,
   Inbox,
   MessageSquare,
+  Receipt,
   Settings,
   ShoppingBag,
   Users,
@@ -49,17 +50,18 @@ const INBOX: NavItem = { key: "inbox", label: "Inbox", icon: Inbox, segment: "in
 const COMMENTS: NavItem = { key: "comments", label: "Comments", icon: MessageSquare, segment: "comments", roles: EVERYONE, href: (s) => route(`/w/${s}/comments`) };
 const CONTACTS: NavItem = { key: "contacts", label: "Contacts", icon: Users, segment: "contacts", roles: EVERYONE, href: (s) => route(`/w/${s}/contacts`) };
 const LEADS: NavItem = { key: "leads", label: "Leads", icon: Funnel, segment: "leads", roles: EVERYONE, href: (s) => route(`/w/${s}/leads`) };
+const ORDERS: NavItem = { key: "orders", label: "Orders", icon: Receipt, segment: "orders", roles: EVERYONE, href: (s) => route(`/w/${s}/orders`) };
 const SCHEDULE: NavItem = { key: "schedule", label: "Schedule", icon: CalendarDays, segment: "schedule", roles: ADMINS, href: (s) => route(`/w/${s}/schedule`) };
 const AUTOMATIONS: NavItem = { key: "automations", label: "Automations", icon: Zap, segment: "automations", roles: ADMINS, href: (s) => route(`/w/${s}/automations`) };
 const KNOWLEDGE: NavItem = { key: "knowledge", label: "Knowledge", icon: BookOpen, segment: "knowledge", roles: ADMINS, href: (s) => route(`/w/${s}/knowledge`) };
 
 const PRODUCTS: NavItem = { key: "products", label: "Products", icon: ShoppingBag, segment: "products", roles: ADMINS, href: (s) => route(`/w/${s}/products`) };
 
-// §3.1's sections, grouped: Home alone; Engage (Inbox, Comments, Contacts, Leads); Grow, for owners and admins.
-// Agents see Home, Inbox, Comments, Contacts and Leads.
+// §3.1's sections, grouped: Home alone; Engage (Inbox, Comments, Contacts, Leads, Orders); Grow, for owners and admins.
+// Agents see Home, Inbox, Comments, Contacts, Leads and Orders.
 export const NAV_GROUPS: readonly NavGroup[] = [
   { key: "home", label: null, roles: EVERYONE, items: [HOME] },
-  { key: "engage", label: "Engage", roles: EVERYONE, items: [INBOX, COMMENTS, CONTACTS, LEADS] },
+  { key: "engage", label: "Engage", roles: EVERYONE, items: [INBOX, COMMENTS, CONTACTS, LEADS, ORDERS] },
   { key: "grow", label: "Grow", roles: ADMINS, items: [SCHEDULE, AUTOMATIONS, KNOWLEDGE, PRODUCTS] },
 ];
 

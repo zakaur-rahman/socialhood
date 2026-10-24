@@ -570,6 +570,9 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - An Orders list and a timeline entry.
   - The R2 "order capture and UPI payment requests".
 - **Done when:** a test-mode Razorpay link marks the sandbox order paid.
+- **Built as:** see C-120. Razorpay with the business's own keys (partner OAuth needs Technology Partner
+  sign-up); UPI marked paid by hand; the flow step "request payment" is not built. Nothing Razorpay-side
+  is verified (`docs/verification.md` item 38).
 
 #### GR-33 · WhatsApp catalogue messages · M · needs GR-31 · *verify*
 - Sync products to a Meta commerce catalogue, and send product and product-list messages on
