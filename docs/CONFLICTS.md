@@ -5295,3 +5295,11 @@ Light mode with a Dark / Light / System switch. Dark stays the default and the m
   inverse button works by token (near-black pill in light, also on photos).
 - Not verified in a browser (no build or screenshots by brief): Clerk's merge of the per-component
   appearance over the provider's, and iOS status bar in light.
+
+## C-113 · The weekly report per account, and the categorical chart palette (feature/weekly-report-accounts)
+
+Owner: the report did not tell accounts apart and had one chart colour. Decided here, small calls:
+
+- **`account_id` on `GET …/reports/weekly`.** Every figure, series, top intent and top post is that account's (`overview_stats` functions take an optional `account_id`); another workspace's account is 404 `not_found`. Leads and captures follow the contact's account and the automation's account. Knowledge-gap questions belong to the workspace, so an account's report returns 0 and none for them and the page hides the line. The digest is unchanged (workspace-wide).
+- **Breakdown** (workspace-wide report only, additive `breakdown`, plus `accounts` for the picker and `account` when one is picked): per account messages received, people who wrote in, comments, replies sent (the reply rate's own definition), automation runs, reach and followers, each this week against last with 8 weekly points. Counts are never None except for a week before the workspace existed. Reach and followers are None with `unavailable` (`insights_not_granted`, `no_readings`) where the platform gives no insights, e.g. WhatsApp. Leads, response time and rates are not broken down by account.
+- **Palette.** `--color-chart-series-2` to `-6` (orange, aqua, sky, yellow, magenta) join series 1 (brand indigo) in a fixed order, validated per theme with the data-viz checker (adjacent colour-blind separation and normal-vision floor pass in light and dark; the light yellow, aqua and magenta are under 3:1, so every chart has a legend, tooltip and table). A seventh entity folds into the neutral token. Shared pieces live in `components/charts/`.

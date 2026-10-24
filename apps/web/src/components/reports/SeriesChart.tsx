@@ -1,62 +1,43 @@
+import { LineChart } from "@/components/charts/LineChart";
 import type { ReportMetric, ReportPoint } from "@/lib/api/types";
+import { dayLabel, formatMetric, weekLabel } from "@/lib/reports/format";
 import { cn } from "@/lib/utils";
-import { dayLabel, plot, seriesSummary } from "@/lib/reports/format";
-
-const WIDTH = 200;
-const HEIGHT = 44;
-const STROKE = 2;
 
 type Props = {
   label: string;
   unit: ReportMetric["unit"];
   series: ReportPoint[];
+  /** The palette position of the entity this line is for (an account's, or 0 for the workspace). */
+  color?: number;
   className?: string;
 };
 
 /**
- * GR-34: one metric over the weeks, a hand-built SVG in the one series colour (DESIGN_SYSTEM
- * 1.8). The scale starts at 0 (a share runs 0 to 100). A week without a value breaks the line, and
- * a week on its own between two gaps is a dot: nothing is drawn through a gap or put in its place.
- * The latest week has a dot. The picture is labelled with every value in words, and the first and
- * last week sit under it as text; the tile above states the numbers.
+ * GR-34: one metric over the weeks as a compact line chart (components/charts). The scale starts
+ * at 0 (a share runs 0 to 100), the first and last week sit under the axis, hovering or focusing
+ * reads any week with the week before it, and a week without a value breaks the line instead of
+ * being drawn as 0. The tile above states the numbers; the chart carries a table of every week.
  */
-export function SeriesChart({ label, unit, series, className }: Props) {
+export function SeriesChart({ label, unit, series, color = 0, className }: Props) {
   if (series.length === 0) return null;
-  const { runs, last, gaps } = plot(series, unit, WIDTH, HEIGHT);
-  const first = series[0].week_start;
-  const end = series[series.length - 1].week_start;
+  const gaps = series.filter((p) => p.value === null || p.value === undefined).length;
   return (
-    <figure className={cn("m-0", className)} data-testid="series-chart">
-      <svg
-        role="img"
-        aria-label={seriesSummary({ label, unit, series })}
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-        className="h-auto w-full overflow-visible text-chart-series-1"
-      >
-        <line x1={0} x2={WIDTH} y1={HEIGHT - 4} y2={HEIGHT - 4} className="stroke-line-strong" strokeWidth={1} />
-        {runs.map((run, index) =>
-          run.length > 1 ? (
-            <polyline
-              key={index}
-              data-testid="series-line"
-              points={run.map(([x, y]) => `${x},${y}`).join(" ")}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={STROKE}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ) : (
-            <circle key={index} data-testid="series-dot" cx={run[0][0]} cy={run[0][1]} r={STROKE} fill="currentColor" />
-          ),
-        )}
-        {last ? <circle data-testid="series-last" cx={last[0]} cy={last[1]} r={STROKE + 1} fill="currentColor" /> : null}
-      </svg>
-      <figcaption className="mt-1 flex justify-between text-xs text-fg-secondary">
-        <span>{dayLabel(first)}</span>
-        {gaps > 0 ? <span data-testid="series-gaps">{gaps === 1 ? "1 week without data" : `${gaps} weeks without data`}</span> : null}
-        <span>{dayLabel(end)}</span>
-      </figcaption>
-    </figure>
+    <div className={cn("space-y-1", className)} data-testid="series-chart">
+      <LineChart
+        compact
+        height={72}
+        label={`${label} by week`}
+        beforeLabel="Week before"
+        fixedTop={unit === "percent" ? 100 : undefined}
+        format={(value) => formatMetric(unit, value)}
+        points={series.map((p) => ({ key: p.week_start, label: dayLabel(p.week_start), title: weekLabel(p.week_start) }))}
+        series={[{ key: label, label, color, values: series.map((p) => p.value) }]}
+      />
+      {gaps > 0 ? (
+        <p data-testid="series-gaps" className="m-0 text-xs text-fg-secondary">
+          {gaps === 1 ? "1 week without data" : `${gaps} weeks without data`}
+        </p>
+      ) : null}
+    </div>
   );
 }

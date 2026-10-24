@@ -79,7 +79,7 @@ export const keys = {
   leadSummary: (wid: string) => ["w", wid, "leads", "summary"] as const,
   leadSettings: (wid: string) => ["w", wid, "leads", "settings"] as const,
   // the weekly report (GR-34); `week` is the Monday, or "latest"
-  weeklyReport: (wid: string, week: string) => ["w", wid, "reports", "weekly", week] as const,
+  weeklyReport: (wid: string, week: string, account: string) => ["w", wid, "reports", "weekly", week, account] as const,
   contactFields: (wid: string) => ["w", wid, "contact-fields"] as const,
   contactSegments: (wid: string) => ["w", wid, "contact-segments"] as const,
   // inbox (P3)

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { ReportMetric } from "@/lib/api/types";
 
-import { dayLabel, formatMetric, parseWeekParam, plot, previousLine, reportTrend, seriesSummary, weekLabel } from "./format";
+import { changeText, dayLabel, formatMetric, parseWeekParam, previousLine, reportTrend, weekLabel } from "./format";
 
 function metric(values: Partial<ReportMetric> = {}): ReportMetric {
   return {
@@ -80,52 +80,10 @@ describe("previousLine", () => {
   });
 });
 
-describe("plot", () => {
-  it("starts the scale at zero and puts the highest value at the top", () => {
-    const { runs, last, gaps } = plot([{ value: 0 }, { value: 5 }, { value: 10 }], "count", 100, 40, 4);
-    expect(gaps).toBe(0);
-    expect(runs).toHaveLength(1);
-    expect(runs[0][0]).toEqual([4, 36]); // zero sits on the baseline
-    expect(runs[0][2]).toEqual([96, 4]); // the highest at the top
-    expect(last).toEqual([96, 4]);
-  });
-
-  it("scales a share from 0 to 100, not to its own maximum", () => {
-    const { runs } = plot([{ value: 50 }, { value: 50 }], "percent", 100, 44, 4);
-    expect(runs[0][0][1]).toBe(22);
-  });
-
-  it("breaks the line at a week with no value and draws nothing in its place", () => {
-    const { runs, gaps, last } = plot([{ value: 3 }, { value: null }, { value: 4 }, { value: 6 }], "count", 100, 40);
-    expect(gaps).toBe(1);
-    expect(runs.map((run) => run.length)).toEqual([1, 2]);
-    expect(last).not.toBeNull();
-  });
-
-  it("has no last point when the latest week has no value", () => {
-    const { last, runs } = plot([{ value: 3 }, { value: 4 }, { value: null }], "count", 100, 40);
-    expect(last).toBeNull();
-    expect(runs).toHaveLength(1);
-  });
-
-  it("has nothing to draw for a series with no values", () => {
-    const { runs, gaps } = plot([{ value: null }, { value: null }], "count", 100, 40);
-    expect(runs).toEqual([]);
-    expect(gaps).toBe(2);
-  });
-});
-
-describe("seriesSummary", () => {
-  it("lists every week in words, with the gaps named", () => {
-    const text = seriesSummary({
-      label: "Messages received",
-      unit: "count",
-      series: [
-        { week_start: "2026-09-07", value: 12 },
-        { week_start: "2026-09-14", value: null },
-        { week_start: "2026-09-21", value: 1204 },
-      ],
-    });
-    expect(text).toBe("Messages received, 3 weeks from 7 Sep: 12, no data, 1,204");
+describe("changeText", () => {
+  it("is the tile's change as text, or null when a side is unknown", () => {
+    expect(changeText({ change_pct: 12.5, direction: "up" })).toBe("+12.5%");
+    expect(changeText({ change_pct: null, direction: "up" })).toBe("New");
+    expect(changeText({ change_pct: null, direction: null })).toBeNull();
   });
 });

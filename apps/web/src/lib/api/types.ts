@@ -522,6 +522,9 @@ export type LeadSettingsPatch = Schemas["LeadSettingsPatch"];
 // Weekly report (GR-34)
 export type WeeklyReport = Schemas["WeeklyReport"];
 export type ReportMetric = Schemas["ReportMetric"];
+export type ReportAccount = Schemas["ReportAccount"];
+export type AccountBreakdown = Schemas["AccountBreakdown"];
+export type BreakdownMetric = Schemas["BreakdownMetric"];
 export type ReportMetricKey = ReportMetric["key"];
 export type ReportAccountMetric = Schemas["ReportAccountMetric"];
 export type ReportPoint = Schemas["ReportPoint"];
