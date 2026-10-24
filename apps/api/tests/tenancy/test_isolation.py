@@ -195,6 +195,8 @@ EXAMPLE_BODIES.update(
         },
         ("PUT", "/v1/w/{wid}/business-hours"): HOURS_OFF,
         ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/business-hours"): HOURS_OFF,
+        # GR-28: B's website chat settings (its public routes are in test_widget_tenancy.py).
+        ("PUT", "/v1/w/{wid}/widget"): {"enabled": False},
     }
 )
 
@@ -377,6 +379,7 @@ B_TABLES = (
     "ice_breakers",
     "saved_replies",
     "business_hours",
+    "widget_settings",  # GR-28
     "comments",
     "message_analyses",
     "reply_suggestions",
@@ -613,6 +616,10 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                 {"w": wid, "k": api_key},
             )
         ).scalar_one()
+    widget = await client.get(  # GR-28: the website chat (its web account and settings)
+        f"/v1/w/{wid}/widget", headers=clerk.headers(owner_b)
+    )
+    assert widget.status_code == 200, widget.text
     async with engine.begin() as conn:  # GR-11: a conversation starter
         await conn.execute(
             text(

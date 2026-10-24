@@ -269,6 +269,12 @@ async def seed_account(engine: AsyncEngine, wid: str, account_id: str) -> Seeded
         w=wid,
         a=account_id,
     )
+    await execute(  # GR-28: the website chat's settings
+        engine,
+        "INSERT INTO widget_settings (workspace_id, social_account_id) VALUES (:w, :a)",
+        w=wid,
+        a=account_id,
+    )
     await execute(  # GR-07: a story mention
         engine,
         "INSERT INTO story_mentions (workspace_id, social_account_id, contact_id, message_id,"

@@ -30,6 +30,7 @@ from socialhood.webhooks import instagram as instagram_webhook
 from socialhood.webhooks import links as links_redirect
 from socialhood.webhooks import meta_privacy
 from socialhood.webhooks import whatsapp as whatsapp_webhook
+from socialhood.widget import routes as widget_files
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -81,6 +82,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(meta_privacy.router)
     app.include_router(whatsapp_webhook.router)
     app.include_router(links_redirect.router)  # GR-15: /l/<code>, the tracked link redirect
+    app.include_router(widget_files.router)  # GR-28: /widget.js and the chat frame
 
     # SEC-05: exact origins only, no credentials (bearer tokens, not cookies).
     app.add_middleware(

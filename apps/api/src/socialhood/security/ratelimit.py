@@ -6,7 +6,10 @@ Retry-After.
   counts against the workspace's 60 sends a minute;
 - per workspace: 60 sends a minute and 20 AI requests a minute (api/ratelimit.per_workspace);
 - per client IP on unauthenticated routes: 30 a minute on OAuth callbacks (TR-API-07), 60 a
-  minute on the other public routes (api/ratelimit.per_ip).
+  minute on the other public routes (api/ratelimit.per_ip);
+- the website chat widget's public routes (GR-28): per IP 120 frame loads, 20 sessions, 40 sends,
+  240 polls and 10 email forms a minute, and per visitor 10 sends a minute, 300 sends a day and 60
+  polls a minute.
 
 Webhooks are not limited by IP (Meta shares IPs, TR-API-07); their bodies are capped at 5 MB.
 
@@ -52,6 +55,15 @@ LIMITS: dict[str, Limit] = {
         Limit("oauth_callback", 30, 60),
         Limit("public", 60, 60),
         Limit("api_key", 120, 60),
+        # GR-28, the website chat widget (no sign-in): per IP, then per visitor.
+        Limit("widget_frame", 120, 60),
+        Limit("widget_session", 20, 60),
+        Limit("widget_send_ip", 40, 60),
+        Limit("widget_send_visitor", 10, 60),
+        Limit("widget_send_day", 300, 86_400),
+        Limit("widget_poll_ip", 240, 60),
+        Limit("widget_poll_visitor", 60, 60),
+        Limit("widget_email_ip", 10, 60),
     )
 }
 

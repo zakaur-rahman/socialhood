@@ -1,0 +1,326 @@
+/* Social Hood chat widget: the styles of the frame (GR-28). Its own small stylesheet: it shares
+   nothing with the app or the host page. --accent and --on-accent are set from the widget's
+   colour; the rest follow the visitor's light or dark preference. */
+:root {
+  --accent: #4467e6;
+  --on-accent: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f1f2f5;
+  --text: #16181d;
+  --text-2: #5a5f6b;
+  --line: #d9dce3;
+  --danger: #b42318;
+  --shadow: 0 8px 32px rgb(0 0 0 / 0.22), 0 1px 3px rgb(0 0 0 / 0.2);
+  --radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #1b1d22;
+    --surface-2: #2a2d34;
+    --text: #f3f4f6;
+    --text-2: #a4a9b4;
+    --line: #3a3e47;
+    --danger: #ff8a80;
+    --shadow: 0 8px 32px rgb(0 0 0 / 0.6), 0 1px 3px rgb(0 0 0 / 0.5);
+  }
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: var(--text);
+  -webkit-text-size-adjust: 100%;
+}
+[hidden] {
+  display: none !important;
+}
+.sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+#root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 12px;
+}
+body.left #root {
+  align-items: flex-start;
+}
+body.right #root {
+  align-items: flex-end;
+}
+
+/* the launcher */
+.launcher {
+  position: relative;
+  width: 60px;
+  height: 60px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: var(--shadow);
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s ease;
+}
+.launcher:hover {
+  transform: scale(1.06);
+}
+.launcher:focus-visible {
+  outline-color: var(--text);
+}
+.launcher svg {
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+  text-align: center;
+}
+
+/* the panel */
+.panel {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  animation: rise 0.18s ease-out;
+}
+body.full #root {
+  padding: 0;
+}
+body.full .panel {
+  border-radius: 0;
+  box-shadow: none;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 8px 14px 16px;
+  background: var(--accent);
+  color: var(--on-accent);
+}
+header h1 {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.close {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  display: grid;
+  place-items: center;
+}
+.close:hover {
+  background: rgb(255 255 255 / 0.18);
+}
+.close:focus-visible {
+  outline-color: var(--on-accent);
+}
+.close svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+/* the conversation */
+.log {
+  flex: 1;
+  min-height: 0;
+  margin: 0;
+  padding: 16px;
+  list-style: none;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overscroll-behavior: contain;
+}
+.msg {
+  max-width: 82%;
+  padding: 9px 13px;
+  border-radius: 16px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.msg.them {
+  align-self: flex-start;
+  background: var(--surface-2);
+  border-bottom-left-radius: 4px;
+}
+.msg.me {
+  align-self: flex-end;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-bottom-right-radius: 4px;
+}
+.msg.pending {
+  opacity: 0.6;
+}
+.tag {
+  align-self: flex-start;
+  margin: 4px 0 -4px 4px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+/* the email card and the composer */
+.card {
+  margin: 0 12px 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+.card p {
+  margin: 0 0 8px;
+}
+.card label.check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 8px 0;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.card input[type="checkbox"] {
+  margin-top: 2px;
+  accent-color: var(--accent);
+}
+.row {
+  display: flex;
+  gap: 8px;
+}
+.field {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.btn {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.btn.quiet {
+  background: transparent;
+  color: var(--text-2);
+  font-weight: 500;
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.error {
+  margin: 0 16px 8px;
+  color: var(--danger);
+  font-size: 13px;
+}
+form.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-top: 1px solid var(--line);
+}
+form.composer textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 120px;
+  resize: none;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+}
+form.composer .btn {
+  min-width: 64px;
+}
+footer {
+  padding: 0 12px 10px;
+  text-align: center;
+  font-size: 12px;
+}
+footer a {
+  color: var(--text-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -44,6 +44,8 @@ from socialhood.api.v1 import (
     stories,
     team,
     whatsapp,
+    widget,
+    widget_public,
     workspace_deletion,
     workspaces,
 )
@@ -88,4 +90,6 @@ ROUTERS: tuple[APIRouter, ...] = (
     notification_settings.router,
     workspace_deletion.router,
     team.router,
+    widget.router,
+    widget_public.router,
 )

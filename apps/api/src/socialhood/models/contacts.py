@@ -71,6 +71,7 @@ class ConsentSource(StrEnum):
     STOP_REPLY = "stop_reply"  # a STOP or unsubscribe reply (GR-23)
     MEMBER = "member"  # recorded by a member, with a note
     IMPORT = "import"
+    WIDGET = "widget"  # the website chat widget's consent box (GR-28)
 
 
 class LeadStage(StrEnum):

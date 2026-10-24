@@ -88,7 +88,12 @@ log = get_logger(__name__)
 
 OutboundSource = Literal["human", "ai_auto", "automation"]
 
-PLATFORM_NAMES = {"instagram": "Instagram", "whatsapp": "WhatsApp", "facebook": "Facebook"}
+PLATFORM_NAMES = {
+    "instagram": "Instagram",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "web": "Website",
+}
 DEFAULT_TAKEOVER_MINUTES = 120
 # ai_paused_until = 'infinity' means "until resumed" (§5.4); asyncpg writes datetime.max as that.
 UNTIL_RESUMED = datetime.max.replace(tzinfo=UTC)
@@ -112,6 +117,7 @@ TEXT_LIMITS: dict[str, TextLimit] = {
     "instagram": TextLimit(1000, "bytes"),
     "whatsapp": TextLimit(4096, "characters"),
     "facebook": TextLimit(2000, "characters"),  # Messenger's text limit (unverified, GR-29)
+    "web": TextLimit(2000, "characters"),  # GR-28: the widget shows short chat bubbles
 }
 KB = 1024
 MB = 1024 * KB

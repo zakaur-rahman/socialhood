@@ -6,6 +6,8 @@ Human Agent is enabled (IG_HUMAN_AGENT_ENABLED: Meta approves Human Agent once f
 human replies (only) are allowed for 7 days with the HUMAN_AGENT tag; then closed. Messenger's
 other message tags are not used: a send outside the window is refused.
 WhatsApp: open for 24 h; then only an approved template can be sent.
+Website chat (GR-28): always open. The visitor's page can stay open for days, the widget shows a
+reply whenever it comes, and nothing is sent through a platform that could refuse it.
 """
 
 from __future__ import annotations
@@ -24,6 +26,8 @@ SendKind = Literal["human", "ai_auto", "automation", "template"]
 def reply_window(
     platform: str, last_inbound_at: datetime | None, *, human_agent: bool, now: datetime
 ) -> ReplyWindow:
+    if platform == "web":
+        return ReplyWindow(state="open")
     closed = "template_only" if platform == "whatsapp" else "closed"
     if last_inbound_at is None:
         return ReplyWindow(state=closed)

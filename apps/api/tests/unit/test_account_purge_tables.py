@@ -47,6 +47,7 @@ EXPECTED = {
     "story_mentions",
     "tracked_links",
     "link_clicks",
+    "widget_settings",  # GR-28
 }
 
 

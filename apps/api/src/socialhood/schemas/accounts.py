@@ -29,7 +29,7 @@ class SocialAccountOut(ResponseModel):
     """Never the token itself (SEC-02)."""
 
     id: uuid.UUID
-    platform: Literal["instagram", "whatsapp", "facebook"]
+    platform: Literal["instagram", "whatsapp", "facebook", "web"]
     display_name: str | None = None
     username: str | None = None
     profile_picture_url: str | None = None

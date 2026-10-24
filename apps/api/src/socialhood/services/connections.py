@@ -504,7 +504,7 @@ async def mark_disconnected_by_platform(session: AsyncSession, acct: SocialAccou
     )
 
 
-PLATFORM_LABELS = {"instagram": "Instagram", "whatsapp": "WhatsApp", "facebook": "Facebook"}
+PLATFORM_LABELS = {"instagram": "Instagram", "whatsapp": "WhatsApp", "facebook": "Facebook", "web": "Website chat"}
 
 
 def platform_label(acct: SocialAccount) -> str:

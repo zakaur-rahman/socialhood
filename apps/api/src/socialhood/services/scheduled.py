@@ -62,6 +62,7 @@ WINDOW_CLOSED_COPY = {  # §4.7 reply_window_closed
         "WhatsApp allows free-form replies for 24 hours after the customer's last message. "
         "Send an approved template instead."
     ),
+    "web": "The website chat has no reply window.",  # never raised: the window is always open
 }
 EXPIRED_REASON = "The reply window closed before the send time."
 STUCK_REASON = "Couldn't send this message. Schedule it again."
