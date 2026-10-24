@@ -188,8 +188,9 @@ export interface paths {
         };
         /**
          * List Agent Approvals
-         * @description R2: approvals across runs; a member sees the ones they may decide (their own runs' writes
-         *     their role allows), owners and admins all.
+         * @description The writes the agent proposed, soonest to expire first ("Waiting for you"): owners and
+         *     admins see every approval, a member those of their own runs. ``status`` ``all`` keeps every
+         *     status; ``run_id`` one run's. Approvals past their time are marked expired first.
          */
         get: operations["list_agent_approvals"];
         put?: never;
@@ -211,8 +212,11 @@ export interface paths {
         put?: never;
         /**
          * Approve Agent Approval
-         * @description R2: run the write as shown, or with edited ``args`` (re-checked by the gateway). The
-         *     caller's role must allow the tool (403 forbidden); 409 when it is no longer pending.
+         * @description Run the write as proposed, or with edited ``args``, through the normal service (what the
+         *     screen would do by hand). 403 forbidden when the caller's role couldn't do it by hand; 404
+         *     when it isn't the caller's to see; 409 when it is no longer pending (decided or expired); 422
+         *     for edited arguments that don't fit. When the service refuses it (a name taken since, a plan
+         *     limit) nothing is saved, the approval stays pending and its ``outcome`` says why.
          */
         post: operations["approve_agent_approval"];
         delete?: never;
@@ -232,8 +236,8 @@ export interface paths {
         put?: never;
         /**
          * Reject Agent Approval
-         * @description R2: cancel the write; the step is skipped and the run continues without it. 409 when it
-         *     is no longer pending.
+         * @description Say no: nothing is saved. 404 when it isn't the caller's to see; 409 when it is no longer
+         *     pending.
          */
         post: operations["reject_agent_approval"];
         delete?: never;
@@ -555,6 +559,72 @@ export interface paths {
          *     the metric at that age are left out (``considered`` is the sample size).
          */
         get: operations["list_top_posts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/api-keys": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Api Keys
+         * @description Newest first, revoked keys included, with every scope a key can carry.
+         */
+        get: operations["list_api_keys"];
+        put?: never;
+        /**
+         * Create Api Key
+         * @description The key is in this response only. 402 entitlement_required on Free (the public API is part
+         *     of Pro); 409 at 20 active keys.
+         */
+        post: operations["create_api_key"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/api-keys/{key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke Api Key
+         * @description Stops the key working at once and removes the REST hooks it subscribed. Revoking a revoked
+         *     key changes nothing.
+         */
+        delete: operations["revoke_api_key"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/audit-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Audit Events
+         * @description Who sent, edited or deleted what, newest first. ``until`` is exclusive.
+         */
+        get: operations["list_audit_events"];
         put?: never;
         post?: never;
         delete?: never;
@@ -984,6 +1054,196 @@ export interface paths {
          *     Dodo has already ended the plan.
          */
         post: operations["resume_billing"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Broadcasts
+         * @description Newest first, each with its counts.
+         */
+        get: operations["list_broadcasts"];
+        put?: never;
+        /**
+         * Create Broadcast
+         * @description Save a draft. Nothing is sent until it is started.
+         */
+        post: operations["create_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Broadcast Availability
+         * @description Whether broadcasts are switched on, what the plan allows this month and Meta's rate card.
+         */
+        get: operations["get_broadcast_availability"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview Broadcast
+         * @description Who would get it, who is skipped and why, what Meta's rate card says it costs, whether it
+         *     fits the plan's recipients and the number's daily limit, and the message with a sample
+         *     contact. 402 on a plan without broadcasts; 404 for a number or segment of another workspace;
+         *     422 names what doesn't fit the template.
+         */
+        post: operations["preview_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Broadcast */
+        get: operations["get_broadcast"];
+        put?: never;
+        post?: never;
+        /**
+         * Delete Broadcast
+         * @description Delete a draft, a cancelled or a failed broadcast; 409 for one that was sent.
+         */
+        delete: operations["delete_broadcast"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Broadcast
+         * @description Change a draft or scheduled broadcast; 409 once it has started.
+         */
+        patch: operations["update_broadcast"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Broadcast
+         * @description Stop for good: everyone still waiting is skipped. Messages already handed over still go.
+         */
+        post: operations["cancel_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/pause": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pause Broadcast */
+        post: operations["pause_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/recipients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Broadcast Recipients
+         * @description The audience, by position, with each person's status; failed and skipped ones say why.
+         */
+        get: operations["list_broadcast_recipients"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resume Broadcast
+         * @description Resume a paused broadcast; 409 while the number's quality is Low.
+         */
+        post: operations["resume_broadcast"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/broadcasts/{broadcast_id}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Broadcast
+         * @description Send now, or at ``scheduled_at``. 402 without the plan or past the month's recipients, 409
+         *     if it has already finished, 422 when no one can be sent to.
+         */
+        post: operations["start_broadcast"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1664,7 +1924,9 @@ export interface paths {
         put?: never;
         /**
          * Create Sandbox Account
-         * @description Connect a fake Instagram account for local development.
+         * @description Connect a fake Instagram account for local development: with ``platform: facebook`` a fake
+         *     Facebook Page (GR-29), with ``platform: whatsapp`` a fake WhatsApp number with approved
+         *     templates (GR-23).
          */
         post: operations["create_sandbox_account"];
         delete?: never;
@@ -1826,6 +2088,200 @@ export interface paths {
          * @description Rename a group or replace its hashtags.
          */
         patch: operations["update_hashtag_group"];
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Google Sheets
+         * @description The connection, its sheet and column mapping, the fields a column can hold and the latest
+         *     rows with their results.
+         */
+        get: operations["get_google_sheets"];
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect Google Sheets
+         * @description Revoke Google's access and remove the connection and the rows still waiting.
+         */
+        delete: operations["disconnect_google_sheets"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete Google Connect
+         * @description Finish a connect with the nonce the OAuth callback redirected with. Only the member who
+         *     started it, in the workspace they started it in, can finish it; the nonce works once and for 10
+         *     minutes. 404 when it expired or was used, 403 when someone else started it, 502 when Google
+         *     fails.
+         */
+        post: operations["complete_google_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Google Connect
+         * @description Google's authorize URL (the narrow drive.file scope). 402 without Sheets sync on the plan,
+         *     503 when Google isn't set up on this server.
+         */
+        post: operations["start_google_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save Google Sheet Mapping
+         * @description Which field goes in which column, in order. A sheet Social Hood made gets its header row
+         *     updated; a sheet that was already yours is not touched.
+         */
+        put: operations["save_google_sheet_mapping"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/sheet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Select Google Sheet
+         * @description Use a sheet by its link. With the narrow scope Google lets Social Hood open only sheets it
+         *     made or was granted: any other gives 422 on ``link``.
+         */
+        put: operations["select_google_sheet"];
+        /**
+         * Create Google Sheet
+         * @description Make a new sheet in the connected Google account, with a header row from the mapping.
+         */
+        post: operations["create_google_sheet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/integrations/google-sheets/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send Google Sheet Test
+         * @description Add a sample row now. 409 with the reason in plain words when Google refuses it.
+         */
+        post: operations["send_google_sheet_test"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Invitations
+         * @description Pending invitations, with the ones past their expiry marked expired.
+         */
+        get: operations["list_invitations"];
+        put?: never;
+        /**
+         * Create Invitation
+         * @description Invite by email. 402 when the plan's seats (members and pending invitations) are full;
+         *     409 for a member or an open invitation; 403 when an admin invites an admin.
+         */
+        post: operations["create_invitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/invitations/{invitation_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke Invitation */
+        delete: operations["revoke_invitation"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/invitations/{invitation_id}/resend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend Invitation */
+        post: operations["resend_invitation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/v1/w/{wid}/knowledge-gaps": {
@@ -2113,6 +2569,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Members
+         * @description Members with role and last active, and the seats the plan allows.
+         */
+        get: operations["list_members"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/members/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Member
+         * @description Their past messages and changes stay attributed to them.
+         */
+        delete: operations["remove_member"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Member Role
+         * @description Admin or agent. 409 for the owner of record: transfer ownership instead.
+         */
+        patch: operations["update_member_role"];
+        trace?: never;
+    };
     "/v1/w/{wid}/message-analyses/{analysis_id}": {
         parameters: {
             query?: never;
@@ -2251,6 +2751,46 @@ export interface paths {
          *     for comparison. ``range`` with ``from`` or ``to`` is 422.
          */
         get: operations["get_overview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/ownership-transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Transfer Ownership
+         * @description Make another member the owner; the caller becomes an admin. Needs the workspace name.
+         */
+        post: operations["transfer_ownership"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/permissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Workspace Permissions
+         * @description The caller's role and permissions here; the web app hides what they can't do from it.
+         */
+        get: operations["get_workspace_permissions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2701,6 +3241,72 @@ export interface paths {
         get: operations["list_social_accounts"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/facebook/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Facebook Connect
+         * @description Facebook's authorize URL. 503 until Facebook connections are configured, 402 over
+         *     accounts_per_platform.
+         */
+        post: operations["start_facebook_connect"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/facebook/connect-pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect Facebook Pages
+         * @description Connect the picked Pages. 422 page_ids for a Page that wasn't listed or that the person
+         *     can't answer messages for, 409 account_in_use when a Page is connected to another workspace,
+         *     402 over accounts_per_platform (nothing is added, the nonce stays valid), 404 when it
+         *     expired.
+         */
+        post: operations["connect_facebook_pages"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/w/{wid}/social-accounts/facebook/pages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * List Facebook Pages
+         * @description The Pages the person who started the connect manages, from the nonce the OAuth callback
+         *     redirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it
+         *     expired (10 minutes), 502 when Facebook fails. Asking again returns the same list.
+         */
+        post: operations["list_facebook_pages"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3192,6 +3798,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/w/{wid}/widget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Widget Settings
+         * @description The widget's settings and its embed code.
+         */
+        get: operations["get_widget_settings"];
+        /**
+         * Update Widget Settings
+         * @description Change the fields sent; the others stay as they are.
+         */
+        put: operations["update_widget_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/workspaces": {
         parameters: {
             query?: never;
@@ -3224,7 +3854,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /**
              * Status
              * @enum {string}
@@ -3331,7 +3961,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "automation_run" | "flow_step" | "message" | "webhook_delivery" | "account";
+            kind: "automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast";
             /**
              * Occurred At
              * Format: date-time
@@ -3410,6 +4040,11 @@ export interface components {
          */
         AgentApproval: {
             /**
+             * Can Decide
+             * @default false
+             */
+            can_decide: boolean;
+            /**
              * Created At
              * Format: date-time
              */
@@ -3417,6 +4052,8 @@ export interface components {
             /** Decided At */
             decided_at?: string | null;
             decided_by?: components["schemas"]["Actor"] | null;
+            /** Events */
+            events?: components["schemas"]["ApprovalEvent"][];
             /**
              * Expires At
              * Format: date-time
@@ -3429,12 +4066,18 @@ export interface components {
             id: string;
             /** Label */
             label: string;
+            /** Lines */
+            lines?: string[];
+            /** Match Count */
+            match_count?: number | null;
+            outcome?: components["schemas"]["ApprovalOutcome"] | null;
             /** Payload */
             payload: {
                 [key: string]: unknown;
             };
             /** Request */
             request: string;
+            requested_by?: components["schemas"]["Actor"] | null;
             /**
              * Run Id
              * Format: uuid
@@ -3445,6 +4088,8 @@ export interface components {
              * @enum {string}
              */
             status: "pending" | "approved" | "rejected" | "expired" | "superseded";
+            /** Step Count */
+            step_count?: number | null;
             /**
              * Step Id
              * Format: uuid
@@ -3565,7 +4210,7 @@ export interface components {
          */
         AgentRun: {
             /** Action Cards */
-            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"])[];
+            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"] | components["schemas"]["FlowProposalAction"] | components["schemas"]["SegmentProposalAction"])[];
             /** Answer */
             answer?: string | null;
             /** Answer Refs */
@@ -3629,11 +4274,13 @@ export interface components {
          */
         AgentRunDetail: {
             /** Action Cards */
-            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"])[];
+            action_cards: (components["schemas"]["ScheduleMessageAction"] | components["schemas"]["CommentReplyAction"] | components["schemas"]["AutomationDraftAction"] | components["schemas"]["FlowProposalAction"] | components["schemas"]["SegmentProposalAction"])[];
             /** Answer */
             answer?: string | null;
             /** Answer Refs */
             answer_refs: components["schemas"]["AnswerRef"][];
+            /** Approvals */
+            approvals: components["schemas"]["AgentApproval"][];
             /** Completed At */
             completed_at?: string | null;
             /**
@@ -3972,6 +4619,83 @@ export interface components {
             /** Parent Id */
             parent_id?: string | null;
         };
+        /** ApiKey */
+        ApiKey: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Name */
+            name: string;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Scopes */
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+        };
+        /** ApiKeyCreate */
+        ApiKeyCreate: {
+            /** Name */
+            name: string;
+            /** Scopes */
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+        };
+        /** ApiKeyList */
+        ApiKeyList: {
+            /** Active Limit */
+            active_limit: number;
+            /** Items */
+            items: components["schemas"]["ApiKey"][];
+            /** Scopes */
+            scopes: components["schemas"]["ApiScope"][];
+        };
+        /**
+         * ApiKeyWithKey
+         * @description Create only: the key itself, shown this once. Only its hash is kept.
+         */
+        ApiKeyWithKey: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Key Prefix */
+            key_prefix: string;
+            /** Last Used At */
+            last_used_at?: string | null;
+            /** Name */
+            name: string;
+            /** Revoked At */
+            revoked_at?: string | null;
+            /** Scopes */
+            scopes: ("contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe")[];
+        };
+        /** ApiScope */
+        ApiScope: {
+            /** Description */
+            description: string;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "contacts:read" | "contacts:write" | "tags:read" | "tags:write" | "conversations:read" | "messages:send" | "automations:read" | "webhooks:subscribe";
+        };
         /**
          * ApprovalApprove
          * @description Approve as shown, or with edited arguments (Edit): the edit replaces the payload and is
@@ -3982,6 +4706,51 @@ export interface components {
             args?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /**
+         * ApprovalEvent
+         * @description One line of an approval's audit trail (GR-36): who did what, and when.
+         */
+        ApprovalEvent: {
+            actor?: components["schemas"]["Actor"] | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "proposed" | "approved" | "rejected" | "expired" | "executed" | "failed";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
+        /**
+         * ApprovalOutcome
+         * @description What approving did (GR-36). ``ok`` false: the service refused it, nothing was saved, and
+         *     the approval is still pending so the member can edit it or reject it.
+         */
+        ApprovalOutcome: {
+            /** Error Code */
+            error_code?: string | null;
+            /** Ok */
+            ok: boolean;
+            /** Resource Id */
+            resource_id?: string | null;
+            /** Resource Kind */
+            resource_kind?: ("automation" | "segment") | null;
+            /** Route */
+            route?: string | null;
+            /** Summary */
+            summary: string;
         };
         /**
          * AskStep
@@ -4075,6 +4844,55 @@ export interface components {
             url: string;
             /** Width */
             width?: number | null;
+        };
+        /** AudienceCounts */
+        AudienceCounts: {
+            /** Eligible */
+            eligible: number;
+            /** Matching */
+            matching: number;
+            /** Missing Value */
+            missing_value: number;
+            /** No Consent */
+            no_consent: number;
+            /** Opted Out */
+            opted_out: number;
+        };
+        /** AuditEvent */
+        AuditEvent: {
+            /** Action */
+            action: string;
+            /** Actor Name */
+            actor_name: string | null;
+            /** Actor User Id */
+            actor_user_id: string | null;
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Target Id */
+            target_id: string | null;
+            /** Target Type */
+            target_type: string;
+        };
+        /** AuditEventList */
+        AuditEventList: {
+            /** Actions */
+            actions: string[];
+            /** Has More */
+            has_more: boolean;
+            /** Items */
+            items: components["schemas"]["AuditEvent"][];
         };
         /** Automation */
         Automation: {
@@ -4672,6 +5490,200 @@ export interface components {
              */
             type: "branch";
         };
+        /** Broadcast */
+        Broadcast: {
+            /** Account Label */
+            account_label?: string | null;
+            /** Audience Size */
+            audience_size: number;
+            /** Completed At */
+            completed_at?: string | null;
+            cost?: components["schemas"]["CostEstimate"] | null;
+            counts: components["schemas"]["BroadcastCounts"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Paused Code */
+            paused_code?: string | null;
+            /** Paused Reason */
+            paused_reason?: string | null;
+            /** Scheduled At */
+            scheduled_at?: string | null;
+            /** Segment Id */
+            segment_id?: string | null;
+            /** Segment Name */
+            segment_name: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "draft" | "scheduled" | "sending" | "paused" | "completed" | "cancelled" | "failed";
+            template: components["schemas"]["BroadcastTemplate"];
+            /** Variables */
+            variables: components["schemas"]["VariableOut"][];
+        };
+        /**
+         * BroadcastAvailability
+         * @description Whether the web shows broadcasts at all (the BROADCASTS_ENABLED setting), and what the plan
+         *     allows.
+         */
+        BroadcastAvailability: {
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Monthly Limit
+             * @default 0
+             */
+            monthly_limit: number;
+            /** Period End */
+            period_end?: string | null;
+            /**
+             * Plan Allowed
+             * @default false
+             */
+            plan_allowed: boolean;
+            rate_card?: components["schemas"]["RateCardOut"] | null;
+            /**
+             * Used This Period
+             * @default 0
+             */
+            used_this_period: number;
+        };
+        /** BroadcastCounts */
+        BroadcastCounts: {
+            /** Delivered */
+            delivered: number;
+            /** Failed */
+            failed: number;
+            /** Queued */
+            queued: number;
+            /** Read */
+            read: number;
+            /** Replied */
+            replied: number;
+            /** Sent */
+            sent: number;
+            /** Skipped */
+            skipped: number;
+            /** Stopped */
+            stopped: number;
+            /** Total */
+            total: number;
+        };
+        /** BroadcastCreate */
+        BroadcastCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Segment Id
+             * Format: uuid
+             */
+            segment_id: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Template Language */
+            template_language: string;
+            /** Template Name */
+            template_name: string;
+            /** Variables */
+            variables?: components["schemas"]["VariableSpec"][];
+        };
+        /**
+         * BroadcastDraft
+         * @description What a broadcast says and who gets it; the preview takes only this.
+         */
+        BroadcastDraft: {
+            /**
+             * Segment Id
+             * Format: uuid
+             */
+            segment_id: string;
+            /**
+             * Social Account Id
+             * Format: uuid
+             */
+            social_account_id: string;
+            /** Template Language */
+            template_language: string;
+            /** Template Name */
+            template_name: string;
+            /** Variables */
+            variables?: components["schemas"]["VariableSpec"][];
+        };
+        /** BroadcastList */
+        BroadcastList: {
+            /** Items */
+            items: components["schemas"]["Broadcast"][];
+            /** Total */
+            total: number;
+        };
+        /** BroadcastPreview */
+        BroadcastPreview: {
+            audience: components["schemas"]["AudienceCounts"];
+            cost: components["schemas"]["CostEstimate"];
+            number: components["schemas"]["NumberInfo"];
+            /** Problems */
+            problems?: string[];
+            quota: components["schemas"]["QuotaInfo"];
+            sample: components["schemas"]["SamplePreview"];
+        };
+        /**
+         * BroadcastStart
+         * @description Send now, or at ``scheduled_at`` (at least a minute from now).
+         */
+        BroadcastStart: {
+            /** Scheduled At */
+            scheduled_at?: string | null;
+        };
+        /** BroadcastTemplate */
+        BroadcastTemplate: {
+            /** Body */
+            body: string;
+            /** Category */
+            category: string;
+            /** Language */
+            language: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * BroadcastUpdate
+         * @description Change a draft or a scheduled broadcast. Everything is optional; a changed number,
+         *     segment or template must still fit the others.
+         */
+        BroadcastUpdate: {
+            /** Name */
+            name?: string | null;
+            /** Segment Id */
+            segment_id?: string | null;
+            /** Social Account Id */
+            social_account_id?: string | null;
+            /** Template Language */
+            template_language?: string | null;
+            /** Template Name */
+            template_name?: string | null;
+            /** Variables */
+            variables?: components["schemas"]["VariableSpec"][] | null;
+        };
         /** BulkPause */
         BulkPause: {
             /** Ids */
@@ -4864,7 +5876,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /**
              * Send At
              * Format: date-time
@@ -5216,7 +6228,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "platform_optin" | "flow" | "stop_reply" | "member" | "import";
+            source: "platform_optin" | "flow" | "stop_reply" | "member" | "import" | "widget";
             /**
              * Status
              * @enum {string}
@@ -5318,7 +6330,7 @@ export interface components {
             /** Min Lead Score */
             min_lead_score?: number | null;
             /** Platform */
-            platform?: ("instagram" | "whatsapp") | null;
+            platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
             /** Q */
             q?: string | null;
             /** Stages */
@@ -5353,7 +6365,7 @@ export interface components {
             /** Min Lead Score */
             min_lead_score?: number | null;
             /** Platform */
-            platform?: ("instagram" | "whatsapp") | null;
+            platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
             /** Q */
             q?: string | null;
             /** Stages */
@@ -5558,7 +6570,7 @@ export interface components {
             /** Last Message Preview */
             last_message_preview?: string | null;
             /** Last Message Source */
-            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "native_app" | "system") | null;
+            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "broadcast" | "native_app" | "system") | null;
             latest_analysis?: components["schemas"]["MessageAnalysis"] | null;
             /** Lead Score */
             lead_score?: number | null;
@@ -5571,7 +6583,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             reply_window: components["schemas"]["ReplyWindow"];
             /** Reply Window Closes At */
             reply_window_closes_at?: string | null;
@@ -5668,7 +6680,7 @@ export interface components {
             /** Last Message Preview */
             last_message_preview?: string | null;
             /** Last Message Source */
-            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "native_app" | "system") | null;
+            last_message_source?: ("customer" | "human" | "ai_auto" | "automation" | "broadcast" | "native_app" | "system") | null;
             /** Lead Score */
             lead_score?: number | null;
             /** Needs Human */
@@ -5679,7 +6691,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /** Reply Window Closes At */
             reply_window_closes_at?: string | null;
             /** Signal */
@@ -5725,6 +6737,27 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * CostEstimate
+         * @description Meta's rate card times the people to send to. Information, not a charge: the business pays
+         *     Meta directly (PD-3). The card is typed in by hand and unverified.
+         */
+        CostEstimate: {
+            /** As Of */
+            as_of: string;
+            /** Category */
+            category: string;
+            /** Currency */
+            currency: string;
+            /** Per Message */
+            per_message: string;
+            /** Source */
+            source: string;
+            /** Total */
+            total: string;
+            /** Verified */
+            verified: boolean;
         };
         /** DailyRuns */
         DailyRuns: {
@@ -5928,6 +6961,52 @@ export interface components {
             path: string;
         };
         /**
+         * FacebookConnectPages
+         * @description The Pages to connect, picked from the list the same nonce returned.
+         */
+        FacebookConnectPages: {
+            /** Nonce */
+            nonce: string;
+            /** Page Ids */
+            page_ids: string[];
+        };
+        /** FacebookPageList */
+        FacebookPageList: {
+            /** Items */
+            items: components["schemas"]["FacebookPageOption"][];
+        };
+        /** FacebookPageOption */
+        FacebookPageOption: {
+            /**
+             * Can Connect
+             * @default true
+             */
+            can_connect: boolean;
+            /**
+             * Connected
+             * @default false
+             */
+            connected: boolean;
+            /** Id */
+            id: string;
+            /** Name */
+            name?: string | null;
+            /** Picture Url */
+            picture_url?: string | null;
+            /** Problem */
+            problem?: string | null;
+            /** Username */
+            username?: string | null;
+        };
+        /**
+         * FacebookPagesRequest
+         * @description The nonce the OAuth callback put in the Connections page's URL (?facebook=…).
+         */
+        FacebookPagesRequest: {
+            /** Nonce */
+            nonce: string;
+        };
+        /**
          * FieldCondition
          * @description ``equals`` ignores case; ``set`` is any value.
          */
@@ -6096,6 +7175,33 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** FlowProposalAction */
+        FlowProposalAction: {
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            /** Automation Id */
+            automation_id?: string | null;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "flow_proposal";
+            /** Label */
+            label: string;
+            /** Lines */
+            lines: string[];
+            /** Note */
+            note?: string | null;
+            /** Route */
+            route: string;
+            /** Step Count */
+            step_count: number;
+            /** Title */
+            title: string;
+        };
         /**
          * FollowsCondition
          * @description Whether they follow the account, read when the step runs; unknown counts as neither.
@@ -6163,6 +7269,55 @@ export interface components {
             text?: string | null;
             /** Title */
             title: string;
+        };
+        /**
+         * GoogleConnectComplete
+         * @description The nonce the OAuth callback put in the Integrations page's URL (?google=…).
+         */
+        GoogleConnectComplete: {
+            /** Nonce */
+            nonce: string;
+        };
+        /** GoogleConnectStart */
+        GoogleConnectStart: {
+            /** Authorize Url */
+            authorize_url: string;
+        };
+        /** GoogleSheetsStatus */
+        GoogleSheetsStatus: {
+            /** Available */
+            available: boolean;
+            /** Columns */
+            columns?: components["schemas"]["SheetColumnOut"][];
+            /** Connected */
+            connected: boolean;
+            /** Entitled */
+            entitled: boolean;
+            /**
+             * Failed Rows
+             * @default 0
+             */
+            failed_rows: number;
+            /** Fields */
+            fields?: components["schemas"]["SheetFieldOption"][];
+            /** Google Email */
+            google_email?: string | null;
+            /** Last Error */
+            last_error?: string | null;
+            /** Last Failure At */
+            last_failure_at?: string | null;
+            /** Last Success At */
+            last_success_at?: string | null;
+            /**
+             * Pending Rows
+             * @default 0
+             */
+            pending_rows: number;
+            /** Recent */
+            recent?: components["schemas"]["SheetRowOut"][];
+            sheet?: components["schemas"]["SheetOut"] | null;
+            /** Status */
+            status?: ("active" | "needs_reconnect") | null;
         };
         /**
          * HandOff
@@ -6328,6 +7483,56 @@ export interface components {
              * @enum {string}
              */
             intent: "pricing" | "product_inquiry" | "purchase" | "order_status" | "shipping" | "support" | "complaint" | "refund" | "feedback" | "collaboration" | "greeting" | "spam" | "other";
+        };
+        /** Invitation */
+        Invitation: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email */
+            email: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invited By Name */
+            invited_by_name: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "agent";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "expired" | "accepted" | "revoked";
+        };
+        /**
+         * InvitationCreate
+         * @description Owners invite admins or agents; admins invite agents only.
+         */
+        InvitationCreate: {
+            /** Email */
+            email: string;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "agent";
+        };
+        /** InvitationList */
+        InvitationList: {
+            /** Items */
+            items: components["schemas"]["Invitation"][];
         };
         /** KnowledgeGap */
         KnowledgeGap: {
@@ -6715,6 +7920,51 @@ export interface components {
             /** Width */
             width?: number | null;
         };
+        /** Member */
+        Member: {
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Email */
+            email: string;
+            /** Is You */
+            is_you: boolean;
+            /**
+             * Joined At
+             * Format: date-time
+             */
+            joined_at: string;
+            /** Last Seen At */
+            last_seen_at: string | null;
+            /** Name */
+            name: string | null;
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "agent";
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
+        /** MemberList */
+        MemberList: {
+            /** Items */
+            items: components["schemas"]["Member"][];
+            seats: components["schemas"]["Seats"];
+        };
+        /**
+         * MemberRolePatch
+         * @description Admin or agent. Ownership moves only through the transfer route.
+         */
+        MemberRolePatch: {
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "admin" | "agent";
+        };
         /** MentionContact */
         MentionContact: {
             /** Display Name */
@@ -6785,7 +8035,7 @@ export interface components {
              * Source
              * @enum {string}
              */
-            source: "customer" | "human" | "ai_auto" | "automation" | "native_app" | "system";
+            source: "customer" | "human" | "ai_auto" | "automation" | "broadcast" | "native_app" | "system";
             /** Status */
             status?: ("received" | "queued" | "sending" | "sent" | "delivered" | "read" | "failed") | null;
             /** Suggestion Id */
@@ -7011,6 +8261,20 @@ export interface components {
              */
             note: string;
         };
+        /** NumberInfo */
+        NumberInfo: {
+            /** Daily Limit */
+            daily_limit?: number | null;
+            /** Days To Send */
+            days_to_send: number;
+            /** Limit Known */
+            limit_known: boolean;
+            /**
+             * Quality Rating
+             * @enum {string}
+             */
+            quality_rating: "green" | "yellow" | "red" | "unknown";
+        };
         /** OverlapWarning */
         OverlapWarning: {
             /**
@@ -7057,7 +8321,7 @@ export interface components {
             /** Oldest Waiting Since */
             oldest_waiting_since: string | null;
             /** Platforms Connected */
-            platforms_connected: ("instagram" | "whatsapp")[];
+            platforms_connected: ("instagram" | "whatsapp" | "facebook" | "web")[];
             previous: components["schemas"]["OverviewPeriod"];
             /** Priority Queue */
             priority_queue: components["schemas"]["PriorityConversation"][];
@@ -7202,6 +8466,20 @@ export interface components {
             /** Thumbnail Url */
             thumbnail_url: string | null;
         };
+        /**
+         * OwnershipTransfer
+         * @description Hand the workspace to another member. The previous owner becomes an admin. Type the
+         *     workspace's name to confirm.
+         */
+        OwnershipTransfer: {
+            /** Confirm Name */
+            confirm_name: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
+        };
         /** PaymentList */
         PaymentList: {
             /** Items */
@@ -7290,7 +8568,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook";
         };
         /**
          * PolishRequest
@@ -7643,7 +8921,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /** Priority */
             priority: ("critical" | "high" | "medium" | "low") | null;
             /** Waiting Since */
@@ -7793,6 +9071,19 @@ export interface components {
             /** Title */
             title: string;
         };
+        /** QuotaInfo */
+        QuotaInfo: {
+            /** Fits */
+            fits: boolean;
+            /** Limit */
+            limit: number;
+            /** Period End */
+            period_end?: string | null;
+            /** Remaining */
+            remaining: number;
+            /** Used */
+            used: number;
+        };
         /**
          * RandomizeStep
          * @description An A/B split: each run takes one path, at random by weight.
@@ -7868,6 +9159,23 @@ export interface components {
              */
             version: 1;
         };
+        /** RateCardOut */
+        RateCardOut: {
+            /** As Of */
+            as_of: string;
+            /** Country */
+            country: string;
+            /** Currency */
+            currency: string;
+            /** Rates */
+            rates: {
+                [key: string]: string;
+            };
+            /** Source */
+            source: string;
+            /** Verified */
+            verified: boolean;
+        };
         /** Reaction */
         Reaction: {
             /**
@@ -7882,6 +9190,45 @@ export interface components {
             by: "customer" | "business";
             /** Emoji */
             emoji: string;
+        };
+        /** Recipient */
+        Recipient: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contact Name */
+            contact_name: string;
+            /** Conversation Id */
+            conversation_id?: string | null;
+            /** Dispatched At */
+            dispatched_at?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Reason */
+            reason?: string | null;
+            /** Replied */
+            replied: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "sent" | "delivered" | "read" | "failed" | "skipped";
+            /** Stopped */
+            stopped: boolean;
+            /** Username */
+            username?: string | null;
+        };
+        /** RecipientList */
+        RecipientList: {
+            /** Items */
+            items: components["schemas"]["Recipient"][];
+            /** Total */
+            total: number;
         };
         /** RemoveTag */
         RemoveTag: {
@@ -7942,7 +9289,7 @@ export interface components {
              * Key
              * @enum {string}
              */
-            key: "messages_received" | "conversations" | "reply_rate" | "median_first_response_s" | "handled_by_ai_rate" | "comments_received" | "story_mentions" | "conversations_from_links" | "conversations_from_ads" | "leads_qualified" | "leads_won";
+            key: "messages_received" | "conversations" | "reply_rate" | "median_first_response_s" | "handled_by_ai_rate" | "comments_received" | "story_mentions" | "conversations_from_links" | "conversations_from_ads" | "captures" | "leads_qualified" | "leads_won";
             /** Label */
             label: string;
             /**
@@ -8026,12 +9373,40 @@ export interface components {
             /** Message */
             message: string;
         };
+        /** SamplePreview */
+        SamplePreview: {
+            /** Contact Name */
+            contact_name?: string | null;
+            /** Text */
+            text: string;
+        };
+        /**
+         * SandboxAccountCreate
+         * @description Which sandbox account to make (dev and e2e): an Instagram account, a Facebook Page (GR-29)
+         *     or a WhatsApp number with approved templates (GR-23). No body makes an Instagram one.
+         */
+        SandboxAccountCreate: {
+            /**
+             * Platform
+             * @default instagram
+             * @enum {string}
+             */
+            platform: "instagram" | "facebook" | "whatsapp";
+        };
         /**
          * SandboxInbound
-         * @description A fake Instagram event (dev and e2e). GR-01 adds a referral without a message (an entry
-         *     link opened, or an ad tapped), a tapped postback (an ice breaker), an opt-in and a Live
-         *     comment; a DM can carry an ad referral (its first message from an ad). GR-06 and GR-07 add a
-         *     story reply, a story like (the heart) and a story mention.
+         * @description A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).
+         *     GR-01 adds a referral without a message (an entry link opened, or an ad tapped), a tapped
+         *     postback (an ice breaker), an opt-in and a Live comment; a DM can carry an ad referral (its
+         *     first message from an ad). GR-06 and GR-07 add a
+         *     story reply, a story like (the heart) and a story mention. A Facebook Page takes a DM, a
+         *     comment on a post, a referral, a postback and an opt-in; the kinds it doesn't have are
+         *     refused (GR-29).
+         *
+         *     GR-23 adds two kinds for a sandbox WhatsApp number, and lets a ``dm`` be a WhatsApp customer's
+         *     message (``from_id`` is their number): ``status`` is a delivery status for the last message we
+         *     sent that contact (``delivery_status``, with ``error_code`` and ``error_text`` for a failure),
+         *     and ``quality`` a ``phone_number_quality_update`` (``quality_event``, ``tier``).
          */
         SandboxInbound: {
             /**
@@ -8045,6 +9420,12 @@ export interface components {
             ad_title?: string | null;
             /** Age Seconds */
             age_seconds?: number | null;
+            /** Delivery Status */
+            delivery_status?: ("sent" | "delivered" | "read" | "failed") | null;
+            /** Error Code */
+            error_code?: number | null;
+            /** Error Text */
+            error_text?: string | null;
             /** From Id */
             from_id?: string | null;
             /** From Username */
@@ -8053,9 +9434,11 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin" | "story_reply" | "story_like" | "story_mention";
+            kind: "dm" | "comment" | "live_comment" | "referral" | "postback" | "optin" | "story_reply" | "story_like" | "story_mention" | "status" | "quality";
             /** Postback Payload */
             postback_payload?: string | null;
+            /** Quality Event */
+            quality_event?: ("ONBOARDING" | "UPGRADE" | "DOWNGRADE" | "FLAGGED" | "UNFLAGGED") | null;
             /** Quick Reply Payload */
             quick_reply_payload?: string | null;
             /** Ref */
@@ -8066,6 +9449,8 @@ export interface components {
             story_id?: string | null;
             /** Text */
             text?: string | null;
+            /** Tier */
+            tier?: string | null;
         };
         /** SandboxInboundResult */
         SandboxInboundResult: {
@@ -8215,7 +9600,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /**
              * Send At
              * Format: date-time
@@ -8408,6 +9793,18 @@ export interface components {
              */
             status: "pending" | "publishing" | "container_created" | "published" | "failed" | "canceled";
         };
+        /**
+         * Seats
+         * @description Members plus pending invitations against the plan's ``members`` limit (null: unlimited).
+         */
+        Seats: {
+            /** Limit */
+            limit: number | null;
+            /** Members */
+            members: number;
+            /** Pending Invitations */
+            pending_invitations: number;
+        };
         /** Segment */
         Segment: {
             /**
@@ -8440,6 +9837,31 @@ export interface components {
             filter?: components["schemas"]["ContactFilterSpec"] | null;
             /** Name */
             name?: string | null;
+        };
+        /** SegmentProposalAction */
+        SegmentProposalAction: {
+            /**
+             * Approval Id
+             * Format: uuid
+             */
+            approval_id: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "segment_proposal";
+            /** Label */
+            label: string;
+            /** Lines */
+            lines: string[];
+            /** Match Count */
+            match_count: number;
+            /** Note */
+            note?: string | null;
+            /** Route */
+            route: string;
+            /** Title */
+            title: string;
         };
         /**
          * SendMessage
@@ -8608,6 +10030,91 @@ export interface components {
             /** Value */
             value: string;
         };
+        /** SheetColumn */
+        SheetColumn: {
+            /** Field */
+            field: string;
+            /** Header */
+            header: string;
+        };
+        /** SheetColumnOut */
+        SheetColumnOut: {
+            /** Field */
+            field: string;
+            /** Header */
+            header: string;
+        };
+        /** SheetCreate */
+        SheetCreate: {
+            /**
+             * Title
+             * @default Social Hood leads
+             */
+            title: string;
+        };
+        /** SheetFieldOption */
+        SheetFieldOption: {
+            /** Custom */
+            custom: boolean;
+            /** Field */
+            field: string;
+            /** Label */
+            label: string;
+        };
+        /** SheetMappingPut */
+        SheetMappingPut: {
+            /** Columns */
+            columns: components["schemas"]["SheetColumn"][];
+        };
+        /** SheetOut */
+        SheetOut: {
+            /** Spreadsheet Id */
+            spreadsheet_id: string;
+            /** Tab */
+            tab: string;
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+        };
+        /** SheetRowOut */
+        SheetRowOut: {
+            /** Attempts */
+            attempts: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Error */
+            error?: string | null;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Attempt At */
+            last_attempt_at?: string | null;
+            /** Next Attempt At */
+            next_attempt_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "succeeded" | "failed";
+        };
+        /** SheetSelect */
+        SheetSelect: {
+            /** Link */
+            link: string;
+        };
+        /** SheetTestResult */
+        SheetTestResult: {
+            /** Ok */
+            ok: boolean;
+        };
         /**
          * SiteCrawlInfo
          * @description GR-35: where a site source's crawl is. Counts are of this site's pages.
@@ -8743,7 +10250,7 @@ export interface components {
              * Platform
              * @enum {string}
              */
-            platform: "instagram" | "whatsapp";
+            platform: "instagram" | "whatsapp" | "facebook" | "web";
             /** Profile Picture Url */
             profile_picture_url?: string | null;
             /**
@@ -9068,7 +10575,7 @@ export interface components {
              * Kind
              * @enum {string}
              */
-            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag" | "lead_stage";
+            kind: "conversation" | "comment" | "automation_run" | "story_mention" | "consent" | "tag" | "lead_stage" | "broadcast";
             /**
              * Occurred At
              * Format: date-time
@@ -9164,6 +10671,38 @@ export interface components {
             period_end?: string | null;
             /** Used */
             used: number;
+        };
+        /** VariableOut */
+        VariableOut: {
+            /** Fallback */
+            fallback?: string | null;
+            /** Field */
+            field?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "field" | "fixed";
+            /** Value */
+            value?: string | null;
+        };
+        /**
+         * VariableSpec
+         * @description One template variable: a contact field (with the text to use when the person has none) or
+         *     a fixed text. ``field`` is first_name, name, username, email, phone or a custom field's key.
+         */
+        VariableSpec: {
+            /** Fallback */
+            fallback?: string | null;
+            /** Field */
+            field?: string | null;
+            /**
+             * Source
+             * @enum {string}
+             */
+            source: "field" | "fixed";
+            /** Value */
+            value?: string | null;
         };
         /**
          * VisualPeriod
@@ -9376,8 +10915,6 @@ export interface components {
             metrics: components["schemas"]["ReportMetric"][];
             /** Needs You */
             needs_you: number;
-            /** Notes */
-            notes: "captures_not_built"[];
             /** Open Questions */
             open_questions: number;
             previous_week: components["schemas"]["DaySpan"];
@@ -9422,6 +10959,89 @@ export interface components {
         WhatsAppTemplateList: {
             /** Items */
             items: components["schemas"]["WhatsAppTemplate"][];
+        };
+        /** WidgetSettingsOut */
+        WidgetSettingsOut: {
+            /** Accent Color */
+            accent_color: string;
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /**
+             * Ai Mode
+             * @enum {string}
+             */
+            ai_mode: "off" | "suggest" | "auto";
+            /** Allowed Domains */
+            allowed_domains: string[];
+            /** Can Remove Branding */
+            can_remove_branding: boolean;
+            /** Conversations Daily Limit */
+            conversations_daily_limit: number;
+            /** Conversations Today */
+            conversations_today: number;
+            /**
+             * Email Capture
+             * @enum {string}
+             */
+            email_capture: "off" | "optional" | "required";
+            /** Email Prompt */
+            email_prompt: string;
+            /** Embed Snippet */
+            embed_snippet: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Greeting */
+            greeting: string;
+            /** Marketing Consent Enabled */
+            marketing_consent_enabled: boolean;
+            /** Marketing Consent Text */
+            marketing_consent_text: string;
+            /**
+             * Position
+             * @enum {string}
+             */
+            position: "right" | "left";
+            /** Script Url */
+            script_url: string;
+            /** Show Branding */
+            show_branding: boolean;
+            /** Title */
+            title: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Widget Id */
+            widget_id: string;
+        };
+        /** WidgetSettingsUpdate */
+        WidgetSettingsUpdate: {
+            /** Accent Color */
+            accent_color?: string | null;
+            /** Allowed Domains */
+            allowed_domains?: string[] | null;
+            /** Email Capture */
+            email_capture?: ("off" | "optional" | "required") | null;
+            /** Email Prompt */
+            email_prompt?: string | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Greeting */
+            greeting?: string | null;
+            /** Marketing Consent Enabled */
+            marketing_consent_enabled?: boolean | null;
+            /** Marketing Consent Text */
+            marketing_consent_text?: string | null;
+            /** Position */
+            position?: ("right" | "left") | null;
+            /** Show Branding */
+            show_branding?: boolean | null;
+            /** Title */
+            title?: string | null;
         };
         /** WinningAutomation */
         WinningAutomation: {
@@ -9519,6 +11139,20 @@ export interface components {
             slug?: string | null;
             /** Timezone */
             timezone?: string | null;
+        };
+        /**
+         * WorkspacePermissions
+         * @description What the signed-in member may do here. The web app's can() reads this list; it never
+         *     keeps a copy of the matrix.
+         */
+        WorkspacePermissions: {
+            /** Permissions */
+            permissions: string[];
+            /**
+             * Role
+             * @enum {string}
+             */
+            role: "owner" | "admin" | "agent";
         };
         /** WorkspaceSummary */
         WorkspaceSummary: {
@@ -9930,7 +11564,7 @@ export interface operations {
         parameters: {
             query?: {
                 failures_only?: boolean;
-                kind?: ("automation_run" | "flow_step" | "message" | "webhook_delivery" | "account") | null;
+                kind?: ("automation_run" | "flow_step" | "message" | "webhook_delivery" | "account" | "broadcast") | null;
                 automation_id?: string | null;
                 account_id?: string | null;
                 cursor?: string | null;
@@ -9976,7 +11610,8 @@ export interface operations {
     list_agent_approvals: {
         parameters: {
             query?: {
-                status?: "pending" | "approved" | "rejected" | "expired" | "superseded";
+                status?: "pending" | "approved" | "rejected" | "expired" | "superseded" | "all";
+                run_id?: string | null;
                 cursor?: string | null;
                 limit?: number;
             };
@@ -10826,6 +12461,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TopPosts"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_api_keys: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ApiKeyCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKeyWithKey"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_api_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                key_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiKey"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_audit_events: {
+        parameters: {
+            query?: {
+                member?: string | null;
+                action?: string | null;
+                since?: string | null;
+                until?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEventList"];
                 };
             };
             /** @description Validation error */
@@ -11900,6 +13707,516 @@ export interface operations {
             };
         };
     };
+    list_broadcasts: {
+        parameters: {
+            query?: {
+                status?: ("draft" | "scheduled" | "sending" | "paused" | "completed" | "cancelled" | "failed") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_broadcast_availability: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastAvailability"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastDraft"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BroadcastPreview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    cancel_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    pause_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_broadcast_recipients: {
+        parameters: {
+            query?: {
+                status?: ("queued" | "sent" | "delivered" | "read" | "failed" | "skipped") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipientList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resume_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_broadcast: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                broadcast_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BroadcastStart"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Broadcast"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_business_hours: {
         parameters: {
             query?: never;
@@ -12625,7 +14942,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -12726,7 +15043,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -12781,7 +15098,7 @@ export interface operations {
             query?: {
                 q?: string | null;
                 tag_id?: string[] | null;
-                platform?: ("instagram" | "whatsapp") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 has_email?: boolean | null;
                 has_phone?: boolean | null;
@@ -13100,7 +15417,7 @@ export interface operations {
         parameters: {
             query?: {
                 view?: "all" | "unread" | "needs_reply" | "needs_you" | "leads" | "closing_soon" | "ai_handled" | "archived";
-                platform?: ("instagram" | "whatsapp") | null;
+                platform?: ("instagram" | "whatsapp" | "facebook" | "web") | null;
                 account_id?: string | null;
                 q?: string | null;
                 cursor?: string | null;
@@ -13662,7 +15979,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SandboxAccountCreate"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             201: {
@@ -14180,6 +16501,504 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HashtagGroup"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_google_sheets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnect_google_sheets: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_google_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleConnectComplete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_google_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    save_google_sheet_mapping: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SheetMappingPut"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    select_google_sheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SheetSelect"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_google_sheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SheetCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleSheetsStatus"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    send_google_sheet_test: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SheetTestResult"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_invitations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvitationList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvitationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invitation"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    revoke_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    resend_invitation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invitation_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Invitation"];
                 };
             };
             /** @description Validation error */
@@ -14967,6 +17786,130 @@ export interface operations {
             };
         };
     };
+    list_members: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    remove_member: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_member_role: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: string;
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberRolePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     correct_message_analysis: {
         parameters: {
             query?: never;
@@ -15285,6 +18228,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Overview"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    transfer_ownership: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnershipTransfer"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_workspace_permissions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkspacePermissions"];
                 };
             };
             /** @description Validation error */
@@ -16392,6 +19419,134 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SocialAccountList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    start_facebook_connect: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConnectStart"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connect_facebook_pages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FacebookConnectPages"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SocialAccountList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_facebook_pages: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FacebookPagesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FacebookPageList"];
                 };
             };
             /** @description Validation error */
@@ -17698,6 +20853,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WebhookEventTypeList"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_widget_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetSettingsOut"];
+                };
+            };
+            /** @description Validation error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Problem details (application/problem+json) */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    update_widget_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                wid: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WidgetSettingsUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WidgetSettingsOut"];
                 };
             };
             /** @description Validation error */
