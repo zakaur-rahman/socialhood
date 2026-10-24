@@ -7,7 +7,7 @@
 Expand-only: two nullable or defaulted columns, and checks widened (every existing row still passes).
 
 Revision ID: 0046
-Revises: 0044
+Revises: 0045
 Create Date: 2026-10-26 09:00:00.000000+00:00
 """
 
@@ -20,7 +20,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0046"
-down_revision: str | None = "0044"
+down_revision: str | None = "0045"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
