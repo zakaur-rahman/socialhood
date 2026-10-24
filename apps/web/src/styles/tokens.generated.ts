@@ -73,9 +73,9 @@ export const tokenValues = {
     "whatsapp-logo": "#25D366",
     "chart-series-2": "#D95926",
     "chart-series-3": "#199E70",
-    "chart-series-4": "#2F8FD0",
-    "chart-series-5": "#C98500",
-    "chart-series-6": "#D55181"
+    "chart-series-4": "#C98500",
+    "chart-series-5": "#D55181",
+    "chart-series-6": "#2F8FE0"
   },
   "colorsLight": {
     "canvas": "#F5F6FB",
@@ -148,9 +148,9 @@ export const tokenValues = {
     "whatsapp-logo": "#25D366",
     "chart-series-2": "#EB6834",
     "chart-series-3": "#1BAF7A",
-    "chart-series-4": "#1F9BD1",
-    "chart-series-5": "#EDA100",
-    "chart-series-6": "#E87BA4"
+    "chart-series-4": "#EDA100",
+    "chart-series-5": "#E87BA4",
+    "chart-series-6": "#2A8FD8"
   },
   "themed": [
     "color:canvas",
