@@ -542,6 +542,8 @@ These work on today's flat model; GR-03's migration later carries them into flow
 - Publish to Pages from the composer.
 - **"Best times" (R2 in the spec):** from each account's own post insights, a suggested slot per
   weekday, shown in the composer and the Posting times drawer.
+- **Built as:** photos, several photos, a video and text posts through our own scheduler; best
+  times from the account's own post engagement (see C-115). Page Stories are not built.
 
 ### Wave 6: commerce
 

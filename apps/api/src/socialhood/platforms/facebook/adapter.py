@@ -3,8 +3,9 @@
 The account is one Page: ``platform_account_id`` is the Page id (the webhook ``entry.id``) and
 the token is its Page access token, which does not expire. Calls go to ``graph.facebook.com``
 with ``me`` meaning the Page. A Page can message, take attachments, mark chats seen, backfill
-conversations, and read, answer, hide and delete comments and send private replies. It cannot
-yet publish or read insights (GR-30), so those raise ``capability_unavailable``.
+conversations, read, answer, hide and delete comments, send private replies and (GR-30, with the
+``pages_manage_posts`` permission) publish photos, videos and text posts. It cannot read insights
+yet, so those raise ``capability_unavailable``; the best posting times use post counts instead.
 
 Every Meta behaviour here is unverified until a real Page confirms it (docs/verification.md):
 see the CONFLICTS entry for GR-29 for the list.
@@ -59,6 +60,7 @@ CAPABILITIES = frozenset(
         Capability.CONVERSATION_BACKFILL,
         Capability.COMMENTS,
         Capability.PRIVATE_REPLY,
+        Capability.PUBLISH,
     }
 )
 
@@ -67,7 +69,8 @@ CAPABILITIES = frozenset(
 BUTTON_TEXT_MAX_CHARS = 640
 MAX_BUTTONS = 3
 MAX_QUICK_REPLIES = 13
-NO_PUBLISHING = "Publishing to Facebook Pages isn't available yet"
+NO_QUOTA = "Facebook Pages have no publishing limit to read"
+NO_STORIES = "Facebook Page Stories aren't available yet"
 NO_INSIGHTS = "Insights for Facebook Pages aren't available yet"
 
 
@@ -80,6 +83,8 @@ class FacebookAdapter:
 
     def capabilities_for(self, acct: SocialAccount) -> frozenset[Capability]:
         caps = set(CAPABILITIES)
+        if oauth.PUBLISH_SCOPE not in (acct.scopes or []):
+            caps.discard(Capability.PUBLISH)  # connected before GR-30: reconnect to allow it
         if self.deps.settings.ig_human_agent_enabled:  # one Meta approval covers both (O-10)
             caps.add(Capability.HUMAN_AGENT)
         return frozenset(caps)
@@ -312,41 +317,76 @@ class FacebookAdapter:
         return AccountInsights(followers_count=count)
 
     async def get_publishing_quota(self, acct: SocialAccount) -> PublishingQuota:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        raise PlatformError("capability_unavailable", message=NO_QUOTA)
+
+    # ---- publishing (GR-30, publishing.py): a container is a reference to what was uploaded
+    # unpublished; publish_container posts it. See the module for the references.
 
     async def create_image_container(
         self, acct: SocialAccount, *, image_url: str, caption: str
     ) -> str:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        from socialhood.platforms.facebook import publishing
+
+        return await publishing.create_photo(
+            self.http, self._graph, self._token(acct), image_url=image_url, caption=caption
+        )
 
     async def create_reel_container(
         self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
     ) -> str:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        """A Page video (not a Facebook Reel); ``share_to_feed`` has no meaning here."""
+        from socialhood.platforms.facebook import publishing
+
+        return await publishing.create_video(
+            self.http, self._graph, self._token(acct), video_url=video_url, caption=caption
+        )
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        raise PlatformError("capability_unavailable", message=NO_STORIES)
 
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        from socialhood.platforms.facebook import publishing
+
+        return await publishing.create_child(self.http, self._graph, self._token(acct), media)
 
     async def create_carousel_container(
         self, acct: SocialAccount, *, children: Sequence[str], caption: str
     ) -> str:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        from socialhood.platforms.facebook import publishing
+
+        return publishing.create_photos_parent(children)
+
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        from socialhood.platforms.facebook import publishing
+
+        return publishing.create_text()
 
     async def get_container_status(
         self, acct: SocialAccount, container_ref: str
     ) -> ContainerStatus:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        from socialhood.platforms.facebook import publishing
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        return await publishing.container_status(
+            self.http, self._graph, self._token(acct), container_ref
+        )
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
+        from socialhood.platforms.facebook import publishing
+
+        return await publishing.publish_container(
+            self.http, self._graph, self._token(acct), container_ref, caption=caption
+        )
 
     async def get_published_media(
         self, acct: SocialAccount, media_ref: str, *, story: bool = False
     ) -> PlatformMedia | None:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        from socialhood.platforms.facebook import publishing
+
+        return await publishing.published_media(
+            self.http, self._graph, self._token(acct), media_ref
+        )
 
     async def find_published_media(
         self,
@@ -357,10 +397,22 @@ class FacebookAdapter:
         published_after: datetime,
         story: bool = False,
     ) -> PlatformMedia | None:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        from socialhood.platforms.facebook import publishing
+
+        return await publishing.find_published_media(
+            self.http,
+            self._graph,
+            self._token(acct),
+            caption=caption,
+            published_after=published_after,
+        )
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:
-        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+        from socialhood.platforms.facebook import publishing
+
+        return await publishing.post_comment(
+            self.http, self._graph, self._token(acct), media_ref, text
+        )
 
 
 def text_content(message: OutboundMessage) -> dict[str, object]:

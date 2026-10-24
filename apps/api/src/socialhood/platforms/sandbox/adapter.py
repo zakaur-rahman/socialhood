@@ -274,10 +274,17 @@ class SandboxAdapter:
 
         return publishing.container_status(acct, container_ref)
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
         from socialhood.platforms.sandbox import publishing
 
-        return publishing.publish_container(acct, container_ref)
+        return publishing.create_text_container(acct)
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
+        from socialhood.platforms.sandbox import publishing
+
+        return publishing.publish_container(acct, container_ref, text=caption)
 
     async def get_published_media(
         self, acct: SocialAccount, media_ref: str, *, story: bool = False

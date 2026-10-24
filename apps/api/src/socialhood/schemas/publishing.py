@@ -42,7 +42,7 @@ from socialhood.schemas.inbox import ErrorInfo, MediaAssetOut, ScheduledMessage
 ScheduledPostStatusName = Literal[
     "draft", "scheduled", "publishing", "published", "partially_published", "failed", "canceled"
 ]
-PostFormatName = Literal["image", "carousel", "reel", "story"]
+PostFormatName = Literal["image", "carousel", "reel", "story", "text"]
 PostKind = Literal["post", "story"]
 TargetStatusName = Literal[
     "pending", "publishing", "container_created", "published", "failed", "canceled"
@@ -316,6 +316,36 @@ class PostingSlots(ResponseModel):
     timezone: str
     slots: list[PostingSlot]  # by weekday, then time
     next_free_at: list[datetime]  # the next 5 free times, soonest first ("Add to queue" preview)
+
+
+# ---- best times (GR-30, C-115)
+
+
+class BestTimeDay(ResponseModel):
+    """One weekday's suggestion. ``local_time`` is None when the account's history is too thin for
+    this day (``posts`` is how many posts the suggested hour is based on, else 0)."""
+
+    weekday: int  # 0 = Monday … 6 = Sunday
+    local_time: time | None = None  # workspace time zone, on the hour
+    posts: int = 0
+    # How much better than the account's typical post the posts at this time did, in percent.
+    lift_percent: int | None = None
+
+
+class BestTimes(ResponseModel):
+    """GET …/social-accounts/{id}/best-times: a suggested posting time per weekday, worked out
+    from the account's own posts (never by an AI model). ``enough_history`` is false, and every
+    day empty, until the account has ``min_posts`` posts with known engagement. Cached for a few
+    hours."""
+
+    social_account_id: uuid.UUID
+    timezone: str
+    enough_history: bool
+    sample_size: int  # posts used
+    min_posts: int  # posts needed
+    method: str  # one sentence saying how the times were chosen
+    days: list[BestTimeDay]  # seven, Monday first
+    computed_at: datetime
 
 
 # ---- hashtag groups (FR-PUB-12, UX-SCR-14)

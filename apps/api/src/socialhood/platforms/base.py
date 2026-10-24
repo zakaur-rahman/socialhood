@@ -378,10 +378,20 @@ class PlatformAdapter(Protocol):
         """A container's processing state (at most one call a minute per container)."""
         ...
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        """A post with only text (GR-30; Facebook Pages): the text goes with ``publish_container``.
+        Returns its reference."""
+        ...
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
         """Publish a FINISHED container; returns the new post's platform media id. After
         delivery_unknown, ``get_container_status`` tells whether it went out (PUBLISHED: find the
-        post with ``find_published_media``; FINISHED: publishing again is safe)."""
+        post with ``find_published_media``; FINISHED: publishing again is safe on Instagram).
+        ``caption`` is the post's text for platforms that take it at publish time (Facebook
+        Pages); Instagram has it on the container already. A Facebook Page can't tell from the
+        status whether a lost answer published, so the jobs never retry it there."""
         ...
 
     async def get_published_media(

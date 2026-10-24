@@ -65,6 +65,7 @@ import {
   fromPostAsset,
   handleOf,
   isEditable,
+  pagesOnlyText,
   MAX_ASSETS,
   MIN_SCHEDULE_LEAD_MS,
   publishingAccounts,
@@ -295,7 +296,13 @@ function Composer({
   }));
   const postAssets = entries.map((entry) => entry.asset);
   const isStory = draft.kind === "story";
-  const format = isStory ? (postAssets.length === 1 ? "story" : null) : deriveFormat(postAssets);
+  const format = isStory
+    ? postAssets.length === 1
+      ? "story"
+      : null
+    : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
+      ? "text"
+      : deriveFormat(postAssets);
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
   const cropAsset = cropId ? assets[cropId] : undefined;
 
@@ -640,7 +647,15 @@ function Composer({
               onToggle={toggleAccount}
               slug={slug}
             />
-            <PostTypeSection value={draft.kind} onChange={(kind) => change({ kind })} />
+            <PostTypeSection
+              value={draft.kind}
+              onChange={(kind) => change({ kind })}
+              storyBlockedBy={
+                selectedAccounts.find((account) => account.platform !== "instagram")
+                  ? handleOf(selectedAccounts.find((account) => account.platform !== "instagram"))
+                  : null
+              }
+            />
             <MediaTray
               entries={entries}
               uploads={newUploads}
@@ -712,6 +727,9 @@ function Composer({
                 allowQueue={isDraft}
                 slug={slug}
                 now={now}
+                bestFor={
+                  selectedAccounts[0] ? { wid, accountId: selectedAccounts[0].id, handle: handleOf(selectedAccounts[0]) } : null
+                }
               />
             ) : null}
           </fieldset>

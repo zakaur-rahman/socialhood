@@ -616,17 +616,20 @@ async def test_a_page_token_does_not_expire_so_refresh_keeps_it() -> None:
     assert (grant.access_token, grant.expires_at) == ("page-token", None)
 
 
-async def test_publishing_and_insights_are_not_available_yet() -> None:
+async def test_insights_and_the_publishing_quota_are_not_available_yet() -> None:
     page = adapter(Recorder())
     with pytest.raises(PlatformError) as raised:
-        await page.create_image_container(account(), image_url="https://x.test/a.jpg", caption="")
+        await page.get_media_insights(account(), "1_2", media_type="image")
     assert raised.value.code == "capability_unavailable"
+    with pytest.raises(PlatformError):
+        await page.get_publishing_quota(account())
 
 
-def test_capabilities_have_no_publishing_and_human_agent_follows_the_setting() -> None:
+def test_capabilities_publish_but_have_no_insights_and_human_agent_follows_the_setting() -> None:
     off = adapter(Recorder()).capabilities_for(account())
     assert {Capability.DM_SEND, Capability.COMMENTS, Capability.PRIVATE_REPLY} <= off
-    assert not off & {Capability.PUBLISH, Capability.POST_INSIGHTS, Capability.TEMPLATES}
+    assert Capability.PUBLISH in off  # GR-30: pages_manage_posts is in the connect scopes
+    assert not off & {Capability.POST_INSIGHTS, Capability.TEMPLATES}
     assert Capability.HUMAN_AGENT not in off
     on = adapter(Recorder(), ig_human_agent_enabled=True).capabilities_for(account())
     assert Capability.HUMAN_AGENT in on
@@ -642,7 +645,7 @@ def test_the_registry_picks_the_facebook_adapter_and_the_sandbox_one_for_sandbox
     sandbox.platform_account_id = "sandbox_ab12"
     chosen = adapter_for(sandbox, deps)
     assert isinstance(chosen, SandboxAdapter)
-    assert Capability.PUBLISH not in chosen.capabilities_for(sandbox)
+    assert Capability.PUBLISH in chosen.capabilities_for(sandbox)
     assert Capability.COMMENTS in chosen.capabilities_for(sandbox)
 
 

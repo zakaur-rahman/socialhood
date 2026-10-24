@@ -50,8 +50,8 @@ export function AccountPicture({
 }
 
 /**
- * UX-SCR-13 Accounts: a toggle chip per Instagram account, in the order chosen (the first one's
- * name and picture lead the preview). An account that can't publish is disabled with the reason;
+ * UX-SCR-13 Accounts: a toggle chip per Instagram account or Facebook Page (GR-30), in the order
+ * chosen (the first one's name and picture lead the preview). Choosing both posts to both at once. An account that can't publish is disabled with the reason;
  * one already on the post stays clickable so it can be taken off.
  */
 export function AccountPicker({
@@ -61,7 +61,7 @@ export function AccountPicker({
   onToggle,
   slug,
 }: {
-  /** The workspace's Instagram accounts. */
+  /** The workspace's Instagram accounts and Facebook Pages. */
   accounts: SocialAccount[];
   loading: boolean;
   /** Selected account ids, in order. */
@@ -80,13 +80,13 @@ export function AccountPicker({
         </div>
       ) : accounts.length === 0 ? (
         <p className="text-sm text-fg-secondary">
-          Connect an Instagram business or creator account to publish posts.{" "}
+          Connect an Instagram business or creator account, or a Facebook Page, to publish posts.{" "}
           <Link href={connectHref} className="text-brand-fg underline-offset-4 hover:underline">
-            Connect Instagram
+            Connect an account
           </Link>
         </p>
       ) : (
-        <ul className="flex flex-wrap gap-2" aria-label="Instagram accounts">
+        <ul className="flex flex-wrap gap-2" aria-label="Accounts to publish to">
           {accounts.map((account) => {
             const isSelected = selected.includes(account.id);
             const reason = cannotPublishReason(account);
@@ -108,6 +108,11 @@ export function AccountPicker({
                 >
                   <AccountPicture account={account} identity={identities.get(account.id)} />
                   {handleOf(account)}
+                  {account.platform === "facebook" ? (
+                    <span className="text-xs font-normal text-fg-secondary" data-testid="page-tag">
+                      Facebook Page
+                    </span>
+                  ) : null}
                   {isSelected ? <Check className="size-4 text-brand-fg" aria-hidden /> : null}
                 </button>
                 {reason ? (

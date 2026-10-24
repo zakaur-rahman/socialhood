@@ -383,7 +383,14 @@ class InstagramAdapter:
             self.http, self._graph, self._token(acct), container_ref
         )
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        raise PlatformError(
+            "capability_unavailable", message="Instagram posts need a photo or video"
+        )
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
         from socialhood.platforms.instagram import publishing
 
         return await publishing.publish_container(

@@ -28,6 +28,7 @@ from socialhood.auth.deps import Admin, CanManagePublishing, Session, WorkspaceC
 from socialhood.platforms.deps import deps_from
 from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.publishing import (
+    BestTimes,
     BulkScheduledPostRequest,
     BulkScheduledPostResult,
     Calendar,
@@ -44,6 +45,7 @@ from socialhood.schemas.publishing import (
     ScheduledPostView,
     ScheduleRequest,
 )
+from socialhood.services.scheduled_posts import best_times as best_times_service
 from socialhood.services.scheduled_posts import calendar as calendar_service
 from socialhood.services.scheduled_posts import hashtag_groups, posts, slots
 
@@ -262,6 +264,22 @@ async def get_posting_slots(account_id: uuid.UUID, ctx: Admin, session: Session)
     """The account's weekly posting times and its next 5 free times (UX-SCR-14)."""
     return await slots.posting_slots(
         session, account_id, timezone=ctx.workspace.timezone, now=datetime.now(UTC)
+    )
+
+
+@router.get("/social-accounts/{account_id}/best-times", operation_id="get_best_times")
+async def get_best_times(
+    request: Request, account_id: uuid.UUID, ctx: Admin, session: Session
+) -> BestTimes:
+    """GR-30: a suggested posting hour per weekday from the account's own posts (the method is in
+    the answer). Worked out by a service, cached for a few hours, never by an AI model; an account
+    with too little history says so (``enough_history`` false)."""
+    return await best_times_service.best_times(
+        session,
+        request.app.state.redis,
+        account_id,
+        timezone=ctx.workspace.timezone,
+        now=datetime.now(UTC),
     )
 
 

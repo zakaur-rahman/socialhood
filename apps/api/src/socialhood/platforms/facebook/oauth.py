@@ -24,7 +24,9 @@ DIALOG = "https://www.facebook.com"
 GRAPH = "https://graph.facebook.com"
 
 # pages_manage_metadata lets us subscribe a Page to webhooks; pages_read_user_content reads the
-# comments on its posts. GR-30 adds pages_manage_posts and read_insights (docs/app-review).
+# comments on its posts. pages_manage_posts (GR-30) lets us publish; read_insights is not asked
+# for yet (docs/app-review).
+PUBLISH_SCOPE = "pages_manage_posts"
 SCOPES = (
     "pages_show_list",
     "pages_messaging",
@@ -32,6 +34,7 @@ SCOPES = (
     "pages_manage_engagement",
     "pages_read_engagement",
     "pages_read_user_content",
+    "pages_manage_posts",
 )
 # A Page task that lets a person answer messages as the Page.
 MESSAGING_TASK = "MESSAGING"

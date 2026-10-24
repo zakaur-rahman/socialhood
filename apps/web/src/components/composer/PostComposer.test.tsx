@@ -24,6 +24,7 @@ import {
   type Call,
 } from "@/test/api";
 import {
+  bestTimes,
   hashtagGroup,
   mediaAsset,
   postAsset,
@@ -234,6 +235,39 @@ describe("PostComposer Story mode (GR-39)", () => {
       }),
     });
     expect(await screen.findByTestId("story-expiry")).toHaveTextContent(/Disappears|Expired after 24 hours/);
+  });
+});
+
+describe("PostComposer Facebook Pages (GR-30)", () => {
+  const page = account({ id: "p1", platform: "facebook", username: "maple.page", display_name: "Maple Page", capabilities: ["publish"] });
+
+  it("offers Pages beside Instagram accounts; text alone is a post for a Page, and the preview is Facebook's", async () => {
+    const user = userEvent.setup();
+    const { puts } = renderComposer({
+      initial: scheduledPost({ targets: [target({ social_account_id: "p1" })] }),
+      accounts: [maple, page],
+    });
+    await user.type(await screen.findByRole("textbox", { name: "Caption" }), "Open late tonight");
+    expect(await screen.findByRole("article", { name: "Facebook preview" })).toHaveTextContent("Open late tonight");
+    expect(screen.getByTestId("post-format")).toHaveTextContent("Text");
+    await waitFor(() => expect(puts).toHaveLength(1), { timeout: 3000 });
+    expect(puts[0].body).toMatchObject({ caption: "Open late tonight", asset_ids: [], kind: "post" });
+    expect(screen.queryByText("Add a photo or video.")).not.toBeInTheDocument();
+  });
+
+  it("a Page can't be a Story: the Story option is off with the reason", async () => {
+    renderComposer({ initial: scheduledPost({ targets: [target({ social_account_id: "p1" })] }), accounts: [maple, page] });
+    const type = await screen.findByRole("region", { name: "Type" });
+    expect(await within(type).findByTestId("story-blocked")).toHaveTextContent("Maple Page is a Facebook Page");
+    expect(within(type).getByRole("radio", { name: "Story" })).toBeDisabled();
+  });
+
+  it("shows the best time for the picked day beside the time picker", async () => {
+    renderComposer({
+      initial: readyPost({ publish_at: "2026-10-26T12:30:00Z" }),
+      handlers: { "GET /v1/w/:wid/social-accounts/:id/best-times": () => json(bestTimes()) },
+    });
+    expect(await screen.findByText(/Best time for @maple.bakery on Mondays/)).toHaveTextContent("18:00");
   });
 });
 

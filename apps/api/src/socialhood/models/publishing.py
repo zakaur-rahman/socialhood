@@ -96,6 +96,7 @@ class PostFormat(StrEnum):
     CAROUSEL = "carousel"  # 2 to 10 images and videos
     REEL = "reel"  # exactly 1 video (Instagram publishes single videos as Reels)
     STORY = "story"  # exactly 1 image or video, chosen as a Story (GR-39); no caption
+    TEXT = "text"  # no media, a caption: a text or link post on Facebook Pages only (GR-30)
 
 
 class TargetStatus(StrEnum):

@@ -203,7 +203,7 @@ export function deriveFormat(assets: Pick<AssetInfo, "resource_type">[]): PostFo
   return "carousel";
 }
 
-export const FORMAT_LABEL: Record<PostFormat, string> = { image: "Image", carousel: "Carousel", reel: "Reel", story: "Story" };
+export const FORMAT_LABEL: Record<PostFormat, string> = { image: "Image", carousel: "Carousel", reel: "Reel", story: "Story", text: "Text" };
 
 // ---- Stories (GR-39; Meta's limits, unverified until a real account publishes one, C-114)
 
@@ -238,8 +238,22 @@ export function assetLabel(asset: Pick<AssetInfo, "resource_type">, index: numbe
 
 /** Instagram accounts are the ones that can publish (WhatsApp can't, C-043). */
 export function publishingAccounts(accounts: SocialAccount[]): SocialAccount[] {
-  return accounts.filter((account) => account.platform === "instagram");
+  return accounts.filter((account) => account.platform === "instagram" || account.platform === "facebook");
 }
+
+/** GR-30: the platforms the post goes to; before the accounts load, Instagram's rules apply. */
+export function postPlatforms(accounts: Pick<SocialAccount, "platform">[]): { instagram: boolean; facebook: boolean } {
+  const facebook = accounts.some((account) => account.platform === "facebook");
+  const instagram = accounts.some((account) => account.platform === "instagram") || accounts.length === 0;
+  return { instagram, facebook };
+}
+
+/** No media and some text, for Facebook Pages alone: a text post (GR-30). */
+export function pagesOnlyText(accounts: Pick<SocialAccount, "platform">[], caption: string): boolean {
+  return accounts.length > 0 && accounts.every((account) => account.platform === "facebook") && caption.trim().length > 0;
+}
+
+export const FACEBOOK_NO_MIX = "A Facebook post can have several photos or one video, not both.";
 
 export function handleOf(account: Pick<SocialAccount, "username" | "display_name"> | null | undefined): string {
   if (!account) return "This account";

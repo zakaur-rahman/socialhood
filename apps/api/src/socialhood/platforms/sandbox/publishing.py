@@ -47,7 +47,7 @@ from socialhood.platforms.base import (
 from socialhood.platforms.errors import PlatformError
 
 PublishStep = Literal["quota", "container", "status", "publish", "read", "find", "comment"]
-ContainerKind = Literal["image", "video", "carousel"]
+ContainerKind = Literal["image", "video", "carousel", "text"]
 STORY_LIFETIME = timedelta(hours=24)
 
 DEFAULT_PROCESSING_READS = 2
@@ -242,6 +242,11 @@ def create_reel_container(
     )
 
 
+def create_text_container(acct: SocialAccount) -> str:
+    """A text post (Facebook Pages): FINISHED at once; its text arrives with the publish."""
+    return _new_container(acct, "text", carousel_item=False)
+
+
 def create_story_container(acct: SocialAccount, media: ContainerMedia) -> str:
     """A Story: one image (FINISHED at once) or video (processes like a Reel), no caption."""
     return _new_container(acct, media.kind, carousel_item=False, url=media.url, story=True)
@@ -287,9 +292,11 @@ def container_status(acct: SocialAccount, container_ref: str) -> ContainerStatus
 
 
 def publish_container(
-    acct: SocialAccount, container_ref: str, *, now: datetime | None = None
+    acct: SocialAccount, container_ref: str, *, now: datetime | None = None, text: str = ""
 ) -> str:
     row = _own(acct, container_ref)
+    if text and not row.caption:  # Facebook: the text goes with the publish
+        row.caption = text
     _injected("publish", row.caption)
     if row.carousel_item:
         raise _rejected("Sandbox: a carousel item is published through its carousel")
@@ -304,15 +311,15 @@ def publish_container(
     if row.status_code != "FINISHED":
         raise _rejected(f"Sandbox: the container is {row.status_code}")
     at = now or datetime.now(UTC)
-    if _quota(acct.platform_account_id, at).remaining <= 0:
+    if acct.platform == "instagram" and _quota(acct.platform_account_id, at).remaining <= 0:
         raise _rejected(LIMIT_REACHED)
     media_id = f"sandbox_media_{secrets.token_hex(8)}"
-    media_type: Literal["image", "carousel", "reel", "story"] = (
+    media_type: Literal["image", "video", "carousel", "reel", "story"] = (
         "story"
         if row.story
         else "carousel"
         if row.kind == "carousel"
-        else "reel"
+        else ("reel" if acct.platform == "instagram" else "video")
         if row.kind == "video"
         else "image"
     )
@@ -327,11 +334,7 @@ def publish_container(
             caption=row.caption or None,
             media_url=first_url,
             thumbnail_url=None,
-            permalink=(
-                f"https://www.instagram.com/stories/{acct.username or 'sandbox'}/{media_id[-11:]}/"
-                if row.story
-                else f"https://www.instagram.com/p/{media_id[-11:]}/"
-            ),
+            permalink=_permalink(acct, media_id, story=row.story),
             posted_at=at.replace(microsecond=0),
             like_count=0,
             comments_count=0,
@@ -346,6 +349,15 @@ def publish_container(
             "delivery_unknown", retryable=False, message="The platform did not confirm the send"
         )
     return media_id
+
+
+def _permalink(acct: SocialAccount, media_id: str, *, story: bool) -> str:
+    tail = media_id[-11:]
+    if acct.platform == "facebook":
+        return f"https://www.facebook.com/{acct.platform_account_id}/posts/{tail}"
+    if story:
+        return f"https://www.instagram.com/stories/{acct.username or 'sandbox'}/{tail}/"
+    return f"https://www.instagram.com/p/{tail}/"
 
 
 def published_media(acct: SocialAccount, media_ref: str) -> PlatformMedia | None:

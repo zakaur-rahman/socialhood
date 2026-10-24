@@ -3904,3 +3904,89 @@ migration: `ck_automation_runs_one_trigger` is still the 0007 definition and was
 - **For the coordinator:** regenerate the client (`PostFormatName` gains `story`,
   `ScheduledPostDraft.kind`, `ScheduledPostTarget.expires_at`); the web reads `kind` and `expires_at`
   from the generated types.
+
+## C-115 · Facebook publishing and best posting times (GR-30, feature/gr-39-30-stories-fb-publishing)
+
+- **One composer, Pages included.** A Facebook Page shows in the composer's Accounts beside
+  Instagram accounts (tagged "Facebook Page"); choosing both posts to both at once (the composer
+  already took up to 10 accounts; the preview gets an account switcher when the platforms differ and
+  a Facebook-style preview for a Page). Pages also appear in the Schedule page's account filter and
+  colours. The publish jobs, states, retries, failure reasons and notifications are the same ones
+  (`services/post_publishing`); only the platform calls differ.
+- **Permission.** The Page connect now asks for `pages_manage_posts` (`oauth.SCOPES`). A Page
+  gets `Capability.PUBLISH` only if that scope is on the account, so a Page connected before this
+  must be reconnected ("Reconnect to allow publishing", the same wording as Instagram). Sandbox Pages
+  can always publish. `read_insights` is still not asked for.
+- **Containers are references** (`platforms/facebook/publishing.py`): Facebook has none, so the
+  adapter returns `photo:{id}` (an unpublished `POST /me/photos`), `photos:{id,id}` (the parent of 2
+  to 10 photos, no call), `video:{id}` (an unpublished `POST /me/videos` with `file_url`, polled with
+  `GET /{id}?fields=status`) or `text:post`; `publish_container` then posts it: photos as
+  `POST /me/feed` with `attached_media`, a video with `POST /{id}` `{published: true}`, text as
+  `POST /me/feed` `{message, link?}` (the first URL in the text becomes `link`). The adapter
+  protocol gained `create_text_container`, and `publish_container` takes the post's `caption` (the
+  jobs pass it; Instagram ignores it).
+- **Our scheduler, not Meta's.** Every call publishes at once; `scheduled_publish_time` is not used,
+  so Social Hood's states, retries, calendar and Activity stay the one source of truth and a Page
+  post can be moved or canceled until the moment it publishes. *No good reason found to use Meta's.*
+- **Formats.** The same derived formats (one photo, one video, 2 to 10 photos), plus **text**
+  (`scheduled_posts.format = text`, migration 0039): no media, a caption, only when every account is
+  a Page. A Page video is a normal Page video (media item type `video`, not a Reel). The checklist is
+  per platform (`TargetFacts.platform`): a Page takes any photo shape (4:5 to 1.91:1 is Instagram's),
+  refuses photos mixed with a video ("A Facebook post can have several photos or one video, not
+  both."), has no hashtag or mention limit and no publishing limit; text for a post that also goes
+  to Instagram is refused ("Add an image or video."); a Story cannot go to a Page. *Deviation:* the
+  2,200 character caption limit stays for Pages too (the column check and the API schemas share it);
+  Facebook allows far more, so lifting it is a later change.
+- **Lost answers are not retried on a Page.** Instagram can tell from the container's `PUBLISHED`
+  status that a lost publish answer went out; a Page post has no such state, so a `delivery_unknown`
+  ends the target as unconfirmed ("We couldn't confirm Facebook published this post. Check ...
+  before trying again.") instead of publishing again. A worker that dies between Facebook accepting
+  the post and our storing it could still publish twice on the sweeper's retry (a window of
+  milliseconds; no cheap fix). Reasons are mapped for Facebook error codes 200, 324, 368 and 506;
+  anything else falls back to the generic reason.
+- **Not built: Page Stories** (`/photo_stories`, `/video_stories`). They need their own two step
+  upload, and there is no read API to list them for the story picker. The composer says Pages can't
+  publish Stories. Also not built: Facebook Reels, Meta's own scheduling, post insights for Pages
+  (`get_media_insights` still raises `capability_unavailable`).
+- **Best times.** `GET /social-accounts/{id}/best-times` (owners and admins, like posting times;
+  another workspace's account is 404) returns a suggested hour per weekday (`BestTimes`). It is
+  computed in `services/scheduled_posts/best_times.py`, cached in Valkey for 6 hours per account, and
+  never by an AI model. **Method:** the account's last 90 posts of the last 180 days (stories left
+  out) with a known engagement (the latest snapshot's likes + comments + shares + saves, else the
+  live like and comment counts, so a Page without insights works); each post is scored against the
+  account's median post; posts are grouped by weekday and hour in the workspace time zone; an hour
+  needs 2 posts, and a weekday gets the hour with the best median score (the earlier on a tie);
+  fewer than 10 scored posts: `enough_history` false and no suggestion ("not enough history").
+  `lift_percent` is how far the hour beats a typical post (null when the median is 0). The
+  constants are at the top of the module.
+- **Web.** The time picker shows the best time for the chosen weekday with a "Use 18:00" button (or
+  the top three days to start from, before a day is chosen) and says when there is not enough
+  history; the Posting times drawer lists the suggestion per weekday with an "Add" button. Both read
+  the cached route.
+- **Migration 0039** (after 0038), expand-only: `ck_scheduled_posts_format` accepts `text`
+  (downgrade turns text posts back into drafts without a format). No new tables; the best times
+  need none.
+- **Unverified (Meta), until a real Page publishes:** JSON bodies on `/photos`, `/videos` and
+  `/feed` (Meta's examples are form encoded, and `attached_media` is documented as a list of JSON
+  strings); `file_url` on `graph.facebook.com` rather than `graph-video.facebook.com`; that an
+  unpublished video is published by `POST /{id}` with `published: true`; the `status.video_status`
+  values (`ready`, `processing`, `uploading`, `error`, `expired`); that `GET /{post-id}` and the video
+  fields in `VIDEO_FIELDS` return a permalink (a video's is relative); the `link` field's preview
+  behaviour; the error codes 200, 324, 368 and 506 and their reasons; that `pages_manage_posts` is
+  enough (App Review: O-10); that a post id has `_` and a video id is a bare number (how the read
+  back tells them apart); `POST /{id}/comments` for a Page's own first comment.
+- **Tests.** Unit: `test_facebook_publishing.py` (the permission gate, every call body, the video
+  status, errors, the read back, the per-platform checklist, the best-times arithmetic with the
+  zone, the minimum bucket, too little data and a zero median); `test_facebook_platform.py` updated
+  (Pages publish, no insights). Integration: `test_facebook_publishing.py` (text, photos, video,
+  no limit, first comment, a refused post and its notification, a lost answer never published twice,
+  a Page without the permission; the composer API per platform; the best-times route: too little
+  history, the busy weekday, a Page from its counts, the time zone and the cache, 401 and 404);
+  `test_facebook_connect.py` updated. Tenancy: the new route has an account id, so the walk covers
+  it. Vitest: the best-times helpers and components, the Page checklist, the account picker, the
+  preview, the composer. E2E: `gr30-facebook-publishing.spec.ts`.
+- **For the coordinator:** regenerate the client (`BestTimes`, `BestTimeDay`, the `get_best_times`
+  operation, `PostFormatName` gains `text`); the web types are aliases waiting for it. The Meta app
+  needs `pages_manage_posts` added to the Facebook Login permissions for production (O-10). Roles:
+  the route uses the same `Admin` dependency as posting times; there is no member-role integration
+  test for it (none exists for posting times either).

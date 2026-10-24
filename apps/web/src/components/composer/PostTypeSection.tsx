@@ -18,10 +18,13 @@ export function PostTypeSection({
   value,
   onChange,
   disabled,
+  storyBlockedBy,
 }: {
   value: PostKind;
   onChange: (kind: PostKind) => void;
   disabled?: boolean;
+  /** GR-30: the name of a chosen account that can't publish Stories (a Facebook Page), if any. */
+  storyBlockedBy?: string | null;
 }) {
   return (
     <Section id={POST_TYPE_ID} title="Type">
@@ -32,8 +35,15 @@ export function PostTypeSection({
         onValueChange={(next) => onChange(next as PostKind)}
       >
         <ToggleGroupItem value="post">Post</ToggleGroupItem>
-        <ToggleGroupItem value="story">Story</ToggleGroupItem>
+        <ToggleGroupItem value="story" disabled={Boolean(storyBlockedBy) && value !== "story"}>
+          Story
+        </ToggleGroupItem>
       </ToggleGroup>
+      {storyBlockedBy ? (
+        <p className="mt-3 text-sm text-fg-secondary" data-testid="story-blocked">
+          {storyBlockedBy} is a Facebook Page, and Pages can&apos;t publish Stories from Social Hood yet.
+        </p>
+      ) : null}
       {value === "story" ? (
         <p className="mt-3 text-sm text-fg-secondary" data-testid="story-hint">
           One photo, or one video of {STORY_VIDEO_MIN_SECONDS} to {STORY_VIDEO_MAX_SECONDS} seconds. 9:16 fits best. Stories have no

@@ -23,6 +23,7 @@ import type {
   HashtagGroup,
   HashtagSuggestion,
   HashtagSuggestionRequest,
+  BestTimes,
   MediaAssetList,
   PostingSlots,
   ScheduledPost,
@@ -139,6 +140,22 @@ export function useComposerPostingSlots(wid: string, accountIds: string[], enabl
           }),
         ) as Promise<PostingSlots>,
     })),
+  });
+}
+
+/** GR-30: an account's suggested posting hour per weekday (worked out and cached by the API). */
+export function useBestTimes(wid: string, accountId: string | null, enabled = true) {
+  const api = useApi();
+  return useQuery<BestTimes>({
+    queryKey: keys.bestTimes(wid, accountId ?? ""),
+    enabled: enabled && Boolean(accountId),
+    staleTime: 10 * 60_000,
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/w/{wid}/social-accounts/{account_id}/best-times", {
+          params: { path: { wid, account_id: accountId ?? "" } },
+        }),
+      ) as Promise<BestTimes>,
   });
 }
 

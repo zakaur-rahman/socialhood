@@ -3,7 +3,6 @@
  * 12, 14). Colours are token utilities only.
  */
 import { ApiError } from "@/lib/api/errors";
-import { instagramAccounts } from "@/lib/automations/accounts";
 import type {
   BulkScheduledPostResult,
   PostingSlot,
@@ -81,6 +80,8 @@ export function postFormatLabel(post: Pick<ScheduledPostSummary, "format" | "ass
   switch (post.format) {
     case "story":
       return "Story";
+    case "text":
+      return "Text post";
     case "reel":
       return "Reel";
     case "carousel":
@@ -104,11 +105,11 @@ export function accountColors(accounts: Pick<SocialAccount, "id">[]): Map<string
 }
 
 /**
- * The identities from the workspace's whole account list: its connected Instagram accounts, in
- * order. Schedule and the post composer both read this, so an account looks the same in both.
+ * The identities from the workspace's whole account list: its connected Instagram accounts and
+ * Facebook Pages (GR-30), in order. Schedule and the post composer both read this, so an account looks the same in both.
  */
 export function instagramAccountColors(accounts: SocialAccount[]): Map<string, AccountColor> {
-  return accountColors(instagramAccounts(accounts));
+  return accountColors(accounts.filter((a) => a.platform === "instagram" || a.platform === "facebook"));
 }
 
 /** An account the page doesn't know (disconnected): a neutral ring, no identity. */

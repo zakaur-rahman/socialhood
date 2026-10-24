@@ -165,7 +165,12 @@ class WebAdapter:
     ) -> ContainerStatus:
         raise _unavailable(NO_POSTS)
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        raise _unavailable(NO_POSTS)
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
         raise _unavailable(NO_POSTS)
 
     async def get_published_media(

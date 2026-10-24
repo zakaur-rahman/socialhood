@@ -160,7 +160,8 @@ async def test_a_connected_page_has_an_encrypted_token_and_a_subscription(
     assert account["display_name"] == "Maple Bakery"
     assert account["token_expires_at"] is None
     assert {"dm_send", "comments", "private_reply", "read_receipts"} <= set(account["capabilities"])
-    assert not {"publish", "post_insights", "templates"} & set(account["capabilities"])
+    assert "publish" in account["capabilities"]  # GR-30: pages_manage_posts is requested
+    assert not {"post_insights", "templates"} & set(account["capabilities"])
 
     [row] = await accounts(engine)
     assert (row["platform"], row["platform_account_id"]) == ("facebook", PAGE_ID)

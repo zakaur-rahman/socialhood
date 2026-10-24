@@ -24,6 +24,7 @@ import { WEEKDAYS_LONG, WEEKDAYS_SHORT, zoneLabel } from "@/lib/schedule/dates";
 import { formatDayTime } from "@/lib/tz";
 import { EYEBROW } from "@/styles/tokens";
 
+import { BestTimesPanel } from "./BestTimes";
 import { useOptionalSchedule } from "./schedule-context";
 
 export type TimesBasics = { wid: string; timeZone: string; now: Date };
@@ -117,7 +118,7 @@ export function PostingTimesDrawer({
         ) : current ? (
           <div className="flex min-h-0 flex-1 flex-col">{times(current)}</div>
         ) : (
-          <p className="p-4 text-sm text-fg-secondary">Connect an Instagram account to set posting times.</p>
+          <p className="p-4 text-sm text-fg-secondary">Connect an Instagram account or a Facebook Page to set posting times.</p>
         )}
       </SheetContent>
     </Sheet>
@@ -195,6 +196,12 @@ function AccountTimes({
             />
           ))}
         </ul>
+        <BestTimesPanel
+          wid={schedule.wid}
+          accountId={account.id}
+          existing={week}
+          onAdd={(weekday, time) => update(week.map((times, index) => (index === weekday ? [...times, time] : times)))}
+        />
         <CardInset padding="compact" className="mt-4">
           <p className={EYEBROW}>Next free times</p>
           <p className="mt-1 text-sm tabular-nums" data-testid="next-free-times">

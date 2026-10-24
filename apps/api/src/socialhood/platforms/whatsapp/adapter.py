@@ -336,7 +336,12 @@ class WhatsAppAdapter:
     ) -> ContainerStatus:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
-    async def publish_container(self, acct: SocialAccount, container_ref: str) -> str:
+    async def create_text_container(self, acct: SocialAccount) -> str:
+        raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
+
+    async def publish_container(
+        self, acct: SocialAccount, container_ref: str, *, caption: str = ""
+    ) -> str:
         raise PlatformError("capability_unavailable", message=NO_PUBLISHING)
 
     async def get_published_media(

@@ -184,13 +184,18 @@ def _caption(post: ScheduledPost, target: ScheduledPostTarget) -> str:
     return target.caption_override if target.caption_override is not None else post.caption
 
 
-def container_media(post: ScheduledPost, assets: Sequence[MediaAsset]) -> list[ContainerMedia]:
+def container_media(
+    post: ScheduledPost, assets: Sequence[MediaAsset]
+) -> list[ContainerMedia] | None:
     """The post's media by their delivery URLs (JPEG images, H.264 MP4 video; TR-MED-02), or
-    [] when they no longer make the post's format (§5.7 format rules)."""
+    None when they no longer make the post's format (§5.7 format rules). A text post (GR-30) has
+    no media: []."""
+    if post.format == PostFormat.TEXT:
+        return [] if not assets else None
     media: list[ContainerMedia] = []
     for asset in assets:
         if asset.resource_type not in ("image", "video") or not asset.secure_url:
-            return []
+            return None
         kind: Literal["image", "video"] = "image" if asset.resource_type == "image" else "video"
         media.append(ContainerMedia(kind=kind, url=delivery_url(asset.secure_url, kind)))
     kinds = [m.kind for m in media]
@@ -204,7 +209,7 @@ def container_media(post: ScheduledPost, assets: Sequence[MediaAsset]) -> list[C
         CAROUSEL_MIN_ASSETS <= len(media) <= CAROUSEL_MAX_ASSETS
     ):
         return media
-    return []
+    return None
 
 
 async def _notify_failure(
@@ -415,7 +420,7 @@ async def publish_target(
             await commit_and_publish(session, redis)
             return "canceled" if got.status == TargetStatus.CANCELED else "failed"
         media = container_media(post, await repo.assets_of(session, post.id))
-        if not media:
+        if media is None:
             await settle(
                 session,
                 post,
@@ -432,7 +437,8 @@ async def publish_target(
     adapter, caption, workspace_id = got, _caption(post, target), post.workspace_id
 
     try:
-        quota = await _quota(adapter, acct)
+        # Only Instagram has a publishing limit to read (Facebook Pages have none, C-115).
+        quota = await _quota(adapter, acct) if acct.platform == "instagram" else None
         if quota is not None and quota.remaining <= 0:
             return await _end(
                 sessionmaker,
@@ -489,6 +495,8 @@ async def _create(
 ) -> tuple[str | None, list[str]]:
     """(container id, children): a carousel's children only, its parent comes once they are
     FINISHED (poll_container)."""
+    if post_format == PostFormat.TEXT:
+        return await adapter.create_text_container(acct), []
     if post_format == PostFormat.STORY:
         return await adapter.create_story_container(acct, media[0]), []
     if post_format == PostFormat.CAROUSEL:
@@ -598,8 +606,21 @@ async def _poll(p: _Poll) -> Outcome:
         return await _recover(p, container_id)
 
     try:
-        media_id = await p.adapter.publish_container(p.acct, container_id)
+        media_id = await p.adapter.publish_container(p.acct, container_id, caption=p.caption)
     except PlatformError as error:
+        if error.code == DELIVERY_UNKNOWN and p.acct.platform != "instagram":
+            # A Page post can't be told from its status (no PUBLISHED state): publishing on
+            # would risk a second post, so it ends unconfirmed for the owner to check (C-115).
+            log.warning("publish_answer_lost_page", target_id=str(p.target_id), n=p.n)
+            return await _end_with(
+                p.sessionmaker,
+                p.redis,
+                p.target_id,
+                error,
+                p.acct,
+                expect=TargetStatus.CONTAINER_CREATED,
+                poll=p.n,
+            )
         if error.code == DELIVERY_UNKNOWN:
             # It may have published: the next poll reads the status before anything else.
             log.warning("publish_answer_lost", target_id=str(p.target_id), n=p.n)
@@ -716,10 +737,10 @@ async def _read_back(p: _Poll, media_id: str) -> PlatformMedia:
         media = None
     if media is not None and media.platform_media_id == media_id:
         return media
-    media_type: Literal["image", "carousel", "reel", "story"] = (
+    media_type: Literal["image", "video", "carousel", "reel", "story"] = (
         "carousel"
         if p.post.format == PostFormat.CAROUSEL
-        else "reel"
+        else ("reel" if p.acct.platform == "instagram" else "video")
         if p.post.format == PostFormat.REEL
         else "story"
         if p.post.format == PostFormat.STORY

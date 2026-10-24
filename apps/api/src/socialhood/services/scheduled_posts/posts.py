@@ -254,8 +254,14 @@ async def _write(
     post.caption = body.caption
     post.first_comment = body.first_comment or None
     post.publish_at = utc(body.publish_at) if body.publish_at else None
+    # No media but text, and only Facebook Pages: a text post (GR-30).
+    pages_only = bool(body.targets) and all(
+        checked.accounts[t.social_account_id].platform == "facebook" for t in body.targets
+    )
     post.format = rules.derive_format(
-        [a.resource_type for a in checked.assets], story=body.kind == "story"
+        [a.resource_type for a in checked.assets],
+        story=body.kind == "story",
+        text=pages_only and bool(body.caption.strip()),
     )
     post.updated_at = now
     current = [row.media_asset_id for row, _ in await repo.assets_for(session, [post.id])]

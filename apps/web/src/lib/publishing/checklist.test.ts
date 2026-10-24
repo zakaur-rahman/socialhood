@@ -28,6 +28,65 @@ function input(overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<
 
 const failures = (items: ChecklistItem[]) => items.filter((item) => !item.ok).map((item) => [item.key, item.field, item.message]);
 
+describe("localChecklist for Facebook Pages (GR-30)", () => {
+  const page = account({ id: "p1", username: "maple.page", platform: "facebook", capabilities: ["publish"] });
+  const toPage = { targets: [{ social_account_id: "p1", caption_override: null }] };
+
+  it("makes text with no media a text post, without Instagram's hashtag and mention checks", () => {
+    const items = localChecklist(input({ ...toPage, asset_ids: [], caption: "Open late #a @b" }, { accounts: [page], assets: {} }));
+    expect(failures(items)).toEqual([]);
+    expect(items.map((item) => item.key)).toEqual(["accounts", "media", "caption"]);
+    expect(items.find((item) => item.key === "media")?.message).toBe("Text post");
+  });
+
+  it("asks a Page for media or text", () => {
+    expect(failures(localChecklist(input({ ...toPage, asset_ids: [], caption: " " }, { accounts: [page], assets: {} })))).toEqual([
+      ["media", "asset_ids", "Add a photo or video, or write the post's text."],
+    ]);
+  });
+
+  it("still needs media when an Instagram account is chosen too", () => {
+    const items = localChecklist(
+      input(
+        { targets: [{ social_account_id: "a1", caption_override: null }, ...toPage.targets], asset_ids: [], caption: "Text only" },
+        { accounts: [ready, page], assets: {} },
+      ),
+    );
+    expect(failures(items)).toEqual([["media", "asset_ids", "Add a photo or video."]]);
+  });
+
+  it("takes a wide photo that Instagram would ask to crop", () => {
+    const wide = assetInfo({ width: 3000, height: 500 });
+    expect(failures(localChecklist(input(toPage, { accounts: [page], assets: { as1: wide } })))).toEqual([]);
+    expect(
+      failures(
+        localChecklist(
+          input(
+            { targets: [{ social_account_id: "a1", caption_override: null }, ...toPage.targets] },
+            { accounts: [ready, page], assets: { as1: wide } },
+          ),
+        ),
+      ).map((row) => row[0]),
+    ).toEqual(["media_files"]);
+  });
+
+  it("does not mix photos and a video on a Page", () => {
+    const items = localChecklist(
+      input(
+        { ...toPage, asset_ids: ["as1", "as2"] },
+        { accounts: [page], assets: { as1: assetInfo(), as2: assetInfo({ id: "as2", resource_type: "video", duration_s: 10 }) } },
+      ),
+    );
+    expect(failures(items)).toEqual([["media", "asset_ids", "A Facebook post can have several photos or one video, not both."]]);
+  });
+
+  it("names the platform that sets the caption limit", () => {
+    const long = "a".repeat(2201);
+    expect(failures(localChecklist(input({ ...toPage, caption: long }, { accounts: [page] })))[0][2]).toContain("Social Hood allows 2,200");
+    expect(failures(localChecklist(input({ caption: long })))[0][2]).toContain("Instagram allows 2,200");
+  });
+});
+
 describe("localChecklist as a Story (GR-39)", () => {
   const story = (overrides: Partial<ChecklistInput["draft"]> = {}, extra: Partial<Omit<ChecklistInput, "draft">> = {}) =>
     input({ kind: "story", caption: "kept, never sent #a #b", ...overrides }, extra);

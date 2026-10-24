@@ -73,6 +73,11 @@ STORY_ASPECT_TOLERANCE = 0.05
 STORY_ONE_FILE = "A Story is one image or one video."
 STORY_NO_CAPTION = "Stories are published without a caption"
 
+# Facebook Pages (GR-30): a photo post takes several photos or one video, never both.
+FACEBOOK_NO_MIX = "A Facebook post can have several photos or one video, not both."
+FACEBOOK_NO_MEDIA = "Add a photo or video, or write the post's text."
+NEEDS_MEDIA = "{handle} can't publish a post without a photo or video."
+
 PUBLISHING_STARTED = "Publishing started."
 ALREADY_PUBLISHED = "This post was already published."
 NOT_SCHEDULED = "This post isn't scheduled."
@@ -82,11 +87,16 @@ TIME_TOO_SOON = "Pick a time at least 5 minutes from now."
 # ---------------------------------------------------------------- format (§5.7)
 
 
-def derive_format(resource_types: Sequence[str], *, story: bool = False) -> PostFormat | None:
+def derive_format(
+    resource_types: Sequence[str], *, story: bool = False, text: bool = False
+) -> PostFormat | None:
     """1 image: an image post; 1 video: a Reel; 2 to 10 images and videos: a carousel. Chosen as a
-    Story (GR-39), exactly 1 image or video is a Story. Nothing else makes a post."""
+    Story (GR-39), exactly 1 image or video is a Story. No media but text for a Facebook Page
+    (``text``, GR-30): a text post. Nothing else makes a post."""
     if any(kind not in ("image", "video") for kind in resource_types):
         return None
+    if not resource_types:
+        return PostFormat.TEXT if text and not story else None
     if story:
         return PostFormat.STORY if len(resource_types) == 1 else None
     if len(resource_types) == 1:
@@ -96,7 +106,12 @@ def derive_format(resource_types: Sequence[str], *, story: bool = False) -> Post
     return None
 
 
-FORMAT_LABELS = {PostFormat.IMAGE: "Image post", PostFormat.REEL: "Reel", PostFormat.STORY: "Story"}
+FORMAT_LABELS = {
+    PostFormat.IMAGE: "Image post",
+    PostFormat.REEL: "Reel",
+    PostFormat.STORY: "Story",
+    PostFormat.TEXT: "Text post",
+}
 
 
 def format_label(fmt: PostFormat, count: int) -> str:
@@ -178,7 +193,7 @@ def handle(username: str | None, display_name: str | None = None) -> str:
     return display_name or "This account"
 
 
-def _account_problem(target: TargetFacts, *, story: bool = False) -> str | None:
+def _account_problem(target: TargetFacts, *, story: bool = False, text: bool = False) -> str | None:
     if target.status == AccountStatus.DISCONNECTED:
         return f"{target.handle} is disconnected. Reconnect it or remove it from this post."
     if target.status != AccountStatus.ACTIVE:
@@ -187,10 +202,12 @@ def _account_problem(target: TargetFacts, *, story: bool = False) -> str | None:
         return f"{target.handle} can't publish posts."
     if story and target.platform != "instagram":
         return f"{target.handle} can't publish Stories. Remove it or choose a post."
+    if text and target.platform != "facebook":
+        return NEEDS_MEDIA.format(handle=target.handle)
     return None
 
 
-def asset_problem(asset: AssetFacts, *, story: bool = False) -> str | None:
+def asset_problem(asset: AssetFacts, *, story: bool = False, instagram: bool = True) -> str | None:
     """TR-MED-02: type, size, aspect ratio and video length. A Story takes any image shape (9:16
     is only recommended) and a video of 3 to 60 seconds."""
     fmt = (asset.format or "").lower()
@@ -199,7 +216,7 @@ def asset_problem(asset: AssetFacts, *, story: bool = False) -> str | None:
             return "Use a JPEG, PNG, WEBP or HEIC image."
         if asset.bytes > IMAGE.max_bytes:
             return f"Images can be up to {IMAGE.max_bytes // MB} MB."
-        if asset.width and asset.height and not story:
+        if asset.width and asset.height and not story and instagram:
             ratio = asset.width / asset.height
             if ratio < MIN_ASPECT - ASPECT_SLACK or ratio > MAX_ASPECT + ASPECT_SLACK:
                 return "Crop this image to between 4:5 (portrait) and 1.91:1 (landscape)."
@@ -260,8 +277,9 @@ def _texts(post: PostFacts, *, first_comment: bool) -> list[tuple[str, str | Non
     return texts
 
 
-def _text_items(post: PostFacts) -> list[ChecklistItem]:
-    """The caption, hashtags and mentions checks (FR-PUB-10) of a post that has a caption."""
+def _text_items(post: PostFacts, *, hashtags_and_mentions: bool = True) -> list[ChecklistItem]:
+    """The caption, hashtags and mentions checks (FR-PUB-10) of a post that has a caption.
+    Hashtag and mention limits are Instagram's: a post for Facebook Pages only skips them."""
     items: list[ChecklistItem] = []
     # caption: lengths
     failing = []
@@ -278,6 +296,8 @@ def _text_items(post: PostFacts) -> list[ChecklistItem]:
                 )
             )
     items += failing or [_item("caption", f"Caption within {CAPTION_MAX_CHARS:,} characters")]
+    if not hashtags_and_mentions:
+        return items
 
     # hashtags: each caption and the first comment (where hashtags often go, FR-PUB-11)
     failing = []
@@ -323,6 +343,11 @@ def checklist(
     rule (Publish now)."""
     items: list[ChecklistItem] = []
 
+    ig = any(t.platform == "instagram" for t in post.targets)
+    fb = any(t.platform == "facebook" for t in post.targets)
+    text_post = bool(post.caption.strip()) and fb and not ig and not post.story
+    fmt = derive_format([a.resource_type for a in post.assets], story=post.story, text=text_post)
+
     # accounts
     if not post.targets:
         items.append(_item("accounts", "Choose at least one account.", ok=False, field="targets"))
@@ -330,7 +355,8 @@ def checklist(
         failing = [
             _item("accounts", problem, ok=False, field=f"targets.{i}")
             for i, t in enumerate(post.targets)
-            if (problem := _account_problem(t, story=post.story)) is not None
+            if (problem := _account_problem(t, story=post.story, text=fmt == PostFormat.TEXT))
+            is not None
         ]
         count = len(post.targets)
         items += failing or [
@@ -343,9 +369,20 @@ def checklist(
         ]
 
     # media and media_files
-    fmt = derive_format([a.resource_type for a in post.assets], story=post.story)
-    if not post.assets:
-        items.append(_item("media", "Add an image or video.", ok=False, field="asset_ids"))
+    mixed = (
+        fb and fmt == PostFormat.CAROUSEL and any(a.resource_type == "video" for a in post.assets)
+    )
+    if fmt == PostFormat.TEXT:
+        items.append(_item("media", format_label(fmt, 0)))
+    elif not post.assets:
+        items.append(
+            _item(
+                "media",
+                FACEBOOK_NO_MEDIA if fb and not ig else "Add an image or video.",
+                ok=False,
+                field="asset_ids",
+            )
+        )
     elif fmt is None:
         items.append(
             _item(
@@ -357,36 +394,44 @@ def checklist(
                 field="asset_ids",
             )
         )
+    elif mixed:
+        items.append(_item("media", FACEBOOK_NO_MIX, ok=False, field="asset_ids"))
     else:
         items.append(_item("media", format_label(fmt, len(post.assets))))
     failing = [
         _item("media_files", problem, ok=False, field=f"asset_ids.{i}")
         for i, a in enumerate(post.assets)
-        if (problem := asset_problem(a, story=post.story)) is not None
+        if (problem := asset_problem(a, story=post.story, instagram=ig or not fb)) is not None
     ]
     note = story_shape_note(post.assets[0]) if post.story and len(post.assets) == 1 else None
-    items += failing or [_item("media_files", note or "Media meets Instagram's requirements")]
+    names = "Instagram's and Facebook's" if ig and fb else "Facebook's" if fb else "Instagram's"
+    if post.assets or fmt != PostFormat.TEXT:
+        items += failing or [_item("media_files", note or f"Media meets {names} requirements")]
 
     if post.story:
         # A Story has no caption, hashtags or mentions: whatever the draft holds is kept but
         # never sent, so there is nothing to check.
         items.append(_item("caption", STORY_NO_CAPTION))
     else:
-        items += _text_items(post)
+        items += _text_items(post, hashtags_and_mentions=ig or not fb)
 
     # publishing_limit: this post plus the account's others in the 24 hours up to its time
-    failing = [
-        _item(
-            "publishing_limit",
-            f"{t.handle} already has {t.recent_posts} posts in the 24 hours before this time; "
-            f"Instagram allows {publishing_limit}.",
-            ok=False,
-            field=f"targets.{i}",
-        )
-        for i, t in enumerate(post.targets)
-        if t.recent_posts + 1 > publishing_limit
-    ]
-    items += failing or [_item("publishing_limit", "Room in each account's daily publishing limit")]
+    # (Instagram only: Facebook Pages have no such limit)
+    if ig or not post.targets:
+        failing = [
+            _item(
+                "publishing_limit",
+                f"{t.handle} already has {t.recent_posts} posts in the 24 hours before this time; "
+                f"Instagram allows {publishing_limit}.",
+                ok=False,
+                field=f"targets.{i}",
+            )
+            for i, t in enumerate(post.targets)
+            if t.platform == "instagram" and t.recent_posts + 1 > publishing_limit
+        ]
+        items += failing or [
+            _item("publishing_limit", "Room in each account's daily publishing limit")
+        ]
 
     # publish_at: only when the post has a time
     if check_time and post.publish_at is not None:
