@@ -16,14 +16,16 @@ import { cn } from "@/lib/utils";
  * tab scroll clear of the fade, and the scroll padding stops a tab reached with Tab short of it.
  * The hairline sits on a wrapper, outside the mask, so it doesn't fade; the row overlaps it by 1 px
  * and the active underline covers it. Focus is the global outline, inset because the row clips
- * (DESIGN_SYSTEM §8.3).
+ * (DESIGN_SYSTEM §8.3). The row stays in view while the page scrolls (owner, 2026-10-24): sticky
+ * under the phone's top bar (h-14) and at the top from md, on the work-pane glass so what scrolls
+ * beneath it blurs instead of showing through.
  */
 export default function SettingsLayout({ children }: { children: ReactNode }) {
   const { slug, role } = useCurrentWorkspace();
   const pathname = usePathname();
   return (
     <div>
-      <div className="w-full px-4 pt-4 md:px-6 md:pt-6">
+      <div className="glass-pane sticky top-14 z-30 w-full px-4 pt-4 md:top-0 md:px-6 md:pt-6">
         <div className="border-b border-line">
           <nav aria-label="Settings" className="mask-fade-x -mb-px flex gap-1 overflow-x-auto pe-4 scroll-pe-4">
             {SETTINGS_SECTIONS.filter((section) => section.roles.includes(role)).map((section) => {
