@@ -338,7 +338,7 @@ describe("Schedule popover (F-10)", () => {
     expect(screen.getByText("Window closes Today 23:30")).toBeInTheDocument();
 
     const time = screen.getByLabelText("Time");
-    expect(screen.getByLabelText("Date")).toHaveValue("2026-09-28");
+    expect(screen.getByLabelText("Date")).toHaveTextContent("Mon 28 Sep 2026");
     fireEvent.change(time, { target: { value: "23:45" } });
     await user.click(screen.getByRole("button", { name: "Schedule" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Pick a time before Today 23:25, when the reply window closes.");

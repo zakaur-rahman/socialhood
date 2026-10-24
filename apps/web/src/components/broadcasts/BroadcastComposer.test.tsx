@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { Broadcast, BroadcastAvailability, BroadcastPreview } from "@/lib/api/types";
+import { pickDate } from "@/test/datepicker";
 import { account, json, problem, renderWithApi, type Call } from "@/test/api";
 
 import { BroadcastComposer, toSpecs, variablesReady } from "./BroadcastComposer";
@@ -192,7 +193,7 @@ describe("the broadcast composer (GR-23)", () => {
     const send = screen.getByRole("button", { name: "Schedule broadcast" });
     expect(send).toBeDisabled();
     const day = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
-    await user.type(screen.getByLabelText("Date"), day);
+    await pickDate(user, "Date", day);
     await user.type(screen.getByLabelText("Time"), "10:30");
     await screen.findByTestId("eligible");
     await waitFor(() => expect(send).toBeEnabled());

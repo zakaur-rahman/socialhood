@@ -23,6 +23,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -42,7 +43,7 @@ import type { BroadcastDraft, BroadcastPreview, VariableSpec } from "@/lib/api/t
 import { BUILT_IN_FIELDS, fillTemplate, formatCount, formatMoney } from "@/lib/broadcasts/format";
 import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
-import { zonedToDate } from "@/lib/tz";
+import { toZonedInputs, zonedToDate } from "@/lib/tz";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { BroadcastsUnavailable } from "./BroadcastsPage";
 import { CARD_TITLE, ITEM_TITLE, META } from "@/styles/tokens";
@@ -138,6 +139,7 @@ export function BroadcastComposer() {
     return zonedToDate(date, time, workspace.timezone);
   }, [when, date, time, workspace.timezone]);
   const now = useNow();
+  const today = toZonedInputs(now, workspace.timezone).date;
   const scheduleOk = when === "now" || (scheduledAt !== null && scheduledAt.getTime() > now.getTime() + 60_000);
   const waiting = draftKey !== settledKey || preview.isPending;
   const canSend =
@@ -366,18 +368,19 @@ export function BroadcastComposer() {
             </ToggleGroup>
             {when === "later" ? (
               <div className="flex flex-wrap items-end gap-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="broadcast-date" className={ITEM_TITLE}>
-                    Date
-                  </label>
-                  <Input id="broadcast-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="broadcast-time" className={ITEM_TITLE}>
-                    Time
-                  </label>
-                  <Input id="broadcast-time" type="time" value={time} onChange={(event) => setTime(event.target.value)} />
-                </div>
+                <DateTimePicker
+                  idPrefix="broadcast"
+                  size="default"
+                  value={{ date, time }}
+                  onChange={(next) => {
+                    setDate(next.date);
+                    setTime(next.time);
+                  }}
+                  min={today}
+                  today={today}
+                  labelClassName={ITEM_TITLE}
+                  className="w-full max-w-sm"
+                />
                 <p className={META}>In {workspace.timezone}. The audience is fixed when it starts.</p>
               </div>
             ) : null}

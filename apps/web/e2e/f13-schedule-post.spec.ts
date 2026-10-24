@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import type { SandboxAccount, Workspace } from "./support/api";
 import { expect, test, unique } from "./support/fixtures";
@@ -35,6 +35,16 @@ async function composeDraft(page: Page, workspace: Workspace, account: SandboxAc
   await expect(page.getByRole("region", { name: "Checklist" }).getByRole("link", { name: /^To fix:/ })).toHaveCount(0);
 }
 
+/** Opens the date picker's calendar, pages to the month of `day` ("YYYY-MM-DD") and clicks it. */
+async function pickDay(page: Page, trigger: Locator, day: string): Promise<void> {
+  await trigger.click();
+  const cell = page.locator(`td[data-day="${day}"]:not([data-outside])`);
+  for (let hops = 0; hops < 2 && (await cell.count()) === 0; hops++) {
+    await page.getByRole("button", { name: /next month/i }).click();
+  }
+  await cell.getByRole("button").click();
+}
+
 function tomorrowUtc(): string {
   return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
@@ -48,7 +58,7 @@ test.describe("F-13 schedule and publish a post", () => {
 
     const when = page.getByRole("region", { name: "When" });
     await expect(when).toContainText("Times are in UTC.");
-    await when.getByRole("textbox", { name: "Date" }).fill(tomorrowUtc());
+    await pickDay(page, when.getByRole("button", { name: "Date" }), tomorrowUtc());
     await when.getByRole("textbox", { name: "Time" }).fill("10:30");
 
     const scheduled = page.waitForResponse((r) => /\/scheduled-posts\/[^/]+\/schedule$/.test(r.url()) && r.request().method() === "POST");

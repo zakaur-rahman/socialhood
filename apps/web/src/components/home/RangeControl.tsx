@@ -4,7 +4,7 @@ import { useRef, useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { OverviewQuery } from "@/lib/api/queries";
@@ -12,7 +12,7 @@ import type { OverviewQuery } from "@/lib/api/queries";
 import { addDays, checkCustom, choiceOf, MAX_CUSTOM_DAYS, type CustomErrors } from "./range";
 
 /**
- * 7 days / 30 days / Custom. Custom opens two date inputs (local days in the workspace's time
+ * 7 days / 30 days / Custom. Custom opens two date pickers (local days in the workspace's time
  * zone, up to today, at most 90 days) and applies them together; clicking Custom again edits them.
  */
 export function RangeControl({
@@ -101,24 +101,18 @@ function CustomRangeForm({
       <div className="grid grid-cols-2 gap-3">
         <Field id="home-range-from">
           <FieldLabel>From</FieldLabel>
-          <Input
-            type="date"
+          <DatePicker
             value={from}
             max={to || today}
             min={to ? addDays(to, -(MAX_CUSTOM_DAYS - 1)) : undefined}
-            onChange={(event) => setFrom(event.target.value)}
+            today={today}
+            onChange={setFrom}
           />
           <FieldError>{errors?.from}</FieldError>
         </Field>
         <Field id="home-range-to">
           <FieldLabel>To</FieldLabel>
-          <Input
-            type="date"
-            value={to}
-            min={from || undefined}
-            max={today}
-            onChange={(event) => setTo(event.target.value)}
-          />
+          <DatePicker value={to} min={from || undefined} max={today} today={today} onChange={setTo} />
           <FieldError>{errors?.to}</FieldError>
         </Field>
       </div>

@@ -1,9 +1,10 @@
-import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import type { ChecklistStep, Overview, PriorityConversation, SentimentSplit } from "@/lib/api/types";
 import { dayKey } from "@/lib/tz";
+import { pickDate } from "@/test/datepicker";
 import { json, knowledgeSource, problem, renderWithApi, workspace, type Call } from "@/test/api";
 
 import { resetAllSet } from "./checklist-state";
@@ -477,22 +478,15 @@ describe("Home (UX-SCR-01, FR-HOME-01)", () => {
 
     await user.click(screen.getByRole("radio", { name: "Custom" }));
     const picker = await screen.findByRole("form", { name: "Custom period" });
-    const fromInput = within(picker).getByLabelText("From");
-    const toInput = within(picker).getByLabelText("To");
-    expect(toInput).toHaveAttribute("max", today);
-
-    // A start after the end is refused before anything is sent.
-    fireEvent.change(fromInput, { target: { value: addDays(today, 1) } });
-    fireEvent.change(toInput, { target: { value: today } });
-    await user.click(within(picker).getByRole("button", { name: "Apply" }));
-    expect(within(picker).getByRole("alert")).toHaveTextContent("Pick a start date on or before the end date.");
-    // More than 90 days too.
-    fireEvent.change(fromInput, { target: { value: addDays(today, -90) } });
-    await user.click(within(picker).getByRole("button", { name: "Apply" }));
-    expect(within(picker).getByRole("alert")).toHaveTextContent("Pick at most 90 days.");
-    expect(overviewCalls(calls)).toHaveLength(1);
-
-    fireEvent.change(fromInput, { target: { value: from } });
+    // The calendars keep the pair valid: no day after today (or after the end, or 90 days back).
+    await user.click(within(picker).getByLabelText("To"));
+    const toGrid = await screen.findByRole("grid");
+    expect(toGrid.querySelector(`td[data-day="${today}"] button`)).toBeEnabled();
+    const tomorrow = toGrid.querySelector(`td[data-day="${addDays(today, 1)}"] button`);
+    if (tomorrow) expect(tomorrow).toBeDisabled();
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("grid")).not.toBeInTheDocument());
+    await pickDate(user, within(picker).getByLabelText("From"), from);
     await user.click(within(picker).getByRole("button", { name: "Apply" }));
 
     await waitFor(() => expect(tile("Messages today")).toHaveTextContent("11 in 12 days"));

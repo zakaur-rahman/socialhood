@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { DateTimePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -261,27 +262,15 @@ function WindowEdge({
     <div className="space-y-1.5">
       <p className="text-xs font-medium text-fg-secondary">{label}</p>
       <div className="flex items-center gap-2">
-        <label htmlFor={`${id}-date`} className="sr-only">
-          {label} date
-        </label>
-        <Input
-          id={`${id}-date`}
-          type="date"
-          value={inputs.date}
-          onChange={(event) => set(event.target.value, inputs.time)}
+        <DateTimePicker
+          idPrefix={id}
           size="lg"
-        />
-        <label htmlFor={`${id}-time`} className="sr-only">
-          {label} time
-        </label>
-        <Input
-          id={`${id}-time`}
-          type="time"
-          value={inputs.time}
-          disabled={!inputs.date}
-          onChange={(event) => set(inputs.date, event.target.value)}
-          size="lg"
-          className="w-28"
+          value={inputs}
+          onChange={(next) => set(next.date, next.time)}
+          labels={{ date: `${label} date`, time: `${label} time` }}
+          hideLabels
+          timeNeedsDate
+          className="flex-1"
         />
         {value ? (
           <Button variant="ghost" size="icon-lg" aria-label={`Clear ${label.toLowerCase()}`} onClick={() => onChange(null)}>

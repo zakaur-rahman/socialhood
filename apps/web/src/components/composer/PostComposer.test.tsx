@@ -11,6 +11,7 @@ import type { Cropper } from "@/lib/publishing/crop";
 import type { ScheduledPost, ScheduledPostDraft } from "@/lib/publishing/types";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
 import { formatDayTime } from "@/lib/tz";
+import { pickDate } from "@/test/datepicker";
 import {
   account,
   automation,
@@ -371,7 +372,7 @@ describe("PostComposer checklist gating (FR-PUB-10, T7.5 done-when)", () => {
 
     const soon = new Date(Date.now() + 60_000);
     const [date, time] = [soon.toLocaleDateString("en-CA", { timeZone: TZ }), soon.toLocaleTimeString("en-GB", { timeZone: TZ, hour: "2-digit", minute: "2-digit" })];
-    await user.type(screen.getByLabelText("Date"), date);
+    await pickDate(user, "Date", date);
     await user.type(screen.getByLabelText("Time"), time);
     expect(await within(checklist()).findByRole("link", { name: /Pick a time at least 5 minutes from now./ })).toHaveAttribute("href", "#composer-when-date");
     expect(scheduleButton()).toBeDisabled();
