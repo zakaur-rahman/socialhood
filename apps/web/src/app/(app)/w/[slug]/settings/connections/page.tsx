@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { AUTO_UPGRADE } from "@/components/ai/AiModeControl";
 import { AutoConfirmDialog } from "@/components/ai/AiModeDialogs";
 import { AccountCard } from "@/components/connections/AccountCard";
+import { AddAccountMenu } from "@/components/connections/AddAccountMenu";
 import { ConnectWhatsAppButton, useWhatsAppConnect } from "@/components/connections/ConnectWhatsAppButton";
 import { FacebookGlyph } from "@/components/connections/FacebookGlyph";
 import { FacebookPagesDialog } from "@/components/connections/FacebookPagesDialog";
@@ -43,13 +44,7 @@ import {
 import type { SocialAccount } from "@/lib/api/types";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { browser } from "@/lib/billing/browser";
-import {
-  completeConnectResult,
-  connectResult,
-  emptyStates,
-  instagramConnected,
-  type ConnectResult,
-} from "@/lib/copy";
+import { completeConnectResult, connectResult, emptyStates, instagramConnected, type ConnectResult } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useDocumentTitle } from "@/lib/document-title";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -164,15 +159,13 @@ function Connections() {
       ) : null}
       {empty ? null : (
         <>
-          <ConnectWhatsAppButton wid={wid} onFailure={failWhatsApp} />
-          <Button size="lg" loading={connectFacebook.isPending} onClick={startFacebook}>
-            <FacebookGlyph className="size-4" />
-            Connect Facebook
-          </Button>
-          <Button size="lg" loading={connect.isPending || finishing} onClick={startConnect}>
-            <InstagramGlyph className="size-4" />
-            Connect Instagram
-          </Button>
+          <AddAccountMenu
+            onInstagram={startConnect}
+            onFacebook={startFacebook}
+            onWhatsApp={whatsapp.connect}
+            whatsAppConfigured={whatsapp.configured}
+            busy={connect.isPending || finishing || connectFacebook.isPending || whatsapp.busy}
+          />
         </>
       )}
     </>
@@ -219,31 +212,33 @@ function Connections() {
         </Card>
       ) : (
         <>
-          <Card className="flex flex-col gap-2 p-2 lg:flex-row lg:items-center">
-            <SearchInput
-              label="Search accounts"
-              placeholder="Search by name, handle or number"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              size="xl"
-              className="flex-1"
-            />
-            {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
+          {accounts.data.length >= 2 ? (
+            <Card className="flex flex-col gap-2 p-2 lg:flex-row lg:items-center">
+              <SearchInput
+                label="Search accounts"
+                placeholder="Search by name, handle or number"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                size="xl"
+                className="flex-1"
+              />
+              {/* `default` beside the 40 px search: its track is 40 px outside, so the edges line up (C-073).
                 Below lg it is a row of its own that scrolls on phones, with the edge fade (UI-ISS-058). */}
-            <ToggleGroup
-              value={filter}
-              onValueChange={(value) => setFilter(value as AccountFilter)}
-              aria-label="Show accounts"
-              className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
-            >
-              {ACCOUNT_FILTERS.map((option) => (
-                <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
-                  {option.label}
-                  <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </Card>
+              <ToggleGroup
+                value={filter}
+                onValueChange={(value) => setFilter(value as AccountFilter)}
+                aria-label="Show accounts"
+                className="mask-fade-x overflow-x-auto pe-4 scroll-pe-4 lg:w-auto lg:mask-none lg:pe-1 lg:scroll-pe-0"
+              >
+                {ACCOUNT_FILTERS.map((option) => (
+                  <ToggleGroupItem key={option.value} value={option.value} className="shrink-0">
+                    {option.label}
+                    <span className="text-xs text-fg-secondary tabular-nums">{counts[option.value]}</span>
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
+            </Card>
+          ) : null}
           {shown.length === 0 ? (
             <Card>
               <EmptyState
