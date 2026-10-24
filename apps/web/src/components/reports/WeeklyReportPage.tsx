@@ -7,7 +7,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { assignColours, colourIndexes, seriesStyle } from "@/components/charts/palette";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
-import { MetricComparison } from "@/components/agent/visuals/MetricComparison";
 import { formatCount, formatSpan } from "@/components/home/format";
 import { MetricTile } from "@/components/home/MetricTile";
 import { PageFrame } from "@/components/shell/PageFrame";
@@ -19,7 +18,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { INTENT_LABEL } from "@/lib/ai/format";
 import { useWeeklyReport } from "@/lib/api/queries";
 import type { Platform, ReportAccountMetric, ReportMetric, WeeklyReport } from "@/lib/api/types";
-import { formatMetric, parseAccountParam, parseWeekParam, previousLine, reportHref, reportTrend, weekLabel } from "@/lib/reports/format";
+import { cn } from "@/lib/utils";
+import {
+  formatMetric,
+  insightLine,
+  isIdle,
+  parseAccountParam,
+  parseWeekParam,
+  previousLine,
+  reportHref,
+  reportTrend,
+  weekLabel,
+} from "@/lib/reports/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
 import { CARD_TITLE } from "@/styles/tokens";
 
@@ -137,9 +147,14 @@ function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; s
   const before = formatSpan(data.previous_week.since, data.previous_week.until);
   // An account's colour is its place in the API's list, the same in every chart on the page.
   const indexes = colourIndexes((data.accounts ?? []).map((a) => a.id));
-  const color = data.account ? (indexes.get(data.account.id) ?? 0) : 0;
+  // The workspace-wide lines are neutral, so no account's hue stands for "everyone".
+  const color = data.account ? (indexes.get(data.account.id) ?? 0) : ALL_ACCOUNTS;
+  const compared = !!data.breakdown && data.breakdown.length > 1;
+  const idle = data.metrics.filter((m) => isIdle(m.unit, m.series));
+  const busy = data.metrics.filter((m) => !idle.includes(m));
+  const insights = data.account_metrics;
   return (
-    <div className="space-y-8" aria-busy={switching} data-testid="weekly-report">
+    <div className={cn("space-y-8 transition-opacity", switching && "opacity-60")} aria-busy={switching} data-testid="weekly-report">
       <p className="text-sm text-fg-secondary" data-testid="report-span">
         <span className="font-medium text-fg tabular-nums">{span}</span>, Monday to Sunday in {data.timezone}, against {before}. Charts show the{" "}
         {data.series_weeks} weeks up to this one.
@@ -158,25 +173,45 @@ function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; s
           {data.account ? "Conversations and leads" : "Conversations and leads, all accounts"}
         </h2>
         <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {data.metrics.map((metric) => (
+          {busy.map((metric) => (
             <MetricItem key={metric.key} metric={metric} color={color} />
           ))}
         </ul>
+        {idle.length > 0 ? (
+          <p className="text-sm text-fg-secondary" data-testid="report-idle">
+            No activity in the last {data.series_weeks} weeks: {idle.map((m) => m.label).join(", ")}.
+          </p>
+        ) : null}
       </section>
 
-      {data.breakdown && data.breakdown.length > 1 ? <AccountBreakdown breakdown={data.breakdown} accounts={data.accounts ?? []} /> : null}
+      {compared && data.breakdown ? <AccountBreakdown breakdown={data.breakdown} accounts={data.accounts ?? []} /> : null}
 
-      <section aria-labelledby="report-account" className="space-y-3">
-        <h2 id="report-account" className={CARD_TITLE}>
-          {data.account ? "Account insights" : "Account insights, all accounts"}
-        </h2>
-        <MetricComparison visual={data.account_comparison} />
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          {data.account_metrics.map((item) => (
-            <AccountSeries key={item.figure.metric} item={item} color={color} />
-          ))}
-        </ul>
-      </section>
+      {/* With every account compared above, reach and followers are in that table and those charts;
+          this section is for one account, or a workspace with one. */}
+      {!compared ? (
+        <section aria-labelledby="report-account" className="space-y-3">
+          <h2 id="report-account" className={CARD_TITLE}>
+            Account insights
+          </h2>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {insights
+              .filter((item) => !isIdle("count", item.series) || item.figure.current.value !== null)
+              .map((item) => (
+                <InsightItem key={item.figure.metric} item={item} color={color} />
+              ))}
+          </ul>
+          {insights.some((item) => isIdle("count", item.series) && item.figure.current.value === null) ? (
+            <p className="text-sm text-fg-secondary" data-testid="insights-idle">
+              No readings in these weeks:{" "}
+              {insights
+                .filter((item) => isIdle("count", item.series) && item.figure.current.value === null)
+                .map((item) => item.label)
+                .join(", ")}
+              .
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <IntentsCard report={data} />
@@ -187,25 +222,42 @@ function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; s
   );
 }
 
+/** Position outside the palette: the neutral line that stands for every account together. */
+const ALL_ACCOUNTS = -1;
+
 function MetricItem({ metric, color }: { metric: ReportMetric; color: number }) {
   return (
-    <li data-metric={metric.key} className="flex min-w-0 flex-col gap-1">
-      <MetricTile label={metric.label} value={formatMetric(metric.unit, metric.value)} trend={reportTrend(metric)} hint={previousLine(metric)} />
-      <SeriesChart label={metric.label} unit={metric.unit} series={metric.series} color={color} className="px-1" />
+    <li data-metric={metric.key} className="flex min-w-0 flex-col">
+      <MetricTile label={metric.label} value={formatMetric(metric.unit, metric.value)} trend={reportTrend(metric)} hint={previousLine(metric)}>
+        <SeriesChart label={metric.label} unit={metric.unit} series={metric.series} color={color} />
+      </MetricTile>
     </li>
   );
 }
 
-function AccountSeries({ item, color }: { item: ReportAccountMetric; color: number }) {
-  const known = item.series.some((p) => p.value !== null && p.value !== undefined);
+/** An account insight: the week's figure, the change, one line on the week before and the days
+ * with a reading, and the weeks leading up to it. */
+function InsightItem({ item, color }: { item: ReportAccountMetric; color: number }) {
+  const { figure } = item;
+  const value = figure.current.value;
+  const hasChart = item.series.some((p) => p.value !== null && p.value !== undefined);
   return (
-    <li data-account-metric={item.figure.metric} className="min-w-0 space-y-1 rounded-xl border border-line p-3">
-      <p className="text-xs text-fg-secondary">{item.label}, by week</p>
-      {known ? (
-        <SeriesChart label={item.label} unit="count" series={item.series} color={color} />
-      ) : (
-        <p className="text-sm text-fg-secondary">No readings in these weeks.</p>
-      )}
+    <li data-account-metric={figure.metric} className="flex min-w-0 flex-col">
+      <MetricTile
+        label={item.label}
+        value={formatMetric("count", value)}
+        trend={reportTrend({ direction: figure.direction, change_pct: figure.change_pct, value, previous: figure.previous?.value, unit: "count" })}
+        hint={insightLine({
+          unit: "count",
+          previous: figure.previous?.value,
+          daysNow: figure.current.days_known,
+          daysBefore: figure.previous?.days_known,
+          daysTotal: figure.current.days_total,
+          unavailable: figure.current.unavailable,
+        })}
+      >
+        {hasChart ? <SeriesChart label={item.label} unit="count" series={item.series} color={color} /> : null}
+      </MetricTile>
     </li>
   );
 }

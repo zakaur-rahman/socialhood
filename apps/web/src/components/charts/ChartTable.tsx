@@ -6,7 +6,10 @@ import type { ReactNode } from "react";
  */
 export function ChartTable({ caption, columns, rows }: { caption: string; columns: string[]; rows: { key: string; cells: ReactNode[] }[] }) {
   return (
-    <table className="sr-only" data-testid="chart-table">
+    // The table sits inside a clipped box: a table given a 1 px width still grows to its content,
+    // and a clipped but wide box would still widen the page's scrollable area.
+    <div className="sr-only">
+    <table data-testid="chart-table">
       <caption>{caption}</caption>
       <thead>
         <tr>
@@ -25,5 +28,6 @@ export function ChartTable({ caption, columns, rows }: { caption: string; column
         ))}
       </tbody>
     </table>
+    </div>
   );
 }

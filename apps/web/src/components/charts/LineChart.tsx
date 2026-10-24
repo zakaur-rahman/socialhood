@@ -32,8 +32,10 @@ type Props = {
   label: string;
   points: LinePoint[];
   series: LineSeries[];
-  /** A value as text, for the axis, the tooltip and the table. */
+  /** A value as text, for the tooltip and the table. */
   format: (value: number) => string;
+  /** A value as a short axis label (a duration as "28h"); defaults to `format`. Always one line. */
+  tickFormat?: (value: number) => string;
   /** Pin the top of the axis (100 for a share); otherwise it is the first round tick above the data. */
   fixedTop?: number;
   /** Plot height in px. */
@@ -56,7 +58,7 @@ type Props = {
  * screen-reader table and the plot has a text label. Marks are placed in percentages, so it fills
  * any width.
  */
-export function LineChart({ label, points, series, format, fixedTop, height = 160, compact = false, beforeLabel = "Before", legend, className }: Props) {
+export function LineChart({ label, points, series, format, tickFormat, fixedTop, height = 160, compact = false, beforeLabel = "Before", legend, className }: Props) {
   const id = useId();
   const [active, setActive] = useState<number | null>(null);
   const count = points.length;
@@ -66,6 +68,9 @@ export function LineChart({ label, points, series, format, fixedTop, height = 16
   const scale = niceScale(Math.max(0, ...known), fixedTop, compact ? 2 : 4);
   const showLegend = legend ?? (!compact && series.length > 1);
   const ticks = compact ? [scale.ticks[0], scale.ticks[scale.ticks.length - 1]] : scale.ticks;
+  const axis = tickFormat ?? format;
+  // The gutter is as wide as the longest label (in characters), so a label never wraps or clips.
+  const gutter = `${Math.max(2, ...ticks.map((tick) => axis(tick).length)) + 1}ch`;
   const xLabels = compact ? [0, count - 1] : labelIndexes(count);
 
   const move = (ratio: number) => setActive(nearestIndex(ratio, count));
@@ -86,11 +91,12 @@ export function LineChart({ label, points, series, format, fixedTop, height = 16
 
   return (
     <figure className={cn("m-0 space-y-2", className)} data-testid="line-chart">
-      <div className="flex gap-2">
-        <div aria-hidden className="relative shrink-0 text-xs text-fg-secondary tabular-nums" style={{ height, width: compact ? "2.25rem" : "3rem" }}>
+      {/* The top padding keeps the highest axis label inside the chart, clear of whatever is above. */}
+      <div className="flex gap-2 pt-2">
+        <div aria-hidden className="relative shrink-0 whitespace-nowrap text-xs text-fg-secondary tabular-nums" style={{ height, width: gutter }}>
           {ticks.map((tick) => (
             <span key={tick} className="absolute right-0 -translate-y-1/2 leading-none" style={{ top: `${yPercent(tick, scale.top)}%` }}>
-              {format(tick)}
+              {axis(tick)}
             </span>
           ))}
         </div>
@@ -163,15 +169,15 @@ export function LineChart({ label, points, series, format, fixedTop, height = 16
               />
             ) : null}
           </div>
-          <div aria-hidden className={cn("relative mt-1 h-4 text-xs text-fg-secondary", compact && "flex justify-between")}>
+          <div aria-hidden className={cn("relative mt-2 h-4 text-xs text-fg-secondary", compact && "flex justify-between")}>
             {xLabels.map((index) =>
               compact ? (
                 <span key={points[index].key}>{points[index].label}</span>
               ) : (
                 <span
                   key={points[index].key}
-                  className="absolute -translate-x-1/2 whitespace-nowrap"
-                  style={{ left: `${xPercent(index, count)}%`, ...(index === 0 ? { transform: "none" } : index === count - 1 ? { transform: "translateX(-100%)" } : null) }}
+                  className={cn("absolute whitespace-nowrap", index === 0 ? "translate-x-0" : index === count - 1 ? "-translate-x-full" : "-translate-x-1/2")}
+                  style={{ left: index === 0 ? 0 : index === count - 1 ? "100%" : `${xPercent(index, count)}%` }}
                 >
                   {points[index].label}
                 </span>
@@ -195,14 +201,20 @@ export function LineChart({ label, points, series, format, fixedTop, height = 16
   );
 }
 
-/** The dots: the latest point of a line, any point alone between gaps, and the hovered point. */
+/**
+ * The dots: the latest point of a line and the hovered point. A point alone between gaps gets a
+ * dot unless it is the first reading of a series that has more (a line that starts mid-chart is
+ * not preceded by a stray dot there); any point can still be read by hovering or from the table.
+ */
 function Dots({ series, count, top, active }: { series: LineSeries; count: number; top: number; active: number | null }) {
   const shown = new Set<number>();
+  const known = series.values.filter((v) => v !== null && v !== undefined).length;
   series.values.forEach((value, index) => {
     if (value === null || value === undefined) return;
     const alone = (index === 0 || series.values[index - 1] == null) && (index === count - 1 || series.values[index + 1] == null);
     const lastKnown = index === lastIndex(series.values);
-    if (alone || lastKnown || index === active) shown.add(index);
+    const firstKnown = index === series.values.findIndex((v) => v !== null && v !== undefined);
+    if ((alone && (known === 1 || !firstKnown)) || lastKnown || index === active) shown.add(index);
   });
   return (
     <>

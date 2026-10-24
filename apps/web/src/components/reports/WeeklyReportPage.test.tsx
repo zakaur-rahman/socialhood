@@ -182,21 +182,17 @@ describe("the weekly report page (GR-34)", () => {
     expect(within(rate).getByTestId("trend")).toHaveAttribute("data-tone", "bad");
   });
 
-  it("a figure that isn't known is a dash with no change, and its chart is empty, never zero", async () => {
+  it("a metric with nothing in any week is one line of words, not a card with a flat chart", async () => {
     setup();
-    const median = await waitFor(() => {
-      const found = item("median_first_response_s");
-      expect(found).toBeTruthy();
-      return found;
-    });
-    expect(within(median).getByTestId("metric-value")).toHaveTextContent("—");
-    expect(within(median).queryByTestId("trend")).toBeNull();
-    expect(within(median).getByText("Week before: no data")).toBeInTheDocument();
-    expect(within(median).queryByTestId("series-line")).toBeNull();
-    expect(within(median).getByTestId("series-gaps")).toHaveTextContent("8 weeks without data");
+    await screen.findByTestId("weekly-report");
+    // The median first response has no value in all 8 weeks.
+    expect(item("median_first_response_s")).toBeNull();
+    expect(screen.getByTestId("report-idle")).toHaveTextContent("No activity in the last 8 weeks: Median first response.");
+    // The others keep their card.
+    expect(item("messages_received")).not.toBeNull();
   });
 
-  it("a rise from nothing is New, and a gap in the series breaks the line", async () => {
+  it("a rise from nothing is New, and a line that starts mid-chart says where", async () => {
     setup();
     const won = await waitFor(() => {
       const found = item("leads_won");
@@ -204,20 +200,51 @@ describe("the weekly report page (GR-34)", () => {
       return found;
     });
     expect(within(won).getByTestId("trend")).toHaveTextContent("New");
-    expect(within(won).getByTestId("series-gaps")).toHaveTextContent("2 weeks without data");
+    expect(within(won).getByTestId("series-gaps")).toHaveTextContent("No data before 17 Aug");
   });
 
-  it("the account figures use Ask's comparison cards, with the days behind a figure and why one is missing", async () => {
+  it("keeps each chart inside its tile, so the card grows to hold it", async () => {
     setup();
-    const visual = await screen.findByTestId("visual-metric-comparison");
-    const reach = within(visual).getAllByTestId("metric-tile")[0];
-    expect(reach).toHaveTextContent("5,400");
-    expect(reach).toHaveTextContent("This period: 5 of 7 days");
-    expect(visual).toHaveTextContent("No daily figures are recorded for these days yet.");
-    // And each account metric by week; one with no readings says so.
-    const reachSeries = accountItem("reach");
-    expect(reachSeries.querySelector("[data-testid=series-chart]")).not.toBeNull();
-    expect(accountItem("views")).toHaveTextContent("No readings in these weeks.");
+    await screen.findByTestId("weekly-report");
+    const tile = within(item("messages_received")).getByTestId("metric-tile");
+    expect(within(tile).getByTestId("series-chart")).toBeInTheDocument();
+  });
+
+  it("writes a small change out instead of calling it No change", async () => {
+    const followers = {
+      label: "Followers",
+      figure: {
+        metric: "followers" as const,
+        current: { value: 1054, days_known: 7, days_total: 7 },
+        previous: { value: 1056, days_known: 7, days_total: 7 },
+        change_pct: -0.2,
+        direction: "flat" as const,
+      },
+      series: series([1050, 1051, 1052, 1053, 1056, 1056, 1056, 1054]),
+    };
+    setup({ data: report({ account_metrics: [followers] }) });
+    const tile = await waitFor(() => {
+      const found = accountItem("followers");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(within(tile).getByTestId("trend")).toHaveTextContent("−2 (−0.2%)");
+    expect(within(tile).getByTestId("trend")).not.toHaveTextContent("No change");
+    expect(within(tile).getByText("Week before: 1,056")).toBeInTheDocument();
+  });
+
+  it("the account insights are tiles with one clear line, and the ones without readings are one sentence", async () => {
+    setup();
+    const reach = await waitFor(() => {
+      const found = accountItem("reach");
+      expect(found).not.toBeNull();
+      return found;
+    });
+    expect(within(reach).getByTestId("metric-value")).toHaveTextContent("5,400");
+    expect(within(reach).getByText("Week before: 5,000 · readings on 5 of 7 days, 7 of 7 days the week before")).toBeInTheDocument();
+    expect(within(reach).getByTestId("series-chart")).toBeInTheDocument();
+    expect(accountItem("views")).toBeNull();
+    expect(screen.getByTestId("insights-idle")).toHaveTextContent("No readings in these weeks: Views.");
   });
 
   it("shows intents, posts and what is open now", async () => {

@@ -75,10 +75,15 @@ export function BarChart({ label, rows, format, change, currentLabel = "This wee
                 <span className="col-span-2 text-fg-secondary">{row.unavailable}</span>
               ) : (
                 <>
-                  <span className="flex flex-col justify-center gap-0.5 border-l border-line-strong py-0.5">
-                    <span aria-hidden data-testid="bar-current" className={cn("h-2.5 rounded-r-sm", seriesStyle(row.color).bg)} style={{ width: width(row.value) }} />
+                  <span className="flex flex-col justify-center gap-0.5 py-0.5">
+                    {/* A faint full-width track, so a zero is an empty track and never a stray line. */}
+                    <span aria-hidden className="block h-2.5 overflow-hidden rounded-sm bg-raised">
+                      {row.value ? <span data-testid="bar-current" className={cn("block h-full rounded-r-sm", seriesStyle(row.color).bg)} style={{ width: width(row.value) }} /> : null}
+                    </span>
                     {row.previous !== undefined && row.previous !== null ? (
-                      <span aria-hidden data-testid="bar-previous" className={cn("h-1.5 rounded-r-sm opacity-40", seriesStyle(row.color).bg)} style={{ width: width(row.previous) }} />
+                      <span aria-hidden className="block h-1.5 overflow-hidden rounded-sm bg-raised">
+                        {row.previous ? <span data-testid="bar-previous" className={cn("block h-full rounded-r-sm opacity-40", seriesStyle(row.color).bg)} style={{ width: width(row.previous) }} /> : null}
+                      </span>
                     ) : null}
                   </span>
                   <span className="min-w-8 text-right font-semibold tabular-nums text-fg">{row.value === null || row.value === undefined ? "—" : format(row.value)}</span>

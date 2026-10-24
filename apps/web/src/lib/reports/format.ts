@@ -3,7 +3,7 @@
  * (services/reports.py works them out, the digest email carries the same ones); these functions
  * only format them and lay a series out as a line. Pure, tested directly.
  */
-import { DASH, formatCount, formatPercent, formatWait, type Trend } from "@/components/home/format";
+import { DASH, formatCount, formatPercent, formatWait, formatWaitCompact, smallChange, type Trend } from "@/components/home/format";
 import type { ReportMetric } from "@/lib/api/types";
 
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -63,13 +63,22 @@ export function formatMetric(unit: ReportMetric["unit"], value: number | null | 
  * tone follows `lower_is_better` (a faster first response is good news).
  */
 export function reportTrend(
-  metric: Pick<ReportMetric, "direction" | "change_pct"> & Partial<Pick<ReportMetric, "change_points" | "lower_is_better">>,
+  metric: Pick<ReportMetric, "direction" | "change_pct"> &
+    Partial<Pick<ReportMetric, "change_points" | "lower_is_better" | "unit" | "value" | "previous">>,
 ): Trend | null {
   const { direction, change_pct: pct, change_points: points, lower_is_better: lower = false } = metric;
   if (!direction) return null;
   const good = direction === "flat" ? null : (direction === "up") !== lower;
   if (direction === "flat") {
-    return { direction, good: null, text: "No change", words: "no change from the week before" };
+    // Flat is the API's call for under half a percent (or point). Only exactly equal values are
+    // "No change"; any other difference is written out.
+    const unit = metric.unit ?? "count";
+    const small = smallChange(metric.value, metric.previous, {
+      points: unit === "percent",
+      format: (n) => formatMetric(unit, n),
+      period: "the week before",
+    });
+    return small ?? { direction, good: null, text: "No change", words: "no change from the week before" };
   }
   if (points !== null && points !== undefined) {
     const size = oneDecimal.format(Math.abs(points));
@@ -100,6 +109,52 @@ export function previousLine(metric: Pick<ReportMetric, "unit" | "previous">): s
 }
 
 /** The tooltip's change for a count compared with the week before: "+12%", "New" (a rise from none) or null. */
-export function changeText(metric: Pick<ReportMetric, "direction" | "change_pct">): string | null {
+export function changeText(
+  metric: Pick<ReportMetric, "direction" | "change_pct"> & Partial<Pick<ReportMetric, "unit" | "value" | "previous">>,
+): string | null {
   return reportTrend(metric)?.text ?? null;
+}
+
+/** An axis label for a value: durations are compact ("28h", "1d 4h") so they stay on one line. */
+export function formatAxis(unit: ReportMetric["unit"], value: number): string {
+  return unit === "seconds" ? formatWaitCompact(value) : formatMetric(unit, value);
+}
+
+/**
+ * The line under an insight's number: the week before and the days that have a reading, in one
+ * sentence ("Week before: 1,056 · readings on 2 of 7 days (both weeks)"), or why there is nothing.
+ */
+export function insightLine(options: {
+  unit: ReportMetric["unit"];
+  previous: number | null | undefined;
+  daysNow?: number | null;
+  daysBefore?: number | null;
+  daysTotal?: number | null;
+  unavailable?: string | null;
+}): string {
+  const { unit, previous, daysNow, daysBefore, daysTotal, unavailable } = options;
+  if (unavailable) return unavailableWords(unavailable);
+  const before = previous === null || previous === undefined ? "Week before: no data" : `Week before: ${formatMetric(unit, previous)}`;
+  if (!daysTotal || daysNow === null || daysNow === undefined) return before;
+  const same = daysBefore === null || daysBefore === undefined || daysBefore === daysNow;
+  const days = (n: number) => `${n} of ${daysTotal} days`;
+  if (daysNow >= daysTotal && (same || daysBefore === daysTotal)) return before;
+  return same ? `${before} · readings on ${days(daysNow)} (both weeks)` : `${before} · readings on ${days(daysNow)}, ${days(daysBefore ?? 0)} the week before`;
+}
+
+/**
+ * A metric with nothing to draw over the weeks shown: no value at all, or (for a count) only zeros.
+ * A rate or a time of 0 is a reading, so only a count can be idle by being zero.
+ */
+export function isIdle(unit: ReportMetric["unit"], series: { value?: number | null }[]): boolean {
+  return series.every((p) => p.value === null || p.value === undefined || (unit === "count" && p.value === 0));
+}
+
+/** The note under a compact chart about weeks without a value: where the line starts, or how many. */
+export function gapNote(series: { week_start: string; value?: number | null }[]): string | null {
+  const missing = series.filter((p) => p.value === null || p.value === undefined).length;
+  if (missing === 0) return null;
+  const leading = series.findIndex((p) => p.value !== null && p.value !== undefined);
+  if (leading > 0 && series.slice(0, leading).length === missing) return `No data before ${dayLabel(series[leading].week_start)}`;
+  return missing === 1 ? "1 week without data" : `${missing} weeks without data`;
 }

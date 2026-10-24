@@ -1,6 +1,6 @@
 import { LineChart } from "@/components/charts/LineChart";
 import type { ReportMetric, ReportPoint } from "@/lib/api/types";
-import { dayLabel, formatMetric, weekLabel } from "@/lib/reports/format";
+import { dayLabel, formatAxis, formatMetric, gapNote, weekLabel } from "@/lib/reports/format";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -20,7 +20,7 @@ type Props = {
  */
 export function SeriesChart({ label, unit, series, color = 0, className }: Props) {
   if (series.length === 0) return null;
-  const gaps = series.filter((p) => p.value === null || p.value === undefined).length;
+  const note = gapNote(series);
   return (
     <div className={cn("space-y-1", className)} data-testid="series-chart">
       <LineChart
@@ -30,12 +30,13 @@ export function SeriesChart({ label, unit, series, color = 0, className }: Props
         beforeLabel="Week before"
         fixedTop={unit === "percent" ? 100 : undefined}
         format={(value) => formatMetric(unit, value)}
+        tickFormat={(value) => formatAxis(unit, value)}
         points={series.map((p) => ({ key: p.week_start, label: dayLabel(p.week_start), title: weekLabel(p.week_start) }))}
         series={[{ key: label, label, color, values: series.map((p) => p.value) }]}
       />
-      {gaps > 0 ? (
+      {note ? (
         <p data-testid="series-gaps" className="m-0 text-xs text-fg-secondary">
-          {gaps === 1 ? "1 week without data" : `${gaps} weeks without data`}
+          {note}
         </p>
       ) : null}
     </div>

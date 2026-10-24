@@ -3,7 +3,7 @@
  * change was worked out by the analytics service (`MetricDelta.change_pct`), so nothing here
  * derives a number; these functions only format them. Pure, tested directly.
  */
-import type { Trend } from "@/components/home/format";
+import { smallChange, type Trend } from "@/components/home/format";
 import type { MetricDelta } from "@/lib/api/types";
 
 const whole = new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 });
@@ -21,11 +21,22 @@ export function formatValue(format: "count" | "percent", value: number | null | 
  * when the API gave no direction (a side is unknown, or the periods differ in length). The tone is
  * the API's rule for the metric (more unfollows is bad news).
  */
-export function deltaTrend(delta: Pick<MetricDelta, "change_pct" | "direction" | "tone">, previous: string): Trend | null {
+export function deltaTrend(
+  delta: Pick<MetricDelta, "change_pct" | "direction" | "tone"> & Partial<Pick<MetricDelta, "current" | "previous" | "format">>,
+  previous: string,
+): Trend | null {
   const { direction, change_pct: pct, tone } = delta;
   if (!direction) return null;
   const good = tone === "good" ? true : tone === "bad" ? false : null;
-  if (direction === "flat") return { direction, good: null, text: "No change", words: `no change from ${previous}` };
+  if (direction === "flat") {
+    // The API calls under half a percent flat; a difference that is not zero is still shown.
+    const small = smallChange(delta.current, delta.previous, {
+      points: delta.format === "percent",
+      format: (n) => whole.format(n),
+      period: previous,
+    });
+    return small ?? { direction, good: null, text: "No change", words: `no change from ${previous}` };
+  }
   if (pct === null || pct === undefined) {
     return { direction, good, text: "New", words: `${direction} from none in ${previous}` };
   }

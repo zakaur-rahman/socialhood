@@ -30,7 +30,9 @@ export function ChartLegend({ items, className, label = "Legend" }: { items: Leg
             aria-hidden
             className={cn("shrink-0 rounded-full", item.shape === "box" ? "size-2.5 rounded-sm" : "h-0.5 w-3.5", item.swatch ?? seriesStyle(item.color).bg)}
           />
-          <span className="min-w-0 truncate">{item.label}</span>
+          <span className="min-w-0 truncate">
+            <bdi>{item.label}</bdi>
+          </span>
         </li>
       ))}
     </ul>

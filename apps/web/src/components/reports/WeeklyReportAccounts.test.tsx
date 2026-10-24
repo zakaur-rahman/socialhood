@@ -163,29 +163,57 @@ describe("the weekly report for one account or all of them", () => {
     expect(asked(calls)?.has("account_id")).toBe(false);
   });
 
-  it("compares the accounts: a table, bars for this week against last and a line per account, one colour each", async () => {
+  it("compares the accounts: a table with an account in each column and a line per account under it", async () => {
     setup();
     const section = await screen.findByTestId("account-breakdown");
     const table = within(section).getByTestId("breakdown-table");
-    const instagram = table.querySelector(`[data-account="${IG}"]`) as HTMLElement;
-    const whatsapp = table.querySelector(`[data-account="${WA}"]`) as HTMLElement;
-    expect(within(instagram).getByText("Maple Bakery")).toBeInTheDocument();
-    expect(instagram.querySelector("[data-cell=messages_received]")).toHaveTextContent("90");
-    expect(instagram.querySelector("[data-cell=messages_received]")).toHaveTextContent("+50%");
-    expect(whatsapp.querySelector("[data-cell=messages_received]")).toHaveTextContent("52");
+    const cell = (account: string, key: string) => table.querySelector(`td[data-account="${account}"][data-cell="${key}"]`) as HTMLElement;
+    expect(within(table.querySelector(`th[data-account="${IG}"]`) as HTMLElement).getByText("Maple Bakery")).toBeInTheDocument();
+    expect(cell(IG, "messages_received")).toHaveTextContent("90");
+    expect(cell(IG, "messages_received")).toHaveTextContent("+50%");
+    expect(cell(WA, "messages_received")).toHaveTextContent("52");
     // A figure the platform can't give is words, never 0.
-    expect(whatsapp.querySelector("[data-cell=reach]")).toHaveTextContent("Not available: this account gives no insights");
+    expect(cell(WA, "reach")).toHaveTextContent("Not available: this account gives no insights");
 
+    // The numbers are in the table once: no per-account bars under it, only the weekly lines.
+    expect(section.querySelector("[data-testid=bar-chart]")).toBeNull();
     const card = section.querySelector("[data-breakdown=messages_received]") as HTMLElement;
-    const bars = within(card).getAllByTestId("bar-current");
-    expect(bars[0]).toHaveClass("bg-chart-series-1");
-    expect(bars[1]).toHaveClass("bg-chart-series-2");
     const lines = within(card).getAllByTestId("series-line");
     expect(lines.map((l) => l.getAttribute("data-series"))).toEqual([IG, WA]);
+    expect(lines[0]).toHaveClass("stroke-chart-series-1");
     expect(lines[1]).toHaveClass("stroke-chart-series-2");
     // The reach card draws a line for the account that has readings only.
     const reach = section.querySelector("[data-breakdown=reach]") as HTMLElement;
     expect(within(reach).getAllByTestId("series-line")).toHaveLength(1);
+  });
+
+  it("does not repeat the account insights when the accounts are compared", async () => {
+    setup();
+    await screen.findByTestId("account-breakdown");
+    expect(screen.queryByRole("heading", { name: /Account insights/ })).toBeNull();
+  });
+
+  it("puts a metric with no activity on any account in one sentence instead of a card", async () => {
+    const idle = (key: BreakdownMetric["key"], label: string) => ({ ...count(key, label, 0, 0), series: series([0, 0, 0, 0, 0, 0, 0, 0]) });
+    setup({
+      data: report({
+        breakdown: [
+          { account: ACCOUNTS[0], metrics: [count("messages_received", "Messages received", 90, 60), idle("automation_runs", "Automation runs")] },
+          { account: ACCOUNTS[1], metrics: [count("messages_received", "Messages received", 52, 60), idle("automation_runs", "Automation runs")] },
+        ],
+      }),
+    });
+    const section = await screen.findByTestId("account-breakdown");
+    expect(section.querySelector("[data-breakdown=automation_runs]")).toBeNull();
+    expect(within(section).getByTestId("breakdown-idle")).toHaveTextContent("No activity on any account in these weeks: Automation runs.");
+  });
+
+  it("shows an account name in any script isolated, so a right-to-left name cannot reorder its neighbours", async () => {
+    const arabic = { ...ACCOUNTS[0], name: "مخبز القيقب" };
+    setup({ data: report({ accounts: [arabic, ACCOUNTS[1]], breakdown: report().breakdown?.map((row, i) => (i === 0 ? { ...row, account: arabic } : row)) }) });
+    const section = await screen.findByTestId("account-breakdown");
+    const head = section.querySelector(`th[data-account="${IG}"]`) as HTMLElement;
+    expect(head.querySelector("bdi")).toHaveTextContent("مخبز القيقب");
   });
 
   it("explains an account that can't be shown and offers every account", async () => {
