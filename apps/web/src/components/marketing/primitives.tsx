@@ -111,19 +111,23 @@ export function SectionHeading({
   title,
   intro,
   className,
+  level = 2,
 }: {
   id: string;
   eyebrow: string;
   title: string;
   intro?: ReactNode;
   className?: string;
+  /** 1 on a page whose first section this is (the pricing page has no other h1). */
+  level?: 1 | 2;
 }) {
+  const Heading = level === 1 ? "h1" : "h2";
   return (
     <div className={cn("mx-auto max-w-2xl text-center", className)}>
       <p className={SECTION_EYEBROW}>{eyebrow}</p>
-      <h2 id={id} className={cn(MARKETING_HEADING, "mt-3 text-balance")}>
+      <Heading id={id} className={cn(MARKETING_HEADING, "mt-3 text-balance")}>
         {title}
-      </h2>
+      </Heading>
       {intro ? <p className="mt-4 text-base leading-relaxed text-pretty text-fg-secondary">{intro}</p> : null}
     </div>
   );

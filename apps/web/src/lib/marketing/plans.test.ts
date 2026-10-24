@@ -69,6 +69,7 @@ describe("planFeatures", () => {
   it("phrases the entitlements as the product guide does", () => {
     expect(planFeatures(FALLBACK_ENTITLEMENTS.free)).toEqual([
       "1 Instagram and 1 WhatsApp account",
+      "1 team member",
       "AI replies: Off and Suggest",
       "200 AI credits a month",
       "3 active automations",
@@ -80,6 +81,7 @@ describe("planFeatures", () => {
     ]);
     expect(planFeatures(FALLBACK_ENTITLEMENTS.pro)).toEqual([
       "3 Instagram and 3 WhatsApp accounts",
+      "3 team members",
       "AI replies: Off, Suggest and Auto",
       "AI replies inside automations",
       "5,000 AI credits a month",
@@ -89,6 +91,9 @@ describe("planFeatures", () => {
       "500 pending scheduled messages",
       "Unlimited message history",
       "Comment analysis on all posts",
+      "Public API and Zapier app",
+      "Google Sheets sync",
+      "Product catalogue",
     ]);
   });
 

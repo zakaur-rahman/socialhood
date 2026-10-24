@@ -4661,3 +4661,71 @@ tenancy, vitest and e2e tests were written but not run (the coordinator runs the
   setting.
 - Owner track: a real WhatsApp number with a commerce catalogue connected in WhatsApp Manager, and a
   check of which token can call the Catalog API (item 39).
+
+## C-122 · Go-to-market pages (GR-37, feature/gr-37-gtm-pages)
+
+Seven public pages: Switch from Manychat, Social Hood vs Manychat, Social Hood vs Interakt, three
+feature pages (comment intelligence, the AI inbox, publishing) and Pricing. Web only: no API
+change, no migration. The footer has a "Compare and learn" column, every page is in the sitemap
+(`PUBLIC_PATHS`), and the landing page's pricing links to `/pricing`.
+
+### Pages
+- **Content is data.** `lib/marketing/gtm-pages.ts` holds each page (blocks, the comparison rows,
+  the honesty notes, the sources); `components/marketing/GtmPageView.tsx` renders it; each route is a
+  six-line `page.tsx` using `pageMetadata` (title, description, canonical, Open Graph, Twitter).
+  Static pages, one h1, h2 sections, tables with row headers inside a scrolling box (the page never
+  scrolls sideways), only theme tokens.
+- **Screenshots, not the lazy illustrations.** The pages use the existing `SHOTS` images (the
+  illustrations load on scroll in the browser only).
+- **`/pricing`** reuses the landing page's `Pricing` (prices from Dodo, hourly, `revalidate = 3600`
+  as a literal) with its heading as the page's h1 (`SectionHeading level`), then `PlanMatrix`.
+
+### Pricing without drift
+- **One typed module, one exported table.** `plan-table.json` is `ENTITLEMENTS` and `TRIAL_DAYS`
+  exported from `billing/plans.py`. `tests/unit/test_marketing_plan_table.py` (DB-free) fails when
+  plans.py and the file differ and rewrites the file with `UPDATE_PLAN_TABLE=1`. The web reads the
+  file in two places: `plan-matrix.ts` (the comparison table) and the landing page's offline
+  fallback (`FALLBACK_ENTITLEMENTS`, which used to be a hand-written copy). `plan-matrix.test.ts` fails
+  when an entitlement in the file has no row (or an entry in `NOT_SHOWN`), so a new limit has to be
+  worded before it ships. *Chosen over reading openapi.json, which carries no plan values.*
+- **Plan cards** gain team members, "Public API and Zapier app", "Google Sheets sync" and "Product
+  catalogue" lines (from the API's plan list as before). Broadcasts are not a card line (see below).
+- **Proposed values shown as they are now:** the catalogue caps (C-116) and sequence caps (C-118) are
+  in the table, with a line under it saying they may change. *If the owner changes them, change
+  plans.py, refresh the file, nothing else.*
+- Seats (PD-1), broadcasts (PD-4), webhooks, API, Zapier and Sheets (PD-6), widget branding (PD-7)
+  and commerce (PD-8) are shown as decided in plans.py.
+
+### What waits on the owner, and how it is worded
+- **Broadcasts (O-11):** "Coming soon" with the reason (India's consent rules), in the table and on
+  both comparison pages. *Not on the plan card: the web can't tell whether `BROADCASTS_ENABLED` is on.*
+- **Shopify sync (O-10):** "arrives with our Shopify app listing". The catalogue itself is described
+  as built.
+- **Facebook and the Instagram events that need Advanced Access (C-077, C-108, C-115):** "coming
+  soon" or "with Meta's approval". Story replies and mentions arrive as ordinary messages and are
+  stated plainly.
+- **Not claimed:** payments in chat, contact import, share-to-DM, follow triggers, TikTok, Telegram,
+  SMS, email, a free-form canvas. The Switch page says so in a "what is different" section.
+
+### Competitor claims
+- Only what `docs/competitors.md` and `docs/competitor-manychat.md` record with a source (read
+  2026-10-22), or what was read from the vendor's own page. A comment above every competitor cell
+  names the source and date, and a test (`gtm-pages.test.tsx`) fails if one is missing. Each page
+  lists its sources and when they were read.
+- **Interakt's pricing page was read on 2026-10-25** (WebFetch): Starter 999 rupees (Instagram only),
+  Growth 2,799 and Advanced 3,799, plus taxes; campaigns, a catalogue and unlimited agents on the
+  higher plans (the page is inconsistent about agent roles, and the page says so). Checkout and
+  WhatsApp Pay come only from third-party guides and are worded that way.
+- **Manychat's pages refuse automated reads (403, again on 2026-10-25),** so its column stays on the
+  third-party guides and says so on the page. *Prices are indicative; the owner should check
+  manychat.com and interakt.shop before launch.*
+- A competitor "lacks" something only as "Not found" (a test forbids "Not offered" on their side).
+  No logos, no "best" or "#1" (a test checks the words).
+
+### Tests
+- vitest: `plan-matrix.test.ts`, `app/(marketing)/gtm-pages.test.tsx` (metadata, one h1, links,
+  sources, the status words, the pricing page with and without the API), `app/seo.test.ts` (sitemap),
+  and `plans.test.ts` / `test/plans.ts` for the new card lines.
+- pytest: `tests/unit/test_marketing_plan_table.py`.
+- Playwright: `e2e/gr37-gtm-pages.spec.ts` visits every page signed out, at desktop and phone width.
+- *Written but not run in this session (the coordinator builds and runs the web checks).*
