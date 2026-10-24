@@ -319,19 +319,13 @@ export type HashtagGroupPatch = Schemas["HashtagGroupPatch"];
  * question over another range or platform, or a draft reply for each of a few conversations.
  * Whitelisted values only; the API words the member's question from them.
  */
-export type RunHints = {
-  range_days?: 7 | 30 | 90 | null;
-  platform?: "all" | "instagram" | "facebook" | "whatsapp" | null;
-  reply_conversation_ids?: string[];
-};
+export type RunHints = Schemas["RunHints"];
 /** What the Ask thread can send: a question in words, or a structured follow-up (VIS-11). */
 export type AskInput = string | RunHints;
-// `hints` and the optional `request` come with the next client generation; until then they are
-// added here so the screens type-check against the API they call.
-export type AgentRun = Schemas["AgentRun"] & { hints?: RunHints | null };
-export type AgentRunDetail = Schemas["AgentRunDetail"] & { hints?: RunHints | null };
+export type AgentRun = Schemas["AgentRun"];
+export type AgentRunDetail = Schemas["AgentRunDetail"];
 export type AgentRunList = Schemas["AgentRunList"];
-export type AgentRunCreate = Omit<Schemas["AgentRunCreate"], "request"> & { request?: string; hints?: RunHints | null };
+export type AgentRunCreate = Schemas["AgentRunCreate"];
 export type AgentStep = Schemas["AgentStep"];
 export type AgentThread = Schemas["AgentThread"];
 export type AgentThreadList = Schemas["AgentThreadList"];
@@ -343,11 +337,7 @@ export type AgentStepStatus = AgentStep["status"];
 export type RiskTier = NonNullable<AgentStep["tier"]>;
 export type StepVerification = Schemas["StepVerification"];
 /** A record an answer used: `[n]` in the answer is item n of answer_refs (1-based). */
-export type AnswerRef = Omit<Schemas["AnswerRef"], "kind"> & {
-  kind: Schemas["AnswerRef"]["kind"] | "report";
-  /** VIS-13, report refs: the Monday of the week; `parent_id` is then the account, if any. */
-  week?: string | null;
-};
+export type AnswerRef = Schemas["AnswerRef"];
 export type AnswerRefKind = AnswerRef["kind"];
 /** A prepared action (FR-AGT-03): it opens an existing screen pre-filled. */
 export type ActionCard = AgentRun["action_cards"][number];

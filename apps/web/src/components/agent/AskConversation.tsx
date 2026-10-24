@@ -138,7 +138,7 @@ export function AskConversation({
         ? threadId
           ? { request: input, thread_id: threadId }
           : { request: input }
-        : { hints: input, thread_id: threadId };
+        : { request: "", hints: input, thread_id: threadId };
     ask.mutate(body, {
       onSuccess: (run) => {
         setThread(wid, run.thread_id);

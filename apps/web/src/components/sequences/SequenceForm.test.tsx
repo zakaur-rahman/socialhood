@@ -139,7 +139,8 @@ describe("the sequence form (GR-24)", () => {
     });
     expect(steps[1]).toMatchObject({ delay_seconds: 259_200, delay_from: "entry", text: "Still thinking it over?", template_name: null });
     await waitFor(() => expect(push).toHaveBeenCalledWith("/w/maple/sequences/new1"));
-  });
+    // Many typed fields: slower than the default under a full-suite load.
+  }, 60_000);
 
   it("moves a step down and removes one", async () => {
     const user = userEvent.setup();

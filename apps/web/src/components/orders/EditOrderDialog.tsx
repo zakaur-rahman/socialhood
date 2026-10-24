@@ -38,7 +38,9 @@ export function EditOrderDialog({
   const edit = useEditOrder(wid);
   const [lines, setLines] = useState<Draft[]>(() => draftsOf(order));
   const [address, setAddress] = useState<Record<string, string>>(() =>
-    Object.fromEntries(Object.entries(order.address ?? {}).filter(([, value]) => typeof value === "string" && value)),
+    Object.fromEntries(
+      Object.entries(order.address ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== ""),
+    ),
   );
   const [note, setNote] = useState(order.note ?? "");
   const [resend, setResend] = useState(order.status === "awaiting_payment");
@@ -58,7 +60,7 @@ export function EditOrderDialog({
           items: built.items,
           address: filledAddress(address),
           note: note.trim(),
-          payment: resend && order.conversation_id ? { method, send: true } : null,
+          payment: resend && order.conversation_id ? { method, send: true, allow_partial: order.accept_partial } : null,
         },
       },
       {

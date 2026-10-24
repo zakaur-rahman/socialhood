@@ -50,6 +50,15 @@ function order(values: Partial<Order> = {}): Order {
     created_by_name: "Sam",
     created_at: NOW,
     updated_at: NOW,
+    accept_partial: false,
+    amount_left: "1598.00",
+    amount_left_minor: 159800,
+    amount_paid: "0.00",
+    amount_paid_minor: 0,
+    amount_refunded: "0.00",
+    amount_refunded_minor: 0,
+    refundable: "0.00",
+    refundable_minor: 0,
     ...values,
   };
 }

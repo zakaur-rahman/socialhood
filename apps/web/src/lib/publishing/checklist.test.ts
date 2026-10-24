@@ -261,7 +261,11 @@ describe("localChecklist (FR-PUB-10)", () => {
     const items = localChecklist(
       input({
         caption: long,
-        targets: [{ social_account_id: "a1", caption_override: `${tags} ${mentions}` }],
+        // One account with its own caption, one on the shared caption (held to Instagram's 2,200).
+        targets: [
+          { social_account_id: "a1", caption_override: `${tags} ${mentions}` },
+          { social_account_id: "a1", caption_override: null },
+        ],
         first_comment: tags,
       }),
     );
