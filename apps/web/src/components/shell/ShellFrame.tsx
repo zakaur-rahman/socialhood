@@ -55,7 +55,10 @@ export function ShellFrame({
         Skip to content
       </a>
       {topBar}
-      <div className="sticky top-0 hidden h-dvh shrink-0 p-4 pr-0 md:block">{sidebar}</div>
+      {/* z-30: sticky makes this its own stacking layer, and <main> paints after it, so without a
+          z-index the half of the sidebar's edge toggle that overhangs <main> sits under the page and
+          misses clicks. Above the sticky page headers (z-20), below menus and dialogs (z-50). */}
+      <div className="sticky top-0 z-30 hidden h-dvh shrink-0 p-4 pr-0 md:block">{sidebar}</div>
       <main id="main" tabIndex={-1} className="flex min-h-0 min-w-0 flex-1 flex-col text-sm outline-none">
         {children}
       </main>
