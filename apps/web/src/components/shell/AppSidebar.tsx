@@ -95,6 +95,7 @@ export function AppSidebar({
   // changes (the button, Ctrl/⌘ [, the inbox's auto-collapse, a resize across the breakpoint) animate.
   // (A DOM attribute, not state: no extra render, and React never resets it.)
   const navRef = useRef<HTMLElement>(null);
+  const accountSlot = useRef<HTMLDivElement>(null);
   useEffect(() => {
     navRef.current?.setAttribute("data-ready", "true");
   }, []);
@@ -209,13 +210,24 @@ export function AppSidebar({
 
       {reconnecting ? <ReconnectingNotice collapsed={collapsed} /> : null}
 
+      {/* Owner, 2026-10-25: the whole card opens the account menu, not just the avatar. The menu
+          is the auth provider's own button, which can't be opened from outside, so a click
+          anywhere else on the card clicks it; keyboard users reach the same button directly. */}
       <div
+        data-testid="account-card"
+        onClick={(event) => {
+          const slot = accountSlot.current;
+          if (!slot || slot.contains(event.target as Node)) return;
+          slot.querySelector<HTMLButtonElement>("button")?.click();
+        }}
         className={cn(
-          "relative mt-2 flex w-full items-center gap-2.5 overflow-hidden rounded-lg border p-1.5 motion-safe:group-data-[ready=true]/sb:transition-[background-color,border-color] motion-safe:group-data-[ready=true]/sb:duration-slow motion-safe:group-data-[ready=true]/sb:ease-standard",
-          collapsed ? "border-transparent bg-transparent" : "border-line bg-hover",
+          "relative mt-2 flex w-full cursor-pointer items-center gap-2.5 overflow-hidden rounded-lg border p-1.5 motion-safe:group-data-[ready=true]/sb:transition-[background-color,border-color] motion-safe:group-data-[ready=true]/sb:duration-slow motion-safe:group-data-[ready=true]/sb:ease-standard",
+          collapsed ? "border-transparent bg-transparent" : "border-line bg-hover hover:border-line-strong hover:bg-pressed",
         )}
       >
-        <div className="shrink-0">{account}</div>
+        <div ref={accountSlot} className="shrink-0">
+          {account}
+        </div>
         <div inert={collapsed} aria-hidden={collapsed} className={cn("min-w-0 flex-1", sidebarFadeClass(!collapsed))}>
           <p className="truncate text-sm font-medium">{userName ?? "Account"}</p>
           <p className="truncate text-xs text-fg-secondary">{userEmail || ROLE_LABEL[workspace.role]}</p>

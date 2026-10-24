@@ -119,6 +119,22 @@ describe("AppSidebar (UX-SH-01)", () => {
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Automations");
   });
 
+  it("a click anywhere on the account card opens the account menu (owner, 2026-10-25)", async () => {
+    const open = vi.fn();
+    renderSidebar({
+      userName: "Zakaur Rahman",
+      account: (
+        <button type="button" aria-label="Open account menu" onClick={open}>
+          ZR
+        </button>
+      ),
+    });
+    await userEvent.click(screen.getByText("Zakaur Rahman"));
+    expect(open).toHaveBeenCalledOnce();
+    await userEvent.click(screen.getByRole("button", { name: "Open account menu" }));
+    expect(open).toHaveBeenCalledTimes(2); // the avatar itself still works, once per click
+  });
+
   it("toggles collapse when the host allows it", async () => {
     const toggle = vi.fn();
     renderSidebar({ onToggleCollapsed: toggle });
