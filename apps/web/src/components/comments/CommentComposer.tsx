@@ -14,9 +14,13 @@ import {
   PRIVATE_REPLY_MAX_BYTES,
   REPLY_MAX_CHARS,
 } from "@/lib/comments/format";
-import type { PostComment } from "@/lib/api/types";
+import type { Platform, PostComment } from "@/lib/api/types";
+import { PLATFORM_LABEL } from "@/lib/inbox/format";
 import { cn } from "@/lib/utils";
 import { uuid } from "@/lib/uuid";
+
+/** Messenger's text limit for a private reply on a Page (unverified, GR-29). */
+const FACEBOOK_PRIVATE_REPLY_MAX = 2000;
 
 export type ComposerKind = "reply" | "dm";
 
@@ -33,6 +37,7 @@ export function CommentComposer({
   onSend,
   onCancel,
   initialText = "",
+  platform = "instagram",
 }: {
   kind: ComposerKind;
   comment: PostComment;
@@ -42,14 +47,17 @@ export function CommentComposer({
   onCancel: () => void;
   /** A reply prepared by Ask Social Hood (FR-AGT-03); the member edits and sends it. */
   initialText?: string;
+  /** GR-29: the post's platform. A Page counts a private reply in characters (2,000), Instagram in bytes. */
+  platform?: Platform;
 }) {
   const id = useId();
   const [text, setText] = useState(initialText);
   const last = useRef<{ text: string; key: string } | null>(null);
   const name = authorName(comment);
   const trimmed = text.trim();
-  const size = kind === "dm" ? byteLength(trimmed) : trimmed.length;
-  const limit = kind === "dm" ? PRIVATE_REPLY_MAX_BYTES : REPLY_MAX_CHARS;
+  const inBytes = kind === "dm" && platform !== "facebook";
+  const size = inBytes ? byteLength(trimmed) : trimmed.length;
+  const limit = kind === "dm" ? (platform === "facebook" ? FACEBOOK_PRIVATE_REPLY_MAX : PRIVATE_REPLY_MAX_BYTES) : REPLY_MAX_CHARS;
   const over = size > limit;
   const canSend = trimmed.length > 0 && !over && !pending;
 
@@ -77,7 +85,7 @@ export function CommentComposer({
         <FieldLabel className="sr-only">{label}</FieldLabel>
         {kind === "dm" ? (
           <FieldDescription className="px-1">
-            Sent as a DM to {name}. Instagram allows one private reply per comment, within 7 days of it.
+            Sent as a DM to {name}. {PLATFORM_LABEL[platform]} allows one private reply per comment, within 7 days of it.
           </FieldDescription>
         ) : null}
         <Textarea
@@ -94,7 +102,7 @@ export function CommentComposer({
         <div className="flex items-center justify-between gap-2">
           <FieldDescription className={cn("px-1 tabular-nums", over && "text-danger-fg")}>
             {formatCount(size)} / {formatCount(limit)}
-            {kind === "dm" ? " bytes" : ""}
+            {inBytes ? " bytes" : ""}
           </FieldDescription>
           <div className="flex gap-2">
             <Button variant="ghost" size="sm" onClick={onCancel}>

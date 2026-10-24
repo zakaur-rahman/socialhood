@@ -76,7 +76,7 @@ export function PostDetailPage({ postId }: { postId: string }) {
         <EmptyState
           className="flex-1"
           title="Post not found"
-          body="It may have been deleted on Instagram, or it belongs to another workspace."
+          body="It may have been deleted, or it belongs to another workspace."
           action={
             <Link href={back.href} className="text-sm text-brand-fg underline-offset-4 hover:underline">
               Back to Comments
@@ -101,7 +101,7 @@ export function PostDetailPage({ postId }: { postId: string }) {
           <PostPanel post={data} account={account} slug={workspace.slug} timeZone={workspace.timezone} now={now} />
         </div>
         <div className="min-w-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
-          <CommentsColumn post={data} now={now} accountUsername={account?.username} />
+          <CommentsColumn post={data} now={now} accountUsername={account?.username} platform={account?.platform} />
         </div>
         <div className="min-w-0 space-y-4" data-testid="post-insights">
           <PostSummaryCard post={data} now={now} />

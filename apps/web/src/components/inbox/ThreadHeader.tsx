@@ -27,7 +27,7 @@ import { ReplyWindowChip } from "./ReplyWindowChip";
 const AI_LABEL = { off: "AI: Off", suggest: "AI: Suggest", auto: "AI: Auto" } as const;
 
 /** Platform colours are for glyphs and fills, never text (DESIGN_SYSTEM §1.6). */
-const PLATFORM_GLYPH = { instagram: "text-instagram", whatsapp: "text-whatsapp" } as const;
+const PLATFORM_GLYPH = { instagram: "text-instagram", whatsapp: "text-whatsapp", facebook: "text-facebook" } as const;
 
 type Props = {
   conversation: Conversation;

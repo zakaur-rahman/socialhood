@@ -28,6 +28,13 @@ import { AttachmentView } from "./AttachmentView";
 import { ContactAvatar } from "./ContactAvatar";
 import { SystemNote } from "./DateSeparator";
 
+/** Where a message in a format we can't show can be seen in the platform's own inbox. */
+const UNSUPPORTED_LINK: Record<Platform, string> = {
+  instagram: "https://www.instagram.com/direct/inbox/",
+  whatsapp: "https://web.whatsapp.com/",
+  facebook: "https://business.facebook.com/latest/inbox/messenger",
+};
+
 const STATUS: Partial<Record<MessageStatus, { icon: LucideIcon; label: string; className?: string }>> = {
   queued: { icon: Clock, label: "Queued" },
   // The Spinner's icon and rule: it turns only when motion is allowed (DESIGN_SYSTEM §7.4).
@@ -185,7 +192,7 @@ export function MessageBubble({
             >
               <span className={outbound && !nativeApp ? "text-on-brand" : "text-fg-secondary"}>Unsupported message format</span>
               <a
-                href={platform === "instagram" ? "https://www.instagram.com/direct/inbox/" : "https://web.whatsapp.com/"}
+                href={UNSUPPORTED_LINK[platform]}
                 target="_blank"
                 rel="noreferrer"
                 className={cn(

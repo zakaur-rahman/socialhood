@@ -337,4 +337,24 @@ describe("plan hero and quotas (C-066)", () => {
       "1 of 3 connected",
     );
   });
+
+  it("GR-29: Facebook Pages have their own meter, with the Facebook mark", async () => {
+    setup({
+      billing: billingState({
+        usage: [
+          { metric: "instagram_accounts", used: 1, limit: 1 },
+          { metric: "facebook_accounts", used: 1, limit: 3 },
+        ],
+      }),
+    });
+    const usage = await screen.findByRole("list", { name: "Usage" });
+    const tiles = within(usage).getAllByRole("listitem");
+    expect(tiles).toHaveLength(2);
+    expect(tiles[1]).toHaveTextContent("Facebook Pages");
+    expect(within(tiles[1]).getByRole("meter", { name: "Facebook Pages" })).toHaveAttribute(
+      "aria-valuetext",
+      "1 of 3 connected",
+    );
+    expect(tiles[1].querySelector(".bg-facebook")).not.toBeNull();
+  });
 });

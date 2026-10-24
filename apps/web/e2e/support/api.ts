@@ -104,8 +104,12 @@ export class Api {
 
   // ---------------------------------------------------------------- the app's own endpoints
 
-  connectSandbox(wid: string): Promise<SandboxAccount> {
-    return this.call<SandboxAccount>("POST", `/v1/w/${wid}/dev/sandbox/accounts`);
+  connectSandbox(wid: string, platform: "instagram" | "facebook" = "instagram"): Promise<SandboxAccount> {
+    return this.call<SandboxAccount>(
+      "POST",
+      `/v1/w/${wid}/dev/sandbox/accounts`,
+      platform === "instagram" ? undefined : { platform },
+    );
   }
 
   /**
@@ -209,6 +213,34 @@ export class Api {
       message_text: values.messageText,
       post_scope: values.adIds?.length ? "selected" : "all",
       ad_ids: values.adIds ?? [],
+    });
+    await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
+    return draft;
+  }
+
+  /** GR-29: an active comment keyword automation: a public reply and a private message. */
+  async commentAutomation(
+    wid: string,
+    accountId: string,
+    keyword: string,
+    values: { messageText: string; publicReplies: string[] },
+  ): Promise<{ id: string }> {
+    const name = `Comment ${keyword}`;
+    const draft = await this.call<{ id: string }>("POST", `/v1/w/${wid}/automations`, {
+      name,
+      social_account_id: accountId,
+    });
+    await this.call("PUT", `/v1/w/${wid}/automations/${draft.id}`, {
+      name,
+      social_account_id: accountId,
+      trigger: "comment_keyword",
+      keywords: [keyword],
+      match_mode: "word",
+      action: "send_message",
+      message_text: values.messageText,
+      public_reply_texts: values.publicReplies,
+      post_scope: "all",
+      confirm_first: false,
     });
     await this.call("POST", `/v1/w/${wid}/automations/${draft.id}/activate`);
     return draft;

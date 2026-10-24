@@ -600,6 +600,7 @@ function BranchArms({ node, follower }: { node: BranchNode; follower: boolean })
                   tags={env.tags}
                   fields={env.fields}
                   label={`Rule ${index + 1} of step ${env.numberOf(node.id)}`}
+                  platform={env.platform}
                   problem={problems[`rules.${index}.when`]?.message}
                   onChange={(when) =>
                     set((current) => ({ ...current, rules: current.rules.map((r, i) => (i === index ? { ...r, when } : r)) }))

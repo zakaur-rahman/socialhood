@@ -13,7 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useAgentHandoff, type CommentReplyHandoff } from "@/lib/agent/handoff";
 import { usePostComments } from "@/lib/api/queries";
-import type { CommentFilter, PostDetail } from "@/lib/api/types";
+import type { CommentFilter, Platform, PostDetail } from "@/lib/api/types";
 import { flattenComments } from "@/lib/comments/cache";
 import { COMMENT_FILTERS, filterEmpty, formatCount, isAnalysing } from "@/lib/comments/format";
 import { useCurrentWorkspace } from "@/lib/workspace";
@@ -45,10 +45,12 @@ export function CommentsColumn({
   post,
   now,
   accountUsername,
+  platform,
 }: {
   post: PostDetail;
   now: Date;
   accountUsername?: string | null;
+  platform?: Platform;
 }) {
   const workspace = useCurrentWorkspace();
   // The card's "n need a reply" opens the post with this chip chosen (?filter=needs_reply).
@@ -117,6 +119,7 @@ export function CommentsColumn({
                 canDelete={canDelete}
                 onRemoved={() => headingRef.current?.focus()}
                 accountUsername={accountUsername}
+                platform={platform}
                 prepared={isTarget ? { kind: prepared.private ? "dm" : "reply", text: prepared.text } : undefined}
               />
             );

@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCommentCounts, usePostGrid, useSocialAccounts } from "@/lib/api/queries";
 import type { PostSort } from "@/lib/api/types";
-import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import { accountLabel, automationAccounts } from "@/lib/automations/accounts";
 import { flattenPosts } from "@/lib/comments/cache";
 import { formatCount } from "@/lib/comments/format";
 import { emptyStates } from "@/lib/copy";
@@ -56,7 +56,7 @@ export function CommentsPage() {
   const now = useNow();
   const [accountId, setAccountId] = useState<string | null>(null);
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
   const [sort, setSort] = useState<PostSort>("recent");
   const posts = usePostGrid(wid, accountId, sort);
   const counts = useCommentCounts(wid);
@@ -98,7 +98,7 @@ export function CommentsPage() {
           <EmptyState
             size="compact"
             title={emptyStates.comments.title}
-            body="Your Instagram posts and their comments appear here once they sync."
+            body="Your posts and their comments appear here once they sync."
           />
         </Card>
       );

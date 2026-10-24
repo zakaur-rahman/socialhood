@@ -6,7 +6,8 @@ import { Alert, AlertAction } from "@/components/ui/alert";
 import type { AccountAttention } from "@/lib/api/types";
 
 function problem(account: AccountAttention): string {
-  const name = account.username ? `@${account.username}` : account.platform === "whatsapp" ? "Your WhatsApp number" : "Your Instagram account";
+  const fallback = { whatsapp: "Your WhatsApp number", facebook: "Your Facebook Page", instagram: "Your Instagram account" };
+  const name = account.username ? `@${account.username}` : fallback[account.platform];
   return account.status === "needs_reconnect"
     ? `${name} needs reconnecting to keep receiving messages`
     : `${name} has a connection error`;

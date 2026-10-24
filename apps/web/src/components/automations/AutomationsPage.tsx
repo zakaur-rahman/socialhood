@@ -32,7 +32,7 @@ import {
   type AutomationFilters,
 } from "@/lib/api/queries";
 import type { Automation, AutomationSort, AutomationStatus, SocialAccount, TriggerName } from "@/lib/api/types";
-import { accountLabel, instagramAccounts } from "@/lib/automations/accounts";
+import { accountLabel, automationAccounts } from "@/lib/automations/accounts";
 import { etaText, formatCount, TRIGGER_LABEL_IG } from "@/lib/automations/format";
 import { emptyStates, errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
@@ -141,7 +141,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const summary = useAutomationsSummary(wid);
   const templates = useAutomationTemplates(wid);
   const allAccounts = useSocialAccounts(wid);
-  const accounts = useMemo(() => instagramAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
   // UI-064: no Instagram account (WhatsApp only, or nothing connected) hears that first.
   const noInstagram = allAccounts.isSuccess && accounts.length === 0;
   const canConnect = workspace.role !== "agent";

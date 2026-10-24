@@ -70,6 +70,7 @@ const ENTITLEMENT_FOR_METRIC: Record<string, string> = {
   scheduled_posts: "scheduled_posts_monthly",
   instagram_accounts: "accounts_per_platform",
   whatsapp_accounts: "accounts_per_platform",
+  facebook_accounts: "accounts_per_platform",
 };
 
 const METER_ICON: Record<string, ReactNode> = {
@@ -80,15 +81,17 @@ const METER_ICON: Record<string, ReactNode> = {
   pending_scheduled_messages: <Clock />,
   instagram_accounts: <PlatformGlyph platform="instagram" />,
   whatsapp_accounts: <PlatformGlyph platform="whatsapp" />,
+  facebook_accounts: <PlatformGlyph platform="facebook" />,
 };
 
 const METER_ICON_BG: Record<string, string> = {
   instagram_accounts: `${PLATFORM_BG.instagram} text-on-brand`,
   whatsapp_accounts: `${PLATFORM_BG.whatsapp} text-on-brand`,
+  facebook_accounts: `${PLATFORM_BG.facebook} text-on-brand`,
 };
 
 /** Places, not allowances (VH-007): filling them is normal use, so the meter never warns. */
-const SLOT_METRICS = new Set(["instagram_accounts", "whatsapp_accounts", "active_automations"]);
+const SLOT_METRICS = new Set(["instagram_accounts", "whatsapp_accounts", "facebook_accounts", "active_automations"]);
 
 /** FR-BIL-07, said before the owner cancels: what moving to Free changes. Nothing is deleted. */
 const DOWNGRADE_EFFECTS =

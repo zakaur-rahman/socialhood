@@ -219,7 +219,7 @@ describe("InboxShell list states (§4.7)", () => {
     renderShell({ accounts: [account({ status: "disconnected" })] });
     const link = await screen.findByRole("link", { name: "Connect an account" });
     expect(link).toHaveAttribute("href", "/w/maple/settings/connections");
-    expect(screen.getByText("Messages from Instagram and WhatsApp will appear here.")).toBeInTheDocument();
+    expect(screen.getByText("Messages from Instagram, Facebook and WhatsApp will appear here.")).toBeInTheDocument();
   });
 
   it("no conversations yet", async () => {

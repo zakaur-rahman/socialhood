@@ -209,11 +209,19 @@ export function useDeleteAccountData(wid: string) {
   );
 }
 
-/** TR-PL-07: a fake Instagram account for local development (404 unless the API enables it). */
+/**
+ * TR-PL-07: a fake Instagram account, or (GR-29) a fake Facebook Page, for local development (404
+ * unless the API enables it). No argument makes an Instagram one.
+ */
 export function useCreateSandboxAccount(wid: string) {
   const api = useApi();
-  return useAccountMutation(wid, () =>
-    unwrap(api.POST("/v1/w/{wid}/dev/sandbox/accounts", { params: { path: { wid } } })),
+  return useAccountMutation(wid, (platform?: "instagram" | "facebook") =>
+    unwrap(
+      api.POST("/v1/w/{wid}/dev/sandbox/accounts", {
+        params: { path: { wid } },
+        body: { platform: platform ?? "instagram" },
+      }),
+    ),
   );
 }
 

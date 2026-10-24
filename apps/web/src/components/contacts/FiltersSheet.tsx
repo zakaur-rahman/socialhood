@@ -156,6 +156,7 @@ export function FiltersSheet({
               <SelectContent>
                 <SelectItem value={ANY}>Any platform</SelectItem>
                 <SelectItem value="instagram">Instagram</SelectItem>
+                <SelectItem value="facebook">Facebook</SelectItem>
                 <SelectItem value="whatsapp">WhatsApp</SelectItem>
               </SelectContent>
             </Select>

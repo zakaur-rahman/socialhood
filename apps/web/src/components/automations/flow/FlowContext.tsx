@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 
-import type { FlowFieldDefinition, FlowTag, SavedReply } from "@/lib/api/types";
+import type { FlowFieldDefinition, FlowTag, Platform, SavedReply } from "@/lib/api/types";
 import {
   endsFlow,
   flatten,
@@ -29,6 +29,8 @@ export type FlowEnv = {
   wid: string;
   disclosure: string | null;
   comment: boolean;
+  /** GR-29: the account's platform: the text limit, and what Messenger lacks. */
+  platform: Platform;
   upload?: Uploader;
   tags: FlowTag[];
   fields: FlowFieldDefinition[];
@@ -75,6 +77,7 @@ export function FlowProvider({
   update,
   disclosure,
   comment,
+  platform = "instagram",
   upload,
   tags,
   fields,
@@ -91,6 +94,7 @@ export function FlowProvider({
   update: (change: (tree: EditorStep[]) => EditorStep[]) => void;
   disclosure: string | null;
   comment: boolean;
+  platform?: Platform;
   upload?: Uploader;
   tags: FlowTag[];
   fields: FlowFieldDefinition[];
@@ -114,8 +118,9 @@ export function FlowProvider({
       tagIds: new Set(tags.map((tag) => tag.id)),
       savedReplyIds: savedReplies ? new Set(savedReplies.map((reply) => reply.id)) : undefined,
       commentFirstId: comment ? (tree[0]?.id ?? null) : undefined,
+      platform,
     }),
-    [disclosure, fields, tags, savedReplies, comment, tree],
+    [disclosure, fields, tags, savedReplies, comment, tree, platform],
   );
   const order = useMemo(() => flatten(tree), [tree]);
   const numbers = useMemo(() => new Map(order.map((node, index) => [node.id, index + 1])), [order]);
@@ -238,6 +243,7 @@ export function FlowProvider({
     wid,
     disclosure,
     comment,
+    platform,
     upload,
     tags,
     fields,

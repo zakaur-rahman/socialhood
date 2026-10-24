@@ -21,14 +21,14 @@ import type {
   FlowDefinition,
   FlowPreviewStep,
   FlowStep,
+  Platform,
 } from "@/lib/api/types";
 
+import { messageLimit, messageSize, networkName, overLimitCopy } from "./limits";
 import {
   BUTTON_TEXT_MAX_CHARS,
-  MESSAGE_LIMIT_BYTES,
   renderFields,
   withDisclosure,
-  worstCaseBytes,
   worstCaseChars,
   type FieldValues,
 } from "./render";
@@ -724,7 +724,17 @@ export type FlowContext = {
   savedReplyIds?: ReadonlySet<string>;
   /** The id of a comment flow's first step, which can't be a saved reply (undefined: not a comment flow). */
   commentFirstId?: string | null;
+  /** GR-29: the account's platform, which sets the text limit and what Messenger lacks (default Instagram). */
+  platform?: Platform;
 };
+
+/** What a Facebook Page can't do in a flow, in the API's words (services/automations/flows.py). */
+export const FACEBOOK_FLOW_COPY = {
+  follows:
+    "Messenger doesn't say whether someone follows your Page. Remove this branch or use another condition.",
+  profileButton: "The profile button opens an Instagram profile. Give this button a link instead.",
+  consent: "Facebook doesn't record marketing consent yet. Turn off the consent question.",
+} as const;
 
 /** Which field types hold which kind of answer (the same table as the API's). */
 const ANSWER_TYPES: Record<AskNode["expect"], string[]> = {
@@ -767,10 +777,10 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
   const textProblems = (text: string, buttons: boolean, what: string) => {
     if (!text.trim()) out.text = `Write the ${what}.`;
     else if (placeholderProblem(text)) out.text = placeholderProblem(text) ?? "";
-    else if (worstCaseBytes(text, ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
-      out.text = `Instagram allows ${MESSAGE_LIMIT_BYTES.toLocaleString("en-US")} bytes in a DM, counting the longest name. Shorten it.`;
+    else if (messageSize(text, ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+      out.text = overLimitCopy(ctx.platform, "it");
     } else if (buttons && worstCaseChars(text, ctx.disclosure) > BUTTON_TEXT_MAX_CHARS) {
-      out.text = `With link buttons Instagram allows ${BUTTON_TEXT_MAX_CHARS} characters, counting the longest name. Shorten it.`;
+      out.text = `With link buttons ${networkName(ctx.platform)} allows ${BUTTON_TEXT_MAX_CHARS} characters, counting the longest name. Shorten it.`;
     }
   };
   switch (node.kind) {
@@ -788,7 +798,10 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
       if (!node.text.trim() && !node.image_asset_id) out.text = "Write the message to send.";
       else if (node.text.trim()) textProblems(node.text, node.buttons.length > 0, "message to send");
       node.buttons.forEach((button, index) => {
-        if (button.profile) return;
+        if (button.profile) {
+          if (ctx.platform === "facebook") out[`buttons.${index}`] = FACEBOOK_FLOW_COPY.profileButton;
+          return;
+        }
         if (!button.title.trim()) out[`buttons.${index}.title`] = "Give the button a title.";
         if (!(button.url ?? "").trim()) out[`buttons.${index}.url`] = "Add a link, or make it the profile button.";
         else if (!isHttps(button.url ?? "")) out[`buttons.${index}.url`] = "Use a link that starts with https://.";
@@ -809,10 +822,11 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
       for (const part of ["retry_text", "consent_text", "confirm_text"] as const) {
         if (part === "consent_text" && !node.consent) continue;
         if (placeholderProblem(node[part])) out[part] = placeholderProblem(node[part]) ?? "";
-        else if (node[part].trim() && worstCaseBytes(node[part], ctx.disclosure) > MESSAGE_LIMIT_BYTES) {
-          out[part] = `Instagram allows ${MESSAGE_LIMIT_BYTES.toLocaleString("en-US")} bytes in a DM. Shorten it.`;
+        else if (node[part].trim() && messageSize(node[part], ctx.disclosure, ctx.platform) > messageLimit(ctx.platform).limit) {
+          out[part] = overLimitCopy(ctx.platform, "it", false);
         }
       }
+      if (node.consent && ctx.platform === "facebook") out.consent = FACEBOOK_FLOW_COPY.consent;
       if (node.field_key === null) {
         if (node.expect === "text") out.field_key = "Choose the field to save the answer to.";
       } else {
@@ -829,6 +843,8 @@ export function stepProblems(node: EditorStep, ctx: FlowContext): StepProblems {
         const when = rule.when;
         if (when.kind === "tag" && !ctx.tagIds.has(when.tag_id)) {
           out[`rules.${index}.when`] = "Choose a tag.";
+        } else if (when.kind === "follows_business" && ctx.platform === "facebook") {
+          out[`rules.${index}.when`] = FACEBOOK_FLOW_COPY.follows;
         } else if (when.kind === "field") {
           if (!ctx.fields.some((field) => field.key === when.key)) out[`rules.${index}.when`] = "Choose a field.";
           else if (when.op === "equals" && !(when.value ?? "").trim()) out[`rules.${index}.when`] = "Write the value to compare with.";

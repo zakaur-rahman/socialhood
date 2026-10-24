@@ -3,17 +3,10 @@
  * trigger, when each step is complete (FR-AUT-02), and which step an API field error belongs to.
  */
 import type { ProblemField } from "@/lib/api/errors";
-import type { Automation, AutomationDefinition, LinkButton, TriggerName } from "@/lib/api/types";
+import type { Automation, AutomationDefinition, LinkButton, Platform, TriggerName } from "@/lib/api/types";
 
-import {
-  BUTTON_TITLE_MAX,
-  charCount,
-  clampChars,
-  FOLLOW_NUDGE_MAX,
-  MESSAGE_LIMIT_BYTES,
-  OPENING_BUTTON_MAX,
-  worstCaseBytes,
-} from "./render";
+import { messageLimit, messageSize, overLimitCopy } from "./limits";
+import { BUTTON_TITLE_MAX, charCount, clampChars, FOLLOW_NUDGE_MAX, OPENING_BUTTON_MAX } from "./render";
 
 export type StepId = "when" | "posts" | "keywords" | "then" | "settings";
 
@@ -230,13 +223,13 @@ export type OpeningProblems = { text?: string; button?: string };
 export function openingProblems(
   draft: Pick<AutomationDefinition, "opening_text" | "opening_button">,
   disclosure: string | null = null,
+  platform?: Platform,
 ): OpeningProblems {
   const problems: OpeningProblems = {};
   const text = draft.opening_text ?? "";
   if (!text.trim()) problems.text = "Write the opening message.";
-  else if (worstCaseBytes(text, disclosure) > MESSAGE_LIMIT_BYTES) {
-    const limit = MESSAGE_LIMIT_BYTES.toLocaleString("en-US");
-    problems.text = `Instagram allows ${limit} bytes in a DM, counting the longest name. Shorten the opening.`;
+  else if (messageSize(text, disclosure, platform) > messageLimit(platform).limit) {
+    problems.text = overLimitCopy(platform, "the opening");
   }
   const button = draft.opening_button ?? "";
   if (!button.trim()) problems.button = "Add a button title.";
@@ -258,7 +251,12 @@ export function runWindowProblem(draft: Pick<AutomationDefinition, "starts_at" |
 }
 
 /** FR-AUT-02, per step, as the editor can tell before asking the API. */
-export function stepComplete(step: StepId, draft: AutomationDefinition, disclosure: string | null = null): boolean {
+export function stepComplete(
+  step: StepId,
+  draft: AutomationDefinition,
+  disclosure: string | null = null,
+  platform?: Platform,
+): boolean {
   switch (step) {
     case "when":
       return Boolean(draft.social_account_id && draft.trigger);
@@ -283,12 +281,17 @@ export function stepComplete(step: StepId, draft: AutomationDefinition, disclosu
       const text = draft.message_text ?? "";
       const hasContent = Boolean(text.trim() || draft.message_media_asset_id);
       const buttonsOk = (draft.message_buttons ?? []).every((button) => Object.keys(buttonProblems(button)).length === 0);
-      const messageOk = hasContent && buttonsOk && worstCaseBytes(text, disclosure) <= MESSAGE_LIMIT_BYTES;
+      const messageOk =
+        hasContent && buttonsOk && messageSize(text, disclosure, platform) <= messageLimit(platform).limit;
       // A private reply carries no image (C-030): only tap first's message, a normal DM, can.
       const tapFirst = usesTapFirst(draft);
       const imageOk = !isCommentTrigger(draft.trigger) || tapFirst || !draft.message_media_asset_id;
-      const openingOk = !tapFirst || Object.keys(openingProblems(draft, disclosure)).length === 0;
-      const nudgeOk = !usesFollowNudge(draft) || followNudgeProblem(draft.follow_nudge_text) === null;
+      const openingOk = !tapFirst || Object.keys(openingProblems(draft, disclosure, platform)).length === 0;
+      // Messenger doesn't say who follows a Page, so the follow line can't be on (GR-29).
+      const nudgeOk =
+        platform === "facebook"
+          ? !usesFollowNudge(draft)
+          : !usesFollowNudge(draft) || followNudgeProblem(draft.follow_nudge_text) === null;
       return messageOk && imageOk && openingOk && nudgeOk;
     }
     case "settings":
@@ -296,8 +299,12 @@ export function stepComplete(step: StepId, draft: AutomationDefinition, disclosu
   }
 }
 
-export function firstIncompleteStep(draft: AutomationDefinition, disclosure: string | null = null): StepId | null {
-  return visibleSteps(draft.trigger).find((step) => !stepComplete(step, draft, disclosure)) ?? null;
+export function firstIncompleteStep(
+  draft: AutomationDefinition,
+  disclosure: string | null = null,
+  platform?: Platform,
+): StepId | null {
+  return visibleSteps(draft.trigger).find((step) => !stepComplete(step, draft, disclosure, platform)) ?? null;
 }
 
 // ---- API field errors (422 validation_error) → steps

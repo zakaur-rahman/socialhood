@@ -276,20 +276,20 @@ describe("AutomationsPage (UX-SCR-02)", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: "New automation" })).toHaveFocus());
   });
 
-  it("WhatsApp only: the Instagram notice is the whole page, with Connect Instagram", async () => {
+  it("WhatsApp only: the Instagram and Facebook notice is the whole page, with Connect an account", async () => {
     const whatsapp = account({ id: "w1", platform: "whatsapp", username: null, display_name: "Maple WhatsApp", phone_number: "+919999999999" });
     renderWithApi(<AutomationsPage />, { handlers: handlers({ items: [], accountList: [whatsapp], templates: [template({ key: "t1", name: "Send a link" })] }) });
 
     const notice = await screen.findByTestId("instagram-only-notice");
     expect(notice).toHaveTextContent("Automations work on Instagram");
-    expect(within(notice).getByRole("link", { name: "Connect Instagram" })).toHaveAttribute("href", "/w/maple/settings/connections");
+    expect(within(notice).getByRole("link", { name: "Connect an account" })).toHaveAttribute("href", "/w/maple/settings/connections");
     // Nothing sits above it, and no template invites a start.
     expect(screen.queryByRole("region", { name: "Last 7 days" })).not.toBeInTheDocument();
     expect(screen.queryByRole("article")).not.toBeInTheDocument();
     expect(screen.queryByText("Reply automatically")).not.toBeInTheDocument();
   });
 
-  it("the gallery says it first when there is no Instagram account", async () => {
+  it("the gallery says it first when there is no Instagram account or Facebook Page", async () => {
     const user = userEvent.setup();
     renderWithApi(<AutomationsPage />, { handlers: handlers({ items: [], accountList: [], templates: [template({ key: "t1", name: "Send a link" })] }) });
     await screen.findByTestId("instagram-only-notice");
@@ -297,7 +297,7 @@ describe("AutomationsPage (UX-SCR-02)", () => {
     const dialog = await screen.findByRole("dialog", { name: "New automation" });
     const notice = within(dialog).getByTestId("instagram-only-notice");
     expect(notice).toHaveTextContent("Automations work on Instagram");
-    expect(within(notice).getByRole("link", { name: "Connect Instagram" })).toBeInTheDocument();
+    expect(within(notice).getByRole("link", { name: "Connect an account" })).toBeInTheDocument();
     // The notice comes before the templates.
     expect(notice.compareDocumentPosition(within(dialog).getByRole("list", { name: "Templates" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(within(dialog).getByRole("article", { name: "Send a link" })).toHaveTextContent("Instagram comment keyword");
