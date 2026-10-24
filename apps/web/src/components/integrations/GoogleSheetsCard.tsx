@@ -338,9 +338,11 @@ function SheetPicker({ wid, status, disabled }: { wid: string; status: GoogleShe
 function Columns({ wid, status }: { wid: string; status: GoogleSheetsStatus }) {
   const save = useSaveSheetMapping(wid);
   const [edits, setEdits] = useState<GoogleSheetColumn[] | null>(null);
-  const columns = edits ?? status.columns;
-  const dirty = edits !== null && !sameColumns(edits, status.columns);
-  const unused = unusedFields(status.fields, columns);
+  const saved = status.columns ?? [];
+  const fields = status.fields ?? [];
+  const columns = edits ?? saved;
+  const dirty = edits !== null && !sameColumns(edits, saved);
+  const unused = unusedFields(fields, columns);
   const change = (next: GoogleSheetColumn[]) => setEdits(next);
 
   return (
@@ -352,7 +354,7 @@ function Columns({ wid, status }: { wid: string; status: GoogleSheetsStatus }) {
       </p>
       <ul className="space-y-2" aria-label="Columns">
         {columns.map((column, index) => {
-          const label = fieldLabel(status.fields, column.field);
+          const label = fieldLabel(fields, column.field);
           return (
             <li key={column.field} className="flex flex-wrap items-center gap-2" data-testid="sheet-column">
               <span className="w-28 shrink-0 text-sm text-fg-secondary">{label}</span>
@@ -431,7 +433,8 @@ function Columns({ wid, status }: { wid: string; status: GoogleSheetsStatus }) {
 }
 
 function Rows({ status }: { status: GoogleSheetsStatus }) {
-  if (status.recent.length === 0) {
+  const recent = status.recent ?? [];
+  if (recent.length === 0) {
     return status.sheet ? (
       <p className="text-sm text-fg-secondary">No rows yet. A lead you capture shows up here and in your sheet.</p>
     ) : null;
@@ -443,7 +446,7 @@ function Rows({ status }: { status: GoogleSheetsStatus }) {
         {status.pending_rows} waiting, {status.failed_rows} failed.
       </p>
       <ul className="divide-y divide-line-subtle" aria-label="Latest rows">
-        {status.recent.map((row) => {
+        {recent.map((row) => {
           const state = ROW[row.status];
           return (
             <li key={row.id} data-testid="sheet-row" className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">

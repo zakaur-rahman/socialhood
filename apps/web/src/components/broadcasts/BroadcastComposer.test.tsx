@@ -87,6 +87,8 @@ async function fill(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("option", { name: "Everyone" }));
   await user.click(await screen.findByRole("combobox", { name: "Template" }));
   await user.click(await screen.findByRole("option", { name: /sale_offer/ }));
+  // Variable 2 starts as a contact field; this one is the same text for everyone.
+  await user.click(within(screen.getByRole("radiogroup", { name: "Variable 2 comes from" })).getByRole("radio", { name: "The same text" }));
   await user.type(screen.getByLabelText("Variable 2 text"), "31 October");
 }
 

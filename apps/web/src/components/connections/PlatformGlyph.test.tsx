@@ -49,8 +49,6 @@ describe("Connections' search and filters with Pages", () => {
   });
 });
 
-import { PLATFORM_BG, PlatformGlyph } from "./PlatformGlyph";
-
 describe("PlatformGlyph (GR-28)", () => {
   it("draws a different mark for each platform, all decorative", () => {
     const marks = (["instagram", "whatsapp", "web"] as const).map((platform) => {

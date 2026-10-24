@@ -73,9 +73,16 @@ const RULES: Record<Platform, Partial<Record<FileKind, Rule>>> = {
       maxBytes: 100 * MB,
     },
   },
+  // The website chat takes text only (GR-28, C-111: no attachments).
+  web: {},
 };
 
-const PLATFORM_NAME: Record<Platform, string> = { instagram: "Instagram", whatsapp: "WhatsApp", facebook: "Facebook" };
+const PLATFORM_NAME: Record<Platform, string> = {
+  instagram: "Instagram",
+  whatsapp: "WhatsApp",
+  facebook: "Facebook",
+  web: "Website chat",
+};
 
 export function extensionOf(name: string): string {
   const dot = name.lastIndexOf(".");
@@ -127,6 +134,7 @@ export const ATTACHMENT_RULES: Record<Platform, { accept: string; check: (file: 
   instagram: { accept: acceptFor("instagram"), check: checkFor("instagram") },
   whatsapp: { accept: acceptFor("whatsapp"), check: checkFor("whatsapp") },
   facebook: { accept: acceptFor("facebook"), check: checkFor("facebook") },
+  web: { accept: acceptFor("web"), check: checkFor("web") },
 };
 
 /** WhatsApp stickers: 512 x 512 WebP up to 500 KB (the API checks the size in pixels). */

@@ -56,7 +56,7 @@ describe("WidgetSettingsPage (GR-28)", () => {
   it("shows the allowed sites, the embed code and today's chats", async () => {
     setup(settings());
     expect(await screen.findByRole("heading", { level: 1, name: "Website chat" })).toBeInTheDocument();
-    const sites = screen.getByRole("list", { name: "Allowed sites" });
+    const sites = await screen.findByRole("list", { name: "Allowed sites" });
     expect(within(sites).getByText("example.com")).toBeInTheDocument();
     expect(screen.getByText(SNIPPET)).toBeInTheDocument();
     expect(screen.getByText(/Chats started today: 3 of 50/)).toBeInTheDocument();

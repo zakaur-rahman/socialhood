@@ -52,8 +52,8 @@ export function BroadcastsPage() {
       </PageFrame>
     );
   }
-  if (!enabled) return <BroadcastsUnavailable />;
   const plan = availability.data;
+  if (!enabled || !plan) return <BroadcastsUnavailable />;
 
   return (
     <PageFrame

@@ -62,12 +62,12 @@ export function WaitingForYou({
                 </div>
               </div>
               <ul className="space-y-0.5 pl-11 text-xs text-fg-secondary" aria-label="What will happen">
-                {approval.lines.slice(0, 4).map((line, index) => (
+                {(approval.lines ?? []).slice(0, 4).map((line, index) => (
                   <li key={`${index}:${line}`} className="break-words">
                     {line}
                   </li>
                 ))}
-                {approval.lines.length > 4 ? <li>and {approval.lines.length - 4} more</li> : null}
+                {(approval.lines ?? []).length > 4 ? <li>and {(approval.lines ?? []).length - 4} more</li> : null}
               </ul>
               <div className="pl-11">
                 <ApprovalPanel

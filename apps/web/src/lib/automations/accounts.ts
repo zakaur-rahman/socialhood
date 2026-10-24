@@ -23,7 +23,7 @@ export function instagramAccounts(accounts: SocialAccount[]): SocialAccount[] {
 
 /** "@handle", else the name, else what kind of account it is. */
 export function accountLabel(
-  account: Pick<SocialAccount, "username" | "display_name"> & { platform?: SocialAccount["platform"] },
+  account: Pick<SocialAccount, "username" | "display_name"> & { platform?: string },
 ): string {
   if (account.username) return `@${account.username}`;
   return account.display_name ?? (account.platform === "facebook" ? "Facebook Page" : "Instagram account");

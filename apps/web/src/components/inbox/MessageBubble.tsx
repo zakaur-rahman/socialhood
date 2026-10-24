@@ -30,10 +30,11 @@ import { ContactAvatar } from "./ContactAvatar";
 import { SystemNote } from "./DateSeparator";
 
 /** Where a message in a format we can't show can be seen in the platform's own inbox. */
-const UNSUPPORTED_LINK: Record<Platform, string> = {
+const UNSUPPORTED_LINK: Partial<Record<Platform, string>> = {
   instagram: "https://www.instagram.com/direct/inbox/",
   whatsapp: "https://web.whatsapp.com/",
   facebook: "https://business.facebook.com/latest/inbox/messenger",
+  // A website chat has no inbox outside Social Hood, so it has no link.
 };
 
 const STATUS: Partial<Record<MessageStatus, { icon: LucideIcon; label: string; className?: string }>> = {
@@ -196,17 +197,19 @@ export function MessageBubble({
               data-testid="unsupported-card"
             >
               <span className={outbound && !nativeApp ? "text-on-brand" : "text-fg-secondary"}>Unsupported message format</span>
-              <a
-                href={UNSUPPORTED_LINK[platform]}
-                target="_blank"
-                rel="noreferrer"
-                className={cn(
-                  "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline",
-                  outbound && !nativeApp ? "" : "text-brand-fg",
-                )}
-              >
-                View in {platformName} <ExternalLink className="size-3" aria-hidden />
-              </a>
+              {UNSUPPORTED_LINK[platform] ? (
+                <a
+                  href={UNSUPPORTED_LINK[platform]}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={cn(
+                    "inline-flex items-center gap-1 font-medium underline-offset-4 hover:underline",
+                    outbound && !nativeApp ? "" : "text-brand-fg",
+                  )}
+                >
+                  View in {platformName} <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : null}
             </div>
           ) : message.kind === "location" && !message.text ? (
             <p>Shared a location</p>

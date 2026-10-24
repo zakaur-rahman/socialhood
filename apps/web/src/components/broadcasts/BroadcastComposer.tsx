@@ -147,7 +147,7 @@ export function BroadcastComposer() {
     !waiting &&
     result !== undefined &&
     result.audience.eligible > 0 &&
-    result.problems.length === 0;
+    (result.problems ?? []).length === 0;
 
   function chooseTemplate(key: string) {
     const next = sendable.find((t) => `${t.name}|${t.language}` === key);
@@ -561,11 +561,11 @@ function PreviewBody({
         {number.days_to_send > 1 ? `, so this takes about ${number.days_to_send} days.` : "."}
       </p>
 
-      {result.problems.length > 0 ? (
+      {(result.problems ?? []).length > 0 ? (
         <Alert tone="warning" variant="soft" icon={<AlertTriangle />} data-testid="problems">
           <AlertDescription>
             <ul className="space-y-1">
-              {result.problems.map((problem) => (
+              {(result.problems ?? []).map((problem) => (
                 <li key={problem}>{problem}</li>
               ))}
             </ul>

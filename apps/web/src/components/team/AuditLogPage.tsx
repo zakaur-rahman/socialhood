@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuditEvents, useMembers } from "@/lib/api/queries";
 import type { AuditEvent } from "@/lib/api/types";
 import { PERMISSION, useCan } from "@/lib/permissions";
+import { useNow } from "@/lib/use-browser-state";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 const ANY = "any";
@@ -50,12 +51,12 @@ export function AuditLogPage() {
   const [range, setRange] = useState<string>(ANY);
   const [page, setPage] = useState(0);
   const hours = RANGES.find((r) => r.value === range)?.hours ?? null;
-  // The cutoff is rounded to the minute so the query key doesn't change on every render.
-  const since = useMemo(() => {
-    if (hours === null) return null;
-    const minute = Math.floor(Date.now() / 60_000) * 60_000;
-    return new Date(minute - hours * 3_600_000).toISOString();
-  }, [hours]);
+  // useNow is rounded to the minute, so the query key doesn't change on every render.
+  const now = useNow();
+  const since = useMemo(
+    () => (hours === null ? null : new Date(now.getTime() - hours * 3_600_000).toISOString()),
+    [hours, now],
+  );
   const events = useAuditEvents(wid, { member, action, since, page }, allowed);
 
   function filter<T>(set: (value: T) => void, value: T) {
@@ -63,6 +64,7 @@ export function AuditLogPage() {
     setPage(0);
   }
 
+  const items = events.data?.items ?? [];
   let content;
   if (!ready || (allowed && events.isPending)) {
     content = (
@@ -90,7 +92,7 @@ export function AuditLogPage() {
     );
   } else if (events.isError) {
     content = <ErrorState error={events.error} onRetry={() => void events.refetch()} />;
-  } else if (events.data.items.length === 0) {
+  } else if (items.length === 0) {
     content = (
       <Card>
         <EmptyState
@@ -105,7 +107,7 @@ export function AuditLogPage() {
     content = (
       <Card className="overflow-hidden p-0">
         <ul aria-label="Audit log" className="divide-y divide-line-subtle">
-          {events.data.items.map((event) => (
+          {items.map((event) => (
             <li key={event.id} className="space-y-1 px-4 py-3" data-testid="audit-row">
               <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                 <p className="text-sm font-medium">{actionLabel(event.action)}</p>

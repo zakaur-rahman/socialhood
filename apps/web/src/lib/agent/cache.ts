@@ -42,7 +42,7 @@ function patchRunPages(
 /** A run as the API returned it (create, cancel): the detail keeps its steps; lists get the run. */
 export function putRun(queryClient: QueryClient, wid: string, run: AgentRun): void {
   queryClient.setQueryData<AgentRunDetail>(keys.agentRun(wid, run.id), (detail) =>
-    detail ? { ...detail, ...run, steps: detail.steps } : { ...run, steps: [] },
+    detail ? { ...detail, ...run, steps: detail.steps } : { ...run, steps: [], approvals: [] },
   );
   patchRunPages(queryClient, wid, run.id, (current) => ({ ...current, ...run }));
 }

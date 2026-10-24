@@ -163,7 +163,7 @@ const APPROVAL_STATUS_LABEL: Record<AgentApproval["status"], string> = {
   expired: "Expired",
   superseded: "Replaced",
 };
-const APPROVAL_EVENT_LABEL: Record<AgentApproval["events"][number]["event"], string> = {
+const APPROVAL_EVENT_LABEL: Record<NonNullable<AgentApproval["events"]>[number]["event"], string> = {
   proposed: "Proposed",
   approved: "Approved",
   rejected: "Rejected",
@@ -188,7 +188,7 @@ function ApprovalTrace({ approval, timeZone, now }: { approval: AgentApproval; t
       </p>
       {approval.outcome ? <p className="text-xs text-fg-secondary">{approval.outcome.summary}</p> : null}
       <ol aria-label="Audit trail" className="space-y-0.5 text-xs text-fg-secondary">
-        {approval.events.map((event) => (
+        {(approval.events ?? []).map((event) => (
           <li key={event.id}>
             {APPROVAL_EVENT_LABEL[event.event]}
             {event.actor?.name ? ` by ${event.actor.name}` : event.event === "proposed" ? " by Social Hood" : ""}
