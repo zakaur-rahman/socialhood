@@ -151,7 +151,7 @@ API and worker read the same variables.
 | `IG_REDIRECT_URI` | config | no | `https://api.socialhood.com/v1/oauth/instagram/callback` |
 | `IG_WEBHOOK_VERIFY_TOKEN` | secrets | yes | random; also typed into Meta's webhook form |
 | `IG_GRAPH_VERSION` · `META_GRAPH_VERSION` | config | no | `v25.0` |
-| `IG_REQUEST_INSIGHTS_SCOPE` · `IG_HUMAN_AGENT_ENABLED` | config | no | `false` until Meta approves |
+| `IG_REQUEST_INSIGHTS_SCOPE` · `FB_REQUEST_INSIGHTS_SCOPE` · `IG_HUMAN_AGENT_ENABLED` | config | no | `false` until Meta approves (`FB_REQUEST_INSIGHTS_SCOPE` asks Facebook Pages for `read_insights`, C-131) |
 | `META_APP_ID` · `META_APP_SECRET` | secrets | secret: yes | Meta app → Settings → Basic |
 | `WHATSAPP_CONFIG_ID` | secrets | no* | Embedded Signup configuration id |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | secrets | yes | random; also typed into Meta |

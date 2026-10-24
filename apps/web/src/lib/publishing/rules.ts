@@ -212,6 +212,10 @@ export const FORMAT_LABEL: Record<PostFormat, string> = { image: "Image", carous
 /** A Story video runs 3 to 60 seconds. */
 export const STORY_VIDEO_MIN_SECONDS = 3;
 export const STORY_VIDEO_MAX_SECONDS = 60;
+/** A Facebook Reel is one video of 3 to 90 seconds (Meta's limits, unverified, C-131). */
+export const FACEBOOK_REEL_MIN_SECONDS = 3;
+export const FACEBOOK_REEL_MAX_SECONDS = 90;
+
 /** A Story lives for 24 hours. */
 export const STORY_LIFETIME_HOURS = 24;
 const STORY_RATIO = 9 / 16;
@@ -230,6 +234,17 @@ export function storyVideoProblem(asset: Pick<AssetInfo, "resource_type" | "dura
   if (asset.duration_s < STORY_VIDEO_MIN_SECONDS) return `Story videos must be at least ${STORY_VIDEO_MIN_SECONDS} seconds.`;
   return null;
 }
+
+/** Why a video can't be a Facebook Reel, or null: shorter than 3 s (the longest is the usual 90 s). */
+export function reelVideoProblem(asset: Pick<AssetInfo, "resource_type" | "duration_s">): string | null {
+  if (asset.resource_type !== "video" || asset.duration_s == null) return null;
+  if (asset.duration_s < FACEBOOK_REEL_MIN_SECONDS) return `Reel videos must be at least ${FACEBOOK_REEL_MIN_SECONDS} seconds.`;
+  return null;
+}
+
+export const REEL_ONE_VIDEO = "A Facebook Reel is one video.";
+export const REEL_NEEDS_VIDEO = "Add a video for the Reel.";
+export const REEL_NEEDS_PAGE = "Choose a Facebook Page for a Reel. Instagram already publishes a single video as a Reel.";
 
 /** "Photo 2" or "Video 3": items are named by their place in the post. */
 export function assetLabel(asset: Pick<AssetInfo, "resource_type">, index: number): string {

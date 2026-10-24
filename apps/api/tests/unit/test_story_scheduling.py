@@ -153,11 +153,24 @@ def test_a_reel_can_still_be_90_seconds_but_a_story_cannot() -> None:
     assert rules.asset_problem(_video(80.0), story=True) == "Story videos can be up to 60 seconds."
 
 
-def test_a_facebook_page_cannot_take_a_story() -> None:
-    items = _checklist(_story(targets=[_target(platform="facebook", handle="Maple Page")]))
-    assert items["accounts"] == [
-        (False, "Maple Page can't publish Stories. Remove it or choose a post.")
+def test_a_facebook_page_can_take_a_story_with_the_same_rules() -> None:
+    """C-131: Page Stories (photo_stories and video_stories) follow the Story rules."""
+    page = _target(platform="facebook", handle="Maple Page")
+    items = _checklist(_story(targets=[page]))
+    assert items["accounts"] == [(True, "Publishing to Maple Page")]
+    assert items["caption"] == [(True, "Stories are published without a caption")]
+    assert "publishing_limit" not in items  # a Page has none
+    # The shape note names the platform that crops.
+    wide = _checklist(_story(targets=[page], assets=[_image(1920, 1080)]))
+    assert wide["media_files"] == [
+        (True, "9:16 fits a Story best. Facebook may crop or add bars to this file.")
     ]
+    both = _checklist(_story(targets=[_target(), page], assets=[_image(1920, 1080)]))
+    assert both["media_files"] == [
+        (True, "9:16 fits a Story best. Instagram and Facebook may crop or add bars to this file.")
+    ]
+    long = _checklist(_story(targets=[page], assets=[_video(75.0)]))
+    assert long["media_files"] == [(False, "Story videos can be up to 60 seconds.")]
 
 
 # ---------------------------------------------------------------- the container body

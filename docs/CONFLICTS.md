@@ -5400,3 +5400,154 @@ expand-only). No new route, no new setting.
 VIS-X2 (quote account names in the prompt), VIS-X4 (design-system entries for the visuals and
 their controls), a platform control on the lead list, a two-series trend, a reply-window
 pre-check for the lead follow-up, and localised labels.
+
+## C-131 · Facebook and Stories follow-ups (feature/followups-fb-stories)
+
+What C-114 (Instagram Stories) and C-115 (Facebook publishing) recorded as "not built", built after
+the owner approved it. **Every Meta behaviour below was written from Meta's docs and none has been
+seen on a real Page or account.** Each is marked *unverified* and listed in `docs/verification.md`
+item 50. The permission work is part of the second App Review submission (O-10,
+`docs/ops/app-review.md` section 8).
+
+### 1. A caption limit per platform
+- **The numbers.** Instagram 2,200 characters (as before). A Facebook Page post 63,206 characters,
+  the figure Meta's Pages documentation and Page tools give (*unverified*). They are
+  `CAPTION_MAX_CHARS` and `FACEBOOK_CAPTION_MAX_CHARS` in `models/publishing.py`. The first comment
+  stays at 2,200 for every platform (Instagram's; Facebook allows more, nobody asked for it).
+- **Where they apply.** The columns and the request bodies hold the longest
+  (`STORED_CAPTION_MAX_CHARS`; migration 0050 re-creates `ck_scheduled_posts_caption_length` and
+  `ck_scheduled_post_targets_caption_override_length`), so a draft can hold a long caption. The
+  checklist and the scheduling rules apply the platform's limit (`rules.caption_limit`): an account's
+  own caption to its platform's; the shared caption to the strictest of the accounts that use it
+  (those without their own caption). A Page-only post may be long; add an Instagram account and the
+  caption fails with "Shorten the caption to 2,200 characters (now N)". The composer's counter and
+  checklist (`captionLimit`, `checklist.ts`) do the same; the counter under each caption shows its
+  own limit.
+- **Not changed.** The AI caption writer and "improve" still work to 2,200 characters
+  (`CaptionRequest`), so improving a longer Page caption is refused by the schema; hashtag
+  suggestions likewise.
+- **Migration 0050** (after 0044), expand-only. *Numbering:* 0046 to 0049 belong to the other
+  follow-ups branch; the coordinator re-chains.
+
+### 2. Story insights
+- **Windows.** A Story is gone after 24 hours, so it has its own snapshot windows: 1 h, 6 h and 23 h
+  (`STORY_WINDOWS`, new `SnapshotWindow.H23`, `ck_post_metric_snapshots_window` re-created in
+  migration 0051). Feed posts and Reels never get 23 h (`ages.WINDOWS` leaves it out). A Story's
+  grace ends 10 minutes before it goes down (the 23 h reading has 50 minutes), the 15 minute tick
+  (`due_condition`) now includes Stories, and every `ages` function takes the post's windows
+  (`windows_for(media_type)`).
+- **What is read.** Every Story window reads the insights (a Story has no like or comment counts to
+  read early) and is final when written (`insights_final`). The metrics: `reach`, `views`,
+  `shares`, `replies`, `total_interactions`, `follows`, `profile_visits`, and from the `navigation`
+  metric with `breakdown=story_navigation_action_type` the `taps_forward`, `taps_back`,
+  `swipes_forward` and `exits` (`tap_forward`, `tap_back`, `swipe_forward`, `tap_exit`). The
+  breakdown is asked for on its own, like `follows_and_unfollows`. A kind with no row in the
+  breakdown is 0; a refused call leaves the figures unknown (never 0). Without the insights scope a
+  Story gets an empty snapshot, so it is not asked for again.
+- **Stored like other metrics:** `post_metric_snapshots.metrics` (new `PostMetric` keys `replies`,
+  `taps_forward`, `taps_back`, `swipes_forward`, `exits`, `clicks`).
+- **Shown.** The analytics reads already take any post: `PostPerformance` gains `extra_metrics`
+  (`ExtraMetrics`: the Story and Page figures that `PostMetrics` does not carry, so every post's
+  shared metrics and their comparisons are unchanged), and `AgeName` gains `23h`. A Story is shown
+  at the latest reading it has reached and is compared only with the account's other Stories (and
+  no other post with a Story); rankings (`top_posts`) and other posts' baselines still leave Stories
+  out. Web: the published Story in the composer's status banner (the schedule's published view)
+  shows "Reach 900 · Views 1,100 · Shares 7 · Replies 5 · at 6 h" (`story-insights`); "Comments and
+  results" in the schedule menu opens the Performance card, which for a Story lists reach, views,
+  shares, replies, taps forward, taps back, swipes forward and exits at 1 h, 6 h, 23 h or lifetime.
+- *Unverified:* the metric names and the breakdown values; that insights can be read while the Story
+  is up and for how long after it goes down; that `replies` and `navigation` are offered under
+  Instagram Login.
+
+### 3. Facebook Page post insights
+- **Metrics.** `GET /{post_id}/insights?metric=post_media_view,post_total_media_view_unique,post_clicks&period=lifetime`
+  gives `views`, `reach` and `clicks`; `GET /{post_id}?fields=shares` gives `shares`. Likes
+  (reactions) and comments come from the live counts, as before. Meta replaced the old impressions
+  metrics with these "media view" ones, so the old names are not used. A refused metric is read
+  alone and left unknown (the Instagram helpers).
+- **Schedule.** The same windows as Instagram posts: live counts at 1 h and 6 h, insights from 24 h,
+  the 72 h run marks them final (no change to `snapshot_account_posts`; a Page now has
+  `Capability.POST_INSIGHTS`).
+- **Permission.** `read_insights`, asked for only with `FB_REQUEST_INSIGHTS_SCOPE` (default off, like
+  `IG_REQUEST_INSIGHTS_SCOPE`); a Page connected without it has no `POST_INSIGHTS` and the
+  Performance card says to reconnect. Sandbox Pages always have it. Account-level insights for Pages
+  are still not built (account insights stay followers only).
+- **Shown** where Instagram post metrics are: the Performance card on the post detail (reach, views,
+  likes, comments, shares, saves, engagement rate, and a Page post's clicks; the wording names
+  Facebook for a Page). Saves, profile visits and follows are Instagram's, so a Page shows "—".
+- *Unverified:* the three metric names and `period=lifetime`; `values[0].value`; `shares.count`; how
+  soon after posting the figures exist; that reactions are a fair "likes".
+
+### 4. Facebook Reels
+- **A choice, not a shape.** A Page video stays a normal video. The composer's Type section offers
+  **Reel** when a Facebook Page is chosen (`kind: "reel"`, `PostKind.REEL`; migration 0052 widens
+  `ck_scheduled_posts_kind`). A Reel is exactly one video of 3 to 90 seconds (*unverified limits*,
+  `FACEBOOK_REEL_MIN_S`, `FACEBOOK_REEL_MAX_S`); 9:16 is only recommended, so another shape passes
+  with a note ("9:16 fits a Reel best. Facebook may crop or add bars to this file."). It needs a
+  Page ("Choose a Facebook Page for a Reel. Instagram already publishes a single video as a
+  Reel."); with an Instagram account chosen too, the Instagram side is its usual Reel. The caption,
+  hashtag and first comment rules are a normal post's. The stored `format` is `reel` (as for any
+  single video).
+- **Calls** (`platforms/facebook/publishing.py`): `reel:{video_id}`. Create is
+  `POST /me/video_reels {upload_phase: start}` then the hosted file handed to the answer's
+  `upload_url` with `Authorization: OAuth {token}` and a `file_url` header; the token is only sent
+  to an https address on facebook.com. Status is `GET /{video_id}?fields=status`: FINISHED when
+  `uploading_phase` is complete, ERROR when a phase failed, PUBLISHED once `publishing_phase` has
+  started. Publish is `POST /me/video_reels {upload_phase: finish, video_id, video_state: PUBLISHED,
+  description}`. The video id is the media id, read back as a video and stored as `reel`.
+  `PlatformHttp.request` gained a `headers` argument for the upload call; `create_reel_container`
+  gained `page_reel` (Instagram and the others ignore it).
+- **Lost answers.** A plain Page post cannot tell a lost publish answer from one that never went
+  out, so it still ends unconfirmed (C-115). A Reel's status shows the publishing phase, so after a
+  lost answer the job reads the status first: PUBLISHED finds the post again
+  (`find_published_media` reads the video), anything else ends unconfirmed. The check runs for every
+  non-Instagram lost answer, and only a Reel or a video Story ever answers PUBLISHED. The sandbox
+  does the same.
+- *Deviation:* once `finish` is accepted the target is marked published, though Facebook may still
+  be processing the Reel (the publishing phase); a later processing failure is not followed up.
+- *Unverified:* the whole flow (`video_reels` bodies and answers, the upload host and header,
+  `file_url` for a hosted file there, the phase and `status` values, `video_state`), the limits, and
+  that `pages_manage_posts` covers Reels.
+
+### 5. Facebook Page Stories
+- **Same Type switch and rules as Instagram's:** one photo or one video, no caption (kept on the
+  draft, never sent), no first comment, 3 to 60 second videos, any image shape (a note says who may
+  crop), 24 hours (the banner says "Disappears ..."). The composer no longer disables Story for a
+  Page (the old "Pages can't publish Stories" is gone). A Page has no publishing limit to check.
+- **Calls:** a photo Story is an unpublished `POST /me/photos` (`storyphoto:{id}`) then
+  `POST /me/photo_stories {photo_id}`; a video Story is the Reel's start and upload on
+  `video_stories` (`storyvideo:{id}`), the same status, then
+  `POST /me/video_stories {upload_phase: finish, video_id}`. The answer's `post_id` is stored as the
+  media id (else the upload id). The target is a `story` media item, so "next post" automations
+  never link to it.
+- **Not readable, honestly.** Facebook has no read API for Page Stories: the permalink stays empty
+  (no "View on Facebook"), the story picker's live list is empty for a Page (`list_stories` returns
+  `[]`; the sandbox too), `get_published_media` returns nothing for a Story (the job keeps what it
+  knows), and a Page Story has no insights (the published banner says "Facebook doesn't share
+  figures for Page Stories"; its snapshots are empty). A photo Story's lost answer ends unconfirmed
+  like any plain Page post; a video Story's is found through its status like a Reel's.
+- *Unverified:* `photo_stories` and `video_stories` bodies and answers, the Page video Story limits
+  (the Instagram ones are used), and that `pages_manage_posts` is enough.
+
+### Shared notes
+- **Migrations** 0050 (caption checks), 0051 (snapshot window 23h), 0052 (post kind reel), all
+  expand-only, each with a downgrade that removes or rewrites what the old check would refuse.
+- **Settings:** `FB_REQUEST_INSIGHTS_SCOPE` (default false) in `.env.example` and
+  `docs/ops/deploy.md`.
+- **Tests.** Unit: `test_page_caption_limit.py`, `test_story_insights.py`,
+  `test_facebook_insights.py`, `test_facebook_reels_stories.py`; `test_story_scheduling.py`,
+  `test_facebook_publishing.py` and `test_analytics_rules.py` updated. Contract:
+  `test_story_insights.py`. Integration (written, not run): `test_facebook_reels_stories.py`, plus
+  new cases in `test_metric_snapshots.py` (Stories read at 1 h, 6 h and 23 h; Page post insights; a
+  Page Story), `test_analytics_api.py` (Story figures, the 23h age, Story comparison) and
+  `test_story_publishing.py` (a Story may go to a Page). Vitest (written, not run):
+  `checklist.test.ts`, `format.test.ts`, `PostPerformanceCard.test.tsx`, `StatusBanner.test.tsx`,
+  `PostComposer.test.tsx`. E2E: `followups-fb-stories.spec.ts` (a long Page caption, a Page Reel, a
+  Page Story) and `gr30-facebook-publishing.spec.ts` updated; the e2e seed can now add a video
+  (`videoAsset`).
+- **For the coordinator:** regenerate the client: `AgeName` gains `23h`,
+  `PostPerformance.extra_metrics` and `ExtraMetrics`, `ScheduledPostDraft.kind` and
+  `ScheduledPostSummary.kind` gain `reel`. The web uses the generated types for all of these
+  (`ExtraMetrics` is an alias in `lib/api/types.ts`). Re-chain migrations 0050 to 0052 after the
+  other branch's 0046 to 0049. The shared lists (nav, plans, tenancy) are untouched (no new table
+  or route).

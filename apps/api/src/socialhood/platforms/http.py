@@ -30,8 +30,11 @@ class PlatformHttp:
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
         json: Any = None,
+        headers: dict[str, str] | None = None,
     ) -> Any:
-        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        """``headers`` are added to (and may replace) the bearer token header, for the few calls
+        that take their credentials another way (Facebook's resumable upload host)."""
+        headers = {**({"Authorization": f"Bearer {token}"} if token else {}), **(headers or {})}
         started = time.perf_counter()
         try:
             response = await self.client.request(

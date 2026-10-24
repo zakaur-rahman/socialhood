@@ -10,6 +10,11 @@ room in the quota, and a published container reads PUBLISHED and can't be publis
 Published posts get a platform media id and a permalink and show up in ``history.post`` and
 ``list_media`` like synced posts; a first comment gets an id and is recorded in ``COMMENTS``.
 
+A Facebook Page behaves like its real self where the jobs depend on it (C-131): a plain post's
+container status never says it was published (a lost answer ends unconfirmed), a Reel's and a
+video Story's does; a Page video is a normal video unless it was created as a Reel; a Page Story
+has no permalink and can't be listed.
+
 Failures are injectable for tests, like sends in ``outbox``:
 - ``fail_next(code, step=…)`` makes the next call of a step fail (quota, container, status,
   publish, read, find, comment); ``lose_next_publish_answer()`` publishes but answers
@@ -67,6 +72,10 @@ class SandboxContainer:
     children: tuple[str, ...] = ()
     share_to_feed: bool = True
     story: bool = False
+    page_reel: bool = False  # a Facebook Reel (C-131)
+    # Whether the status says "PUBLISHED" once published. Instagram's does; a Facebook Page's does
+    # only for a Reel or a video Story (their publishing phase), not a plain post.
+    shows_published: bool = True
     reads_left: int = 0  # status reads still IN_PROGRESS
     status_code: ContainerStatusCode = "IN_PROGRESS"
     detail: str | None = None
@@ -202,6 +211,7 @@ def _new_container(
     children: tuple[str, ...] = (),
     share_to_feed: bool = True,
     story: bool = False,
+    page_reel: bool = False,
 ) -> str:
     _injected("container")
     container_id = f"sandbox_container_{secrets.token_hex(8)}"
@@ -215,6 +225,8 @@ def _new_container(
         children=children,
         share_to_feed=share_to_feed,
         story=story,
+        page_reel=page_reel,
+        shows_published=acct.platform != "facebook" or (kind == "video" and (story or page_reel)),
         reads_left=STATE.processing_reads if kind == "video" else 0,
         status_code="IN_PROGRESS" if kind == "video" else "FINISHED",
     )
@@ -230,7 +242,12 @@ def create_image_container(acct: SocialAccount, *, image_url: str, caption: str)
 
 
 def create_reel_container(
-    acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool
+    acct: SocialAccount,
+    *,
+    video_url: str,
+    caption: str,
+    share_to_feed: bool,
+    page_reel: bool = False,
 ) -> str:
     return _new_container(
         acct,
@@ -239,6 +256,7 @@ def create_reel_container(
         url=video_url,
         caption=caption,
         share_to_feed=share_to_feed,
+        page_reel=page_reel,
     )
 
 
@@ -288,6 +306,10 @@ def container_status(acct: SocialAccount, container_ref: str) -> ContainerStatus
             row.reads_left -= 1
         else:
             row.status_code = "FINISHED"
+    if row.status_code == "PUBLISHED" and not row.shows_published:
+        # A Facebook Page's plain post has no published state to read (C-115): it reads as it
+        # did before the publish.
+        return ContainerStatus(status_code="FINISHED", detail=row.detail)
     return ContainerStatus(status_code=row.status_code, detail=row.detail)
 
 
@@ -319,7 +341,7 @@ def publish_container(
         if row.story
         else "carousel"
         if row.kind == "carousel"
-        else ("reel" if acct.platform == "instagram" else "video")
+        else ("reel" if acct.platform == "instagram" or row.page_reel else "video")
         if row.kind == "video"
         else "image"
     )
@@ -334,7 +356,12 @@ def publish_container(
             caption=row.caption or None,
             media_url=first_url,
             thumbnail_url=None,
-            permalink=_permalink(acct, media_id, story=row.story),
+            # A Page Story has no address we could read back (C-131).
+            permalink=(
+                None
+                if row.story and acct.platform == "facebook"
+                else _permalink(acct, media_id, story=row.story)
+            ),
             posted_at=at.replace(microsecond=0),
             like_count=0,
             comments_count=0,

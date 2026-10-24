@@ -72,7 +72,6 @@ BUTTON_TEXT_MAX_CHARS = 640
 MAX_BUTTONS = 3
 MAX_QUICK_REPLIES = 13
 NO_QUOTA = "Facebook Pages have no publishing limit to read"
-NO_STORIES = "Facebook Page Stories aren't available yet"
 NO_INSIGHTS = "Account insights for Facebook Pages aren't available yet"
 
 
@@ -209,7 +208,7 @@ class FacebookAdapter:
         return await reads.list_media(self.http, self._graph, self._token(acct), limit=limit)
 
     async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
-        return []  # Pages have no stories we can read
+        return []  # Facebook has no read API for a Page's Stories (C-131)
 
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
         from socialhood.platforms.facebook import reads
@@ -344,17 +343,37 @@ class FacebookAdapter:
         )
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
-        """A Page video (not a Facebook Reel); ``share_to_feed`` has no meaning here."""
+        """A Page video, or with ``page_reel`` (the composer's Reel choice, C-131) a Facebook
+        Reel; ``share_to_feed`` has no meaning here."""
         from socialhood.platforms.facebook import publishing
 
+        if page_reel:
+            return await publishing.create_reel(
+                self.http, self._graph, self._token(acct), video_url=video_url
+            )
         return await publishing.create_video(
             self.http, self._graph, self._token(acct), video_url=video_url, caption=caption
         )
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:
-        raise PlatformError("capability_unavailable", message=NO_STORIES)
+        """A Page Story (C-131): a photo or a video, published by ``publish_container``."""
+        from socialhood.platforms.facebook import publishing
+
+        if media.kind == "video":
+            return await publishing.create_story_video(
+                self.http, self._graph, self._token(acct), video_url=media.url
+            )
+        return await publishing.create_story_photo(
+            self.http, self._graph, self._token(acct), image_url=media.url
+        )
 
     async def create_carousel_item(self, acct: SocialAccount, media: ContainerMedia) -> str:
         from socialhood.platforms.facebook import publishing
@@ -396,6 +415,8 @@ class FacebookAdapter:
     ) -> PlatformMedia | None:
         from socialhood.platforms.facebook import publishing
 
+        if story:
+            return None  # a Page Story can't be read back (C-131)
         return await publishing.published_media(
             self.http, self._graph, self._token(acct), media_ref
         )
@@ -417,6 +438,7 @@ class FacebookAdapter:
             self._token(acct),
             caption=caption,
             published_after=published_after,
+            container_ref=container_ref,
         )
 
     async def post_comment(self, acct: SocialAccount, media_ref: str, text: str) -> str | None:

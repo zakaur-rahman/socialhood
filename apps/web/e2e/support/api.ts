@@ -94,6 +94,17 @@ export class Api {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }
 
+  /** C-131: a 9:16 video in the media library (a Facebook Reel, a Page video Story). */
+  videoAsset(wid: string, filename = "e2e-reel.mp4", durationSeconds = 20): Promise<{ id: string; secure_url: string }> {
+    return this.seed("POST", `/workspaces/${wid}/media-assets`, {
+      filename,
+      video: true,
+      width: 1080,
+      height: 1920,
+      duration_s: durationSeconds,
+    });
+  }
+
   /**
    * GR-38: a finished Ask run of the signed-in owner (the fake model calls no tools). With `visual`
    * it seeds the account's metrics for the last `days` complete days and the `days` before them,

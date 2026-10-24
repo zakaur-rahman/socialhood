@@ -31,6 +31,10 @@ import {
   MIN_SCHEDULE_LEAD_MS,
   FACEBOOK_NO_MIX,
   postPlatforms,
+  REEL_NEEDS_PAGE,
+  REEL_NEEDS_VIDEO,
+  REEL_ONE_VIDEO,
+  reelVideoProblem,
   storyShapeOff,
   storyVideoProblem,
   videoTooLong,
@@ -109,12 +113,13 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const targets = draft.targets ?? [];
   const assetIds = draft.asset_ids ?? [];
   const story = draft.kind === "story";
+  const reel = draft.kind === "reel";
   const selected = targets
     .map((target) => accounts.find((item) => item.id === target.social_account_id))
     .filter((account): account is SocialAccount => Boolean(account));
   const { instagram: ig, facebook: fb } = postPlatforms(selected);
   // Text for Facebook Pages alone, with no media, is a text post (GR-30).
-  const textPost = fb && !ig && !story && assetIds.length === 0 && Boolean((draft.caption ?? "").trim());
+  const textPost = fb && !ig && !story && !reel && assetIds.length === 0 && Boolean((draft.caption ?? "").trim());
   const limitName = ig ? "Instagram" : "Social Hood";
 
   // accounts: at least one, each connected and able to publish
@@ -126,12 +131,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       const account = accounts.find((item) => item.id === target.social_account_id);
       if (!account) return; // not loaded yet, or gone: the API says which
       const reason = cannotPublishReason(account);
-      if (!reason) {
-        if (story && account.platform !== "instagram") {
-          problems.push(fail("accounts", `${handleOf(account)} can't publish Stories. Remove it or choose a post.`, `targets.${index}`));
-        }
-        return;
-      }
+      if (!reason) return;
       const handle = handleOf(account);
       const message =
         account.status === "needs_reconnect"
@@ -143,6 +143,8 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
               : `${handle} didn't give Social Hood permission to publish. Reconnect to allow it.`;
       problems.push(fail("accounts", message, `targets.${index}`));
     });
+    // A Reel is for Facebook Pages: Instagram already publishes a single video as a Reel (C-131).
+    if (reel && !fb) problems.push(fail("accounts", REEL_NEEDS_PAGE, "targets"));
     if (problems.length) items.push(...problems);
     else items.push(pass("accounts", targets.length === 1 ? "1 account can publish" : `${targets.length} accounts can publish`));
   }
@@ -153,8 +155,15 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     items.push(
       textPost
         ? pass("media", "Text post")
-        : fail("media", fb && !ig ? "Add a photo or video, or write the post's text." : "Add a photo or video.", "asset_ids"),
+        : fail(
+            "media",
+            reel ? REEL_NEEDS_VIDEO : fb && !ig ? "Add a photo or video, or write the post's text." : "Add a photo or video.",
+            "asset_ids",
+          ),
     );
+  } else if (reel) {
+    const oneVideo = assetIds.length === 1 && (known.length === 0 || known[0].resource_type === "video");
+    items.push(oneVideo ? pass("media", "Reel") : fail("media", REEL_ONE_VIDEO, "asset_ids"));
   } else if (fb && !story && assetIds.length > 1 && known.some((asset) => asset.resource_type === "video")) {
     items.push(fail("media", FACEBOOK_NO_MIX, "asset_ids"));
   } else if (story) {
@@ -174,7 +183,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
     if (!asset) return;
     const label = assetLabel(asset, index);
     const crop = story || !ig ? null : cropNeeded(asset);
-    const storyProblem = story ? storyVideoProblem(asset) : null;
+    const storyProblem = story ? storyVideoProblem(asset) : reel && fb ? reelVideoProblem(asset) : null;
     if (storyProblem) {
       fileProblems.push(fail("media_files", `${label}: ${storyProblem}`, `asset_ids.${index}`));
     } else if (crop) {
@@ -190,14 +199,15 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       );
     }
   });
-  const offShape = story && assetIds.length === 1 && assets[assetIds[0]] && storyShapeOff(assets[assetIds[0]]);
+  const offShape = (story || reel) && assetIds.length === 1 && assets[assetIds[0]] && storyShapeOff(assets[assetIds[0]]);
+  const who = ig && fb ? "Instagram and Facebook" : fb ? "Facebook" : "Instagram";
   if (fileProblems.length) items.push(...fileProblems);
   else if (assetIds.length) {
     items.push(
       pass(
         "media_files",
         offShape
-          ? "9:16 fits a Story best. Instagram may crop or add bars to this file."
+          ? `9:16 fits a ${story ? "Story" : "Reel"} best. ${who} may crop or add bars to this file.`
           : `Photos and videos fit ${ig && fb ? "Instagram's and Facebook's" : fb ? "Facebook's" : "Instagram's"} sizes`,
       ),
     );

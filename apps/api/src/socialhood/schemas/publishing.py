@@ -44,7 +44,7 @@ ScheduledPostStatusName = Literal[
     "draft", "scheduled", "publishing", "published", "partially_published", "failed", "canceled"
 ]
 PostFormatName = Literal["image", "carousel", "reel", "story", "text"]
-PostKind = Literal["post", "story"]
+PostKind = Literal["post", "story", "reel"]
 TargetStatusName = Literal[
     "pending", "publishing", "container_created", "published", "failed", "canceled"
 ]
@@ -217,8 +217,10 @@ class ScheduledPostDraft(RequestModel):
     first_comment: str | None = Field(default=None, max_length=FIRST_COMMENT_MAX_CHARS)
     # A draft may keep a time (a calendar click); a scheduled post's time.
     publish_at: datetime | None = None
-    # ``story``: the one image or video is published as an Instagram Story (GR-39), without the
-    # caption or first comment (both are kept on the draft but never sent).
+    # ``story``: the one image or video is published as a Story (GR-39; a Facebook Page's too,
+    # C-131), without the caption or first comment (both are kept on the draft but never sent).
+    # ``reel``: the one video is published to a Facebook Page as a Reel instead of a normal video
+    # (C-131).
     kind: PostKind = "post"
 
 

@@ -262,7 +262,8 @@ async def _write(
     post.format = rules.derive_format(
         [a.resource_type for a in checked.assets],
         story=body.kind == "story",
-        text=pages_only and bool(body.caption.strip()),
+        text=pages_only and bool(body.caption.strip()) and body.kind != "reel",
+        reel=body.kind == "reel",
     )
     post.updated_at = now
     current = [row.media_asset_id for row, _ in await repo.assets_for(session, [post.id])]
@@ -305,6 +306,7 @@ async def replace(
             ],
             assets=checked.assets,
             story=body.kind == "story",
+            reel=body.kind == "reel",
         )
         await _require_ready(session, draft, env)
     retry = post.status in RETRYABLE

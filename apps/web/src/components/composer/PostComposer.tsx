@@ -302,11 +302,16 @@ function Composer({
     .map((accountId) => allAccounts.find((account) => account.id === accountId))
     .filter((account): account is NonNullable<typeof account> => Boolean(account));
   const isStory = draft.kind === "story";
+  const isReel = draft.kind === "reel";
   const format = isStory
     ? postAssets.length === 1
       ? "story"
       : null
-    : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
+    : isReel
+      ? postAssets.length === 1 && postAssets[0].resource_type === "video"
+        ? "reel"
+        : null
+      : postAssets.length === 0 && pagesOnlyText(selectedAccounts, draft.caption)
       ? "text"
       : deriveFormat(postAssets);
   const cropIndex = cropId ? draft.asset_ids.indexOf(cropId) : -1;
@@ -653,11 +658,8 @@ function Composer({
             <PostTypeSection
               value={draft.kind}
               onChange={(kind) => change({ kind })}
-              storyBlockedBy={
-                selectedAccounts.find((account) => account.platform !== "instagram")
-                  ? handleOf(selectedAccounts.find((account) => account.platform !== "instagram"))
-                  : null
-              }
+              reelAvailable={selectedAccounts.some((account) => account.platform === "facebook")}
+              instagramToo={selectedAccounts.some((account) => account.platform === "instagram")}
             />
             <MediaTray
               entries={entries}

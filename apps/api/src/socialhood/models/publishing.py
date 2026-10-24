@@ -72,6 +72,10 @@ DEFAULT_PUBLISHING_LIMIT = 100
 STORY_LIFETIME = dt.timedelta(hours=24)
 STORY_VIDEO_MIN_S = 3
 STORY_VIDEO_MAX_S = 60
+# Facebook Reels (C-131; Meta's Reels publishing limits, unverified until a real Page publishes
+# one): a Reel is one video of 3 to 90 seconds; 9:16 is the shape Meta recommends.
+FACEBOOK_REEL_MIN_S = 3
+FACEBOOK_REEL_MAX_S = 90
 
 # ---------------------------------------------------------------- publish job timing (T7.3)
 
@@ -108,10 +112,13 @@ class PostFormat(StrEnum):
 
 class PostKind(StrEnum):
     """What the owner chose in the composer (GR-39). Stored, not derived: a Story draft with the
-    wrong media has no format yet, and must still be checked as a Story."""
+    wrong media has no format yet, and must still be checked as a Story. ``reel`` (C-131) is the
+    choice to publish a Page's single video as a Facebook Reel instead of a normal video;
+    Instagram already publishes every single video as a Reel."""
 
     POST = "post"
     STORY = "story"
+    REEL = "reel"
 
 
 class TargetStatus(StrEnum):

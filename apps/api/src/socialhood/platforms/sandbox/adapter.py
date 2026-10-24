@@ -127,6 +127,8 @@ class SandboxAdapter:
     async def list_stories(self, acct: SocialAccount) -> list[PlatformMedia]:
         from socialhood.platforms.sandbox import history
 
+        if acct.platform == "facebook":
+            return []  # Facebook has no read API for a Page's Stories (C-131)
         return history.stories(acct)
 
     async def get_media(self, acct: SocialAccount, media_ref: str) -> PlatformMedia | None:
@@ -242,12 +244,22 @@ class SandboxAdapter:
         return publishing.create_image_container(acct, image_url=image_url, caption=caption)
 
     async def create_reel_container(
-        self, acct: SocialAccount, *, video_url: str, caption: str, share_to_feed: bool = True
+        self,
+        acct: SocialAccount,
+        *,
+        video_url: str,
+        caption: str,
+        share_to_feed: bool = True,
+        page_reel: bool = False,
     ) -> str:
         from socialhood.platforms.sandbox import publishing
 
         return publishing.create_reel_container(
-            acct, video_url=video_url, caption=caption, share_to_feed=share_to_feed
+            acct,
+            video_url=video_url,
+            caption=caption,
+            share_to_feed=share_to_feed,
+            page_reel=page_reel,
         )
 
     async def create_story_container(self, acct: SocialAccount, media: ContainerMedia) -> str:

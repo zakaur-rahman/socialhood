@@ -67,6 +67,36 @@ describe("a published Story shows its insights (C-131)", () => {
     expect(await screen.findByTestId("story-insights")).toHaveTextContent("Reconnect to read Story insights");
   });
 
+  it("says a Page Story has no figures, without asking for any", async () => {
+    let asked = 0;
+    renderWithApi(
+      <StatusBanner
+        post={scheduledPost({
+          status: "published",
+          format: "story",
+          published_at: "2026-09-29T10:00:00Z",
+          targets: [target({ status: "published", post_id: "mi1", published_at: "2026-09-29T10:00:00Z", expires_at: "2026-09-30T10:00:00Z" })],
+        })}
+        accounts={[account({ id: "a1", username: "maple.page", platform: "facebook" })]}
+        timeZone="UTC"
+        now={NOW}
+        onEditAndRetry={() => {}}
+        retrying={false}
+        wid="w1"
+      />,
+      {
+        handlers: {
+          "GET /v1/w/:wid/analytics/posts/:id/performance": () => {
+            asked += 1;
+            return json(performance());
+          },
+        },
+      },
+    );
+    expect(await screen.findByTestId("story-insights")).toHaveTextContent("Facebook doesn't share figures for Page Stories");
+    expect(asked).toBe(0);
+  });
+
   it("shows nothing for a post that is not a Story", async () => {
     banner(performance(), null);
     expect(await screen.findByTestId("status-banner")).toBeInTheDocument();

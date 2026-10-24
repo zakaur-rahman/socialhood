@@ -111,7 +111,13 @@ function TargetRows({
               </span>
             ) : null}
             {wid && target.expires_at && target.status === "published" && target.post_id ? (
-              <StoryInsights wid={wid} postId={target.post_id} />
+              account?.platform === "facebook" ? (
+                <span className="text-fg-secondary" data-testid="story-insights">
+                  Facebook doesn&apos;t share figures for Page Stories
+                </span>
+              ) : (
+                <StoryInsights wid={wid} postId={target.post_id} />
+              )
             ) : null}
             <FirstCommentLine target={target} />
           </li>

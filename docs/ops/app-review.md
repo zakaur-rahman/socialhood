@@ -186,7 +186,7 @@ in `docs/verification.md` item 36.
 | `pages_read_user_content` | To read the comments people leave on the Page's posts (*verify* whether `pages_read_engagement` covers this). | Open a post's comments | S-12 |
 | `pages_manage_engagement` | To reply to comments as the Page, hide spam, delete comments, and send one private reply to a person who comments a keyword. | Reply to and hide a comment; automation private reply | S-12, S-13 |
 
-Not requested yet (GR-30): `pages_manage_posts` and `read_insights` for publishing and best times.
+Not requested yet (GR-30, C-131): `pages_manage_posts` for publishing (posts, Reels and Page Stories) and `read_insights` for Page post insights (only asked for when `FB_REQUEST_INSIGHTS_SCOPE` is on).
 
 **Webhook fields to subscribe** (Page object): `messages`, `message_echoes`, `messaging_postbacks`,
 `messaging_referrals`, `message_reads`, `message_deliveries`, `message_reactions`, `message_edits`,

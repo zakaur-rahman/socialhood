@@ -212,7 +212,8 @@ class Draft:
     publish_at: datetime | None
     targets: Sequence[tuple[SocialAccount, str | None]]  # the account and its own caption
     assets: Sequence[MediaAsset]
-    story: bool = False  # chosen as an Instagram Story (GR-39)
+    story: bool = False  # chosen as a Story (GR-39; a Facebook Page's too, C-131)
+    reel: bool = False  # chosen as a Facebook Reel (C-131)
 
     @classmethod
     def of(cls, loaded: Loaded) -> Draft:
@@ -225,6 +226,7 @@ class Draft:
             targets=[(account, target.caption_override) for target, account in loaded.targets],
             assets=[asset for _, asset in loaded.assets],
             story=post.kind == PostKind.STORY,
+            reel=post.kind == PostKind.REEL,
         )
 
 
@@ -285,6 +287,7 @@ def facts(
         first_comment=draft.first_comment,
         publish_at=draft.publish_at,
         story=draft.story,
+        reel=draft.reel,
     )
 
 

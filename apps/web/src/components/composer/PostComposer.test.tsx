@@ -256,11 +256,19 @@ describe("PostComposer Facebook Pages (GR-30)", () => {
     expect(screen.queryByText("Add a photo or video.")).not.toBeInTheDocument();
   });
 
-  it("a Page can't be a Story: the Story option is off with the reason", async () => {
+  it("a Page can be a Story or a Reel; an Instagram account alone is not offered the Reel (C-131)", async () => {
     renderComposer({ initial: scheduledPost({ targets: [target({ social_account_id: "p1" })] }), accounts: [maple, page] });
     const type = await screen.findByRole("region", { name: "Type" });
-    expect(await within(type).findByTestId("story-blocked")).toHaveTextContent("@maple.page is a Facebook Page");
-    expect(within(type).getByRole("radio", { name: "Story" })).toBeDisabled();
+    expect(await within(type).findByRole("radio", { name: "Story" })).toBeEnabled();
+    expect(within(type).getByRole("radio", { name: "Reel" })).toBeEnabled();
+    expect(within(type).queryByTestId("story-blocked")).not.toBeInTheDocument();
+  });
+
+  it("an Instagram account alone has no Reel choice: it publishes a single video as a Reel already", async () => {
+    renderComposer({ initial: scheduledPost({ targets: [target({ social_account_id: "a1" })] }), accounts: [maple, page] });
+    const type = await screen.findByRole("region", { name: "Type" });
+    expect(await within(type).findByRole("radio", { name: "Story" })).toBeEnabled();
+    expect(within(type).queryByRole("radio", { name: "Reel" })).not.toBeInTheDocument();
   });
 
   it("shows the best time for the picked day beside the time picker", async () => {

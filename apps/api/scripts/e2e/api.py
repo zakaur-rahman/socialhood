@@ -119,9 +119,12 @@ class WorkspaceOut(BaseModel):
 
 
 class AssetIn(BaseModel):
-    filename: str = "e2e-post.jpg"
+    filename: str = Field(default="e2e-post.jpg", max_length=120)
     width: int = 1080
     height: int = 1080
+    # C-131: a video (a Facebook Reel, a Page video Story) instead of a photo.
+    video: bool = False
+    duration_s: float = Field(default=20.0, ge=0, le=600)
 
 
 class AssetOut(BaseModel):
@@ -162,17 +165,19 @@ async def set_plan(body: PlanIn, ctx: Owner, session: Session) -> None:
 async def create_media_asset(body: AssetIn, ctx: Owner, session: Session) -> AssetOut:
     stem = body.filename.rsplit(".", 1)[0]
     public_id = f"ws/{ctx.workspace_id}/{AssetPurpose.POST.value}/{stem}-{secrets.token_hex(4)}"
-    secure_url = f"https://res.cloudinary.com/e2e/image/upload/v1/{public_id}.jpg"
+    kind, extension = ("video", "mp4") if body.video else ("image", "jpg")
+    secure_url = f"https://res.cloudinary.com/e2e/{kind}/upload/v1/{public_id}.{extension}"
     asset = MediaAsset(
         public_id=public_id,
-        resource_type=ResourceType.IMAGE.value,
+        resource_type=ResourceType.VIDEO.value if body.video else ResourceType.IMAGE.value,
         purpose=AssetPurpose.POST.value,
-        format="jpg",
+        format=extension,
         original_filename=body.filename,
         secure_url=secure_url,
-        bytes=180_000,
+        bytes=4_000_000 if body.video else 180_000,
         width=body.width,
         height=body.height,
+        duration_s=body.duration_s if body.video else None,
         created_by_user_id=ctx.user.id,
     )
     session.add(asset)

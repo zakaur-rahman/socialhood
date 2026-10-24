@@ -114,12 +114,14 @@ async def test_a_caption_kept_on_a_story_draft_is_not_checked(shop: Shop) -> Non
     assert post["caption"].count("#") == 700
 
 
-async def test_a_story_is_refused_on_a_facebook_page(shop: Shop) -> None:
+async def test_a_story_may_go_to_a_facebook_page_too(shop: Shop) -> None:
+    """C-131: Page Stories follow the same rules; a Page has no publishing limit to check."""
     page = await shop.account("maple.page", platform="facebook")
     post = await story_draft(
         shop, targets=[{"social_account_id": shop.account_id}, {"social_account_id": page}]
     )
-    assert failing(post) == {"targets.1": "accounts"}
+    assert post["ready"] is True, post["checklist"]
+    assert post["format"] == "story"
 
 
 async def test_a_story_counts_against_the_plans_scheduled_posts(shop: Shop) -> None:
