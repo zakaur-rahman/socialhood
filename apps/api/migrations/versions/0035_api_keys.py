@@ -8,7 +8,7 @@
 Expand-only: a new table and a nullable column.
 
 Revision ID: 0035
-Revises: 0030
+Revises: 0034
 Create Date: 2026-10-24 16:00:00.000000+00:00
 """
 
@@ -21,7 +21,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0035"
-down_revision: str | None = "0030"
+down_revision: str | None = "0034"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
