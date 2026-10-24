@@ -33,3 +33,4 @@ export * from "./contacts";
 export * from "./leads";
 export * from "./reports";
 export * from "./team";
+export * from "./assignment";

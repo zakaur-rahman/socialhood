@@ -5,6 +5,8 @@
   commit (C-106).
 - Rows hold ids, names and changed field names, never a message body, a secret or a token: the
   detail is filtered and cut to size here, whatever a caller passes.
+- A change nobody made by hand (round-robin, an automation) is ``record_system``: no member, a
+  label for who or what did it.
 - The actor's name is kept on the row, so it still reads right after the member is removed.
 - Owners and admins read the log, newest first, filtered by member, action and date.
 """
@@ -20,6 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.auth.deps import WorkspaceContext
+from socialhood.db.tenancy import require_workspace
 from socialhood.models.identity import User
 from socialhood.models.team import AuditEvent
 from socialhood.schemas.team import AuditEvent as AuditEventOut
@@ -71,6 +74,30 @@ async def record(
             workspace_id=ctx.workspace_id,
             actor_user_id=ctx.user.id,
             actor_label=actor_label(ctx.user),
+            action=action[:60],
+            target_type=target_type[:40],
+            target_id=str(target_id)[:80] if target_id is not None else None,
+            detail=clean_detail(detail),
+        )
+    )
+
+
+def record_system(
+    session: AsyncSession,
+    label: str,
+    action: str,
+    target_type: str,
+    target_id: uuid.UUID | str | None = None,
+    **detail: Any,
+) -> None:
+    """Add an audit row for a change nobody made by hand (a round-robin turn, an automation's
+    step): no member, ``label`` says who or what, e.g. "Round-robin" or "Automation: Welcome".
+    Runs in the current workspace's scope. The caller commits."""
+    session.add(
+        AuditEvent(
+            workspace_id=require_workspace(),
+            actor_user_id=None,
+            actor_label=label[:120],
             action=action[:60],
             target_type=target_type[:40],
             target_id=str(target_id)[:80] if target_id is not None else None,

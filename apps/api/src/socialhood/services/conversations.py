@@ -29,6 +29,7 @@ from sqlalchemy import (
     Text,
     Uuid,
     cast,
+    false,
     func,
     literal,
     literal_column,
@@ -55,6 +56,7 @@ from socialhood.realtime import events
 from socialhood.repositories import automation_runs, inbox, social_accounts
 from socialhood.repositories import conversations as writes
 from socialhood.schemas.inbox import (
+    Assignee,
     AutomationRef,
     ContactDetail,
     ConversationAccount,
@@ -75,6 +77,7 @@ from socialhood.services.inbox_views import (
     REMINDER_FROM,
     human_agent_allowed,
     list_item,
+    member_label,
     message_out,
 )
 from socialhood.services.reply_window import STANDARD_WINDOW, reply_window
@@ -161,7 +164,7 @@ async def latest_customer_message(
     )
 
 
-async def _human_agent(session: AsyncSession, conv: Conversation, *, enabled: bool) -> bool:
+async def human_agent_for(session: AsyncSession, conv: Conversation, *, enabled: bool) -> bool:
     acct = await social_accounts.get(session, conv.social_account_id)
     return acct is not None and human_agent_allowed(acct, ig_human_agent_enabled=enabled)
 
@@ -175,13 +178,18 @@ class ListFilters:
     platform: str | None = None
     account_id: uuid.UUID | None = None
     q: str | None = None
+    # GR-20: the caller (the "mine" view is theirs) and an explicit assignee to filter by.
+    viewer_id: uuid.UUID | None = None
+    assignee_id: uuid.UUID | None = None
     # Ask Social Hood (FR-AGT-05): conversations whose last message is in [active_from,
     # active_until).
     active_from: datetime | None = None
     active_until: datetime | None = None
 
 
-def _view_filter(view: InboxView, now: datetime) -> list[ColumnElement[bool]]:
+def _view_filter(
+    view: InboxView, now: datetime, viewer_id: uuid.UUID | None = None
+) -> list[ColumnElement[bool]]:
     if view == "archived":
         return [Conversation.status == ConversationStatus.ARCHIVED]
     where = [Conversation.status == ConversationStatus.OPEN]
@@ -191,6 +199,12 @@ def _view_filter(view: InboxView, now: datetime) -> list[ColumnElement[bool]]:
         where.append(Conversation.awaiting_reply == true())
     elif view == "needs_you":  # escalated to a person (FR-SUG-04); InboxCounts.needs_you counts it
         where.append(Conversation.needs_human == true())
+    elif view == "mine":  # GR-20: assigned to the caller
+        where.append(
+            Conversation.assignee_user_id == viewer_id if viewer_id is not None else false()
+        )
+    elif view == "unassigned":
+        where.append(Conversation.assignee_user_id.is_(None))
     elif view == "leads":
         where.append(Conversation.lead_score >= LEAD_SCORE)
     elif view == "closing_soon":  # inbox_views.closing_soon, in SQL (FR-INB-14, F-18)
@@ -243,7 +257,12 @@ def _search_filter(q: str) -> ColumnElement[bool] | None:
 
 
 def _filters(filters: ListFilters, now: datetime) -> list[ColumnElement[bool]]:
-    where = [Conversation.last_message_at.is_not(None), *_view_filter(filters.view, now)]
+    where = [
+        Conversation.last_message_at.is_not(None),
+        *_view_filter(filters.view, now, filters.viewer_id),
+    ]
+    if filters.assignee_id is not None:
+        where.append(Conversation.assignee_user_id == filters.assignee_id)
     if filters.platform is not None:
         where.append(Conversation.platform == filters.platform)
     if filters.account_id is not None:
@@ -306,8 +325,14 @@ async def list_conversations(
     now: datetime,
 ) -> ConversationList:
     query = (
-        select(Conversation, Contact)
+        select(
+            Conversation,
+            Contact,
+            func.coalesce(User.name, func.split_part(User.email, "@", 1)),
+            User.avatar_url,
+        )
         .join(Contact, Contact.id == Conversation.contact_id)
+        .outerjoin(User, User.id == Conversation.assignee_user_id)
         .where(*_filters(filters, now))
         .order_by(Conversation.last_message_at.desc(), Conversation.id.desc())
         .limit(limit + 1)
@@ -328,8 +353,14 @@ async def list_conversations(
     last = page[-1][0] if page else None
     return ConversationList(
         items=[
-            list_item(conv, contact, now=now, human_agent=conv.social_account_id in human_agent)
-            for conv, contact in page
+            list_item(
+                conv,
+                contact,
+                now=now,
+                human_agent=conv.social_account_id in human_agent,
+                assignee=_assignee(conv, name, avatar),
+            )
+            for conv, contact, name, avatar in page
         ],
         next_cursor=(
             encode_cursor(last.last_message_at, last.id)
@@ -339,14 +370,27 @@ async def list_conversations(
     )
 
 
-async def inbox_counts(session: AsyncSession) -> InboxCounts:
-    """The Inbox nav badge (unread conversations, FR-INB-04) and the view chips."""
-    unread, needs_reply, needs_you = (
+def _assignee(conv: Conversation, name: str | None, avatar_url: str | None) -> Assignee | None:
+    if conv.assignee_user_id is None:
+        return None
+    return Assignee(user_id=conv.assignee_user_id, name=name, avatar_url=avatar_url)
+
+
+async def inbox_counts(session: AsyncSession, viewer_id: uuid.UUID | None = None) -> InboxCounts:
+    """The Inbox nav badge (unread conversations, FR-INB-04) and the view chips; ``mine`` is the
+    open conversations assigned to the caller (GR-20)."""
+    mine = (
+        func.count().filter(Conversation.assignee_user_id == viewer_id)
+        if viewer_id is not None
+        else literal(0)
+    )
+    unread, needs_reply, needs_you, assigned = (
         await session.execute(
             select(
                 func.count().filter(Conversation.unread_count > 0),
                 func.count().filter(Conversation.awaiting_reply == true()),
                 func.count().filter(Conversation.needs_human == true()),
+                mine,
             )
             .select_from(Conversation)
             .where(
@@ -355,7 +399,9 @@ async def inbox_counts(session: AsyncSession) -> InboxCounts:
             )
         )
     ).one()
-    return InboxCounts(unread=unread, needs_reply=needs_reply, needs_you=needs_you)
+    return InboxCounts(
+        unread=unread, needs_reply=needs_reply, needs_you=needs_you, mine=int(assigned or 0)
+    )
 
 
 # ---------------------------------------------------------------- detail (§5.10, TR-PL-04)
@@ -378,9 +424,12 @@ async def conversation_detail(
         )
     )
     paused = conv.ai_paused_until if conv.ai_paused_until and conv.ai_paused_until > now else None
+    assignee = await _assignee_of(session, conv)
     out = ConversationOut.model_validate(
         {
-            **list_item(conv, contact, now=now, human_agent=human_agent).model_dump(),
+            **list_item(
+                conv, contact, now=now, human_agent=human_agent, assignee=assignee
+            ).model_dump(),
             "contact": ContactDetail(
                 id=contact.id,
                 display_name=contact.display_name,
@@ -422,6 +471,15 @@ async def conversation_detail(
     )
     out.pending_suggestion = await suggestions.pending_out(session, conv.id)  # T5.4, F-08
     return out
+
+
+async def _assignee_of(session: AsyncSession, conv: Conversation) -> Assignee | None:
+    if conv.assignee_user_id is None:
+        return None
+    user = await session.get(User, conv.assignee_user_id)
+    if user is None:
+        return None
+    return _assignee(conv, member_label(user.name, user.email), user.avatar_url)
 
 
 def entry_out(conv: Conversation) -> ConversationEntry | None:
@@ -559,5 +617,5 @@ async def _changed(
     session: AsyncSession, conv: Conversation, *, ig_human_agent_enabled: bool, now: datetime
 ) -> None:
     await session.refresh(conv)
-    human_agent = await _human_agent(session, conv, enabled=ig_human_agent_enabled)
+    human_agent = await human_agent_for(session, conv, enabled=ig_human_agent_enabled)
     await events.queue_conversation(session, conv, now=now, human_agent=human_agent)

@@ -30,6 +30,9 @@ FR-AUT-21). A tapped quick reply keeps its payload (``quick_reply_payload``). Wi
 for the account it queues ``analyze_conversation`` (4 s, one waiting job per conversation, so a
 burst is analysed once; TR-AI-05).
 
+With round-robin on, a new customer message in a conversation nobody has hands it to the next
+available member (GR-20; services/assignment).
+
 A new WhatsApp text that is only a stop phrase (STOP, unsubscribe, ...) records the contact's
 marketing consent as withdrawn, and a message after a broadcast counts as its reply (GR-23;
 services/broadcasts/inbound).
@@ -218,6 +221,16 @@ async def _broadcasts(
     await inbound.on_inbound(session, acct, contact, msg, now)
 
 
+async def _assign(
+    session: AsyncSession, conv: Conversation, contact: Contact, now: datetime
+) -> None:
+    """GR-20: with round-robin on, a customer's message in a conversation nobody has hands it to
+    the next available member."""
+    from socialhood.services import assignment
+
+    await assignment.on_inbound(session, conv, contact, now=now)
+
+
 async def _automations(session: AsyncSession, contact: Contact, msg: Message) -> None:
     """A new customer DM: count it as a reply to recent automation DMs (FR-AUT-16) and let
     automations answer it (F-11 runtime, before the AI's analysis): a tap-first opening waiting
@@ -332,6 +345,7 @@ class _Ingest:
                 await _webhook_events(self.session, self.acct, contact, msg, new_contact)
                 await _story_mention(self.session, self.acct, contact, msg, self.now)
                 await _broadcasts(self.session, self.acct, contact, msg, self.now)
+                await _assign(self.session, conv, contact, self.now)
                 await _automations(self.session, contact, msg)
                 await _supersede_suggestion(self.session, conv, msg)
                 if self.acct.ai_analysis_enabled:  # FR-PRV-02

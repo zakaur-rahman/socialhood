@@ -39,13 +39,21 @@ async def list_conversations(
     view: Annotated[InboxView, Query()] = "all",
     platform: Annotated[PlatformName | None, Query()] = None,
     account_id: Annotated[uuid.UUID | None, Query()] = None,
+    assignee_id: Annotated[uuid.UUID | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
     cursor: Annotated[str | None, Query(max_length=200)] = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 30,
 ) -> ConversationList:
     return await service.list_conversations(
         session,
-        service.ListFilters(view=view, platform=platform, account_id=account_id, q=q),
+        service.ListFilters(
+            view=view,
+            platform=platform,
+            account_id=account_id,
+            q=q,
+            viewer_id=ctx.user.id,
+            assignee_id=assignee_id,
+        ),
         cursor=cursor,
         limit=limit,
         ig_human_agent_enabled=_human_agent_enabled(request),
@@ -55,7 +63,7 @@ async def list_conversations(
 
 @router.get("/conversations/counts", operation_id="get_inbox_counts")
 async def get_inbox_counts(ctx: AnyMember, session: Session) -> InboxCounts:
-    return await service.inbox_counts(session)
+    return await service.inbox_counts(session, ctx.user.id)
 
 
 @router.get("/conversations/{conversation_id}", operation_id="get_conversation")

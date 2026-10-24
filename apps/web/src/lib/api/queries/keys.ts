@@ -102,6 +102,7 @@ export const keys = {
   savedReplies: (wid: string) => ["w", wid, "saved-replies"] as const, // GR-21
   permissions: (wid: string) => ["w", wid, "permissions"] as const, // GR-19
   members: (wid: string) => ["w", wid, "members"] as const,
+  assignment: (wid: string) => ["w", wid, "assignment"] as const, // GR-20
   invitations: (wid: string) => ["w", wid, "invitations"] as const,
   auditEvents: (wid: string, filters: AuditFilters) => ["w", wid, "audit-events", filters] as const,
   broadcastAvailability: (wid: string) => ["w", wid, "broadcasts", "availability"] as const, // GR-23

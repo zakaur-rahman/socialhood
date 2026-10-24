@@ -713,6 +713,8 @@ export function describeAction(action: FlowAction, tagName?: (id: string) => str
       return "Notify the team";
     case "hand_off":
       return "Hand off to a person";
+    case "assign":
+      return action.mode === "member" ? "Assign to a team member" : action.mode === "nobody" ? "Remove the assignee" : "Assign to the next available member";
   }
 }
 

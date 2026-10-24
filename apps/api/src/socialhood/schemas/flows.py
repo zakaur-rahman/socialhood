@@ -217,8 +217,18 @@ class HandOff(RequestModel):
     kind: Literal["hand_off"] = "hand_off"
 
 
+class Assign(RequestModel):
+    """Give the conversation to a member (GR-20): a chosen ``member``, the next available member
+    in turn (``round_robin``, whatever the workspace's own round-robin setting), or ``nobody``
+    (clears the assignment). The member is told, as for any assignment."""
+
+    kind: Literal["assign"] = "assign"
+    mode: Literal["member", "round_robin", "nobody"] = "round_robin"
+    user_id: uuid.UUID | None = None  # the member, for mode "member"
+
+
 Action = Annotated[
-    AddTag | RemoveTag | SetField | NotifyTeam | HandOff, Field(discriminator="kind")
+    AddTag | RemoveTag | SetField | NotifyTeam | HandOff | Assign, Field(discriminator="kind")
 ]
 
 

@@ -112,10 +112,40 @@ async def notify_members(
     )
 
 
+async def notify_user(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    type: str,
+    severity: str,
+    title: str,
+    body: str,
+    link: str | None = None,
+    dedupe_key: str | None = None,
+    data: Mapping[str, Any] | None = None,
+) -> int:
+    """Notify one member of the current workspace (a conversation assigned to them, GR-20), with
+    the channels and the member's own switches as for any notification; a repeated dedupe_key is
+    a no-op. Returns 0 when they are not a member."""
+    return await _notify(
+        session,
+        roles=None,
+        user_ids=frozenset({user_id}),
+        type=type,
+        severity=severity,
+        title=title,
+        body=body,
+        link=link,
+        dedupe_key=dedupe_key,
+        data=data,
+    )
+
+
 async def _notify(
     session: AsyncSession,
     *,
     roles: frozenset[Role] | None,
+    user_ids: frozenset[uuid.UUID] | None = None,
     type: str,
     severity: str,
     title: str,
@@ -133,6 +163,8 @@ async def _notify(
     ).join(User, User.id == WorkspaceMember.user_id)
     if roles is not None:
         query = query.where(WorkspaceMember.role.in_(roles))
+    if user_ids is not None:
+        query = query.where(WorkspaceMember.user_id.in_(user_ids))
     recipients = {row.user_id: row for row in (await session.execute(query)).all()}
     if not recipients:
         return 0

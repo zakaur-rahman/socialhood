@@ -35,6 +35,11 @@ export type ConversationEntry = Schemas["ConversationEntry"];
 export type ConversationPatch = Schemas["ConversationPatch"];
 export type ContactSummary = Schemas["ContactSummary"];
 export type InboxCounts = Schemas["InboxCounts"];
+// Assignment (GR-20)
+export type Assignee = Schemas["Assignee"];
+export type Assignable = Schemas["Assignable"];
+export type AssignmentOverview = Schemas["AssignmentOverview"];
+export type AssignmentSettingsPut = Schemas["AssignmentSettingsPut"];
 export type ReplyWindow = Schemas["ReplyWindow"];
 export type WindowState = ReplyWindow["state"];
 export type Signal = NonNullable<ConversationListItem["signal"]>;

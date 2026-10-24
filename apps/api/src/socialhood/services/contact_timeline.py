@@ -1,9 +1,10 @@
 """One contact's timeline (GR-17): what happened with them, newest first, read-only.
 
 Sources today: their conversation, their comments, automation runs on them, story mentions,
-consent records, tags added, lead stage moves (GR-18) and the broadcasts they were sent (GR-23:
-"Received broadcast X", with how far it got). (Captured answers have no table of their own;
-when they get one it adds a source here.)
+consent records, tags added, lead stage moves (GR-18), the broadcasts they were sent (GR-23:
+"Received broadcast X", with how far it got) and who had their conversation (GR-20, from the audit
+rows ``conversation.assigned`` and ``conversation.unassigned``). (Captured answers have no table
+of their own; when they get one it adds a source here.)
 
 Rules:
 - Each source is read newest first with the same keyset, (time, id) before the cursor, and the
@@ -20,7 +21,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import Select, and_, or_, select
+from sqlalchemy import Select, Text, and_, cast, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.errors import ApiError
@@ -41,6 +42,7 @@ from socialhood.models.contacts import (
     Tag,
 )
 from socialhood.models.inbox import Contact, Conversation, EntrySource, Message
+from socialhood.models.team import AuditEvent
 from socialhood.repositories.broadcasts import status_expr
 from socialhood.schemas.contacts import TimelineItem, TimelineKind, TimelineList
 from socialhood.services import leads
@@ -72,6 +74,10 @@ BROADCAST_DETAIL: dict[str, str] = {
     "delivered": "Delivered",
     "read": "Read",
     "failed": "Couldn't be delivered",
+}
+ASSIGNED_BY: dict[str, str] = {
+    "round_robin": "Round-robin",
+    "automation": "By an automation",
 }
 CHANNEL_LABEL = {
     "instagram": "Instagram",
@@ -135,6 +141,28 @@ def _stage_detail(
     if reason:
         parts.append(reason.rstrip("."))
     return ". ".join(parts) + "."
+
+
+def _assignment_item(row: Any) -> TimelineItem:
+    """ "Assigned to Priya" or "Unassigned", with who did it: "By Sam", "Round-robin" or "By an
+    automation" (the audit row keeps the name as it was)."""
+    detail = row.detail or {}
+    via = str(detail.get("via") or "")
+    by = ASSIGNED_BY.get(via) or (f"By {row.actor_label}" if row.actor_label else None)
+    if row.action == "conversation.assigned":
+        title = f"Assigned to {detail.get('to_name') or 'a team member'}"
+    else:
+        title = "Unassigned"
+    came_from = detail.get("from_name")
+    parts = [by, f"From {came_from}" if came_from else None]
+    return _item(
+        row.id,
+        "assignment",
+        row.created_at,
+        title,
+        ". ".join(p for p in parts if p) or None,
+        row.conversation_id,
+    )
 
 
 async def timeline(
@@ -318,6 +346,33 @@ async def timeline(
         _item(i, "broadcast", at, f"Received broadcast {name}", BROADCAST_DETAIL.get(shown))
         for i, at, name, shown in sent
     ]
+
+    handovers = (
+        await session.execute(
+            _before(
+                select(
+                    AuditEvent.id,
+                    AuditEvent.created_at,
+                    AuditEvent.action,
+                    AuditEvent.actor_label,
+                    AuditEvent.detail,
+                    Conversation.id.label("conversation_id"),
+                )
+                .join(Conversation, cast(Conversation.id, Text) == AuditEvent.target_id)
+                .where(
+                    Conversation.contact_id == contact_id,
+                    AuditEvent.target_type == "conversation",
+                    AuditEvent.action.in_(("conversation.assigned", "conversation.unassigned")),
+                ),
+                AuditEvent.created_at,
+                AuditEvent.id,
+                after,
+            )
+            .order_by(AuditEvent.created_at.desc(), AuditEvent.id.desc())
+            .limit(take)
+        )
+    ).all()
+    items += [_assignment_item(h) for h in handovers]
 
     items.sort(key=lambda item: (item.occurred_at, item.id), reverse=True)
     page = items[:limit]

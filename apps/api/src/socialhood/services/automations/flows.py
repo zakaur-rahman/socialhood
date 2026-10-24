@@ -50,6 +50,7 @@ from socialhood.schemas.flows import (
     AddTag,
     AiReplyStep,
     AskStep,
+    Assign,
     BranchRule,
     BranchStep,
     Condition,
@@ -113,6 +114,8 @@ COPY = {
     "field_missing": "That field doesn't exist any more. Choose another.",
     "field_type": "This field can't hold that kind of answer. Choose a field of the same type.",
     "tag_missing": "That tag doesn't exist any more. Choose another.",
+    "member_needed": "Choose who gets the conversation.",
+    "member_missing": "That person isn't on your team any more. Choose another.",
     "value_missing": "Write the value to compare with.",
     "saved_reply_missing": "That saved reply doesn't exist any more. Choose another.",
     "saved_reply_alone": (
@@ -321,6 +324,8 @@ class Context:
     # includes the catalogue (a product step is refused without it).
     products: Mapping[uuid.UUID, tuple[bool, frozenset[uuid.UUID]]] = field(default_factory=dict)
     commerce: bool = True
+    # GR-20: the workspace's members, for an "assign to a member" action.
+    member_ids: frozenset[uuid.UUID] = frozenset()
 
     @property
     def comment(self) -> bool:
@@ -487,6 +492,10 @@ def _action_errors(i: int, step: ActionStep, ctx: Context) -> list[FieldError]:
     match step.action:
         case AddTag(tag_id=tag_id) | RemoveTag(tag_id=tag_id) if tag_id not in ctx.tag_ids:
             return [FieldError(where, COPY["tag_missing"])]
+        case Assign(mode="member", user_id=None):
+            return [FieldError(f"{where}.user_id", COPY["member_needed"])]
+        case Assign(mode="member", user_id=user_id) if user_id not in ctx.member_ids:
+            return [FieldError(f"{where}.user_id", COPY["member_missing"])]
         case SetField(key=key) if key not in ctx.fields:
             return [FieldError(where, COPY["field_missing"])]
         case SetField(key=key, value=value):

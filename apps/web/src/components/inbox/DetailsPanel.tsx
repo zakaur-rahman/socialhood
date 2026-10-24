@@ -6,6 +6,7 @@ import { useState, type ReactNode } from "react";
 import { pausedUntil } from "@/components/ai/AiModeControl";
 import { AnalysisDetails } from "@/components/ai/AnalysisChips";
 import { SummarySection } from "@/components/ai/SummarySection";
+import { AssigneeMenu } from "@/components/assignment/AssigneeMenu";
 import { latestQuestion, useCachedMessages, useTeachAi } from "@/components/ai/TeachAi";
 import { ContactDrawer } from "@/components/contacts/ContactDrawer";
 import type { KnowledgeUploader } from "@/components/knowledge/SourceSheet";
@@ -153,6 +154,10 @@ export function DetailsPanel({
           </Button>
         </CardInset>
         <Attention conversation={c} now={now} timeZone={workspace.timezone} />
+      </Section>
+
+      <Section id="details-assignee" title="Assigned to">
+        <AssigneeMenu conversation={c} variant="panel" />
       </Section>
 
       <Section

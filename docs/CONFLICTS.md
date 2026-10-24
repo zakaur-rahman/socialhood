@@ -4174,3 +4174,87 @@ Vitest: `format`, `flow` (the step), `ProductsPage`, `ImportDialog`, `ShopifyCar
   `/__e2e/shopify/sign`.
 - Owner track O-10: the Shopify Partner account, the app listing, the callback and webhook
   addresses, and the three privacy webhooks' wording. `.env.example` has the new settings.
+
+## C-117 · Conversation assignment (GR-20, feature/gr-20-24-assign-sequences)
+
+- **Model.** `conversations.assignee_user_id` (null: nobody; `ON DELETE SET NULL`) and `assigned_at`,
+  `workspace_members.available_for_assignment` (default true, per workspace membership),
+  `workspaces.assignment_round_robin` (default false) and `workspaces.assignment_cursor_user_id` (the
+  member who had the last turn; not a foreign key, so a removed member just restarts the turn). Migration
+  `0041` (after `0040`), expand-only, one partial index for the "Assigned to me" view. No new tables.
+- **Who may assign whom (a decision; the plan left it open).** Owners and admins assign any conversation
+  to any member or to nobody. Agents *take* a conversation nobody has (assign it to themselves) and
+  *release or hand on* one they have (to anyone, or to nobody); they cannot give a free conversation to a
+  colleague or take one from a colleague (403 "Agents can take a conversation nobody has, or hand on one
+  they have."). The rule is `assignment.may_assign` and is unit tested; the web menu disables what the API
+  would refuse. The route stays behind GR-19's `assign` permission (`CanAssign`, agent tier). An assignee
+  who is not a member of this workspace is 404 `not_found` (checked before the role rule). Assignment
+  works on every plan (on Free the one member is the only choice).
+- **Every change does the same things, in one transaction** (`services/assignment.apply`): the
+  conversation row is locked, then `assignee_user_id` and `assigned_at` are set; a system note goes in the
+  thread ("Sam assigned this to Priya", "Priya took this conversation", "Assigned to Priya
+  (round-robin)", "An automation assigned this to Priya"); an audit row `conversation.assigned` or
+  `conversation.unassigned` (target the conversation, detail `via` member / round_robin / automation, the
+  names and ids of the new and old assignee); `conversation.updated` for open inboxes; the
+  `conversation.assigned` webhook (now emitted); and a notification to the new assignee. *The note and
+  the audit row are the conversation's activity:* the contact timeline (GR-17) reads the audit rows for
+  the contact's conversations ("Assigned to Priya", "By Sam. From Kim.", "Round-robin", "By an
+  automation"; new timeline kind `assignment`). *Deviation: audit rows from a round-robin turn or a flow
+  step have no member, so `audit.record_system(label, ...)` is new; the actor name is "Round-robin" or
+  "Automation: name".*
+- **Round-robin** (workspace setting, off by default; `PUT /assignment/settings`, admins). With it on, a
+  customer message in a conversation nobody has hands it to the next *available* member (ingest hook
+  `ingest._assign`, after the broadcast hook, with the conversation already locked). Members are taken in
+  the order they joined; a member whose availability is off is skipped; nobody available leaves the
+  conversation unassigned. The turn is read and moved under a `FOR UPDATE` lock on the workspace row, so
+  concurrent inbound messages take different turns (tested with six at once); the lock lasts until the
+  ingest transaction commits. *Accepted:* a workspace being deleted at the same moment could meet it in a
+  lock cycle; the job retries. Manual assignment ignores availability. The flow action can ask for a
+  round-robin turn whatever the setting says.
+- **Availability.** `PUT /members/{user_id}/availability` (`CanSelf`): your own, or anyone's if you can
+  manage settings (403 otherwise; a stranger is 404). Audited when it changes. The switch is in the
+  assignee menu (your own, for agents) and on the Members page (everyone's, for owners and admins).
+- **Notification** (`conversation_assigned`, new type; `notify_user` is new in `services/notifications`).
+  In app always; push when the member's **"needs you" switch is on** (*decided: no new switch, so the
+  notification settings page and its tests stay as they are*; `PUSH_EVENT_OF_TYPE` maps it to `NEEDS_YOU`).
+  No notification when someone assigns a conversation to themselves. Title "Priya Shah was assigned to
+  you", body says who or what handed it over, link `/inbox/{id}`. Never emailed.
+- **Views and filters.** `GET /conversations` gains the views `mine` (open, assigned to the caller) and
+  `unassigned`, and `assignee_id`. `GET /conversations/counts` gains `mine`. Each list item carries
+  `assignee` ({user_id, name, avatar_url}; the name is the member's, else the part of their email before
+  the @) and `assigned_at`. The live event (`conversation.updated`) carries the same, with the name
+  looked up, so an open inbox updates without a refetch. A caller that cannot look the name up still
+  sends the id, and the web falls back to the members it holds.
+- **Removing a member** clears their conversations (`assignment.clear_for_member`, counted in the
+  `member.removed` audit detail); the note in C-106 is closed.
+- **Routes** (`/v1/w/{wid}`): `PUT /conversations/{id}/assignee` (body `{user_id | null}`, returns the
+  conversation), `GET /assignment` (any member: who can be assigned, with availability and open
+  conversations, and the setting), `PUT /assignment/settings`, `PUT /members/{user_id}/availability`.
+- **Flow action `assign`** (`schemas.flows.Assign`): `mode` member (a chosen `user_id`), round_robin or
+  nobody. Activation and the draft check say "Choose who gets the conversation." or "That person isn't on
+  your team any more." (`Context.member_ids`). At run time a member who has left, or nobody available,
+  skips the step with `skipped: member_missing` or `nobody_available` and the flow goes on. A flow's
+  assign step overrides what round-robin did for the same message (two notes, two audit rows, and the
+  last assignee is notified). Its fields are in the flow editor's Action step.
+- **Web.** Inbox: an "Assigned to me" chip (with the count) before Leads; the row shows the assignee's
+  initials or picture (the name for screen readers); the thread header has an assignee menu (Nobody, each
+  member with open conversations and "away", and the caller's own availability); the details panel has
+  the same as a field. Settings, Members: a "Hand out new conversations" card (the round-robin switch and
+  everyone's availability). The contact timeline shows assignments. *Limit:* the cache keeps a row in the
+  "Assigned to me" list until the next fetch when another member takes it away (only the server knows who
+  is asking); assigning from the app refetches the lists.
+- **Not built.** Per-account or per-skill routing; assignment by workload or by business hours;
+  reassigning on a member's availability change; a daily cap per member; an "unassigned" count chip.
+- **Tests.** Unit: `test_assignment_rules.py` (who may assign, the turn, the note, the flow action's
+  checks, the push mapping). Integration: `test_assignment.py` (the rules, the note, audit and timeline,
+  the notification and its channels, the views and counts, round-robin on and off, an away member,
+  nobody available, availability rights, six concurrent messages, removing a member, live events, the
+  flow action in three modes, activation refusing a stranger); `test_conversations.py` counts updated.
+  Tenancy: the two new routes with ids in `test_isolation.py`. Vitest: `AssigneeMenu`, `AssignmentCard`,
+  `ConversationRow`, `lib/inbox/assignee`, `lib/inbox/cache`, the flow editor's assign action. E2E:
+  `gr20-assignment.spec.ts`.
+- **For the coordinator:** regenerate the client (`Assignee`, `Assignable`, `AssignmentOverview`,
+  `AssigneeUpdate`, `AssignmentSettingsPut`, `AvailabilityPut`, `Assign` in the flow action union, the
+  `mine` and `unassigned` views, `assignee_id`, `mine` on `InboxCounts`, `assignment` on `TimelineKind`
+  and the four operations); the web types are aliases waiting for it. `ContactTimeline`'s icon map and
+  `ListHeader`'s chips will not typecheck until then. Migration `0041` follows `0040` (GR-31).

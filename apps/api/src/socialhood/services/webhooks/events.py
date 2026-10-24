@@ -16,8 +16,8 @@ written when no endpoint wants the event. Backfilled history emits nothing.
 
 A ``lead.captured`` also queues a row for the workspace's Google Sheet (services/sheets.py).
 
-``conversation.assigned`` (GR-20) and ``broadcast.finished`` (GR-23) are in the catalogue so
-endpoints can subscribe now; they're emitted once those features exist.
+``broadcast.finished`` (GR-23) is in the catalogue so endpoints can subscribe now; it's emitted once
+that feature sends it.
 """
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ EVENTS: tuple[EventType, ...] = (
     EventType("lead.captured", 1, "An automation's question saved an email, phone or field."),
     EventType("lead.stage_changed", 1, "A contact's lead stage changed."),
     EventType("message.received", 1, "A customer sent a direct message."),
-    EventType("conversation.assigned", 1, "A conversation was assigned.", emitted=False),
+    EventType("conversation.assigned", 1, "A conversation was assigned or unassigned."),
     EventType("automation.run.completed", 1, "An automation run finished."),
     EventType("broadcast.finished", 1, "A broadcast finished sending.", emitted=False),
 )
@@ -322,6 +322,34 @@ async def message_received(
                 "text": msg.text,
                 "occurred_at": msg.occurred_at.isoformat(),
             },
+        },
+    )
+
+
+async def conversation_assigned(
+    session: AsyncSession,
+    contact: Contact,
+    *,
+    conversation_id: uuid.UUID,
+    platform: str,
+    assignee: dict[str, Any] | None,
+    previous: dict[str, Any] | None,
+    assigned_by: dict[str, Any],
+) -> None:
+    """A conversation was assigned, handed to someone else or unassigned (GR-20). ``assignee`` and
+    ``previous`` are ``{user_id, name}`` or null; ``assigned_by`` is ``{kind, user_id}`` where kind
+    is member, round_robin or automation."""
+    if not await wanted(session, "conversation.assigned"):
+        return
+    await emit(
+        session,
+        "conversation.assigned",
+        {
+            "contact": contact_ref(contact, platform),
+            "conversation_id": str(conversation_id),
+            "assignee": assignee,
+            "previous_assignee": previous,
+            "assigned_by": assigned_by,
         },
     )
 

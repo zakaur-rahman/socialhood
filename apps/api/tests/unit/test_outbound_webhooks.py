@@ -62,10 +62,7 @@ def test_the_envelope() -> None:
 def test_every_event_is_catalogued_with_a_version() -> None:
     names = [e.name for e in events.EVENTS]
     assert len(names) == len(set(names)) == 9
-    assert {e.name for e in events.EVENTS if not e.emitted} == {
-        "conversation.assigned",
-        "broadcast.finished",
-    }
+    assert {e.name for e in events.EVENTS if not e.emitted} == {"broadcast.finished"}
     listed = endpoints.catalogue()
     assert [i.type for i in listed.items] == names
 

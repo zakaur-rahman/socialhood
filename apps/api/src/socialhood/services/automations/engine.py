@@ -74,6 +74,7 @@ from socialhood.schemas.flows import (
     AddTag,
     AiReplyStep,
     AskStep,
+    Assign,
     BranchStep,
     ContactCondition,
     DelayStep,
@@ -530,6 +531,44 @@ async def _act(
                 dedupe_key=f"automation_step:{run.id}:{step.id}",
             )
             return {}
+        case Assign(mode=mode, user_id=user_id):
+            return await _assign(session, scene, mode, user_id, now)
+    return {}
+
+
+async def _assign(
+    session: AsyncSession, scene: Scene, mode: str, user_id: uuid.UUID | None, now: datetime
+) -> dict[str, object]:
+    """GR-20: the flow's "assign" action. A chosen member who has left the team, or nobody being
+    available for a round-robin turn, skips the step with the reason; the flow goes on."""
+    from socialhood.models.identity import WorkspaceMember
+    from socialhood.services import assignment
+
+    target: uuid.UUID | None = None
+    if mode == "member":
+        member = (
+            await session.scalar(
+                select(WorkspaceMember.id).where(WorkspaceMember.user_id == user_id)
+            )
+            if user_id is not None
+            else None
+        )
+        if member is None:
+            return {"skipped": "member_missing"}
+        target = user_id
+    elif mode == "round_robin":
+        target = await assignment.pick_round_robin(session)
+        if target is None:
+            return {"skipped": "nobody_available"}
+    conv = await assignment.lock_conversation(session, scene.conv)
+    await assignment.apply(
+        session,
+        conv,
+        target,
+        actor=assignment.automation_actor(scene.automation.name),
+        now=now,
+        contact=scene.contact,
+    )
     return {}
 
 
