@@ -54,26 +54,50 @@ bg-panel, text-fg-secondary, shadow-glow …      tokens.ts (descriptions + type
   `tracking-eyebrow`, `leading-display`, `duration-*`, `ease-*`) so `cn()` merges them like Tailwind's
   own. A new utility that replaces another of its kind needs a line there.
 
-### Dark only today
+### Two themes (C-102)
 
-The app is dark only: `<html className="dark">` is fixed in `app/layout.tsx`, `:root` sets
-`color-scheme: dark`, and there is no light palette, no switch and no `dark:` class in app code
-(the lint refuses one). The tokens are shaped so that a light theme is a bounded job, not a rewrite,
-but it is not built and not planned. These are the prerequisites if it ever is:
+Dark is the default; Light is a choice. A colour that differs between themes is written once in
+`@theme` as `light-dark(LIGHT, DARK)` (light first), and the browser picks by the element's
+`color-scheme`:
 
-1. A second set of `--color-*` values under a theme selector, for every token in section 2.
-2. The state overlays (`hover`, `pressed`, `line*`, `scrim`) are white or black alpha; a light theme
-   redefines them as black alpha. Decide the values, there is no mechanical flip.
-3. Shadows are black only (`--shadow-floating`, `--shadow-overlay`, the crop mask); light surfaces
-   need lighter shadows. The `glow` shadows are brand-tinted and probably fine.
-4. `media-scrim` and its steps, and the black photo scrims, must stay dark in any theme.
-5. The inverse button (`bg-fg text-canvas`) and `bg-fg` fills flip meaning; check the three places.
-6. `statusBarStyle: "black"` and the viewport `themeColor`; the manifest colours.
-7. The grain texture over the sidebar and auth panel (`public/grain.jpg`), `mix-blend-lighten` on
-   the avatar edge (`ui/avatar.tsx`), and the glows and `canvas`-coloured fades over media.
-8. Clerk uses its `dark` base theme; sonner is left on its default theme (`ui/sonner.tsx`).
-9. The OG image and the icons are drawn from dark tokens; decide whether they follow a theme.
-10. Contrast pairs in DESIGN_SYSTEM §1.11 are all computed on dark surfaces; recheck every pair.
+- `<html data-theme="dark|light|system">` sets it (`:root`, `:root[data-theme=light]`,
+  `:root[data-theme=system]` in globals.css). System sets both schemes, so the OS decides with no script and
+  no listener.
+- A subtree can pin itself: Tailwind's `scheme-dark` on the marketing layout's wrapper keeps the public site
+  dark in a light app. `<html>` is pinned too (an inline script on a first load, `ThemePin` on a client
+  navigation), so scrollbars, overscroll and portals match.
+- Components never need a per-theme class; the lint still refuses `dark:`.
+- A colour with one value (a platform brand, `media-scrim`, `on-brand`, `brand-strong`, `brand-deep`,
+  `shell-*`, `danger-fill`) is the same in both and is listed in `themeInvariant` (`tokens.ts`) with a
+  reason. Shades are `color-mix` of a base token and follow it. `tokens.test.ts` fails on any other single
+  literal, on a pair whose two sides are equal, and on a listed invariant that is now a pair.
+- `pnpm tokens` splits the pairs: `colors`/`shadows` are the dark values, `colorsLight`/`shadowsLight` the
+  light ones. `colorValue(name, theme)` reads either (dark by default).
+
+How the choice is kept (`lib/theme.ts`): the cookie `sh_theme` (`dark` | `light` | `system`, a year,
+`path=/`, `SameSite=Lax`, not HttpOnly). A script in `<head>` copies it to `data-theme` before first paint.
+It is a script and not a server read because the root layout is shared with the static, hourly-revalidated
+marketing pages and `cookies()` would make them dynamic; the CSP already allows inline scripts. The switch
+(`ThemeSwitch`, `useTheme`) writes the cookie and the attribute at once. It is in Settings → Appearance and in
+the workspace menu. `ThemeSync` keeps `<meta name="theme-color">` on the canvas of the theme on screen.
+
+Consumers that can't use CSS variables:
+
+| Consumer | In Light |
+|---|---|
+| Clerk (`lib/clerk-appearance.ts`) | `clerkAppearanceFor(theme)`: Light drops the dark base and reads the light variables; the sign-in and sign-up cards and the user button pass the set for the theme on screen (`components/auth/ThemedClerk.tsx`). Element styles are CSS variables and follow by themselves. |
+| Viewport `themeColor` | Dark canvas from the server; `ThemeSync` sets it per theme |
+| `statusBarStyle` | Stays `black` (iOS reads it once at launch) |
+| Manifest, OG image, icons | Dark on purpose (the installed app opens on the default; the site is dark) |
+| Global error page | Dark: the stylesheet isn't loaded, the theme is unknown |
+| Sonner | Follows with no `theme` prop: every toast colour is a token class |
+| Grain over the sidebar and auth panel | `--grain-opacity` is 0 on light (and System on a light OS) |
+| Avatar edge | A `line` ring, no blend mode |
+
+Light values, measured (WCAG): `fg` on panel 18.0, `fg-secondary` 5.05 (raised-hover) to 6.58 (panel),
+`line-control` 3.61 to 3.91, `brand` marks 4.04 to 5.25, `brand-fg` 5.71 to 7.43, `brand-strong` with white 5.82,
+status text on its soft fill 4.9 or more, `danger-fg` 4.31 or more. `styles/contrast.test.ts` holds the key pairs
+of both themes.
 
 The emails (`apps/api/.../notify/templates/layout.py`) are a separate, light palette on purpose.
 
@@ -220,7 +244,7 @@ chosen so it can't be mistaken for Facebook or LinkedIn blue or for the status c
 | `fg-secondary` on canvas / panel / raised / raised-hover | 7.8 / 7.1 / 6.2 / 5.4 (5.4 or more on every surface) |
 | `line-control` (composited) on canvas / panel / raised / raised-hover | 3.6 / 3.55 / 3.4 / 3.16 |
 | `brand-strong` with `on-brand` | 5.82 |
-| `brand-fg` on panel / raised-hover | 8.6 / 6.5 |
+| `brand-fg` on panel / raised-hover | 8.6 / 6.4 |
 | `brand` (marks) on panel / raised / raised-hover | 4.0 / 3.5 / 3.0 |
 | `danger-fg` on panel | 8.7 |
 | `fg-disabled` on panel | 3.65 (never readable text) |
@@ -255,13 +279,17 @@ the value will be used more than once; that is how the opacity shades became `pa
 
 ## 4. Changing the look
 
+Values are `light-dark(LIGHT, DARK)` pairs: edit the side you mean. **A new colour token** goes in both
+themes: write the pair (or a `color-mix` of another token, or list it in `themeInvariant` with a reason),
+add its `use` entry to `colorMeta` in `tokens.ts`, run `pnpm tokens`.
+
 Every recipe is: edit `globals.css`, run `pnpm tokens`, commit the generated files with it, check
 `/dev/tokens` and the screens named.
 
 - **Primary colour.** Edit `--color-brand` (marks: focus ring, dots, switch), `--color-brand-strong`
   (fills that carry white text: keep it at 4.5:1 with `on-brand`) and `--color-brand-deep` (the
   gradient start). Then the tints: `brand-fg` (text on dark), `brand-soft`, `brand-soft-hover` and
-  `brand-line` (they are `rgb(109 106 245 / …)`; change the three numbers), and the glow shadows follow
+  `brand-line` (`rgb(109 106 245 / …)` on dark, `rgb(91 87 234 / …)` on light; change the numbers in both halves), and the glow shadows follow
   by themselves. This changes primary buttons, outgoing bubbles, the focus outline, selected rows'
   bar, Clerk's forms, charts' main series and the marketing glow. The shell colours (`shell-1`,
   `shell-2`) are the logo tile: change them separately, then run `node scripts/generate-icons.mjs`

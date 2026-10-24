@@ -4,7 +4,8 @@
 //   node scripts/gen-tokens.mjs          (pnpm tokens; also runs before `pnpm dev` and `pnpm build`)
 //
 // It reads: the `@theme` block (colours, shadows, font sizes, tracking, leading, radii, easings,
-// breakpoints), the `:root` variables (motion durations, gradients, shadcn aliases), `@custom-variant`
+// breakpoints; a colour or shadow that differs between themes is written `light-dark(LIGHT, DARK)`
+// and split into a dark set and a light set, C-102), the `:root` variables (motion durations, gradients, shadcn aliases), `@custom-variant`
 // lines and the one-line `@utility` rules. tokens.test.ts runs `generate()` again and fails when
 // the committed files differ, so an edit to globals.css without `pnpm tokens` can't land.
 import { readFileSync, writeFileSync } from "node:fs";
@@ -39,12 +40,45 @@ function declarations(body) {
   return out;
 }
 
+/**
+ * Picks one side of every `light-dark(LIGHT, DARK)` in a value, nested ones included:
+ * `resolveTheme("0 1px light-dark(#fff, #000)", "dark")` is `0 1px #000`. A value without the
+ * function is the same in both themes and comes back unchanged. The arguments are split at the
+ * top-level comma, so `color-mix(in srgb, …)` and `rgb(…)` inside them are safe.
+ */
+export function resolveTheme(value, theme) {
+  const open = value.indexOf("light-dark(");
+  if (open === -1) return value;
+  let depth = 0;
+  let comma = -1;
+  let i = open + "light-dark(".length;
+  const start = i;
+  for (; i < value.length; i += 1) {
+    const ch = value[i];
+    if (ch === "(") depth += 1;
+    else if (ch === ")") {
+      if (depth === 0) break;
+      depth -= 1;
+    } else if (ch === "," && depth === 0 && comma === -1) comma = i;
+  }
+  if (comma === -1 || i >= value.length) throw new Error(`Unbalanced light-dark() in: ${value}`);
+  const light = value.slice(start, comma).trim();
+  const dark = value.slice(comma + 1, i).trim();
+  const rest = value.slice(i + 1);
+  return resolveTheme(value.slice(0, open) + (theme === "light" ? light : dark) + resolveTheme(rest, theme), theme);
+}
+
 const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
 
 /** @param {string} source the text of globals.css */
 export function generate(source) {
   const css = stripComments(source.replace(/\r\n/g, "\n"));
-  const theme = declarations(blocks(css, "@theme").join("\n"));
+  const themeAll = declarations(blocks(css, "@theme").join("\n"));
+  // The dark set is the default: `colors`, `shadows` and the rest are the dark values, as before.
+  // The light set repeats every colour and shadow, resolved the same way (one side of each pair).
+  const theme = themeAll.map(([name, value]) => [name, resolveTheme(value, "dark")]);
+  const themeLight = themeAll.map(([name, value]) => [name, resolveTheme(value, "light")]);
+  const pairs = themeAll.filter(([, value]) => value.includes("light-dark(")).map(([name]) => name);
   const rootVars = declarations(blocks(css, ":root").join("\n"));
 
   const colors = {};
@@ -73,6 +107,14 @@ export function generate(source) {
     else if (name.startsWith("breakpoint-")) breakpoints[name.slice(11)] = value;
   }
 
+  const colorsLight = {};
+  const shadowsLight = {};
+  for (const [name, value] of themeLight) {
+    if (name.startsWith("color-") && name !== "color-*" && !value.match(/^var\(--color-[a-z0-9-]+\)$/)) colorsLight[name.slice(6)] = value;
+    else if (name.startsWith("shadow-")) shadowsLight[name.slice(7)] = value;
+  }
+  const themed = pairs.map((name) => name.replace(/^(color|shadow)-/, "$1:"));
+
   const motion = {};
   const gradients = {};
   const shadcn = {};
@@ -94,7 +136,7 @@ export function generate(source) {
     utilities[match[1]] = match[2];
   }
 
-  return { colors, colorAliases, shadows, fontSizes, tracking, leading, radius, easings, breakpoints, motion, gradients, shadcn, variants, utilities };
+  return { colors, colorsLight, themed, colorAliases, shadows, shadowsLight, fontSizes, tracking, leading, radius, easings, breakpoints, motion, gradients, shadcn, variants, utilities };
 }
 
 /** The two files' text, from the generated values. */

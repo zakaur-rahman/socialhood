@@ -83,7 +83,7 @@ export function AuthShell({ mode, children }: { mode: AuthMode; children: ReactN
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-glow-brand" />
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 bg-repeat opacity-5"
+          className="pointer-events-none absolute inset-0 bg-repeat opacity-(--grain-opacity)"
           style={{ backgroundImage: "url(/grain.jpg)" }}
         />
         <div className="relative max-w-xl">

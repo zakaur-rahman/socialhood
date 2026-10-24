@@ -1,6 +1,5 @@
 "use client";
 
-import { UserButton } from "@clerk/nextjs";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
@@ -8,6 +7,7 @@ import { useEffect, useRef, type ReactNode } from "react";
 import type { Route } from "next";
 
 import { AskButton, AskRoot } from "@/components/agent/AskPanel";
+import { ThemedUserButton } from "@/components/auth/ThemedClerk";
 import { UpgradeDialog } from "@/components/billing/UpgradeDialog";
 import { creditsUpgrade } from "@/components/billing/upgrade-requests";
 import { useOpenPortal } from "@/components/billing/use-billing-actions";
@@ -87,7 +87,7 @@ export function AppShell({ children, banners = [] }: { children: ReactNode; bann
     workspaces: workspaces.data,
     userName: me.data?.name ?? null,
     userEmail: me.data?.email ?? null,
-    account: <UserButton />,
+    account: <ThemedUserButton />,
     unreadCount: counts.data?.unread ?? 0,
     commentsCount: commentCounts.data?.needs_reply ?? 0,
     credits: creditsUsage(billing.data, billing.isPending),

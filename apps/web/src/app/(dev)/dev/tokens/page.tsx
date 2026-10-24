@@ -78,7 +78,12 @@ export default function TokensPage() {
               <span className={`${token.swatch} size-10 shrink-0 rounded-lg border border-line-strong`} aria-hidden />
               <span className="min-w-0 text-sm">
                 <span className="block font-medium">{token.name}</span>
-                <span className="block font-mono text-xs tabular-nums text-fg-secondary">{token.value}</span>
+                <span className="block font-mono text-xs tabular-nums text-fg-secondary">
+                  {token.light === token.value ? token.value : `dark ${token.value}`}
+                </span>
+                {token.light === token.value ? null : (
+                  <span className="block font-mono text-xs tabular-nums text-fg-secondary">light {token.light}</span>
+                )}
                 <span className="block truncate text-xs text-fg-secondary">{token.use}</span>
               </span>
             </li>
@@ -123,7 +128,8 @@ export default function TokensPage() {
           {shadowTokens.map((s) => (
             <div key={s.name} className={`${s.sample} rounded-lg p-4`}>
               <span className="block text-sm font-medium">{s.name}</span>
-              <span className="block font-mono text-xs break-words text-fg-secondary">{s.value}</span>
+              <span className="block font-mono text-xs break-words text-fg-secondary">dark {s.value}</span>
+              <span className="block font-mono text-xs break-words text-fg-secondary">light {s.light}</span>
               <span className="block text-xs text-fg-secondary">{s.use}</span>
             </div>
           ))}
@@ -139,7 +145,8 @@ export default function TokensPage() {
           {glassShadows.map((g) => (
             <div key={g.name} className={`${g.sample} rounded-lg p-4`}>
               <span className="block text-sm font-medium">{g.name}</span>
-              <span className="block font-mono text-xs break-words text-fg-secondary">{g.value}</span>
+              <span className="block font-mono text-xs break-words text-fg-secondary">dark {g.value}</span>
+              <span className="block font-mono text-xs break-words text-fg-secondary">light {g.light}</span>
               <span className="block text-xs text-fg-secondary">{g.use}</span>
             </div>
           ))}

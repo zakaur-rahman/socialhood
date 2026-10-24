@@ -5256,3 +5256,42 @@ local-dev. This entry makes it real in the theme system (C-100), and the preview
 - **Icons.** `node scripts/generate-icons.mjs` was run; the PNGs use the new shell gradient.
 - Tests that quoted the old classes or values were updated (card, button, floating family, sonner,
   tooltip 13:1, manifest, tone).
+
+## C-102 · Light mode (feature/theme-midnight-glass)
+
+Light mode with a Dark / Light / System switch. Dark stays the default and the marketing site stays dark.
+
+- **Mechanism: `light-dark()` pairs.** Each differing colour is one declaration, `light-dark(LIGHT,
+  DARK)`, in the same `@theme` entry, so the two values sit side by side and a token can't exist in one
+  theme only. `<html data-theme>` sets `color-scheme` (dark, light, or both for System, which therefore
+  follows the OS with no script). Chosen over a second block of overrides under a selector because that
+  needs the dark values written twice to pin a subtree dark (the marketing pages), and over a `dark`
+  class because `dark:` is banned. Checked that Tailwind's optimizer keeps `light-dark()` intact in
+  custom properties. Needs a 2024 browser (Chrome 123, Safari 17.5, Firefox 120).
+  `scripts/gen-tokens.mjs` splits the pairs (`colors`/`colorsLight`, `shadows`/`shadowsLight`);
+  `themeInvariant` lists single-valued colours with reasons.
+- **Choice and first paint.** Cookie `sh_theme` (dark | light | system, default dark), applied by a small
+  script in `<head>`. *Deviation from the brief: no server read in the root layout.* The root layout is
+  shared with the marketing pages, which are static and revalidated hourly; `cookies()` there would make
+  them all dynamic. The CSP already allows inline scripts. Only a no-JS visitor differs: they get Dark.
+- **Switch.** Settings → Appearance (new tab, everyone) and a Theme radio group in the workspace menu (the
+  shell's account area; Clerk's own user menu can't hold a three-way control). It is the member's, per
+  browser; no Save bar.
+- **Palette.** Soft cool canvas `#F5F6FB`, white panels, cool ink alpha for lines and states, text
+  `#14161F` / `#585C73`, the same indigo family (`brand` `#5B57EA`, `brand-fg` `#4640C8`,
+  `brand-strong` and `brand-deep` unchanged, 5.82:1 with white). Status colours are darker on light so they
+  read as text on their soft fills (success `#166534`, warning `#92400E`, danger-fg `#B91C1C`). Glass on
+  light: panes 88%, cards 72%, floating 92% white frost with the same blurs; shadows are cool ink; the
+  ambient glows are lighter (new tokens `ambient-1..3`). Every key pair is measured and held by
+  `styles/contrast.test.ts`.
+- **Marketing stays dark.** The layout wrapper carries `scheme-dark` and `bg-ambient`; `<html>` is pinned
+  by an inline script on a first load and by `ThemePin` on a client navigation, so scrollbars, overscroll
+  and portals match. Auth pages and the app follow the choice.
+- **Runtime-literal consumers.** Clerk gets per-theme variables and base (component-level appearance);
+  viewport `themeColor` starts dark and `ThemeSync` moves it; manifest, OG image, icons and the global
+  error page stay dark; `statusBarStyle` stays black (read once by iOS). See THEME.md section 1.
+- **Dark-only spots.** Shadows are pairs; the avatar edge lost `mix-blend-lighten` for a plain `line` ring;
+  the grain is `--grain-opacity` (0 on light); `dark:` variant now follows `data-theme="dark"`; the
+  inverse button works by token (near-black pill in light, also on photos).
+- Not verified in a browser (no build or screenshots by brief): Clerk's merge of the per-component
+  appearance over the provider's, and iOS status bar in light.

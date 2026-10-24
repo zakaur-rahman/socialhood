@@ -32,6 +32,7 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "Business hours",
       "Website chat",
       "Notifications",
+      "Appearance",
       "Billing and usage",
       "Integrations",
       "Members",
@@ -49,6 +50,7 @@ describe("Settings tabs (UX-SCR-07)", () => {
       "Saved replies",
       "Business hours",
       "Notifications",
+      "Appearance",
       "Ask Social Hood",
     ]);
     expect(screen.getByRole("link", { name: "Notifications" })).toHaveAttribute("aria-current", "page");

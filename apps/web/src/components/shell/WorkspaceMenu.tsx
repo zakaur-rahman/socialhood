@@ -8,12 +8,16 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Plan, Role } from "@/lib/api/types";
+import { THEME_CHOICES, THEME_LABEL, parseTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/use-theme";
 import { cn } from "@/lib/utils";
 
 import { WORKSPACE_HOME_HREF, WORKSPACE_SETTINGS_HREF } from "./nav";
@@ -64,6 +68,7 @@ export function WorkspaceMenu({
    */
   onShowChecklist?: () => void;
 }) {
+  const theme = useTheme();
   const others = (workspaces ?? []).filter((w) => w.slug !== workspace.slug);
   const trigger = (
     <DropdownMenuTrigger
@@ -140,6 +145,16 @@ export function WorkspaceMenu({
             Workspace settings
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* C-102: the theme is the user's, not the workspace's; it is also in Settings → Appearance. */}
+        <DropdownMenuLabel>Theme</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={theme.choice} onValueChange={(next) => theme.setChoice(parseTheme(next))}>
+          {THEME_CHOICES.map((choice) => (
+            <DropdownMenuRadioItem key={choice} value={choice}>
+              {THEME_LABEL[choice]}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

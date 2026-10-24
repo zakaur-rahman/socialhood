@@ -3,8 +3,11 @@
 /* Addition to §4.2 (docs/CONFLICTS.md C-002): keyframes and data-state variants used by shadcn v4 components. No colours. */
 @import "shadcn/tailwind.css";
 
-/* Addition to §4.2 (C-002): the app is dark-only (D13), so `dark:` follows the class on <html>, not the OS setting. */
-@custom-variant dark (&:is(.dark *));
+/* Addition to §4.2 (C-002), reworked for light mode (C-102): `dark:` follows the theme attribute on
+   <html> (or a pinned subtree), not the OS setting. App code doesn't use it (the lint refuses it):
+   a token has both values, so a component never needs a per-theme class. Kept for `shadcn add`
+   output. Under the System choice it is false, because only the browser knows the scheme. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 /* A short viewport, 500 px tall or less: 200% zoom, a landscape phone (RSP-006). Sticky bars stay in
    the flow there (`short:static`, shell/sticky-bar.ts) so they can't take a quarter of the screen,
@@ -21,7 +24,15 @@
    `pnpm tokens` (scripts/gen-tokens.mjs, run by predev and prebuild) reads this file and writes
    styles/tokens.generated.ts and .json, which the TypeScript consumers (Clerk, the OG image, the
    manifest, the icon generator, /dev/tokens) read; tokens.ts holds only the descriptions. Edit a
-   value here, run `pnpm tokens`, commit the generated files. */
+   value here, run `pnpm tokens`, commit the generated files.
+
+   TWO THEMES, ONE DECLARATION (C-102). A colour that differs between themes is written once as
+   `light-dark(LIGHT, DARK)`, light first, so the pair sits side by side. The browser picks by the
+   element's `color-scheme`: `<html data-theme>` sets it (dark, light, or both for System, which
+   follows the OS with no script), and a subtree can pin itself (`scheme-dark`: the marketing
+   pages). A colour with one value (a platform brand, the media scrim, `on-brand`) is the same in
+   both and is listed in `themeInvariant` (styles/tokens.ts). Shades are `color-mix` of a base
+   token and follow it. The generator splits the pairs into a dark and a light set. */
 
 @theme {
   /* The palette lock (UI-070, C-075): Tailwind's default colours are cleared, so only the
@@ -34,22 +45,22 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 
   /* Surfaces: Midnight, a charcoal with a cool indigo cast (C-101). The ladder is canvas < field < panel < overlay < raised. */
-  --color-canvas: #131520;        /* app and thread background */
-  --color-panel: #1B1E2A;         /* cards, sidebar, list pane, headers, composer bar, the phone drawer */
-  --color-field: #181B26;         /* inputs, incoming bubbles, segmented track */
-  --color-raised: #252937;        /* selected row, active segment, focused input, secondary button */
-  --color-raised-hover: #2E3343;
-  --color-overlay: #222633;       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
-  --color-line: rgb(214 219 255 / 0.10);
-  --color-line-subtle: rgb(214 219 255 / 0.05);
-  --color-line-strong: rgb(214 219 255 / 0.20);
-  --color-line-glass: rgb(214 219 255 / 0.08);  /* a card's edge on glass: quieter than line, the top highlight and the drop shadow carry the rest (C-101) */
-  --color-line-control: rgb(214 219 255 / 0.45);  /* edges that identify a control, 3.16:1 or more on every surface (3.55 on panel); --input (D-01, C-071, C-101) */
+  --color-canvas: light-dark(#F5F6FB, #131520);        /* app and thread background */
+  --color-panel: light-dark(#FFFFFF, #1B1E2A);         /* cards, sidebar, list pane, headers, composer bar, the phone drawer */
+  --color-field: light-dark(#F0F1F8, #181B26);         /* inputs, incoming bubbles, segmented track */
+  --color-raised: light-dark(#E8EAF5, #252937);        /* selected row, active segment, focused input, secondary button */
+  --color-raised-hover: light-dark(#DEE1F0, #2E3343);
+  --color-overlay: light-dark(#FFFFFF, #222633);       /* what floats: popovers, menus, select options, dialogs, sheets, toasts (D-12, C-071) */
+  --color-line: light-dark(rgb(20 24 54 / 0.10), rgb(214 219 255 / 0.10));
+  --color-line-subtle: light-dark(rgb(20 24 54 / 0.06), rgb(214 219 255 / 0.05));
+  --color-line-strong: light-dark(rgb(20 24 54 / 0.20), rgb(214 219 255 / 0.20));
+  --color-line-glass: light-dark(rgb(20 24 54 / 0.08), rgb(214 219 255 / 0.08));  /* a card's edge on glass: quieter than line, the top highlight and the drop shadow carry the rest (C-101) */
+  --color-line-control: light-dark(rgb(20 24 54 / 0.55), rgb(214 219 255 / 0.45));  /* edges that identify a control, 3:1 or more on every surface: dark 3.16 (raised-hover) to 3.63, light 3.61 to 3.91; --input (D-01, C-071, C-101, C-102) */
 
   /* States, as overlays so they work on any surface (C-070) */
-  --color-hover: rgb(214 219 255 / 0.05);    /* hover fill on any surface; neutral chip fill */
-  --color-pressed: rgb(214 219 255 / 0.10);  /* pressed or open: aria-expanded, data-state=open */
-  --color-scrim: rgb(4 5 10 / 0.65);          /* modal and drawer backdrop (UX-SH-02) */
+  --color-hover: light-dark(rgb(20 24 54 / 0.05), rgb(214 219 255 / 0.05));    /* hover fill on any surface; neutral chip fill */
+  --color-pressed: light-dark(rgb(20 24 54 / 0.09), rgb(214 219 255 / 0.10));  /* pressed or open: aria-expanded, data-state=open */
+  --color-scrim: light-dark(rgb(10 12 26 / 0.50), rgb(4 5 10 / 0.65));          /* modal and drawer backdrop (UX-SH-02) */
   --color-media-scrim: #000000;              /* on photos and video only; the steps below are its named shades */
   --color-media-wash: color-mix(in srgb, var(--color-media-scrim) 20%, transparent);   /* a light dim over a photo: file cards, thumbnails */
   --color-media-chip: color-mix(in srgb, var(--color-media-scrim) 70%, transparent);   /* a label or button on a photo: count chips, captions */
@@ -61,16 +72,23 @@
   /* Glass (C-101): the surfaces that let the ambient light show through. Each is its solid token
      at a set strength; the blur comes from the glass-* utilities below. Work panes are subtler than
      cards on purpose: dense text sits on them. */
-  --color-panel-frost: color-mix(in srgb, var(--color-panel) 82%, transparent);    /* work panes: sidebar, inbox panes, headers, composer bar */
-  --color-card-glass: color-mix(in srgb, var(--color-panel) 68%, transparent);     /* cards: where the glass shows */
-  --color-overlay-frost: color-mix(in srgb, var(--color-overlay) 86%, transparent);  /* what floats: menus, popovers, selects, dialogs, sheets, toasts */
+  --color-panel-frost: light-dark(color-mix(in srgb, var(--color-panel) 88%, transparent), color-mix(in srgb, var(--color-panel) 82%, transparent));    /* work panes: sidebar, inbox panes, headers, composer bar */
+  --color-card-glass: light-dark(color-mix(in srgb, var(--color-panel) 72%, transparent), color-mix(in srgb, var(--color-panel) 68%, transparent));     /* cards: where the glass shows */
+  --color-overlay-frost: light-dark(color-mix(in srgb, var(--color-overlay) 92%, transparent), color-mix(in srgb, var(--color-overlay) 86%, transparent));  /* what floats: menus, popovers, selects, dialogs, sheets, toasts */
   --color-raised-frost: color-mix(in srgb, var(--color-raised) 72%, transparent);  /* the secondary button */
-  --color-frost-outline: color-mix(in srgb, var(--color-panel) 45%, transparent);  /* the outline button */
+  --color-frost-outline: light-dark(color-mix(in srgb, var(--color-panel) 55%, transparent), color-mix(in srgb, var(--color-panel) 45%, transparent));  /* the outline button */
+
+  /* The three glows of the ambient light (C-101, C-102), as colours so each theme sets its own
+     strength: indigo at the top corners and a deeper pool at the bottom on dark, lighter washes of
+     the brand on light. --gradient-ambient places them. */
+  --color-ambient-1: light-dark(color-mix(in srgb, var(--color-brand) 14%, transparent), color-mix(in srgb, var(--color-brand) 20%, transparent));
+  --color-ambient-2: light-dark(color-mix(in srgb, var(--color-brand-strong) 8%, transparent), color-mix(in srgb, var(--color-brand-strong) 13%, transparent));
+  --color-ambient-3: light-dark(color-mix(in srgb, var(--color-brand) 10%, transparent), color-mix(in srgb, var(--color-brand-deep) 32%, transparent));
 
   /* Text */
-  --color-fg: #F3F4F8;
-  --color-fg-secondary: #A6A9BC;  /* all secondary and meta text, including timestamps; placeholders (D-06, C-071); 5.4:1 or more on every surface, 7.13 on panel */
-  --color-fg-disabled: #71758A;   /* disabled controls only (3.65:1 on panel: never readable text) */
+  --color-fg: light-dark(#14161F, #F3F4F8);
+  --color-fg-secondary: light-dark(#585C73, #A6A9BC);  /* all secondary and meta text, including timestamps; placeholders (D-06, C-071); 5.4:1 or more on every dark surface (7.13 on panel), 5.05:1 or more on every light one (6.58 on panel) */
+  --color-fg-disabled: light-dark(#A3A6B8, #71758A);   /* disabled controls only (3.65:1 on dark panel, 2.41:1 on light: never readable text) */
   --color-on-brand: #FFFFFF;      /* text and icons on the brand gradient, brand-strong, danger-fill and platform fills (C-070) */
   --color-on-brand-soft: color-mix(in srgb, var(--color-on-brand) 15%, transparent);         /* a quiet fill on a brand bubble: image and button previews */
   --color-on-brand-line: color-mix(in srgb, var(--color-on-brand) 30%, transparent);         /* an edge on a brand bubble */
@@ -78,25 +96,25 @@
   --color-fg-hover: color-mix(in srgb, var(--color-fg) 90%, transparent);  /* hover on the inverse button (bg-fg) */
 
   /* Brand */
-  --color-brand: #6D6AF5;         /* non-text marks: focus ring, dots, selection bar, switch on; never behind text */
-  --color-brand-strong: #5550E0;  /* solid brand fills that carry text (5.82:1 with on-brand); the gradient's end (C-070) */
+  --color-brand: light-dark(#5B57EA, #6D6AF5);         /* non-text marks: focus ring, dots, selection bar, switch on; never behind text; 3:1 or more on every surface: dark 3.01 (raised-hover) to 4.35, light 4.04 to 5.25 */
+  --color-brand-strong: #5550E0;  /* solid brand fills that carry text (5.82:1 with on-brand in both themes); the gradient's end (C-070) */
   --color-brand-deep: #2B2585;
-  --color-brand-fg: #B5B3FF;      /* brand-coloured text and icons on dark surfaces */
-  --color-brand-soft: rgb(109 106 245 / 0.15);
-  --color-brand-soft-hover: rgb(109 106 245 / 0.25);  /* hover and open on brand-soft: the soft button (C-073) */
-  --color-brand-line: rgb(109 106 245 / 0.35);
+  --color-brand-fg: light-dark(#4640C8, #B5B3FF);      /* brand-coloured text and icons: 6.4:1 or more on every dark surface (8.58 on panel), 5.71:1 or more on every light one (7.43 on panel) */
+  --color-brand-soft: light-dark(rgb(91 87 234 / 0.12), rgb(109 106 245 / 0.15));
+  --color-brand-soft-hover: light-dark(rgb(91 87 234 / 0.20), rgb(109 106 245 / 0.25));  /* hover and open on brand-soft: the soft button (C-073) */
+  --color-brand-line: light-dark(rgb(91 87 234 / 0.40), rgb(109 106 245 / 0.35));  /* the light values are the light brand (#5B57EA) */
   --color-shell-1: #4B44C9;       /* logo tile and upgrade button */
   --color-shell-2: #231E6B;
 
   /* Semantic */
-  --color-success: #22C55E;
-  --color-warning: #FB923C;
-  --color-danger: #EF4444;        /* icons and borders */
-  --color-danger-fg: #FCA5A5;     /* danger text on dark */
+  --color-success: light-dark(#166534, #22C55E);  /* marks, and text on success-soft: light 4.9:1 or more on every light surface (a dark green so the text passes) */
+  --color-warning: light-dark(#92400E, #FB923C);  /* the same, light 4.9:1 or more (a dark amber) */
+  --color-danger: light-dark(#DC2626, #EF4444);        /* icons and borders */
+  --color-danger-fg: light-dark(#B91C1C, #FCA5A5);     /* danger text: 7.94:1 on dark overlay, light 4.31:1 or more over every light surface and soft fill (5.54 on panel) */
   --color-danger-fill: #C53030;   /* failed bubble background (white text) */
-  --color-success-soft: rgb(34 197 94 / 0.15);  /* chip, banner and callout fills (C-070) */
-  --color-warning-soft: rgb(251 146 60 / 0.15);
-  --color-danger-soft: rgb(239 68 68 / 0.15);
+  --color-success-soft: light-dark(rgb(22 163 74 / 0.12), rgb(34 197 94 / 0.15));  /* chip, banner and callout fills (C-070) */
+  --color-warning-soft: light-dark(rgb(217 119 6 / 0.12), rgb(251 146 60 / 0.15));
+  --color-danger-soft: light-dark(rgb(220 38 38 / 0.10), rgb(239 68 68 / 0.15));
   --color-danger-line: color-mix(in srgb, var(--color-danger) 30%, transparent);  /* callout edges, as brand-line is for brand */
   --color-warning-line: color-mix(in srgb, var(--color-warning) 40%, transparent);
   --color-danger-fill-hover: color-mix(in srgb, var(--color-danger-fill) 90%, transparent);  /* hover on the destructive button */
@@ -149,15 +167,15 @@
      toasts) and overlay (dialogs, alert dialogs, sheets, over the scrim). The 1 px `line` edge is a
      separate ring-1 ring-line (or a sheet's side border), so a call site's leftover shadow can't
      take the edge with it. */
-  --shadow-floating: 0 8px 24px -6px rgb(0 0 0 / 0.7);
-  --shadow-overlay: 0 24px 64px -12px rgb(0 0 0 / 0.8);
+  --shadow-floating: 0 8px 24px -6px light-dark(rgb(30 35 80 / 0.18), rgb(0 0 0 / 0.7));
+  --shadow-overlay: 0 24px 64px -12px light-dark(rgb(30 35 80 / 0.25), rgb(0 0 0 / 0.8));
 
   /* Glass (C-101): a 1 px inset highlight along the top edge and a soft drop. The cool edge
      around a card is the border (line-glass); the buttons' glow is brand-tinted. */
-  --shadow-glass: inset 0 1px 0 0 rgb(255 255 255 / 0.06), 0 1px 2px rgb(0 0 0 / 0.30), 0 12px 32px -14px rgb(0 0 0 / 0.65);
-  --shadow-highlight: inset 0 1px 0 0 rgb(255 255 255 / 0.06);
-  --shadow-button-primary: inset 0 1px 0 0 rgb(255 255 255 / 0.22), 0 8px 22px -8px color-mix(in srgb, var(--color-brand) 60%, transparent);
-  --shadow-button-secondary: inset 0 0 0 1px var(--color-line-glass), inset 0 1px 0 0 rgb(255 255 255 / 0.06);
+  --shadow-glass: inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06)), 0 1px 2px light-dark(rgb(30 35 80 / 0.08), rgb(0 0 0 / 0.30)), 0 12px 32px -14px light-dark(rgb(30 35 80 / 0.18), rgb(0 0 0 / 0.65));
+  --shadow-highlight: inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06));
+  --shadow-button-primary: inset 0 1px 0 0 rgb(255 255 255 / 0.22), 0 8px 22px -8px light-dark(color-mix(in srgb, var(--color-brand) 40%, transparent), color-mix(in srgb, var(--color-brand) 60%, transparent));
+  --shadow-button-secondary: inset 0 0 0 1px var(--color-line-glass), inset 0 1px 0 0 light-dark(rgb(255 255 255 / 0.9), rgb(255 255 255 / 0.06));
 
   /* Marketing glow (C-100): brand-tinted drops under marketing and auth cards. They replace
      `shadow-2xl shadow-brand/15`, `hover:shadow-xl hover:shadow-brand/10` and
@@ -176,12 +194,12 @@
   --gradient-shell: linear-gradient(135deg, var(--color-shell-1) 0%, var(--color-shell-2) 100%);
   --gradient-glow-brand: radial-gradient(120% 140% at 0% 0%, var(--color-brand-soft), transparent 60%);
   --gradient-glow-brand-top: radial-gradient(50% 55% at 50% 0%, var(--color-brand-soft), transparent 70%);
-  /* The light behind the glass (C-101), fixed to the viewport on the body: indigo at the top
-     corners, a deeper indigo at the bottom. */
+  /* The light behind the glass (C-101), fixed to the viewport on the body; the glows are the
+     --color-ambient-* tokens. */
   --gradient-ambient:
-    radial-gradient(60rem 38rem at 0% -12%, color-mix(in srgb, var(--color-brand) 20%, transparent), transparent 62%),
-    radial-gradient(48rem 32rem at 100% -4%, color-mix(in srgb, var(--color-brand-strong) 13%, transparent), transparent 60%),
-    radial-gradient(64rem 40rem at 55% 115%, color-mix(in srgb, var(--color-brand-deep) 32%, transparent), transparent 65%);
+    radial-gradient(60rem 38rem at 0% -12%, var(--color-ambient-1), transparent 62%),
+    radial-gradient(48rem 32rem at 100% -4%, var(--color-ambient-2), transparent 60%),
+    radial-gradient(64rem 40rem at 55% 115%, var(--color-ambient-3), transparent 65%);
 }
 @utility bg-brand-gradient { background-image: var(--gradient-brand); }
 @utility bg-brand-gradient-decor { background-image: var(--gradient-brand-decor); }
@@ -296,8 +314,23 @@
   to { background-position: -100% 0; }
 }
 
+/* The theme (C-102): `<html data-theme>` is dark (the default), light or system, and sets the
+   scheme that every `light-dark()` above reads. System takes both, so the OS decides with no
+   script. A subtree pins itself with `scheme-dark` (Tailwind's utility; the marketing pages). The
+   attribute is set before first paint (app/layout.tsx, lib/theme.ts). */
+:root { color-scheme: dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="system"] { color-scheme: light dark; }
+
+/* The grain over the sidebar and the auth panel is a dark-theme texture: its opacity is a
+   variable, and it is off on light, and under System when the OS is light. */
+:root { --grain-opacity: 0.05; }
+:root[data-theme="light"] { --grain-opacity: 0; }
+@media (prefers-color-scheme: light) {
+  :root[data-theme="system"] { --grain-opacity: 0; }
+}
+
 :root {
-  color-scheme: dark;
   /* shadcn/ui semantic variables mapped onto the tokens. Nothing hand-written uses these names:
      components, primitives included, wear the tokens (bg-overlay, text-fg-secondary, border-line
      …) and the design lint refuses the alias class names. They stay only so that `shadcn add`

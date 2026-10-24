@@ -9,7 +9,10 @@
 import { tokenValues } from "./tokens.generated";
 
 /** `swatch` is a literal class so Tailwind emits the variable (it only keeps theme values in use). */
-export type ColorToken = { name: string; value: string; use: string; swatch: string };
+export type ColorToken = { name: string; value: string; light: string; use: string; swatch: string };
+
+/** The two themes (C-102). Dark is the default; a token's `value` is its dark value, `light` its light one. */
+export type Theme = "dark" | "light";
 
 /** What each colour is for, by name. Every `--color-*` in globals.css needs an entry (tokens.test.ts). */
 const colorMeta: Record<string, { use: string; swatch: string }> = {
@@ -37,6 +40,9 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "overlay-frost": { use: "What floats on glass: menus, popovers, selects, dialogs, sheets, toasts (86% overlay, strong blur)", swatch: "bg-overlay-frost" },
   "raised-frost": { use: "The secondary button on glass (72% raised)", swatch: "bg-raised-frost" },
   "frost-outline": { use: "The outline button on glass (45% panel)", swatch: "bg-frost-outline" },
+  "ambient-1": { use: "The ambient light's top-left glow, behind the glass", swatch: "bg-ambient-1" },
+  "ambient-2": { use: "The ambient light's top-right glow", swatch: "bg-ambient-2" },
+  "ambient-3": { use: "The ambient light's bottom pool", swatch: "bg-ambient-3" },
   // Lines
   "line-glass": { use: "A card's edge on glass, quieter than line", swatch: "bg-line-glass" },
   line: { use: "Borders", swatch: "bg-line" },
@@ -82,10 +88,31 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   web: { use: "Website chat", swatch: "bg-web" },
 };
 
+/**
+ * Colours that are the same in both themes on purpose, written once in globals.css: a literal here
+ * has no `light-dark()`. Every other literal colour must be a pair (tokens.test.ts), so a new token
+ * can't be added to one theme only. Shades (`color-mix` of another token) follow their base and
+ * are not listed.
+ */
+export const themeInvariant: Record<string, string> = {
+  "media-scrim": "Black over photos and video, dark in any theme",
+  "on-brand": "White on the brand gradient, brand-strong, danger-fill and platform fills, in both themes",
+  "brand-strong": "The gradient's end and the primary fill: white on it is 5.82:1 in both themes",
+  "brand-deep": "The gradient's start",
+  "shell-1": "The logo tile's own gradient; the icons are drawn from it",
+  "shell-2": "The logo tile's own gradient; the icons are drawn from it",
+  "danger-fill": "The failed bubble and the destructive button carry white text: 5.47:1 in both themes",
+  instagram: "A third party's brand colour",
+  whatsapp: "A third party's brand colour",
+  facebook: "A third party's brand colour",
+  linkedin: "A third party's brand colour",
+};
+
 /** The colour tokens, in the order of globals.css, with their values from the generated file. */
 export const colorTokens: ColorToken[] = Object.entries(tokenValues.colors as Record<string, string>).map(([name, value]) => ({
   name,
   value,
+  light: (tokenValues.colorsLight as Record<string, string>)[name] ?? value,
   use: colorMeta[name]?.use ?? "",
   swatch: colorMeta[name]?.swatch ?? `bg-${name}`,
 }));
@@ -97,10 +124,12 @@ export const describedColors: string[] = Object.keys(colorMeta);
  * A colour token's value, for the consumers that can't read CSS variables: Clerk (it computes
  * shades), the OG image (Satori), the manifest and the viewport (UI-ISS-095). They read it here
  * instead of restating the hex, so a token change reaches them too. A chart alias resolves to the
- * token it points at.
+ * token it points at. `theme` picks the dark (default) or light value (C-102); a consumer that follows
+ * the user's choice passes the resolved theme, one that is dark on purpose (the OG image, the
+ * manifest, the global error page) passes nothing.
  */
-export function colorValue(name: string): string {
-  const colors = tokenValues.colors as Record<string, string>;
+export function colorValue(name: string, theme: Theme = "dark"): string {
+  const colors = (theme === "light" ? tokenValues.colorsLight : tokenValues.colors) as Record<string, string>;
   const aliases = tokenValues.colorAliases as Record<string, string>;
   const found = colors[name] ?? colors[aliases[name]];
   if (found === undefined) throw new Error(`Unknown colour token: ${name}`);
@@ -166,6 +195,7 @@ const shadowMeta = [
 export const shadowTokens = shadowMeta.map((entry) => ({
   ...entry,
   value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
+  light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],
 }));
 
 /** The glass family (C-101): a top highlight, a soft drop, the buttons' inner light and glow. */
@@ -178,6 +208,7 @@ const glassShadowMeta = [
 export const glassShadows = glassShadowMeta.map((entry) => ({
   ...entry,
   value: (tokenValues.shadows as Record<string, string>)[entry.name.replace("shadow-", "")],
+  light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],
 }));
 
 /** The marketing glow family (C-100): brand-tinted drops under marketing and auth cards. */

@@ -57,11 +57,11 @@ describe("AvatarFallback", () => {
 })
 
 describe("Avatar", () => {
-  it("has no dark: classes (the app is dark only) and keeps its lightened edge", () => {
+  it("has no dark: classes and draws its edge as a line ring, in either theme (C-102)", () => {
     render(<Contact />)
     const list = classes(screen.getByTestId("avatar"))
     expect(list.filter((c) => c.startsWith("dark:"))).toEqual([])
-    expect(list).toContain("after:mix-blend-lighten")
-    expect(list).not.toContain("after:mix-blend-darken")
+    expect(list).toContain("after:border-line")
+    expect(list.filter((c) => c.includes("mix-blend"))).toEqual([])
   })
 })

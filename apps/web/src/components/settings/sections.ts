@@ -20,6 +20,8 @@ export const SETTINGS_SECTIONS: readonly SettingsSection[] = [
   { segment: "widget", label: "Website chat", roles: ["owner", "admin"] },
   // T8.6: every member's own digest and push settings.
   { segment: "notifications", label: "Notifications", roles: EVERYONE },
+  // C-102: the member's own theme (Dark, Light, System), kept in a cookie on this browser.
+  { segment: "appearance", label: "Appearance", roles: EVERYONE },
   // §3.1: billing is the owner's (admins see it read-only, C-048's Upgrade leads there).
   { segment: "billing", label: "Billing and usage", roles: ["owner", "admin"] },
   // GR-04: outbound webhooks, for owners and admins like the API's integrations routes.

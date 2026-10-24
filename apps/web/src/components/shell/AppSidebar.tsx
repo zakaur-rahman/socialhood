@@ -103,7 +103,7 @@ export function AppSidebar({
     >
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-xl bg-repeat opacity-5"
+        className="pointer-events-none absolute inset-0 rounded-xl bg-repeat opacity-(--grain-opacity)"
         style={{ backgroundImage: "url(/grain.jpg)" }}
       />
 

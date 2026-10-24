@@ -16,8 +16,9 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        // The app is dark only (C-002): the edge lightens the picture (shadcn's dark pair, without `dark:`).
-        "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-line after:mix-blend-lighten data-[size=lg]:size-10 data-[size=sm]:size-6",
+        // The edge is a 1 px `line` ring over the picture: a cool white wash on dark and a cool ink
+        // wash on light. It was `mix-blend-lighten` (dark only, C-002); that blend hides a dark line.
+        "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-line data-[size=lg]:size-10 data-[size=sm]:size-6",
         className
       )}
       {...props}

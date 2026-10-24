@@ -65,9 +65,10 @@ export const colourExceptions: ColourException[] = [
 
   // Consumers that can't read CSS variables.
   { kind: "runtime", where: "app/layout.tsx", reason: "The viewport themeColor is a meta tag: it takes a value, not a variable." },
-  { kind: "runtime", where: "app/manifest.ts", reason: "The web app manifest is JSON: background_color and theme_color are values." },
-  { kind: "runtime", where: "app/global-error.tsx", reason: "It replaces the root layout, so the stylesheet isn't loaded: its inline styles take token values." },
-  { kind: "runtime", where: "components/marketing/og.tsx", reason: "Satori (next/og) draws the share card and can't read CSS variables." },
+  { kind: "runtime", where: "app/manifest.ts", reason: "The web app manifest is JSON: background_color and theme_color are values. Dark on purpose in light mode: the installed app opens on the dark default (C-102)." },
+  { kind: "runtime", where: "app/global-error.tsx", reason: "It replaces the root layout, so the stylesheet isn't loaded: its inline styles take token values, dark: the page can't know the theme (C-102)." },
+  { kind: "runtime", where: "components/marketing/og.tsx", reason: "Satori (next/og) draws the share card and can't read CSS variables. The marketing site it advertises is always dark (C-102)." },
+  { kind: "runtime", where: "lib/theme.ts", reason: "The theme-color meta tag takes the canvas value of the theme on screen, not a variable (C-102)." },
   { kind: "runtime", where: "lib/clerk-appearance.ts", reason: "Clerk computes shades from its `variables`, so they must be values; its element styles use the variables." },
   {
     kind: "code",
@@ -116,10 +117,9 @@ export const colourExceptions: ColourException[] = [
     reason: "The same empty send button as in Ask.",
   },
 
-  // Dark-only assumptions (the light-theme prerequisites list in THEME.md §1).
-  { kind: "text", where: "components/ui/avatar.tsx", match: "mix-blend-lighten", reason: "The avatar edge lightens the picture; it only makes sense on a dark surface." },
-  { kind: "text", where: "app/layout.tsx", match: 'statusBarStyle: "black"', reason: "iOS status bar over a black canvas." },
-  { kind: "text", where: "components/shell/AppSidebar.tsx", match: "url(/grain.jpg)", reason: "A dark grain texture over the sidebar." },
+  // Choices that stay dark or are texture, not a token (the light-theme list in THEME.md §1, C-102).
+  { kind: "text", where: "app/layout.tsx", match: 'statusBarStyle: "black"', reason: "iOS reads the status bar style once, at launch, so it can't follow the theme: black suits the default (Dark)." },
+  { kind: "text", where: "components/shell/AppSidebar.tsx", match: "url(/grain.jpg)", reason: "A grain texture over the sidebar; its opacity is --grain-opacity, which is 0 on light." },
   { kind: "text", where: "components/auth/AuthShell.tsx", match: "url(/grain.jpg)", reason: "The same grain over the auth panel." },
 
   // Files with colours baked in, and the email templates.

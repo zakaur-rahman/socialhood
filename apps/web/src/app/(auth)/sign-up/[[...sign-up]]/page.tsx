@@ -1,7 +1,7 @@
-import { SignUp } from "@clerk/nextjs";
 import type { Metadata } from "next";
 
-import { AuthShell, authAppearance } from "@/components/auth/AuthShell";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { ThemedSignUp } from "@/components/auth/ThemedClerk";
 
 export const metadata: Metadata = { title: "Create your account" };
 
@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Create your account" };
 export default function SignUpPage() {
   return (
     <AuthShell mode="sign-up">
-      <SignUp signInUrl="/sign-in" fallbackRedirectUrl="/app" appearance={authAppearance} />
+      <ThemedSignUp />
     </AuthShell>
   );
 }
