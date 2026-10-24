@@ -4895,3 +4895,228 @@ VIS-11 (range controls), VIS-13 (the report page), VIS-14 (the OpenUI spike), VI
 account names in the prompt), VIS-X4 (design-system entries for `TrendChart`, `LeadList` and
 `DataTableVisual`), a two-series trend, a reply-window pre-check for the lead follow-up, and
 localised labels.
+
+## C-124 · Sequence follow-ups (GR-24, feature/followups-24-32-ask)
+
+The four items C-118 left as "not built", on the same tables and hooks. Migration `0046` (after `0044`;
+`0045` is the visuals branch's), expand-only.
+
+- **Stop when a tag is removed.** New stop rule `stop_removed_tag_ids` (up to 20 tags) beside the
+  existing `stop_tag_ids`. A removal arrives through `webhooks.events.contacts_tagged` like an addition
+  (the contacts API, a flow's "remove tag" step and the agent already call it with `added=False`);
+  `entry.on_tagged` now handles both. The enrolment is stopped with the new reason `tag_removed` and
+  says "A tag they needed was taken off: VIP". Only the contact's *active* enrolments in sequences that
+  list the tag are touched. The stop-reason check on `sequence_enrolments` is widened.
+- **Start on a lead stage.** New entry type `lead_stage` with `entry_stage` (new, qualified, follow up,
+  won or lost; every stage can start a sequence, "new" included). `entry.on_stage`, called by
+  `webhooks.events.lead_stage_changed` (GR-18), now first stops the sequences that stop on the new
+  stage and then enrols the contact in those that start on it, so a stage never stops the sequence it
+  just started. The enrolment says "Lead stage: Qualified". It follows the usual rules: only an active
+  sequence on the contact's own account, one active enrolment at a time, re-entry only if allowed.
+  The `entry_type` check is widened; `entry_stage` has its own check.
+- **Analytics** (`GET /sequences/{id}/analytics`, owners and admins, `services/sequences/analytics.py`).
+  Computed on the server from the enrolments and step runs and cached in Redis for 5 minutes
+  (`seqstats:<workspace>:<sequence>`; a cache outage only costs the query). Definitions:
+  - entered, in it now, finished, stopped, with stopped split by reason (most first);
+  - sent, skipped (split by reason code, with the sentence) and failed, from the step runs;
+  - **replied** = a *sent* run followed by a customer message in the contact's conversation on the same
+    account within 24 hours of the run (`window_hours` in the answer). Someone who answers two steps
+    counts once for each. *My choice of window; the brief said "within the window after a step".*
+  - per step: reached (the runs at that step plus the people it is next for), waiting, sent, skipped,
+    failed, replied, reply rate and the share of everyone who entered, which is the funnel.
+  The reply count is one `EXISTS` over `messages` (`ix_messages_thread` serves it). *Not built:* opens
+  and reads, a date range, per-variable breakdowns.
+- **Webhook events** `sequence.enrolled`, `sequence.step_sent`, `sequence.completed` and
+  `sequence.stopped` through GR-04's catalogue (now 16 events with `order.refunded`; the catalogue test
+  counts them). Payload: the contact, `sequence` (id, name), `enrolment_id`, plus the step (1-based),
+  `step_count`, `sent_as` and `message_id` on a step, and `reason` and `reason_text` on a stop. `emit` is
+  skipped when no endpoint wants the event. A person taken out by hand emits `sequence.stopped` with
+  reason `member`. *The Zapier trigger list (GR-26) is unchanged: it has five triggers and does not
+  expose `order.created` or `order.paid` either, so the sequence events are not added there.*
+- **Web.** The editor offers "A lead moves into a stage" (with a stage picker) and a "One of these tags is
+  taken off" group under "Stops when". The sequence page has a Numbers section (stat figures, the
+  skip and stop reasons, and a `Meter` per step for the funnel) between the form and the people; it
+  stays out of the way if the numbers can't load.
+- **Ask.** `list_sequences` also lists the removed-tag stops ("the tag VIP being removed").
+- **Tests.** Unit: `test_sequence_analytics.py` (the counts, rates and funnel from grouped numbers, the
+  new entry and stop rules, the words). Integration: `test_sequence_follow_ups.py` (tag removed stops
+  and leaves the others, a stage starts a sequence, validation, the numbers with a skip, a stop and a
+  reply, the empty sequence, 404, the four events, the catalogue). Vitest: `SequenceNumbers`, `format`.
+  E2E: `followups-sequences.spec.ts`. *Integration, vitest and e2e were written, not run.*
+- **For the coordinator:** regenerate the client (`SequenceAnalytics`, `StepStats`, `ReasonCount`, the
+  `lead_stage` entry type and `stage`, `removed_tag_ids` / `removed_tag_names`, `tag_removed` stop
+  reason, `get_sequence_analytics`, the four `EventName`s). Migration `0046` follows `0044`; the
+  coordinator re-chains it with the others.
+
+## C-125 · Order follow-ups (GR-32, feature/followups-24-32-ask)
+
+Part payments, refunds, shipping, editing, status messages and the "request payment" flow step, on the
+GR-32 tables. Migration `0047` (after `0046`), expand-only: `orders` gains `amount_paid_minor`,
+`amount_refunded_minor`, `accept_partial`, `fulfilled_at` and `fulfilment_note`; two new tables,
+`order_payments` and `order_refunds`; the status check gains `partially_paid`, `fulfilled` and
+`refunded`, and the source check gains `flow`. Orders paid before it are backfilled with their one
+payment. *Everything Razorpay-side below is unverified against a real account; see
+`docs/verification.md` item 38.* PD-8 (commerce is Pro and Max) applies to all of it; nothing here is
+pending another PD.
+
+### Status and money
+- **Statuses:** draft, awaiting payment, **partly paid**, paid, **shipped** (`fulfilled`), **refunded**,
+  cancelled, expired. The money is rows, not a status: every payment is an `order_payments` row and
+  every refund an `order_refunds` row, and the two totals on the order are kept equal to their sums by
+  `services/orders/ledger.py`. Partly paid means some of the total is paid; paid means all of it.
+  Refunded means everything paid has been given back; a part refund leaves the status as it is (the
+  sheet shows "Partly refunded" and the amounts).
+- **Part payments.** *Razorpay:* the payment request can set `allow_partial`, which creates the link
+  with `accept_partial: true`; Razorpay's `payment_link.partially_paid` and `payment_link.paid` events
+  each record the payment entity's own amount (the link's running total is only a fallback). A Razorpay
+  payment is unique per order by its payment id, so a re-delivered event and the final `paid` event never
+  count twice. A link that does not take part payments ignores a part (and logs it), as before. *In
+  rupees only: unverified whether Razorpay allows part payments in other currencies, so the API refuses
+  `allow_partial` for a non-INR order until a real account says otherwise.* *UPI:* a member records each
+  payment (`POST .../mark-paid` with `amount_minor`; blank is everything left); more than is left is a
+  422. Asking for payment again on a partly paid order asks for what is left (the link or UPI amount and
+  the message say "Paid so far" and "Left to pay").
+- **Cancelling** an order with payments is a 422 ("Refund them before you cancel it"); *a paid order was
+  already final, and a partly paid one now is too.* Unpaid and expired orders behave as before.
+- **Refunds** (`POST /orders/{id}/refunds`: `amount_minor` blank for everything, a required `reason`).
+  Taken from the newest payments first. A Razorpay payment is refunded through the business's own keys
+  (`POST /payments/{id}/refund`, normal speed, our reason in the notes); the refund is **pending** until
+  Razorpay's `refund.processed` (or `refund.failed`) webhook arrives, or processed at once when
+  Razorpay answers so. A UPI payment can't be sent back by us: the member pays it back themselves and
+  the refund is recorded as processed at once ("paid back by you"). The refundable amount is paid,
+  less processed refunds, less pending ones, so two refunds can't promise the same money; a failed
+  refund frees it again. If Razorpay refuses or can't be reached on the first part the request fails
+  (422 or 502) and nothing is recorded; on a later part the failed part is recorded as failed. **A
+  refund made in the Razorpay dashboard** arrives as the same webhook and is recorded as "Refunded in the
+  Razorpay dashboard" (ignored if it is more than was paid or the payment is unknown). The webhook card
+  lists `refund.processed` and `refund.failed` to turn on.
+- **Event** `order.refunded` (payload as for the other order events, plus `refund`: id, amount, reason,
+  method, and `full`), emitted once when a refund becomes processed. `order.created` and `order.paid`
+  also carry `amount_paid_minor` and `amount_refunded_minor`. `RAZORPAY_PROVIDER=fake` refunds
+  (`rfnd_fake_<n>`, processed; `refund_status = "pending"` leaves one for the suite to finish with a
+  signed `refund.processed`).
+- **Shipping.** `POST /orders/{id}/fulfil` with an optional note (courier and tracking number) moves a
+  paid order to `fulfilled`; shown on the order, in Activity and on the contact timeline ("Order #12
+  shipped"). A shipped order can still be refunded.
+- **Audit.** Every change writes a row: `order.edited` (changed parts, totals before and after, whether
+  the link was cancelled), `order.marked_paid` (amount), `order.payment_requested` (method, partial),
+  `order.cancelled`, `order.fulfilled`, `order.refunded` (amount, reason, methods) and
+  `order.status_message` (sent or not); Razorpay-driven changes are system rows labelled "Razorpay"
+  (`order.payment_recorded`, `order.refund_updated`); the flow step's rows are "Automation: name".
+
+### Editing
+- `PATCH /orders/{id}` while the order is a draft or awaiting payment (422 after that, with the status in
+  words): `items` replaces the lines and re-prices them from the catalogue now (the same checks as
+  making an order: switched off, no price, stock, one currency; another workspace's product is 404),
+  `address` and `note` replace theirs (an empty note clears it). **A new total makes the payment link
+  useless:** the old Razorpay link is cancelled (best effort) and the order goes back to a draft, unless
+  the request carries `payment`, which asks for a new request straight after (and sends it). An edit that
+  keeps the total leaves the link alone. The sheet's "Edit order" dialog shares the line and address
+  fields with "Create order" (`OrderLinesFields`).
+
+### Messages to the customer
+- Every status change (`mark-paid`, `cancel`, `fulfil`, `refunds`) accepts an optional `notice`
+  (`message`, `template_name`, `template_language`). The change is made first; the answer's `notice`
+  says `{sent, reason}`, and the sheet toasts the reason when it didn't go.
+  - **Inside the 24-hour window** it goes as text, the member's own words or the default ("Thanks, we've got
+    your payment for order #12 (INR 1598.00).", "We've received INR 500.00 for order #12. INR 1098.00 is
+    still to pay.", "Good news: order #12 is on its way. Delhivery 123", "Order #12 has been cancelled.",
+    "We've refunded INR 200.00 for order #12. It can take a few days to show in your account.").
+    Human Agent applies as for any member's message.
+  - **Outside it on WhatsApp** only an approved *utility* template can go (an order update is not
+    marketing, so marketing consent is not involved; GR-23's `approved_templates` is the source). Its
+    variables are filled in this order: the customer's first name, the order number, the total, the new
+    status in words; a template with more than four is refused. With no template chosen the message is
+    not sent and the answer says "The 24-hour window has closed. WhatsApp only allows an approved
+    template now. Choose a utility template to send this update."
+  - **Outside it on Instagram or Messenger** it can't be sent, and the answer says why.
+  - No conversation (the order has none) or an account that needs reconnecting also say so.
+  The template picker in the sheet lists the number's approved utility templates with up to four
+  variables (`OrderOut` now carries the conversation's `social_account_id` and `platform`).
+  *Unverified:* that a utility template is accepted by Meta for these updates; the sandbox's
+  `order_shipped` (two variables) is what the tests use.
+
+### The flow step "request payment"
+- New step type `payment` (`schemas.flows.PaymentStep`): `source` `items` (up to ten products, with a
+  variant when the product has some, and a quantity) or `draft` (the conversation's latest order that is
+  not paid yet: a draft, a WhatsApp cart, one awaiting payment, or one only partly paid), a `method`
+  (Razorpay or UPI) and an optional `intro`. Like the product step it needs the `commerce` plan to be
+  saved (402 "Asking for payment is part of Pro.") and is checked at activation: the method must be set
+  up under Payments, the products exist, are switched on and have a variant chosen when they have
+  variants, and `items` is not empty; it can't follow a comment's private reply. The flow editor has the
+  step (`PaymentFields`).
+- **At run time** (`services/orders/flow_payment.py`) the plan is checked again, a new order is made at
+  the catalogue's prices *when the step runs* (source `flow`, nobody made it; the monthly cap applies),
+  and the payment message goes as an automation message. Failures end the run with a plain reason in the
+  step log and Activity: no plan, no unpaid order to ask for, a product gone or switched off or out of
+  stock, the method not set up. A refused Razorpay key from inside a run is not written to the payment
+  card (the run commits as a whole). The step's run row carries the `order_id`.
+
+### Other places
+Activity shows paid, shipped and refunded orders; the contact timeline has words for every status; Ask's
+`list_orders` knows the new statuses and counts paid or shipped orders as paid; the orders page filters
+by partly paid, shipped and refunded.
+
+### Not built
+Reminders for unpaid orders; refunds by the line (a refund is an amount, with a reason); automatic
+restocking; shipping labels or courier tracking; delivery fees, tax and discounts; a customer-facing
+order page; editing the lines of a partly paid order (refund and make a new one).
+
+### Tests
+Unit: `test_order_follow_ups.py` (what is left to pay or refund, the split of a refund over payments,
+the default messages, the payment message of a part-paid order, the UPI amount, the Razorpay refund call
+and statuses with a mock transport and the sandbox, the request shapes, the payment step's activation
+checks). Integration: `test_order_follow_ups.py` (UPI parts and the rest, a Razorpay link taking parts
+and each payment counted once, a part and then a full refund with the events and audit, the refund
+rules, a pending refund finished by the webhook and a failed one freeing the money, a dashboard refund,
+Razorpay failures, a UPI refund, shipping, editing and the link, status messages in and out of the
+window, on WhatsApp with templates), `test_flow_payment.py` (the step's order and message, the price
+read when it runs, draft mode, a plan that was left, a method not set up, saving and activating).
+Tenancy: the new routes and tables in `test_isolation.py`; the purge and account-deletion lists have
+the two tables. Vitest: `OrderSheet.test.tsx`, `lib/orders/format`, `lib/automations/flow`. E2E:
+`followups-orders.spec.ts`. *The integration, tenancy, vitest and e2e tests were written, not run.*
+
+### For the coordinator
+- Regenerate the client: `OrderOut` (new money fields, `payments`, `refunds`, `notice`,
+  `social_account_id`, `platform`), `OrderPaymentOut`, `OrderRefundOut`, `NoticeIn`, `NoticeOut`,
+  `MarkPaid`, `CancelOrder`, `FulfilOrder`, `RefundCreate`, `OrderEdit`, `PaymentRequest.allow_partial`,
+  `PaymentStep` / `PaymentItem` in the flow step union and `StepType`, the new statuses, `flow` order
+  source, the operations `edit_order`, `fulfil_order`, `refund_order`, and the `order.refunded` and
+  `sequence.*` event names. The web types are aliases waiting for it.
+- `alembic check` for `0047` (after `0046`, which follows `0044`). Add the two refund events to the
+  Razorpay dashboard's webhook for the live test. Owner track: a real test account to verify item 38.
+
+## C-126 · The assign action in Ask's flow proposals (GR-36 + GR-20, feature/followups-24-32-ask)
+
+GR-20 added the flow action `assign`; `propose_flow` could not draft it. Now it can.
+
+- **The model's side** (`agent/tools/proposals.py`): an action step may be `assign`, with `assign_to`
+  `member`, `round_robin` or `nobody` and, for a member, `member` (the member's name or email as the
+  workspace lists them; never an id, like tags). `build_flow` resolves it with the workspace's roster
+  (`assignment.roster`). A name is matched ignoring case against the member's name (or the part of the
+  email before the @) and their email; no match is a `validation_error` that names the step and lists
+  the team ("There's no team member called "X". Members of this workspace: ..."), which the model can
+  correct; two members with the same name is "More than one member is called ... Use their email
+  address instead."; a missing `assign_to`, a member with no name, or a member named for `nobody` or
+  `round_robin` is refused with what to fix.
+- **Validation is the editor's.** The gateway's `check_flow` already ran `flow_store.reference_errors`,
+  which refuses an assign step whose member is not on the team ("That person isn't on your team any
+  more.") or is missing ("Choose who gets the conversation."); no second rule was added. Approving
+  saves a draft as for any flow.
+- **Round-robin** works in a flow whatever the workspace's own setting says (C-117), but only to an
+  *available* member. *Decision (the brief said "needs the workspace setting or says what to switch
+  on"; the editor and the engine have no such requirement, and "same validation as the editor" won):*
+  the proposal is accepted and its summary says what to switch on: "Nobody is available for assignment
+  now, so the assign step would be skipped. Turn on availability for a member under Members." and/or
+  "New conversations are not handed out in turn yet (Settings, Members). This step still assigns in turn
+  when it runs." (`actions.assign_notes`, from `assignment.overview`.)
+- **The summary** names the member ("assign to Ben Das"), "assign to the next available member" or
+  "remove the assignee" (`flows.describe` takes the member names; without them it says "assign to a team
+  member"), in the proposal card's lines. Ask's reading of an existing flow uses the generic wording.
+- **Schema and prompts.** `ProposedStep` has `assign_to` and `member`; the tool description lists the
+  actions in 500 characters (the registry test caps it). The eval set has `write-flow-assign`.
+- **Tests.** Unit (`test_agent_actions.py`): resolving by name or email, in turn and nobody, every
+  refusal, the stranger message listing the team, the card lines, the round-robin notes, the schema.
+  Integration (`test_agent_actions.py`): a member is saved as an assign step in a draft, a stranger is
+  refused before anything is stored, the round-robin notes with the setting off and nobody available.
+- *Not changed:* the web proposal card shows the summary lines as they are; nothing there lists actions.
