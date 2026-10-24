@@ -11,7 +11,9 @@ Rules for every tool:
   from services with their time range and sample size (FR-AGT-04).
 - Times arrive resolved (agent/timeparse.py) and results echo the range they used (FR-AGT-05).
 - Read tools change nothing; draft tools return a ``DraftResult`` with an action card and change
-  nothing either (FR-AGT-02, FR-AGT-03). Write tools are R2 and go through the gateway.
+  nothing either (FR-AGT-02, FR-AGT-03). The proposal tools (proposals.py, GR-36) are drafts too:
+  they file a pending approval through the action gateway and save nothing until a member
+  approves it. Direct write tools are R2 and go through agent/gateway.py.
 - The principal's role bounds each tool (``min_role``): automations, knowledge and publishing
   tools are for owners and admins, as in the UI.
 """
@@ -29,6 +31,7 @@ TOOL_MODULES = (
     "socialhood.agent.tools.analytics",
     "socialhood.agent.tools.scheduling",
     "socialhood.agent.tools.automations",
+    "socialhood.agent.tools.proposals",
     "socialhood.agent.tools.knowledge",
     "socialhood.agent.tools.integrations",
     "socialhood.agent.tools.activity",
