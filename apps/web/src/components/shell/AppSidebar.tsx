@@ -15,6 +15,7 @@ import { EYEBROW } from "@/styles/tokens";
 
 import { SETTINGS_NAV, activeSegment, navGroupsFor, type NavGroup, type NavItem } from "./nav";
 import { COLLAPSE_SHORTCUT_ARIA, shortcutHint, useCollapseShortcut, useModifierKey } from "./shortcuts";
+import { useCollapsedTooltip } from "./use-collapsed-tooltip";
 import { KBD_CLASS, sidebarFadeClass, sidebarIconClass, sidebarLabelClass, sidebarRowClass } from "./sidebar-styles";
 import { UsageCard } from "./UsageCard";
 import { usageView, type CreditsUsage } from "./usage";
@@ -383,9 +384,11 @@ function WithTooltip({
   children: ReactNode;
 }) {
   // Always wrapped, so the row is never remounted when the sidebar collapses (its text keeps
-  // animating); the tooltip's content exists only while collapsed.
+  // animating); the tooltip's content exists only while collapsed, and it opens only from a hover
+  // after collapsing (useCollapsedTooltip).
+  const tooltip = useCollapsedTooltip(enabled);
   return (
-    <Tooltip>
+    <Tooltip {...tooltip}>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
       {enabled ? <TooltipContent side="right">{label}</TooltipContent> : null}
     </Tooltip>

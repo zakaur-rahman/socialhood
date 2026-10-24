@@ -106,6 +106,19 @@ describe("AppSidebar (UX-SH-01)", () => {
     expect(screen.getByRole("link", { name: "Home" })).not.toHaveAttribute("aria-current");
   });
 
+  it("a row hovered while expanded shows no tooltip once the sidebar collapses (owner, 2026-10-25)", async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderSidebar();
+    await user.hover(screen.getByRole("link", { name: "Schedule" }));
+    await new Promise((resolve) => setTimeout(resolve, 800)); // past the tooltip's open delay
+    rerender({ collapsed: true });
+    expect(screen.queryByRole("tooltip")).toBeNull();
+    // A hover after collapsing still shows its tooltip.
+    await user.unhover(screen.getByRole("link", { name: "Schedule" }));
+    await user.hover(screen.getByRole("link", { name: "Automations" }));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Automations");
+  });
+
   it("toggles collapse when the host allows it", async () => {
     const toggle = vi.fn();
     renderSidebar({ onToggleCollapsed: toggle });

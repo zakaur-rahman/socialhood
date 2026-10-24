@@ -9,6 +9,7 @@ import { useUpgradeDialog } from "@/lib/api/provider";
 import { cn } from "@/lib/utils";
 
 import { creditsUsedText, type UsageView } from "./usage";
+import { useCollapsedTooltip } from "./use-collapsed-tooltip";
 
 /**
  * FR-AI-05: the AI credits meter above the account card (Meter, `role="meter"`; it warns from
@@ -25,6 +26,7 @@ export function UsageCard({
   collapsed: boolean;
 }) {
   const upgradeDialog = useUpgradeDialog();
+  const ringTooltip = useCollapsedTooltip(collapsed);
   if (view.kind === "hidden") return null;
 
   let card: React.ReactNode = null;
@@ -76,7 +78,7 @@ export function UsageCard({
       {ring ? (
         <div className={layer(collapsed)} inert={!collapsed} aria-hidden={!collapsed}>
           <div className="min-h-0 overflow-hidden pl-0.5">
-            <Tooltip>
+            <Tooltip {...ringTooltip}>
               <TooltipTrigger asChild>{ring}</TooltipTrigger>
               {collapsed ? <TooltipContent side="right">AI credits: {text}</TooltipContent> : null}
             </Tooltip>
