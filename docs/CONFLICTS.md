@@ -3527,3 +3527,127 @@ words (`validation.py`, `flows.py`; copy shared with the web):
   the app's document). The jest tests and `zapier validate` have never run: expect small fixes on the
   first `npm test` (Zapier's `bundle` shapes are written from the docs). The `API_BASE_URL` default
   `https://api.socialhood.com` is a guess at the production host.
+
+## C-111 · Website chat widget (GR-28, feature/gr-28-widget)
+
+Decided by the owner on 2026-10-24: **PD-7**. The widget is on every plan. Free shows "Powered by
+Social Hood" (a small link in the widget); Pro and Max turn it off in the widget settings. The abuse
+limits below apply to all plans. *The plan's recommended option was "Pro and Max, with the link on
+Free"; the owner chose to give the widget itself to every plan.* The PD table in the plan says so.
+
+- **A `web` platform, one widget per workspace.** A widget is a `social_accounts` row of platform
+  `web` (its `platform_account_id` is the public widget id, `wgt_` and 22 random characters) and a
+  `widget_settings` row. One per workspace (a partial unique index), not one per site: several
+  sites share it through the allowed-domains list. The first time an owner or admin opens Settings →
+  Website chat, the web account is made (`GET …/widget` writes once); a disconnected one comes back
+  with the same id. Visitors are contacts of that account and chats are ordinary conversations
+  (platform `web`), so the inbox, filters, search, AI, analysis, leads, webhooks and the Needs you
+  queue need nothing special. The account is listed with the others; Connections hides it (it is
+  not a connection) and AI rules and takeover shows it like any account, so the AI mode is set
+  there, not copied. Migration `0037` (down revision 0030; the coordinator re-chains): `web` in the
+  platform check, `widget` in the consent source check, the unique index and `widget_settings`.
+- **Adapter** (`platforms/web/adapter.py`). Capability `dm_send` only. `send_message` mints an id
+  (`web_<uuid>`): the reply is already in the conversation and the widget reads it from there.
+  Everything a platform with posts, comments, tokens or profiles does is `capability_unavailable`.
+  Replies go through the normal send pipeline (queue, job, `sent`), so scheduled messages, AI
+  replies and automations that send text work. Text limit 2,000 characters. No buttons or quick
+  replies (the web has no template for them), no attachments.
+- **No reply window** (`services/reply_window.py`): a page can stay open for days and nothing is
+  sent through a platform that could refuse a late reply. Always `open`, so Auto mode, scheduled
+  messages and automations are never blocked by a closed window. *Recorded as the plan asked.*
+- **The embed and its isolation.** `<script src="https://<api>/widget.js" data-widget="wgt_…" async>`
+  (`data-workspace` is accepted as an alias: the plan's name, though the value is the widget id, not
+  the workspace id). The API serves three plain files from `socialhood/widget/assets/`: `loader.js`
+  (2.9 KB, 1.2 KB gzipped), `frame.js` (16.2 KB, 5.1 KB) and `frame.css` (5.9 KB, 1.9 KB), about 9 KB
+  over the wire in all. No framework and no build step: *not TypeScript compiled by the repo's
+  toolchain*, because a new build target could not be tried here and a 16 KB script does not need
+  one; they are checked with `node --check` and the e2e test. The loader adds one **iframe** from
+  the API's own origin and resizes it; the chat lives inside it. *Iframe, not a shadow DOM:* a
+  frame isolates scripts and CSS both ways, keeps the visitor's session out of the host page, and
+  its `Content-Security-Policy` can name the sites allowed to frame it. The host page's CSP only
+  needs `frame-src` for the API origin. The widget never loads the app's CSS: it has its own small
+  stylesheet, its accent colour from the settings, and light and dark from `prefers-color-scheme`.
+- **Allowed domains are required** (`services/widget/origin.py`). Host names without scheme or port
+  (`example.com`, `*.example.com`; a pasted address is cleaned; `www.` of a bare domain is included;
+  `localhost` and IPs work for testing). A new widget allows nothing, so it shows nowhere until a
+  domain is added. Enforced three ways: the frame page is served only when the loader's `h`
+  (`location.hostname`) is allowed and carries `frame-ancestors` naming the allowed sites, which the
+  browser enforces; the session endpoint checks the same host; the visitor token carries that host and
+  every call checks it again, so removing a domain or switching the widget off stops live sessions
+  within one poll. *Honest limit:* the API is public, so a script outside a browser can call it with
+  any host; what stops it is the rate limits and the abuse rules, not the domain list. Browser calls
+  from another site are refused (`Origin` must be this server's own).
+- **Visitors and tokens** (`security/widget_tokens.py`). The frame keeps a random *visitor key* in
+  its own storage; the contact is keyed by `v_` and 24 hex characters of its SHA-256, so the id in
+  the inbox and exports cannot read the chat. `POST /v1/widget/session` turns the key into a signed
+  *session key* (6 hours; HMAC with a key derived from `TOKEN_ENCRYPTION_KEYS`, like the digest
+  unsubscribe links, so no new secret and rotation works), which the frame holds in memory and sends
+  as a bearer. No secret is in the page. The public routes avoid `token`, `secret` and `password` in
+  field names (SEC-02), so they are `session_key` and `visitor_key`. Nothing is stored for a visitor
+  who never writes; the contact and conversation are made by the first message.
+- **Public API** (`/v1/widget/*`, not in the OpenAPI document): `POST /session`, `GET /messages`
+  (a long poll: `version` and `wait` up to 20 s, rechecked every 1.5 s on a query that holds no
+  connection while sleeping), `POST /messages` (`client_id` makes a retry idempotent), `POST /email`.
+  *Real time is a long poll, not SSE or the inbox stream:* the workspace's Redis stream belongs to
+  members and carries more than a visitor may see; a long poll needs nothing new, works through any
+  proxy and delivers a reply within about 1.5 s of it being sent. The frame stops polling in a
+  hidden tab and before the visitor has written.
+- **Email and consent.** The email form is `off`, `optional` (after the first message, skippable) or
+  `required` (before the first message; the API refuses a message without it). The address is
+  normalised like a flow's question, set on the contact (`email_source = widget`, unverified),
+  qualifies a new lead (GR-18) and fires `contact.updated`/`contact.created`. *`lead.captured` is
+  not fired: it names an automation run, and there is none.* With "Ask for marketing consent" on, an
+  unticked box is shown; ticked, a granted **email** consent is recorded (source `widget`, new)
+  with the exact words shown, the site's host, the address and the time as evidence, as GR-14 does.
+  Unticked records nothing (silence is not a refusal). Consent is for email, the channel the
+  address is for.
+- **Abuse limits, all plans.** Per IP a minute: 120 frame loads, 20 sessions, 40 sends, 240 polls,
+  10 email forms. Per visitor: 10 sends a minute, 300 sends a day, 60 polls a minute. Message
+  length 1,000 characters (the API schema allows 2,000 so the sentence comes from the rules, not a
+  422 with no words). Rules (`services/widget/abuse.py`, new: the app has no DM spam detection to
+  reuse; comment spam is the AI's sentiment): no control characters, at most 2 links, no run of 30
+  of one character, no fourth identical message in a row. **New chats a day, by plan**
+  (`widget_conversations_daily`): Free 50, Pro 500, Max 5,000; over it a visitor sees "try again in a
+  little while" (429 with `Retry-After`), open chats carry on. *The numbers are proposals.*
+- **Plan rules.** New entitlement `widget_remove_branding` (Free false, Pro and Max true).
+  `PUT …/widget` with `show_branding: false` on Free is 402 `entitlement_required`; the choice
+  stays stored across a downgrade and the visitor sees the link again (`show_branding` in the
+  response is what is shown, `can_remove_branding` says whether the switch is locked).
+- **Settings routes** (`GET`/`PUT /v1/w/{wid}/widget`): owners and admins. *Waiting on GR-19:* both
+  should move to `require_permission` when the matrix lands (TODO in `api/v1/widget.py`).
+- **Web.** Settings → Website chat (owners and admins): sites (chips), the embed code with Copy, an
+  on/off switch, title, greeting, accent colour from six brand hues (`widgetAccents` in
+  `styles/tokens.ts`: the widget runs on the visitor's page and needs hex values), position, a
+  preview, the email form and consent, branding (locked on Free, with the upgrade dialog) and a link to
+  the AI settings. One new token, `--color-web` (`#0F766E`, 5.5:1 with white), for the platform
+  badge; a globe glyph; "Website" in the inbox's platform strip, the thread header, the contacts
+  filter, the contact drawer and the AI settings. A website visitor has no profile elsewhere, so
+  "Open in …" is hidden for them. *The theme refactor is pending: the token is one line in
+  `globals.css` and `tokens.ts` to port.*
+- **Not built.** Attachments, a typing indicator, read receipts and a visitor's "seen"; a page URL
+  or title on the conversation (the entry source is `organic`); push or email to the visitor when
+  they close the page (the email they gave could carry it later); several widgets per workspace;
+  per-page rules; a custom domain for the embed; `lead.captured` for the widget form; a custom
+  colour picker (only the six hues, plus an API-set colour shown as "Current colour"); minifying
+  the three files.
+- **Tests.** Unit: `test_widget_origin.py`, `test_widget_tokens.py`, `test_widget_abuse.py`,
+  `test_web_adapter.py` (adapter, registry, window, text limit); `test_account_purge_tables.py`
+  lists `widget_settings`. Integration: `test_website_widget.py` (settings and roles, the branding
+  rule per plan, sessions and sites, a removed domain, the same-origin guard, expired and forged
+  keys, start and receive, idempotency, email and consent, required email, spam rules, the daily
+  cap, per-visitor and per-IP limits, an inbox reply reaching the widget, a waiting poll, the AI
+  answer from knowledge, an escalation to Needs you, the served files and the frame policy).
+  Tenancy: `tests/tenancy/test_widget_tenancy.py` (public routes across two workspaces: same
+  visitor key, forged tokens, widget ids on the wrong site, deleting workspaces) and the settings
+  route and `widget_settings` in `test_isolation.py`; the account deletion test seeds a row. Vitest:
+  `WidgetSettingsPage.test.tsx`, `lib/widget/form.test.ts`, `PlatformGlyph.test.tsx`, a Website
+  segment in `PlatformStrip.test.tsx`; the settings tab lists. E2E: `gr28-widget.spec.ts` (a test
+  page served by the test on `http://localhost`, the chat to the inbox with the AI's draft, the
+  reply back to the open widget, the unread badge, email, keyboard, phone width, a site not on the
+  list, the settings page).
+- **Unsure / for the coordinator:** regenerate the client (`WidgetSettingsOut`, `WidgetSettingsUpdate`,
+  `get_widget_settings`, `update_widget_settings`, `web` in `platform` literals and `widget` in
+  `ConsentSourceName`); the web types are aliases waiting for it. Migration 0037 re-chains and it
+  edits the `ck_contact_consents_source` check: any other branch that recreates it must keep
+  `widget`. The e2e stack needs `TOKEN_ENCRYPTION_KEYS` (it has one) and its rate limits may stay on.
+  `frame-ancestors` for `localhost` allows any port over http and https.
