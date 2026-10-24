@@ -270,6 +270,7 @@ function WindowEdge({
           labels={{ date: `${label} date`, time: `${label} time` }}
           hideLabels
           timeNeedsDate
+          jumpMonths
           className="flex-1"
         />
         {value ? (

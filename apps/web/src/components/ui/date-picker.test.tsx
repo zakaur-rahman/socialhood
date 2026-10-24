@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -10,6 +10,8 @@ import { pickDate } from "@/test/datepicker";
 
 beforeAll(() => {
   Element.prototype.scrollIntoView ??= () => {};
+  Element.prototype.hasPointerCapture ??= () => false;
+  Element.prototype.releasePointerCapture ??= () => {};
 });
 
 function Picker({ initial = "2026-09-28", min, max }: { initial?: string; min?: string; max?: string }) {
@@ -137,5 +139,34 @@ describe("DateTimePicker", () => {
 
     await pickDate(user, "Date", "2026-10-01");
     expect(screen.getByText("Saved: 2026-10-01 21:00")).toBeInTheDocument();
+  });
+});
+
+describe("DatePicker with jumpMonths", () => {
+  function Jump({ min, max }: { min?: string; max?: string }) {
+    const [value, setValue] = useState("2026-09-28");
+    return (
+      <>
+        <p>Saved: {value}</p>
+        <Field id="far">
+          <FieldLabel>Start</FieldLabel>
+          <DatePicker value={value} onChange={setValue} min={min} max={max} today="2026-09-28" jumpMonths />
+        </Field>
+      </>
+    );
+  }
+
+  it("jumps to another month and year from the caption", async () => {
+    const user = userEvent.setup();
+    render(<Jump min="2026-01-15" max="2028-06-30" />);
+    await user.click(screen.getByLabelText("Start"));
+    await user.click(await screen.findByRole("combobox", { name: /year/i }));
+    const years = within(await screen.findByRole("listbox")).getAllByRole("option").map((o) => o.textContent);
+    expect(years).toEqual(["2026", "2027", "2028"]);
+    await user.click(screen.getByRole("option", { name: "2028" }));
+    await user.click(screen.getByRole("combobox", { name: /month/i }));
+    await user.click(await screen.findByRole("option", { name: "March" }));
+    await user.click(within(await screen.findByRole("grid")).getByRole("button", { name: /15/ }));
+    expect(screen.getByText("Saved: 2028-03-15")).toBeInTheDocument();
   });
 });

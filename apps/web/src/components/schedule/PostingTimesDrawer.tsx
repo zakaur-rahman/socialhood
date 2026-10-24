@@ -9,8 +9,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CardInset } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TimeField } from "@/components/ui/date-picker";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -280,11 +280,9 @@ function DayRow({
             {/* The time field and its two buttons share the `default` height: 32 px, 40 px on touch. */}
             <Field id={inputId} className="w-auto">
               <FieldLabel className="sr-only">New time on {name}</FieldLabel>
-              <Input
-                type="time"
-                step={60}
+              <TimeField
                 value={adding}
-                onChange={(event) => setAdding(event.target.value)}
+                onChange={setAdding}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();

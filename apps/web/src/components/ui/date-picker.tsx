@@ -28,6 +28,12 @@ type DatePickerProps = VariantProps<typeof inputVariants> & {
   max?: string
   /** Today in the workspace's zone ("YYYY-MM-DD"); the browser's today when omitted. */
   today?: string
+  /**
+   * A month and a year Select in the calendar's caption, for a field where a far date is allowed.
+   * Years run from `min` to `max`; a side without a bound reaches 10 years from today or from the
+   * chosen day, whichever is further.
+   */
+  jumpMonths?: boolean
   placeholder?: string
   /** Shows a clear button while a day is chosen; clearing calls `onChange("")`. */
   clearable?: boolean
@@ -40,6 +46,15 @@ type DatePickerProps = VariantProps<typeof inputVariants> & {
   "aria-invalid"?: React.AriaAttributes["aria-invalid"]
 }
 
+/** The months a jump-to Select offers: the allowed days, or 10 years around today and the chosen day. */
+function yearBounds(min?: Date, max?: Date, selected?: Date, today?: Date) {
+  const base = today ?? new Date()
+  const years = [base.getFullYear(), selected?.getFullYear() ?? base.getFullYear()]
+  const first = min ?? new Date(Math.min(...years) - 10, 0, 1)
+  const last = max ?? new Date(Math.max(...years) + 10, 11, 31)
+  return { start: new Date(first.getFullYear(), first.getMonth(), 1), end: new Date(last.getFullYear(), last.getMonth(), 1) }
+}
+
 /**
  * A button on the Input recipe that shows the chosen day and opens a calendar. Choosing a day
  * closes it; Esc closes it too and focus returns to the button.
@@ -50,6 +65,7 @@ function DatePicker({
   min,
   max,
   today,
+  jumpMonths = false,
   placeholder = "Pick a date",
   clearable = false,
   clearLabel = "Clear date",
@@ -65,6 +81,7 @@ function DatePicker({
   const label = dayLabel(value)
   const todayDay = parseDay(today)
   const clear = clearable && Boolean(label)
+  const reach = jumpMonths ? yearBounds(minDay, maxDay, selected, todayDay) : null
   return (
     <div className="relative w-full">
     <Popover open={open} onOpenChange={setOpen}>
@@ -108,6 +125,7 @@ function DatePicker({
           defaultMonth={selected ?? todayDay}
           today={todayDay}
           showOutsideDays={false}
+          {...(reach ? { captionLayout: "dropdown" as const, startMonth: reach.start, endMonth: reach.end } : null)}
           disabled={[...(minDay ? [{ before: minDay }] : []), ...(maxDay ? [{ after: maxDay }] : [])]}
           onSelect={(day) => {
             if (!day) return
@@ -287,6 +305,8 @@ type DateTimePickerProps = {
   min?: string
   max?: string
   today?: string
+  /** See DatePicker: a month and year Select for far dates. */
+  jumpMonths?: boolean
   size?: "sm" | "default" | "lg" | "xl"
   density?: "default" | "compact"
   /** Keeps the labels for screen readers only. */
@@ -311,6 +331,7 @@ function DateTimePicker({
   min,
   max,
   today,
+  jumpMonths,
   size = "lg",
   density = "default",
   hideLabels = false,
@@ -326,7 +347,7 @@ function DateTimePicker({
     <div className={cn("grid grid-cols-[minmax(0,1fr)_minmax(0,9rem)] gap-2", className)}>
       <Field id={`${idPrefix}-date`} density={density} invalid={invalid} disabled={disabled}>
         <FieldLabel className={labelClass}>{labels.date}</FieldLabel>
-        <DatePicker size={size} value={value.date} min={min} max={max} today={today} onChange={(date) => onChange({ ...value, date })} />
+        <DatePicker size={size} value={value.date} min={min} max={max} today={today} jumpMonths={jumpMonths} onChange={(date) => onChange({ ...value, date })} />
       </Field>
       <Field id={`${idPrefix}-time`} density={density} invalid={invalid} disabled={disabled || (timeNeedsDate && !value.date)}>
         <FieldLabel className={labelClass}>{labels.time}</FieldLabel>

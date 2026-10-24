@@ -1,10 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { DayPicker, type DayButton } from "react-day-picker"
+import { DayPicker, type DayButton, type DropdownProps } from "react-day-picker"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
 import { buttonVariants } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { formatDay } from "@/lib/day"
 import { cn } from "@/lib/utils"
 
@@ -13,7 +14,9 @@ import { cn } from "@/lib/utils"
  * own stylesheet is not imported, so every part is styled here. Arrow keys, Home/End, PageUp/Down
  * and Enter come from the library. The selected day is the brand fill, today a brand-coloured
  * number, days outside the month are dimmed (or hidden), and a range runs on `brand-soft`. Cells
- * are 36 px, 40 px on coarse pointers (the control ladder).
+ * are 36 px, 40 px on coarse pointers (the control ladder). With `captionLayout="dropdown"` (and
+ * `startMonth` / `endMonth`, which bound the years offered) the caption is a month and a year
+ * Select, the shared control, so a far date is two picks away instead of many clicks on the arrows.
  */
 function Calendar({
   className,
@@ -35,6 +38,7 @@ function Calendar({
         button_next: cn(buttonVariants({ variant: "ghost", size: "icon" }), "aria-disabled:opacity-50"),
         month_caption: "flex h-8 items-center justify-center px-9 pointer-coarse:h-10",
         caption_label: "text-sm font-medium",
+        dropdowns: "flex items-center justify-center gap-1",
         month_grid: "w-full border-collapse",
         weekdays: "flex",
         weekday: "flex size-9 items-center justify-center text-xs font-normal text-fg-secondary pointer-coarse:size-10",
@@ -54,10 +58,37 @@ function Calendar({
             <ChevronRightIcon className={cn("size-4", chevron)} {...rest} />
           ),
         DayButton: CalendarDayButton,
+        Dropdown: CalendarDropdown,
         ...components,
       }}
       {...props}
     />
+  )
+}
+
+/**
+ * The caption's month or year picker: the shared Select in place of the library's native one. The
+ * library reads `event.target.value` from `onChange`, so the picked value is handed over in that
+ * shape. Options outside `startMonth` / `endMonth` arrive already disabled or absent.
+ */
+function CalendarDropdown({ options, value, onChange, disabled, "aria-label": label }: DropdownProps) {
+  return (
+    <Select
+      value={value === undefined ? undefined : String(value)}
+      disabled={disabled}
+      onValueChange={(next) => onChange?.({ target: { value: next } } as React.ChangeEvent<HTMLSelectElement>)}
+    >
+      <SelectTrigger size="sm" aria-label={label} className="h-8 gap-1 px-2 text-sm font-medium pointer-coarse:h-10">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent className="max-h-60 min-w-0">
+        {options?.map((option) => (
+          <SelectItem key={option.value} value={String(option.value)} disabled={option.disabled}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   )
 }
 

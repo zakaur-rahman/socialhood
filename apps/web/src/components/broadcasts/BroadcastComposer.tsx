@@ -378,6 +378,7 @@ export function BroadcastComposer() {
                   }}
                   min={today}
                   today={today}
+                  jumpMonths
                   labelClassName={ITEM_TITLE}
                   className="w-full max-w-sm"
                 />

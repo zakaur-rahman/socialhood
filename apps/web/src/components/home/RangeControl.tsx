@@ -106,13 +106,14 @@ function CustomRangeForm({
             max={to || today}
             min={to ? addDays(to, -(MAX_CUSTOM_DAYS - 1)) : undefined}
             today={today}
+            jumpMonths
             onChange={setFrom}
           />
           <FieldError>{errors?.from}</FieldError>
         </Field>
         <Field id="home-range-to">
           <FieldLabel>To</FieldLabel>
-          <DatePicker value={to} min={from || undefined} max={today} today={today} onChange={setTo} />
+          <DatePicker value={to} min={from || undefined} max={today} today={today} jumpMonths onChange={setTo} />
           <FieldError>{errors?.to}</FieldError>
         </Field>
       </div>

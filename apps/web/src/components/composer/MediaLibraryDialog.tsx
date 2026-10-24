@@ -81,6 +81,7 @@ export function MediaLibraryDialog({
               value={since}
               max={until || undefined}
               placeholder="Any date"
+              jumpMonths
               clearable
               clearLabel="Clear uploaded from"
               onChange={setSince}
@@ -94,6 +95,7 @@ export function MediaLibraryDialog({
               value={until}
               min={since || undefined}
               placeholder="Any date"
+              jumpMonths
               clearable
               clearLabel="Clear to date"
               onChange={setUntil}

@@ -4,8 +4,8 @@ import { Plus, X } from "lucide-react";
 import { useId } from "react";
 
 import { Button } from "@/components/ui/button";
+import { TimeField } from "@/components/ui/date-picker";
 import { Field, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
@@ -75,39 +75,39 @@ export function HoursEditor({
                     return (
                       <div key={index} className="space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <Input
-                            type="time"
-                            size="lg"
-                            className="w-32"
-                            aria-label={`${DAY_NAMES[day.day]} opens at`}
-                            aria-invalid={startError ? true : undefined}
-                            value={range.start}
-                            disabled={disabled}
-                            onChange={(event) =>
-                              setDay(
-                                day.day,
-                                day.ranges.map((r, i) => (i === index ? { ...r, start: event.target.value } : r)),
-                              )
-                            }
-                          />
+                          <div className="w-36">
+                            <TimeField
+                              size="lg"
+                              aria-label={`${DAY_NAMES[day.day]} opens at`}
+                              aria-invalid={startError ? true : undefined}
+                              value={range.start}
+                              disabled={disabled}
+                              onChange={(time) =>
+                                setDay(
+                                  day.day,
+                                  day.ranges.map((r, i) => (i === index ? { ...r, start: time } : r)),
+                                )
+                              }
+                            />
+                          </div>
                           <span aria-hidden className="text-fg-secondary">
                             to
                           </span>
-                          <Input
-                            type="time"
-                            size="lg"
-                            className="w-32"
-                            aria-label={`${DAY_NAMES[day.day]} closes at`}
-                            aria-invalid={endError ? true : undefined}
-                            value={displayEnd(range.end)}
-                            disabled={disabled}
-                            onChange={(event) =>
-                              setDay(
-                                day.day,
-                                day.ranges.map((r, i) => (i === index ? { ...r, end: parseEnd(event.target.value) } : r)),
-                              )
-                            }
-                          />
+                          <div className="w-36">
+                            <TimeField
+                              size="lg"
+                              aria-label={`${DAY_NAMES[day.day]} closes at`}
+                              aria-invalid={endError ? true : undefined}
+                              value={displayEnd(range.end)}
+                              disabled={disabled}
+                              onChange={(time) =>
+                                setDay(
+                                  day.day,
+                                  day.ranges.map((r, i) => (i === index ? { ...r, end: parseEnd(time) } : r)),
+                                )
+                              }
+                            />
+                          </div>
                           <Button
                             variant="ghost"
                             size="icon-lg"
