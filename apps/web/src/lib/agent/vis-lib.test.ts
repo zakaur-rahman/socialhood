@@ -6,8 +6,10 @@ import type { AgentRunDetail, AgentStepProgress } from "@/lib/api/types";
 import { agentRun, runDetail } from "@/test/agent";
 import { leadListVisual, leadRow, tableVisual, trendPoint, trendVisual } from "@/test/visuals";
 
+import { controlGate, controlHints, costWords, currentSelection, offersControls } from "./controls";
+import { REF_KIND_LABEL } from "./format";
 import { applyAgentStepEvent, cancelVisualRefetches, VISUAL_REFETCH_MS, VISUAL_TOOLS } from "./cache";
-import { moreLeads, prepareRepliesHint, prepareRepliesRequest, scoreText, stageLabel } from "./leads";
+import { moreLeads, prepareRepliesHint, prepareRepliesHints, scoreText, stageLabel } from "./leads";
 import { refPath, visualPath } from "./routes";
 import { cellText, moreRows } from "./tables";
 import { gapsNote, plotTrend, pointLabel, pointRow, trendFacts } from "./trend";
@@ -88,17 +90,10 @@ describe("lead list words (VIS-08, VIS-12)", () => {
     expect(moreLeads(leadListVisual({ total: 1, items: [leadRow()] }))).toBe(0);
   });
 
-  it("the follow-up names conversations by id only and says nothing is sent", () => {
-    const request = prepareRepliesRequest(["cv1", "cv2"]);
-    expect(request).toContain("cv1, cv2");
-    expect(request).toContain("draft_reply");
-    expect(request).toContain("send nothing");
-    expect(request).toContain("reply window is closed");
-    expect(request).not.toContain("Priya");
-    expect(request.length).toBeLessThan(2000);
-    // Three UUIDs, the most the API asks for, fit the request limit with room.
-    const ids = Array.from({ length: 3 }, () => "123e4567-e89b-12d3-a456-426614174000");
-    expect(prepareRepliesRequest(ids).length).toBeLessThan(400);
+  it("the follow-up is a structured hint with ids only; the API words the question", () => {
+    const hints = prepareRepliesHints(["cv1", "cv2"]);
+    expect(hints).toEqual({ reply_conversation_ids: ["cv1", "cv2"] });
+    expect(JSON.stringify(hints)).not.toContain("Priya");
     expect(prepareRepliesHint(1)).toBe("Drafts a reply for the top lead. Nothing is sent.");
     expect(prepareRepliesHint(3)).toBe("Drafts a reply for the top 3 leads. Nothing is sent.");
   });
@@ -223,5 +218,66 @@ describe("progressive visuals (VIS-10): a finished visual-producing step refetch
         "top_posts",
       ].sort(),
     );
+  });
+});
+
+describe("controls (VIS-11)", () => {
+  const none = { rangeDays: null, platform: null } as const;
+
+  it("reads the current choice from the visual's period and the run's follow-up", () => {
+    expect(currentSelection(trendVisual({ period: { start: "a", end: "b", label: "x", days: 30 } }), null)).toEqual({
+      rangeDays: 30,
+      platform: null,
+    });
+    expect(currentSelection(trendVisual(), { range_days: 90, platform: "instagram" })).toEqual({
+      rangeDays: 90,
+      platform: "instagram",
+    });
+    // Five days is not one of the offered ranges: none is shown as chosen.
+    expect(currentSelection(trendVisual(), null).rangeDays).toBeNull();
+  });
+
+  it("a change sends the whole selection, whitelisted values only", () => {
+    expect(controlHints(none, { rangeDays: 7 })).toEqual({ range_days: 7 });
+    expect(controlHints({ rangeDays: 7, platform: "all" }, { platform: "whatsapp" })).toEqual({
+      range_days: 7,
+      platform: "whatsapp",
+    });
+  });
+
+  it("the gate explains, by plan and by credits left", () => {
+    expect(controlGate(null)).toEqual({ ok: true });
+    expect(controlGate({ limit: null, used: 9 })).toEqual({ ok: true });
+    expect(controlGate({ limit: 200, used: 100 })).toEqual({ ok: true });
+    expect(controlGate({ limit: 200, used: 196 })).toEqual({ ok: true });
+    expect(controlGate({ limit: 0, used: 0 })).toMatchObject({ ok: false });
+    expect(controlGate({ limit: 200, used: 200, resetsOn: "2026-11-01" })).toMatchObject({
+      ok: false,
+      reason: expect.stringContaining("used all 200 AI credits"),
+    });
+    expect(controlGate({ limit: 200, used: 197 })).toEqual({
+      ok: false,
+      reason: "You have 3 AI credits left this month, and a change can use up to 4.",
+    });
+    expect(costWords).toBe("About 2 to 4 AI credits");
+  });
+
+  it("offers controls on trends, comparisons and period rankings only", () => {
+    expect(offersControls(trendVisual())).toBe(true);
+    expect(offersControls(tableVisual())).toBe(false);
+    expect(offersControls(leadListVisual())).toBe(false);
+  });
+});
+
+describe("report refs (VIS-13)", () => {
+  it("open the weekly report of the week, for one account when the ref names it", () => {
+    const base = { id: "r1", label: "Weekly report, 5-11 Oct 2026", kind: "report" as const };
+    expect(refPath({ ...base, week: "2026-10-05" })).toBe("reports?week=2026-10-05");
+    expect(refPath({ ...base, week: "2026-10-05", parent_id: "123e4567-e89b-12d3-a456-426614174000" })).toBe(
+      "reports?week=2026-10-05&account=123e4567-e89b-12d3-a456-426614174000"
+    );
+    // A malformed ref never builds an address from its text.
+    expect(refPath({ ...base, week: "x&evil=1", parent_id: "../x" })).toBe("reports");
+    expect(REF_KIND_LABEL.report).toBe("Weekly report");
   });
 });

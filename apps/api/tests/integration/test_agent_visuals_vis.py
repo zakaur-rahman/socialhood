@@ -229,6 +229,28 @@ async def test_a_weekly_trend_is_drawn_by_week(shop: Shop) -> None:
     assert len(got.visual.points) == len(got.points) <= 14
 
 
+async def test_a_trend_and_a_comparison_cite_the_weekly_report_of_their_period(shop: Shop) -> None:
+    """VIS-13: the latest finished week inside the period (12 to 18 Oct on Fri 23 Oct), for the
+    account when the question named one; a period without a whole week cites none."""
+    await seed(shop, "2026-10-01", "2026-10-22", lambda d: {"reach": 100})
+    every = await shop.call("metric_trend", {"metric": "reach", "range": "this month"}, now=NOW)
+    [report] = [r for r in every.refs if r.kind == "report"]
+    assert (report.week, report.parent_id) == (date(2026, 10, 12), None)
+    assert report.label == "Weekly report, 12-18 Oct 2026"
+    one = await shop.call(
+        "metric_trend",
+        {"metric": "reach", "range": "this month", "account": "@maple.bakery"},
+        now=NOW,
+    )
+    [mine] = [r for r in one.refs if r.kind == "report"]
+    assert (mine.week, mine.parent_id) == (date(2026, 10, 12), shop.account_id)
+    assert mine.id != report.id
+    compared = await shop.call("compare_periods", {"range": "the last 7 days"}, now=NOW)
+    assert [r.kind for r in compared.refs] == []  # 7 days ending yesterday hold no whole week
+    month = await shop.call("compare_periods", {"range": "this month"}, now=NOW)
+    assert [r.week for r in month.refs if r.kind == "report"] == [date(2026, 10, 12)]
+
+
 async def test_no_readings_means_no_line(shop: Shop) -> None:
     got = await shop.call("metric_trend", {"metric": "reach", "range": "this month"}, now=NOW)
     assert got.known_points == 0

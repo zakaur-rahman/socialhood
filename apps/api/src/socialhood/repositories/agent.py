@@ -37,6 +37,7 @@ from socialhood.models.agent import (
 )
 from socialhood.models.billing import AiFeature, AiUsageEvent
 from socialhood.models.identity import User, WorkspaceMember
+from socialhood.models.inbox import Conversation
 from socialhood.repositories.automations import escape_like
 from socialhood.repositories.base import scoped_update
 
@@ -100,6 +101,14 @@ async def list_runs(
             < tuple_(literal(before[0], _TIMESTAMP), literal(before[1], _UUID))
         )
     return list((await session.scalars(statement.limit(limit + 1))).all())
+
+
+async def count_conversations(session: AsyncSession, ids: set[uuid.UUID]) -> int:
+    """How many of these conversations the workspace has (RLS scopes the query)."""
+    found = await session.scalar(
+        select(func.count()).select_from(Conversation).where(Conversation.id.in_(ids))
+    )
+    return int(found or 0)
 
 
 async def thread_history(session: AsyncSession, run: AgentRun, *, limit: int) -> list[AgentRun]:

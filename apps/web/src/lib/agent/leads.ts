@@ -3,7 +3,7 @@
  * conversations to draft for (`reply_ids`, a few at a time so the run stays inside its credit and
  * tool-call caps); this words the request and the row labels. Pure, tested directly.
  */
-import type { LeadListVisual, LeadRow } from "@/lib/api/types";
+import type { LeadListVisual, LeadRow, RunHints } from "@/lib/api/types";
 
 const STAGE_LABEL: Record<LeadRow["lead_stage"], string> = {
   new: "New",
@@ -28,16 +28,13 @@ export function moreLeads(visual: Pick<LeadListVisual, "total" | "items">): numb
 }
 
 /**
- * The follow-up question for the agent. It carries ids only (no customer text goes into a prompt),
- * asks for one draft_reply per conversation, and says nothing is sent. A closed reply window makes
- * that draft fail on its own, so the request tells the agent to skip it and say so.
+ * The follow-up for the agent (VIS-12, VIS-11): a structured hint with ids only. The API words
+ * the member's question ("Prepare replies for these leads", no ids in view) and the agent's
+ * instruction (one draft_reply per conversation, nothing sent, a closed reply window skipped and
+ * said so), so no customer text and no prompt wording comes from the browser.
  */
-export function prepareRepliesRequest(conversationIds: readonly string[]): string {
-  return (
-    "Prepare replies for these leads. Use draft_reply once for each of these conversations, " +
-    `one at a time, and send nothing: ${conversationIds.join(", ")}. ` +
-    "If a reply window is closed, skip that conversation and say so."
-  );
+export function prepareRepliesHints(conversationIds: readonly string[]): RunHints {
+  return { reply_conversation_ids: [...conversationIds] };
 }
 
 /** The line under the button: what it does and how far it goes. */

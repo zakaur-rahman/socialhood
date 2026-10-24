@@ -13,7 +13,7 @@ import { expect, test, unique } from "./support/fixtures";
  */
 
 type Contact = { id: string; name: string; username: string | null; conversation_id: string | null };
-type Run = { id: string; request: string; action_cards: { kind: string; route: string; label: string }[] };
+type Run = { id: string; request: string; hints?: { reply_conversation_ids?: string[] } | null; action_cards: { kind: string; route: string; label: string }[] };
 
 const SCORES = [90, 60, 30];
 
@@ -117,13 +117,14 @@ test.describe("VIS-07 to VIS-12", () => {
     await expect(list.getByText("Drafts a reply for the top 3 leads. Nothing is sent.")).toBeVisible();
     await list.getByRole("button", { name: "Prepare replies" }).click();
 
-    // The follow-up is a new question in the same thread, naming the conversations by id only.
-    const bubble = page.getByRole("article", { name: /^Question: Prepare replies for these leads\./ });
+    // The follow-up is a new question in the same thread: words in the bubble, ids only in its hints.
+    const bubble = page.getByRole("article", { name: "Question: Prepare replies for these leads" });
     await expect(bubble).toBeVisible({ timeout: 30_000 });
     const asked = await api.call<{ items: Run[] }>("GET", `/v1/w/${workspace.id}/agent/runs?thread_id=${seeded.thread_id}`);
-    const followUp = asked.items.find((run) => run.request.startsWith("Prepare replies for these leads."));
+    const followUp = asked.items.find((run) => run.request === "Prepare replies for these leads");
     expect(followUp).toBeDefined();
-    for (const id of seeded.reply_ids) expect(followUp?.request).toContain(id);
+    expect([...(followUp?.hints?.reply_conversation_ids ?? [])].sort()).toEqual([...seeded.reply_ids].sort());
+    for (const id of seeded.reply_ids) expect(followUp?.request).not.toContain(id);
     // Drafts are never sent: no outbound message exists for any of these conversations.
     for (const { contact } of leads) {
       const messages = await api.call<{ items: { direction: string }[] }>(

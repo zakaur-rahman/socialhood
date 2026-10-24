@@ -56,6 +56,7 @@ from sqlalchemy import delete, select
 from socialhood.agent import visuals
 from socialhood.agent.registry import Principal, ToolContext
 from socialhood.agent.tools import load_tools
+from socialhood.agent.tools.common import REPORT_NAMESPACE
 from socialhood.auth.deps import CurrentUser, Owner, Session
 from socialhood.billing.registry import _process_fake
 from socialhood.errors import ApiError
@@ -186,11 +187,29 @@ class AgentRunIn(BaseModel):
     visual: bool = False  # seed account metrics and attach a metric_comparison visual
     trend: bool = False  # with visual: also a metric_trend step holding the reach line (VIS-07)
     days: int = Field(default=14, ge=2, le=60)
+    # VIS-13: cite the weekly report of this Monday (with account_id: of that account)
+    report_week: date | None = None
 
 
 class AgentRunOut(BaseModel):
     id: uuid.UUID
     thread_id: uuid.UUID
+
+
+def _report_refs(body: AgentRunIn) -> list[dict[str, object]]:
+    """The weekly report as the answer's one source (VIS-13), shaped as the tools cite it."""
+    if body.report_week is None:
+        return []
+    key = f"{body.report_week.isoformat()}:{body.account_id or ''}"
+    return [
+        {
+            "kind": "report",
+            "id": str(uuid.uuid5(REPORT_NAMESPACE, key)),
+            "label": "Weekly report",
+            "parent_id": str(body.account_id) if body.account_id else None,
+            "week": body.report_week.isoformat(),
+        }
+    ]
 
 
 @router.post("/workspaces/{wid}/agent-runs", status_code=201)
@@ -301,7 +320,7 @@ async def create_agent_run(body: AgentRunIn, ctx: Owner, session: Session) -> Ag
         mode="read_only",
         status="succeeded",
         answer=body.answer,
-        answer_refs=[],
+        answer_refs=_report_refs(body),
         model="e2e",
         prompt_version="agent.v4",
         credits=1,

@@ -80,6 +80,7 @@ export const REF_KIND_LABEL: Record<AnswerRefKind, string> = {
   product: "Product",
   order: "Order",
   contact: "Contact",
+  report: "Weekly report",
 };
 
 export type PromptArea = "inbox" | "comments" | "posts" | "automations";
@@ -104,6 +105,7 @@ const FOLLOW_UPS: Record<AnswerRefKind, readonly string[]> = {
   product: ["Which products are out of stock?"],
   order: ["Which orders are still unpaid?"],
   contact: ["Which leads haven't I replied to?"],
+  report: ["How did my reach change last month?"],
 };
 const GENERAL_FOLLOW_UPS = ["Which posts beat my average this month?", "What are people complaining about this week?"];
 

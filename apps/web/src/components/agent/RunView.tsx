@@ -9,10 +9,11 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { answerToPlainText } from "@/lib/agent/answer";
+import type { CreditsNow } from "@/lib/agent/controls";
 import { creditsText, followUpsFor, isActive, runOutcome, workedFor, type RunOutcome } from "@/lib/agent/format";
 import { useUpgradeDialog } from "@/lib/api/provider";
 import { useAgentRun } from "@/lib/api/queries";
-import type { AgentRun, AgentRunDetail, Role, Visual } from "@/lib/api/types";
+import type { AgentRun, AgentRunDetail, AskInput, Role, RunHints, Visual } from "@/lib/api/types";
 import { errorMessage } from "@/lib/copy";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
@@ -31,9 +32,12 @@ export type RunContext = {
   /** Following a link or action card leaves the panel: the caller closes it. */
   onNavigate?: () => void;
   /** Ask in the same thread: again after a failure or a cancel, or a follow-up. */
-  onAsk?: (request: string) => void;
+  onAsk?: (ask: AskInput) => void;
   /** A question is being sent, or another run in the thread is working. */
   busy?: boolean;
+  /** VIS-11: the AI credits now, so a visual's range and platform controls can say what a change
+   * costs, or why it can't run. */
+  credits?: CreditsNow;
 };
 
 /**
@@ -125,7 +129,7 @@ function Finished({
           <Skeleton className="h-3 w-2/3" />
         </div>
       ) : null}
-      <RunVisuals visuals={visuals} context={context} askable={latest} />
+      <RunVisuals visuals={visuals} hints={run.hints} context={context} askable={latest} />
       {run.action_cards.length > 0 ? (
         <div className="space-y-2">
           {run.action_cards.map((card, index) => (
@@ -167,7 +171,17 @@ function Finished({
  * GR-38: the run's visuals, in step order. `askable` (the latest answer of a finished run) lets a
  * visual ask a follow-up in the thread, as the lead list's "Prepare replies" does (VIS-12).
  */
-function RunVisuals({ visuals, context, askable = false }: { visuals: Visual[]; context: RunContext; askable?: boolean }) {
+function RunVisuals({
+  visuals,
+  hints,
+  context,
+  askable = false,
+}: {
+  visuals: Visual[];
+  hints?: RunHints | null;
+  context: RunContext;
+  askable?: boolean;
+}) {
   if (visuals.length === 0) return null;
   return (
     <div className="space-y-3" data-testid="run-visuals">
@@ -179,6 +193,9 @@ function RunVisuals({ visuals, context, askable = false }: { visuals: Visual[]; 
           onNavigate={context.onNavigate}
           onAsk={askable ? context.onAsk : undefined}
           busy={context.busy}
+          runHints={hints}
+          credits={context.credits}
+          now={context.now}
         />
       ))}
     </div>
@@ -241,7 +258,7 @@ function OutcomeNotice({ outcome, run, context }: { outcome: RunOutcome; run: Ag
       data-outcome={outcome.kind}
       action={
         canAskAgain ? (
-          <AlertAction disabled={context.busy} onClick={() => context.onAsk?.(run.request)}>
+          <AlertAction disabled={context.busy} onClick={() => context.onAsk?.(run.hints ?? run.request)}>
             <RotateCw aria-hidden /> {outcome.kind === "failed" ? "Try again" : "Ask again"}
           </AlertAction>
         ) : upgrade ? (

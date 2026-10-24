@@ -101,7 +101,16 @@ export class Api {
    */
   agentRun(
     wid: string,
-    run: { request: string; answer: string; accountId?: string; visual?: boolean; trend?: boolean; days?: number },
+    run: {
+      request: string;
+      answer: string;
+      accountId?: string;
+      visual?: boolean;
+      trend?: boolean;
+      days?: number;
+      /** VIS-13: cite the weekly report of this Monday (YYYY-MM-DD). */
+      reportWeek?: string;
+    },
   ): Promise<{ id: string; thread_id: string }> {
     return this.seed("POST", `/workspaces/${wid}/agent-runs`, {
       request: run.request,
@@ -110,6 +119,7 @@ export class Api {
       visual: run.visual ?? false,
       trend: run.trend ?? false,
       days: run.days ?? 14,
+      report_week: run.reportWeek,
     });
   }
 

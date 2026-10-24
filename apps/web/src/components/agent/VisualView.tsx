@@ -3,7 +3,8 @@
 import * as Sentry from "@sentry/nextjs";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
-import type { Visual } from "@/lib/api/types";
+import { currentSelection, offersControls, type CreditsNow } from "@/lib/agent/controls";
+import type { AskInput, RunHints, Visual } from "@/lib/api/types";
 
 import { DataTableVisual } from "./visuals/DataTableVisual";
 import { LeadList } from "./visuals/LeadList";
@@ -11,6 +12,7 @@ import { MetricComparison } from "./visuals/MetricComparison";
 import { RankedPosts } from "./visuals/RankedPosts";
 import { SentimentSummary } from "./visuals/SentimentSummary";
 import { TrendChart } from "./visuals/TrendChart";
+import { VisualControls } from "./visuals/VisualControls";
 
 /**
  * A visual that fails to draw is hidden and reported (Sentry, tagged with its kind), so the text
@@ -47,19 +49,37 @@ export function VisualView({
   onNavigate,
   onAsk,
   busy,
+  runHints,
+  credits = null,
+  now,
 }: {
   visual: Visual;
   slug: string;
   /** Following a link leaves the Ask panel: the caller closes it. */
   onNavigate?: () => void;
-  /** Ask in the same thread (the lead list's "Prepare replies"); absent for an older answer. */
-  onAsk?: (request: string) => void;
+  /** Ask in the same thread (the lead list's "Prepare replies", the range and platform controls);
+   * absent for an older answer. */
+  onAsk?: (ask: AskInput) => void;
   busy?: boolean;
+  /** The follow-up this visual's run was made from, so the controls show what is chosen. */
+  runHints?: RunHints | null;
+  /** The AI credits left, so a control can say what a change costs or why it can't run. */
+  credits?: CreditsNow;
+  now?: Date;
 }) {
   return (
     <VisualBoundary kind={visual.kind}>
-      <div data-testid="visual" data-kind={visual.kind}>
+      <div data-testid="visual" data-kind={visual.kind} className="space-y-2">
         <Drawn visual={visual} slug={slug} onNavigate={onNavigate} onAsk={onAsk} busy={busy} />
+        {onAsk && offersControls(visual) ? (
+          <VisualControls
+            selection={currentSelection(visual, runHints)}
+            credits={credits}
+            now={now}
+            busy={busy}
+            onChange={onAsk}
+          />
+        ) : null}
       </div>
     </VisualBoundary>
   );
@@ -75,7 +95,7 @@ function Drawn({
   visual: Visual;
   slug: string;
   onNavigate?: () => void;
-  onAsk?: (request: string) => void;
+  onAsk?: (ask: AskInput) => void;
   busy?: boolean;
 }) {
   switch (visual.kind) {

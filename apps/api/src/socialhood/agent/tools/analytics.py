@@ -66,6 +66,7 @@ from socialhood.agent.tools.common import (
     post_ref,
     quoted,
     ref,
+    report_ref,
     tool,
     when,
 )
@@ -1077,6 +1078,7 @@ async def compare_periods(ctx: ToolContext, args: ComparePeriodsInput) -> Compar
         note=matched.note,
         metrics=metrics,
         visual=comparison,
+        refs=report_ref(ctx, matched.current.since, matched.current.until, acct),
         caveats=caveats,
     )
 
@@ -1250,5 +1252,6 @@ async def metric_trend(ctx: ToolContext, args: MetricTrendInput) -> MetricTrendR
         highest=highest,
         change_pct=stats.change_pct,
         direction=stats.direction,
+        refs=report_ref(ctx, closed.span.since, closed.span.until, acct),
         caveats=caveats,
     )

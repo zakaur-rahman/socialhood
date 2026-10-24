@@ -5,9 +5,9 @@ import { useId } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { moreLeads, prepareRepliesHint, prepareRepliesRequest, scoreText, stageLabel } from "@/lib/agent/leads";
+import { moreLeads, prepareRepliesHint, prepareRepliesHints, scoreText, stageLabel } from "@/lib/agent/leads";
 import { refPath, visualPath, workspaceHref } from "@/lib/agent/routes";
-import type { LeadListVisual } from "@/lib/api/types";
+import type { AskInput, LeadListVisual } from "@/lib/api/types";
 import { formatCount } from "@/lib/comments/format";
 
 /**
@@ -31,7 +31,7 @@ export function LeadList({
   slug: string;
   onNavigate?: () => void;
   /** Ask in the same thread; absent for older answers, where the button isn't offered. */
-  onAsk?: (request: string) => void;
+  onAsk?: (ask: AskInput) => void;
   /** A question is being sent, or another run in the thread is working. */
   busy?: boolean;
 }) {
@@ -98,7 +98,7 @@ export function LeadList({
         ) : null}
         {canPrepare ? (
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1">
-            <Button variant="soft" size="sm" disabled={busy} onClick={() => onAsk?.(prepareRepliesRequest(visual.reply_ids))}>
+            <Button variant="soft" size="sm" disabled={busy} onClick={() => onAsk?.(prepareRepliesHints(visual.reply_ids))}>
               <MessageSquareReply aria-hidden /> Prepare replies
             </Button>
             <span className="text-xs text-fg-secondary">{prepareRepliesHint(visual.reply_ids.length)}</span>

@@ -25,12 +25,14 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from socialhood.agent import hints
 from socialhood.db.tenancy import require_workspace
 from socialhood.models.agent import THREAD_CONTEXT_RUNS, AgentRun
 from socialhood.models.connections import AccountStatus, Platform, SocialAccount
 from socialhood.models.identity import Workspace
 from socialhood.platforms.instagram.oauth import INSIGHTS_SCOPE
 from socialhood.repositories import agent as repo
+from socialhood.schemas.agent import RunHints
 from socialhood.services.analytics.common import zone
 from socialhood.services.suggestions.drafting import load_brand
 
@@ -62,6 +64,8 @@ class AgentContext:
     accounts: list[str] = field(default_factory=list)
     brand_voice: str | None = None  # from ai_settings: trusted settings, not customer text
     history: list[Exchange] = field(default_factory=list)  # oldest first, at most 6
+    # VIS-11: the last question typed in words in the thread, the one a control repeats.
+    last_typed: str | None = None
 
 
 def describe_account(account: SocialAccount) -> str:
@@ -95,11 +99,21 @@ async def build_context(session: AsyncSession, run: AgentRun, *, now: datetime) 
     if brand.business_description:
         voice = f"{brand.business_name}: {brand.business_description}. Tone: {brand.tone}."
     earlier = await repo.thread_history(session, run, limit=THREAD_CONTEXT_RUNS)
+    history: list[Exchange] = []
+    last_typed: str | None = None
+    for r in earlier:
+        # A follow-up is shown to the model as the instruction it was given, not as its bubble.
+        if r.hints:
+            asked = hints.instruction(RunHints.model_validate(r.hints), last_typed)
+        else:
+            asked = last_typed = r.request
+        history.append(Exchange(request=asked, answer=r.answer, at=r.created_at))
     return AgentContext(
         workspace_name=workspace.name if workspace else "this workspace",
         timezone=zone(workspace.timezone if workspace else "UTC"),
         now=now,
         accounts=[describe_account(a) for a in accounts.all()],
         brand_voice=voice,
-        history=[Exchange(request=r.request, answer=r.answer, at=r.created_at) for r in earlier],
+        history=history,
+        last_typed=last_typed,
     )

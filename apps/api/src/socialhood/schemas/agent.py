@@ -33,7 +33,7 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
-from pydantic import Field, TypeAdapter
+from pydantic import Field, TypeAdapter, model_validator
 
 from socialhood.models.agent import REQUEST_MAX_CHARS
 from socialhood.schemas.analytics import ChangeDirection
@@ -70,6 +70,9 @@ ApprovalStatusName = Literal["pending", "approved", "rejected", "expired", "supe
 # - knowledge_source: a knowledge source (FAQ, note, page or file)
 # - product: a catalogue product (GR-31), on the Products page
 # - order: an order (GR-32), on the Orders page
+# - contact: a contact with no conversation, on the Contacts page
+# - report: a weekly report (GR-34, VIS-13): its Monday in ``week``, the account it is about in
+#   ``parent_id`` (none: every account); ``id`` is derived from both, so it is stable
 # - contact: a contact without a conversation (VIS-08), on the Contacts page
 AnswerRefKind = Literal[
     "post",
@@ -82,6 +85,7 @@ AnswerRefKind = Literal[
     "product",
     "order",
     "contact",
+    "report",  # VIS-13: a weekly report (GR-34); ``week`` and, for one account, ``parent_id``
 ]
 ActionKind = Literal[
     "schedule_message",
@@ -104,6 +108,7 @@ class AnswerRef(ResponseModel):
     # Where the record is shown: the post of a comment, the conversation of a scheduled
     # message; None for records with a screen of their own.
     parent_id: uuid.UUID | None = None
+    week: date | None = None  # report refs only: the Monday of the week (VIS-13)
 
 
 class ScheduleMessagePrefill(ResponseModel):
@@ -473,6 +478,32 @@ class AgentStep(ResponseModel):
     completed_at: datetime | None = None
 
 
+RangeDays = Literal[7, 30, 90]
+HintPlatform = Literal["all", "instagram", "facebook", "whatsapp"]
+HINT_REPLY_MAX = 3  # the same cap as a lead list's reply_ids
+
+
+class RunHints(RequestModel):
+    """VIS-11: a structured follow-up on the run before it, instead of free text from the screen.
+
+    Two kinds, never mixed: ``range_days`` and/or ``platform`` ask the same question again over
+    another range or platform (the controls on a visual); ``reply_conversation_ids`` asks for a
+    draft reply to each of those conversations (VIS-12). Keys and values are whitelisted; the
+    server words the member's question from them and the planner applies them as if the member had
+    asked. Conversations must be the workspace's (404 otherwise)."""
+
+    range_days: RangeDays | None = None
+    platform: HintPlatform | None = None
+    reply_conversation_ids: list[uuid.UUID] = Field(default_factory=list, max_length=HINT_REPLY_MAX)
+
+    @model_validator(mode="after")
+    def _one_kind(self) -> RunHints:
+        controls = self.range_days is not None or self.platform is not None
+        if controls == bool(self.reply_conversation_ids):  # neither, or both
+            raise ValueError("Give a range or platform, or conversations to prepare replies for.")
+        return self
+
+
 class AgentRun(ResponseModel):
     """A run in the history and a thread's exchanges (FR-AGT-01, FR-AGT-07); also the 202 answer
     of POST …/agent/runs."""
@@ -480,6 +511,8 @@ class AgentRun(ResponseModel):
     id: uuid.UUID
     thread_id: uuid.UUID
     request: str
+    # VIS-11: the structured follow-up this run was made from; None for a typed question.
+    hints: RunHints | None = None
     source: AgentRunSourceName
     mode: AgentModeName
     status: AgentRunStatusName
@@ -519,9 +552,21 @@ class AgentRunList(ResponseModel):
 class AgentRunCreate(RequestModel):
     """POST …/agent/runs: a question in plain language (English, Hindi or Hinglish)."""
 
-    request: str = Field(min_length=1, max_length=REQUEST_MAX_CHARS)
+    # Required without ``hints``. With hints the server words the question itself and ignores this.
+    request: str = Field(default="", max_length=REQUEST_MAX_CHARS)
     # Continue one of the caller's threads; omitted: a new thread whose id is this run's id.
     thread_id: uuid.UUID | None = None
+    # VIS-11: a structured follow-up (a visual's range or platform control, "Prepare replies").
+    # Needs a thread to follow up on.
+    hints: RunHints | None = None
+
+    @model_validator(mode="after")
+    def _asked(self) -> AgentRunCreate:
+        if self.hints is None and not self.request:
+            raise ValueError("Write a question.")
+        if self.hints is not None and self.thread_id is None:
+            raise ValueError("A follow-up needs the thread it follows.")
+        return self
 
 
 class AgentThread(ResponseModel):

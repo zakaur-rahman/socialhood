@@ -173,6 +173,9 @@ class AgentRun(IdMixin, TimestampMixin, TenantScoped, Base):
     )
     source: Mapped[str] = mapped_column(Text, server_default=sql("'ask'"))
     request: Mapped[str] = mapped_column(Text)
+    # VIS-11: the validated structured follow-up (agent/hints.RunHints) the request was made from;
+    # null for a question typed in words. ``request`` then holds its readable words.
+    hints: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     mode: Mapped[str] = mapped_column(Text)  # the policy's mode when the run started
     status: Mapped[str] = mapped_column(Text, server_default=sql("'queued'"))
     plan: Mapped[dict[str, Any] | None] = mapped_column(JSONB)  # R2: agent/plan.Plan

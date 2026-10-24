@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { keys } from "@/lib/api/queries/keys";
-import type { Visual } from "@/lib/api/types";
+import type { AskInput, Visual } from "@/lib/api/types";
 import { renderWithApi } from "@/test/api";
 import { agentRun, runDetail } from "@/test/agent";
 import { leadListVisual, leadRow, tableVisual, trendPoint, trendVisual } from "@/test/visuals";
@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/w/maple/ask",
 }));
 
-function show(visual: Visual, props: { onNavigate?: () => void; onAsk?: (request: string) => void; busy?: boolean } = {}) {
+function show(visual: Visual, props: { onNavigate?: () => void; onAsk?: (ask: AskInput) => void; busy?: boolean } = {}) {
   return renderWithApi(<VisualView visual={visual} slug="maple" {...props} />);
 }
 
@@ -156,11 +156,8 @@ describe("LeadList (VIS-08, VIS-12)", () => {
     expect(screen.getByText("Drafts a reply for the top 2 leads. Nothing is sent.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Prepare replies" }));
     expect(onAsk).toHaveBeenCalledTimes(1);
-    const request = onAsk.mock.calls[0][0] as string;
-    expect(request).toContain("cv1, cv2");
-    expect(request).toContain("draft_reply");
-    expect(request).toContain("send nothing");
-    expect(request).not.toContain("Priya"); // ids only: no customer text goes into a prompt
+    // A structured hint with ids only: the API words the question, so no ids or customer text show.
+    expect(onAsk.mock.calls[0][0]).toEqual({ reply_conversation_ids: ["cv1", "cv2"] });
   });
 
   it("offers no follow-up on an older answer, or when the API chose no conversation", () => {
@@ -284,5 +281,64 @@ describe("VisualView (VIS-07 to VIS-09): the new kinds are boundary-wrapped like
     unmount();
     show(tableVisual());
     expect(screen.getByTestId("visual")).toHaveAttribute("data-kind", "table");
+  });
+});
+
+describe("range and platform controls (VIS-11)", () => {
+  const credits = (used: number, limit: number | null = 200) => ({ limit, used, resetsOn: "2026-11-01" });
+
+  it("offers range and platform under a trend on the latest answer, with what a change costs", () => {
+    show(trendVisual({ period: { start: "2026-09-01", end: "2026-09-30", label: "1-30 Sep 2026", days: 30 } }), {
+      onAsk: vi.fn(),
+    });
+    const controls = screen.getByTestId("visual-controls");
+    expect(within(controls).getByRole("radio", { name: "Last 30 days" })).toBeChecked();
+    expect(within(controls).getByRole("radio", { name: "Instagram" })).not.toBeChecked();
+    expect(within(controls).getByTestId("controls-note")).toHaveTextContent(
+      "Changing this asks again. About 2 to 4 AI credits."
+    );
+  });
+
+  it("has no controls on an older answer or on a visual with no range to change", () => {
+    const { unmount } = show(trendVisual());
+    expect(screen.queryByTestId("visual-controls")).toBeNull();
+    unmount();
+    show(tableVisual(), { onAsk: vi.fn() });
+    expect(screen.queryByTestId("visual-controls")).toBeNull();
+  });
+
+  it("choosing a range asks the same question as a structured follow-up, never a data query", async () => {
+    const onAsk = vi.fn();
+    show(trendVisual(), { onAsk });
+    await userEvent.click(screen.getByRole("radio", { name: "Last 90 days" }));
+    expect(onAsk).toHaveBeenCalledWith({ range_days: 90 });
+    await userEvent.click(screen.getByRole("radio", { name: "Instagram" }));
+    // The platform change keeps the range already chosen on the screen (none: the 5-day period).
+    expect(onAsk).toHaveBeenLastCalledWith({ platform: "instagram" });
+  });
+
+  it("keeps the other control's choice from the run's own follow-up", async () => {
+    const onAsk = vi.fn();
+    renderWithApi(
+      <VisualView visual={trendVisual()} slug="maple" onAsk={onAsk} runHints={{ range_days: 7, platform: "facebook" }} />
+    );
+    await userEvent.click(screen.getByRole("radio", { name: "Instagram" }));
+    expect(onAsk).toHaveBeenCalledWith({ range_days: 7, platform: "instagram" });
+  });
+
+  it("explains instead of failing when the credits are used up or too few", () => {
+    const { unmount } = renderWithApi(
+      <VisualView visual={trendVisual()} slug="maple" onAsk={vi.fn()} credits={credits(200)} />
+    );
+    expect(screen.getByTestId("controls-note")).toHaveTextContent("You've used all 200 AI credits for this month.");
+    expect(screen.getByRole("radio", { name: "Last 30 days" })).toBeDisabled();
+    unmount();
+    renderWithApi(<VisualView visual={trendVisual()} slug="maple" onAsk={vi.fn()} credits={credits(198)} />);
+    expect(screen.getByTestId("controls-note")).toHaveTextContent("You have 2 AI credits left this month");
+  });
+
+  it("waits while a question is being sent", () => {
+    show(trendVisual(), { onAsk: vi.fn(), busy: true });
+    expect(screen.getByRole("radio", { name: "Last 7 days" })).toBeDisabled();
   });
 });
