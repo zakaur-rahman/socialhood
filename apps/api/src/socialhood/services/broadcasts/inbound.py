@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.broadcasts import BroadcastRecipient, RecipientState
@@ -54,7 +54,8 @@ async def on_inbound(
                 BroadcastRecipient.contact_id == contact.id,
                 BroadcastRecipient.state == RecipientState.DISPATCHED,
                 BroadcastRecipient.dispatched_at >= since,
-                BroadcastRecipient.dispatched_at <= at,
+                # Meta's timestamps are whole seconds: a reply in the same second still counts.
+                func.date_trunc("second", BroadcastRecipient.dispatched_at) <= at,
             )
             .with_for_update()
         )

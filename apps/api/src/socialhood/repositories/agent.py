@@ -18,7 +18,7 @@ from collections.abc import Collection, Sequence
 from datetime import datetime
 from typing import Any, NamedTuple
 
-from sqlalchemy import DateTime, Text, Uuid, exists, func, literal, select, tuple_
+from sqlalchemy import DateTime, Text, Uuid, case, exists, func, literal, select, tuple_
 from sqlalchemy.dialects.postgresql import ARRAY, aggregate_order_by
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -426,6 +426,15 @@ async def approvals_of_runs(
     return list(rows.all())
 
 
+# Events written in one transaction share created_at (now()) and ids are random, so ties are
+# broken by where each kind falls in an approval's life: approved always before executed.
+_EVENT_ORDER = case(
+    {"proposed": 0, "approved": 1, "executed": 2},
+    value=AgentApprovalEvent.event,
+    else_=3,
+)
+
+
 async def approval_events(
     session: AsyncSession, approval_ids: Collection[uuid.UUID]
 ) -> dict[uuid.UUID, list[AgentApprovalEvent]]:
@@ -434,7 +443,7 @@ async def approval_events(
     rows = await session.scalars(
         select(AgentApprovalEvent)
         .where(AgentApprovalEvent.approval_id.in_(approval_ids))
-        .order_by(AgentApprovalEvent.created_at, AgentApprovalEvent.id)
+        .order_by(AgentApprovalEvent.created_at, _EVENT_ORDER, AgentApprovalEvent.id)
     )
     found: dict[uuid.UUID, list[AgentApprovalEvent]] = {}
     for row in rows.all():

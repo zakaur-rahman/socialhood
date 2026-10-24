@@ -96,7 +96,7 @@ def _record(
     log.info(
         "agent_approval",
         approval_id=str(approval_id),
-        event=event.value,
+        kind=event.value,
         actor=str(actor_user_id) if actor_user_id else None,
     )
 
@@ -275,6 +275,7 @@ async def approve(
         log.info(
             "agent_approval_refused", run_id=str(run_id), tool=spec.tool, http_status=error.status
         )
+        await session.flush()
         return row
 
     summary = await spec.summarize(env, args)

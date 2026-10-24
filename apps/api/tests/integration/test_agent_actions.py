@@ -252,7 +252,7 @@ async def test_a_flow_is_saved_as_a_draft_automation_and_never_switched_on(team:
     assert automation["activated_at"] is None
     assert automation["flow_version"] == 1
     assert await count(team, "automation_flows") == 1
-    [keyword] = await team.rows("SELECT normalized FROM automation_keywords")
+    [keyword] = await team.rows("SELECT keyword_normalized AS normalized FROM automation_keywords")
     assert keyword["normalized"] == "price"
 
 

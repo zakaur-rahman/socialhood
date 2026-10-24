@@ -96,7 +96,10 @@ async def test_with_the_setting_off_nothing_is_available(
         ("POST", "/broadcasts/preview"),
         ("POST", "/broadcasts"),
     ):
-        response = await off.ws.call(method, path, json=off.body() if method == "POST" else None)
+        body = off.body() if method == "POST" else None
+        if path.endswith("/preview"):
+            body = {k: v for k, v in off.body().items() if k != "name"}
+        response = await off.ws.call(method, path, json=body)
         assert response.status_code == 404, f"{method} {path}"
         body = response.json()
         assert body["code"] == "not_found"
@@ -126,7 +129,10 @@ async def test_the_free_plan_has_no_broadcasts(
     assert (availability["enabled"], availability["plan_allowed"]) == (True, False)
     assert availability["monthly_limit"] == 0
     for path in ("/broadcasts/preview", "/broadcasts"):
-        response = await free.ws.call("POST", path, json=free.body())
+        body = free.body()
+        if path.endswith("/preview"):
+            body.pop("name")
+        response = await free.ws.call("POST", path, json=body)
         assert response.status_code == 402, response.text
         assert response.json()["code"] == "entitlement_required"
         assert response.json()["entitlement"] == "broadcast_recipients_monthly"
@@ -403,7 +409,7 @@ async def test_a_stop_reply_revokes_consent_and_they_are_never_sent_to_again(des
     await desk.batch(started["id"])
     await desk.deliver_queued(send_tasks)
 
-    await settle(desk, kind="dm", from_id=asha.wa_id, text="STOP")
+    await settle(desk, kind="dm", from_id=asha.wa_id, from_username=asha.name, text="STOP")
 
     consent = await desk.rows(
         "SELECT status, source, evidence FROM contact_consents WHERE contact_id = :c"
@@ -446,7 +452,7 @@ async def test_a_stop_reply_revokes_consent_and_they_are_never_sent_to_again(des
 )
 async def test_the_stop_words_work_without_a_broadcast(desk: Shop, words: str) -> None:
     person = await desk.customer("Asha Rao")
-    await settle(desk, kind="dm", from_id=person.wa_id, text=words)
+    await settle(desk, kind="dm", from_id=person.wa_id, from_username=person.name, text=words)
     [latest] = await desk.rows(
         "SELECT status, source FROM contact_consents WHERE contact_id = :c"
         " ORDER BY occurred_at DESC, created_at DESC LIMIT 1",
@@ -460,7 +466,9 @@ async def test_an_ordinary_reply_is_counted_and_keeps_consent(desk: Shop) -> Non
     started = await desk.send_now()
     await desk.batch(started["id"])
     await desk.deliver_queued(send_tasks)
-    await settle(desk, kind="dm", from_id=asha.wa_id, text="Do you have it in blue?")
+    await settle(
+        desk, kind="dm", from_id=asha.wa_id, from_username=asha.name, text="Do you have it in blue?"
+    )
     by_name = {r["contact_name"]: r for r in await recipients(desk, started["id"])}
     assert (by_name["Asha Rao"]["replied"], by_name["Asha Rao"]["stopped"]) == (True, False)
     [latest] = await desk.rows(

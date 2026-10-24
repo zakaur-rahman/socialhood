@@ -184,7 +184,7 @@ async def shop(
     wid = me["workspaces"][0]["id"]
     headers = clerk.headers(clerk_id)
     created = await client.post(
-        f"/v1/w/{wid}/dev/sandbox/accounts", params={"platform": "whatsapp"}, headers=headers
+        f"/v1/w/{wid}/dev/sandbox/accounts", json={"platform": "whatsapp"}, headers=headers
     )
     assert created.status_code == 201, created.text
     ws = Ws(client, clerk, clerk_id, wid, me["id"], created.json()["id"])

@@ -38,7 +38,6 @@ from socialhood.services.broadcasts import service
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["broadcasts"])
 log = get_logger(__name__)
-log = get_logger(__name__)
 
 StatusFilter = Literal[
     "draft", "scheduled", "sending", "paused", "completed", "cancelled", "failed"
