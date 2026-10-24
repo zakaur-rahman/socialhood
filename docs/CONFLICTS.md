@@ -5303,3 +5303,100 @@ Owner: the report did not tell accounts apart and had one chart colour. Decided 
 - **`account_id` on `GET …/reports/weekly`.** Every figure, series, top intent and top post is that account's (`overview_stats` functions take an optional `account_id`); another workspace's account is 404 `not_found`. Leads and captures follow the contact's account and the automation's account. Knowledge-gap questions belong to the workspace, so an account's report returns 0 and none for them and the page hides the line. The digest is unchanged (workspace-wide).
 - **Breakdown** (workspace-wide report only, additive `breakdown`, plus `accounts` for the picker and `account` when one is picked): per account messages received, people who wrote in, comments, replies sent (the reply rate's own definition), automation runs, reach and followers, each this week against last with 8 weekly points. Counts are never None except for a week before the workspace existed. Reach and followers are None with `unavailable` (`insights_not_granted`, `no_readings`) where the platform gives no insights, e.g. WhatsApp. Leads, response time and rates are not broken down by account.
 - **Palette.** `--color-chart-series-2` to `-6` (orange, aqua, sky, yellow, magenta) join series 1 (brand indigo) in a fixed order, validated per theme with the data-viz checker (adjacent colour-blind separation and normal-vision floor pass in light and dark; the light yellow, aqua and magenta are under 3:1, so every chart has a legend, tooltip and table). A seventh entity folds into the neutral token. Shared pieces live in `components/charts/`.
+
+
+## C-132 · Range and platform controls, report links, and the OpenUI spike (VIS-11, VIS-13, VIS-14, feature/vis-11-13-14)
+
+The last three backlog items for Ask, on top of C-123 (branch `feature/vis-07-12`). Option C still
+holds: the API builds every visual, the model neither writes nor sees one, and everything stays
+behind `AGENT_VISUALS_ENABLED`. **One migration, 0045** (`agent_runs.hints`, nullable JSON,
+expand-only). No new route, no new setting.
+
+### Structured follow-ups (VIS-11)
+- **`AgentRunCreate.hints`** (`RunHints`, `schemas/agent.py`): whitelisted keys and values only,
+  `extra="forbid"`. Two kinds, never mixed: `range_days` (7, 30 or 90) and/or `platform` (`all`,
+  `instagram`, `facebook`, `whatsapp`) repeat the question over another range or platform;
+  `reply_conversation_ids` (at most 3, the same cap as the lead list) is VIS-12's "Prepare
+  replies". Never free text from the screen. A follow-up needs a `thread_id` (422 without).
+- **`request` is optional with hints.** The server words the member's side itself
+  (`agent/hints.bubble`: "Same, for the last 90 days on Instagram", "Same, across all platforms",
+  "Prepare replies for these leads") and ignores any text sent with hints, so the thread shows
+  words, never ids, and the screen can't put its own words in the thread. *This fixes the gap
+  C-123 recorded: the bubble no longer shows UUIDs.*
+- **The planner applies the hint as if the member had asked** (`hints.instruction`): the member's
+  earlier typed question (`AgentContext.last_typed`, carried as quoted data) asked again with the
+  range and platform as tool arguments, same tools. Earlier follow-ups in the thread reach the
+  model as their instruction, not their bubble. When the earlier question is out of the context
+  window (six runs) the instruction says "your previous answer's question".
+- **Stored:** `agent_runs.hints` holds the validated hints (defaults left out) and `request` the
+  bubble; run responses return `hints` (null for a typed question) so the web shows what is
+  chosen. *A migration was needed: the bubble must be words and the planner must still know the
+  structure, and the run table had nowhere to keep it.*
+- **Conversations are checked.** `reply_conversation_ids` that aren't the workspace's give 404
+  `not_found`, the rule for every body that names a resource. An integration test covers it (the
+  tenancy example body can hold only one resource per route, and `thread_id` already uses it).
+- **Controls on the visual** (`VisualControls`, `lib/agent/controls.ts`): range chips and
+  platform chips under `trend`, `metric_comparison`, and `ranked_posts` and `sentiment_summary`
+  when they have a period (a single post has no range). Not on `lead_list` and `table` (their
+  tools take neither). Shown on the latest answer only, like the other follow-ups. The chosen
+  range comes from the visual's own period when it is 7, 30 or 90 days, the platform from the
+  run's hints; none is shown as chosen otherwise. A change sends the whole selection, so one
+  control keeps the other's choice. Clicking the chosen chip does nothing (no run for no change).
+- **Credits, before the run.** Under the controls: "Changing this asks again. About 2 to 4 AI
+  credits." (`agent_turn` is 1 credit a model call and a typical question takes 2 to 4,
+  `billing/plans.py`; the same run, so the same price as typing the question). The controls turn
+  off, with the reason in that line, when the plan has no AI credits, none are left (the
+  composer's own message with the reset date), or fewer are left than the upper estimate (4):
+  "You have 3 AI credits left this month, and a change can use up to 4." *The API only needs one
+  credit to start a run; the stricter line is a choice so a change doesn't stop half way. Easy to
+  loosen in `controlGate`.* The API still answers 402 `quota_exceeded` as before.
+- **Retry** on a failed follow-up resends its hints, not its bubble words.
+
+### Weekly report links (VIS-13)
+- **`report` answer-ref kind** with `AnswerRef.week` (the Monday). `parent_id` is the account when
+  the question was about one; `id` is derived from week and account (`uuid5`), so the same report
+  is one source however often it is cited. The web opens `reports?week=<monday>[&account=<id>]`
+  (`lib/agent/routes.ts`, both values re-checked there; a malformed ref opens `reports`) and
+  labels it "Weekly report". Nothing in `components/reports` and no change to the page.
+- **Which week matches:** the latest finished week (Monday to Sunday in the workspace's zone,
+  within the report's 52 weeks) that lies wholly inside the tool's period (`report_week`, a
+  function of dates only). A period with no whole finished week cites none; a running week is
+  never linked, as the report page itself refuses it.
+- **Tools:** `metric_trend` and `compare_periods` (the current period) cite it, for the account
+  when the question named one. *There is no overview tool in the agent (Home's figures come from
+  `compare_periods`); nothing else cites a report.* The label is "Weekly report, 12-18 Oct 2026"
+  (with the handle for an account). It works with the visuals setting off: refs are not visuals.
+- *The `?account=` parameter belongs to the report page work on `feature/ui-refresh`; until it
+  lands the page shows the workspace report for the week and ignores the account.*
+
+### The OpenUI spike (VIS-14), not shipped
+- Done offline on the scratch branch `spike/openui` (`spike/openui/`), packages installed only
+  there, `OPENUI_TELEMETRY_DISABLED=1`. Result and numbers:
+  `docs/architecture/generative-ui/11-openui-spike-result.md` (on this branch too).
+- **Decision: do not adopt; keep C.** 30 of 30 valid, 0 number errors in 521 numbers, p95 1.54 s
+  as a separate call (about 0.25 s written inside the answer's own turn, an estimate); but no
+  open-ended use the catalogue can't serve was found, which the gate requires.
+- The Gemini key was read through the API's `Settings` (`apps/api/.env`), held in memory, never
+  printed or written; about 140 calls in all.
+
+### Tests
+- API unit (run here): `tests/unit/test_agent_hints.py` (the words, the instruction, the
+  whitelist, the request rules, which week a period links, the ref).
+- API integration (written, not run): `test_agent_api.py` (a follow-up is worded by the server and
+  keeps its hints; thread and whitelist; 404 for another workspace's conversation; 402 without
+  credits), `test_agent_visuals_vis.py` (the trend and the comparison cite the week, for an
+  account, none for a period without a whole week).
+- Web (written, not run): `lib/agent/vis-lib.test.ts` (selection, hints, the credit gate, which
+  visuals offer controls, the report path), `VisualViewVis.test.tsx` (the controls, the cost
+  line, the explanation, busy). E2E `e2e/vis-11-13.spec.ts` (written, not run); the e2e seed
+  (`scripts/e2e/api.py`) gains `report_week`; `vis-07-12.spec.ts` now expects the new bubble.
+- **Checked centrally:** apply migration 0045; regenerate `apps/api/openapi.json` and
+  `packages/api-client` (`RunHints`, `AgentRunCreate.hints` and an optional `request`,
+  `AgentRun.hints`, `AnswerRef.week` and `kind` with `report`), then drop the hand-added
+  `RunHints`, `AgentRun`, `AgentRunDetail`, `AgentRunCreate` and `AnswerRef` additions in
+  `lib/api/types.ts`; typecheck, build, the integration and tenancy suites, vitest, the e2e specs.
+
+### Left for later
+VIS-X2 (quote account names in the prompt), VIS-X4 (design-system entries for the visuals and
+their controls), a platform control on the lead list, a two-series trend, a reply-window
+pre-check for the lead follow-up, and localised labels.

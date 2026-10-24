@@ -14,6 +14,7 @@ An investigation of how the existing agent could answer with charts, KPI cards, 
 | [08 Decision record](08-decision-record.md) | The proposed decision and what needs the owner |
 | [09 Product opportunities](09-product-opportunities.md) | Ranked ideas beyond basic charts |
 | [10 Implementation backlog](10-implementation-backlog.md) | Task list (VIS-01 to VIS-14) |
+| [11 OpenUI spike result](11-openui-spike-result.md) | VIS-14 offline spike against the gate: do not adopt |
 
 **In one line:**
 - Build typed visuals that our tools derive from service data, rendered with our own components, the same way action cards work today.
