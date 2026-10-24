@@ -19,6 +19,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from socialhood.agent import visuals
 from socialhood.agent.registry import (
     Release,
     ToolContext,
@@ -46,7 +47,7 @@ from socialhood.models.identity import Role
 from socialhood.models.inbox import Contact
 from socialhood.models.media import MediaItem
 from socialhood.repositories import social_accounts
-from socialhood.schemas.agent import AnswerRef, AnswerRefKind
+from socialhood.schemas.agent import AnswerRef, AnswerRefKind, Visual
 from socialhood.services.analytics.ages import format_of
 from socialhood.services.analytics.common import View, capabilities_from
 
@@ -224,6 +225,14 @@ def ref(
     return AnswerRef(
         kind=kind, id=record_id, label=clip(label, LABEL_CHARS) or kind, parent_id=parent_id
     )
+
+
+def visual[V: Visual](ctx: ToolContext, kind: str, build: Callable[[], V]) -> V | None:
+    """The tool's visual (GR-38), or None with AGENT_VISUALS_ENABLED off or when it can't be
+    built (the result and the answer stand). The tool's own role check has already run."""
+    if not ctx.platform.settings.agent_visuals_enabled:
+        return None
+    return visuals.safe(kind, build)
 
 
 def quoted(text: str | None) -> str:

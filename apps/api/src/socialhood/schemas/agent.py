@@ -70,6 +70,7 @@ ApprovalStatusName = Literal["pending", "approved", "rejected", "expired", "supe
 # - knowledge_source: a knowledge source (FAQ, note, page or file)
 # - product: a catalogue product (GR-31), on the Products page
 # - order: an order (GR-32), on the Orders page
+# - contact: a contact without a conversation (VIS-08), on the Contacts page
 AnswerRefKind = Literal[
     "post",
     "conversation",
@@ -80,6 +81,7 @@ AnswerRefKind = Literal[
     "knowledge_source",
     "product",
     "order",
+    "contact",
 ]
 ActionKind = Literal[
     "schedule_message",
@@ -318,9 +320,119 @@ class SentimentSummaryVisual(ResponseModel):
     topics: list[VisualTopic] = Field(max_length=MAX_TOPICS)
 
 
+MAX_TREND_POINTS = 92
+MAX_LEADS = 10
+LEAD_REPLY_MAX = 3  # leads one "Prepare replies" follow-up drafts for (credits: 2 each, cap 10)
+MAX_TABLE_ROWS = 10
+MAX_TABLE_COLUMNS = 6
+TrendMetricKey = Literal[
+    "reach",
+    "views",
+    "accounts_engaged",
+    "interactions",
+    "followers",
+    "follows",
+    "unfollows",
+    "profile_link_taps",
+]
+LeadStage = Literal["new", "qualified", "follow_up", "won", "lost"]
+Align = Literal["left", "right"]
+# A link a visual carries: a plain workspace path (no scheme, host, ".." or "//"), the same rule
+# the web's SAFE_PATH applies before it draws one.
+WORKSPACE_PATH = r"^[A-Za-z0-9_-]+(/[A-Za-z0-9_-]+)*(\?[A-Za-z0-9_=&-]*)?$"
+
+
+class TrendPoint(ResponseModel):
+    day: date  # the day, or the first day of the week
+    value: float | None = None  # None: no reading, drawn as a gap and never as zero
+    days_known: int = Field(ge=0, le=7)  # days of the point that had a reading
+
+
+class TrendVisual(ResponseModel):
+    """One series over time (metric_trend, VIS-07). One series only: a second hue waits for the
+    categorical palette (C-123). Every value, the extremes and the change come from the tool."""
+
+    kind: Literal["trend"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    metric_key: TrendMetricKey
+    metric_label: str = Field(max_length=40)
+    format: MetricFormat
+    granularity: Literal["day", "week"]
+    period: VisualPeriod
+    account_label: str | None = Field(default=None, max_length=60)
+    points: list[TrendPoint] = Field(max_length=MAX_TREND_POINTS)
+    known_points: int = Field(ge=0)
+    first: TrendPoint | None = None  # the earliest point with a value
+    last: TrendPoint | None = None
+    lowest: TrendPoint | None = None
+    highest: TrendPoint | None = None
+    change_pct: float | None = None  # first to last, from the service
+    direction: ChangeDirection | None = None
+    summary: str = Field(max_length=300)  # the chart in words: its aria label and text fallback
+    note: str | None = Field(default=None, max_length=200)  # e.g. "3 of 30 days have no reading"
+
+
+class LeadRow(ResponseModel):
+    """One lead. ``name`` is the customer's own text: render it as text."""
+
+    contact_id: uuid.UUID
+    conversation_id: uuid.UUID | None = None  # None: never messaged; the row opens the contact
+    name: str = Field(max_length=60)
+    platform: str = Field(max_length=20)
+    lead_score: int | None = Field(default=None, ge=0, le=100)
+    lead_stage: LeadStage = "new"
+    last_activity_label: str | None = Field(default=None, max_length=60)
+
+
+class LeadListVisual(ResponseModel):
+    """Leads waiting for a reply, best score first (list_contacts with awaiting_reply, VIS-08)."""
+
+    kind: Literal["lead_list"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    total: int = Field(ge=0)  # all that match, not only those listed
+    items: list[LeadRow] = Field(max_length=MAX_LEADS)
+    # VIS-12: the conversations "Prepare replies" drafts for, the best scores that have one, at
+    # most LEAD_REPLY_MAX. A draft sends nothing.
+    reply_ids: list[uuid.UUID] = Field(max_length=LEAD_REPLY_MAX)
+    more_route: str | None = Field(default=None, max_length=120, pattern=WORKSPACE_PATH)
+
+
+class TableColumn(ResponseModel):
+    key: str = Field(max_length=30)
+    label: str = Field(max_length=40)
+    align: Align = "left"  # figures are right-aligned
+    format: Literal["text", "count", "percent"] = "text"
+
+
+class TableRow(ResponseModel):
+    """Cells in the order of the table's columns. Text cells may be the customer's own words:
+    render them as text."""
+
+    cells: list[str | float | None] = Field(max_length=MAX_TABLE_COLUMNS)
+
+
+class TableVisual(ResponseModel):
+    """A short table of what a tool listed (VIS-09): at most 10 rows and 6 columns."""
+
+    kind: Literal["table"]
+    version: Literal[1] = 1
+    title: str = Field(max_length=120)
+    columns: list[TableColumn] = Field(min_length=1, max_length=MAX_TABLE_COLUMNS)
+    rows: list[TableRow] = Field(max_length=MAX_TABLE_ROWS)
+    total: int = Field(ge=0)  # all that match, not only those listed
+    more_route: str | None = Field(default=None, max_length=120, pattern=WORKSPACE_PATH)
+
+
 # GR-38 (docs/architecture/generative-ui/05): built by agent/visuals.py from service data.
 Visual = Annotated[
-    MetricComparisonVisual | RankedPostsVisual | SentimentSummaryVisual,
+    MetricComparisonVisual
+    | RankedPostsVisual
+    | SentimentSummaryVisual
+    | TrendVisual
+    | LeadListVisual
+    | TableVisual,
     Field(discriminator="kind"),
 ]
 VISUAL_ADAPTER: TypeAdapter[Visual] = TypeAdapter(Visual)

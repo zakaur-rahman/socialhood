@@ -309,10 +309,11 @@ ROLE_WORDS: dict[Role, str] = {
 # GR-38: said only when the member's screen will draw the figures (AGENT_VISUALS_ENABLED), so the
 # answer doesn't repeat them. It never names a visual's layout: the model doesn't write one.
 VISUALS_NOTE = (
-    "- Some tools put their figures on the member's screen, as cards, a ranked list or a bar,\n"
-    "  beside your answer. When a tool you called does that (compare_periods, top_posts,\n"
-    "  sentiment_distribution, comment_topics), don't copy its table into your answer: lead with\n"
-    "  the one or two changes that matter, with their figures, and the caveats.\n"
+    "- Some tools put their figures on the member's screen, as cards, a ranked list, a line, a\n"
+    "  table or a bar, beside your answer. When a tool you called does that (compare_periods,\n"
+    "  top_posts, sentiment_distribution, comment_topics, metric_trend, list_contacts with\n"
+    "  awaiting_reply, search_conversations, list_orders), don't copy its table or list into your\n"
+    "  answer: lead with the one or two changes that matter, with their figures, and the caveats.\n"
 )
 
 

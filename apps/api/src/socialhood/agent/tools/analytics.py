@@ -20,7 +20,8 @@ R1 (all read; any member, as the analytics routes):
 - metric_trend(metric, range, account): one account metric by day (up to 31 days) or week, with
   its first, last, lowest and highest points and the change between first and last.
 
-Visuals (GR-38): top_posts, sentiment_distribution, comment_topics and compare_periods put a
+Visuals (GR-38): top_posts, sentiment_distribution, comment_topics, compare_periods and
+metric_trend (a line, VIS-07; none when no point has a reading) put a
 ``visual`` in their result, built by agent/visuals.py from the same numbers; the web draws it. The
 model never sees it (agent/report.model_view) and never writes one.
 
@@ -40,7 +41,7 @@ from __future__ import annotations
 
 import math
 import uuid
-from collections.abc import Callable, Sequence
+from collections.abc import Sequence
 from datetime import date, datetime, timedelta
 from typing import Literal
 
@@ -68,13 +69,14 @@ from socialhood.agent.tools.common import (
     tool,
     when,
 )
+from socialhood.agent.tools.common import visual as _visual
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.ai import Sentiment
 from socialhood.models.analytics import LIVE_COUNT_WINDOWS, WINDOW_AGES, SnapshotWindow
 from socialhood.models.connections import Platform, SocialAccount
 from socialhood.platforms.capabilities import Capability
 from socialhood.repositories import social_accounts
-from socialhood.schemas.agent import SentimentSummaryVisual, Visual
+from socialhood.schemas.agent import SentimentSummaryVisual, TrendPoint, Visual
 from socialhood.schemas.analytics import (
     MIN_COMPARABLE_POSTS,
     AccountMetricFigure,
@@ -176,14 +178,6 @@ class Metrics(BaseModel):
     shares: int | None = None
     saves: int | None = None
     engagement_rate: float | None = None  # % of reach, at the same age
-
-
-def _visual[V: Visual](ctx: ToolContext, kind: str, build: Callable[[], V]) -> V | None:
-    """The tool's visual (GR-38), or None with AGENT_VISUALS_ENABLED off or when it can't be
-    built (the result and the answer stand)."""
-    if not ctx.platform.settings.agent_visuals_enabled:
-        return None
-    return visuals.safe(kind, build)
 
 
 def _age_caveats(ctx: ToolContext, perf: PostPerformance, rule: str | None) -> list[str]:
@@ -1140,6 +1134,11 @@ class MetricTrendResult(ToolResult):
     highest: TrendPointOut | None = None
     change_pct: float | None = None  # first to last
     direction: ChangeDirection | None = None
+    visual: Visual | None = None  # GR-38 (VIS-07): the series as a line (agent/visuals.py)
+
+
+def _trend_point(p: TrendPointOut | None) -> TrendPoint | None:
+    return None if p is None else TrendPoint(day=p.day, value=p.value, days_known=p.days_known)
 
 
 def _point(p: SeriesPoint | None) -> TrendPointOut | None:
@@ -1205,19 +1204,50 @@ async def metric_trend(ctx: ToolContext, args: MetricTrendInput) -> MetricTrendR
             summary += f" ({stats.change_pct:+.1f}%)"
     elif not stats.known:
         summary += ": no readings"
+    out = [TrendPointOut(day=p.day, value=p.value, days_known=p.days_known) for p in series]
+    first, last = _point(stats.first), _point(stats.last)
+    lowest, highest = _point(stats.low), _point(stats.high)
+    # Nothing to draw without a single reading: the caveats say why.
+    line = (
+        _visual(
+            ctx,
+            "trend",
+            lambda: visuals.trend(
+                metric=args.metric,
+                granularity="week" if weekly else "day",
+                period=visuals.period_of(closed.span.since, closed.span.until),
+                account_label=handle(acct) if acct else None,
+                points=[TrendPoint(day=p.day, value=p.value, days_known=p.days_known) for p in out],
+                known_points=stats.known,
+                first=_trend_point(first),
+                last=_trend_point(last),
+                lowest=_trend_point(lowest),
+                highest=_trend_point(highest),
+                change_pct=stats.change_pct,
+                direction=stats.direction,
+                note=None
+                if stats.known >= len(series)
+                else f"{len(series) - stats.known} of {len(series)} "
+                f"{'weeks' if weekly else 'days'} have no reading.",
+            ),
+        )
+        if stats.known
+        else None
+    )
     return MetricTrendResult(
+        visual=line,
         summary=clip(summary, 300) or "Traced a trend",
         account=handle(acct) if acct else None,
         metric=args.metric,
         label=label,
         period=_period_out(closed.span),
         granularity="week" if weekly else "day",
-        points=[TrendPointOut(day=p.day, value=p.value, days_known=p.days_known) for p in series],
+        points=out,
         known_points=stats.known,
-        first=_point(stats.first),
-        last=_point(stats.last),
-        lowest=_point(stats.low),
-        highest=_point(stats.high),
+        first=first,
+        last=last,
+        lowest=lowest,
+        highest=highest,
         change_pct=stats.change_pct,
         direction=stats.direction,
         caveats=caveats,

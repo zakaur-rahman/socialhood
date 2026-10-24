@@ -10,6 +10,11 @@ agent/report.model_view), so it can't put a number, label or layout in one.
 - ``ranked_posts``: posts by one metric, best first (top_posts).
 - ``sentiment_summary``: the sentiment split and top topics (sentiment_distribution,
   comment_topics).
+- ``trend``: one series over time, gaps kept as gaps (metric_trend; VIS-07).
+- ``lead_list``: the best-scored contacts waiting for a reply (list_contacts with
+  ``awaiting_reply``; VIS-08), and the conversations "Prepare replies" drafts for (VIS-12).
+- ``table``: a short table of what a tool listed, for the tools that return tabular data only:
+  search_conversations and list_orders (VIS-09).
 
 ``safe`` runs a builder: a failure, or a visual over MAX_VISUAL_BYTES, drops only the visual (the
 tool's result and the answer stand), logged as ``agent_visual`` and counted. ``read`` re-checks a
@@ -25,7 +30,7 @@ import uuid
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import date
-from typing import Any, cast
+from typing import Any, Literal, cast
 from urllib.parse import urlsplit
 
 from pydantic import ValidationError
@@ -34,28 +39,48 @@ from socialhood.agent.timeparse import span_label
 from socialhood.observability.logging import get_logger
 from socialhood.observability.metrics import AGENT_VISUALS
 from socialhood.schemas.agent import (
+    LEAD_REPLY_MAX,
+    MAX_LEADS,
     MAX_METRICS,
     MAX_RANKED,
+    MAX_TABLE_COLUMNS,
+    MAX_TABLE_ROWS,
     MAX_TOPICS,
+    MAX_TREND_POINTS,
     MAX_VISUAL_BYTES,
     VISUAL_ADAPTER,
+    LeadListVisual,
+    LeadRow,
     MetricComparisonVisual,
     MetricDelta,
     MetricFormat,
     RankedPostRow,
     RankedPostsVisual,
     SentimentSummaryVisual,
+    TableColumn,
+    TableRow,
+    TableVisual,
     Tone,
+    TrendMetricKey,
+    TrendPoint,
+    TrendVisual,
     Visual,
     VisualMetricKey,
     VisualPeriod,
     VisualTopic,
 )
-from socialhood.schemas.analytics import AccountMetricFigure, AccountMetrics, DaySpan, MetricGap
+from socialhood.schemas.analytics import (
+    AccountMetricFigure,
+    AccountMetrics,
+    ChangeDirection,
+    DaySpan,
+    MetricGap,
+)
+from socialhood.schemas.contacts import ContactListItem
 
 log = get_logger(__name__)
 
-KINDS = ("metric_comparison", "ranked_posts", "sentiment_summary")
+KINDS = ("metric_comparison", "ranked_posts", "sentiment_summary", "trend", "lead_list", "table")
 THUMBNAIL_MAX_CHARS = 400
 CAPTION_CHARS = 100
 LABEL_CHARS = 60
@@ -255,6 +280,190 @@ def sentiment_summary(
             VisualTopic(label=_clip(label, 40) or "topic", count=count)
             for label, count in topics[:MAX_TOPICS]
         ],
+    )
+
+
+# ---------------------------------------------------------------- trend (VIS-07)
+
+
+def _count(value: float | None) -> str:
+    return "no reading" if value is None else f"{value:,.0f}"
+
+
+def _day(point: TrendPoint) -> str:
+    return f"{point.day.day} {point.day:%b}"
+
+
+def trend_summary(
+    *,
+    label: str,
+    granularity: str,
+    period: VisualPeriod,
+    first: TrendPoint | None,
+    last: TrendPoint | None,
+    lowest: TrendPoint | None,
+    highest: TrendPoint | None,
+    change_pct: float | None,
+) -> str:
+    """The chart in words, from the tool's own figures (the aria label and the text fallback)."""
+    text = f"{label} by {granularity}, {period.label}."
+    if first is None or last is None:
+        return f"{text} No readings."
+    if first.day == last.day:
+        text += f" One reading: {_count(first.value)} on {_day(first)}."
+    else:
+        text += (
+            f" From {_count(first.value)} on {_day(first)} to {_count(last.value)} on {_day(last)}"
+        )
+        text += f" ({change_pct:+.1f}%)." if change_pct is not None else "."
+    if lowest and highest and lowest.day != highest.day:
+        text += (
+            f" Lowest {_count(lowest.value)} on {_day(lowest)},"
+            f" highest {_count(highest.value)} on {_day(highest)}."
+        )
+    return text
+
+
+def trend(
+    *,
+    metric: str,
+    granularity: str,
+    period: VisualPeriod,
+    account_label: str | None,
+    points: Sequence[TrendPoint],
+    known_points: int,
+    first: TrendPoint | None,
+    last: TrendPoint | None,
+    lowest: TrendPoint | None,
+    highest: TrendPoint | None,
+    change_pct: float | None,
+    direction: ChangeDirection | None,
+    note: str | None,
+) -> TrendVisual:
+    """One series, in the tool's order. A point without a reading stays ``None``; this never
+    fills one in. More than MAX_TREND_POINTS points (the tool's own spans never make that many)
+    fail the build, so a chart is never silently cut."""
+    if len(points) > MAX_TREND_POINTS:
+        raise ValueError("too many points for a trend")
+    label, fmt, _ = METRICS[metric]
+    where = _clip(account_label, LABEL_CHARS)
+    return TrendVisual(
+        kind="trend",
+        title=_clip(f"{label}, {period.label}" + (f": {where}" if where else ""), 120) or label,
+        metric_key=cast(TrendMetricKey, metric),
+        metric_label=label,
+        format=fmt,
+        granularity=cast(Any, granularity),
+        period=period,
+        account_label=where,
+        points=list(points),
+        known_points=known_points,
+        first=first,
+        last=last,
+        lowest=lowest,
+        highest=highest,
+        change_pct=change_pct,
+        direction=direction,
+        summary=_clip(
+            trend_summary(
+                label=label,
+                granularity=granularity,
+                period=period,
+                first=first,
+                last=last,
+                lowest=lowest,
+                highest=highest,
+                change_pct=change_pct,
+            ),
+            300,
+        )
+        or label,
+        note=_clip(note, 200),
+    )
+
+
+# ---------------------------------------------------------------- lead_list (VIS-08, VIS-12)
+
+
+def lead_list(
+    *,
+    items: Sequence[ContactListItem],
+    total: int,
+    more_route: str | None,
+    activity: Sequence[str | None] = (),
+) -> LeadListVisual:
+    """The leads as the contacts service listed them (already best score first). ``reply_ids``
+    are the first LEAD_REPLY_MAX that have a conversation: the ones "Prepare replies" drafts for.
+    ``activity`` is each lead's last-activity words, from the tool."""
+    shown = list(items[:MAX_LEADS])
+    return LeadListVisual(
+        kind="lead_list",
+        title="Leads waiting for your reply",
+        total=total,
+        items=[
+            LeadRow(
+                contact_id=c.id,
+                conversation_id=c.conversation_id,
+                name=_clip(c.name, LABEL_CHARS) or "Customer",
+                platform=c.platform[:20],
+                lead_score=c.lead_score,
+                lead_stage=c.lead_stage,
+                last_activity_label=_clip(activity[i], 60) if i < len(activity) else None,
+            )
+            for i, c in enumerate(shown)
+        ],
+        reply_ids=[c.conversation_id for c in shown if c.conversation_id][:LEAD_REPLY_MAX],
+        more_route=more_route,
+    )
+
+
+# ---------------------------------------------------------------- table (VIS-09)
+
+TEXT_CELL_CHARS = 80
+
+
+@dataclass(frozen=True)
+class Column:
+    """A table column: ``figures`` are right-aligned (a count, a percent or money text)."""
+
+    key: str
+    label: str
+    figures: bool = False
+    format: Literal["text", "count", "percent"] = "text"
+
+
+def table(
+    *,
+    title: str,
+    columns: Sequence[Column],
+    rows: Sequence[Sequence[str | float | None]],
+    total: int,
+    more_route: str | None,
+) -> TableVisual:
+    """The first MAX_TABLE_ROWS rows of what a tool listed, cells in the columns' order. A row of
+    the wrong width fails the build."""
+    if not 1 <= len(columns) <= MAX_TABLE_COLUMNS:
+        raise ValueError("a table has 1 to 6 columns")
+    if any(len(row) != len(columns) for row in rows):
+        raise ValueError("a row must have a cell for every column")
+    return TableVisual(
+        kind="table",
+        title=_clip(title, 120) or "Table",
+        columns=[
+            TableColumn(
+                key=c.key[:30],
+                label=_clip(c.label, 40) or c.key,
+                align="right" if c.figures else "left",
+                format=c.format,
+            )
+            for c in columns
+        ],
+        rows=[
+            TableRow(cells=[_clip(v, TEXT_CELL_CHARS) if isinstance(v, str) else v for v in row])
+            for row in rows[:MAX_TABLE_ROWS]
+        ],
+        total=total,
+        more_route=more_route,
     )
 
 
