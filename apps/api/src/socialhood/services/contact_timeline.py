@@ -75,6 +75,7 @@ CONSENT_SOURCE = {
     "stop_reply": "Replied STOP",
     "member": "Recorded by your team",
     "import": "Imported",
+    "widget": "Agreed in the website chat",
 }
 
 

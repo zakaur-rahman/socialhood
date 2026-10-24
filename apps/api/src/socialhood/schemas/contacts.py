@@ -14,7 +14,7 @@ from socialhood.schemas.common import RequestModel, ResponseModel
 FieldTypeName = Literal["text", "email", "phone", "number", "date", "choice"]
 ConsentChannelName = Literal["instagram", "whatsapp", "email"]
 ConsentStatusName = Literal["granted", "revoked"]
-ConsentSourceName = Literal["platform_optin", "flow", "stop_reply", "member", "import"]
+ConsentSourceName = Literal["platform_optin", "flow", "stop_reply", "member", "import", "widget"]
 LeadStageName = Literal["new", "qualified", "follow_up", "won", "lost"]  # GR-18
 Option = Annotated[str, Field(min_length=1, max_length=60)]  # a choice field's value
 # A custom field filter: ``key:value`` (equal, ignoring case) or ``key:*`` (has any value).
