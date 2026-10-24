@@ -167,12 +167,12 @@ async def test_the_sync_sends_one_item_per_variant_and_only_what_changed(
         f"/products/{made.id}",
         json={
             "variants": [
-                {"id": str(made.variants[t]), "title": t, "price": price}
-                for t, price in [
-                    ("Blue / S", "799"),
-                    ("Blue / M", "899"),
-                    ("Blue / L", "849"),
-                    ("Red / M", "799"),
+                {"id": str(made.variants[t]), "title": t, "price": price, "stock": stock}
+                for t, price, stock in [  # stock is sent too: leaving it out would clear it
+                    ("Blue / S", "799", 4),
+                    ("Blue / M", "899", 12),
+                    ("Blue / L", "849", 0),
+                    ("Red / M", "799", None),
                 ]
             ]
         },

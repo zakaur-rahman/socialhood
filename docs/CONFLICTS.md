@@ -4522,6 +4522,15 @@ coordinator runs them).*
   its own webhooks with the secret it types into the card. Owner track: Razorpay account(s) for a live
   test, and whether to become a Technology Partner (OAuth).
 
+- *Fixed in the combined batch:* (1) the payment settings showed no webhook address unless
+  `API_BASE_URL` was set; it now falls back to the address the request came to, as the widget snippet does.
+  (2) Asking for a payment link returned 500: `updated_at` was expired by the update and read lazily
+  in the response (`MissingGreenlet`); `orders.views` now refreshes it. (3) Test fixes: the Razorpay
+  webhook column is `razorpay_webhook_secret_enc`; two orders in one workspace reuse one kurta (SKUs are
+  unique per workspace); the Activity feed hides successes unless `failures_only=false`, and names the
+  contact as `@username`. The account-deletion seed adds one catalogue connection per workspace
+  (the table allows one).
+
 ## C-121 · WhatsApp catalogue messages (GR-33, feature/gr-32-33-orders-wa-catalogue)
 
 Products copied to a Meta commerce catalogue, product and product-list messages sent from the inbox,
@@ -4662,6 +4671,10 @@ tenancy, vitest and e2e tests were written but not run (the coordinator runs the
 - Owner track: a real WhatsApp number with a commerce catalogue connected in WhatsApp Manager, and a
   check of which token can call the Catalog API (item 39).
 
+- *Fixed in the combined batch:* the sync test patched a product's variants without their stock, which
+  clears it and flipped Blue / L to "in stock", so two items were sent instead of one. The test now
+  sends the stock too. (Test only: the sync was right to resend a changed item.)
+
 ## C-122 · Go-to-market pages (GR-37, feature/gr-37-gtm-pages)
 
 Seven public pages: Switch from Manychat, Social Hood vs Manychat, Social Hood vs Interakt, three
@@ -4729,3 +4742,9 @@ change, no migration. The footer has a "Compare and learn" column, every page is
 - pytest: `tests/unit/test_marketing_plan_table.py`.
 - Playwright: `e2e/gr37-gtm-pages.spec.ts` visits every page signed out, at desktop and phone width.
 - *Written but not run in this session (the coordinator builds and runs the web checks).*
+
+- *Fixed in the combined batch:* the pages said in-chat payments were "Not offered" and the plan
+  table had no row for `orders_monthly` (added by GR-32). The Interakt comparison now says what we
+  offer (Razorpay link to the business's own account, or UPI marked paid by hand; no WhatsApp Pay) and
+  the catalogue row says WhatsApp product messages need the owner's Meta catalogue and Meta's approval
+  (C-121). The plan matrix shows "Orders a month" under commerce (Pro and Max).

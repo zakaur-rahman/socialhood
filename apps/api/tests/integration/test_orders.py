@@ -44,10 +44,12 @@ async def rows(engine: AsyncEngine, sql: str, **params: Any) -> list[dict[str, A
         return [dict(r._mapping) for r in await conn.execute(text(sql), params)]
 
 
-async def order_in_chat(ws: Ws, engine: AsyncEngine, **extra: Any) -> tuple[dict[str, Any], Any]:
-    """A conversation, the cotton kurta and an order of two Blue / M."""
+async def order_in_chat(
+    ws: Ws, engine: AsyncEngine, *, kurta: Any = None, **extra: Any
+) -> tuple[dict[str, Any], Any]:
+    """A conversation, the cotton kurta (made once, or pass it) and two Blue / M."""
     thread = await make_thread(engine, workspace_id=ws.wid, account_id=ws.account_id)
-    kurta = await make_product(engine, workspace_id=ws.wid)
+    kurta = kurta or await make_product(engine, workspace_id=ws.wid)
     order = await ws.ok(
         "POST",
         "/orders",
@@ -199,10 +201,10 @@ async def test_bad_keys_are_refused_and_good_ones_are_stored_encrypted(
     assert "payment_link.paid" in status["webhook_events"]
     assert "keysecret123" not in json.dumps(status)
     [stored] = await rows(
-        engine, "SELECT razorpay_secret_enc, razorpay_webhook_key_enc FROM payment_connections"
+        engine, "SELECT razorpay_secret_enc, razorpay_webhook_secret_enc FROM payment_connections"
     )
     assert b"keysecret123" not in bytes(stored["razorpay_secret_enc"])
-    assert b"hooksecret1" not in bytes(stored["razorpay_webhook_key_enc"])
+    assert b"hooksecret1" not in bytes(stored["razorpay_webhook_secret_enc"])
 
 
 async def razorpay_ready(ws: Ws) -> str:
@@ -377,7 +379,7 @@ async def test_cancel_stops_the_order_and_a_paid_one_cannot_be_cancelled(
     ws: Ws, engine: AsyncEngine, fake_razorpay: FakeRazorpay
 ) -> None:
     await razorpay_ready(ws)
-    order, _ = await order_in_chat(ws, engine)
+    order, kurta = await order_in_chat(ws, engine)
     await ws.ok(
         "POST", f"/orders/{order['id']}/payment-request", json={"method": "razorpay", "send": False}
     )
@@ -388,7 +390,7 @@ async def test_cancel_stops_the_order_and_a_paid_one_cannot_be_cancelled(
         await ws.call("POST", f"/orders/{order['id']}/payment-request", json={"method": "upi"})
     ).status_code == 422
 
-    other, _ = await order_in_chat(ws, engine)
+    other, _ = await order_in_chat(ws, engine, kurta=kurta)
     await ws.ok("POST", f"/orders/{other['id']}/mark-paid", json={})
     assert (await ws.call("POST", f"/orders/{other['id']}/cancel")).status_code == 422
 
@@ -419,7 +421,7 @@ async def test_events_timeline_activity_and_ask_see_the_order(ws: Ws, engine: As
     assert entry["title"] == "Order #1 paid"
     assert "INR 1598.00" in entry["detail"]
 
-    feed = await ws.ok("GET", "/activity?kind=order")
+    feed = await ws.ok("GET", "/activity?kind=order&failures_only=false")
     assert [i["title"] for i in feed["items"]] == [
-        f"Order #1 was paid from {order['contact']['display_name']}"
+        f"Order #1 was paid from @{order['contact']['username']}"
     ]

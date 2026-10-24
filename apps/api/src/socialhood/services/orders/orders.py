@@ -25,7 +25,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote, urlencode
 
-from sqlalchemy import func, select
+from sqlalchemy import func, inspect, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.entitlements import allows, check_entitlement, quota_error
@@ -133,6 +133,9 @@ async def views(session: AsyncSession, orders: Sequence[Order]) -> list[OrderOut
     """The orders as the API shows them (one query each for lines, contacts and names)."""
     if not orders:
         return []
+    for o in orders:
+        if "updated_at" in inspect(o).unloaded:  # just updated: the server-side value is read here
+            await session.refresh(o, ["updated_at"])
     items = await items_of(session, [o.id for o in orders])
     contacts = {
         c.id: c

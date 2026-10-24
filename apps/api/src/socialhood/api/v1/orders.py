@@ -169,13 +169,19 @@ async def cancel_order(
 # ---------------------------------------------------------------- payment settings
 
 
+def _api_base(request: Request) -> str:
+    """The public address of this API: the configured one, else the one this request came to (as the
+    widget snippet does), so the webhook address to paste into Razorpay is always shown."""
+    return request.app.state.settings.api_base_url or str(request.base_url)
+
+
 @router.get("/integrations/payments", operation_id="get_payment_settings")
 async def get_payment_settings(
     request: Request, ctx: CanManageIntegrations, session: Session
 ) -> PaymentSettings:
     """Whether Razorpay and/or UPI are set up, and the webhook address to add in Razorpay. The
     keys and secrets are never returned."""
-    return await payments.status(session, api_base_url=request.app.state.settings.api_base_url)
+    return await payments.status(session, api_base_url=_api_base(request))
 
 
 @router.put("/integrations/payments/razorpay", operation_id="connect_razorpay")
@@ -188,7 +194,7 @@ async def connect_razorpay(
         session, _client(request), _cipher(request), body, user_id=ctx.user.id
     )
     await audit.record(session, ctx, "payments.razorpay_connected", "payments")
-    out = await payments.status(session, api_base_url=request.app.state.settings.api_base_url)
+    out = await payments.status(session, api_base_url=_api_base(request))
     await session.commit()
     return out
 
@@ -211,7 +217,7 @@ async def save_upi(
     paid by hand)."""
     await payments.save_upi(session, body, user_id=ctx.user.id)
     await audit.record(session, ctx, "payments.upi_saved", "payments")
-    out = await payments.status(session, api_base_url=request.app.state.settings.api_base_url)
+    out = await payments.status(session, api_base_url=_api_base(request))
     await session.commit()
     return out
 
