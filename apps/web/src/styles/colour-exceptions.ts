@@ -53,6 +53,12 @@ export const colourExceptions: ColourException[] = [
   },
   {
     kind: "tokens",
+    tokens: ["chart-series-2", "chart-series-3", "chart-series-4", "chart-series-5", "chart-series-6"],
+    reason:
+      "The categorical chart palette after the brand hue: the fixed order for accounts, platforms and topics. Distinct hues on purpose, validated for colour-blind separation in both themes; charts only, never text.",
+  },
+  {
+    kind: "tokens",
     tokens: ["media-scrim", "media-wash", "media-chip", "media-heavy", "scrim"],
     reason: "Black over photos, video and behind modals: dark in any theme, so it is not a surface colour. Three named steps replace six opacities.",
   },

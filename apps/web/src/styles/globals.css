@@ -140,6 +140,16 @@
   --color-chart-neutral: var(--color-fg-secondary);
   --color-chart-negative: var(--color-danger);
   --color-chart-series-1: var(--color-brand);
+  /* The categorical palette for several series (accounts, platforms, intents), in a fixed order that
+     is never cycled: brand indigo, orange, aqua, sky, yellow, magenta. Validated with the data-viz
+     checker per theme (lightness band, chroma, adjacent colour-blind and normal-vision separation);
+     the light yellow, aqua and magenta are under 3:1 on white, so every chart also has a legend, a
+     tooltip and a table. A 7th series folds into "Other" in the neutral token, never a new hue. */
+  --color-chart-series-2: light-dark(#EB6834, #D95926);   /* orange */
+  --color-chart-series-3: light-dark(#1BAF7A, #199E70);   /* aqua */
+  --color-chart-series-4: light-dark(#1F9BD1, #2F8FD0);   /* sky */
+  --color-chart-series-5: light-dark(#EDA100, #C98500);   /* yellow */
+  --color-chart-series-6: light-dark(#E87BA4, #D55181);   /* magenta */
 
   /* Type: the two sizes the scale lacked, each with its line height (C-070) */
   --text-2xs: 0.6875rem; --text-2xs--line-height: 1rem;      /* 11/16: status badges, chips, eyebrows */

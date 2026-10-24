@@ -93,6 +93,12 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "instagram-logo-4": { use: "Instagram logo gradient, last stop", swatch: "bg-instagram-logo-4" },
   "facebook-logo": { use: "Facebook logo tile", swatch: "bg-facebook-logo" },
   "whatsapp-logo": { use: "WhatsApp logo tile", swatch: "bg-whatsapp-logo" },
+  // The categorical chart palette after series 1 (brand): charts only, never text
+  "chart-series-2": { use: "Chart series 2 (orange): the 2th account, platform or topic in a chart", swatch: "bg-chart-series-2" },
+  "chart-series-3": { use: "Chart series 3 (aqua): the 3th account, platform or topic in a chart", swatch: "bg-chart-series-3" },
+  "chart-series-4": { use: "Chart series 4 (sky): the 4th account, platform or topic in a chart", swatch: "bg-chart-series-4" },
+  "chart-series-5": { use: "Chart series 5 (yellow): the 5th account, platform or topic in a chart", swatch: "bg-chart-series-5" },
+  "chart-series-6": { use: "Chart series 6 (magenta): the 6th account, platform or topic in a chart", swatch: "bg-chart-series-6" },
 };
 
 /**

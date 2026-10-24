@@ -70,7 +70,12 @@ export const tokenValues = {
     "instagram-logo-3": "#8134AF",
     "instagram-logo-4": "#515BD4",
     "facebook-logo": "#0866FF",
-    "whatsapp-logo": "#25D366"
+    "whatsapp-logo": "#25D366",
+    "chart-series-2": "#D95926",
+    "chart-series-3": "#199E70",
+    "chart-series-4": "#2F8FD0",
+    "chart-series-5": "#C98500",
+    "chart-series-6": "#D55181"
   },
   "colorsLight": {
     "canvas": "#F5F6FB",
@@ -140,7 +145,12 @@ export const tokenValues = {
     "instagram-logo-3": "#8134AF",
     "instagram-logo-4": "#515BD4",
     "facebook-logo": "#0866FF",
-    "whatsapp-logo": "#25D366"
+    "whatsapp-logo": "#25D366",
+    "chart-series-2": "#EB6834",
+    "chart-series-3": "#1BAF7A",
+    "chart-series-4": "#1F9BD1",
+    "chart-series-5": "#EDA100",
+    "chart-series-6": "#E87BA4"
   },
   "themed": [
     "color:canvas",
@@ -179,6 +189,11 @@ export const tokenValues = {
     "color:success-soft",
     "color:warning-soft",
     "color:danger-soft",
+    "color:chart-series-2",
+    "color:chart-series-3",
+    "color:chart-series-4",
+    "color:chart-series-5",
+    "color:chart-series-6",
     "shadow:floating",
     "shadow:overlay",
     "shadow:glass",
