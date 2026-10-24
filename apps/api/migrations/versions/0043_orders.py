@@ -178,9 +178,7 @@ def upgrade() -> None:
         *_id_and_times(),
         sa.CheckConstraint("quantity BETWEEN 1 AND 999", name=op.f("ck_order_items_quantity")),
         sa.CheckConstraint("unit_price_minor >= 0", name=op.f("ck_order_items_unit_price_minor")),
-        sa.CheckConstraint(
-            "line_total_minor >= 0", name=op.f("ck_order_items_line_total_minor")
-        ),
+        sa.CheckConstraint("line_total_minor >= 0", name=op.f("ck_order_items_line_total_minor")),
         sa.ForeignKeyConstraint(
             ["order_id"],
             ["orders.id"],

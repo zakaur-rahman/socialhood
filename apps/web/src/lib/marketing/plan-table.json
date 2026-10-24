@@ -136,6 +136,11 @@
       "pro": 500,
       "max": 5000
     },
+    "orders_monthly": {
+      "free": 0,
+      "pro": 500,
+      "max": 5000
+    },
     "active_sequences": {
       "free": 1,
       "pro": 10,

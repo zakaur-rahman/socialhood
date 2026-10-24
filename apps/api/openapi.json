@@ -373,7 +373,8 @@
               "webhook_delivery",
               "account",
               "broadcast",
-              "sequence"
+              "sequence",
+              "order"
             ],
             "title": "Kind",
             "type": "string"
@@ -553,6 +554,204 @@
           "tag_id"
         ],
         "title": "AddTag",
+        "type": "object"
+      },
+      "AddressIn": {
+        "additionalProperties": false,
+        "description": "Where to deliver. Every part is optional (digital orders have none); it is saved as given.",
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "line1": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line1"
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 30,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "pincode": {
+            "anyOf": [
+              {
+                "maxLength": 12,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pincode"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "title": "AddressIn",
+        "type": "object"
+      },
+      "AddressOut": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "line1": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line1"
+          },
+          "line2": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line2"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "pincode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pincode"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          }
+        },
+        "title": "AddressOut",
         "type": "object"
       },
       "AgentApproval": {
@@ -2206,7 +2405,8 @@
               "scheduled_message",
               "scheduled_post",
               "knowledge_source",
-              "product"
+              "product",
+              "order"
             ],
             "title": "Kind",
             "type": "string"
@@ -11529,6 +11729,33 @@
         "title": "InvitationList",
         "type": "object"
       },
+      "ItemRef": {
+        "additionalProperties": false,
+        "properties": {
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          }
+        },
+        "required": [
+          "product_id"
+        ],
+        "title": "ItemRef",
+        "type": "object"
+      },
       "KnowledgeGap": {
         "properties": {
           "examples": {
@@ -12436,6 +12663,26 @@
           "status"
         ],
         "title": "LinkedAutomation",
+        "type": "object"
+      },
+      "MarkPaid": {
+        "additionalProperties": false,
+        "description": "For a UPI order: the customer's payment reference, if they shared one.",
+        "properties": {
+          "reference": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          }
+        },
+        "title": "MarkPaid",
         "type": "object"
       },
       "MarkRead": {
@@ -13776,6 +14023,468 @@
         "title": "NumberInfo",
         "type": "object"
       },
+      "OrderContact": {
+        "properties": {
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Username"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "title": "OrderContact",
+        "type": "object"
+      },
+      "OrderCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "conversation_id": {
+            "format": "uuid",
+            "title": "Conversation Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineIn"
+            },
+            "maxItems": 50,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "conversation_id",
+          "items"
+        ],
+        "title": "OrderCreate",
+        "type": "object"
+      },
+      "OrderLimits": {
+        "properties": {
+          "entitled": {
+            "title": "Entitled",
+            "type": "boolean"
+          },
+          "razorpay_ready": {
+            "title": "Razorpay Ready",
+            "type": "boolean"
+          },
+          "upi_ready": {
+            "title": "Upi Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entitled",
+          "razorpay_ready",
+          "upi_ready"
+        ],
+        "title": "OrderLimits",
+        "type": "object"
+      },
+      "OrderLineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "product_id": {
+            "format": "uuid",
+            "title": "Product Id",
+            "type": "string"
+          },
+          "quantity": {
+            "default": 1,
+            "maximum": 999.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          }
+        },
+        "required": [
+          "product_id"
+        ],
+        "title": "OrderLineIn",
+        "type": "object"
+      },
+      "OrderLineOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "line_total": {
+            "title": "Line Total",
+            "type": "string"
+          },
+          "line_total_minor": {
+            "title": "Line Total Minor",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "product_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Product Id"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "sku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sku"
+          },
+          "unit_price": {
+            "title": "Unit Price",
+            "type": "string"
+          },
+          "unit_price_minor": {
+            "title": "Unit Price Minor",
+            "type": "integer"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          },
+          "variant_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Title"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "quantity",
+          "unit_price_minor",
+          "unit_price",
+          "line_total_minor",
+          "line_total"
+        ],
+        "title": "OrderLineOut",
+        "type": "object"
+      },
+      "OrderList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/OrderLimits"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "limits"
+        ],
+        "title": "OrderList",
+        "type": "object"
+      },
+      "OrderOut": {
+        "properties": {
+          "address": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AddressOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "contact": {
+            "$ref": "#/components/schemas/OrderContact"
+          },
+          "conversation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conversation Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By Name"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OrderLineOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "link_expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Expires At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "number": {
+            "title": "Number",
+            "type": "integer"
+          },
+          "paid_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid At"
+          },
+          "paid_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paid By Name"
+          },
+          "payment_link_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Link Url"
+          },
+          "payment_method": {
+            "anyOf": [
+              {
+                "enum": [
+                  "razorpay",
+                  "upi"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Method"
+          },
+          "payment_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Reference"
+          },
+          "source": {
+            "enum": [
+              "inbox",
+              "whatsapp"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "draft",
+              "awaiting_payment",
+              "paid",
+              "cancelled",
+              "expired"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "string"
+          },
+          "total_minor": {
+            "title": "Total Minor",
+            "type": "integer"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "status",
+          "source",
+          "currency",
+          "total_minor",
+          "total",
+          "items",
+          "contact",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "OrderOut",
+        "type": "object"
+      },
       "OverlapWarning": {
         "properties": {
           "automation_id": {
@@ -14364,6 +15073,126 @@
           "status"
         ],
         "title": "PaymentOut",
+        "type": "object"
+      },
+      "PaymentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "method": {
+            "enum": [
+              "razorpay",
+              "upi"
+            ],
+            "title": "Method",
+            "type": "string"
+          },
+          "send": {
+            "default": true,
+            "title": "Send",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "method"
+        ],
+        "title": "PaymentRequest",
+        "type": "object"
+      },
+      "PaymentSettings": {
+        "properties": {
+          "entitled": {
+            "title": "Entitled",
+            "type": "boolean"
+          },
+          "razorpay_connected": {
+            "title": "Razorpay Connected",
+            "type": "boolean"
+          },
+          "razorpay_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Razorpay Error"
+          },
+          "razorpay_key_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Razorpay Key Id"
+          },
+          "razorpay_test_mode": {
+            "default": false,
+            "title": "Razorpay Test Mode",
+            "type": "boolean"
+          },
+          "upi_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upi Name"
+          },
+          "upi_vpa": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Upi Vpa"
+          },
+          "webhook_events": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Webhook Events",
+            "type": "array"
+          },
+          "webhook_seen_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Seen At"
+          },
+          "webhook_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Url"
+          }
+        },
+        "required": [
+          "entitled",
+          "razorpay_connected"
+        ],
+        "title": "PaymentSettings",
         "type": "object"
       },
       "PeriodFigure": {
@@ -15834,6 +16663,74 @@
         "title": "ProductList",
         "type": "object"
       },
+      "ProductMessageSend": {
+        "additionalProperties": false,
+        "description": "``product``: one item (``item``). ``product_list``: ``sections`` of items (up to 30 in all,\nin up to 10 sections) under a ``header``, which Meta requires for a list.",
+        "properties": {
+          "body": {
+            "maxLength": 1024,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "footer": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Footer"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "maxLength": 60,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Header"
+          },
+          "item": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ItemRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "enum": [
+              "product",
+              "product_list"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/SectionIn"
+            },
+            "maxItems": 10,
+            "title": "Sections",
+            "type": "array"
+          }
+        },
+        "required": [
+          "kind",
+          "body"
+        ],
+        "title": "ProductMessageSend",
+        "type": "object"
+      },
       "ProductOut": {
         "properties": {
           "active": {
@@ -16711,6 +17608,37 @@
         "title": "RateCardOut",
         "type": "object"
       },
+      "RazorpayConnect": {
+        "additionalProperties": false,
+        "properties": {
+          "key_id": {
+            "maxLength": 64,
+            "minLength": 8,
+            "pattern": "^rzp_(test|live)_[A-Za-z0-9]+$",
+            "title": "Key Id",
+            "type": "string"
+          },
+          "private_key": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Private Key",
+            "type": "string"
+          },
+          "webhook_key": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "Webhook Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key_id",
+          "private_key",
+          "webhook_key"
+        ],
+        "title": "RazorpayConnect",
+        "type": "object"
+      },
       "Reaction": {
         "properties": {
           "at": {
@@ -17286,6 +18214,41 @@
         "title": "SandboxAccountCreate",
         "type": "object"
       },
+      "SandboxCartItem": {
+        "additionalProperties": false,
+        "properties": {
+          "price": {
+            "anyOf": [
+              {
+                "maxLength": 24,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "quantity": {
+            "default": 1,
+            "maximum": 999.0,
+            "minimum": 1.0,
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "retailer_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Retailer Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "retailer_id"
+        ],
+        "title": "SandboxCartItem",
+        "type": "object"
+      },
       "SandboxInbound": {
         "additionalProperties": false,
         "description": "A fake Instagram event, or a fake Facebook Page event for a sandbox Page (dev and e2e).\nGR-01 adds a referral without a message (an entry link opened, or an ad tapped), a tapped\npostback (an ice breaker), an opt-in and a Live comment; a DM can carry an ad referral (its\nfirst message from an ad). GR-06 and GR-07 add a\nstory reply, a story like (the heart) and a story mention. A Facebook Page takes a DM, a\ncomment on a post, a referral, a postback and an opt-in; the kinds it doesn't have are\nrefused (GR-29).\n\nGR-23 adds two kinds for a sandbox WhatsApp number, and lets a ``dm`` be a WhatsApp customer's\nmessage (``from_id`` is their number): ``status`` is a delivery status for the last message we\nsent that contact (``delivery_status``, with ``error_code`` and ``error_text`` for a failure),\nand ``quality`` a ``phone_number_quality_update`` (``quality_event``, ``tier``).",
@@ -17331,6 +18294,21 @@
               }
             ],
             "title": "Age Seconds"
+          },
+          "cart": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SandboxCartItem"
+                },
+                "maxItems": 30,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cart"
           },
           "delivery_status": {
             "anyOf": [
@@ -17410,7 +18388,8 @@
               "story_like",
               "story_mention",
               "status",
-              "quality"
+              "quality",
+              "order"
             ],
             "title": "Kind",
             "type": "string"
@@ -18547,6 +19526,32 @@
           "limit"
         ],
         "title": "Seats",
+        "type": "object"
+      },
+      "SectionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ItemRef"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "title": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "items"
+        ],
+        "title": "SectionIn",
         "type": "object"
       },
       "Segment": {
@@ -21340,7 +22345,8 @@
               "lead_stage",
               "broadcast",
               "assignment",
-              "sequence"
+              "sequence",
+              "order"
             ],
             "title": "Kind",
             "type": "string"
@@ -21482,6 +22488,30 @@
           "items"
         ],
         "title": "TopPosts",
+        "type": "object"
+      },
+      "UpiSave": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "vpa": {
+            "maxLength": 100,
+            "minLength": 5,
+            "pattern": "^[A-Za-z0-9._-]{2,64}@[A-Za-z]{2,32}$",
+            "title": "Vpa",
+            "type": "string"
+          }
+        },
+        "required": [
+          "vpa",
+          "name"
+        ],
+        "title": "UpiSave",
         "type": "object"
       },
       "UploadSignature": {
@@ -21886,6 +22916,210 @@
         "title": "VisualTopic",
         "type": "object"
       },
+      "WaCatalogueConnect": {
+        "additionalProperties": false,
+        "properties": {
+          "brand": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "catalog_id": {
+            "maxLength": 40,
+            "minLength": 3,
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "title": "Catalog Id",
+            "type": "string"
+          },
+          "social_account_id": {
+            "format": "uuid",
+            "title": "Social Account Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "social_account_id",
+          "catalog_id"
+        ],
+        "title": "WaCatalogueConnect",
+        "type": "object"
+      },
+      "WaCatalogueProblem": {
+        "properties": {
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "message"
+        ],
+        "title": "WaCatalogueProblem",
+        "type": "object"
+      },
+      "WaCatalogueStatus": {
+        "properties": {
+          "account_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Label"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "catalog_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Id"
+          },
+          "catalog_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Catalog Name"
+          },
+          "connected": {
+            "title": "Connected",
+            "type": "boolean"
+          },
+          "entitled": {
+            "title": "Entitled",
+            "type": "boolean"
+          },
+          "items_error": {
+            "default": 0,
+            "title": "Items Error",
+            "type": "integer"
+          },
+          "items_pending": {
+            "default": 0,
+            "title": "Items Pending",
+            "type": "integer"
+          },
+          "items_synced": {
+            "default": 0,
+            "title": "Items Synced",
+            "type": "integer"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "problems": {
+            "items": {
+              "$ref": "#/components/schemas/WaCatalogueProblem"
+            },
+            "title": "Problems",
+            "type": "array"
+          },
+          "social_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Social Account Id"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "active",
+                  "needs_reconnect"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "sync_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Error"
+          },
+          "synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced At"
+          },
+          "syncing": {
+            "default": false,
+            "title": "Syncing",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entitled",
+          "connected"
+        ],
+        "title": "WaCatalogueStatus",
+        "type": "object"
+      },
       "WebhookDelivery": {
         "properties": {
           "attempts": {
@@ -22081,7 +23315,9 @@
                 "message.received",
                 "conversation.assigned",
                 "automation.run.completed",
-                "broadcast.finished"
+                "broadcast.finished",
+                "order.created",
+                "order.paid"
               ],
               "type": "string"
             },
@@ -22172,7 +23408,9 @@
                 "message.received",
                 "conversation.assigned",
                 "automation.run.completed",
-                "broadcast.finished"
+                "broadcast.finished",
+                "order.created",
+                "order.paid"
               ],
               "type": "string"
             },
@@ -22250,7 +23488,9 @@
                     "message.received",
                     "conversation.assigned",
                     "automation.run.completed",
-                    "broadcast.finished"
+                    "broadcast.finished",
+                    "order.created",
+                    "order.paid"
                   ],
                   "type": "string"
                 },
@@ -22338,7 +23578,9 @@
                 "message.received",
                 "conversation.assigned",
                 "automation.run.completed",
-                "broadcast.finished"
+                "broadcast.finished",
+                "order.created",
+                "order.paid"
               ],
               "type": "string"
             },
@@ -22428,7 +23670,9 @@
               "message.received",
               "conversation.assigned",
               "automation.run.completed",
-              "broadcast.finished"
+              "broadcast.finished",
+              "order.created",
+              "order.paid"
             ],
             "title": "Type",
             "type": "string"
@@ -23755,7 +24999,8 @@
                     "webhook_delivery",
                     "account",
                     "broadcast",
-                    "sequence"
+                    "sequence",
+                    "order"
                   ],
                   "type": "string"
                 },
@@ -32058,6 +33303,80 @@
         ]
       }
     },
+    "/v1/w/{wid}/conversations/{conversation_id}/product-message": {
+      "post": {
+        "description": "Send a WhatsApp product message (one catalogue item) or product list (up to 30 items in up\nto 10 sections) in the conversation. Every item must be in the catalogue as last synced. 402\nwithout commerce on the plan, 409 when no catalogue is connected, it belongs to another number\nor the reply window is closed, 422 for an item that isn't ready or a list without a header.",
+        "operationId": "send_product_message",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductMessageSend"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Send Product Message",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
     "/v1/w/{wid}/conversations/{conversation_id}/read": {
       "post": {
         "operationId": "mark_conversation_read",
@@ -33753,6 +35072,276 @@
         ]
       }
     },
+    "/v1/w/{wid}/integrations/payments": {
+      "get": {
+        "description": "Whether Razorpay and/or UPI are set up, and the webhook address to add in Razorpay. The\nkeys and secrets are never returned.",
+        "operationId": "get_payment_settings",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Payment Settings",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/payments/razorpay": {
+      "delete": {
+        "operationId": "disconnect_razorpay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Disconnect Razorpay",
+        "tags": [
+          "orders"
+        ]
+      },
+      "put": {
+        "description": "Check the keys with Razorpay and save them (encrypted). 402 without commerce on the plan,\n422 when Razorpay refuses the keys, 502 when it doesn't answer.",
+        "operationId": "connect_razorpay",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RazorpayConnect"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Connect Razorpay",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/payments/upi": {
+      "delete": {
+        "operationId": "remove_upi",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Remove Upi",
+        "tags": [
+          "orders"
+        ]
+      },
+      "put": {
+        "description": "The UPI address customers pay (a plain UPI request has no webhook: such an order is marked\npaid by hand).",
+        "operationId": "save_upi",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpiSave"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentSettings"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Save Upi",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
     "/v1/w/{wid}/integrations/shopify": {
       "delete": {
         "description": "Revoke Shopify's access and remove the connection and, unless ``keep_products``, the\nproducts it made (they would no longer be kept in step).",
@@ -34039,6 +35628,221 @@
           }
         },
         "summary": "Sync Shopify",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/whatsapp-catalogue": {
+      "delete": {
+        "description": "Forget the connection. The catalogue itself is left as it is in Meta.",
+        "operationId": "disconnect_whatsapp_catalogue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Disconnect Whatsapp Catalogue",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "get": {
+        "description": "The connection, how many items Meta has, which ones it refused and why. Any member may read\nit (the inbox's \"Send product\" needs to know a catalogue is connected).",
+        "operationId": "get_whatsapp_catalogue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaCatalogueStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Whatsapp Catalogue",
+        "tags": [
+          "catalogue"
+        ]
+      },
+      "put": {
+        "description": "Check Meta shows the catalogue to the number's business account, save the connection and\nstart the first sync. 402 without commerce on the plan, 404 for an account that isn't this\nworkspace's, 422 for a number that isn't WhatsApp, 409 for a catalogue Meta won't show (not\nfound, or not connected to the number's business account), 502 when Meta doesn't answer.",
+        "operationId": "connect_whatsapp_catalogue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WaCatalogueConnect"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaCatalogueStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Connect Whatsapp Catalogue",
+        "tags": [
+          "catalogue"
+        ]
+      }
+    },
+    "/v1/w/{wid}/integrations/whatsapp-catalogue/sync": {
+      "post": {
+        "description": "Send what changed now. While a sync runs this changes nothing.",
+        "operationId": "sync_whatsapp_catalogue",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WaCatalogueStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Sync Whatsapp Catalogue",
         "tags": [
           "catalogue"
         ]
@@ -36229,6 +38033,461 @@
         "summary": "Mark Notifications Read",
         "tags": [
           "notifications"
+        ]
+      }
+    },
+    "/v1/w/{wid}/orders": {
+      "get": {
+        "description": "Newest first, with whether the plan and the payment settings are ready.",
+        "operationId": "list_orders",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "draft",
+                    "awaiting_payment",
+                    "paid",
+                    "cancelled",
+                    "expired"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 100000,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "List Orders",
+        "tags": [
+          "orders"
+        ]
+      },
+      "post": {
+        "description": "An order for the conversation's customer, priced from the catalogue now (the request\nnever carries a price). 402 without commerce on the plan or over the month's orders, 404\nfor a conversation or product that isn't this workspace's, 422 on the lines (a variant\nneeded, a product switched off or without a price, more than is in stock).",
+        "operationId": "create_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Create Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/orders/{order_id}": {
+      "get": {
+        "operationId": "get_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Get Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/orders/{order_id}/cancel": {
+      "post": {
+        "description": "Cancel an order that isn't paid, and its Razorpay link. 422 for a paid order.",
+        "operationId": "cancel_order",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Cancel Order",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/orders/{order_id}/mark-paid": {
+      "post": {
+        "description": "A member says the order was paid: for UPI, which has no webhook. Who and when are kept on\nthe order and in the audit trail. 422 when it is already paid or cancelled.",
+        "operationId": "mark_order_paid",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkPaid"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Mark Order Paid",
+        "tags": [
+          "orders"
+        ]
+      }
+    },
+    "/v1/w/{wid}/orders/{order_id}/payment-request": {
+      "post": {
+        "description": "Make a Razorpay payment link or a UPI request for the order and, unless ``send`` is false,\nsend it as a message on the order's conversation. 409 when the method isn't set up (\"Razorpay\nisn't set up for this workspace\"), 409 ``reply_window_closed`` when the message can't go,\n422 for an order that is paid or cancelled.",
+        "operationId": "request_order_payment",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "order_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Order Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "wid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Wid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PaymentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Validation error"
+          },
+          "default": {
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "Problem details (application/problem+json)"
+          }
+        },
+        "summary": "Request Payment",
+        "tags": [
+          "orders"
         ]
       }
     },
