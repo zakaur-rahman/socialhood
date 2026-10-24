@@ -453,7 +453,7 @@ These work on today's flat model; GR-03's migration later carries them into flow
   - Automations may require "inside hours" as a condition.
 - **Done when:** a message at 23:00 gets the away reply once and the Auto setting is respected.
 
-#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4 · built 2026-10-24 behind `BROADCASTS_ENABLED` (C-109)
+#### GR-23 · WhatsApp broadcasts · L · needs GR-02, GR-14, O-11, PD-3, PD-4 · built 2026-10-24 behind `BROADCASTS_ENABLED` (C-112)
 - **Platform:**
   - Only approved templates, and only to contacts with marketing opt-in.
   - Meta prices per message by category (marketing, utility); India is billed in INR from 2026.

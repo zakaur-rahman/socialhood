@@ -10,8 +10,8 @@
 
 Expand-only: a wider check and new tables; nothing is rewritten.
 
-Revision ID: 0036
-Revises: 0030
+Revision ID: 0037
+Revises: 0036
 Create Date: 2026-10-24 18:00:00.000000+00:00
 """
 
@@ -23,8 +23,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0036"
-down_revision: str | None = "0030"
+revision: str = "0037"
+down_revision: str | None = "0036"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -194,7 +194,9 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_broadcast_recipients")),
         sa.UniqueConstraint(
-            "broadcast_id", "contact_id", name=op.f("uq_broadcast_recipients_broadcast_id_contact_id")
+            "broadcast_id",
+            "contact_id",
+            name=op.f("uq_broadcast_recipients_broadcast_id_contact_id"),
         ),
     )
     op.create_index(
@@ -217,9 +219,7 @@ def upgrade() -> None:
     op.create_table(
         "whatsapp_number_health",
         sa.Column("social_account_id", sa.Uuid(), nullable=False),
-        sa.Column(
-            "quality_rating", sa.Text(), server_default=sa.text("'unknown'"), nullable=False
-        ),
+        sa.Column("quality_rating", sa.Text(), server_default=sa.text("'unknown'"), nullable=False),
         sa.Column("messaging_tier", sa.Text(), nullable=True),
         sa.Column("daily_limit", sa.Integer(), nullable=True),
         sa.Column("source", sa.Text(), server_default=sa.text("'webhook'"), nullable=False),

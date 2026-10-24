@@ -3772,12 +3772,12 @@ Free"; the owner chose to give the widget itself to every plan.* The PD table in
   `status` (a delivery status for the last message sent to `from_id`: `delivery_status`,
   `error_code`, `error_text`) and `quality` (`quality_event`, `tier`), as the webhook bodies Meta
   would deliver, through the real intake. The e2e stack has a seed route to put a workspace on a plan.
-- **API** (owners and admins; `TODO(GR-19)` in the module: `broadcasts.view` for the reads,
-  `broadcasts.manage` for the writes): `GET /broadcasts/availability`, `GET /broadcasts`,
+- **API** (owners and admins, through GR-19's automations permission for reads and
+  writes): `GET /broadcasts/availability`, `GET /broadcasts`,
   `POST /broadcasts/preview`, `POST /broadcasts`, `GET|PATCH|DELETE /broadcasts/{id}`,
   `GET /broadcasts/{id}/recipients?status=&limit=&offset=`, `POST /broadcasts/{id}/start|pause|resume|cancel`.
   A number, segment or broadcast of another workspace is 404 `not_found` before any plan check.
-- **Migration 0036** (after 0030; the coordinator re-chains), expand-only: `messages.source` accepts
+- **Migration 0037** (after 0036), expand-only: `messages.source` accepts
   `broadcast`; tables `broadcasts`, `broadcast_recipients` (`uq_broadcast_recipients_broadcast_id_contact_id`)
   and `whatsapp_number_health` (`uq_whatsapp_number_health_social_account_id`). All three reference the
   account, so the account purge deletes them (children first); the purge test's list, the
@@ -3812,7 +3812,7 @@ Free"; the owner chose to give the widget itself to every plan.* The PD table in
   `create_sandbox_account`, and `status` and `quality` plus four fields on `SandboxInbound`); the web
   types are aliases waiting for it, and the web calls the paths through the typed client, so typecheck
   after regenerating. Decimal fields (`per_message`, `total`, the rate card) arrive as strings and the
-  web formats them. Re-chain migration 0036. For production the Meta app's WhatsApp webhook needs the
+  web formats them. For production the Meta app's WhatsApp webhook needs the
   `phone_number_quality_update` field subscribed (*unverified* that it is delivered to the same
   callback as `messages`). `BROADCASTS_ENABLED` belongs on in staging only until
   O-11.

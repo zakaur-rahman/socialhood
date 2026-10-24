@@ -43,7 +43,7 @@ from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete
 
 from socialhood.agent import visuals
 from socialhood.agent.registry import Principal, ToolContext

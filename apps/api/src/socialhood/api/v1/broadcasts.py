@@ -7,9 +7,8 @@ the availability route says ``enabled: false`` so the web shows nothing.
 Plans: Pro and Max (PD-4). A write on a plan without broadcasts is 402 ``entitlement_required``;
 one that would pass the month's recipients is 402 ``quota_exceeded``.
 
-TODO(GR-19): when the permission matrix lands these move to ``require_permission``:
-``broadcasts.view`` for the GETs and ``broadcasts.manage`` for create, change, delete, start,
-pause, resume and cancel (owners and admins today).
+Every route needs the automations permission (GR-19): broadcasts are marketing sends, managed by
+owners and admins as automations are.
 """
 
 from __future__ import annotations
@@ -20,7 +19,7 @@ from typing import Annotated, Literal
 
 from fastapi import APIRouter, Query, Request, Response
 
-from socialhood.auth.deps import Admin, Session
+from socialhood.auth.deps import CanManageAutomations, Session
 from socialhood.errors import ApiError
 from socialhood.observability.logging import get_logger
 from socialhood.platforms.deps import PlatformDeps, deps_from
@@ -68,7 +67,7 @@ async def _send_first_batch(ctx_workspace: uuid.UUID, broadcast_id: uuid.UUID) -
 
 @router.get("/broadcasts/availability", operation_id="get_broadcast_availability")
 async def get_broadcast_availability(
-    request: Request, ctx: Admin, session: Session
+    request: Request, ctx: CanManageAutomations, session: Session
 ) -> BroadcastAvailability:
     """Whether broadcasts are switched on, what the plan allows this month and Meta's rate card."""
     return await service.availability(
@@ -81,7 +80,7 @@ async def get_broadcast_availability(
 @router.get("/broadcasts", operation_id="list_broadcasts")
 async def list_broadcasts(
     request: Request,
-    ctx: Admin,
+    ctx: CanManageAutomations,
     session: Session,
     status: StatusFilter | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
@@ -94,7 +93,7 @@ async def list_broadcasts(
 
 @router.post("/broadcasts/preview", operation_id="preview_broadcast")
 async def preview_broadcast(
-    request: Request, body: BroadcastDraft, ctx: Admin, session: Session
+    request: Request, body: BroadcastDraft, ctx: CanManageAutomations, session: Session
 ) -> BroadcastPreview:
     """Who would get it, who is skipped and why, what Meta's rate card says it costs, whether it
     fits the plan's recipients and the number's daily limit, and the message with a sample
@@ -108,7 +107,7 @@ async def preview_broadcast(
 
 @router.post("/broadcasts", status_code=201, operation_id="create_broadcast")
 async def create_broadcast(
-    request: Request, body: BroadcastCreate, ctx: Admin, session: Session
+    request: Request, body: BroadcastCreate, ctx: CanManageAutomations, session: Session
 ) -> Broadcast:
     """Save a draft. Nothing is sent until it is started."""
     _enabled(request)
@@ -126,7 +125,7 @@ async def create_broadcast(
 
 @router.get("/broadcasts/{broadcast_id}", operation_id="get_broadcast")
 async def get_broadcast(
-    request: Request, broadcast_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, broadcast_id: uuid.UUID, ctx: CanManageAutomations, session: Session
 ) -> Broadcast:
     _enabled(request)
     return await service.get_out(session, broadcast_id)
@@ -134,7 +133,11 @@ async def get_broadcast(
 
 @router.patch("/broadcasts/{broadcast_id}", operation_id="update_broadcast")
 async def update_broadcast(
-    request: Request, broadcast_id: uuid.UUID, body: BroadcastUpdate, ctx: Admin, session: Session
+    request: Request,
+    broadcast_id: uuid.UUID,
+    body: BroadcastUpdate,
+    ctx: CanManageAutomations,
+    session: Session,
 ) -> Broadcast:
     """Change a draft or scheduled broadcast; 409 once it has started."""
     _enabled(request)
@@ -145,7 +148,7 @@ async def update_broadcast(
 
 @router.delete("/broadcasts/{broadcast_id}", status_code=204, operation_id="delete_broadcast")
 async def delete_broadcast(
-    request: Request, broadcast_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, broadcast_id: uuid.UUID, ctx: CanManageAutomations, session: Session
 ) -> Response:
     """Delete a draft, a cancelled or a failed broadcast; 409 for one that was sent."""
     _enabled(request)
@@ -158,7 +161,7 @@ async def delete_broadcast(
 async def list_broadcast_recipients(
     request: Request,
     broadcast_id: uuid.UUID,
-    ctx: Admin,
+    ctx: CanManageAutomations,
     session: Session,
     status: RecipientFilter | None = None,
     limit: Annotated[int, Query(ge=1, le=100)] = 50,
@@ -173,7 +176,11 @@ async def list_broadcast_recipients(
 
 @router.post("/broadcasts/{broadcast_id}/start", operation_id="start_broadcast")
 async def start_broadcast(
-    request: Request, broadcast_id: uuid.UUID, body: BroadcastStart, ctx: Admin, session: Session
+    request: Request,
+    broadcast_id: uuid.UUID,
+    body: BroadcastStart,
+    ctx: CanManageAutomations,
+    session: Session,
 ) -> Broadcast:
     """Send now, or at ``scheduled_at``. 402 without the plan or past the month's recipients, 409
     if it has already finished, 422 when no one can be sent to."""
@@ -194,7 +201,7 @@ async def start_broadcast(
 
 @router.post("/broadcasts/{broadcast_id}/pause", operation_id="pause_broadcast")
 async def pause_broadcast(
-    request: Request, broadcast_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, broadcast_id: uuid.UUID, ctx: CanManageAutomations, session: Session
 ) -> Broadcast:
     _enabled(request)
     out = await service.pause(session, broadcast_id)
@@ -204,7 +211,7 @@ async def pause_broadcast(
 
 @router.post("/broadcasts/{broadcast_id}/resume", operation_id="resume_broadcast")
 async def resume_broadcast(
-    request: Request, broadcast_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, broadcast_id: uuid.UUID, ctx: CanManageAutomations, session: Session
 ) -> Broadcast:
     """Resume a paused broadcast; 409 while the number's quality is Low."""
     _enabled(request)
@@ -219,7 +226,7 @@ async def resume_broadcast(
 
 @router.post("/broadcasts/{broadcast_id}/cancel", operation_id="cancel_broadcast")
 async def cancel_broadcast(
-    request: Request, broadcast_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, broadcast_id: uuid.UUID, ctx: CanManageAutomations, session: Session
 ) -> Broadcast:
     """Stop for good: everyone still waiting is skipped. Messages already handed over still go."""
     _enabled(request)
