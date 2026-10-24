@@ -57,6 +57,7 @@ CLIENT_ID_NAMESPACE = uuid.UUID("5d3f0b8e-9c1a-4e27-8b6d-2f4a7c9e1b03")
 
 WINDOW_CLOSED_COPY = {  # §4.7 reply_window_closed
     "instagram": "Instagram allows replies for 24 hours after the customer's last message.",
+    "facebook": "Facebook allows replies for 24 hours after the customer's last message.",
     "whatsapp": (
         "WhatsApp allows free-form replies for 24 hours after the customer's last message. "
         "Send an approved template instead."
@@ -273,8 +274,8 @@ async def _get_or_404(session: AsyncSession, scheduled_message_id: uuid.UUID) ->
 
 
 def _human_agent(platform: str, enabled: bool) -> bool:
-    """As inbox_views.human_agent_allowed: Instagram only, once Meta has approved it."""
-    return enabled and platform == "instagram"
+    """As inbox_views.human_agent_allowed: Instagram and Facebook, once Meta has approved it."""
+    return enabled and platform in ("instagram", "facebook")
 
 
 def _field_error(field: str, message: str) -> ApiError:

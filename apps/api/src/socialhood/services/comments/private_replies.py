@@ -295,7 +295,11 @@ async def _fail(
             locked.private_reply_message_id = None
             await session.flush()
     if code == "account_needs_reconnect" and acct.status not in sending.BLOCKED_STATUSES:
-        await mark_needs_reconnect(session, acct, "Instagram stopped accepting this connection.")
+        await mark_needs_reconnect(
+            session,
+            acct,
+            sending.say("Instagram stopped accepting this connection.", acct.platform),
+        )
     await _publish(session, redis, msg.id, comment.id)
     return "failed"
 

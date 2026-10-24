@@ -918,7 +918,7 @@ async def _post_public_reply(
 ) -> None:
     """FR-AUT-14: one variation, posted now; the result is kept on the comment and the run."""
     from socialhood.services.connections import mark_needs_reconnect
-    from socialhood.services.sending import BLOCKED_STATUSES, readable_error
+    from socialhood.services.sending import BLOCKED_STATUSES, readable_error, say
 
     assert fired.variant is not None
     text = actions.public_reply(
@@ -962,7 +962,9 @@ async def _post_public_reply(
             fresh = await accounts.get(session, acct.id)
             if fresh is not None and fresh.status not in BLOCKED_STATUSES:
                 await mark_needs_reconnect(
-                    session, fresh, "Instagram stopped accepting this connection."
+                    session,
+                    fresh,
+                    say("Instagram stopped accepting this connection.", fresh.platform),
                 )
         await session.commit()
 

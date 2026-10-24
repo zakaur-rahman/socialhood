@@ -63,7 +63,12 @@ RUN_DETAIL: dict[str, str] = {
     RunResult.AWAITING_REPLY: "Waiting for their answer",
     RunResult.SKIPPED_READ_ONLY: "Skipped: the account is read-only",
 }
-CHANNEL_LABEL = {"instagram": "Instagram", "whatsapp": "WhatsApp", "email": "email"}
+CHANNEL_LABEL = {
+    "instagram": "Instagram",
+    "whatsapp": "WhatsApp",
+    "facebook": "Facebook",
+    "email": "email",
+}
 CONSENT_SOURCE = {
     "platform_optin": "Opted in on the platform",
     "flow": "Answered in a conversation",

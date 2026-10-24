@@ -171,7 +171,7 @@ class ContactFilterSpec(RequestModel):
 
     q: str | None = Field(default=None, max_length=100)
     tag_ids: list[uuid.UUID] = Field(default_factory=list, max_length=10)  # every one of them
-    platform: Literal["instagram", "whatsapp"] | None = None
+    platform: Literal["instagram", "whatsapp", "facebook"] | None = None
     account_id: uuid.UUID | None = None
     has_email: bool | None = None
     has_phone: bool | None = None
@@ -199,7 +199,7 @@ class ContactFilterOut(ResponseModel):
 
     q: str | None = None
     tag_ids: list[uuid.UUID] = Field(default_factory=list)
-    platform: Literal["instagram", "whatsapp"] | None = None
+    platform: Literal["instagram", "whatsapp", "facebook"] | None = None
     account_id: uuid.UUID | None = None
     has_email: bool | None = None
     has_phone: bool | None = None

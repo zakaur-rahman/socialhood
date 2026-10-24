@@ -33,6 +33,7 @@ from socialhood.agent.tools.common import (
     PlatformName,
     clip,
     contact_name,
+    facebook_unconnected,
     find_account,
     handle,
     limit_field,
@@ -151,7 +152,7 @@ class ConversationsResult(ToolResult):
 async def search_conversations(
     ctx: ToolContext, args: SearchConversationsInput
 ) -> ConversationsResult:
-    if args.platform == "facebook":
+    if await facebook_unconnected(ctx, args.platform):
         return ConversationsResult(
             summary="Facebook isn't connected, so there are no Facebook conversations",
             items=[],
@@ -695,7 +696,10 @@ async def draft_reply(ctx: ToolContext, args: DraftReplyInput) -> DraftReplyResu
     conv = await conversations.get_or_404(ctx.session, args.conversation_id)
     contact = await inbox.get_contact(ctx.session, conv.contact_id)
     name = contact_name(contact)
-    human_agent = ctx.platform.settings.ig_human_agent_enabled and conv.platform == "instagram"
+    human_agent = ctx.platform.settings.ig_human_agent_enabled and conv.platform in (
+        "instagram",
+        "facebook",
+    )
     window = reply_window(conv.platform, conv.last_inbound_at, human_agent=human_agent, now=ctx.now)
     if not may_send(window, "human"):
         raise ApiError(

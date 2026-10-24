@@ -283,6 +283,7 @@ async def test_get_billing_has_prices_and_a_meter_for_every_limit(owner: Owner) 
         "pending_scheduled_messages",
         "instagram_accounts",
         "whatsapp_accounts",
+        "facebook_accounts",
     }
     assert (meters["ai_credits"]["limit"], meters["scheduled_posts"]["limit"]) == (200, 10)
     assert (meters["instagram_accounts"]["used"], meters["instagram_accounts"]["limit"]) == (0, 1)
