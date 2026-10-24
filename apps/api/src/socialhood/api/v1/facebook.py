@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
-from socialhood.auth.deps import Admin, Session
+from socialhood.auth.deps import CanManageChannels, Session
 from socialhood.billing.plans import current_plan
 from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.schemas.accounts import ConnectStart, SocialAccountList
@@ -26,7 +26,9 @@ def _deps(request: Request) -> PlatformDeps:
 
 
 @router.post("/social-accounts/facebook/connect", operation_id="start_facebook_connect")
-async def start_facebook_connect(request: Request, ctx: Admin, session: Session) -> ConnectStart:
+async def start_facebook_connect(
+    request: Request, ctx: CanManageChannels, session: Session
+) -> ConnectStart:
     """Facebook's authorize URL. 503 until Facebook connections are configured, 402 over
     accounts_per_platform."""
     url = await facebook_connect.start(
@@ -43,7 +45,7 @@ async def start_facebook_connect(request: Request, ctx: Admin, session: Session)
 
 @router.post("/social-accounts/facebook/pages", operation_id="list_facebook_pages")
 async def list_facebook_pages(
-    request: Request, body: FacebookPagesRequest, ctx: Admin, session: Session
+    request: Request, body: FacebookPagesRequest, ctx: CanManageChannels, session: Session
 ) -> FacebookPageList:
     """The Pages the person who started the connect manages, from the nonce the OAuth callback
     redirected with. Only that member, in that workspace, can read it (403 otherwise); 404 when it
@@ -64,7 +66,7 @@ async def list_facebook_pages(
     operation_id="connect_facebook_pages",
 )
 async def connect_facebook_pages(
-    request: Request, body: FacebookConnectPages, ctx: Admin, session: Session
+    request: Request, body: FacebookConnectPages, ctx: CanManageChannels, session: Session
 ) -> SocialAccountList:
     """Connect the picked Pages. 422 page_ids for a Page that wasn't listed or that the person
     can't answer messages for, 409 account_in_use when a Page is connected to another workspace,

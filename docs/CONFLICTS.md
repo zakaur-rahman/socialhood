@@ -3238,7 +3238,7 @@ marked *unverified* and listed in `docs/verification.md` item 36. The second App
   webhook bodies (a DM, a comment as a `feed` change on the Page's first sandbox post, a referral
   with `source: SHORTLINK` or `ADS`, a postback, an opt-in) and stores them as `facebook` events.
   Live comments and the story kinds are refused there with 422 on `kind`.
-- **Migration 0032.** `webhook_events.provider` accepts `facebook`. Nothing else changes: no new
+- **Migration 0034** (after 0033). `webhook_events.provider` accepts `facebook`. Nothing else changes: no new
   table, so the account purge, tenancy seeds and `B_TABLES` need no change.
 
 ### Connect
@@ -3362,7 +3362,7 @@ words (`validation.py`, `flows.py`; copy shared with the web):
   operations (`start_facebook_connect`, `list_facebook_pages`, `connect_facebook_pages`, the
   optional body of `create_sandbox_account`), then typecheck: web code calls them through the typed
   client and keys several `Record<Platform, …>` by `facebook`.
-- `alembic check` for 0032; re-chain it after the other branches (`down_revision` is 0030).
+- `alembic check` for 0034 (after 0033).
 - Meta's behaviour: see `docs/verification.md` item 36. The risky ones: the commenter id, whether
   private replies take buttons and quick replies, ice breakers without a Get Started button, the
   `tasks` field, and the Messenger text limit.

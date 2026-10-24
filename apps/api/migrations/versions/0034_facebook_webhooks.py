@@ -7,8 +7,8 @@ changes.
 
 Expand-only: a wider check; nothing is rewritten.
 
-Revision ID: 0032
-Revises: 0030
+Revision ID: 0034
+Revises: 0033
 Create Date: 2026-10-25 09:00:00.000000+00:00
 """
 
@@ -18,8 +18,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0032"
-down_revision: str | None = "0030"
+revision: str = "0034"
+down_revision: str | None = "0033"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
