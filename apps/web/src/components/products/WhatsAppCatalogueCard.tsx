@@ -180,7 +180,7 @@ function Connected({ wid, status }: { wid: string; status: WaCatalogueStatus }) 
                 {status.items_error} {status.items_error === 1 ? "item can't" : "items can't"} be sent.
               </p>
               <ul className="mt-1 list-disc ps-5">
-                {status.problems.map((problem) => (
+                {(status.problems ?? []).map((problem) => (
                   <li key={`${problem.name}-${problem.message}`}>
                     {problem.name}: {problem.message}
                   </li>

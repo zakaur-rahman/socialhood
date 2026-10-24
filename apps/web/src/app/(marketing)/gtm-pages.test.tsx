@@ -1,6 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import type { Metadata } from "next";
 import type { ReactElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -25,8 +26,7 @@ class IdleObserver {
   }
 }
 
-type Meta = { title?: unknown; description?: unknown; alternates?: { canonical?: unknown } };
-const PAGES: { page: GtmPage; Component: () => ReactElement; metadata: Meta }[] = [
+const PAGES: { page: GtmPage; Component: () => ReactElement; metadata: Metadata }[] = [
   { page: GTM_PAGES[0], Component: SwitchPage, metadata: switchMetadata },
   { page: GTM_PAGES[1], Component: ComparisonManychat, metadata: manychatMetadata },
   { page: GTM_PAGES[2], Component: ComparisonInterakt, metadata: interaktMetadata },
@@ -126,7 +126,7 @@ describe("Social Hood vs Interakt", () => {
     expect(screen.getByRole("link", { name: "Interakt pricing" })).toHaveAttribute("href", "https://www.interakt.shop/pricing/");
     expect(screen.getByText(/read 2026-10-25/)).toBeInTheDocument();
     expect(screen.getByText(/check interakt.shop before you decide/)).toBeInTheDocument();
-    expect(screen.getByRole("row", { name: /^Payments and checkout in chat/ })).toHaveTextContent("Not offered");
+    expect(screen.getByRole("row", { name: /^Payments and checkout in chat/ })).toHaveTextContent(/Yes.*Razorpay/);
   });
 });
 

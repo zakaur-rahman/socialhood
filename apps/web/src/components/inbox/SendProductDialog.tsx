@@ -28,7 +28,7 @@ const nextSection = (title = ""): Section => ({ key: `s${(keyCounter += 1)}`, ti
 
 /** One choosable row per variant, or per product without variants: the unit WhatsApp shows. */
 function choices(products: Product[]): { id: string; label: string; item: ProductMessageItem }[] {
-  return products.flatMap((product) =>
+  return products.flatMap<{ id: string; label: string; item: ProductMessageItem }>((product) =>
     product.variants.length > 0
       ? product.variants.map((variant) => ({
           id: variant.id,
@@ -38,7 +38,7 @@ function choices(products: Product[]): { id: string; label: string; item: Produc
       : [
           {
             id: product.id,
-            label: product.price_minor === null ? product.name : `${product.name} (${formatPrice(product.price_minor, product.currency)})`,
+            label: product.price_minor == null ? product.name : `${product.name} (${formatPrice(product.price_minor, product.currency)})`,
             item: { product_id: product.id, variant_id: null },
           },
         ],

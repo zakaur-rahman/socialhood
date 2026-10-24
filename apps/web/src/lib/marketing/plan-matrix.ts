@@ -82,6 +82,7 @@ export const MATRIX: MatrixGroup[] = [
       },
       { key: "commerce", label: "Product catalogue", format: { kind: "flag" }, note: "Shopify sync arrives with our Shopify app listing." },
       { key: "catalogue_products", label: "Products in the catalogue", format: { kind: "quota" } },
+      { key: "orders_monthly", label: "Orders a month", format: { kind: "quota" }, note: "Orders you create from a chat, with a Razorpay link or UPI payment request." },
       { key: "catalogue_import_rows", label: "Rows in one CSV import", format: { kind: "quota" } },
     ],
   },

@@ -347,13 +347,19 @@ export const COMPARE_INTERAKT: GtmPage = {
       },
       {
         feature: "Product catalogue",
-        ours: { status: "yes", text: "Add products by hand or CSV; the AI answers price and stock from it. Shopify sync is coming soon. Pro and Max." },
+        ours: {
+          status: "approval",
+          text: "Add products by hand or CSV; the AI answers price and stock from it, and you can send a product or product list in WhatsApp from the inbox. The WhatsApp catalogue messages need your Meta catalogue set up and Meta's approval. Shopify sync is coming soon. Pro and Max.",
+        },
         // source: interakt.shop/pricing, read 2026-10-25: catalogue creation and product message templates on Growth
         theirs: { status: "yes", text: "Catalogue creation and product message templates." },
       },
       {
         feature: "Payments and checkout in chat",
-        ours: { status: "no", text: "Not yet. Payments are planned after the catalogue." },
+        ours: {
+          status: "yes",
+          text: "Send a payment request in the chat: a Razorpay link paid to your own Razorpay account, or your UPI ID marked paid by hand. Orders are tracked in the Orders page. Pro and Max. We do not hold your money, and we do not offer WhatsApp Pay.",
+        },
         // source: docs/competitors.md (Hyperleap Interakt alternatives 2026; InstantDM vs Interakt; read 2026-10-22): checkout and WhatsApp Pay
         theirs: { status: "yes", text: "Checkout and WhatsApp Pay, according to third-party guides." },
       },
