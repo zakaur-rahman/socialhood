@@ -144,7 +144,7 @@ export function WorkspaceMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        {/* C-102: the theme is the user's, not the workspace's; it is also in Settings → Appearance. */}
+        {/* C-129: the theme is the user's, not the workspace's; it is also in Settings → Appearance. */}
         <DropdownMenuLabel>Theme</DropdownMenuLabel>
         <DropdownMenuRadioGroup value={theme.choice} onValueChange={(next) => theme.setChoice(parseTheme(next))}>
           {THEME_CHOICES.map((choice) => (

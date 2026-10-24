@@ -8,7 +8,7 @@ import type * as React from "react"
 
 /**
  * The floating surface (DESIGN_SYSTEM §6, level 1; D-12): `overlay`, a shade lighter than the
- * panel cards beneath, with a 1 px `line` edge and the dark `shadow-floating`, frosted (`glass-float`: 86% with a 22 px blur, C-101), set here so call
+ * panel cards beneath, with a 1 px `line` edge and the dark `shadow-floating`, frosted (`glass-float`: 86% with a 22 px blur, C-128), set here so call
  * sites don't add their own. The edge is a ring of its own, so a call site's `shadow-*` replaces
  * only the shadow, never the edge.
  */

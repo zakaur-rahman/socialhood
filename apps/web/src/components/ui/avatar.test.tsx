@@ -57,7 +57,7 @@ describe("AvatarFallback", () => {
 })
 
 describe("Avatar", () => {
-  it("has no dark: classes and draws its edge as a line ring, in either theme (C-102)", () => {
+  it("has no dark: classes and draws its edge as a line ring, in either theme (C-129)", () => {
     render(<Contact />)
     const list = classes(screen.getByTestId("avatar"))
     expect(list.filter((c) => c.startsWith("dark:"))).toEqual([])

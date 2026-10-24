@@ -1,5 +1,5 @@
 /**
- * Every intentional colour that is not "a semantic token in a class" (C-100, docs/ui-audit/THEME.md
+ * Every intentional colour that is not "a semantic token in a class" (C-127, docs/ui-audit/THEME.md
  * §5). The design lint (design-lint.test.ts) reads this list both ways: a literal, an arbitrary
  * colour value or an allowed shade found in code must be listed here, and a listed entry that no
  * longer exists fails, so the list can't go stale. To add one: write the entry with a reason a
@@ -29,6 +29,16 @@ export type ColourException =
   | { kind: "asset"; where: string; match?: string; reason: string };
 
 export const colourExceptions: ColourException[] = [
+  // The website chat widget's accent presets (GR-28): colours a business picks for its own site.
+  ...["#4467E6", "#0F766E", "#15803D", "#BE185D", "#C2410C", "#334155"].map(
+    (match): ColourException => ({
+      kind: "code",
+      where: "components/widget/accents.ts",
+      match,
+      reason:
+        "Widget accent presets: the widget runs in its own frame on a customer's site and can't read our variables, so the business's chosen colour is stored and sent as hex. Customer data, not our theme.",
+    }),
+  ),
   // Intentional hues: tokens, listed so the palette's fixed colours are visible in one place.
   {
     kind: "tokens",
@@ -77,10 +87,10 @@ export const colourExceptions: ColourException[] = [
 
   // Consumers that can't read CSS variables.
   { kind: "runtime", where: "app/layout.tsx", reason: "The viewport themeColor is a meta tag: it takes a value, not a variable." },
-  { kind: "runtime", where: "app/manifest.ts", reason: "The web app manifest is JSON: background_color and theme_color are values. Dark on purpose in light mode: the installed app opens on the dark default (C-102)." },
-  { kind: "runtime", where: "app/global-error.tsx", reason: "It replaces the root layout, so the stylesheet isn't loaded: its inline styles take token values, dark: the page can't know the theme (C-102)." },
-  { kind: "runtime", where: "components/marketing/og.tsx", reason: "Satori (next/og) draws the share card and can't read CSS variables. The marketing site it advertises is always dark (C-102)." },
-  { kind: "runtime", where: "lib/theme.ts", reason: "The theme-color meta tag takes the canvas value of the theme on screen, not a variable (C-102)." },
+  { kind: "runtime", where: "app/manifest.ts", reason: "The web app manifest is JSON: background_color and theme_color are values. Dark on purpose in light mode: the installed app opens on the dark default (C-129)." },
+  { kind: "runtime", where: "app/global-error.tsx", reason: "It replaces the root layout, so the stylesheet isn't loaded: its inline styles take token values, dark: the page can't know the theme (C-129)." },
+  { kind: "runtime", where: "components/marketing/og.tsx", reason: "Satori (next/og) draws the share card and can't read CSS variables. The marketing site it advertises is always dark (C-129)." },
+  { kind: "runtime", where: "lib/theme.ts", reason: "The theme-color meta tag takes the canvas value of the theme on screen, not a variable (C-129)." },
   { kind: "runtime", where: "lib/clerk-appearance.ts", reason: "Clerk computes shades from its `variables`, so they must be values; its element styles use the variables." },
   {
     kind: "code",
@@ -129,7 +139,7 @@ export const colourExceptions: ColourException[] = [
     reason: "The same empty send button as in Ask.",
   },
 
-  // Choices that stay dark or are texture, not a token (the light-theme list in THEME.md §1, C-102).
+  // Choices that stay dark or are texture, not a token (the light-theme list in THEME.md §1, C-129).
   { kind: "text", where: "app/layout.tsx", match: 'statusBarStyle: "black"', reason: "iOS reads the status bar style once, at launch, so it can't follow the theme: black suits the default (Dark)." },
   { kind: "text", where: "components/shell/AppSidebar.tsx", match: "url(/grain.jpg)", reason: "A grain texture over the sidebar; its opacity is --grain-opacity, which is 0 on light." },
   { kind: "text", where: "components/auth/AuthShell.tsx", match: "url(/grain.jpg)", reason: "The same grain over the auth panel." },
@@ -145,7 +155,7 @@ export const colourExceptions: ColourException[] = [
     kind: "asset",
     where: "../api/src/socialhood/notify/templates/layout.py",
     match: "#09090b",
-    reason: "Emails: clients ignore CSS variables and render light, so the templates carry their own zinc palette (#09090b, #27272a, #52525b, #e4e4e7, #f4f4f5, #ffffff) as inline styles. Outside the web app; not changed here (C-100).",
+    reason: "Emails: clients ignore CSS variables and render light, so the templates carry their own zinc palette (#09090b, #27272a, #52525b, #e4e4e7, #f4f4f5, #ffffff) as inline styles. Outside the web app; not changed here (C-127).",
   },
   {
     kind: "asset",

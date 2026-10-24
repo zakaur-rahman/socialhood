@@ -15,7 +15,7 @@ vi.mock("@/styles/globals.css", () => ({}));
 
 import RootLayout, { viewport } from "./layout";
 
-describe("the root layout (C-102)", () => {
+describe("the root layout (C-129)", () => {
   const html = renderToStaticMarkup(<RootLayout params={Promise.resolve({})}>{<main>page</main>}</RootLayout>);
 
   it("renders Dark by default and carries no dark class, so a light choice isn't fought by one", () => {

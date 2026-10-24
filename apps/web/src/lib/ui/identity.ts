@@ -12,7 +12,7 @@
  *   facebook 5.17; the oklab midpoints stay above 4.5);
  * - every ring and dot is 3:1 or more on `panel` (brand 3.97, brand-fg 8.58, facebook 3.21), and
  *   the rings are told apart from each other: three hues (indigo, lavender, blue) and 1.2:1 or more
- *   in luminance (brand and facebook, the closest pair, are 1.24:1 apart; C-101).
+ *   in luminance (brand and facebook, the closest pair, are 1.24:1 apart; C-128).
  *
  * Three identities, not four: the only values in these families that reach 3:1 on panel are
  * brand-fg, brand and facebook (brand-strong is 2.85), so a fourth ring would look like one of them.

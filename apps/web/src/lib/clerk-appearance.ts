@@ -8,7 +8,7 @@ const BRAND_TEXT = { color: "var(--color-brand-fg)", "&:hover": { color: "var(--
  * Clerk's components on the §4.2 tokens (Clerk Core 3 variable names). Values are literal
  * (read from the generated tokens, so globals.css stays the only place they are written)
  * because Clerk computes shades from them and cannot read CSS variables, so they are per theme
- * (C-102): `clerkAppearanceFor("light")` reads the light values and drops Clerk's dark base. The
+ * (C-129): `clerkAppearanceFor("light")` reads the light values and drops Clerk's dark base. The
  * root layout carries the dark values; the components that render Clerk's UI (the sign-in and
  * sign-up cards, the user button) pass the set for the theme on screen (ThemedClerk). The
  * element styles below are plain CSS, so they use the variables (which follow the theme by

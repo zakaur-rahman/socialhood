@@ -38,7 +38,7 @@ function Compare({ page }: { page: GtmPage }) {
           role="region"
           aria-label={caption}
           tabIndex={0}
-          className="mt-6 overflow-x-auto rounded-2xl border border-line bg-panel/40 focus-visible:outline-offset-2"
+          className="mt-6 overflow-x-auto rounded-2xl border border-line bg-panel-glass focus-visible:outline-offset-2"
         >
           <table className="w-full min-w-[40rem] border-collapse text-left">
             <caption className="sr-only">{caption}</caption>

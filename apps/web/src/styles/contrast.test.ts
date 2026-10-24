@@ -4,7 +4,7 @@ import { colorValue } from "./tokens";
 import type { Theme } from "./tokens";
 
 /**
- * The contrast of the key token pairs in both themes (C-101, C-102), by the WCAG 2.x formula. The
+ * The contrast of the key token pairs in both themes (C-128, C-129), by the WCAG 2.x formula. The
  * numbers in globals.css's comments and THEME.md are these, measured; this test is what keeps them
  * true when a value changes. Text is 4.5:1, non-text marks and control edges 3:1.
  */

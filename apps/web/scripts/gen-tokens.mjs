@@ -1,11 +1,11 @@
 // Writes src/styles/tokens.generated.ts and tokens.generated.json from src/styles/globals.css, the
-// one place theme values are written (C-100, docs/ui-audit/THEME.md). No dependencies.
+// one place theme values are written (C-127, docs/ui-audit/THEME.md). No dependencies.
 //
 //   node scripts/gen-tokens.mjs          (pnpm tokens; also runs before `pnpm dev` and `pnpm build`)
 //
 // It reads: the `@theme` block (colours, shadows, font sizes, tracking, leading, radii, easings,
 // breakpoints; a colour or shadow that differs between themes is written `light-dark(LIGHT, DARK)`
-// and split into a dark set and a light set, C-102), the `:root` variables (motion durations, gradients, shadcn aliases), `@custom-variant`
+// and split into a dark set and a light set, C-129), the `:root` variables (motion durations, gradients, shadcn aliases), `@custom-variant`
 // lines and the one-line `@utility` rules. tokens.test.ts runs `generate()` again and fails when
 // the committed files differ, so an edit to globals.css without `pnpm tokens` can't land.
 import { readFileSync, writeFileSync } from "node:fs";

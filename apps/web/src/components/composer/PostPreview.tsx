@@ -266,7 +266,7 @@ function StoryPreview({
     <div>
       <article aria-label="Story preview" className="relative mx-auto aspect-[9/16] max-h-[520px] overflow-hidden rounded-xl border border-line bg-canvas">
         {asset ? <Media asset={asset} /> : <NoMedia>Add one photo or video to see the Story.</NoMedia>}
-        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-scrim/60 to-transparent p-3" aria-hidden>
+        <div className="absolute inset-x-0 top-0 space-y-2 bg-linear-to-b from-media-chip to-transparent p-3" aria-hidden>
           <div className="h-0.5 w-full rounded-full bg-line-strong">
             <div className="h-full w-1/3 rounded-full bg-fg" />
           </div>

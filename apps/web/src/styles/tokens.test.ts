@@ -33,7 +33,7 @@ const source = (path: string) => readFileSync(join(__dirname, "..", path), "utf8
 const unix = (text: string) => text.replace(/\r\n/g, "\n");
 const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&");
 
-/** The raw declaration of a colour, `light-dark(…)` included (a pair is written once, C-102). */
+/** The raw declaration of a colour, `light-dark(…)` included (a pair is written once, C-129). */
 function declaredRaw(name: string): string | undefined {
   const match = css.match(new RegExp(`--color-${name}:\\s*([^;]+);`));
   return match?.[1].trim();
@@ -77,7 +77,7 @@ const themeInline = blocks(/@theme inline/).join("\n");
 /** Every `--color-*` declared in `@theme` (the palette lock, `--color-*`, is not a token). */
 const themeColorNames = [...blocks(/@theme/).join("\n").replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/--color-([a-z0-9-]+):/g)].map((m) => m[1]);
 
-describe("one source of truth (C-100)", () => {
+describe("one source of truth (C-127)", () => {
   it("has generated files that match globals.css exactly: run `pnpm tokens` after editing it", () => {
     const { json, ts } = render(generate(css));
     expect(unix(readFileSync(JSON_PATH, "utf8"))).toBe(json);
@@ -168,7 +168,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(css).toMatch(/--popover:\s*var\(--color-overlay\);/);
   });
 
-  it.each(shadowTokens)("defines the $name elevation shadow (D-12, C-102)", ({ name, value, light, sample }) => {
+  it.each(shadowTokens)("defines the $name elevation shadow (D-12, C-129)", ({ name, value, light, sample }) => {
     expect(declaredShadow(name, "dark")).toBe(value);
     expect(declaredShadow(name, "light")).toBe(light);
     expect(sample.split(" ")).toEqual(expect.arrayContaining(["bg-overlay", "ring-1", "ring-line", name]));
@@ -177,12 +177,12 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     expect(light).toMatch(/^0 \d+px \d+px -\d+px rgb\(30 35 80 \/ 0\.\d+\)$/);
   });
 
-  it.each(glassShadows)("defines the $name glass shadow from the tokens (C-101)", ({ name, value, light }) => {
+  it.each(glassShadows)("defines the $name glass shadow from the tokens (C-128)", ({ name, value, light }) => {
     expect(declaredShadow(name, "dark")).toBe(value);
     expect(declaredShadow(name, "light")).toBe(light);
   });
 
-  it.each(glowShadows)("defines the $name marketing glow from the brand token (C-100)", ({ name, value }) => {
+  it.each(glowShadows)("defines the $name marketing glow from the brand token (C-127)", ({ name, value }) => {
     expect(css).toMatch(new RegExp(`--${name}:\\s*${escape(value)};`));
     expect(value).toContain("var(--color-brand)");
     expect(value).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(/i);
@@ -291,7 +291,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
     },
   );
 
-  it("gives Clerk the brand gradient and the radii as CSS variables, and the icon script its colours from the generated tokens (C-100)", () => {
+  it("gives Clerk the brand gradient and the radii as CSS variables, and the icon script its colours from the generated tokens (C-127)", () => {
     const clerk = source("lib/clerk-appearance.ts");
     expect(clerk).toContain('backgroundImage: "var(--gradient-brand)"');
     expect(clerk).not.toMatch(/linear-gradient|0\.5rem|0\.75rem/);
@@ -308,7 +308,7 @@ describe("design tokens (§4.2, UX-TOK-01)", () => {
   });
 });
 
-describe("two themes, one declaration (C-102)", () => {
+describe("two themes, one declaration (C-129)", () => {
   const generated = generate(css);
 
   it("defines every colour in both themes: a light-dark() pair, a shade of another token, or a listed invariant", () => {

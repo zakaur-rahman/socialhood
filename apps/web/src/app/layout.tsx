@@ -25,7 +25,7 @@ export const viewport: Viewport = { themeColor: colorValue("canvas") };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // Dark is the default (C-102). The script below copies the user's choice from the `sh_theme`
+    // Dark is the default (C-129). The script below copies the user's choice from the `sh_theme`
     // cookie to `data-theme` before first paint, so the attribute can differ from what the server
     // rendered; hence suppressHydrationWarning. globals.css turns the attribute into color-scheme.
     <html lang="en" data-theme="dark" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>

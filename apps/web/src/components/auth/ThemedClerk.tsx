@@ -14,7 +14,7 @@ function withBase(theme: Theme) {
 }
 
 /**
- * Clerk's components with the appearance for the theme on screen (C-102). Clerk takes its colours
+ * Clerk's components with the appearance for the theme on screen (C-129). Clerk takes its colours
  * as literals, so the root layout's provider carries the dark ones and each Clerk component passes
  * the set for Light when the page is light; the element styles are CSS variables and follow by
  * themselves. These three are the only places Clerk's UI is rendered.

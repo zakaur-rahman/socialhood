@@ -41,7 +41,7 @@ export function Logo({ className }: { className?: string }) {
 }
 
 /**
- * The marketing card surface (C-100): `rounded-2xl` (DESIGN_SYSTEM §4), a `line` edge and the
+ * The marketing card surface (C-127): `rounded-2xl` (DESIGN_SYSTEM §4), a `line` edge and the
  * `panel` fill. A card that reacts to hover adds `MARKETING_CARD_HOVER`; a card laid over the page
  * glow wears the `panel-glass` fill instead. Add padding and layout at the call site.
  */

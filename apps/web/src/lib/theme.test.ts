@@ -26,7 +26,7 @@ afterEach(() => {
   document.head.querySelectorAll('meta[name="theme-color"]').forEach((meta) => meta.remove());
 });
 
-describe("the theme choice (C-102)", () => {
+describe("the theme choice (C-129)", () => {
   it("is Dark unless a known value says otherwise", () => {
     expect(DEFAULT_THEME).toBe("dark");
     expect(parseTheme(undefined)).toBe("dark");

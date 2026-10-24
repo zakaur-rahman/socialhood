@@ -16,12 +16,6 @@ import { FacebookGlyph } from "./FacebookGlyph";
 import { InstagramGlyph } from "./InstagramGlyph";
 import { WhatsAppGlyph } from "./WhatsAppGlyph";
 
-/**
- * Connections' one "Add account" button: a menu of the platforms that have a connect flow, each
- * with its mark and a line on what it connects. The actions are the page's own (the Instagram
- * OAuth start, the Facebook Page picker and the WhatsApp Embedded Signup hook); this only presents them. Platforms without a
- * backend aren't listed. Each mark sits on a tile in its platform's own logo colours.
- */
 function LogoTile({ className, children }: { className: string; children: ReactNode }) {
   return (
     <span className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg text-on-brand", className)}>
@@ -30,6 +24,12 @@ function LogoTile({ className, children }: { className: string; children: ReactN
   );
 }
 
+/**
+ * Connections' one "Add account" button: a menu of the platforms that have a connect flow, each
+ * with its mark and a line on what it connects. The actions are the page's own (the Instagram
+ * OAuth start, the Facebook Page picker and the WhatsApp Embedded Signup hook); this only presents them. Platforms without a
+ * backend aren't listed. Each mark sits on a tile in its platform's own logo colours.
+ */
 export function AddAccountMenu({
   onInstagram,
   onFacebook,

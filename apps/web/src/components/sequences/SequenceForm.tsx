@@ -262,7 +262,7 @@ export function SequenceForm({ sequence, children }: { sequence?: Sequence; chil
       }
     >
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
-        <fieldset disabled={locked} className="min-w-0 space-y-5 disabled:opacity-90">
+        <fieldset disabled={locked} className="min-w-0 space-y-5">
           {locked ? (
             <Alert tone="brand" variant="outline">
               <AlertDescription>

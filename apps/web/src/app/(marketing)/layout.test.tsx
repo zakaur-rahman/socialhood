@@ -9,7 +9,7 @@ vi.mock("@/components/theme/ThemePin", () => ({ ThemePin: () => null }));
 
 import MarketingLayout from "./layout";
 
-describe("the marketing layout (C-102)", () => {
+describe("the marketing layout (C-129)", () => {
   const html = renderToStaticMarkup(<MarketingLayout params={Promise.resolve({})}>{<main>page</main>}</MarketingLayout>);
 
   it("pins the dark scheme on its subtree, so the public site stays dark in a light app", () => {

@@ -184,7 +184,7 @@ showcase, the lazy illustrations and the moving border (DS-13). App screens use 
 
 ### 1.10 shadcn alias map
 
-Since C-100 nothing hand-written uses the alias class names, the primitives in `components/ui`
+Since C-127 nothing hand-written uses the alias class names, the primitives in `components/ui`
 included: they wear the tokens (`bg-overlay`, `text-fg-secondary`, `border-line-control`,
 `outline-brand` …). The aliases stay in `globals.css` only so that `shadcn add` output, which is
 written in those names, still compiles onto the tokens; the design lint refuses them in source.
@@ -200,7 +200,7 @@ state before C-071).
 | `--input` | `line` | `line-control` | **Owner D-01**, applied (C-071) |
 | `--card-foreground`, `--popover-foreground`, `--secondary-foreground`, `--accent-foreground` | not mapped in `@theme inline` | mapped | Their utilities generate no CSS today (COL-009) |
 | `--background`, `--foreground`, `--card`, `--secondary`, `--muted`, `--muted-foreground`, `--destructive`, `--border`, `--ring` | unchanged | unchanged | |
-| `--radius` | `0.5rem`, read by nothing | removed (C-100) | Inert; the radius scale is now `--radius-sm` … `--radius-2xl` in `@theme` |
+| `--radius` | `0.5rem`, read by nothing | removed (C-127) | Inert; the radius scale is now `--radius-sm` … `--radius-2xl` in `@theme` |
 
 `tokens.test.ts` asserts that every alias in `:root` has a `--color-*` mapping.
 
@@ -239,7 +239,7 @@ text.
    (The `dark` custom variant from C-002 stays for library code that needs it.)
 6. Allowed literals: `media-scrim` overlays on media; the values that consumers can't read as
    variables (Clerk, the OG image, the manifest), which read them from `colorValue()` in
-   `styles/tokens.ts` (COL-019). Since C-100 every intentional literal is listed, with a reason, in
+   `styles/tokens.ts` (COL-019). Since C-127 every intentional literal is listed, with a reason, in
    `styles/colour-exceptions.ts`, and the lint fails on one that isn't listed and on an entry that
    no longer exists. The architecture, the exception policy and the light-theme prerequisites are
    in [THEME.md](THEME.md).
@@ -257,7 +257,7 @@ CSS variables (Clerk, the OG image, the manifest, the viewport) take values from
 
 ### 1.13 Token changes in one place
 
-**Historical (C-100).** `src/styles/globals.css` is the only place a theme value is written, and
+**Historical (C-127).** `src/styles/globals.css` is the only place a theme value is written, and
 the values in the blocks below are copies from when the tokens were introduced; some have grown
 since (the named shades, the glow shadows, the radius scale, the gradient variables). Read the
 current values in `globals.css`, or in [THEME.md](THEME.md), and do not edit this section to

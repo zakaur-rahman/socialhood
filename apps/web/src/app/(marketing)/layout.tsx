@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * The public site: header, the page, footer. Always dark (C-102): the wrapper pins the dark
+ * The public site: header, the page, footer. Always dark (C-129): the wrapper pins the dark
  * scheme (`scheme-dark`) so its colours are dark whatever the visitor chose for the app, and <html>
  * is pinned too (the inline script on a first load, ThemePin on a client navigation), so the
  * scrollbars and the overscroll match. Pages stay server-rendered and static; only the

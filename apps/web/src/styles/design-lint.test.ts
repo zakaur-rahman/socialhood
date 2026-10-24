@@ -6,7 +6,7 @@ import { colourExceptions, type ColourException } from "./colour-exceptions";
 import { tokenValues } from "./tokens.generated";
 
 /**
- * UI-070's design lint (UI-ISS-028, DESIGN_SYSTEM §1, §4, §8.3), widened by C-100: class strings
+ * UI-070's design lint (UI-ISS-028, DESIGN_SYSTEM §1, §4, §8.3), widened by C-127: class strings
  * and literals that bypass the tokens or drop the focus outline, checked across the app's source so
  * they can't come back. The palette lock in globals.css makes a default colour generate no CSS; this
  * names where it is. Tests and comment lines are skipped.
@@ -234,7 +234,7 @@ function assetFiles(where: string): string[] {
   return existsSync(dir) ? readdirSync(dir).filter((name) => pattern.test(name)).map((name) => join(dir, name)) : [];
 }
 
-describe("design lint (UI-070, C-100)", () => {
+describe("design lint (UI-070, C-127)", () => {
   const hits = scan();
 
   it("keeps class strings on the tokens and the focus outline in place", () => {

@@ -1,5 +1,5 @@
 /**
- * The theme choice (C-102): Dark (the default), Light, or System. The choice lives in a cookie,
+ * The theme choice (C-129): Dark (the default), Light, or System. The choice lives in a cookie,
  * `sh_theme`, so it survives sessions and a script can read it before the first paint; it is
  * applied as `data-theme` on <html>, which globals.css turns into `color-scheme` (the tokens are
  * `light-dark()` pairs, so nothing else changes). System sets both schemes and the browser follows

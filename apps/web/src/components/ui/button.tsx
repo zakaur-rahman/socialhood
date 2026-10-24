@@ -25,7 +25,7 @@ const buttonRecipe = cva(
         // chip's colours), brand-fg text 7.21:1, a step stronger on hover and while its menu is open.
         soft: "border-brand-line bg-brand-soft text-brand-fg hover:bg-brand-soft-hover aria-expanded:bg-brand-soft-hover",
         destructive: "bg-danger-fill text-on-brand hover:bg-danger-fill-hover",
-        // White on black: the stop button in Ask, the carousel arrows on a photo (C-100). It is
+        // White on black: the stop button in Ask, the carousel arrows on a photo (C-127). It is
         // the one place `bg-fg` is a fill; the text is `canvas`.
         inverse: "bg-fg text-canvas hover:bg-fg-hover",
         "destructive-ghost": "text-danger-fg hover:bg-danger-soft aria-expanded:bg-danger-soft",

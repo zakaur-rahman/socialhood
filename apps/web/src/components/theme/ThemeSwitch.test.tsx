@@ -38,7 +38,7 @@ afterEach(() => {
   document.cookie = `${THEME_COOKIE}=; path=/; max-age=0`;
 });
 
-describe("ThemeSwitch (C-102)", () => {
+describe("ThemeSwitch (C-129)", () => {
   it("offers Dark, Light and System, with Dark chosen by default", () => {
     render(<ThemeSwitch />);
     const group = screen.getByRole("radiogroup", { name: "Theme" });
@@ -65,7 +65,7 @@ describe("ThemeSwitch (C-102)", () => {
   });
 });
 
-describe("useTheme (C-102)", () => {
+describe("useTheme (C-129)", () => {
   it("resolves System by matchMedia and follows a change of the OS setting", () => {
     document.documentElement.setAttribute("data-theme", "system");
     const { result } = renderHook(() => useTheme());

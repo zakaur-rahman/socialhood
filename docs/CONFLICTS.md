@@ -5122,7 +5122,7 @@ GR-20 added the flow action `assign`; `propose_flow` could not draft it. Now it 
 - *Not changed:* the web proposal card shows the summary lines as they are; nothing there lists actions.
 
 
-## C-100 · Theme single source and exception list (feature/theme-single-source)
+## C-127 · Theme single source and exception list (feature/theme-single-source)
 
 Implements the theme audit (F-01 to F-17, exceptions E-01 to E-12). Visual consistency only: no
 logic, API, routing, data or auth change. The guide is `docs/ui-audit/THEME.md`.
@@ -5218,10 +5218,10 @@ logic, API, routing, data or auth change. The guide is `docs/ui-audit/THEME.md`.
   titles are semibold where they were medium; the plans heading on the billing page loses
   `tracking-tight` at 18 px.
 
-## C-101 · Midnight palette, indigo brand and glass surfaces (feature/theme-midnight-glass)
+## C-128 · Midnight palette, indigo brand and glass surfaces (feature/theme-midnight-glass)
 
 The owner approved a preview ("Midnight + indigo + glass") that ran as an override stylesheet on
-local-dev. This entry makes it real in the theme system (C-100), and the preview stylesheet is gone.
+local-dev. This entry makes it real in the theme system (C-127), and the preview stylesheet is gone.
 
 - **Palette.** The values are exactly the approved ones: canvas `#131520`, panel `#1B1E2A`, field
   `#181B26`, raised `#252937`, overlay `#222633`, lines and states as cool `214 219 255` alpha, fg
@@ -5257,7 +5257,7 @@ local-dev. This entry makes it real in the theme system (C-100), and the preview
 - Tests that quoted the old classes or values were updated (card, button, floating family, sonner,
   tooltip 13:1, manifest, tone).
 
-## C-102 · Light mode (feature/theme-midnight-glass)
+## C-129 · Light mode (feature/theme-midnight-glass)
 
 Light mode with a Dark / Light / System switch. Dark stays the default and the marketing site stays dark.
 

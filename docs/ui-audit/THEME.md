@@ -2,7 +2,7 @@
 
 How the look of the web app is wired, so that one edit reaches every screen, and what to do when
 you want to change it. The rules for using the tokens are in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md);
-this page is about the machinery and the knobs. Decisions: CONFLICTS C-100.
+this page is about the machinery and the knobs. Decisions: CONFLICTS C-127.
 
 ---
 
@@ -54,7 +54,7 @@ bg-panel, text-fg-secondary, shadow-glow …      tokens.ts (descriptions + type
   `tracking-eyebrow`, `leading-display`, `duration-*`, `ease-*`) so `cn()` merges them like Tailwind's
   own. A new utility that replaces another of its kind needs a line there.
 
-### Two themes (C-102)
+### Two themes (C-129)
 
 Dark is the default; Light is a choice. A colour that differs between themes is written once in
 `@theme` as `light-dark(LIGHT, DARK)` (light first), and the browser picks by the element's
@@ -232,7 +232,7 @@ The live list, with swatches, is the dev page `/dev/tokens`.
 
 ---
 
-## 2b. Palette (Midnight, C-101)
+## 2b. Palette (Midnight, C-128)
 
 Midnight is a charcoal with a cool indigo cast, lifted at the owner's request; the brand is indigo,
 chosen so it can't be mistaken for Facebook or LinkedIn blue or for the status colours. Measured

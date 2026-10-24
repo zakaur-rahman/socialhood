@@ -10,9 +10,9 @@ import { createCn } from "cn/config";
  * - the motion tokens are durations and easings (`cn("duration-100", "duration-slow")` keeps one);
  * - the elevation shadows are shadow sizes, not colours (`--color-overlay` exists too), so a call
  *   site's `shadow-xl` replaces a primitive's `shadow-floating` instead of stacking on it (C-071);
- *   so are the crop box's `shadow-crop-mask` (C-073) and the marketing `shadow-glow*` family (C-100);
+ *   so are the crop box's `shadow-crop-mask` (C-073) and the marketing `shadow-glow*` family (C-127);
  * - the glass surfaces (`glass-card` …) are a background colour with a blur: a later `bg-field` or
- *   `glass-pane` replaces one (C-101), and the new shadows (`shadow-glass` …) are shadow sizes too;
+ *   `glass-pane` replaces one (C-128), and the new shadows (`shadow-glass` …) are shadow sizes too;
  * - `tracking-eyebrow` and `leading-display` are letter spacing and line height, so a later
  *   `tracking-tight` or `leading-tight` replaces them.
  * Everything, the primitives in `components/ui` included, imports `cn` from here; eslint refuses a

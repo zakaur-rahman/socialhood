@@ -5,7 +5,7 @@ import { SettingsFrame, SettingsPageHeader } from "@/components/settings/Setting
 import { ThemeSwitch } from "@/components/theme/ThemeSwitch";
 
 /**
- * Settings → Appearance (C-102): Dark, Light or System. The choice is the member's own, kept in a
+ * Settings → Appearance (C-129): Dark, Light or System. The choice is the member's own, kept in a
  * cookie on this browser (lib/theme.ts), so it is not a workspace setting and has no Save bar.
  */
 export function AppearancePage() {

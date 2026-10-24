@@ -40,7 +40,7 @@ describe("cn knows the design system's utilities (C-070)", () => {
     expect(cn("hover:bg-brand-soft-hover", "hover:bg-hover")).toBe("hover:bg-hover");
   });
 
-  it("treats the marketing glow shadows as shadow sizes, and the eyebrow tracking and display leading as such (C-100)", () => {
+  it("treats the marketing glow shadows as shadow sizes, and the eyebrow tracking and display leading as such (C-127)", () => {
     expect(cn("shadow-glow", "shadow-none")).toBe("shadow-none");
     expect(cn("shadow-xl", "shadow-glow-hover")).toBe("shadow-glow-hover");
     expect(cn("shadow-glow-button", "shadow-glow")).toBe("shadow-glow");

@@ -47,7 +47,7 @@ export function SiteFooter({ year = new Date().getFullYear() }: { year?: number 
           </ul>
         </nav>
         <nav aria-labelledby="footer-learn">
-          <h2 id="footer-learn" className="text-xs font-semibold tracking-[0.08em] text-fg uppercase">
+          <h2 id="footer-learn" className={EYEBROW}>
             Compare and learn
           </h2>
           <ul className="mt-3 grid gap-1 sm:gap-1.5">

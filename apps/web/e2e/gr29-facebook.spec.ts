@@ -105,7 +105,8 @@ test.describe("GR-29 Facebook Pages", () => {
     await expect(card).toBeVisible();
     await expect(card.getByText("Facebook Pages API")).toBeVisible();
     await expect(card.getByText("Sandbox", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Connect Facebook/ })).toBeVisible();
+    await page.getByRole("button", { name: /Add account/ }).click();
+    await expect(page.getByRole("menuitem", { name: /Facebook/ })).toBeVisible();
   });
 
   test("an entry link on a Page opens m.me", async ({ api, facebook }) => {

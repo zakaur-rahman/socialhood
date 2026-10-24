@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { CARD_TITLE } from "@/styles/tokens"
 
 /**
- * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092). Glass (C-101): `card-glass`,
+ * Card: the one card surface (DESIGN_SYSTEM §8.2; UI-ISS-036, 049, 092). Glass (C-128): `card-glass`,
  * 68% `panel` with a 16 px blur, a 1 px `line-glass` edge, a top highlight and a soft drop
  * (`shadow-glass`); `rounded-xl` for every app card (owner decision D-02).
  *

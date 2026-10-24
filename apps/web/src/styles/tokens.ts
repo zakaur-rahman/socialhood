@@ -2,7 +2,7 @@
  * What the design tokens are for, as data: the /dev/tokens page renders it and tokens.test.ts
  * checks it against globals.css. The VALUES are not written here: globals.css is the only place a
  * theme value is written, and `pnpm tokens` (scripts/gen-tokens.mjs) copies them into
- * tokens.generated.ts, which this file reads (C-100, docs/ui-audit/THEME.md). What lives here is
+ * tokens.generated.ts, which this file reads (C-127, docs/ui-audit/THEME.md). What lives here is
  * the description of each token (name, use, swatch class) and the type-role constants, which
  * components import (`EYEBROW` …) instead of restating the classes.
  */
@@ -11,7 +11,7 @@ import { tokenValues } from "./tokens.generated";
 /** `swatch` is a literal class so Tailwind emits the variable (it only keeps theme values in use). */
 export type ColorToken = { name: string; value: string; light: string; use: string; swatch: string };
 
-/** The two themes (C-102). Dark is the default; a token's `value` is its dark value, `light` its light one. */
+/** The two themes (C-129). Dark is the default; a token's `value` is its dark value, `light` its light one. */
 export type Theme = "dark" | "light";
 
 /** What each colour is for, by name. Every `--color-*` in globals.css needs an entry (tokens.test.ts). */
@@ -34,7 +34,7 @@ const colorMeta: Record<string, { use: string; swatch: string }> = {
   "canvas-veil": { use: "A dimmed cell or inset: days outside the month, a card in a flow", swatch: "bg-canvas-veil" },
   "panel-glass": { use: "Marketing cards over the page glow", swatch: "bg-panel-glass" },
   "panel-veil": { use: "The floating marketing nav over scrolled content", swatch: "bg-panel-veil" },
-  // Glass (C-101): a surface token at a set strength; the glass-* utilities add the blur
+  // Glass (C-128): a surface token at a set strength; the glass-* utilities add the blur
   "panel-frost": { use: "Work panes on glass: sidebar, inbox panes, headers, composer bar (82% panel, light blur)", swatch: "bg-panel-frost" },
   "card-glass": { use: "Cards on glass (68% panel, medium blur)", swatch: "bg-card-glass" },
   "overlay-frost": { use: "What floats on glass: menus, popovers, selects, dialogs, sheets, toasts (86% overlay, strong blur)", swatch: "bg-overlay-frost" },
@@ -144,7 +144,7 @@ export const describedColors: string[] = Object.keys(colorMeta);
  * A colour token's value, for the consumers that can't read CSS variables: Clerk (it computes
  * shades), the OG image (Satori), the manifest and the viewport (UI-ISS-095). They read it here
  * instead of restating the hex, so a token change reaches them too. A chart alias resolves to the
- * token it points at. `theme` picks the dark (default) or light value (C-102); a consumer that follows
+ * token it points at. `theme` picks the dark (default) or light value (C-129); a consumer that follows
  * the user's choice passes the resolved theme, one that is dark on purpose (the OG image, the
  * manifest, the global error page) passes nothing.
  */
@@ -219,9 +219,9 @@ export const shadowTokens = shadowMeta.map((entry) => ({
   light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],
 }));
 
-/** The glass family (C-101): a top highlight, a soft drop, the buttons' inner light and glow. */
+/** The glass family (C-128): a top highlight, a soft drop, the buttons' inner light and glow. */
 const glassShadowMeta = [
-  { name: "shadow-glass", use: "Glass cards: a top highlight and a soft drop (C-101)", sample: "bg-card-glass ring-1 ring-line-glass shadow-glass" },
+  { name: "shadow-glass", use: "Glass cards: a top highlight and a soft drop (C-128)", sample: "bg-card-glass ring-1 ring-line-glass shadow-glass" },
   { name: "shadow-highlight", use: "The outline button: the top highlight alone", sample: "bg-frost-outline ring-1 ring-line shadow-highlight" },
   { name: "shadow-button-primary", use: "The primary button: an inner highlight and an indigo glow", sample: "bg-brand-gradient shadow-button-primary" },
   { name: "shadow-button-secondary", use: "The secondary button: an inset edge and the highlight", sample: "bg-raised-frost shadow-button-secondary" },
@@ -232,7 +232,7 @@ export const glassShadows = glassShadowMeta.map((entry) => ({
   light: (tokenValues.shadowsLight as Record<string, string>)[entry.name.replace("shadow-", "")],
 }));
 
-/** The marketing glow family (C-100): brand-tinted drops under marketing and auth cards. */
+/** The marketing glow family (C-127): brand-tinted drops under marketing and auth cards. */
 const glowMeta = [
   { name: "shadow-glow", use: "Marketing and auth cards: a brand-tinted 2xl drop", sample: "bg-panel shadow-glow" },
   { name: "shadow-glow-hover", use: "A marketing card on hover: a softer xl drop", sample: "bg-panel shadow-glow-hover" },
