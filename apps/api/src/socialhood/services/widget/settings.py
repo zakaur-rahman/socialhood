@@ -1,6 +1,6 @@
 """The widget's settings (GR-28): one web account and one settings row per workspace.
 
-Decisions (docs/CONFLICTS.md C-110):
+Decisions (docs/CONFLICTS.md C-111):
 - **One widget per workspace.** The settings page makes the account the first time an owner or
   admin opens it (``ensure``). Its ``platform_account_id`` is the public widget id (``wgt_`` and
   22 random characters), which is the only thing the embed carries. Several sites share one widget

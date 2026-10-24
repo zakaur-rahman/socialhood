@@ -20,6 +20,11 @@ NO_WORKSPACE = {
     ("POST", "/v1/me/push-subscriptions"),
     ("DELETE", "/v1/me/push-subscriptions"),
     ("POST", "/v1/digest/unsubscribe"),
+    # GR-28: the website chat's visitor routes. Public by design: the widget's signed visitor
+    # session (and the allowed-domain check) stands in for a member's permission.
+    ("POST", "/v1/widget/session"),
+    ("POST", "/v1/widget/messages"),
+    ("POST", "/v1/widget/email"),
 }
 
 

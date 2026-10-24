@@ -11,12 +11,12 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Request
 
-from socialhood.auth.deps import Admin, Session
+from socialhood.auth.deps import CanManageChannels, Session
 from socialhood.schemas.widget import WidgetSettingsOut, WidgetSettingsUpdate
 from socialhood.services.widget import settings as service
 
-# TODO(GR-19): move both routes to require_permission("widget.manage") when the permission matrix
-# lands (the member's role check here is Admin: owners and admins).
+# The widget is a channel: its settings need the channels permission (GR-19), as connecting
+# Instagram does.
 router = APIRouter(prefix="/v1/w/{wid}", tags=["widget"])
 
 
@@ -26,7 +26,9 @@ async def _out(request: Request, session: Session) -> WidgetSettingsOut:
 
 
 @router.get("/widget", operation_id="get_widget_settings")
-async def get_widget_settings(request: Request, ctx: Admin, session: Session) -> WidgetSettingsOut:
+async def get_widget_settings(
+    request: Request, ctx: CanManageChannels, session: Session
+) -> WidgetSettingsOut:
     """The widget's settings and its embed code."""
     await service.ensure(session)
     await session.commit()
@@ -35,7 +37,7 @@ async def get_widget_settings(request: Request, ctx: Admin, session: Session) ->
 
 @router.put("/widget", operation_id="update_widget_settings")
 async def update_widget_settings(
-    request: Request, body: WidgetSettingsUpdate, ctx: Admin, session: Session
+    request: Request, body: WidgetSettingsUpdate, ctx: CanManageChannels, session: Session
 ) -> WidgetSettingsOut:
     """Change the fields sent; the others stay as they are."""
     _, row = await service.ensure(session)

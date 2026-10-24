@@ -8,8 +8,8 @@
 
 Expand-only: a wider check, a new check list, one new table.
 
-Revision ID: 0037
-Revises: 0030
+Revision ID: 0036
+Revises: 0035
 Create Date: 2026-10-27 09:00:00.000000+00:00
 """
 
@@ -21,8 +21,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0037"
-down_revision: str | None = "0030"
+revision: str = "0036"
+down_revision: str | None = "0035"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

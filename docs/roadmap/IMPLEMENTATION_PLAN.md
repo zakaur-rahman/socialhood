@@ -83,7 +83,7 @@ The recommended option is first. Each goes in CONFLICTS.md when taken, as the UI
 | PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only | GR-23 |
 | PD-5 | Flow branching by plan | **All plans, with a step cap on Free** (for example 5 steps) · Pro only | GR-13 |
 | PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Decided 2026-10-24 ("for now"): webhooks on all plans (Free 1, Pro 5, Max 20 endpoints); Sheets, API and Zapier on Pro and Max** | GR-04 |
-| PD-7 | Website chat widget | **Decided 2026-10-24 (C-110): on every plan; Free shows "Powered by Social Hood", Pro and Max can turn it off; abuse limits on all plans.** Was: Pro and Max with the link on Free · paid only | GR-28 |
+| PD-7 | Website chat widget | **Decided 2026-10-24 (C-111): on every plan; Free shows "Powered by Social Hood", Pro and Max can turn it off; abuse limits on all plans.** Was: Pro and Max with the link on Free · paid only | GR-28 |
 | PD-8 | Commerce (catalogue, payments) | **Pro and Max** · Max only | GR-31 |
 | PD-9 | Max plan contents at launch | **Team, broadcasts and higher quotas, so Max goes on sale** (today "Coming soon") · keep Max hidden | Wave 4 |
 | PD-10 | Contacts across channels | **One contact per channel identity; link them by hand later** (P6 decides automatic matching) · automatic matching by phone or email now | GR-02 |

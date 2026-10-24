@@ -3544,7 +3544,7 @@ Free"; the owner chose to give the widget itself to every plan.* The PD table in
   (platform `web`), so the inbox, filters, search, AI, analysis, leads, webhooks and the Needs you
   queue need nothing special. The account is listed with the others; Connections hides it (it is
   not a connection) and AI rules and takeover shows it like any account, so the AI mode is set
-  there, not copied. Migration `0037` (down revision 0030; the coordinator re-chains): `web` in the
+  there, not copied. Migration `0036` (after 0035): `web` in the
   platform check, `widget` in the consent source check, the unique index and `widget_settings`.
 - **Adapter** (`platforms/web/adapter.py`). Capability `dm_send` only. `send_message` mints an id
   (`web_<uuid>`): the reply is already in the conversation and the widget reads it from there.
@@ -3647,7 +3647,7 @@ Free"; the owner chose to give the widget itself to every plan.* The PD table in
   list, the settings page).
 - **Unsure / for the coordinator:** regenerate the client (`WidgetSettingsOut`, `WidgetSettingsUpdate`,
   `get_widget_settings`, `update_widget_settings`, `web` in `platform` literals and `widget` in
-  `ConsentSourceName`); the web types are aliases waiting for it. Migration 0037 re-chains and it
+  `ConsentSourceName`); the web types are aliases waiting for it. Migration 0036 re-chains and it
   edits the `ck_contact_consents_source` check: any other branch that recreates it must keep
   `widget`. The e2e stack needs `TOKEN_ENCRYPTION_KEYS` (it has one) and its rate limits may stay on.
   `frame-ancestors` for `localhost` allows any port over http and https.
