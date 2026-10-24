@@ -48,3 +48,23 @@ export function seriesStyle(index: number): SeriesStyle {
 export function colourIndexes(keys: readonly string[]): Map<string, number> {
   return new Map(keys.map((key, index) => [key, index]));
 }
+
+/**
+ * Colours for a list of entities that has no fixed home (the topics a range happens to rank): each
+ * key prefers the place it has in `order` (so "Pricing" is the same hue week after week), and when
+ * two shown keys would share a hue the later one takes the next free one. Keys past the sixth hue
+ * are neutral. Pass the keys in the order they are shown.
+ */
+export function assignColours(keys: readonly string[], order: readonly string[]): Map<string, number> {
+  const taken = new Set<number>();
+  const out = new Map<string, number>();
+  for (const key of keys) {
+    const found = order.indexOf(key);
+    let index = (found < 0 ? out.size : found) % MAX_SERIES;
+    for (let tries = 0; tries < MAX_SERIES && taken.has(index); tries += 1) index = (index + 1) % MAX_SERIES;
+    if (taken.size >= MAX_SERIES) index = MAX_SERIES; // more keys than hues: neutral
+    taken.add(index);
+    out.set(key, index);
+  }
+  return out;
+}

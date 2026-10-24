@@ -13,12 +13,14 @@ export function Sparkline({
   color = 0,
   fixedTop,
   label,
+  testId = "sparkline",
   className,
 }: {
   values: (number | null | undefined)[];
   color?: number;
   fixedTop?: number;
   label?: string;
+  testId?: string;
   className?: string;
 }) {
   const known = values.filter((v): v is number => v !== null && v !== undefined);
@@ -28,7 +30,7 @@ export function Sparkline({
   const last = [...runs].reverse()[0]?.at(-1);
   const style = seriesStyle(color);
   return (
-    <span className={cn("relative block h-8 w-full", className)} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} data-testid="sparkline">
+    <span className={cn("relative block h-8 w-full", className)} role={label ? "img" : undefined} aria-label={label} aria-hidden={label ? undefined : true} data-testid={testId}>
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 size-full overflow-visible">
         {runs.map((run, index) =>
           run.length > 1 ? (

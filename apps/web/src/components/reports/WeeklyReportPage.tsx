@@ -5,7 +5,7 @@ import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import { colourIndexes, seriesStyle } from "@/components/charts/palette";
+import { assignColours, colourIndexes, seriesStyle } from "@/components/charts/palette";
 import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { MetricComparison } from "@/components/agent/visuals/MetricComparison";
 import { formatCount, formatSpan } from "@/components/home/format";
@@ -212,6 +212,11 @@ function AccountSeries({ item, color }: { item: ReportAccountMetric; color: numb
 
 function IntentsCard({ report }: { report: WeeklyReport }) {
   const most = Math.max(1, ...report.top_intents.map((i) => i.count));
+  // A topic keeps its hue from week to week (the order of INTENT_LABEL); two shown never share one.
+  const colours = assignColours(
+    report.top_intents.map((i) => i.intent),
+    Object.keys(INTENT_LABEL),
+  );
   return (
     <Card asChild className="flex flex-col">
       <section aria-labelledby="report-intents">
@@ -231,7 +236,7 @@ function IntentsCard({ report }: { report: WeeklyReport }) {
                   </span>
                 </div>
                 <div className="h-1.5 overflow-hidden rounded-full bg-raised" aria-hidden>
-                  <div className="h-full rounded-full bg-chart-series-1" style={{ width: `${(item.count / most) * 100}%` }} />
+                  <div className={`h-full rounded-full ${seriesStyle(colours.get(item.intent) ?? 0).bg}`} style={{ width: `${(item.count / most) * 100}%` }} />
                 </div>
               </li>
             ))}
