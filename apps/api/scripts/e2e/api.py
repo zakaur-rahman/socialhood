@@ -24,6 +24,8 @@ It is the normal app (``socialhood.main``) plus two things the suite needs:
   - ``POST /__e2e/workspaces/{wid}/agent-proposals`` (GR-36): a finished Ask run whose draft step
     called propose_flow or propose_segment through the real tool and gateway (the fake model
     calls no tools), so the spec has a pending approval and its card to decide in the browser;
+  - ``PUT /__e2e/workspaces/{wid}/plan {plan}``: the workspace's plan (GR-25: the public API is Pro
+    and Max), without a checkout;
   - ``DELETE /__e2e/users/{clerk_user_id}``: a signed-up user's workspaces (every tenant row
     cascades) and row (F-01). Other test data goes when the launcher drops the database.
 
@@ -41,7 +43,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Any, Literal
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header, Request
+from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import delete
 

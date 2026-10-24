@@ -59,6 +59,7 @@ FEATURES = {
     "ai_modes": "Auto mode is part of Pro.",
     "ai_reply_automations": "AI replies in automations are part of Pro.",
     "sheets_sync": "Google Sheets sync is part of Pro.",
+    "public_api": "The public API, API keys and Zapier are part of Pro.",
 }
 # §4.7 quota_exceeded: "Your plan includes {limit} {thing}."
 THINGS = {

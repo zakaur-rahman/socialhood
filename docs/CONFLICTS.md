@@ -2863,6 +2863,7 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
   config.
 
+<<<<<<< HEAD
 ## C-106 · Team members and roles (GR-19, feature/gr-19-team)
 
 - **Permission matrix, in one place.** `auth/permissions.py` has a `Permission` enum and a
@@ -3366,3 +3367,93 @@ words (`validation.py`, `flows.py`; copy shared with the web):
 - Meta's behaviour: see `docs/verification.md` item 36. The risky ones: the commenter id, whether
   private replies take buttons and quick replies, ice breakers without a Get Started button, the
   `tasks` field, and the Messenger text limit.
+=======
+## C-107 · Public API and API keys (GR-25, feature/gr-25-26-api-zapier)
+
+- **Owner decision PD-6 (decided 2026-10-24):** outbound webhooks stay on every plan (Free 1, Pro 5,
+  Max 20 endpoints, GR-04); the public API, API keys and the Zapier app are **Pro and Max only**.
+  It is the `public_api` entitlement in `billing/plans.py` (`free: False`), checked with
+  `check_entitlement`, so the 402 is `entitlement_required` with `entitlement: "public_api"`
+  ("The public API, API keys and Zapier are part of Pro."). Making a key on Free is 402. Listing
+  and revoking keys stay open, so a workspace that downgraded can clean up. A key made on Pro stops
+  working (402, same body) the moment the workspace is on Free again, and works again if it comes
+  back. *Decided, not pending.*
+- **Keys.** `api_keys` (migration 0035, shared with C-108's column): name (1 to 80), the first 12
+  characters (`key_prefix`, `shk_` and 8 more), the SHA-256 of the whole key (`key_hash`, unique),
+  scopes, `last_used_at`, `revoked_at`, who made it. A key is `shk_` and 43 random characters
+  (`secrets.token_urlsafe(32)`), shown once in the create response (`ApiKeyWithKey.key`) and never
+  stored or logged. *A plain SHA-256, not a slow hash: the key is 256 random bits, so there is
+  nothing to guess.* A key never changes after it is made (no edit; make another); revoking sets
+  `revoked_at` and is the end of it. At most 20 unrevoked keys per workspace (409 over it).
+- **Scopes** (`schemas/api_keys.py`): `contacts:read`, `contacts:write`, `tags:read`, `tags:write`,
+  `conversations:read`, `messages:send`, `automations:read`, `webhooks:subscribe` (C-108's REST
+  hooks). The key form starts read-only (`contacts:read` ticked). A route needs exactly one scope;
+  a key without it gets 403 `forbidden`, naming the scope.
+- **Managing keys** (owners and admins, `/v1/w/{wid}/api-keys`): list (with the scope catalogue),
+  create (201), revoke (`DELETE`, returns the key; again is a no-op). In Settings > Integrations
+  below the webhook endpoints: a list (name, prefix, scopes, made, last used or revoked), a create
+  dialog (name and scopes), a copy-once dialog and a revoke confirmation. A Free workspace sees
+  "part of Pro" and a link to plans instead of the form. *The routes carry a TODO for GR-19: they
+  move to the same `require_permission` as the webhook endpoints.*
+- **Authentication** (`auth/api_key.py`): `Authorization: Bearer shk_...` on `/public/v1`. The key's
+  hash finds the key (the one cross-workspace lookup, in `tenant_bypass_scope`, as `auth/` may); it
+  must be unrevoked and its workspace active (401 `unauthorized` otherwise; an unknown key also
+  counts against the caller's IP, 60 a minute, so guessing is slow); then the per-key limit, then
+  the plan. The key's workspace becomes the request's tenant exactly as for a member, so every
+  service query is scoped and a key can never reach another workspace (404 for another workspace's
+  id, like the app). `last_used_at` is written at most once a minute (Valkey `SET NX`). Every
+  request's log line carries `api_key_id` and `workspace_id`; the key never reaches a log.
+- **Rate limit.** *New limit `api_key`: 120 requests a minute per key* (a sliding window like the
+  others, `security/ratelimit.py`). Sending a message also counts against the workspace's existing
+  60 sends a minute (`sends`), the same budget as the app's. 429 `rate_limited` with `Retry-After`.
+  *The numbers are proposals; changing them is one line each.*
+- **Routes** (`api/public.py`, all call the app's services, no forked logic):
+  `GET /accounts`, `GET/POST /contacts`, `GET/PATCH /contacts/{id}`, `GET /contact-fields`,
+  `GET /tags`, `POST /contacts/{id}/tags` (add and remove by id), `GET /conversations`,
+  `GET /conversations/{id}`, `GET/POST /conversations/{id}/messages`, `GET /automation-runs`
+  (`automation_id`, `result`), `GET /openapi.json`. Responses are the app's schemas where they fit
+  (`ContactList`, `ContactRecord`, `TagList`, `MessageList`, `AutomationRunList`) and lean ones where
+  the app's carry internals (`PublicConversation`: no AI analysis, suggestion or summary).
+  - *Create a contact* adds a customer to a **WhatsApp** account by phone number (the app's E.164
+    rules; 409 for a number already there; 422 for an Instagram account, a phone without a country
+    code or an email or field that doesn't fit). Instagram contacts exist only once they message or
+    comment, so they cannot be added. `contact.created` is raised like for any new contact.
+  - *Custom fields set* is `PATCH /contacts/{id}` with `fields` (merge, null removes), the app's
+    validation and its `contact.updated` event.
+  - *Send a message* is text only, through `sending.queue_outbound` with the app's rules and errors:
+    409 `reply_window_closed` outside the window, 409 for an account that needs reconnecting, 402 for
+    an account the plan made read-only. The message is "human" with no sender (`sent_by` null).
+    `Idempotency-Key` is optional (the app's is required): the same key and body again returns the
+    first response; a derived `client_id` also stops a double send when Valkey is down.
+  - `GET /contacts` gains `sort=created` (newest contact first, for polling lists) in the service
+    (`services/contacts.list_contacts(sort=)`); the app's own list is unchanged.
+    `queries.list_runs` takes no `automation_id` for the workspace-wide list.
+  - Errors are the app's problem+json, one format.
+- **The document.** The public routes are **not** in the app's OpenAPI document (it is for the
+  generated web client; `problem_openapi` leaves the public routers out). `api/public_openapi.py`
+  builds a separate one: only `/public/v1`, bearer security, each operation's `x-required-scope`
+  (also in its description), problem responses, and the scope list. It is served without sign-in at
+  `GET /public/v1/openapi.json` (60 a minute per IP) and cached on the app.
+- **Docs page.** `/developers/api` in the marketing group, server-rendered from that JSON and
+  revalidated hourly: how to authenticate, the scopes, then each operation (method, path, scope,
+  parameters, body fields, responses, a curl line). No viewer library (nothing in `package.json`
+  renders OpenAPI); `lib/marketing/public-api.ts` reads the document with zod and builds the page's
+  model. When the API can't be reached the page says so. *Not added to the sitemap or footer* (the
+  sitemap test lists its pages exactly); one line in `PUBLIC_PATHS` adds it.
+- **Not built.** An audit log of key use beyond the access log's `api_key_id`; an IP allow list; key
+  expiry; a per-key rate limit setting; the webhook event catalogue in the document (GR-04's).
+- **Tests.** Unit `test_public_api.py` (hashing and shape, scope check, limit numbers, entitlement
+  values, the public document: every operation has a known scope, strings bounded, no credential
+  names, nothing public in the app's document). Integration `test_public_api.py` (key management and
+  roles, shown once and stored as a hash, Pro/Max gating both ways, 401s, the done-when read key
+  lists and is 403 on a write, each scope, each endpoint, the window and idempotency, the per-key
+  and sends limits, last used, revoke, tenancy with two workspaces). Tenancy: the `api_keys` table,
+  `key_id`, the create body, and `test_public_routes_hide_other_workspaces` (a workspace A key
+  calls every public route with B's ids: 404 and B unchanged). Vitest: `ApiKeysSection.test.tsx`,
+  `public-api.test.ts`, `ApiReference.test.tsx`. E2E: `gr25-public-api.spec.ts` (the stack gets a
+  `PUT /__e2e/workspaces/{wid}/plan` seed route).
+- **For the coordinator:** regenerate the client (`ApiKey`, `ApiKeyWithKey`, `ApiKeyList`,
+  `ApiKeyCreate`, `ApiScope`, the three `/api-keys` operations; the public routes are not in it);
+  the web types are aliases waiting for it. `alembic check` should be clean (the partial index on
+  `webhook_endpoints.api_key_id` is in the model). Migration 0035 is chained on 0030; re-chain it.
+>>>>>>> 94ae5e5 (GR-25: workspace API keys and the public API (backend))

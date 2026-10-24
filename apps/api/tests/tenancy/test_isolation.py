@@ -82,6 +82,8 @@ PARAM_TO_SEED: dict[str, str] = {
     "page_id": "page_id",  # GR-35
     "user_id": "user_id",  # GR-19
     "invitation_id": "invitation_id",
+    "key_id": "api_key_id",  # GR-25
+    "hook_id": "hook_id",  # GR-26 (the public API's routes, tested below)
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -155,6 +157,7 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
     # GR-18: moving B's lead is 404 from A's workspace; the cold setting is the workspace's own.
     ("POST", "/v1/w/{wid}/contacts/{contact_id}/lead-stage"): {"stage": "won"},
     ("PATCH", "/v1/w/{wid}/leads/settings"): {"cold_after_days": 30},
+    ("POST", "/v1/w/{wid}/api-keys"): {"name": "Not yours", "scopes": ["contacts:read"]},  # GR-25
     ("POST", "/v1/w/{wid}/tags"): {"name": "Not yours"},
     ("PATCH", "/v1/w/{wid}/tags/{tag_id}"): {"name": "Renamed"},
     ("POST", "/v1/w/{wid}/contact-fields"): {"key": "not_yours", "label": "Not yours"},
@@ -364,6 +367,7 @@ B_TABLES = (
     "webhook_deliveries",
     "google_connections",  # GR-27
     "sheet_rows",
+    "api_keys",  # GR-25
     "story_mentions",
     "tracked_links",
     "link_clicks",
@@ -437,6 +441,8 @@ class Seed:
     page_id: str = ""
     user_id: str = ""
     invitation_id: str = ""
+    api_key_id: str = ""  # GR-25
+    hook_id: str = ""  # GR-26: a REST hook that key subscribed
 
 
 @dataclass(frozen=True)
@@ -586,6 +592,27 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
             ),
             {"w": wid, "c": connection.scalar_one()},
         )
+    async with engine.begin() as conn:  # GR-25: an API key, and GR-26: the REST hook it made
+        api_key = (
+            await conn.execute(
+                text(
+                    "INSERT INTO api_keys (workspace_id, name, key_prefix, key_hash, scopes)"
+                    " VALUES (:w, 'Zapier', 'shk_bbbbbbbb', :h, ARRAY['contacts:read'])"
+                    " RETURNING id"
+                ),
+                {"w": wid, "h": "b" * 64},
+            )
+        ).scalar_one()
+        rest_hook = (
+            await conn.execute(
+                text(
+                    "INSERT INTO webhook_endpoints (workspace_id, url, events, status, secret_enc,"
+                    " failing_deliveries, api_key_id) VALUES (:w, 'https://hooks.example.com/z',"
+                    " ARRAY['contact.created'], 'active', '\\x00'::bytea, 0, :k) RETURNING id"
+                ),
+                {"w": wid, "k": api_key},
+            )
+        ).scalar_one()
     async with engine.begin() as conn:  # GR-11: a conversation starter
         await conn.execute(
             text(
@@ -757,6 +784,8 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         page_id=str(site_page),
         user_id=b["id"],
         invitation_id=str(invitation),
+        api_key_id=str(api_key),
+        hook_id=str(rest_hook),
     )
 
 
@@ -857,3 +886,97 @@ async def test_a_user_cannot_remove_another_users_push_device(
             )
         ).scalar_one()
     assert str(owner) == b["id"]
+
+
+# ---------------------------------------------------------------- the public API (GR-25, GR-26)
+
+# The public routes authenticate with an API key, so the walk above (a member's session, the
+# app's OpenAPI document) never sees them. A key of workspace A calls each with B's ids: 404, and
+# B is unchanged. Bodies are valid, so a call fails on tenancy and not on validation.
+PUBLIC_EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
+    ("POST", "/public/v1/contacts"): {"account_id": "{account_id}", "phone": "+919876543210"},
+    ("PATCH", "/public/v1/contacts/{contact_id}"): {"email": "taken@example.com"},
+    ("POST", "/public/v1/contacts/{contact_id}/tags"): {"add": ["{tag_id}"]},
+    ("POST", "/public/v1/conversations/{conversation_id}/messages"): {"text": "Sent into B"},
+    ("POST", "/public/v1/hooks"): {
+        "trigger": "new_contact",
+        "target_url": "https://hooks.example.com/a",
+    },
+}
+PUBLIC_PARAMS = {
+    "contact_id": "contact_id",
+    "conversation_id": "conversation_id",
+    "hook_id": "hook_id",
+    "account_id": "account_id",
+    "tag_id": "tag_id",
+}
+# Routes with no id of B's to name: they list A's own data, and must show none of B's.
+PUBLIC_LISTS = {
+    "/public/v1/contacts",
+    "/public/v1/conversations",
+    "/public/v1/tags",
+    "/public/v1/accounts",
+    "/public/v1/automation-runs",
+    "/public/v1/contact-fields",
+    "/public/v1/hooks",
+    "/public/v1/openapi.json",
+}
+
+
+async def test_public_routes_hide_other_workspaces(
+    app: FastAPI, client: httpx.AsyncClient, clerk: Clerk, engine: AsyncEngine
+) -> None:
+    from socialhood.api.public_openapi import public_openapi
+    from tests.support.automation_api import set_plan
+
+    member_a, a = await sign_in(client, clerk, email="a@example.com", first_name="Anna")
+    seed = await seed_workspace_b(client, clerk, engine)
+    wid_a = a["workspaces"][0]["id"]
+    await set_plan(engine, wid_a, "pro")
+    made = await client.post(
+        f"/v1/w/{wid_a}/api-keys",
+        json={
+            "name": "All",
+            "scopes": [
+                "contacts:read",
+                "contacts:write",
+                "tags:read",
+                "tags:write",
+                "conversations:read",
+                "messages:send",
+                "automations:read",
+                "webhooks:subscribe",
+            ],
+        },
+        headers=clerk.headers(member_a),
+    )
+    assert made.status_code == 201, made.text
+    headers = {"Authorization": f"Bearer {made.json()['key']}"}
+
+    document = public_openapi(app)
+    walked = 0
+    for path, operations in document["paths"].items():
+        params = re.findall(r"{(\w+)}", path)
+        for method, operation in operations.items():
+            key = (method.upper(), path)
+            if not params and path in PUBLIC_LISTS and "requestBody" not in operation:
+                continue  # a list of A's own data, checked below
+            if key == ("POST", "/public/v1/hooks"):
+                continue  # names nothing of B's: it makes A's own hook (tests/integration)
+            assert all(p in PUBLIC_PARAMS for p in params), f"{key}: no seed for {params}"
+            assert not ("requestBody" in operation and key not in PUBLIC_EXAMPLE_BODIES), key
+            body, _ = _fill(PUBLIC_EXAMPLE_BODIES.get(key), seed)
+            url = path.format(**{p: getattr(seed, PUBLIC_PARAMS[p]) for p in params})
+            before = await snapshot(engine, seed.workspace_id)
+            response = await client.request(method, url, json=body, headers=headers)
+            assert response.status_code == 404, f"{method.upper()} {url}: {response.text}"
+            assert response.json()["code"] == "not_found"
+            assert await snapshot(engine, seed.workspace_id) == before, f"{method.upper()} {url}"
+            walked += 1
+    assert walked >= 7, "the public walk found too few routes"
+
+    for path in sorted(PUBLIC_LISTS - {"/public/v1/openapi.json"}):
+        listed = await client.get(path, headers=headers)
+        assert listed.status_code == 200, f"{path}: {listed.text}"
+        for value in (seed.contact_id, seed.conversation_id, seed.tag_id, seed.hook_id):
+            assert value not in listed.text, f"{path} shows B's {value}"

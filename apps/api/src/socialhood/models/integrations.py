@@ -68,8 +68,18 @@ class WebhookEndpoint(IdMixin, TimestampMixin, TenantScoped, Base):
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    # GR-26: the API key that subscribed it (a Zapier trigger's REST hook, services/api_hooks.py).
+    # These endpoints go with the key, and don't count against the plan's webhook_endpoints.
+    api_key_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("api_keys.id", ondelete="CASCADE")
+    )
 
     __table_args__ = (
+        Index(
+            "ix_webhook_endpoints_api_key_id",
+            "api_key_id",
+            postgresql_where=sql("api_key_id IS NOT NULL"),
+        ),
         CheckConstraint(_in("status", EndpointStatus), name="status"),
         CheckConstraint("char_length(url) BETWEEN 8 AND 2000", name="url_length"),
         CheckConstraint("cardinality(events) BETWEEN 1 AND 20", name="events"),

@@ -313,20 +313,22 @@ def _after_cursor(
 
 async def list_runs(
     session: AsyncSession,
-    automation_id: uuid.UUID,
+    automation_id: uuid.UUID | None,
     *,
     result: RunResultName | None,
     cursor: str | None,
     limit: int,
 ) -> AutomationRunList:
-    """Newest first: time, contact, the triggering text, the result and any error."""
+    """Newest first: time, contact, the triggering text, the result and any error. No
+    ``automation_id`` lists every automation's runs (the public API, GR-25)."""
     statement = (
         select(AutomationRun, Contact, Message.text, Comment.text)
         .outerjoin(Contact, Contact.id == AutomationRun.contact_id)
         .outerjoin(Message, Message.id == AutomationRun.trigger_message_id)
         .outerjoin(Comment, Comment.id == AutomationRun.trigger_comment_id)
-        .where(AutomationRun.automation_id == automation_id)
     )
+    if automation_id is not None:
+        statement = statement.where(AutomationRun.automation_id == automation_id)
     if result is not None:
         statement = statement.where(AutomationRun.result == result)
     if cursor:

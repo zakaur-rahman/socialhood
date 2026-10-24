@@ -13,6 +13,7 @@ from socialhood.api.v1 import (
     agent,
     ai,
     analytics,
+    api_keys,
     automations,
     billing,
     business_hours,
@@ -78,6 +79,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     business_hours.router,
     integrations.router,
     google_sheets.router,
+    api_keys.router,  # GR-25
     analytics.router,
     reports.router,
     publishing.router,

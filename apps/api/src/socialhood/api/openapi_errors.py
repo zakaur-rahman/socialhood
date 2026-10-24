@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import APIRouter, FastAPI
 from fastapi.openapi.utils import get_openapi
 
 PROBLEM_SCHEMA: dict[str, Any] = {
@@ -48,10 +48,18 @@ _PROBLEM_RESPONSE: dict[str, Any] = {
 }
 
 
-def problem_openapi(app: FastAPI) -> dict[str, Any]:
+def problem_openapi(app: FastAPI, hidden: tuple[APIRouter, ...] = ()) -> dict[str, Any]:
+    """The app's document, without the routers in ``hidden`` (the public API's)."""
     if app.openapi_schema:
         return app.openapi_schema
-    schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+    routes = [r for r in app.routes if getattr(r, "original_router", None) not in hidden]
+    schema = get_openapi(title=app.title, version=app.version, routes=routes)
+    app.openapi_schema = describe_problems(schema)
+    return app.openapi_schema
+
+
+def describe_problems(schema: dict[str, Any]) -> dict[str, Any]:
+    """Replace FastAPI's 422 shape with ``Problem`` and add the ``default`` problem response."""
     schemas = schema.setdefault("components", {}).setdefault("schemas", {})
     schemas.pop("HTTPValidationError", None)
     schemas.pop("ValidationError", None)
@@ -62,5 +70,4 @@ def problem_openapi(app: FastAPI) -> dict[str, Any]:
             if "422" in responses:
                 responses["422"] = {**_PROBLEM_RESPONSE, "description": "Validation error"}
             responses["default"] = _PROBLEM_RESPONSE
-    app.openapi_schema = schema
     return schema

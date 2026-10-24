@@ -2,6 +2,8 @@
 Retry-After.
 
 - per user, every signed-in request: 300 a minute (auth/deps.current_user);
+- per API key, every public API request (GR-25, auth/api_key.py): 120 a minute; sending also
+  counts against the workspace's 60 sends a minute;
 - per workspace: 60 sends a minute and 20 AI requests a minute (api/ratelimit.per_workspace);
 - per client IP on unauthenticated routes: 30 a minute on OAuth callbacks (TR-API-07), 60 a
   minute on the other public routes (api/ratelimit.per_ip).
@@ -49,6 +51,7 @@ LIMITS: dict[str, Limit] = {
         Limit("ai", 20, 60),
         Limit("oauth_callback", 30, 60),
         Limit("public", 60, 60),
+        Limit("api_key", 120, 60),
     )
 }
 

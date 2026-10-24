@@ -48,6 +48,9 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # Google Sheets sync (GR-27): Pro and Max only (PD-6, decided 2026-10-24; webhooks stay on
     # every plan). Set free to True to open it to every plan.
     "sheets_sync": {"free": False, "pro": True, "max": True},
+    # The public API, API keys and the Zapier app (GR-25, GR-26): Pro and Max only. Outbound
+    # webhooks above stay on every plan. Owner decision PD-6 (2026-10-24).
+    "public_api": {"free": False, "pro": True, "max": True},
     # Steps in one automation flow (GR-13). Every plan can branch; Free is capped (PD-5, the
     # plan's recommended option, pending the owner's decision: change the numbers here, or set
     # free to Pro's to lift the cap). A flow is at most schemas.flows.MAX_STEPS whatever the plan.

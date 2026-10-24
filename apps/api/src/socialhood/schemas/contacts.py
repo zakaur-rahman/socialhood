@@ -160,6 +160,16 @@ class ContactPatch(RequestModel):
     fields: dict[str, Any] | None = None
 
 
+class ContactCreate(RequestModel):
+    """The public API adds a customer to a WhatsApp account by phone number (GR-25)."""
+
+    account_id: uuid.UUID
+    phone: str = Field(min_length=8, max_length=32)
+    name: str | None = Field(default=None, min_length=1, max_length=100)
+    email: str | None = Field(default=None, max_length=254)
+    fields: dict[str, Any] | None = None
+
+
 class ContactTagsUpdate(RequestModel):
     add: list[uuid.UUID] = Field(default_factory=list, max_length=20)
     remove: list[uuid.UUID] = Field(default_factory=list, max_length=20)
