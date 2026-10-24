@@ -21,7 +21,7 @@ export function sidebarRowClass({ active = false }: { active?: boolean } = {}): 
   return cn(
     "relative flex h-9 w-full items-center gap-3 overflow-hidden rounded-lg px-3.5 text-sm font-medium whitespace-nowrap text-fg-secondary pointer-coarse:h-10",
     // Colours only: transition-colors includes outline-color, which faded the focus outline in from
-    // grey (A11Y-023); the outline must appear in brand at once (DESIGN_SYSTEM ง7.3).
+    // grey (A11Y-023); the outline must appear in brand at once (DESIGN_SYSTEM ยง7.3).
     "hover:bg-hover hover:text-fg motion-safe:transition-[color,background-color]",
     active && SELECTED_ROW,
   );
