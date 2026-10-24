@@ -19,6 +19,7 @@ from socialhood.api.v1 import (
     broadcasts,
     business_hours,
     captions,
+    catalogue,
     comments,
     contacts,
     conversations,
@@ -81,6 +82,7 @@ ROUTERS: tuple[APIRouter, ...] = (
     saved_replies.router,
     business_hours.router,
     broadcasts.router,
+    catalogue.router,  # GR-31
     integrations.router,
     google_sheets.router,
     api_keys.router,  # GR-25

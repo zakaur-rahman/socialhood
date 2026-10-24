@@ -32,6 +32,7 @@ CLERK_USERS_URL = "https://api.clerk.com/v1/users/"
 WEB = "http://web.test"
 IG_APP_SECRET = "fake-instagram-app-secret"
 META_APP_SECRET = "fake-meta-app-secret"
+SHOPIFY_SECRET = "fake-shopify-app-secret"  # GR-31: signs the test webhooks
 IG_VERIFY_TOKEN = "fake-verify-token"
 TOKEN_KEY = new_key()
 
@@ -58,6 +59,7 @@ def api_settings(keys: Keys) -> Settings:
         ig_redirect_uri="http://api.test/v1/oauth/instagram/callback",
         ig_webhook_verify_token=IG_VERIFY_TOKEN,
         meta_app_secret=META_APP_SECRET,
+        shopify_api_secret=SHOPIFY_SECRET,
         sandbox_platform_enabled=True,
         # P8: the Dodo client and senders are fakes in tests (tests/support/billing.py, notify.py);
         # these make the real ones look configured and let webhooks verify.

@@ -31,6 +31,7 @@ class WebhookProvider(StrEnum):
     INSTAGRAM = "instagram"
     WHATSAPP = "whatsapp"
     FACEBOOK = "facebook"
+    SHOPIFY = "shopify"  # GR-31: product webhooks
     DODO = "dodo"
     CLERK = "clerk"
 

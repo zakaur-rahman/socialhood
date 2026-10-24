@@ -68,6 +68,15 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # then entitlement_required, otherwise quota_exceeded. A recipient counts when its message is
     # handed to the send queue (an attempt), failures included, skipped contacts never.
     "broadcast_recipients_monthly": {"free": 0, "pro": 2500, "max": 25000},
+    # The product catalogue (GR-31, PD-8: commerce is on Pro and Max, not Free; one line to change).
+    # Without it adding, changing, importing and syncing products is refused with 402
+    # entitlement_required; what exists is still shown and still answers customers.
+    "commerce": {"free": False, "pro": True, "max": True},
+    # Products a workspace may hold, and the rows one CSV import may carry (a product with
+    # variants is one product, each variant a row). Proposed values, pending the owner's plan
+    # decisions: a Shopify sync stops at the product cap and says so.
+    "catalogue_products": {"free": 0, "pro": 1000, "max": 20000},
+    "catalogue_import_rows": {"free": 0, "pro": 500, "max": 5000},
 }
 
 

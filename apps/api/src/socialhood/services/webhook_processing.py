@@ -23,6 +23,7 @@ from socialhood.services.webhook_handlers import (
     dodo,
     facebook,
     instagram,
+    shopify,
     whatsapp,
 )
 
@@ -42,6 +43,7 @@ HANDLERS: dict[str, Handler] = {
     WebhookProvider.INSTAGRAM: instagram.handle,
     WebhookProvider.WHATSAPP: whatsapp.handle,
     WebhookProvider.FACEBOOK: facebook.handle,  # GR-29
+    WebhookProvider.SHOPIFY: shopify.handle,  # GR-31
 }
 
 

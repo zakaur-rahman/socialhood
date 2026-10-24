@@ -37,6 +37,7 @@ from socialhood.models.identity import Workspace
 from socialhood.observability.logging import get_logger
 from socialhood.schemas.inbox import SuggestionSource
 from socialhood.schemas.knowledge import KnowledgeTestResult
+from socialhood.services.catalogue import facts as catalogue
 from socialhood.services.knowledge.retrieval import Retrieved, retrieve
 from socialhood.settings import get_settings
 
@@ -112,13 +113,18 @@ def chunk_text(chunk: Retrieved) -> str:
     return chunk.content[len(prefix) :] if chunk.content.startswith(prefix) else chunk.content
 
 
-def knowledge_block(chunks: Sequence[Retrieved]) -> KnowledgeBlock:
-    """``[k1] (title) text`` for each chunk, k1 the most similar (TR-AI-06)."""
+def knowledge_block(
+    chunks: Sequence[Retrieved], products: Sequence[catalogue.ProductFact] = ()
+) -> KnowledgeBlock:
+    """``[k1] (title) text`` for each chunk, k1 the most similar (TR-AI-06), then the
+    catalogue's PRODUCTS (``[p1] name | price | stock | link``, GR-31) when it names any."""
+    shop = catalogue.block(products)
     if not chunks:
-        return KnowledgeBlock(text=NO_KNOWLEDGE)
+        return KnowledgeBlock(text="\n".join([NO_KNOWLEDGE, shop]) if shop else NO_KNOWLEDGE)
     by_id = {f"k{index}": chunk for index, chunk in enumerate(chunks, start=1)}
     entries = [f"[{k}] ({chunk.source_title}) {chunk_text(chunk)}" for k, chunk in by_id.items()]
-    return KnowledgeBlock(text="\n".join([KNOWLEDGE_HEADER, *entries]), by_id=by_id)
+    lines = [KNOWLEDGE_HEADER, *entries, *([shop] if shop else [])]
+    return KnowledgeBlock(text="\n".join(lines), by_id=by_id)
 
 
 def suggest_system(
@@ -177,12 +183,13 @@ async def try_question(
     except AIError as error:
         log.warning("knowledge_test_retrieval_failed", error_code=error.code)
         raise ApiError("service_unavailable", AI_UNAVAILABLE) from error
+    products = await catalogue.find(session, question)
     ai = (await session.scalars(select(AiSettingsRow))).one_or_none()
     system = suggest_system(
         ai, workspace_name=workspace_name, platform=TEST_PLATFORM, language=language
     )
     await session.commit()  # no transaction stays open while the model runs
-    block = knowledge_block(hits)
+    block = knowledge_block(hits, products)
     contents = [block.turn(), Turn("user", f"CUSTOMER MESSAGE (TARGET):\n{question}")]
     settings = get_settings()
     try:

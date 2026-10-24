@@ -67,6 +67,22 @@ class SendStep(RequestModel):
     next: StepId | None = None
 
 
+# ---------------------------------------------------------------- product (GR-31)
+
+
+class ProductStep(RequestModel):
+    """Send a product from the catalogue: its name, price, stock (when recorded), picture and
+    link, read when the step runs. With ``variant_id`` that variant; without one, the product's
+    price, or a short list of its variants. ``intro`` is a line of your own above it."""
+
+    type: Literal["product"] = "product"
+    id: StepId
+    product_id: uuid.UUID
+    variant_id: uuid.UUID | None = None
+    intro: Annotated[str, StringConstraints(max_length=300)] = ""
+    next: StepId | None = None
+
+
 # ---------------------------------------------------------------- ask
 
 
@@ -255,6 +271,7 @@ class EndStep(RequestModel):
 
 Step = Annotated[
     SendStep
+    | ProductStep
     | AskStep
     | BranchStep
     | ActionStep
@@ -264,7 +281,9 @@ Step = Annotated[
     | EndStep,
     Field(discriminator="type"),
 ]
-StepType = Literal["send", "ask", "branch", "action", "delay", "randomize", "ai_reply", "end"]
+StepType = Literal[
+    "send", "product", "ask", "branch", "action", "delay", "randomize", "ai_reply", "end"
+]
 
 
 class FlowDefinition(RequestModel):

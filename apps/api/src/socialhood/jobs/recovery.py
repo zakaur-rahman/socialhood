@@ -104,6 +104,7 @@ RECOVERY: dict[str, Recovery] = {
     "suggest_reply": R,  # skips a message that already has this generation
     "decide_auto_reply": R,  # one transaction; a stable client id per suggestion, pending only
     "deliver_webhook": R,  # GR-04: at least once; receivers dedupe on webhook-id
+    "sync_shopify_products": R,  # GR-31: a full pass that upserts by Shopify id; re-run is harmless
     "append_sheet_row": R,  # GR-27: re-checks the row's status; doubles only if killed mid-append
     "run_automation": R,  # a run recorded for the event means handled; retried on any error
     "drain_private_replies": R,  # each reply is committed ``sending`` before the call

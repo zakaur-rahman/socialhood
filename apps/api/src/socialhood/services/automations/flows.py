@@ -62,6 +62,7 @@ from socialhood.schemas.flows import (
     LeadScoreCondition,
     LeadStageCondition,
     PlatformCondition,
+    ProductStep,
     QuickReply,
     RandomizeStep,
     RemoveTag,
@@ -118,6 +119,10 @@ COPY = {
         "A saved reply goes on its own. Remove the image, buttons and quick replies, or write "
         "the message here instead."
     ),
+    "product_missing": "That product doesn't exist any more. Choose another.",
+    "product_off": "That product is switched off. Turn it on, or choose another.",
+    "variant_missing": "That variant doesn't exist any more. Choose another.",
+    "product_plan": "Sending products is part of Pro.",
     "comment_saved_reply": (
         "A comment's first message is written here, not a saved reply. Start with a message "
         "step, then use the saved reply."
@@ -145,7 +150,7 @@ def successors(step: Step) -> list[str | None]:
     match step:
         case SendStep(quick_replies=replies) if replies:
             return [r.next for r in replies] + [step.on_text]
-        case SendStep() | ActionStep() | DelayStep():
+        case SendStep() | ProductStep() | ActionStep() | DelayStep():
             return [step.next]
         case AskStep():
             return [step.next, step.on_skip]
@@ -312,6 +317,10 @@ class Context:
     saved_replies: Mapping[uuid.UUID, str] = field(default_factory=dict)
     # GR-29: the account's platform, which sets the text limit and what Messenger lacks.
     platform: str = "instagram"
+    # GR-31: the catalogue's products, id to (switched on, variant ids), and whether the plan
+    # includes the catalogue (a product step is refused without it).
+    products: Mapping[uuid.UUID, tuple[bool, frozenset[uuid.UUID]]] = field(default_factory=dict)
+    commerce: bool = True
 
     @property
     def comment(self) -> bool:
@@ -346,6 +355,8 @@ def _step_errors(i: int, step: Step, ctx: Context) -> list[FieldError]:
     match step:
         case SendStep():
             return _send_errors(i, step, ctx)
+        case ProductStep():
+            return _product_errors(i, step, ctx)
         case AskStep():
             return _ask_errors(i, step, ctx)
         case BranchStep():
@@ -356,6 +367,20 @@ def _step_errors(i: int, step: Step, ctx: Context) -> list[FieldError]:
             return [FieldError(path(i, "instructions"), COPY["ai_instructions"])]
         case _:
             return []
+
+
+def _product_errors(i: int, step: ProductStep, ctx: Context) -> list[FieldError]:
+    if not ctx.commerce:
+        return [FieldError(path(i, "product_id"), COPY["product_plan"])]
+    known = ctx.products.get(step.product_id)
+    if known is None:
+        return [FieldError(path(i, "product_id"), COPY["product_missing"])]
+    active, variants = known
+    if not active:
+        return [FieldError(path(i, "product_id"), COPY["product_off"])]
+    if step.variant_id is not None and step.variant_id not in variants:
+        return [FieldError(path(i, "variant_id"), COPY["variant_missing"])]
+    return []
 
 
 def _text_errors(where: str, text: str, ctx: Context, *, buttons: bool) -> list[FieldError]:
@@ -498,6 +523,8 @@ def _path_errors(g: Graph, ctx: Context) -> dict[str, str]:
 def _allowed(step: Step, window: Window, ctx: Context, start: str) -> tuple[str | None, Window]:
     """(the problem with ``step`` here or None, the window after it)."""
     match step:
+        case ProductStep():
+            return ("after_private_reply" if window == "closed" else None), window
         case SendStep() | AskStep():
             if window == "closed":
                 return "after_private_reply", "closed"

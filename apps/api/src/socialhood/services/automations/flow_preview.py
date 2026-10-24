@@ -24,6 +24,7 @@ from socialhood.schemas.flows import (
     FlowDefinition,
     HandOff,
     NotifyTeam,
+    ProductStep,
     RandomizeStep,
     RemoveTag,
     SendStep,
@@ -61,6 +62,8 @@ def title(step: Step, tag_names: Mapping[uuid.UUID, str]) -> str:
     match step:
         case SendStep():
             return "Message"
+        case ProductStep():
+            return "Send a product"
         case AskStep():
             return ASK_TITLES[step.expect]
         case BranchStep():

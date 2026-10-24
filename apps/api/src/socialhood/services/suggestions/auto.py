@@ -49,7 +49,7 @@ from socialhood.repositories import suggestions as repo
 from socialhood.services import business_hours
 from socialhood.services.notifications import notify_admins
 from socialhood.services.reply_window import reply_window
-from socialhood.services.suggestions import drafting
+from socialhood.services.suggestions import drafting, knowledge_port
 from socialhood.settings import get_settings
 
 log = get_logger(__name__)
@@ -165,6 +165,7 @@ async def policy_input(
     credits = await metering.quota(session, now=now)
     reply = row.reply_text or ""
     allowed = await repo.chunk_texts(session, row.used_chunk_ids or []) + brand.texts()
+    allowed += await knowledge_port.product_texts(session, row.used_chunk_ids or [])  # GR-31
     found = output_filter.candidates(reply)
     if found:
         allowed += await drafting.knowledge_mentioning(session, [v for _, v in found])

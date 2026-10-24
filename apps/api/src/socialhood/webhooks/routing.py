@@ -10,6 +10,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.db.tenancy import tenant_bypass_scope
+from socialhood.models.catalogue import ShopifyConnection
 from socialhood.models.connections import AccountStatus, SocialAccount
 
 
@@ -68,3 +69,14 @@ async def accounts_for_platform_user(
             )
         ).all()
     return [RoutedAccount(account_id=r[0], workspace_id=r[1]) for r in rows]
+
+
+async def shopify_owner(session: AsyncSession, shop_domain: str) -> uuid.UUID | None:
+    """The workspace that holds this Shopify store (GR-31), or None. A store belongs to one
+    workspace at a time, and a webhook names only the store."""
+    with tenant_bypass_scope():
+        return await session.scalar(
+            select(ShopifyConnection.workspace_id).where(
+                ShopifyConnection.shop_domain == shop_domain
+            )
+        )

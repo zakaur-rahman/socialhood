@@ -23,7 +23,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.billing.plans import current_plan, entitlement
 from socialhood.models.billing import UsageMetric
-from socialhood.repositories import automations, knowledge, scheduled, subscriptions, usage
+from socialhood.repositories import (
+    automations,
+    catalogue,
+    knowledge,
+    scheduled,
+    subscriptions,
+    usage,
+)
 
 # The §1.7 keys counted per period, and their usage_counters metric.
 PERIOD_KEYS: dict[str, UsageMetric] = {
@@ -66,4 +73,6 @@ async def live_used(session: AsyncSession, key: str) -> int:
         return await knowledge.characters_used(session)
     if key == "pending_scheduled_messages":
         return await scheduled.count_pending(session)
+    if key == "catalogue_products":  # GR-31
+        return await catalogue.count_products(session)
     raise KeyError(f"{key} is not counted live")

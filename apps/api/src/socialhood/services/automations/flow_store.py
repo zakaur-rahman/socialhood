@@ -24,8 +24,8 @@ from datetime import datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from socialhood.billing.entitlements import quota_error
-from socialhood.billing.plans import entitlement
+from socialhood.billing.entitlements import allows, entitlement_error, quota_error
+from socialhood.billing.plans import current_plan, entitlement
 from socialhood.errors import ApiError, FieldError
 from socialhood.models.automations import (
     Automation,
@@ -37,6 +37,7 @@ from socialhood.models.contacts import ContactFieldDefinition, Tag
 from socialhood.models.media import ResourceType
 from socialhood.models.replies import SavedReply
 from socialhood.repositories import automations as repo
+from socialhood.repositories import catalogue as catalogue_repo
 from socialhood.repositories import social_accounts
 from socialhood.schemas.flows import (
     ActionStep,
@@ -47,6 +48,7 @@ from socialhood.schemas.flows import (
     Flow,
     FlowDefinition,
     FlowSource,
+    ProductStep,
     RemoveTag,
     SendStep,
     SetField,
@@ -127,6 +129,17 @@ async def _saved_replies(session: AsyncSession) -> dict[uuid.UUID, str]:
     return {reply_id: body for reply_id, body in rows.all()}
 
 
+async def _products(
+    session: AsyncSession,
+) -> dict[uuid.UUID, tuple[bool, frozenset[uuid.UUID]]]:
+    """GR-31: the workspace's products, id to (switched on, variant ids)."""
+    rows, _ = await catalogue_repo.list_products(
+        session, q=None, active=None, source=None, limit=5000, offset=0
+    )
+    variants = await catalogue_repo.variants_of(session, [p.id for p in rows])
+    return {p.id: (p.active, frozenset(v.id for v in variants.get(p.id, []))) for p in rows}
+
+
 async def context(
     session: AsyncSession, automation: Automation, disclosure: str | None
 ) -> flows.Context:
@@ -143,6 +156,8 @@ async def context(
         tag_ids=tags,
         saved_replies=await _saved_replies(session),
         platform=acct.platform if acct is not None else "instagram",
+        products=await _products(session),
+        commerce=allows(await current_plan(session), "commerce"),
     )
 
 
@@ -210,6 +225,10 @@ async def save(
     except flows.FlowError as error:
         raise ApiError("validation_error", errors=error.errors) from error
     check_step_cap(definition, plan)
+    if any(isinstance(step, ProductStep) for step in definition.steps) and not allows(
+        plan, "commerce"
+    ):
+        raise entitlement_error("commerce", "Sending products is part of Pro.")
     if errors := await _image_errors(session, definition):
         raise ApiError("validation_error", errors=errors)
     if automation.status == AutomationStatus.ACTIVE:
@@ -283,6 +302,8 @@ async def problems(
     stored = await repo.flows_at(session, flowing)
     parts = await _context_parts(session) if flowing else ({}, frozenset())
     replies = await _saved_replies(session) if flowing else {}
+    shop = await _products(session) if flowing else {}
+    commerce = allows(await current_plan(session), "commerce") if flowing else True
     out: dict[uuid.UUID, list[FieldError]] = {}
     for a in automations:
         d = (definitions_by_id or {}).get(a.id) or await definitions.stored_definition(session, a)
@@ -299,6 +320,8 @@ async def problems(
                 tag_ids=parts[1],
                 saved_replies=replies,
                 platform=d.platform or "instagram",
+                products=shop,
+                commerce=commerce,
             )
             errors += flows.activation_errors(flows.parse(row.definition), ctx)
         out[a.id] = errors
