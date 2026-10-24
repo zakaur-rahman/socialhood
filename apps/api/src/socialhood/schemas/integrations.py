@@ -22,6 +22,7 @@ EventName = Literal[
     "broadcast.finished",
     "order.created",
     "order.paid",
+    "order.refunded",
     "sequence.enrolled",
     "sequence.step_sent",
     "sequence.completed",

@@ -655,3 +655,43 @@ describe("the product step (GR-31)", () => {
     expect(stepTitle(product("p"))).toBe("Send a product");
   });
 });
+
+describe("the request payment step (GR-32)", () => {
+  const payment = (id: string, extra: Partial<Extract<EditorStep, { kind: "payment" }>> = {}): EditorStep => ({
+    kind: "payment",
+    id,
+    source: "items",
+    items: [{ product_id: "p1", variant_id: "v1", quantity: 2 }],
+    method: "upi",
+    intro: "Here is your order:",
+    ...extra,
+  });
+
+  it("is made empty, compiles to the API's payment step and reads back", () => {
+    expect(makeStep("payment", new Set())).toMatchObject({ kind: "payment", source: "items", items: [], method: "razorpay", intro: "" });
+    const tree: EditorStep[] = [send("a", "Hi"), payment("p"), send("b", "Thanks!")];
+    const { definition } = compile(tree);
+    expect(definition.steps[1]).toEqual({
+      type: "payment",
+      id: "p",
+      source: "items",
+      items: [{ product_id: "p1", variant_id: "v1", quantity: 2 }],
+      method: "upi",
+      intro: "Here is your order:",
+      next: "b",
+    });
+    expect(decompile(definition)).toEqual(tree);
+  });
+
+  it("sends no lines when it asks for the conversation's own order", () => {
+    const { definition } = compile([payment("p", { source: "draft" })]);
+    expect(definition.steps[0]).toMatchObject({ type: "payment", source: "draft", items: [], next: null });
+  });
+
+  it("needs at least one product unless it uses the chat's order, and is titled for what it does", () => {
+    expect(stepProblems(payment("p", { items: [] }), CTX)).toEqual({ items: "Choose at least one product to sell." });
+    expect(stepProblems(payment("p", { items: [], source: "draft" }), CTX)).toEqual({});
+    expect(stepProblems(payment("p"), CTX)).toEqual({});
+    expect(stepTitle(payment("p"))).toBe("Request payment");
+  });
+});

@@ -177,7 +177,10 @@ def _assignment_item(row: Any) -> TimelineItem:
 ORDER_VERB: dict[str, str] = {
     OrderStatus.DRAFT: "created",
     OrderStatus.AWAITING_PAYMENT: "waiting for payment",
+    OrderStatus.PARTIALLY_PAID: "partly paid",
     OrderStatus.PAID: "paid",
+    OrderStatus.FULFILLED: "shipped",
+    OrderStatus.REFUNDED: "refunded",
     OrderStatus.CANCELLED: "cancelled",
     OrderStatus.EXPIRED: "expired",
 }
@@ -188,7 +191,7 @@ def order_item(row: Any) -> TimelineItem:
     """ "Order #12 paid", with the total and how it was paid (GR-32)."""
     total = money.label(row.total_minor, row.currency)
     detail = total
-    if row.status == OrderStatus.PAID and row.payment_method in PAID_VIA:
+    if row.status in (OrderStatus.PAID, OrderStatus.FULFILLED) and row.payment_method in PAID_VIA:
         detail = f"{total}. {PAID_VIA[row.payment_method]}"
     return _item(
         row.id,

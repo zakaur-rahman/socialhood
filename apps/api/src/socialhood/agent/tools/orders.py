@@ -38,9 +38,19 @@ class _Input(BaseModel):
 
 
 class ListOrdersInput(_Input):
-    status: Literal["draft", "awaiting_payment", "paid", "cancelled", "expired"] | None = Field(
-        default=None, description="Only orders in this state; leave out for all."
-    )
+    status: (
+        Literal[
+            "draft",
+            "awaiting_payment",
+            "partially_paid",
+            "paid",
+            "fulfilled",
+            "refunded",
+            "cancelled",
+            "expired",
+        ]
+        | None
+    ) = Field(default=None, description="Only orders in this state; leave out for all.")
     customer: str | None = Field(
         default=None,
         max_length=100,
@@ -104,9 +114,10 @@ def _orders_table(ctx: ToolContext, items: list[OrderLine], total: int) -> Table
     name="list_orders",
     label="Looking at your orders",
     description=(
-        "Orders made in conversations: number, status (draft, awaiting payment, paid, cancelled, "
-        "expired), total, customer and lines, with how many are paid and how much was paid in "
-        "the period. For 'which orders are unpaid?' or 'what did we sell this week?'."
+        "Orders made in conversations: number, status (draft, awaiting payment, partially paid, "
+        "paid, shipped, refunded, cancelled, expired), total, customer and lines, with how many "
+        "are paid (paid or shipped) and how much was paid in the period. For 'which orders are "
+        "unpaid?' or 'what did we sell this week?'."
     ),
     input_model=ListOrdersInput,
     result_model=ListOrdersResult,
@@ -146,7 +157,7 @@ async def list_orders(ctx: ToolContext, args: ListOrdersInput) -> ListOrdersResu
     paid = (
         await ctx.session.execute(
             select(Order.currency, func.count(), func.sum(Order.total_minor))
-            .where(*where, Order.status == OrderStatus.PAID)
+            .where(*where, Order.status.in_((OrderStatus.PAID, OrderStatus.FULFILLED)))
             .group_by(Order.currency)
         )
     ).all()

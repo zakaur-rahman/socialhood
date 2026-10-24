@@ -10,6 +10,11 @@ Payments go to the business's own account: Razorpay with its own keys (``payment
 the secrets encrypted like platform tokens, SEC-03, and never returned) or a UPI address a
 customer pays by hand. A Razorpay payment arrives as a signed webhook; a UPI payment has no
 webhook, so a member marks the order paid and the audit trail says who and when.
+
+Follow-ups (C-125): an order can be paid in parts (``order_payments``, one row per payment, so
+``amount_paid_minor`` is their sum), refunded in full or in part (``order_refunds``, one row per
+refund, through Razorpay with the business's own keys or recorded by hand), shipped (``fulfilled``)
+and edited while nobody has paid.
 """
 
 from __future__ import annotations
@@ -43,7 +48,10 @@ from socialhood.models.identity import _in
 class OrderStatus(StrEnum):
     DRAFT = "draft"  # made, no payment asked for yet
     AWAITING_PAYMENT = "awaiting_payment"  # a payment link or UPI request is out
+    PARTIALLY_PAID = "partially_paid"  # some of the total has been paid
     PAID = "paid"
+    FULFILLED = "fulfilled"  # paid and shipped (or handed over)
+    REFUNDED = "refunded"  # everything paid has been given back
     CANCELLED = "cancelled"
     EXPIRED = "expired"  # the payment link ran out before it was paid
 
@@ -56,6 +64,18 @@ class PaymentMethod(StrEnum):
 class OrderSource(StrEnum):
     INBOX = "inbox"  # a member made it from a conversation
     WHATSAPP = "whatsapp"  # the customer's cart (GR-33)
+    FLOW = "flow"  # a "request payment" step in a flow
+
+
+class RefundStatus(StrEnum):
+    PENDING = "pending"  # Razorpay has it and has not finished
+    PROCESSED = "processed"
+    FAILED = "failed"
+
+
+class RefundMethod(StrEnum):
+    RAZORPAY = "razorpay"  # returned through the business's Razorpay account
+    MANUAL = "manual"  # the business gave the money back itself and recorded it here
 
 
 class PaymentConnection(IdMixin, TimestampMixin, TenantScoped, Base):
@@ -114,6 +134,13 @@ class Order(IdMixin, TimestampMixin, TenantScoped, Base):
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    # C-125: the sum of ``order_payments``, the sum of processed ``order_refunds``, whether the
+    # Razorpay link takes part payments, and when and how the order was shipped.
+    amount_paid_minor: Mapped[int] = mapped_column(BigInteger, server_default=sql("0"))
+    amount_refunded_minor: Mapped[int] = mapped_column(BigInteger, server_default=sql("0"))
+    accept_partial: Mapped[bool] = mapped_column(server_default=sql("false"))
+    fulfilled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    fulfilment_note: Mapped[str | None] = mapped_column(Text)
 
     __table_args__ = (
         UniqueConstraint("workspace_id", "number"),
@@ -128,6 +155,11 @@ class Order(IdMixin, TimestampMixin, TenantScoped, Base):
         ),
         CheckConstraint("currency ~ '^[A-Z]{3}$'", name="currency_format"),
         CheckConstraint("total_minor >= 0", name="total_minor"),
+        CheckConstraint("amount_paid_minor >= 0", name="amount_paid_minor"),
+        CheckConstraint(
+            "amount_refunded_minor >= 0 AND amount_refunded_minor <= amount_paid_minor",
+            name="amount_refunded_minor",
+        ),
     )
 
 
@@ -157,4 +189,61 @@ class OrderItem(IdMixin, TimestampMixin, TenantScoped, Base):
         CheckConstraint("quantity BETWEEN 1 AND 999", name="quantity"),
         CheckConstraint("unit_price_minor >= 0", name="unit_price_minor"),
         CheckConstraint("line_total_minor >= 0", name="line_total_minor"),
+    )
+
+
+class OrderPayment(IdMixin, TimestampMixin, TenantScoped, Base):
+    """One payment toward an order: a Razorpay payment (its id keeps a re-delivered webhook from
+    counting twice) or a member's record of a UPI or other payment."""
+
+    __tablename__ = "order_payments"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"))
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    method: Mapped[str] = mapped_column(Text)
+    reference: Mapped[str | None] = mapped_column(Text)
+    razorpay_payment_id: Mapped[str | None] = mapped_column(Text)
+    recorded_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    paid_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("order_id", "razorpay_payment_id"),
+        Index("ix_order_payments_order_id", "order_id"),
+        Index("ix_order_payments_razorpay_payment_id", "razorpay_payment_id"),
+        CheckConstraint("amount_minor > 0", name="amount_minor"),
+        CheckConstraint(_in("method", PaymentMethod), name="method"),
+    )
+
+
+class OrderRefund(IdMixin, TimestampMixin, TenantScoped, Base):
+    """One refund of (part of) a payment. A Razorpay refund is ``pending`` until Razorpay says
+    it is processed (or failed); a refund the business made itself is recorded as processed.
+    Only processed refunds count in ``orders.amount_refunded_minor``."""
+
+    __tablename__ = "order_refunds"
+
+    order_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("orders.id", ondelete="CASCADE"))
+    payment_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("order_payments.id", ondelete="SET NULL")
+    )
+    amount_minor: Mapped[int] = mapped_column(BigInteger)
+    reason: Mapped[str] = mapped_column(Text)
+    method: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(Text)
+    razorpay_refund_id: Mapped[str | None] = mapped_column(Text)
+    failure: Mapped[str | None] = mapped_column(Text)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    __table_args__ = (
+        UniqueConstraint("order_id", "razorpay_refund_id"),
+        Index("ix_order_refunds_order_id", "order_id"),
+        Index("ix_order_refunds_razorpay_refund_id", "razorpay_refund_id"),
+        CheckConstraint("amount_minor > 0", name="amount_minor"),
+        CheckConstraint(_in("method", RefundMethod), name="method"),
+        CheckConstraint(_in("status", RefundStatus), name="status"),
     )

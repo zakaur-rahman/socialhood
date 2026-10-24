@@ -83,6 +83,32 @@ class ProductStep(RequestModel):
     next: StepId | None = None
 
 
+# ---------------------------------------------------------------- request payment (GR-32)
+
+
+class PaymentItem(RequestModel):
+    """One line of an order a payment step makes: a product (and variant, when it has some)."""
+
+    product_id: uuid.UUID
+    variant_id: uuid.UUID | None = None
+    quantity: int = Field(default=1, ge=1, le=99)
+
+
+class PaymentStep(RequestModel):
+    """Ask the customer to pay: make an order and send the payment link (Razorpay) or UPI request.
+    ``source`` ``items`` orders the chosen ``items`` at the catalogue's prices when the step runs;
+    ``draft`` uses the conversation's latest order that isn't paid yet (a member's draft, or the
+    customer's WhatsApp cart). ``intro`` is a line of your own above the payment message."""
+
+    type: Literal["payment"] = "payment"
+    id: StepId
+    source: Literal["items", "draft"] = "items"
+    items: list[PaymentItem] = Field(default_factory=list, max_length=10)
+    method: Literal["razorpay", "upi"] = "razorpay"
+    intro: Annotated[str, StringConstraints(max_length=300)] = ""
+    next: StepId | None = None
+
+
 # ---------------------------------------------------------------- ask
 
 
@@ -282,6 +308,7 @@ class EndStep(RequestModel):
 Step = Annotated[
     SendStep
     | ProductStep
+    | PaymentStep
     | AskStep
     | BranchStep
     | ActionStep
@@ -292,7 +319,7 @@ Step = Annotated[
     Field(discriminator="type"),
 ]
 StepType = Literal[
-    "send", "product", "ask", "branch", "action", "delay", "randomize", "ai_reply", "end"
+    "send", "product", "payment", "ask", "branch", "action", "delay", "randomize", "ai_reply", "end"
 ]
 
 

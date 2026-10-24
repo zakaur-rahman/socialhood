@@ -238,6 +238,10 @@ EXAMPLE_BODIES.update(
         },
         ("POST", "/v1/w/{wid}/orders/{order_id}/payment-request"): {"method": "upi"},
         ("POST", "/v1/w/{wid}/orders/{order_id}/mark-paid"): {},
+        # C-125: B's order edited, shipped and refunded.
+        ("PATCH", "/v1/w/{wid}/orders/{order_id}"): {"note": "Taken over"},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/fulfil"): {},
+        ("POST", "/v1/w/{wid}/orders/{order_id}/refunds"): {"reason": "Taken over"},
         ("PUT", "/v1/w/{wid}/integrations/payments/razorpay"): {
             "key_id": "rzp_test_abcdefgh",
             "private_key": "secretsecret",
@@ -490,6 +494,8 @@ B_TABLES = (
     "payment_connections",  # GR-32
     "orders",
     "order_items",
+    "order_payments",  # C-125
+    "order_refunds",
     "sequences",  # GR-24
     "sequence_steps",
     "sequence_enrolments",
@@ -935,6 +941,23 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
                 " VALUES (:w, :o, :p, 'B kurta', 1, 79900, 79900)"
             ),
             {"w": wid, "o": order, "p": product},
+        )
+        paid = (
+            await conn.execute(
+                text(
+                    "INSERT INTO order_payments (workspace_id, order_id, amount_minor, method,"
+                    " paid_at) VALUES (:w, :o, 79900, 'upi', now()) RETURNING id"
+                ),
+                {"w": wid, "o": order},
+            )
+        ).scalar_one()
+        await conn.execute(
+            text(
+                "INSERT INTO order_refunds (workspace_id, order_id, payment_id, amount_minor,"
+                " reason, method, status) VALUES (:w, :o, :p, 100, 'Returned', 'manual',"
+                " 'processed')"
+            ),
+            {"w": wid, "o": order, "p": paid},
         )
         await conn.execute(
             text(

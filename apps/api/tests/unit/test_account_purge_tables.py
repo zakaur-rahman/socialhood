@@ -43,6 +43,8 @@ EXPECTED = {
     "message_analyses",
     "messages",
     "order_items",  # GR-32
+    "order_payments",  # C-125
+    "order_refunds",
     "orders",
     "post_metric_snapshots",
     "posting_slots",

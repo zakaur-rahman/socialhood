@@ -17,6 +17,8 @@ WEBHOOK_EVENTS = (
     "payment_link.partially_paid",
     "payment_link.expired",
     "payment_link.cancelled",
+    "refund.processed",
+    "refund.failed",
 )
 MIN_EXPIRY_S = 16 * 60  # Razorpay needs a link to last at least 15 minutes
 
@@ -44,6 +46,15 @@ class PaymentLink:
     short_url: str  # https only
 
 
+RefundState = Literal["pending", "processed", "failed"]
+
+
+@dataclass(frozen=True)
+class Refund:
+    id: str  # "rfnd_..."
+    status: RefundState
+
+
 class RazorpayClient(Protocol):
     async def verify(self, creds: Credentials) -> None:
         """Raises ``RazorpayError("auth")`` when the keys don't work."""
@@ -60,6 +71,19 @@ class RazorpayClient(Protocol):
         customer_name: str | None,
         customer_phone: str | None,
         expire_by: int,
+        accept_partial: bool = False,
     ) -> PaymentLink: ...
 
     async def cancel_payment_link(self, creds: Credentials, link_id: str) -> None: ...
+
+    async def refund_payment(
+        self,
+        creds: Credentials,
+        payment_id: str,
+        *,
+        amount_minor: int,
+        reason: str,
+        receipt: str,
+    ) -> Refund:
+        """Refund ``amount_minor`` of the payment (a part or all of it) back to the customer."""
+        ...

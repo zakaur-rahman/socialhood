@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { actionsFor, customerName, lineName, orderNumber, orderTotal } from "./format";
+import { actionsFor, amountMinor, customerName, lineName, orderNumber, orderTotal, STATUS_LABEL } from "./format";
 
 describe("order formatting (GR-32)", () => {
   it("shows the number, the total and the lines", () => {
@@ -17,9 +17,31 @@ describe("order formatting (GR-32)", () => {
   });
 
   it("allows only what the state allows", () => {
-    expect(actionsFor("draft")).toEqual({ pay: true, markPaid: true, cancel: true });
-    expect(actionsFor("expired")).toEqual({ pay: true, markPaid: true, cancel: false });
-    expect(actionsFor("paid")).toEqual({ pay: false, markPaid: false, cancel: false });
-    expect(actionsFor("cancelled")).toEqual({ pay: false, markPaid: false, cancel: false });
+    const none = { pay: false, markPaid: false, cancel: false, edit: false, ship: false, refund: false };
+    expect(actionsFor("draft")).toEqual({ ...none, pay: true, markPaid: true, cancel: true, edit: true });
+    expect(actionsFor("awaiting_payment")).toEqual({ ...none, pay: true, markPaid: true, cancel: true, edit: true });
+    expect(actionsFor("expired")).toEqual({ ...none, pay: true, markPaid: true });
+    expect(actionsFor("partially_paid")).toEqual({ ...none, pay: true, markPaid: true, refund: true });
+    expect(actionsFor("paid")).toEqual({ ...none, ship: true, refund: true });
+    expect(actionsFor("fulfilled")).toEqual({ ...none, refund: true });
+    expect(actionsFor("refunded")).toEqual(none);
+    expect(actionsFor("cancelled")).toEqual(none);
+  });
+
+  it("names every status", () => {
+    expect(STATUS_LABEL.partially_paid).toBe("Partly paid");
+    expect(STATUS_LABEL.fulfilled).toBe("Shipped");
+    expect(STATUS_LABEL.refunded).toBe("Refunded");
+  });
+
+  it("reads an amount a member typed as minor units", () => {
+    expect(amountMinor("500", "INR")).toBe(50000);
+    expect(amountMinor("1,598.50", "INR")).toBe(159850);
+    expect(amountMinor("499.5", "INR")).toBe(49950);
+    expect(amountMinor("1500", "JPY")).toBe(1500);
+    expect(amountMinor("0", "INR")).toBeNull();
+    expect(amountMinor("abc", "INR")).toBeNull();
+    expect(amountMinor("1.234", "INR")).toBeNull();
+    expect(amountMinor("", "INR")).toBeNull();
   });
 });
