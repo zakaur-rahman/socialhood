@@ -58,6 +58,7 @@ CREDITS = "ai_credits_monthly"
 FEATURES = {
     "ai_modes": "Auto mode is part of Pro.",
     "ai_reply_automations": "AI replies in automations are part of Pro.",
+    "sheets_sync": "Google Sheets sync is part of Pro.",
 }
 # §4.7 quota_exceeded: "Your plan includes {limit} {thing}."
 THINGS = {

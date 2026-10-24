@@ -52,6 +52,7 @@ export const keys = {
   notifications: (wid: string) => ["w", wid, "notifications"] as const,
   webhookEvents: (wid: string) => ["w", wid, "webhook-events"] as const,
   webhookEndpoints: (wid: string) => ["w", wid, "webhook-endpoints"] as const,
+  googleSheets: (wid: string) => ["w", wid, "google-sheets"] as const,
   webhookDeliveries: (wid: string, endpointId: string) => ["w", wid, "webhook-deliveries", endpointId] as const,
   /** Activity (GR-05): `activity(wid)` is the prefix every filter's list shares. */
   activityLists: (wid: string) => ["w", wid, "activity"] as const,

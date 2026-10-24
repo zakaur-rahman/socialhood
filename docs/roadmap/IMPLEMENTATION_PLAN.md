@@ -82,7 +82,7 @@ The recommended option is first. Each goes in CONFLICTS.md when taken, as the UI
 | PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell | GR-23 |
 | PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only | GR-23 |
 | PD-5 | Flow branching by plan | **All plans, with a step cap on Free** (for example 5 steps) · Pro only | GR-13 |
-| PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Pro and Max** · webhooks on Free too | GR-04 |
+| PD-6 | Integrations (webhooks, API, Zapier, Sheets) | **Decided 2026-10-24 ("for now"): webhooks on all plans (Free 1, Pro 5, Max 20 endpoints); Sheets, API and Zapier on Pro and Max** | GR-04 |
 | PD-7 | Website chat widget | **Pro and Max, with "Powered by Social Hood" on Free** · paid only | GR-28 |
 | PD-8 | Commerce (catalogue, payments) | **Pro and Max** · Max only | GR-31 |
 | PD-9 | Max plan contents at launch | **Team, broadcasts and higher quotas, so Max goes on sale** (today "Coming soon") · keep Max hidden | Wave 4 |

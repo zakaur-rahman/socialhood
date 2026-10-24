@@ -213,6 +213,10 @@ async def purge_expired_rows(
             lambda s: retention.webhook_deliveries_before(s, deliveries_cutoff, limit=batch),
         ),
         (
+            "sheet_rows",
+            lambda s: retention.sheet_rows_before(s, deliveries_cutoff, limit=batch),
+        ),
+        (
             "story_mention_links",
             lambda s: retention.clear_expired_mention_links(s, now, limit=batch),
         ),

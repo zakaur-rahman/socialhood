@@ -27,6 +27,7 @@ pytest_plugins = [
     # Before api, which imports their constants: Dodo, email and push are fakes in every test.
     "tests.support.billing",
     "tests.support.notify",
+    "tests.support.google",
     "tests.support.api",
     "tests.support.instagram",
     "tests.support.ai",

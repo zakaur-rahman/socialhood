@@ -22,6 +22,7 @@ export * from "./analytics";
 export * from "./calendar";
 export * from "./agent";
 export * from "./integrations";
+export * from "./googleSheets";
 export * from "./activity";
 export * from "./contacts";
 export * from "./leads";

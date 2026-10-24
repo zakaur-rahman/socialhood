@@ -58,6 +58,16 @@ export class Api {
     return this.seed<void>("POST", `/workspaces/${wid}/plan`, { plan });
   }
 
+  /** GR-27: the header and rows the fake Google holds for a sheet. */
+  googleSheet(sheetId: string): Promise<{ header: string[]; rows: string[][] }> {
+    return this.seed("GET", `/google-sheets/${sheetId}`);
+  }
+
+  /** GR-27: delete the sheet as the person would in Google Drive. */
+  deleteGoogleSheet(sheetId: string): Promise<void> {
+    return this.seed<void>("POST", `/google-sheets/${sheetId}/delete`);
+  }
+
   mediaAsset(wid: string, filename = "e2e-post.jpg"): Promise<{ id: string; secure_url: string }> {
     return this.seed("POST", `/workspaces/${wid}/media-assets`, { filename });
   }

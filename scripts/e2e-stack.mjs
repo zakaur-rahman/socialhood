@@ -261,6 +261,8 @@ async function main() {
     EMAIL_PROVIDER: "fake",
     PUSH_PROVIDER: "fake",
     CLERK_INVITATIONS_PROVIDER: "fake",
+    GOOGLE_PROVIDER: "fake", // GR-27: sheets live in Redis, shared by the API and the worker
+    GOOGLE_REDIRECT_URI: `${apiUrl}/v1/oauth/google/callback`,
     E2E_SEED_TOKEN: randomBytes(24).toString("hex"),
     PYTHONUNBUFFERED: "1",
     PYTHONIOENCODING: "utf-8",

@@ -2936,3 +2936,108 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   `OwnershipTransfer`, `AuditEvent`, `AuditEventList` and the new operations); the web types are
   aliases waiting for it. Migration `0033` (down revision `0030`) needs re-chaining. The e2e stack
   needs `CLERK_INVITATIONS_PROVIDER=fake` (added to `scripts/e2e-stack.mjs`).
+
+## C-103 · Native Google Sheets sync (GR-27, feature/gr-27-sheets-followups)
+
+Roadmap P5. Migration `0031_google_sheets` (expand-only; the coordinator re-chains it).
+
+- **Access.** Google OAuth with the narrow `drive.file` scope (plus `openid email`, only to show
+  which account is connected). Offline access with `prompt=consent` so Google always returns a
+  refresh credential. The credential is stored encrypted like platform tokens
+  (`google_connections.credential_enc`, Fernet via `TokenCipher`) and never returned; responses carry
+  no field with token, secret or password in its name.
+- **Unverified (cannot be checked from here; no Google account or app was used).**
+  - *Existing sheets under `drive.file`.* From Google's documentation, `drive.file` gives per-file
+    access: files the app created, or files the person opened with the app through the Google
+    Picker. So a link pasted into a form is **not** enough to grant access to a sheet Social Hood
+    didn't make; the Sheets API answers 404 or 403. *Decided: the supported path is "Create sheet"
+    (Social Hood makes the sheet and writes its header row). "Use a sheet by its link" is offered and
+    works only for a sheet Google already lets the app see (one it made earlier, for example after
+    disconnecting and connecting again); otherwise it says so in plain words on the field.* The
+    Picker (a browser script and a Google API key) would let a person grant a sheet they already
+    have; it is left for later because it can't be tested without Google.
+  - *App verification (O-10).* `drive.file` is documented as a non-sensitive scope, which does not
+    need Google's sensitive-scope review; the OAuth consent screen still needs the app name, logo,
+    privacy policy and terms links and a verified domain, and an app in "testing" mode only lets the
+    listed test users in and expires refresh credentials after 7 days. Plan on moving the consent
+    screen to "In production" before real customers connect. If the Picker or a broader scope is ever
+    added, the review is longer. Not confirmed with Google.
+  - The real client follows Google's documented endpoints and is tested against recorded shapes with
+    respx (`tests/contract/test_google_sheets_client.py`); it has never run against Google.
+- **Setting up.** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`
+  (`<API>/v1/oauth/google/callback`), `GOOGLE_PROVIDER` (`google` or `fake`; `fake` is refused in
+  production). Not required in production: without them the card says Google isn't set up.
+- **Connecting.** Like Instagram's (X-1) the public callback connects nothing: it parks the code
+  (encrypted) under a one-time nonce bound to the member and workspace from the state, and redirects
+  to `/w/{slug}/settings/integrations?google={nonce}`; the signed-in page posts it to `…/complete`.
+  Only the starter can finish it (404 expired or used, 403 someone else). A state made for another
+  platform is refused at this callback. Reconnecting keeps the sheet and mapping unless the Google
+  account changed.
+- **API** (`/v1/w/{wid}/integrations/google-sheets`, owners and admins, Pro and Max). `GET` (status:
+  connection, sheet, columns, the fields a column can hold, counts and the latest 10 rows),
+  `POST /connect`, `POST /complete`, `POST /sheet` (create), `PUT /sheet` (by link), `PUT /mapping`,
+  `POST /test` (a sample row now; 409 with the reason in plain words), `DELETE` (revokes at Google
+  as far as Google answers, removes the connection and its waiting rows).
+- **Plan: PD-6 decided 2026-10-24 ("for now").** Webhooks stay on every plan (Free 1, Pro 5, Max 20
+  endpoints); Google Sheets, the public API and Zapier are Pro and Max. New entitlement
+  `sheets_sync` (Free no, Pro yes, Max yes); 402 `entitlement_required` "Google Sheets sync is part of
+  Pro." The card shows the plan message with a link to the plans. A workspace that drops to Free
+  keeps its connection but queues no new rows.
+- **Mapping.** An ordered list of `{field, header}`, at most 30. Fields: name, @username, platform,
+  email, phone, automation, captured at, consent, and any custom contact field (`field:<key>`); a
+  field appears once. The default is the eight fixed fields. The header row is written only to a
+  sheet Social Hood made (on create and when the mapping is saved); a sheet that was already the
+  person's is never overwritten.
+- **Rows.** `lead.captured` also queues a `sheet_rows` row in the same transaction
+  (`sheets.queue_lead`, called from `events.lead_captured`, only with a connection, a chosen sheet and
+  a plan that includes Sheets sync). The `append_sheet_row` job (bulk lane, recovery class RETRY) adds
+  it with `valueInputOption=RAW`, so a customer's text starting with `=` is never a formula. The row
+  keeps only the custom fields the mapping uses. *A sibling table and job rather than a new
+  webhook delivery kind: `webhook_deliveries` belongs to an endpoint (address, signing secret,
+  failure count) and a Google row has none of those.* It reuses the webhook machinery's backoff
+  (`delivery.backoff`: 1 minute, 5 minutes, 30 minutes, 2 hours, 6 hours, 12 hours; 7 attempts).
+  Only Google being busy (429, 5xx, no connection) is retried; the other answers fail at once.
+- **Failure reasons (plain words, stored with a code).**
+  - `access_removed`: "Access was removed: reconnect Google in Settings, under Integrations." The
+    connection becomes `needs_reconnect`; waiting rows fail without calling Google.
+  - `sheet_gone`: "Google said the sheet was deleted. Pick or create a sheet again."
+  - `sheet_refused`: "Google won't let Social Hood write to that sheet. Pick or create a sheet
+    again."
+  - `no_sheet`, `google_busy` (retries ran out), `google_refused`.
+
+  Owners and admins are told once a day per reason (new notification type `sheets_failing`, in app
+  only). Reconnecting sends the rows that failed with `access_removed`; creating or choosing a sheet
+  sends those that failed for the sheet reasons.
+  *Deviation from the plan: the failures are on the Sheets card (status, last error, latest rows),
+  not in the Activity feed.* The feed's kinds are a closed list shared with the web types, and a new
+  one is a change to GR-05's schema and page; left for a later pass.
+- **Consent column.** The row carries the marketing consent recorded for the contact's channel when
+  it is queued. A flow's consent question comes after the answer it follows, so the row for the
+  first capture usually has an empty consent cell. *Limitation, not fixed.*
+- **More than one row per person.** One row per capture event: a flow that asks for an email and then
+  a phone adds two rows, the second with both. Updating the first row in place needs the row's
+  address from Google and was left out.
+- **Duplicates.** Google's append isn't idempotent: a worker killed after Google accepted a row and
+  before it was recorded sends it again on recovery. Rare, accepted.
+- **Retention.** Finished `sheet_rows` (they hold names, emails and phones) are deleted with the
+  webhook deliveries' window by the purge job.
+- **Fake Google.** `google/fake.py`, chosen by `GOOGLE_PROVIDER=fake` or `use_google` in tests
+  (`tests/support/google.py`, on in every test). It sees only the sheets it made, can revoke access,
+  delete a sheet and fail the next call. With a Redis client the sheets live in Redis, so the e2e API
+  and worker share them; the e2e API has `GET /__e2e/google-sheets/{id}`, `POST …/{id}/delete` and
+  `POST /__e2e/workspaces/{wid}/plan`.
+- **Web.** A Google Sheets card at the top of Settings, Integrations: connect (or reconnect), the
+  sheet (create with a name, or use a link, with the API's reason on the field), the columns (header
+  field, move up and down, remove, add an unused field, save, undo), a test row, the latest rows with
+  their plain reasons, and Disconnect (asks first). Free sees the plan message.
+- **Tests.** Unit: `test_sheets.py`. Contract: `test_google_sheets_client.py`. Integration:
+  `test_google_sheets.py` (callback and nonce, forged and foreign states, create, mapping and header,
+  existing sheets, test rows, revoked access and reconnect, disconnect, plan and roles, a capture
+  becoming a row, retries and the backoff, running out of attempts, a deleted sheet, consent and
+  custom fields, retention). Tenancy: the four new bodies and both tables in `test_isolation.py`.
+  Vitest: `GoogleSheetsCard.test.tsx`, `sheetMapping.test.ts`. E2E: `gr27-sheets-sync.spec.ts`.
+- **Unsure / for the coordinator:** regenerate the client (`GoogleSheetsStatus`, `GoogleConnectStart`,
+  `SheetColumnOut`, `SheetFieldOption`, `SheetRowOut`, `SheetOut`, `SheetMappingPut`,
+  `SheetTestResult` and the seven operations); the web calls the new paths through the typed client.
+  The plan comparison tables (`lib/billing/plan.ts`, `lib/marketing/plans.ts`) don't list Sheets sync
+  yet. Add the Google OAuth client to the production config before turning this on.

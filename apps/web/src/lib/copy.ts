@@ -446,6 +446,10 @@ const FEATURE_COPY: Record<string, { feature: string; body: string }> = {
     feature: "AI replies in automations",
     body: "On Pro, an automation can answer with AI from your knowledge instead of a fixed message.",
   },
+  sheets_sync: {
+    feature: "Google Sheets sync",
+    body: "On Pro, every lead you capture is added to a Google Sheet as a new row.",
+  },
 };
 
 /** What a limit of n on this §1.7 key includes, e.g. "3 active automations"; null for other keys. */

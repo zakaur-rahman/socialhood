@@ -160,6 +160,14 @@ class Settings(BaseSettings):
     # fake: keep pushes in memory (notify/push_fake.py); refused in production.
     push_provider: Literal["webpush", "fake"] = "webpush"
 
+    # GR-27: Google Sheets sync. The OAuth client of the "drive.file" scope (not required: the
+    # card says "not set up" without them). fake: keep sheets in memory, or in Redis where the API
+    # and the worker are separate processes (google/fake.py); refused in production.
+    google_client_id: str | None = None
+    google_client_secret: SecretStr | None = None
+    google_redirect_uri: str | None = None
+    google_provider: Literal["google", "fake"] = "google"
+
     sandbox_platform_enabled: bool = False
     # GR-04: outbound webhooks may go to private and local addresses (development and e2e, which
     # receive them locally); refused in production (security/ssrf.py).
@@ -229,6 +237,7 @@ class Settings(BaseSettings):
             "email_provider",
             "push_provider",
             "clerk_invitations_provider",
+            "google_provider",
         ):
             if getattr(self, name) == "fake":
                 unsafe.append(f"{name.upper()} must not be fake in production")

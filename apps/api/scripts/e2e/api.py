@@ -16,10 +16,16 @@ It is the normal app (``socialhood.main``) plus two things the suite needs:
     metrics for the last ``days`` days and the ``days`` before them, and the run's
     compare_periods step holds the visual the real service and builder make from them, so the
     spec can check the cards against GET …/analytics/account-metrics;
+  - ``POST /__e2e/workspaces/{wid}/plan {plan}`` (GR-27): the workspace's plan, without Dodo's
+    checkout (F-15 covers that), for specs that need Pro;
+  - ``GET /__e2e/google-sheets/{sheet_id}`` and ``POST …/{sheet_id}/delete`` (GR-27): the header
+    and rows the fake Google holds for a sheet (GOOGLE_PROVIDER=fake keeps them in Redis, which the
+    API and the worker share), and deleting it as the person would in Google Drive;
   - ``DELETE /__e2e/users/{clerk_user_id}``: a signed-up user's workspaces (every tenant row
     cascades) and row (F-01). Other test data goes when the launcher drops the database.
 
-It refuses to start unless the sandbox is on, Dodo is the fake and the app is not in production.
+It refuses to start unless the sandbox is on, Dodo and Google are fakes and the app is not in
+production.
 """
 
 from __future__ import annotations
@@ -29,9 +35,9 @@ import os
 import secrets
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
-from fastapi import APIRouter, Depends, Header
+from fastapi import APIRouter, Depends, Header, Request
 from pydantic import BaseModel, Field
 from sqlalchemy import delete
 
@@ -39,6 +45,7 @@ from socialhood.agent import visuals
 from socialhood.auth.deps import CurrentUser, Owner, Session
 from socialhood.billing.registry import _process_fake
 from socialhood.errors import ApiError
+from socialhood.google.registry import process_fake
 from socialhood.main import create_app
 from socialhood.models.agent import AgentRun, AgentStep
 from socialhood.models.analytics import AccountDailyMetric
@@ -59,10 +66,11 @@ if (
     settings.is_production
     or not settings.sandbox_platform_enabled
     or settings.dodo_provider != "fake"
+    or settings.google_provider != "fake"
     or len(SEED_TOKEN) < 16
 ):
     raise RuntimeError(
-        "The e2e API needs SANDBOX_PLATFORM_ENABLED=true, DODO_PROVIDER=fake, "
+        "The e2e API needs SANDBOX_PLATFORM_ENABLED=true, DODO_PROVIDER=fake, GOOGLE_PROVIDER=fake, "
         "E2E_SEED_TOKEN and a non-production APP_ENV"
     )
 
@@ -258,6 +266,17 @@ async def create_agent_run(body: AgentRunIn, ctx: Owner, session: Session) -> Ag
         )
     await session.commit()
     return AgentRunOut(id=run.id, thread_id=run.thread_id)
+
+
+@router.get("/google-sheets/{sheet_id}")
+async def google_sheet(sheet_id: str, request: Request) -> dict[str, Any]:
+    fake = process_fake(settings, request.app.state.redis)
+    return {"header": await fake.header(sheet_id), "rows": await fake.rows(sheet_id)}
+
+
+@router.post("/google-sheets/{sheet_id}/delete", status_code=204)
+async def delete_google_sheet(sheet_id: str, request: Request) -> None:
+    await process_fake(settings, request.app.state.redis).delete_sheet(sheet_id)
 
 
 @router.delete("/users/{clerk_user_id}", status_code=204)

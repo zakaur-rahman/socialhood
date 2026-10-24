@@ -156,6 +156,13 @@ EXAMPLE_BODIES: dict[tuple[str, str], dict[str, Any]] = {
         "events": ["lead.captured"],
     },
     ("PATCH", "/v1/w/{wid}/webhook-endpoints/{endpoint_id}"): {"description": "Taken over"},
+    # GR-27: B's Google connection, sheet and mapping are not reachable from A.
+    ("POST", "/v1/w/{wid}/integrations/google-sheets/complete"): {"nonce": "not-yours-nonce"},
+    ("POST", "/v1/w/{wid}/integrations/google-sheets/sheet"): {"title": "Not yours"},
+    ("PUT", "/v1/w/{wid}/integrations/google-sheets/sheet"): {"link": "not-yours-sheet-id"},
+    ("PUT", "/v1/w/{wid}/integrations/google-sheets/mapping"): {
+        "columns": [{"field": "email", "header": "Mail"}]
+    },
     # GR-11: conversation starters of B's account.
     ("PUT", "/v1/w/{wid}/social-accounts/{account_id}/ice-breakers"): {
         "items": [{"question": "Taken over", "answer_with_ai": True}]
@@ -347,6 +354,8 @@ B_TABLES = (
     "automation_run_steps",
     "webhook_endpoints",
     "webhook_deliveries",
+    "google_connections",  # GR-27
+    "sheet_rows",
     "story_mentions",
     "tracked_links",
     "link_clicks",
@@ -548,6 +557,26 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         f"/v1/w/{wid}/webhook-endpoints/{hook.json()['id']}/test", headers=clerk.headers(owner_b)
     )
     assert sent.status_code == 202, sent.text
+    async with engine.begin() as conn:  # GR-27: a Google connection with a sheet and a waiting row
+        connection = await conn.execute(
+            text(
+                "INSERT INTO google_connections (workspace_id, google_email, credential_enc,"
+                " status, connected_at, spreadsheet_id, spreadsheet_title, spreadsheet_url,"
+                " sheet_tab, mapping) VALUES (:w, 'b@example.com', :c, 'active', now(), 'b-sheet',"
+                " 'B leads', 'https://docs.google.test/b', 'Leads',"
+                ' CAST(\'[{"field": "email", "header": "Mail"}]\' AS jsonb))'
+                " RETURNING id"
+            ),
+            {"w": wid, "c": b"not-a-real-credential"},
+        )
+        await conn.execute(
+            text(
+                "INSERT INTO sheet_rows (workspace_id, connection_id, event_id, source, status)"
+                ' VALUES (:w, :c, gen_random_uuid(), CAST(\'{"email": "b@x.test"}\' AS jsonb),'
+                " 'pending')"
+            ),
+            {"w": wid, "c": connection.scalar_one()},
+        )
     async with engine.begin() as conn:  # GR-11: a conversation starter
         await conn.execute(
             text(

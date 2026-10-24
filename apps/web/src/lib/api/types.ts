@@ -339,6 +339,17 @@ export type WebhookEndpointPatch = Schemas["WebhookEndpointPatch"];
 export type WebhookDelivery = Schemas["WebhookDelivery"];
 export type WebhookDeliveryList = Schemas["WebhookDeliveryList"];
 
+// ---- Google Sheets sync (GR-27)
+
+export type GoogleSheetsStatus = Schemas["GoogleSheetsStatus"];
+export type GoogleSheetsConnectStart = Schemas["GoogleConnectStart"];
+export type GoogleSheetColumn = Schemas["SheetColumnOut"];
+export type GoogleSheetFieldOption = Schemas["SheetFieldOption"];
+export type GoogleSheetRow = Schemas["SheetRowOut"];
+export type GoogleSheetInfo = Schemas["SheetOut"];
+export type GoogleSheetMappingPut = Schemas["SheetMappingPut"];
+export type GoogleSheetTestResult = Schemas["SheetTestResult"];
+
 // Activity (GR-05)
 export type ActivityItem = Schemas["ActivityItem"];
 export type ActivityList = Schemas["ActivityList"];

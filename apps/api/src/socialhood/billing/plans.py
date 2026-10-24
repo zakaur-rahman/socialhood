@@ -45,6 +45,9 @@ ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     # metered (PD-2). Proposed values, pending the owner's plan decisions.
     "contact_fields": {"free": 5, "pro": 50, "max": 200},
     "webhook_endpoints": {"free": 1, "pro": 5, "max": 20},  # GR-04 (C-080)
+    # Google Sheets sync (GR-27): Pro and Max only (PD-6, decided 2026-10-24; webhooks stay on
+    # every plan). Set free to True to open it to every plan.
+    "sheets_sync": {"free": False, "pro": True, "max": True},
     # Steps in one automation flow (GR-13). Every plan can branch; Free is capped (PD-5, the
     # plan's recommended option, pending the owner's decision: change the numbers here, or set
     # free to Pro's to lift the cap). A flow is at most schemas.flows.MAX_STEPS whatever the plan.
