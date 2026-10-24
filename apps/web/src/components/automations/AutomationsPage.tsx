@@ -1,19 +1,43 @@
 "use client";
 
-import { Pause, Plus, X } from "lucide-react";
+import {
+  AtSign,
+  Hand,
+  Link2,
+  ListChecks,
+  Megaphone,
+  MessageCircle,
+  MessageSquareReply,
+  MessagesSquare,
+  Pause,
+  Plus,
+  Reply,
+  Send,
+  X,
+} from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { PlatformGlyph } from "@/components/connections/PlatformGlyph";
 import { PageFrame } from "@/components/shell/PageFrame";
 import { EmptyState } from "@/components/states/EmptyState";
 import { ErrorState } from "@/components/states/ErrorState";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { SearchInput } from "@/components/ui/search-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TOAST_ACTION_DURATION } from "@/components/ui/sonner";
 import { useAgentHandoff, type AutomationDraftHandoff } from "@/lib/agent/handoff";
@@ -32,12 +56,13 @@ import {
   useUpdatePriorities,
   type AutomationFilters,
 } from "@/lib/api/queries";
-import type { Automation, AutomationSort, AutomationStatus, SocialAccount, TriggerName } from "@/lib/api/types";
+import type { Automation, AutomationSort, AutomationStatus, Platform, SocialAccount, TriggerName } from "@/lib/api/types";
 import { accountLabel, automationAccounts } from "@/lib/automations/accounts";
 import { etaText, formatCount, TRIGGER_LABEL_IG } from "@/lib/automations/format";
 import { emptyStates, errorMessage } from "@/lib/copy";
 import { toastError } from "@/lib/toast-error";
 import { useNow } from "@/lib/use-browser-state";
+import { cn } from "@/lib/utils";
 import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AccountGroup, type GroupActions } from "./AccountGroup";
@@ -63,17 +88,60 @@ const STATUSES: { value: AutomationStatus; label: string }[] = [
   { value: "draft", label: "Draft" },
 ];
 
-const TRIGGERS: TriggerName[] = [
-  "comment_keyword",
-  "comment_any",
-  "dm_keyword",
-  "story_reply",
-  "story_mention",
-  "entry_link",
-  "ad_click",
-  "ice_breaker",
-  "first_message",
-  "default_reply",
+/** A status dot's colour: the status tones (running, held, not yet live). */
+const STATUS_DOT: Record<AutomationStatus, string> = {
+  active: "bg-success",
+  paused: "bg-warning",
+  draft: "bg-fg-secondary",
+};
+
+const TRIGGER_ICON: Record<TriggerName, typeof Send> = {
+  comment_keyword: MessageCircle,
+  comment_any: MessagesSquare,
+  dm_keyword: Send,
+  story_reply: Reply,
+  story_mention: AtSign,
+  entry_link: Link2,
+  ad_click: Megaphone,
+  ice_breaker: ListChecks,
+  first_message: Hand,
+  default_reply: MessageSquareReply,
+};
+
+/**
+ * The trigger filter's groups, by where the trigger fires (WhenStep: Facebook Pages have no story
+ * triggers, and the welcome and default reply answer any DM). Items say the short name; the trigger
+ * button and each option's accessible name keep the full one (`TRIGGER_LABEL_IG`).
+ */
+const TRIGGER_GROUPS: { label: string; platforms: Platform[]; triggers: { value: TriggerName; short: string }[] }[] = [
+  {
+    label: "Instagram and Facebook",
+    platforms: ["instagram", "facebook"],
+    triggers: [
+      { value: "comment_keyword", short: "Comment keyword" },
+      { value: "comment_any", short: "Any comment" },
+      { value: "dm_keyword", short: "DM keyword" },
+      { value: "entry_link", short: "Entry link" },
+      { value: "ad_click", short: "Ad click" },
+      { value: "ice_breaker", short: "Conversation starter" },
+    ],
+  },
+  {
+    label: "Instagram only",
+    platforms: ["instagram"],
+    triggers: [
+      { value: "story_reply", short: "Story reply" },
+      { value: "story_mention", short: "Story mention" },
+    ],
+  },
+  {
+    label: "Any channel",
+    platforms: [],
+    triggers: [
+      { value: "first_message", short: "First message (welcome)" },
+      { value: "default_reply", short: "Any other message (default reply)" },
+    ],
+  },
 ];
 const ALL = "all";
 
@@ -145,6 +213,7 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
   const templates = useAutomationTemplates(wid);
   const allAccounts = useSocialAccounts(wid);
   const accounts = useMemo(() => automationAccounts(allAccounts.data ?? []), [allAccounts.data]);
+  const selectedAccount = accounts.find((account) => account.id === accountId);
   // UI-064: no Instagram account (WhatsApp only, or nothing connected) hears that first.
   const noInstagram = allAccounts.isSuccess && accounts.length === 0;
   const canConnect = workspace.role !== "agent";
@@ -398,12 +467,25 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           {accounts.length > 1 ? (
             <Select value={accountId ?? ALL} onValueChange={(value) => setAccountId(value === ALL ? null : value)}>
               <SelectTrigger aria-label="Account" size="lg" className="max-w-48">
-                <SelectValue />
+                <SelectValue>
+                  {selectedAccount ? (
+                    <>
+                      <PlatformGlyph platform={selectedAccount.platform} className="size-4 shrink-0" />
+                      <span className="truncate">{accountLabel(selectedAccount)}</span>
+                    </>
+                  ) : (
+                    "All accounts"
+                  )}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value={ALL}>All accounts</SelectItem>
                 {accounts.map((account) => (
-                  <SelectItem key={account.id} value={account.id}>
+                  <SelectItem
+                    key={account.id}
+                    value={account.id}
+                    icon={<PlatformGlyph platform={account.platform} className="size-4" />}
+                  >
                     {accountLabel(account)}
                   </SelectItem>
                 ))}
@@ -415,12 +497,25 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
             onValueChange={(value) => setStatus(value === ALL ? null : (value as AutomationStatus))}
           >
             <SelectTrigger aria-label="Status" size="lg">
-              <SelectValue />
+              <SelectValue>
+                {status ? (
+                  <>
+                    <span aria-hidden className={cn("size-2 shrink-0 rounded-full", STATUS_DOT[status])} />
+                    {STATUSES.find((option) => option.value === status)?.label}
+                  </>
+                ) : (
+                  "All statuses"
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All statuses</SelectItem>
               {STATUSES.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value}
+                  value={option.value}
+                  icon={<span aria-hidden className={cn("size-2 rounded-full", STATUS_DOT[option.value])} />}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -428,14 +523,48 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
           </Select>
           <Select value={trigger ?? ALL} onValueChange={(value) => setTrigger(value === ALL ? null : (value as TriggerName))}>
             <SelectTrigger aria-label="Trigger" size="lg">
-              <SelectValue />
+              <SelectValue>
+                {trigger ? (
+                  <>
+                    <TriggerIcon trigger={trigger} className="text-fg-secondary" />
+                    <span className="truncate">{TRIGGER_LABEL_IG[trigger]}</span>
+                  </>
+                ) : (
+                  "All triggers"
+                )}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>All triggers</SelectItem>
-              {TRIGGERS.map((value) => (
-                <SelectItem key={value} value={value}>
-                  {TRIGGER_LABEL_IG[value]}
-                </SelectItem>
+              {TRIGGER_GROUPS.map((group) => (
+                <SelectGroup key={group.label}>
+                  <SelectSeparator />
+                  <SelectLabel
+                    icon={
+                      group.platforms.length ? (
+                        <span className="flex items-center gap-1">
+                          {group.platforms.map((platform) => (
+                            <PlatformGlyph key={platform} platform={platform} className="size-3.5" />
+                          ))}
+                        </span>
+                      ) : (
+                        <MessageCircle aria-hidden />
+                      )
+                    }
+                  >
+                    {group.label}
+                  </SelectLabel>
+                  {group.triggers.map(({ value, short }) => (
+                    <SelectItem
+                      key={value}
+                      value={value}
+                      icon={<TriggerIcon trigger={value} />}
+                      aria-label={TRIGGER_LABEL_IG[value]}
+                    >
+                      {short}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
               ))}
             </SelectContent>
           </Select>
@@ -497,6 +626,11 @@ export function AutomationsPage({ openGallery = false }: { openGallery?: boolean
       />
     </PageFrame>
   );
+}
+
+function TriggerIcon({ trigger, className }: { trigger: TriggerName; className?: string }) {
+  const Icon = TRIGGER_ICON[trigger];
+  return <Icon aria-hidden className={cn("size-4 shrink-0", className)} />;
 }
 
 function SummaryStrip({
