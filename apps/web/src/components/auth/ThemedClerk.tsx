@@ -33,5 +33,8 @@ export function ThemedSignUp() {
 
 export function ThemedUserButton() {
   const { resolved } = useTheme();
-  return <UserButton appearance={clerkAppearanceFor(resolved)} />;
+  const appearance = clerkAppearanceFor(resolved);
+  // The account dialog ("Manage account") is Clerk's UserProfile in a modal: it doesn't inherit the
+  // button's appearance, so without its own it took the provider's dark text on a light dialog.
+  return <UserButton appearance={appearance} userProfileProps={{ appearance }} />;
 }
