@@ -71,6 +71,10 @@ function appearanceWithoutBase(theme: Theme) {
       // `rounded-xl`. The inner card and the footer sit on it transparently, so there is one edge,
       // not two. The user menu and the account modal float on `overlay` (D-12).
       cardBox: {
+        // Every rule and edge Clerk draws inside its surfaces (dividers between rows, the footer
+        // line, section rules) takes the app's border colour: Clerk's own is a faint neutral alpha
+        // that vanished on light. Recoloured only: no border is added where Clerk draws none.
+        "& *": { borderColor: "var(--color-line) !important" },
         backgroundColor: "var(--color-panel)",
         border: "1px solid var(--color-line) !important",
         borderRadius: "var(--radius-xl)",
@@ -79,6 +83,7 @@ function appearanceWithoutBase(theme: Theme) {
       card: { backgroundColor: "transparent", border: "0 !important", borderRadius: "0", boxShadow: "none !important" },
       footer: { background: "transparent !important", borderTop: "1px solid var(--color-line) !important" },
       userButtonPopoverCard: {
+        "& *": { borderColor: "var(--color-line) !important" },
         backgroundColor: "var(--color-overlay) !important",
         border: "1px solid var(--color-line) !important",
         borderRadius: "var(--radius-xl)",
@@ -89,7 +94,11 @@ function appearanceWithoutBase(theme: Theme) {
         background: "var(--color-overlay) !important",
         borderTop: "1px solid var(--color-line) !important",
       },
-      modalContent: { borderRadius: "var(--radius-xl)", border: "1px solid var(--color-line) !important" },
+      modalContent: {
+        "& *": { borderColor: "var(--color-line) !important" },
+        borderRadius: "var(--radius-xl)",
+        border: "1px solid var(--color-line) !important",
+      },
       navbar: { backgroundColor: "var(--color-panel)", borderRight: "1px solid var(--color-line) !important" },
       scrollBox: { backgroundColor: "var(--color-overlay)" },
       dividerLine: { backgroundColor: "var(--color-line)" },
