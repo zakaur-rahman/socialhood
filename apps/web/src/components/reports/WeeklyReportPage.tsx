@@ -132,11 +132,6 @@ function Report({ data, slug, switching }: { data: WeeklyReport; slug: string; s
             <MetricItem key={metric.key} metric={metric} />
           ))}
         </ul>
-        {data.notes.includes("captures_not_built") ? (
-          <p className="text-xs text-fg-secondary" data-testid="report-note">
-            Emails and phone numbers collected in flows aren&apos;t counted here yet.
-          </p>
-        ) : null}
       </section>
 
       <section aria-labelledby="report-account" className="space-y-3">

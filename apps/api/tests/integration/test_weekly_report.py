@@ -6,6 +6,7 @@ member's, 422 for a week that cannot be shown, and closed to people outside the 
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -28,7 +29,8 @@ from tests.integration.test_contact_segments import as_agent
 from tests.integration.test_weekly_digest import NINE_IST, WEEK, Seed, ist, seed_week
 from tests.support.analytics import make_account_day
 from tests.support.api import Clerk, sign_in
-from tests.support.automation_api import Ws, workspace
+from tests.support.automation_api import Ws, make_run, workspace
+from tests.support.automations import make_automation
 from tests.support.inbox import make_account
 from tests.support.notify_team import Team, make_team
 from tests.support.post_metrics import make_instagram_account
@@ -234,8 +236,48 @@ async def test_story_mentions_entries_and_leads_are_counted_in_their_week(team: 
         None,
         "up",
     )
-    assert report.notes == ["captures_not_built"]
-    assert all("capture" not in m.key for m in report.metrics)
+    assert not hasattr(report, "notes")
+
+
+async def test_captures_are_the_answers_flows_took_in_each_week(team: Team) -> None:
+    seed = Seed(team, await make_account(team.engine, team.wid))
+    automation = await make_automation(
+        team.engine, workspace_id=team.wid, account_id=seed.account_id, message_text=None
+    )
+    run = await make_run(
+        team.engine, workspace_id=str(team.wid), automation_id=automation, created_at=ist(20, 9)
+    )
+
+    async def step(step_id: str, kind: str, detail: dict[str, Any], at: datetime) -> None:
+        await team.execute(
+            "INSERT INTO automation_run_steps (workspace_id, run_id, step_id, kind, status,"
+            " detail, created_at, updated_at) VALUES (:w, :r, :s, :k, 'done',"
+            " CAST(:d AS jsonb), :at, :at)",
+            w=team.wid,
+            r=run,
+            s=step_id,
+            k=kind,
+            d=json.dumps(detail),
+            at=at,
+        )
+
+    # In the week of 21 September: two answers taken. Not counted: a question skipped after its
+    # tries, a quick-reply tap on a send step (it has an answer too), a question still waiting.
+    await step("a", "ask", {"answer": "priya@example.com"}, ist(22, 10))
+    await step("b", "ask", {"answer": "+919876543210", "tries": 2}, ist(26, 18))
+    await step("c", "ask", {"skipped": True, "tries": 2}, ist(23, 10))
+    await step("d", "send", {"answer": "Yes", "option": 0}, ist(23, 11))
+    await step("e", "ask", {"tries": 1}, ist(24, 11))
+    # The week before: one. After the week: one.
+    await step("f", "ask", {"answer": "ravi@example.com"}, ist(16, 10))
+    await step("g", "ask", {"answer": "late@example.com"}, ist(29, 10))
+
+    report = await report_for(team, REPORT_WEEK)
+
+    captures = metric(report, "captures")
+    assert (captures.value, captures.previous) == (2, 1)
+    assert (captures.change_pct, captures.direction) == (100.0, "up")
+    assert [p.value for p in captures.series][-2:] == [1, 2]
 
 
 # ---------------------------------------------------------------- account metrics
@@ -384,7 +426,8 @@ async def test_the_route_serves_the_latest_finished_week_by_default(
     messages = next(m for m in body["metrics"] if m["key"] == "messages_received")
     assert messages["value"] == 2
     assert len(messages["series"]) == 8
-    assert body["notes"] == ["captures_not_built"]
+    assert "notes" not in body
+    assert next(m for m in body["metrics"] if m["key"] == "captures")["value"] == 0
     assert {a["figure"]["metric"] for a in body["account_metrics"]} >= {"reach", "followers"}
 
 

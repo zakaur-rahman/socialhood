@@ -20,8 +20,8 @@ Rules:
   the days that have a reading and says how many (``days_known`` of ``days_total``); with none it
   is None and says why. A week's followers is its latest reading. These are GR-38's account
   metric rules, and its functions compute them.
-- **Captures** (GR-14) are not in the report: nothing counts them yet (``notes`` says so). The
-  slot is one more line in ``COUNT_METRICS`` once a source exists.
+- **Captures** (GR-14) are the answers a flow's question step took in the week, counted from the
+  flow step log (overview_stats.captures_received), like the flow funnel does.
 """
 
 from __future__ import annotations
@@ -43,7 +43,6 @@ from socialhood.schemas.reports import (
     ReportIntent,
     ReportMetric,
     ReportMetricKey,
-    ReportNote,
     ReportPoint,
     ReportPost,
     ReportQuestion,
@@ -78,6 +77,7 @@ COUNT_METRICS: Final[tuple[MetricDef, ...]] = (
     MetricDef("story_mentions", "Story mentions", "count"),
     MetricDef("conversations_from_links", "Conversations from links", "count"),
     MetricDef("conversations_from_ads", "Conversations from ads", "count"),
+    MetricDef("captures", "Leads captured", "count"),
     MetricDef("leads_qualified", "Leads qualified", "count"),
     MetricDef("leads_won", "Leads won", "count"),
 )
@@ -91,8 +91,7 @@ ACCOUNT_METRICS: Final[tuple[tuple[AccountMetricName, str], ...]] = (
     ("unfollows", "Unfollows"),
 )
 # What must all be zero for a week before the workspace existed to read as "not there yet".
-QUIET_KEYS: Final = ("messages_received", "comments_received", "story_mentions")
-NOTES: Final[tuple[ReportNote, ...]] = ("captures_not_built",)
+QUIET_KEYS: Final = ("messages_received", "comments_received", "story_mentions", "captures")
 
 ACCOUNT_NOTE: Final = (
     "Figures add up the days that have a reading. Reach counts a person once for each day they "
@@ -165,6 +164,7 @@ def stats_values(found: stats.OverviewStats) -> Values:
         "story_mentions": float(found.story_mentions),
         "conversations_from_links": float(found.conversations_from_links),
         "conversations_from_ads": float(found.conversations_from_ads),
+        "captures": float(found.captures),
         "leads_qualified": float(found.leads_qualified),
         "leads_won": float(found.leads_won),
     }
@@ -186,6 +186,7 @@ async def week_values(session: AsyncSession, span: DateRange) -> Values:
             conversations_from_links=entries.get("link", 0),
             leads_qualified=qualified,
             leads_won=won,
+            captures=await stats.captures_received(session, span),
         )
     )
 
@@ -369,7 +370,6 @@ async def build(
         needs_you=current.needs_you,
         open_questions=current.open_questions,
         top_questions=[ReportQuestion(topic=q.topic, asked=q.asked) for q in current.top_questions],
-        notes=list(NOTES),
     )
 
 

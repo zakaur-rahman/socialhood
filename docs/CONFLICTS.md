@@ -3041,3 +3041,31 @@ Roadmap P5. Migration `0031_google_sheets` (expand-only; the coordinator re-chai
   `SheetTestResult` and the seven operations); the web calls the new paths through the typed client.
   The plan comparison tables (`lib/billing/plan.ts`, `lib/marketing/plans.ts`) don't list Sheets sync
   yet. Add the Google OAuth client to the production config before turning this on.
+
+## C-104 · Captures in the weekly report (GR-34 follow-up, feature/gr-27-sheets-followups)
+
+No migration.
+
+- **The count.** `overview_stats.captures_received`: the flow step log rows of kind `ask` whose
+  `detail` has an `answer`, in the week. That is the stored source of truth: an ask step gets an
+  `answer` only when the answer was accepted and saved (a question skipped after its tries has
+  `skipped` instead; a send step's tap also has an `answer` and is not counted), and it is the same
+  predicate the flow funnel (GR-15) counts. *Not the `lead.captured` events: those are stored only as
+  deliveries to an endpoint, so a workspace without one would show zero.*
+- **Dated by `updated_at`,** which is when the answer was taken (the row is created when the question
+  is asked, which can be days earlier). A consent follow-up a few minutes after the answer touches the
+  row again and could move a Sunday-night capture into the next week; accepted.
+- **One list.** `OverviewStats.captures` (so the digest stores it in `weekly_digests.stats`) and a
+  new `captures` metric ("Leads captured", a count) in the report's `COUNT_METRICS`, before leads
+  qualified: the week, the week before, the change and the 8-week series like the others. The
+  digest's trends table carries it automatically; `test_weekly_report.py` still compares every
+  report metric with the stored digest. A week before the workspace existed with nothing in it is a
+  gap, as for the other counts (`captures` joins `QUIET_KEYS`).
+- **Note removed.** `ReportNote`, `WeeklyReport.notes`, `reports.NOTES` and the report page's "aren't
+  counted here yet" line are gone. *The API field `notes` is removed, not emptied: it had one value
+  and nothing else reads it.*
+- **Tests.** `test_reports.py` (the metric and its place), `test_weekly_report.py` (a skipped, a
+  tapped and a waiting step are not counted; the week, the week before, after the week; the series;
+  no `notes`), `test_weekly_digest.py` (the stored stats carry `captures`), `WeeklyReportPage.test.tsx`.
+- **Unsure / for the coordinator:** regenerate the client (`captures` in the metric keys, `notes`
+  removed from `WeeklyReport`).

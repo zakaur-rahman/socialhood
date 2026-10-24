@@ -249,6 +249,7 @@ def expected_stats(cakes_id: str, bread_id: str) -> dict[str, Any]:
         "conversations_from_links": 0,
         "leads_qualified": 0,
         "leads_won": 0,
+        "captures": 0,
     }
 
 

@@ -27,12 +27,11 @@ ReportMetricKey = Literal[
     "story_mentions",
     "conversations_from_links",
     "conversations_from_ads",
+    "captures",
     "leads_qualified",
     "leads_won",
 ]
 ReportUnit = Literal["count", "percent", "seconds"]
-# Why a report metric is not shown at all (it has no source yet).
-ReportNote = Literal["captures_not_built"]
 
 
 class ReportPoint(ResponseModel):
@@ -107,4 +106,3 @@ class WeeklyReport(ResponseModel):
     needs_you: int
     open_questions: int
     top_questions: list[ReportQuestion]
-    notes: list[ReportNote]
