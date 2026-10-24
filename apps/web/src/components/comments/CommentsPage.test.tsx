@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { PostSummary, SocialAccount } from "@/lib/api/types";
+import { formatCount } from "@/lib/comments/format";
 import { applyRealtimeEvent } from "@/lib/realtime/events";
 import { account, json, post, postDetail, problem, renderWithApi, type Call } from "@/test/api";
 
@@ -23,6 +24,7 @@ const posts = [
     thumbnail_url: "https://scontent.cdninstagram.com/po2.jpg",
     caption: "Behind the scenes",
     posted_at: "2024-03-01T12:00:00Z",
+    like_count: null, // likes hidden on Instagram
     stats: { total: 8, analysed: 3, positive: 2, neutral: 1, negative: 0, spam: 0 },
   }),
 ];
@@ -68,7 +70,7 @@ function card(id: string): HTMLElement {
 }
 
 describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
-  it("shows each post: square thumbnail, date, comment count, 6 px sentiment bar and spam count", async () => {
+  it("shows each post: square thumbnail, date, like and comment counts, 6 px sentiment bar and spam count", async () => {
     setup();
     await screen.findAllByTestId("post-card");
 
@@ -76,6 +78,8 @@ describe("Comments grid (FR-CMT-03, UX-SCR-05)", () => {
     expect(within(first).getByRole("link")).toHaveAttribute("href", "/w/maple/comments/po1");
     expect(within(first).getByText("3 Mar 2024")).toBeInTheDocument();
     expect(within(first).getByTestId("comment-count")).toHaveTextContent("12 comments");
+    expect(within(first).getByTestId("like-count")).toHaveTextContent(`${formatCount(1204)} likes`);
+    expect(within(card("po2")).queryByTestId("like-count")).toBeNull(); // no count is not 0
     const bar = within(first).getByRole("img", { name: "Sentiment: 7 positive, 3 neutral, 1 negative" });
     expect(bar).toHaveClass("h-1.5"); // 6 px
     expect(bar.querySelectorAll("[data-sentiment]")).toHaveLength(3);
