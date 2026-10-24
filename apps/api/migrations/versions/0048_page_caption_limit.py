@@ -4,8 +4,8 @@ Instagram's 2,200 characters is still enforced, per platform, by the composer's 
 scheduling rules; the database only holds the longest any platform takes. Both checks are
 re-created with the wider limit. Expand-only: nothing that fit before stops fitting.
 
-Revision ID: 0050
-Revises: 0044
+Revision ID: 0048
+Revises: 0047
 Create Date: 2026-10-25 09:00:00.000000+00:00
 """
 
@@ -15,8 +15,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0050"
-down_revision: str | None = "0044"
+revision: str = "0048"
+down_revision: str | None = "0047"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

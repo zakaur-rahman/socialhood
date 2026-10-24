@@ -5415,7 +5415,7 @@ item 50. The permission work is part of the second App Review submission (O-10,
   `CAPTION_MAX_CHARS` and `FACEBOOK_CAPTION_MAX_CHARS` in `models/publishing.py`. The first comment
   stays at 2,200 for every platform (Instagram's; Facebook allows more, nobody asked for it).
 - **Where they apply.** The columns and the request bodies hold the longest
-  (`STORED_CAPTION_MAX_CHARS`; migration 0050 re-creates `ck_scheduled_posts_caption_length` and
+  (`STORED_CAPTION_MAX_CHARS`; migration 0048 re-creates `ck_scheduled_posts_caption_length` and
   `ck_scheduled_post_targets_caption_override_length`), so a draft can hold a long caption. The
   checklist and the scheduling rules apply the platform's limit (`rules.caption_limit`): an account's
   own caption to its platform's; the shared caption to the strictest of the accounts that use it
@@ -5426,13 +5426,13 @@ item 50. The permission work is part of the second App Review submission (O-10,
 - **Not changed.** The AI caption writer and "improve" still work to 2,200 characters
   (`CaptionRequest`), so improving a longer Page caption is refused by the schema; hashtag
   suggestions likewise.
-- **Migration 0050** (after 0044), expand-only. *Numbering:* 0046 to 0049 belong to the other
+- **Migration 0048** (after 0047; written as 0050 after 0044, renumbered when stacked), expand-only. *Numbering:* 0046 to 0049 belong to the other
   follow-ups branch; the coordinator re-chains.
 
 ### 2. Story insights
 - **Windows.** A Story is gone after 24 hours, so it has its own snapshot windows: 1 h, 6 h and 23 h
   (`STORY_WINDOWS`, new `SnapshotWindow.H23`, `ck_post_metric_snapshots_window` re-created in
-  migration 0051). Feed posts and Reels never get 23 h (`ages.WINDOWS` leaves it out). A Story's
+  migration 0049). Feed posts and Reels never get 23 h (`ages.WINDOWS` leaves it out). A Story's
   grace ends 10 minutes before it goes down (the 23 h reading has 50 minutes), the 15 minute tick
   (`due_condition`) now includes Stories, and every `ages` function takes the post's windows
   (`windows_for(media_type)`).
@@ -5480,7 +5480,7 @@ item 50. The permission work is part of the second App Review submission (O-10,
 
 ### 4. Facebook Reels
 - **A choice, not a shape.** A Page video stays a normal video. The composer's Type section offers
-  **Reel** when a Facebook Page is chosen (`kind: "reel"`, `PostKind.REEL`; migration 0052 widens
+  **Reel** when a Facebook Page is chosen (`kind: "reel"`, `PostKind.REEL`; migration 0050 widens
   `ck_scheduled_posts_kind`). A Reel is exactly one video of 3 to 90 seconds (*unverified limits*,
   `FACEBOOK_REEL_MIN_S`, `FACEBOOK_REEL_MAX_S`); 9:16 is only recommended, so another shape passes
   with a note ("9:16 fits a Reel best. Facebook may crop or add bars to this file."). It needs a
@@ -5530,7 +5530,7 @@ item 50. The permission work is part of the second App Review submission (O-10,
   (the Instagram ones are used), and that `pages_manage_posts` is enough.
 
 ### Shared notes
-- **Migrations** 0050 (caption checks), 0051 (snapshot window 23h), 0052 (post kind reel), all
+- **Migrations** 0048 (caption checks), 0049 (snapshot window 23h), 0050 (post kind reel), all
   expand-only, each with a downgrade that removes or rewrites what the old check would refuse.
 - **Settings:** `FB_REQUEST_INSIGHTS_SCOPE` (default false) in `.env.example` and
   `docs/ops/deploy.md`.
@@ -5548,6 +5548,6 @@ item 50. The permission work is part of the second App Review submission (O-10,
 - **For the coordinator:** regenerate the client: `AgeName` gains `23h`,
   `PostPerformance.extra_metrics` and `ExtraMetrics`, `ScheduledPostDraft.kind` and
   `ScheduledPostSummary.kind` gain `reel`. The web uses the generated types for all of these
-  (`ExtraMetrics` is an alias in `lib/api/types.ts`). Re-chain migrations 0050 to 0052 after the
+  (`ExtraMetrics` is an alias in `lib/api/types.ts`). Migrations re-chained as 0048 to 0050 after the
   other branch's 0046 to 0049. The shared lists (nav, plans, tenancy) are untouched (no new table
   or route).

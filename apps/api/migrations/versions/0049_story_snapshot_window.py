@@ -4,8 +4,8 @@ A Story is gone after 24 hours, so its insights are read at 1 h, 6 h and 23 h; t
 is only ever taken for Stories. The window check is re-created with the new value. Expand-only:
 a wider check, no rows change.
 
-Revision ID: 0051
-Revises: 0050
+Revision ID: 0049
+Revises: 0048
 Create Date: 2026-10-25 10:00:00.000000+00:00
 """
 
@@ -15,8 +15,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0051"
-down_revision: str | None = "0050"
+revision: str = "0049"
+down_revision: str | None = "0048"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

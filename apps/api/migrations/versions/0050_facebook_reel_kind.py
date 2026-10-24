@@ -4,8 +4,8 @@ The composer's Reel choice publishes a Facebook Page's single video as a Reel in
 video. The kind check is re-created with the new value. Expand-only: a wider check, no rows
 change.
 
-Revision ID: 0052
-Revises: 0051
+Revision ID: 0050
+Revises: 0049
 Create Date: 2026-10-25 11:00:00.000000+00:00
 """
 
@@ -15,8 +15,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0052"
-down_revision: str | None = "0051"
+revision: str = "0050"
+down_revision: str | None = "0049"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
