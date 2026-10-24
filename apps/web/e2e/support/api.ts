@@ -90,6 +90,18 @@ export class Api {
     });
   }
 
+  /**
+   * GR-36: a finished Ask run whose draft step called propose_flow or propose_segment through the
+   * real tool and gateway (the fake model calls no tools): a pending approval and its card. A
+   * segment's `tag` must already exist in the workspace.
+   */
+  agentProposal(
+    wid: string,
+    proposal: { request: string; kind: "flow" | "segment"; name: string; keyword?: string; tag?: string },
+  ): Promise<{ run_id: string; thread_id: string; approval_id: string }> {
+    return this.seed("POST", `/workspaces/${wid}/agent-proposals`, proposal);
+  }
+
   // ---------------------------------------------------------------- the app's own endpoints
 
   connectSandbox(wid: string): Promise<SandboxAccount> {

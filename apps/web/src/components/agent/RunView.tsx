@@ -135,6 +135,8 @@ function Finished({
             <ActionCardView
               key={`${card.kind}:${index}`}
               card={card}
+              wid={context.wid}
+              runId={run.id}
               slug={slug}
               timeZone={timeZone}
               now={now}

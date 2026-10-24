@@ -9,6 +9,8 @@ import { toDefinition } from "@/lib/automations/definition";
 
 import { INLINE_PLAN_LIMITS, useApi } from "../provider";
 import type {
+  AgentApproval,
+  AgentApprovalList,
   AgentPolicy,
   AgentRun,
   AgentRunCreate,
@@ -16,6 +18,7 @@ import type {
   AgentRunList,
   AgentRunStatus,
   AgentThreadList,
+  ApprovalStatus,
   Automation,
   AutomationDraftPrefill,
 } from "../types";
@@ -26,6 +29,8 @@ const THREAD_RUNS_PAGE = 20;
 const THREADS_PAGE = 20;
 /** Settings → Agent shows the history a page (of the API) at a time (C-066). */
 const HISTORY_PAGE = 10;
+/** The "Waiting for you" list and a run's cards: a handful at a time is plenty. */
+const APPROVALS_PAGE = 50;
 
 /**
  * agent.* events keep a working run fresh. This slower poll is the fallback for a stream that is
@@ -128,6 +133,31 @@ export function useAgentPolicy(wid: string, enabled = true) {
   });
 }
 
+/**
+ * GR-36: the writes the agent proposed, soonest to expire first. Owners and admins get the
+ * workspace's, members their own runs'. `status` defaults to the ones still waiting; a run's own
+ * cards ask for every status of that run.
+ */
+export function useAgentApprovals(
+  wid: string,
+  filters: { status?: ApprovalStatus | "all"; runId?: string } = {},
+  enabled = true,
+) {
+  const api = useApi();
+  const status = filters.status ?? "pending";
+  const runId = filters.runId ?? null;
+  return useQuery<AgentApprovalList>({
+    queryKey: keys.agentApprovals(wid, status, runId),
+    enabled,
+    queryFn: () =>
+      unwrap(
+        api.GET("/v1/w/{wid}/agent/approvals", {
+          params: { path: { wid }, query: { status, run_id: runId ?? undefined, limit: APPROVALS_PAGE } },
+        }),
+      ),
+  });
+}
+
 // ---- changing
 
 /**
@@ -202,5 +232,53 @@ export function useCancelAgentRun(wid: string) {
       putRun(queryClient, wid, run);
       void queryClient.invalidateQueries({ queryKey: keys.agentThreads(wid), exact: true });
     },
+  });
+}
+
+/** After a decision: the lists, the run's trace, and what an approval may have saved. */
+function refreshAfterDecision(queryClient: ReturnType<typeof useQueryClient>, wid: string, approval: AgentApproval) {
+  void queryClient.invalidateQueries({ queryKey: keys.agentApprovalLists(wid) });
+  void queryClient.invalidateQueries({ queryKey: keys.agentRun(wid, approval.run_id), exact: true });
+  if (approval.outcome?.ok) {
+    void queryClient.invalidateQueries({ queryKey: keys.automationLists(wid) });
+    void queryClient.invalidateQueries({ queryKey: keys.contactSegments(wid) });
+  }
+}
+
+/**
+ * GR-36: approve a proposed write as shown, or with edited `args`. The API runs it through the
+ * normal service. 200 with `outcome.ok` false means the service refused it (a name taken, a plan
+ * limit): nothing was saved and the approval is still pending. 403 for a role that can't do it by
+ * hand; 409 when it was decided or expired meanwhile.
+ */
+export function useApproveAgentApproval(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<AgentApproval, Error, { id: string; args?: Record<string, unknown> | null }>({
+    mutationFn: ({ id, args }) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/agent/approvals/{approval_id}/approve", {
+          params: { path: { wid, approval_id: id } },
+          body: { args: args ?? null },
+        }),
+      ),
+    onSuccess: (approval) => refreshAfterDecision(queryClient, wid, approval),
+    // A plan limit is shown on the card, beside the proposal.
+    meta: INLINE_PLAN_LIMITS,
+  });
+}
+
+/** GR-36: say no; nothing is saved. */
+export function useRejectAgentApproval(wid: string) {
+  const api = useApi();
+  const queryClient = useQueryClient();
+  return useMutation<AgentApproval, Error, string>({
+    mutationFn: (id) =>
+      unwrap(
+        api.POST("/v1/w/{wid}/agent/approvals/{approval_id}/reject", {
+          params: { path: { wid, approval_id: id } },
+        }),
+      ),
+    onSuccess: (approval) => refreshAfterDecision(queryClient, wid, approval),
   });
 }

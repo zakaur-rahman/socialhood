@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 
-import type { ActionCard, AutomationDraftPrefill, CommentReplyPrefill } from "@/lib/api/types";
+import type { AutomationDraftPrefill, CommentReplyPrefill, PreparedCard } from "@/lib/api/types";
 import { useInboxStore } from "@/lib/inbox/store";
 import { uuid } from "@/lib/uuid";
 
@@ -49,7 +49,7 @@ export const useAgentHandoff = create<HandoffState>()((set) => ({
 }));
 
 /** Puts a card's prefill where its screen looks for it; the caller then opens the card's route. */
-export function handOff(card: ActionCard): void {
+export function handOff(card: PreparedCard): void {
   const nonce = uuid();
   switch (card.kind) {
     case "schedule_message": {

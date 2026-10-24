@@ -23,6 +23,7 @@ import { useCurrentWorkspace } from "@/lib/workspace";
 
 import { AskComposer } from "./AskComposer";
 import { RunView, type RunContext } from "./RunView";
+import { WaitingForYou } from "./WaitingForYou";
 
 /** Within this distance of the bottom the conversation follows new content. */
 const NEAR_BOTTOM_PX = 96;
@@ -264,6 +265,7 @@ export function AskConversation({
             {askError(error, credits, now)}
           </Alert>
         ) : null}
+        <WaitingForYou wid={wid} slug={workspace.slug} timeZone={workspace.timezone} now={now} onNavigate={onNavigate} />
         <AskComposer
           id={composerId}
           value={draft}
@@ -313,7 +315,8 @@ function Welcome({
         <h2 className={cn(SECTION_TITLE, "tracking-tight")}>What would you like to know?</h2>
         <p className="text-sm text-fg-secondary">
           Ask about your posts, comments, conversations and automations. Answers show the numbers they used and
-          link to them; Social Hood can prepare a reply for you to finish, but doesn&apos;t change anything itself.
+          link to them; Social Hood can prepare a reply for you to finish, or propose an automation or a segment for
+          you to approve, but doesn&apos;t change anything itself.
         </p>
       </div>
       <ul

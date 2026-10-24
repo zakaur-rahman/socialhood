@@ -17,8 +17,9 @@ import {
   STEP_STATUS_LABEL,
   TIER_LABEL,
 } from "@/lib/agent/format";
+import { isPrepared } from "@/lib/agent/cards";
 import { actionPath } from "@/lib/agent/routes";
-import type { AgentRunDetail, AgentStep } from "@/lib/api/types";
+import type { AgentApproval, AgentRunDetail, AgentStep } from "@/lib/api/types";
 import { formatDayTime } from "@/lib/tz";
 import { cn } from "@/lib/utils";
 import { EYEBROW } from "@/styles/tokens";
@@ -112,17 +113,28 @@ export function RunTrace({
         </section>
       ) : null}
 
-      {run.action_cards.length > 0 ? (
+      {run.action_cards.some(isPrepared) ? (
         <section className="space-y-2">
           <p className={EYEBROW}>Prepared actions</p>
           <ul className="space-y-2">
-            {run.action_cards.map((card, index) => (
+            {run.action_cards.filter(isPrepared).map((card, index) => (
               <li key={index} className={cn(cardInsetVariants({ padding: "compact" }), "bg-field text-sm")}>
                 <p className="font-medium">{card.label}</p>
                 {card.note ? <p className="text-xs text-fg-secondary">{card.note}</p> : null}
                 <p className="font-mono text-2xs break-all text-fg-secondary">{actionPath(card)}</p>
                 <Json label="Prefilled values" value={card.prefill} />
               </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {run.approvals.length > 0 ? (
+        <section className="space-y-2" aria-label="Proposed writes">
+          <p className={EYEBROW}>Proposed writes</p>
+          <ul className="space-y-2">
+            {run.approvals.map((approval) => (
+              <ApprovalTrace key={approval.id} approval={approval} timeZone={timeZone} now={now} />
             ))}
           </ul>
         </section>
@@ -141,6 +153,52 @@ export function RunTrace({
         )}
       </section>
     </div>
+  );
+}
+
+const APPROVAL_STATUS_LABEL: Record<AgentApproval["status"], string> = {
+  pending: "Waiting for approval",
+  approved: "Approved",
+  rejected: "Rejected",
+  expired: "Expired",
+  superseded: "Replaced",
+};
+const APPROVAL_EVENT_LABEL: Record<AgentApproval["events"][number]["event"], string> = {
+  proposed: "Proposed",
+  approved: "Approved",
+  rejected: "Rejected",
+  expired: "Expired",
+  executed: "Saved",
+  failed: "Refused",
+};
+
+/** GR-36: a proposed write and its audit trail, who did what and when. */
+function ApprovalTrace({ approval, timeZone, now }: { approval: AgentApproval; timeZone: string; now: Date }) {
+  return (
+    <li
+      className={cn(cardInsetVariants({ padding: "compact" }), "space-y-1 bg-field")}
+      data-testid="approval-trace"
+      data-status={approval.status}
+    >
+      <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+        {approval.summary}
+        <Badge tone={approval.status === "approved" ? "success" : approval.status === "pending" ? "warning" : "neutral"}>
+          {APPROVAL_STATUS_LABEL[approval.status]}
+        </Badge>
+      </p>
+      {approval.outcome ? <p className="text-xs text-fg-secondary">{approval.outcome.summary}</p> : null}
+      <ol aria-label="Audit trail" className="space-y-0.5 text-xs text-fg-secondary">
+        {approval.events.map((event) => (
+          <li key={event.id}>
+            {APPROVAL_EVENT_LABEL[event.event]}
+            {event.actor?.name ? ` by ${event.actor.name}` : event.event === "proposed" ? " by Social Hood" : ""}
+            {" · "}
+            {formatDayTime(event.created_at, timeZone, now)}
+          </li>
+        ))}
+      </ol>
+      <Json label="Exact call" value={approval.payload} />
+    </li>
   );
 }
 

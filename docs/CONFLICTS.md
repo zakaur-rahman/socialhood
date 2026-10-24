@@ -2863,7 +2863,7 @@ re-reads what changed, and each page listed under its site. It builds on the sin
   the typed client, so typecheck after regenerating. `CRAWL_ALLOW_PRIVATE` belongs in no production
   config.
 
-## C-105 · Team members and roles (GR-19, feature/gr-19-team)
+## C-106 · Team members and roles (GR-19, feature/gr-19-team)
 
 - **Permission matrix, in one place.** `auth/permissions.py` has a `Permission` enum and a
   role-to-permissions map (each role has everything below it). Routes ask for a permission with
@@ -3099,3 +3099,111 @@ to activation.
   alone, flows, questions, the message settings, the opening and follow line); integration
   `test_template_flows_api.py` (refused on each step, the coupon code, a message on the settings);
   vitest `flow.test.ts`, `FlowEditor.test.tsx`.
+
+## C-107 · Copilot write actions (GR-36, feature/gr-36-copilot-writes)
+
+The agent can propose a flow or a segment; a member approves it; only then is it saved, by the same
+service the screen calls. It builds on the approval tables and routes the agent contract already
+had (`agent_approvals`, `…/agent/approvals/*`) and on the flow engine (GR-03, GR-13) and segments
+(GR-17).
+
+- **The action gateway** is `services/agent_actions.py`, with the actions it knows in
+  `agent/actions.py`. *`agent/gateway.py` (the R2 tier, mode and policy table) stays as it was: it
+  decides what an agent may do on its own, which nothing does yet.* Proposals never execute.
+  - *Propose* (from the tool, in the model's turn): the action must exist and not be an unavailable
+    one; the principal's role must allow it (403 `forbidden`); the arguments are checked with the
+    UI's own service validation (the flow graph, the plan step cap, tags and fields that exist,
+    the segment's name and limit); then a pending approval is stored with the proposing step's
+    idempotency key and the step is marked `approval`. A retried step finds its approval instead of
+    adding another. Nothing in the workspace changes.
+  - *Approve* (a member, `POST …/approvals/{id}/approve`): the approval row is locked and must still
+    be pending and not past its time; the approver's role must allow the action; the arguments (as
+    shown, or edited) are checked again; then the normal service function runs in a savepoint in
+    the same transaction that marks the approval `approved` and stores its outcome. A flow is saved
+    with `definitions.create`, `definitions.update` and `flow_store.save`; a segment with
+    `contact_segments.create_segment`. A second approve is 409, so a write never runs twice.
+  - *If the service refuses on approval* (a name taken since, a plan limit): nothing is saved, the
+    approval stays pending, its `outcome` says `ok: false` and why, the trail gets `failed`, and
+    the response is 200. The member can edit it (`args`) or reject it. *This differs from the
+    contract's "409 when no longer pending" only for this case, which is not a state change.*
+  - *Reject*: `rejected`, nothing saved. Anyone who can see the approval may reject (it changes
+    nothing); 409 when decided.
+  - *Expiry*: a proposal lasts **24 hours** (`APPROVAL_TTL`, already in the models; recorded here).
+    `expire_agent_approvals` runs every 15 minutes, and the list and decision routes expire what is
+    due first, so a stale card never approves. Expired is final: the member asks again.
+- **The agent never executes on its own.** *Decided: the proposal tools are draft tier, not write
+  tier, and the workspace's agent policy (mode, `create_automations` switch) does not gate
+  proposing.* The policy is about what the agent may do without asking, and no tool does; a
+  proposal only files a request that a member must approve, as if they had opened the screen. The
+  policy stays read-only by default and its PUT stays R2. When a write tool that runs on its own is
+  built, it goes through `gateway.decide` and the policy as designed.
+- **Roles.** Both screens are for owners and admins (`Admin` on the automation, flow and segment
+  routes), so `min_role` is admin for both actions: the proposal tools are not offered to a team
+  member, and approving needs the same. A team member sees the approvals of their own runs (and can
+  reject them); `can_decide` on each approval tells the web whether to enable Approve. *GR-19:*
+  `agent.actions.required_role(spec)` is the one place to replace with the permission matrix
+  (`automations.manage` for a flow, `contacts.manage` for a segment); callers don't change. The
+  propose and approve checks both call it.
+- **Audit.** Every proposal, approval, rejection, expiry, execution and refused execution is a row
+  in `agent_approval_events` (who, when, what, outcome as plain facts), shown in the run trace
+  (`approvals` on `GET …/agent/runs/{id}`, and "Proposed writes" in Settings → Agent's trace) and
+  logged as `agent_approval`. *Kept in the agent's own tables: GR-19's general `audit_events` is
+  not a dependency.* The hook is `_record` in `services/agent_actions.py`; mirror each event there.
+- **Write tools** (`agent/tools/proposals.py`, admins):
+  - `propose_flow`: a new automation (trigger, keywords, public replies, account) with a flow, or
+    a new flow for an existing automation (`automation_id`). The model writes steps in order
+    (send, ask, action, delay, branch, ai_reply, end) and names tags; the tool resolves names to
+    ids and builds the typed `FlowDefinition`, chaining each step to the next unless a `goto`, a
+    branch rule or a quick reply says otherwise. An unknown tag is refused with the tags the
+    workspace has. Approving saves a **draft** automation (never activated); an existing
+    automation keeps its status, and the card says so when it is live.
+  - `propose_segment`: tags (by name, all required), platform, account, email or phone given,
+    marketing consent, lead stages, score, activity and fields, as the contacts filter has them.
+    The card shows the count it matches; the count is read again on approval.
+  - `propose_broadcast`: **unavailable**. Registered for R2 so the model is never offered it; the
+    plain reason is `agent.actions.UNAVAILABLE` ("Broadcasts aren't available yet…") and the
+    gateway refuses the action with it. When GR-23 lands: add its action to `agent/actions.py`,
+    register the tool in R1 and drop the entry.
+  - `ToolContext` gains `step_id` and `step_key`, set by the executor, so a proposal files its
+    approval against the step that made it.
+- **Prompt.** `agent.v4`: the agent may propose flows and segments, must say a proposal is waiting
+  for approval and what the card shows, that an approved flow is a draft that stays off, never says
+  it is created, saved, live or sent, says plainly when a tool refuses, and says broadcasts can't be
+  drafted yet. Eval cases (`area: writes`): the PRICE flow (English and Hinglish), the vip segment,
+  an unknown tag, a team member (no tools; the answer names owners and admins), and a broadcast.
+  The two earlier `prepare_automation` cases accept either tool. The eval seed gains the tags `vip`
+  and `wholesale`.
+- **Migration 0034** (after 0030), expand-only: `agent_approvals.idempotency_key` (unique per
+  workspace), `outcome`, `executed_at`, an index on pending expiry, and the table
+  `agent_approval_events`. The coordinator re-chains it.
+- **API.** `GET …/agent/approvals` (`status` now also takes `all`, plus `run_id`), `POST
+  …/approvals/{id}/approve` (body `args` optional) and `…/reject` are built (no longer `x-pending`).
+  `AgentApproval` gains `lines`, `match_count`, `step_count`, `can_decide`, `requested_by`,
+  `outcome` and `events`; `AgentRunDetail` gains `approvals`; the action cards gain
+  `flow_proposal` and `segment_proposal` (`approval_id`, `title`, `lines`, and `step_count` or
+  `match_count`). New schemas: `ApprovalOutcome`, `ApprovalEvent`, `ApprovalListStatus`.
+- **Web.** An answer's proposal card says in plain words what will happen (the flow's steps, or the
+  segment's filters and count), when it expires, and has Approve and Reject. Approve is disabled,
+  with the reason, for roles that can't do it. After a decision the card shows the result and an
+  Open button (the automation or the segment), or why nothing was saved. **Waiting for you** sits
+  above the question box in the panel and the page, collapsed, with a count, and decides the same
+  approvals. The cards read the approval from the API, so they are right after a reload. No new
+  real-time event: a decision refreshes the lists, and the list refetches on focus.
+- **Not built.** Editing a proposal in the web (the API takes edited `args`; the card only approves
+  or rejects as shown); a real-time event when someone else decides; resuming a run after an
+  approval (a run ends when it has proposed; the answer says it is waiting); proposals that change
+  or delete things other than a flow and a segment.
+- **Tests.** Unit: `test_agent_actions.py` (the flow built from steps, branches, quick replies,
+  tags, missing parts; strict inputs; the registry; the refusals before any database; plain-words
+  filters; vocabulary). Integration: `test_agent_actions.py` (propose, nothing saved, approve to a
+  segment and a draft automation with its flow and keywords, tags, a change to an existing
+  automation, the step cap, reject, expiry on list and on decision, a refused approval then an
+  edit, idempotent proposals, roles, the run trace). Tenancy: `agent_approval_events` in
+  `test_isolation.py`; the approvals routes are no longer pending. Vitest: `ProposalCardView.test.tsx`,
+  `WaitingForYou.test.tsx`. E2E: `gr36-copilot-writes.spec.ts` with the seed route
+  `POST /__e2e/workspaces/{wid}/agent-proposals`.
+- **Unsure / for the coordinator:** regenerate the client (`FlowProposalAction`,
+  `SegmentProposalAction`, `ApprovalOutcome`, `ApprovalEvent`, the new fields of `AgentApproval`
+  and `AgentRunDetail.approvals`, `ApprovalListStatus`, `run_id` on the list); the web types are
+  aliases waiting for it. Re-chain migration 0034. Run `alembic check` (the model and migration
+  declare the same index and unique constraint). The agent eval needs a live key; I did not run it.

@@ -283,9 +283,23 @@ export type ActionKind = ActionCard["kind"];
 export type ScheduleMessageAction = Schemas["ScheduleMessageAction"];
 export type CommentReplyAction = Schemas["CommentReplyAction"];
 export type AutomationDraftAction = Schemas["AutomationDraftAction"];
+export type FlowProposalAction = Schemas["FlowProposalAction"];
+export type SegmentProposalAction = Schemas["SegmentProposalAction"];
+/** GR-36: a write the agent proposed. Nothing is saved until a member approves it. */
+export type ProposalCard = FlowProposalAction | SegmentProposalAction;
+/** A prepared action (FR-AGT-03): it opens an existing screen pre-filled. */
+export type PreparedCard = Exclude<ActionCard, ProposalCard>;
+export type PreparedKind = PreparedCard["kind"];
 export type ScheduleMessagePrefill = Schemas["ScheduleMessagePrefill"];
 export type CommentReplyPrefill = Schemas["CommentReplyPrefill"];
 export type AutomationDraftPrefill = Schemas["AutomationDraftPrefill"];
+
+/** GR-36: the agent's proposed writes: waiting, decided or expired, with the audit trail. */
+export type AgentApproval = Schemas["AgentApproval"];
+export type AgentApprovalList = Schemas["AgentApprovalList"];
+export type ApprovalOutcome = Schemas["ApprovalOutcome"];
+export type ApprovalEvent = Schemas["ApprovalEvent"];
+export type ApprovalStatus = AgentApproval["status"];
 
 /**
  * A visual answer (GR-38): built by the API's tools from service numbers and listed in the run's

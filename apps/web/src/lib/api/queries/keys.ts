@@ -152,4 +152,8 @@ export const keys = {
   agentRun: (wid: string, runId: string) => ["w", wid, "agent", "run", runId] as const,
   agentThreads: (wid: string) => ["w", wid, "agent", "threads"] as const,
   agentPolicy: (wid: string) => ["w", wid, "agent", "policy"] as const,
+  /** GR-36: the agent's proposed writes; every list shares one prefix. */
+  agentApprovalLists: (wid: string) => ["w", wid, "agent", "approvals"] as const,
+  agentApprovals: (wid: string, status: string, runId: string | null) =>
+    ["w", wid, "agent", "approvals", { status, runId }] as const,
 };
