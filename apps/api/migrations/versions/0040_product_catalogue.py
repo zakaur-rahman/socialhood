@@ -146,7 +146,9 @@ def upgrade() -> None:
             ondelete="CASCADE",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f("pk_product_variants")),
-        sa.UniqueConstraint("product_id", "title", name=op.f("uq_product_variants_product_id_title")),
+        sa.UniqueConstraint(
+            "product_id", "title", name=op.f("uq_product_variants_product_id_title")
+        ),
         sa.UniqueConstraint(
             "workspace_id", "sku", name=op.f("uq_product_variants_workspace_id_sku")
         ),
