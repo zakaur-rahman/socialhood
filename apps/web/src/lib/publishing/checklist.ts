@@ -15,10 +15,12 @@ import type { SocialAccount } from "@/lib/api/types";
 import {
   assetLabel,
   CAPTION_MAX_CHARS,
+  captionLimit,
   cannotPublishReason,
   countText,
   cropNeeded,
   deriveFormat,
+  FACEBOOK_CAPTION_MAX_CHARS,
   FIRST_COMMENT_MAX_CHARS,
   formatCount,
   formatDuration,
@@ -77,17 +79,25 @@ function pass(key: ChecklistKey, message: string): ChecklistItem {
 }
 
 /** One caption with the field it lives in, for the per-caption checks. */
-type CaptionSlot = { text: string; field: string; owner: string };
+type CaptionSlot = { text: string; field: string; owner: string; limit: number };
 
 function captionSlots(draft: ScheduledPostDraft, accounts: SocialAccount[]): CaptionSlot[] {
-  const slots: CaptionSlot[] = [{ text: draft.caption ?? "", field: "caption", owner: "The caption" }];
-  (draft.targets ?? []).forEach((target, index) => {
+  // Each caption is held to the limit of the accounts it goes to (C-131): an account's own caption
+  // to its platform's; the shared one to the strictest of the accounts without their own.
+  const platformOf = (id: string) => accounts.find((item) => item.id === id)?.platform ?? "instagram";
+  const targets = draft.targets ?? [];
+  const shared = targets.filter((target) => target.caption_override == null).map((target) => platformOf(target.social_account_id));
+  const slots: CaptionSlot[] = [
+    { text: draft.caption ?? "", field: "caption", owner: "The caption", limit: shared.length ? captionLimit(shared) : FACEBOOK_CAPTION_MAX_CHARS },
+  ];
+  targets.forEach((target, index) => {
     if (target.caption_override == null) return;
     const account = accounts.find((item) => item.id === target.social_account_id);
     slots.push({
       text: target.caption_override,
       field: `targets.${index}.caption_override`,
       owner: `The caption for ${handleOf(account)}`,
+      limit: captionLimit([platformOf(target.social_account_id)]),
     });
   });
   return slots;
@@ -207,11 +217,11 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
   const mentionProblems: ChecklistItem[] = [];
   for (const slot of slots) {
     const counts = countText(slot.text);
-    if (counts.chars > CAPTION_MAX_CHARS) {
+    if (counts.chars > slot.limit) {
       captionProblems.push(
         fail(
           "caption",
-          `${slot.owner} is ${formatCount(counts.chars)} characters. ${limitName} allows ${formatCount(CAPTION_MAX_CHARS)}.`,
+          `${slot.owner} is ${formatCount(counts.chars)} characters. ${slot.limit === CAPTION_MAX_CHARS ? "Instagram" : "Facebook"} allows ${formatCount(slot.limit)}.`,
           slot.field,
         ),
       );
@@ -242,7 +252,7 @@ export function localChecklist({ draft, accounts, assets, now }: ChecklistInput)
       fail("hashtags", `The first comment has ${commentCounts.hashtags} hashtags. Instagram allows ${MAX_HASHTAGS}.`, "first_comment"),
     );
   }
-  items.push(...(captionProblems.length ? captionProblems : [pass("caption", `Caption within ${formatCount(CAPTION_MAX_CHARS)} characters`)]));
+  items.push(...(captionProblems.length ? captionProblems : [pass("caption", `Caption within ${formatCount(captionLimit(selected.map((account) => account.platform)))} characters`)]));
   // Hashtag and mention limits are Instagram's: a post for Facebook Pages alone has none.
   if (ig) {
     items.push(...(hashtagProblems.length ? hashtagProblems : [pass("hashtags", `Up to ${MAX_HASHTAGS} hashtags`)]));

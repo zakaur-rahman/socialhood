@@ -59,6 +59,7 @@ import { itemsFromErrors, localChecklist, mergeChecklist } from "@/lib/publishin
 import { renderCrop, type Cropper } from "@/lib/publishing/crop";
 import {
   assetLabel,
+  captionLimit,
   checkPostFile,
   deriveFormat,
   fromMediaAsset,
@@ -687,7 +688,13 @@ function Composer({
                 accountId: target.social_account_id,
                 label: handleOf(allAccounts.find((account) => account.id === target.social_account_id)),
                 value: target.caption_override ?? draft.caption,
+                maxChars: captionLimit([allAccounts.find((account) => account.id === target.social_account_id)?.platform ?? "instagram"]),
               }))}
+              maxChars={captionLimit(
+                draft.targets
+                  .filter((target) => target.caption_override == null)
+                  .map((target) => allAccounts.find((account) => account.id === target.social_account_id)?.platform ?? "instagram"),
+              )}
               onAccountCaptionChange={(index, value) =>
                 change((current) => ({
                   targets: current.targets.map((target, position) => (position === index ? { ...target, caption_override: value } : target)),

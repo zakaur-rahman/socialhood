@@ -23,6 +23,7 @@ from socialhood.models.publishing import (
     CAPTION_MAX_CHARS,
     CAROUSEL_MAX_ASSETS,
     CAROUSEL_MIN_ASSETS,
+    FACEBOOK_CAPTION_MAX_CHARS,
     FIRST_COMMENT_MAX_CHARS,
     MAX_HASHTAGS,
     MAX_MENTIONS,
@@ -263,6 +264,28 @@ def _item(
     return ChecklistItem(key=key, ok=ok, message=message, field=field)
 
 
+def caption_limit(platforms: Iterable[str]) -> int:
+    """The caption length a post to these platforms may have: Instagram's 2,200 unless every
+    account is a Facebook Page (C-131). No accounts yet: Instagram's, the strictest."""
+    kinds = list(platforms)
+    if kinds and all(kind == "facebook" for kind in kinds):
+        return FACEBOOK_CAPTION_MAX_CHARS
+    return CAPTION_MAX_CHARS
+
+
+def _limits(post: PostFacts) -> dict[str, int]:
+    """The length limit of each caption field. An account's own caption is held to its own
+    platform; the shared caption goes to every account without one, so it is held to the
+    strictest of those (to the longest limit when each account has its own caption)."""
+    limits = {"first_comment": FIRST_COMMENT_MAX_CHARS}
+    shared = [t.platform for t in post.targets if t.caption_override is None]
+    limits["caption"] = caption_limit(shared) if shared else FACEBOOK_CAPTION_MAX_CHARS
+    for i, t in enumerate(post.targets):
+        if t.caption_override is not None:
+            limits[f"targets.{i}.caption_override"] = caption_limit([t.platform])
+    return limits
+
+
 def _texts(post: PostFacts, *, first_comment: bool) -> list[tuple[str, str | None]]:
     """(field, text) for the caption, each account's own caption and, when asked, the first
     comment."""
@@ -281,10 +304,11 @@ def _text_items(post: PostFacts, *, hashtags_and_mentions: bool = True) -> list[
     """The caption, hashtags and mentions checks (FR-PUB-10) of a post that has a caption.
     Hashtag and mention limits are Instagram's: a post for Facebook Pages only skips them."""
     items: list[ChecklistItem] = []
-    # caption: lengths
+    # caption: lengths, each against the limit of the accounts it goes to
     failing = []
+    limits = _limits(post)
     for field, text in _texts(post, first_comment=True):
-        limit = FIRST_COMMENT_MAX_CHARS if field == "first_comment" else CAPTION_MAX_CHARS
+        limit = limits[field]
         if len(text or "") > limit:
             what = "first comment" if field == "first_comment" else "caption"
             failing.append(
@@ -295,7 +319,8 @@ def _text_items(post: PostFacts, *, hashtags_and_mentions: bool = True) -> list[
                     field=field,
                 )
             )
-    items += failing or [_item("caption", f"Caption within {CAPTION_MAX_CHARS:,} characters")]
+    overall = caption_limit(t.platform for t in post.targets)
+    items += failing or [_item("caption", f"Caption within {overall:,} characters")]
     if not hashtags_and_mentions:
         return items
 

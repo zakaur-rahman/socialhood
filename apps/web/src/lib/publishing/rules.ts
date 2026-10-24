@@ -10,6 +10,8 @@ import type { Tone } from "@/lib/ui/tone";
 import type { PostAsset, PostFormat, ScheduledPostStatus } from "./types";
 
 export const CAPTION_MAX_CHARS = 2200;
+/** A Facebook Page post's text (Meta's figure, unverified until a real Page publishes, C-131). */
+export const FACEBOOK_CAPTION_MAX_CHARS = 63206;
 export const FIRST_COMMENT_MAX_CHARS = 2200;
 export const MAX_HASHTAGS = 30;
 export const MAX_MENTIONS = 20;
@@ -246,6 +248,15 @@ export function postPlatforms(accounts: Pick<SocialAccount, "platform">[]): { in
   const facebook = accounts.some((account) => account.platform === "facebook");
   const instagram = accounts.some((account) => account.platform === "instagram") || accounts.length === 0;
   return { instagram, facebook };
+}
+
+/**
+ * The caption length for a post to these platforms (the API's ``caption_limit``): Instagram's
+ * 2,200 unless every account is a Facebook Page; a cross-posted post is held to the strictest.
+ * No accounts yet: Instagram's.
+ */
+export function captionLimit(platforms: readonly string[]): number {
+  return platforms.length > 0 && platforms.every((platform) => platform === "facebook") ? FACEBOOK_CAPTION_MAX_CHARS : CAPTION_MAX_CHARS;
 }
 
 /** No media and some text, for Facebook Pages alone: a text post (GR-30). */

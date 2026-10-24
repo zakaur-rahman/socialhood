@@ -81,10 +81,21 @@ describe("localChecklist for Facebook Pages (GR-30)", () => {
     expect(failures(items)).toEqual([["media", "asset_ids", "A Facebook post can have several photos or one video, not both."]]);
   });
 
-  it("names the platform that sets the caption limit", () => {
+  it("holds a Page to Facebook's caption limit and a cross-post to the strictest account (C-131)", () => {
     const long = "a".repeat(2201);
-    expect(failures(localChecklist(input({ ...toPage, caption: long }, { accounts: [page] })))[0][2]).toContain("Social Hood allows 2,200");
+    expect(failures(localChecklist(input({ ...toPage, caption: long }, { accounts: [page] })))).toEqual([]);
+    expect(failures(localChecklist(input({ ...toPage, caption: "a".repeat(63207) }, { accounts: [page] })))[0][2]).toContain("Facebook allows 63,206");
     expect(failures(localChecklist(input({ caption: long })))[0][2]).toContain("Instagram allows 2,200");
+    const both = { targets: [{ social_account_id: "a1", caption_override: null }, ...toPage.targets] };
+    expect(failures(localChecklist(input({ ...both, caption: long }, { accounts: [ready, page] })))[0][2]).toContain("Instagram allows 2,200");
+  });
+
+  it("holds each account's own caption to its platform's limit", () => {
+    const long = "a".repeat(3000);
+    const own = { targets: [{ social_account_id: "a1", caption_override: "short" }, { social_account_id: "p1", caption_override: long }] };
+    expect(failures(localChecklist(input({ ...own, caption: "short" }, { accounts: [ready, page] })))).toEqual([]);
+    const swapped = { targets: [{ social_account_id: "a1", caption_override: long }, { social_account_id: "p1", caption_override: "short" }] };
+    expect(failures(localChecklist(input({ ...swapped, caption: "short" }, { accounts: [ready, page] })))[0].slice(0, 2)).toEqual(["caption", "targets.0.caption_override"]);
   });
 });
 
