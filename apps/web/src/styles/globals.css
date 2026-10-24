@@ -391,6 +391,17 @@
   :focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; }
   /* Placeholders are text: fg-secondary is 5.4:1 or more on every surface (D-06, C-071). */
   ::placeholder { color: var(--color-fg-secondary); }
+  /* Thin scrollbars everywhere (owner, 2026-10-25): a 6 px rounded thumb on the line token, brighter
+     on hover, over a transparent track. Chromium and Safari style the ::-webkit-scrollbar parts and
+     ignore them once scrollbar-width/-color are set, so those standard properties (Firefox's thin,
+     about 8 px) apply only where the WebKit parts don't exist. */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track, ::-webkit-scrollbar-corner { background: transparent; }
+  ::-webkit-scrollbar-thumb { background-color: var(--color-line-strong); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--color-line-control); }
+  @supports not selector(::-webkit-scrollbar) {
+    * { scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }
+  }
   /* Weights are 400, 500 and 600 only: bold text is 600, not the browser's 700 (TYP-013, C-070). */
   strong, b { font-weight: 600; }
   /* Reduced motion (DESIGN_SYSTEM §7.4, C-070): overlays, their scrims and skeletons appear and
