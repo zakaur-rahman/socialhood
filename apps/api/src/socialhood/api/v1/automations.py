@@ -15,7 +15,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Query, Response
 from pydantic import BeforeValidator
 
-from socialhood.auth.deps import Admin, Session, WorkspaceContext
+from socialhood.auth.deps import Admin, CanManageAutomations, Session, WorkspaceContext
 from socialhood.billing.plans import current_plan
 from socialhood.schemas.automations import (
     Automation,
@@ -36,6 +36,7 @@ from socialhood.schemas.automations import (
 )
 from socialhood.schemas.flows import Flow, FlowDefinition
 from socialhood.schemas.funnel import AutomationFunnel
+from socialhood.services import audit
 from socialhood.services.automations import (
     definitions,
     dry_run,
@@ -102,17 +103,20 @@ async def get_automations_summary(ctx: Admin, session: Session) -> AutomationsSu
 
 
 @router.post("/automations", status_code=201, operation_id="create_automation")
-async def create_automation(body: AutomationCreate, ctx: Admin, session: Session) -> Automation:
+async def create_automation(
+    body: AutomationCreate, ctx: CanManageAutomations, session: Session
+) -> Automation:
     """A draft, blank or filled from a template (FR-AUT-12)."""
     now = datetime.now(UTC)
     automation = await definitions.create(session, body, user_id=ctx.user.id, now=now)
+    await audit.record(session, ctx, "automation.created", "automation", automation.id)
     await session.commit()
     return await queries.one(session, automation.id, _view(ctx, now))
 
 
 @router.put("/automations/priorities", status_code=204, operation_id="update_automation_priorities")
 async def update_automation_priorities(
-    body: PrioritiesUpdate, ctx: Admin, session: Session
+    body: PrioritiesUpdate, ctx: CanManageAutomations, session: Session
 ) -> Response:
     """The account's automations in their new order (FR-AUT-15)."""
     await definitions.reorder(session, body.social_account_id, body.ordered_ids)
@@ -121,9 +125,12 @@ async def update_automation_priorities(
 
 
 @router.post("/automations/pause", status_code=204, operation_id="pause_automations")
-async def pause_automations(body: BulkPause, ctx: Admin, session: Session) -> Response:
+async def pause_automations(
+    body: BulkPause, ctx: CanManageAutomations, session: Session
+) -> Response:
     """Bulk pause from the list (FR-AUT-19)."""
     await definitions.pause_many(session, body.ids, now=datetime.now(UTC))
+    await audit.record(session, ctx, "automation.paused", "automation", count=len(body.ids))
     await session.commit()
     return Response(status_code=204)
 
@@ -135,7 +142,10 @@ async def get_automation(automation_id: uuid.UUID, ctx: Admin, session: Session)
 
 @router.put("/automations/{automation_id}", operation_id="update_automation")
 async def update_automation(
-    automation_id: uuid.UUID, body: AutomationDefinition, ctx: Admin, session: Session
+    automation_id: uuid.UUID,
+    body: AutomationDefinition,
+    ctx: CanManageAutomations,
+    session: Session,
 ) -> Automation:
     """Replace the whole definition (autosave). Returns overlaps and what activation still needs.
     An active automation must stay complete: 422 lists what the change would break."""
@@ -147,19 +157,25 @@ async def update_automation(
         disclosure=ctx.workspace.automation_disclosure,
         now=now,
     )
+    await audit.record(session, ctx, "automation.updated", "automation", automation_id)
     await session.commit()
     return await queries.one(session, automation_id, _view(ctx, now))
 
 
 @router.delete("/automations/{automation_id}", status_code=204, operation_id="delete_automation")
-async def delete_automation(automation_id: uuid.UUID, ctx: Admin, session: Session) -> Response:
+async def delete_automation(
+    automation_id: uuid.UUID, ctx: CanManageAutomations, session: Session
+) -> Response:
     await definitions.delete(session, automation_id)
+    await audit.record(session, ctx, "automation.deleted", "automation", automation_id)
     await session.commit()
     return Response(status_code=204)
 
 
 @router.post("/automations/{automation_id}/activate", operation_id="activate_automation")
-async def activate_automation(automation_id: uuid.UUID, ctx: Admin, session: Session) -> Automation:
+async def activate_automation(
+    automation_id: uuid.UUID, ctx: CanManageAutomations, session: Session
+) -> Automation:
     """Validate (FR-AUT-02) and entitlements; 422 lists every missing or invalid field. Resuming
     an automation that held private replies restarts its account's queue (FR-AUT-10)."""
     now = datetime.now(UTC)
@@ -170,6 +186,7 @@ async def activate_automation(automation_id: uuid.UUID, ctx: Admin, session: Ses
         disclosure=ctx.workspace.automation_disclosure,
         now=now,
     )
+    await audit.record(session, ctx, "automation.activated", "automation", automation_id)
     await session.commit()
     account_id = automation.social_account_id
     if account_id and await queue.automation_waiting(session, automation_id):
@@ -178,9 +195,12 @@ async def activate_automation(automation_id: uuid.UUID, ctx: Admin, session: Ses
 
 
 @router.post("/automations/{automation_id}/pause", operation_id="pause_automation")
-async def pause_automation(automation_id: uuid.UUID, ctx: Admin, session: Session) -> Automation:
+async def pause_automation(
+    automation_id: uuid.UUID, ctx: CanManageAutomations, session: Session
+) -> Automation:
     now = datetime.now(UTC)
     await definitions.pause(session, automation_id, now=now)
+    await audit.record(session, ctx, "automation.paused", "automation", automation_id)
     await session.commit()
     return await queries.one(session, automation_id, _view(ctx, now))
 
@@ -191,11 +211,14 @@ async def pause_automation(automation_id: uuid.UUID, ctx: Admin, session: Sessio
     operation_id="duplicate_automation",
 )
 async def duplicate_automation(
-    automation_id: uuid.UUID, ctx: Admin, session: Session
+    automation_id: uuid.UUID, ctx: CanManageAutomations, session: Session
 ) -> Automation:
     """A draft copy named "… (copy)"."""
     now = datetime.now(UTC)
     copy = await definitions.duplicate(session, automation_id, user_id=ctx.user.id, now=now)
+    await audit.record(
+        session, ctx, "automation.created", "automation", copy.id, duplicated_from=automation_id
+    )
     await session.commit()
     return await queries.one(session, copy.id, _view(ctx, now))
 
@@ -245,7 +268,7 @@ async def get_automation_funnel(
 
 @router.post("/automations/{automation_id}/test", operation_id="test_automation")
 async def test_automation(
-    automation_id: uuid.UUID, body: AutomationTest, ctx: Admin, session: Session
+    automation_id: uuid.UUID, body: AutomationTest, ctx: CanManageAutomations, session: Session
 ) -> AutomationTestResult:
     """What would happen for this text; sends nothing."""
     automation = await definitions.get_or_404(session, automation_id)
@@ -275,7 +298,7 @@ async def get_automation_flow(automation_id: uuid.UUID, ctx: Admin, session: Ses
 
 @router.put("/automations/{automation_id}/flow", operation_id="update_automation_flow")
 async def update_automation_flow(
-    automation_id: uuid.UUID, body: FlowDefinition, ctx: Admin, session: Session
+    automation_id: uuid.UUID, body: FlowDefinition, ctx: CanManageAutomations, session: Session
 ) -> Flow:
     """Save the flow; from now on its steps replace the message settings. A broken graph is
     refused (422 with each step's field); an active automation must stay complete; more steps
@@ -291,15 +314,19 @@ async def update_automation_flow(
         disclosure=disclosure,
         now=now,
     )
+    await audit.record(session, ctx, "automation.updated", "automation", automation_id, flow=True)
     await session.commit()
     return await flow_store.view(session, automation_id, disclosure=disclosure, now=now)
 
 
 @router.delete("/automations/{automation_id}/flow", operation_id="delete_automation_flow")
-async def delete_automation_flow(automation_id: uuid.UUID, ctx: Admin, session: Session) -> Flow:
+async def delete_automation_flow(
+    automation_id: uuid.UUID, ctx: CanManageAutomations, session: Session
+) -> Flow:
     """Go back to the message settings; runs on a saved version finish on it."""
     now = datetime.now(UTC)
     disclosure = ctx.workspace.automation_disclosure
     await flow_store.use_settings(session, automation_id, disclosure=disclosure, now=now)
+    await audit.record(session, ctx, "automation.updated", "automation", automation_id, flow=False)
     await session.commit()
     return await flow_store.view(session, automation_id, disclosure=disclosure, now=now)

@@ -14,7 +14,7 @@ from typing import Annotated
 from fastapi import APIRouter, Header, Query, Request, Response
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanReply, Session
 from socialhood.realtime import events
 from socialhood.schemas.inbox import (
     ScheduledMessage,
@@ -64,7 +64,7 @@ async def create_scheduled_message(
     request: Request,
     conversation_id: uuid.UUID,
     body: ScheduledMessageCreate,
-    ctx: AnyMember,
+    ctx: CanReply,
     session: Session,
     idempotency_key: Annotated[
         str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)
@@ -114,7 +114,7 @@ async def update_scheduled_message(
     request: Request,
     scheduled_message_id: uuid.UUID,
     body: ScheduledMessagePatch,
-    ctx: AnyMember,
+    ctx: CanReply,
     session: Session,
 ) -> ScheduledMessage:
     """Edit the text or time while the message is still scheduled (409 conflict after that)."""
@@ -135,7 +135,7 @@ async def update_scheduled_message(
     operation_id="cancel_scheduled_message",
 )
 async def cancel_scheduled_message(
-    request: Request, scheduled_message_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, scheduled_message_id: uuid.UUID, ctx: CanReply, session: Session
 ) -> Response:
     """Cancel while the message is still scheduled (409 conflict after that)."""
     await service.cancel(session, scheduled_message_id)

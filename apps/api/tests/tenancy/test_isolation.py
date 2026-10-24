@@ -80,6 +80,8 @@ PARAM_TO_SEED: dict[str, str] = {
     "segment_id": "segment_id",  # GR-17
     "reply_id": "reply_id",  # GR-21
     "page_id": "page_id",  # GR-35
+    "user_id": "user_id",  # GR-19
+    "invitation_id": "invitation_id",
 }
 
 # Public routes keyed by something other than a workspace; each has its own tests.
@@ -282,6 +284,19 @@ EXAMPLE_BODIES.update(
     }
 )
 
+# Team (GR-19): B's members and invitations can't be changed, and nobody can be invited or made
+# the owner, from A's workspace.
+EXAMPLE_BODIES.update(
+    {
+        ("PATCH", "/v1/w/{wid}/members/{user_id}"): {"role": "agent"},
+        ("POST", "/v1/w/{wid}/invitations"): {"email": "intruder@example.com", "role": "agent"},
+        ("POST", "/v1/w/{wid}/ownership-transfer"): {
+            "user_id": "{user_id}",
+            "confirm_name": "Taken over",
+        },
+    }
+)
+
 # Billing and notification settings (P8: T8.2, T8.6): B's checkout and preferences can't be
 # started or changed from A's workspace.
 EXAMPLE_BODIES.update(
@@ -367,6 +382,8 @@ B_TABLES = (
     "payments",
     "email_deliveries",
     "weekly_digests",
+    "workspace_invitations",  # GR-19
+    "audit_events",
 )
 
 
@@ -400,6 +417,8 @@ class Seed:
     segment_id: str = ""
     reply_id: str = ""
     page_id: str = ""
+    user_id: str = ""
+    invitation_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -657,6 +676,17 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         to_email="b@example.com",
     )
     await make_weekly_digest(engine, workspace_id=wid)
+    async with engine.begin() as conn:  # GR-19: an open invitation and an audit row
+        invitation = (
+            await conn.execute(
+                text(
+                    "INSERT INTO workspace_invitations (workspace_id, email, role, expires_at)"
+                    " VALUES (:w, 'invited-b@example.com', 'agent', now() + interval '7 days')"
+                    " RETURNING id"
+                ),
+                {"w": wid},
+            )
+        ).scalar_one()
     return Seed(
         workspace_id=wid,
         account_id=account_id,
@@ -686,6 +716,8 @@ async def seed_workspace_b(client: httpx.AsyncClient, clerk: Clerk, engine: Asyn
         segment_id=segment.json()["id"],
         reply_id=reply.json()["id"],
         page_id=str(site_page),
+        user_id=b["id"],
+        invitation_id=str(invitation),
     )
 
 

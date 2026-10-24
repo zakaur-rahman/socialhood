@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     clerk_issuer: str | None = None
     clerk_authorized_parties: CommaList = Field(default_factory=list)
     clerk_webhook_secret: SecretStr | None = None
+    # fake: keep team invitations in memory (auth/invitations.py); refused in production. Tests
+    # swap the sender with auth.invitations.use_invitation_sender whatever this says.
+    clerk_invitations_provider: Literal["clerk", "fake"] = "clerk"
 
     token_encryption_keys: CommaList = Field(default_factory=list)
 
@@ -220,7 +223,13 @@ class Settings(BaseSettings):
             unsafe.append("LOG_LEVEL must not be DEBUG in production")
         if not self.rate_limits_enabled:
             unsafe.append("RATE_LIMITS_ENABLED must be true in production")
-        for name in ("ai_provider", "dodo_provider", "email_provider", "push_provider"):
+        for name in (
+            "ai_provider",
+            "dodo_provider",
+            "email_provider",
+            "push_provider",
+            "clerk_invitations_provider",
+        ):
             if getattr(self, name) == "fake":
                 unsafe.append(f"{name.upper()} must not be fake in production")
         problems = []

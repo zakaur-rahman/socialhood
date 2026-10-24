@@ -10,7 +10,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Request
 
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanManageChannels, Session
 from socialhood.models.automations import IceBreaker as IceBreakerRow
 from socialhood.platforms.deps import deps_from
 from socialhood.repositories import automation_runs as runs
@@ -65,7 +65,7 @@ async def list_ice_breakers(
 @router.put("/social-accounts/{account_id}/ice-breakers", operation_id="replace_ice_breakers")
 async def replace_ice_breakers(
     request: Request,
-    ctx: Admin,
+    ctx: CanManageChannels,
     session: Session,
     account_id: uuid.UUID,
     body: IceBreakersUpdate,
@@ -86,7 +86,7 @@ async def replace_ice_breakers(
 
 @router.post("/social-accounts/{account_id}/ice-breakers/sync", operation_id="sync_ice_breakers")
 async def sync_ice_breakers(
-    request: Request, ctx: Admin, session: Session, account_id: uuid.UUID
+    request: Request, ctx: CanManageChannels, session: Session, account_id: uuid.UUID
 ) -> IceBreakerList:
     """Push the saved starters to Instagram again."""
     acct = await connections.get_or_404(session, account_id)

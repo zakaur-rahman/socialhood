@@ -22,7 +22,7 @@ from fastapi import APIRouter, Query, Request
 from socialhood.agent import orchestrator
 from socialhood.api import ratelimit
 from socialhood.api.v1.ai import pending
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import Admin, AnyMember, CanAsk, CanManageSettings, Session
 from socialhood.billing.entitlements import credits_gate
 from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.agent import (
@@ -56,7 +56,7 @@ def _visuals_on(request: Request) -> bool:
     "/agent/runs", status_code=202, operation_id="create_agent_run", dependencies=[ratelimit.AI]
 )
 async def create_agent_run(
-    request: Request, body: AgentRunCreate, ctx: AnyMember, session: Session
+    request: Request, body: AgentRunCreate, ctx: CanAsk, session: Session
 ) -> AgentRun:
     """FR-AGT-01: ask a question. The run is stored ``queued`` with the policy's mode, run_agent
     is enqueued (interactive lane, lock ``agent:{run_id}``) and the queued run is returned; nothing
@@ -112,7 +112,7 @@ async def get_agent_run(
 
 @router.post("/agent/runs/{run_id}/cancel", operation_id="cancel_agent_run")
 async def cancel_agent_run(
-    request: Request, run_id: uuid.UUID, ctx: AnyMember, session: Session
+    request: Request, run_id: uuid.UUID, ctx: CanAsk, session: Session
 ) -> AgentRun:
     """Stop at the next step (§9): an unfinished run becomes ``cancelled`` at once and run_agent
     stops before its next step or model turn; a step already running finishes and is kept. A
@@ -149,7 +149,9 @@ async def get_agent_policy(ctx: Admin, session: Session) -> AgentPolicy:
 
 
 @router.put("/agent/policy", operation_id="update_agent_policy", openapi_extra=pending("R2"))
-async def update_agent_policy(body: AgentPolicyUpdate, ctx: Admin, session: Session) -> AgentPolicy:
+async def update_agent_policy(
+    body: AgentPolicyUpdate, ctx: CanManageSettings, session: Session
+) -> AgentPolicy:
     """R2: replace the policy (owners and admins). 409 for ``autonomous`` until R3."""
     raise NotImplementedError("R2")
 
@@ -176,7 +178,7 @@ async def list_agent_approvals(
     openapi_extra=pending("R2"),
 )
 async def approve_agent_approval(
-    approval_id: uuid.UUID, body: ApprovalApprove, ctx: AnyMember, session: Session
+    approval_id: uuid.UUID, body: ApprovalApprove, ctx: CanAsk, session: Session
 ) -> AgentApproval:
     """R2: run the write as shown, or with edited ``args`` (re-checked by the gateway). The
     caller's role must allow the tool (403 forbidden); 409 when it is no longer pending."""
@@ -189,7 +191,7 @@ async def approve_agent_approval(
     openapi_extra=pending("R2"),
 )
 async def reject_agent_approval(
-    approval_id: uuid.UUID, ctx: AnyMember, session: Session
+    approval_id: uuid.UUID, ctx: CanAsk, session: Session
 ) -> AgentApproval:
     """R2: cancel the write; the step is skipped and the run continues without it. 409 when it
     is no longer pending."""

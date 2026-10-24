@@ -6,7 +6,7 @@ import uuid
 
 from fastapi import APIRouter, Request
 
-from socialhood.auth.deps import Admin, AnyMember, Session
+from socialhood.auth.deps import AnyMember, CanManageChannels, Session
 from socialhood.billing.plans import current_plan
 from socialhood.platforms.deps import PlatformDeps, deps_from
 from socialhood.schemas.accounts import SocialAccountOut
@@ -27,7 +27,7 @@ def _deps(request: Request) -> PlatformDeps:
     operation_id="complete_whatsapp_signup",
 )
 async def complete_whatsapp_signup(
-    request: Request, body: EmbeddedSignup, ctx: Admin, session: Session
+    request: Request, body: EmbeddedSignup, ctx: CanManageChannels, session: Session
 ) -> SocialAccountOut:
     """Finish Embedded Signup: store the number and subscribe to its webhooks. waba_id and
     phone_number_id come from Meta's session info when it arrived; without them the API finds

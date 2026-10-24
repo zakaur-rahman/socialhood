@@ -24,7 +24,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request, Response
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import Admin, Session, WorkspaceContext
+from socialhood.auth.deps import Admin, CanManagePublishing, Session, WorkspaceContext
 from socialhood.platforms.deps import deps_from
 from socialhood.realtime.events import commit_and_publish
 from socialhood.schemas.publishing import (
@@ -79,7 +79,7 @@ async def list_scheduled_posts(
 
 @router.post("/scheduled-posts", status_code=201, operation_id="create_scheduled_post")
 async def create_scheduled_post(
-    request: Request, body: ScheduledPostDraft, ctx: Admin, session: Session
+    request: Request, body: ScheduledPostDraft, ctx: CanManagePublishing, session: Session
 ) -> ScheduledPost:
     """New post (F-13): a draft, empty or pre-filled (a calendar click sends ``publish_at``)."""
     out = await posts.create(session, body, _env(request, ctx), user_id=ctx.user.id)
@@ -89,7 +89,7 @@ async def create_scheduled_post(
 
 @router.post("/scheduled-posts/bulk", operation_id="bulk_update_scheduled_posts")
 async def bulk_update_scheduled_posts(
-    request: Request, body: BulkScheduledPostRequest, ctx: Admin, session: Session
+    request: Request, body: BulkScheduledPostRequest, ctx: CanManagePublishing, session: Session
 ) -> BulkScheduledPostResult:
     """FR-PUB-14: shift, unschedule or delete several posts. Any id that is not this workspace's
     makes the whole request 404 and changes nothing. Otherwise each post the action can't apply to
@@ -113,7 +113,7 @@ async def replace_scheduled_post(
     request: Request,
     scheduled_post_id: uuid.UUID,
     body: ScheduledPostDraft,
-    ctx: Admin,
+    ctx: CanManagePublishing,
     session: Session,
 ) -> ScheduledPost:
     """Replace the editable post (autosave, Update schedule, Edit and retry): the format is
@@ -127,7 +127,7 @@ async def replace_scheduled_post(
     "/scheduled-posts/{scheduled_post_id}", status_code=204, operation_id="delete_scheduled_post"
 )
 async def delete_scheduled_post(
-    scheduled_post_id: uuid.UUID, ctx: Admin, session: Session
+    scheduled_post_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> Response:
     """Delete a post in any status but publishing (409). A published post stays on Instagram and
     in Posts; automations linked to it keep their post (C-043)."""
@@ -141,7 +141,7 @@ async def schedule_post(
     request: Request,
     scheduled_post_id: uuid.UUID,
     body: ScheduleRequest,
-    ctx: Admin,
+    ctx: CanManagePublishing,
     session: Session,
 ) -> ScheduledPost:
     """F-13 Schedule (also a draft dropped on the calendar): the checklist must pass and
@@ -155,7 +155,7 @@ async def schedule_post(
 
 @router.post("/scheduled-posts/{scheduled_post_id}/unschedule", operation_id="unschedule_post")
 async def unschedule_post(
-    request: Request, scheduled_post_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, scheduled_post_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> ScheduledPost:
     """Back to draft, keeping its time (FR-PUB-04). A draft is returned as it is."""
     out = await posts.unschedule(session, scheduled_post_id, _env(request, ctx))
@@ -170,7 +170,7 @@ async def unschedule_post(
     dependencies=[ratelimit.SENDS],
 )
 async def publish_post_now(
-    request: Request, scheduled_post_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, scheduled_post_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> ScheduledPost:
     """F-13 Publish now: the Schedule checks without the 5-minute rule, ``publish_at`` = now, and
     publish_target is enqueued for every target at once (202; scheduled_post.updated follows
@@ -186,7 +186,7 @@ async def reschedule_post(
     request: Request,
     scheduled_post_id: uuid.UUID,
     body: ScheduleRequest,
-    ctx: Admin,
+    ctx: CanManagePublishing,
     session: Session,
 ) -> ScheduledPost:
     """A calendar move or "Move to…" (FR-PUB-08): a scheduled post to ``publish_at``, at least 5
@@ -199,7 +199,7 @@ async def reschedule_post(
 
 @router.post("/scheduled-posts/{scheduled_post_id}/queue", operation_id="queue_post")
 async def queue_post(
-    request: Request, scheduled_post_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, scheduled_post_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> ScheduledPost:
     """Add to queue (FR-PUB-09): schedule at the earliest time that is a free posting time of
     every selected account (C-043), then as /schedule. 422 on ``targets.{i}`` when an account has
@@ -216,7 +216,7 @@ async def queue_post(
     operation_id="duplicate_scheduled_post",
 )
 async def duplicate_scheduled_post(
-    request: Request, scheduled_post_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, scheduled_post_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> ScheduledPost:
     """FR-PUB-14: a new draft with the same accounts, captions, media and first comment, without a
     time or automations. Any post can be duplicated."""
@@ -270,7 +270,7 @@ async def replace_posting_slots(
     request: Request,
     account_id: uuid.UUID,
     body: PostingSlotsUpdate,
-    ctx: Admin,
+    ctx: CanManagePublishing,
     session: Session,
 ) -> PostingSlots:
     """Replace the weekly times (FR-PUB-09). An account that can't publish (WhatsApp) is 409
@@ -294,7 +294,7 @@ async def list_hashtag_groups(ctx: Admin, session: Session) -> HashtagGroupList:
 
 @router.post("/hashtag-groups", status_code=201, operation_id="create_hashtag_group")
 async def create_hashtag_group(
-    body: HashtagGroupCreate, ctx: Admin, session: Session
+    body: HashtagGroupCreate, ctx: CanManagePublishing, session: Session
 ) -> HashtagGroup:
     """Save a group (rules in ``HashtagGroupCreate``)."""
     out = await hashtag_groups.create(session, body)
@@ -304,7 +304,7 @@ async def create_hashtag_group(
 
 @router.patch("/hashtag-groups/{hashtag_group_id}", operation_id="update_hashtag_group")
 async def update_hashtag_group(
-    hashtag_group_id: uuid.UUID, body: HashtagGroupPatch, ctx: Admin, session: Session
+    hashtag_group_id: uuid.UUID, body: HashtagGroupPatch, ctx: CanManagePublishing, session: Session
 ) -> HashtagGroup:
     """Rename a group or replace its hashtags."""
     out = await hashtag_groups.update(session, hashtag_group_id, body, now=datetime.now(UTC))
@@ -316,7 +316,7 @@ async def update_hashtag_group(
     "/hashtag-groups/{hashtag_group_id}", status_code=204, operation_id="delete_hashtag_group"
 )
 async def delete_hashtag_group(
-    hashtag_group_id: uuid.UUID, ctx: Admin, session: Session
+    hashtag_group_id: uuid.UUID, ctx: CanManagePublishing, session: Session
 ) -> Response:
     """Delete a group; captions that used it keep their hashtags."""
     await hashtag_groups.delete(session, hashtag_group_id)

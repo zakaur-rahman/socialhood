@@ -260,6 +260,7 @@ async function main() {
     DODO_PRODUCT_MAX_MONTHLY: "prod_e2e_max",
     EMAIL_PROVIDER: "fake",
     PUSH_PROVIDER: "fake",
+    CLERK_INVITATIONS_PROVIDER: "fake",
     E2E_SEED_TOKEN: randomBytes(24).toString("hex"),
     PYTHONUNBUFFERED: "1",
     PYTHONIOENCODING: "utf-8",

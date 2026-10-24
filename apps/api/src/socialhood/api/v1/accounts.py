@@ -11,7 +11,12 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Request, Response
 
-from socialhood.auth.deps import Admin, AnyMember, Owner, Session
+from socialhood.auth.deps import (
+    AnyMember,
+    CanManageChannels,
+    CanUseDevSandbox,
+    Session,
+)
 from socialhood.billing.plans import current_plan
 from socialhood.errors import ApiError
 from socialhood.models.platform import WebhookProvider
@@ -28,7 +33,7 @@ from socialhood.schemas.accounts import (
     SocialAccountOut,
     SocialAccountPatch,
 )
-from socialhood.services import account_deletion
+from socialhood.services import account_deletion, audit
 from socialhood.services import connections as service
 from socialhood.services.webhook_intake import store_and_enqueue
 
@@ -49,7 +54,9 @@ async def list_social_accounts(
 
 
 @router.post("/social-accounts/instagram/connect", operation_id="start_instagram_connect")
-async def start_instagram_connect(request: Request, ctx: Admin, session: Session) -> ConnectStart:
+async def start_instagram_connect(
+    request: Request, ctx: CanManageChannels, session: Session
+) -> ConnectStart:
     url = await service.start_instagram_connect(
         session,
         request.app.state.redis,
@@ -64,7 +71,7 @@ async def start_instagram_connect(request: Request, ctx: Admin, session: Session
 
 @router.post("/social-accounts/instagram/complete", operation_id="complete_instagram_connect")
 async def complete_instagram_connect(
-    request: Request, body: InstagramConnectComplete, ctx: Admin, session: Session
+    request: Request, body: InstagramConnectComplete, ctx: CanManageChannels, session: Session
 ) -> SocialAccountOut:
     """Finish an Instagram connect with the nonce the OAuth callback redirected with (X-1). Only
     the member who started the connect, in the workspace they started it in, can finish it; the
@@ -86,10 +93,16 @@ async def complete_instagram_connect(
 
 @router.patch("/social-accounts/{account_id}", operation_id="update_social_account")
 async def update_social_account(
-    request: Request, account_id: uuid.UUID, body: SocialAccountPatch, ctx: Admin, session: Session
+    request: Request,
+    account_id: uuid.UUID,
+    body: SocialAccountPatch,
+    ctx: CanManageChannels,
+    session: Session,
 ) -> SocialAccountOut:
     acct = await service.get_or_404(session, account_id)
     acct = await service.update_account(session, acct, body, plan=await current_plan(session))
+    await audit.record(session, ctx, "social_account.updated", "social_account", account_id)
+    await session.commit()
     return service.account_out(acct, _deps(request))
 
 
@@ -99,7 +112,7 @@ async def update_social_account(
 async def disconnect_social_account(
     request: Request,
     account_id: uuid.UUID,
-    ctx: Admin,
+    ctx: CanManageChannels,
     session: Session,
     delete_data: Annotated[bool, Query()] = False,
     confirm: Annotated[str | None, Query(min_length=1, max_length=200)] = None,
@@ -130,12 +143,22 @@ async def disconnect_social_account(
         )
     else:
         await service.disconnect(session, request.app.state.redis, acct)
+    await audit.record(
+        session,
+        ctx,
+        "social_account.removed"
+        if delete_data or confirm is not None
+        else "social_account.disconnected",
+        "social_account",
+        account_id,
+    )
+    await session.commit()
     return Response(status_code=204)
 
 
 @router.post("/social-accounts/{account_id}/resubscribe", operation_id="resubscribe_social_account")
 async def resubscribe_social_account(
-    request: Request, account_id: uuid.UUID, ctx: Admin, session: Session
+    request: Request, account_id: uuid.UUID, ctx: CanManageChannels, session: Session
 ) -> SocialAccountOut:
     """Retry the webhook subscription after it failed (F-03 edge case)."""
     acct = await service.get_or_404(session, account_id)
@@ -157,7 +180,7 @@ def _require_sandbox(request: Request) -> None:
 
 @router.post("/dev/sandbox/accounts", status_code=201, operation_id="create_sandbox_account")
 async def create_sandbox_account(
-    request: Request, ctx: Owner, session: Session
+    request: Request, ctx: CanUseDevSandbox, session: Session
 ) -> SocialAccountOut:
     """Connect a fake Instagram account for local development."""
     _require_sandbox(request)
@@ -169,7 +192,7 @@ async def create_sandbox_account(
 
 @router.post("/dev/sandbox/inbound", operation_id="sandbox_inbound")
 async def sandbox_inbound(
-    request: Request, body: SandboxInbound, ctx: Owner, session: Session
+    request: Request, body: SandboxInbound, ctx: CanUseDevSandbox, session: Session
 ) -> SandboxInboundResult:
     """Inject a fake DM or comment. It goes through the same intake as a real webhook."""
     _require_sandbox(request)

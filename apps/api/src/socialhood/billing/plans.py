@@ -24,7 +24,9 @@ TRIAL_DAYS: dict[Plan, int] = {"free": 0, "pro": 7, "max": 0}
 
 ENTITLEMENTS: dict[str, dict[Plan, Any]] = {
     "accounts_per_platform": {"free": 1, "pro": 3, "max": 10},
-    "members": {"free": 1, "pro": 1, "max": 10},
+    # Seats (GR-19): the owner counts, and so does every pending invitation. PD-1, decided by the
+    # owner on 2026-10-24 ("for now"): Free 1, Pro 3, Max 10.
+    "members": {"free": 1, "pro": 3, "max": 10},
     "active_automations": {"free": 3, "pro": 50, "max": None},
     "ai_reply_automations": {"free": False, "pro": True, "max": True},
     "ai_modes": {

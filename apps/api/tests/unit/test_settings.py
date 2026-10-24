@@ -80,7 +80,14 @@ def test_complete_production_settings_load() -> None:
 
 
 @pytest.mark.parametrize(
-    "name", ["ai_provider", "dodo_provider", "email_provider", "push_provider"]
+    "name",
+    [
+        "ai_provider",
+        "dodo_provider",
+        "email_provider",
+        "push_provider",
+        "clerk_invitations_provider",
+    ],
 )
 def test_production_refuses_fake_providers(name: str) -> None:
     # SEC-14: the in-memory fakes are development features.

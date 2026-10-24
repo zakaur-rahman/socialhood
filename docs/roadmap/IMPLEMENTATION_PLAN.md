@@ -77,7 +77,7 @@ The recommended option is first. Each goes in CONFLICTS.md when taken, as the UI
 
 | ID | Decision | Options | Needed by |
 |---|---|---|---|
-| PD-1 | Team seats per plan | **Free 1, Pro 3, Max 10** (today Free 1, Pro 1, Max 10) · Pro 5 | GR-19 |
+| PD-1 | Team seats per plan | **Decided 2026-10-24 ("for now"): Free 1, Pro 3, Max 10** (was Free 1, Pro 1, Max 10; the alternative was Pro 5) | GR-19 |
 | PD-2 | Contacts metering | **Never meter contacts; flat plans** (the competitive edge) · a soft cap | GR-02 |
 | PD-3 | Who pays Meta for WhatsApp template messages | **The business, directly**: each one's account carries its own payment method through Embedded Signup, with no markup and no money through us · we bill and resell | GR-23 |
 | PD-4 | Broadcasts by plan | **Pro and Max, with a monthly recipient quota** · Max only | GR-23 |

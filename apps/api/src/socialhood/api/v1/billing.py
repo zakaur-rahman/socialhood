@@ -14,7 +14,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Request
 
 from socialhood.api import ratelimit
-from socialhood.auth.deps import Admin, AnyMember, Owner, Session
+from socialhood.auth.deps import Admin, AnyMember, CanManageBilling, Session
 from socialhood.billing.dodo import DodoClient
 from socialhood.billing.registry import get_dodo
 from socialhood.schemas.billing import (
@@ -25,6 +25,7 @@ from socialhood.schemas.billing import (
     PlanList,
     PortalSession,
 )
+from socialhood.services import audit
 from socialhood.services import billing as service
 
 router = APIRouter(prefix="/v1/w/{wid}", tags=["billing"])
@@ -67,20 +68,25 @@ async def list_billing_payments(
 
 @router.post("/billing/checkout", operation_id="create_billing_checkout")
 async def create_billing_checkout(
-    request: Request, body: CheckoutRequest, ctx: Owner, session: Session
+    request: Request, body: CheckoutRequest, ctx: CanManageBilling, session: Session
 ) -> CheckoutSession:
     """F-15, TR-BIL-01: a Dodo hosted checkout for ``plan`` with the owner's email, returning to
     /w/{slug}/settings/billing?checkout=return, ``metadata.workspace_id`` set, and the 7-day trial
     only when eligible (TR-BIL-05). 409 conflict when the workspace already has a paid plan
     (active, trialing or on hold): the portal changes it. 422 for ``max`` until R2. 503 when Dodo
     isn't configured or doesn't answer. Nothing changes until Dodo's signed webhook arrives."""
-    return await service.start_checkout(
+    out = await service.start_checkout(
         session, ctx, body, dodo=_dodo(request), settings=request.app.state.settings
     )
+    await audit.record(session, ctx, "billing.checkout_started", "billing", plan=body.plan)
+    await session.commit()
+    return out
 
 
 @router.post("/billing/portal", operation_id="create_billing_portal")
-async def create_billing_portal(request: Request, ctx: Owner, session: Session) -> PortalSession:
+async def create_billing_portal(
+    request: Request, ctx: CanManageBilling, session: Session
+) -> PortalSession:
     """FR-BIL-04, TR-BIL-06: a Dodo customer portal session (payment method, invoices), opened
     in a new tab. 409 conflict when the workspace has never had a Dodo customer; 503 when Dodo
     doesn't answer."""
@@ -90,20 +96,24 @@ async def create_billing_portal(request: Request, ctx: Owner, session: Session) 
 
 
 @router.post("/billing/cancel", operation_id="cancel_billing")
-async def cancel_billing(request: Request, ctx: Owner, session: Session) -> BillingState:
+async def cancel_billing(request: Request, ctx: CanManageBilling, session: Session) -> BillingState:
     """FR-BIL-04, TR-BIL-06: cancel at the end of the period (Dodo's
     cancel_at_next_billing_date). The answer shows ``cancel_at_period_end: true``; the plan stays
     until the period ends (subscription.cancelled, then Free). 409 on the Free plan; cancelling
     again answers the same."""
     await service.set_cancel(session, request.app.state.redis, cancel=True, dodo=_dodo(request))
+    await audit.record(session, ctx, "billing.cancelled", "billing")
+    await session.commit()
     return await _state(request, ctx, session)
 
 
 @router.post("/billing/resume", operation_id="resume_billing")
-async def resume_billing(request: Request, ctx: Owner, session: Session) -> BillingState:
+async def resume_billing(request: Request, ctx: CanManageBilling, session: Session) -> BillingState:
     """Undo a cancellation before the period ends. 409 unless ``cancel_at_period_end``, or when
     Dodo has already ended the plan."""
     await service.set_cancel(session, request.app.state.redis, cancel=False, dodo=_dodo(request))
+    await audit.record(session, ctx, "billing.resumed", "billing")
+    await session.commit()
     return await _state(request, ctx, session)
 
 
