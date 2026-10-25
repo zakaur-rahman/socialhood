@@ -23,6 +23,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Protocol, runtime_checkable
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from socialhood.models.broadcasts import QualityRating, WhatsAppNumberHealth
@@ -133,7 +134,15 @@ async def record(
             source=source,
             checked_at=now,
         )
-        session.add(row)
+        try:
+            # Two requests reading a new number at once both find no row (the broadcast page
+            # asks for a preview twice): the one that loses the insert takes the winner's row.
+            async with session.begin_nested():
+                session.add(row)
+        except IntegrityError:
+            row = await get(session, acct.id)
+            if row is None:
+                raise
     if quality is not None:
         row.quality_rating = quality
     if tier is not None:

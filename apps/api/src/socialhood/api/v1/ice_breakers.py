@@ -81,7 +81,9 @@ async def replace_ice_breakers(
         [service.StarterIn(i.question, i.automation_id, i.answer_with_ai) for i in body.items],
         deps=deps,
     )
-    return await _out(session, rows, error=error)
+    out = await _out(session, rows, error=error)
+    await session.commit()
+    return out
 
 
 @router.post("/social-accounts/{account_id}/ice-breakers/sync", operation_id="sync_ice_breakers")
@@ -92,4 +94,6 @@ async def sync_ice_breakers(
     acct = await connections.get_or_404(session, account_id)
     deps = deps_from(request.app.state.http, request.app.state.settings)
     rows, error = await service.sync(session, acct, deps=deps)
-    return await _out(session, rows, error=error)
+    out = await _out(session, rows, error=error)
+    await session.commit()
+    return out

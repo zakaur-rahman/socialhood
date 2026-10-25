@@ -87,9 +87,15 @@ class SandboxAdapter:
         from socialhood.platforms.sandbox import outbox
 
         short = platform_user_id[-4:]
+        # An id the injector chose (POST /dev/sandbox/inbound from_id, tests and e2e specs) is the
+        # username too; the generated ``sandbox_user_<hex>`` ids get a made-up one.
+        chosen = (
+            not platform_user_id.startswith("sandbox_")
+            and platform_user_id.replace("_", "").replace(".", "").isalnum()
+        )
         return ContactProfile(
             name=f"Sandbox customer {short}",
-            username=f"customer_{short}",
+            username=platform_user_id if chosen else f"customer_{short}",
             profile_picture_url=None,
             follows_business=outbox.follows(platform_user_id),
         )
