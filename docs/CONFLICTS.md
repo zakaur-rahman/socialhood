@@ -5691,3 +5691,6 @@ test `test_instagram_publishing.py` gains payload cases; `test_publishing_rules.
 only when used. Integration (not run): `test_instagram_extras.py`. Vitest (not run):
 `TagDialog.test.tsx`, `InstagramExtras.test.tsx`, `StatusBanner.test.tsx`, `checklist.test.ts`,
 `rules.test.ts`, `upload.test.ts`. E2E (not run): `fr-pub-07-collab-tags-location.spec.ts`.
+
+*Fixed before the PR:* the composer checklist showed only the first passing line under the `extras` key, so with collaborators, a tag and a location set only "Collaborators: ..." was listed. `mergeChecklist` now keeps every passing `extras` line (one per option); other keys still show one. The `share_to_feed` field the generated client now marks as required is sent as `true` by the new-draft bodies (`newDraftBody`, `useCreateScheduledPost`).
+Also fixed: `publish_target` set each collaborator's Pending invite after `settle`, whose `scheduled_post.updated` event is built inside it, so the live banner showed no invites until a reload. They are now set before `settle`.

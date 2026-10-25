@@ -432,8 +432,9 @@ export function mergeChecklist(
   for (const key of CHECKLIST_KEYS) {
     if (failures.some((item) => item.key === key)) continue;
     const source = LOCAL_KEYS.has(key) ? local : server;
-    const ok = source.find((item) => item.key === key && item.ok);
-    if (ok) passing.push(ok);
+    // The Instagram options report one passing line each under "extras"; every other key has one.
+    const oks = source.filter((item) => item.key === key && item.ok);
+    passing.push(...(key === "extras" ? oks : oks.slice(0, 1)));
   }
   const order = (item: ChecklistItem) => CHECKLIST_KEYS.indexOf(item.key);
   failures.sort((a, b) => order(a) - order(b));

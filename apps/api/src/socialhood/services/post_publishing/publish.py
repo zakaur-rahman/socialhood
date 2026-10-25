@@ -867,10 +867,10 @@ async def _published(p: _Poll, media: PlatformMedia) -> Outcome:
         await automation_posts.link_scheduled_post(session, post.id, item)
         if item.media_type != MediaType.STORY:
             await automation_posts.link_next_posts(session, p.acct.id)
-        await settle(session, post, target, TargetStatus.PUBLISHED, media=media)
-        if extras_applies(post, p.acct):  # FR-PUB-07: every collaborator starts Pending
+        if extras_applies(post, p.acct):  # FR-PUB-07: Pending; before settle
             target.collaborator_statuses = collaborators.initial(post)
             target.collaborators_checked_at = None
+        await settle(session, post, target, TargetStatus.PUBLISHED, media=media)
         # A Story takes no comment of its own (GR-39).
         first_comment = bool(post.first_comment) and post.format != PostFormat.STORY
         await commit_and_publish(session, p.redis)

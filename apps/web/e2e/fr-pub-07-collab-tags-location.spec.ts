@@ -43,11 +43,10 @@ test.describe("FR-PUB-07 collaborators, tags and location", () => {
     await expect(options.getByRole("list", { name: "Collaborators" })).toContainText("@maple.studio");
     await expect(options.getByRole("list", { name: "Collaborators" })).toContainText("@accepts.fast");
 
-    // A fourth collaborator is not taken: the field stops at 3.
+    // A fourth collaborator is not taken: the field is disabled at 3.
     await chips.fill("third.one");
     await chips.press("Enter");
-    await chips.fill("fourth.one");
-    await chips.press("Enter");
+    await expect(chips).toBeDisabled();
     await expect(options.getByRole("list", { name: "Collaborators" }).getByRole("listitem")).toHaveCount(3);
 
     // The location is a Facebook Page's link; a vanity link has no id and is refused with a reason.
@@ -107,6 +106,7 @@ test.describe("FR-PUB-07 collaborators, tags and location", () => {
   });
 
   test("a Reel shows its options: a cover frame, feed sharing and an audio name", async ({ page, api, sandbox }) => {
+    test.setTimeout(300_000); // the video is read every minute while it processes
     const { workspace, account } = sandbox;
     await api.videoAsset(workspace.id, "collab-reel.mp4", 20);
     await newPost(page, workspace, account);
@@ -125,7 +125,7 @@ test.describe("FR-PUB-07 collaborators, tags and location", () => {
     await expect(page.getByRole("region", { name: "Checklist" })).toContainText("Reel options set");
     await page.getByRole("region", { name: "Post actions" }).getByRole("button", { name: "Publish now" }).click();
     await page.getByRole("alertdialog", { name: "Publish now?" }).getByRole("button", { name: "Publish now" }).click();
-    await expect(page.getByTestId("status-banner")).toContainText("Published", { timeout: 90_000 });
+    await expect(page.getByTestId("status-banner")).toContainText("Published", { timeout: 240_000 });
   });
 
   test("a cover frame past the end of the video is marked in the checklist", async ({ page, api, sandbox }) => {
