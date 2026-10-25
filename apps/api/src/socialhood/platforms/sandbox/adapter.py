@@ -87,12 +87,12 @@ class SandboxAdapter:
         from socialhood.platforms.sandbox import outbox
 
         short = platform_user_id[-4:]
-        # An id the injector chose (POST /dev/sandbox/inbound from_id, tests and e2e specs) is the
-        # username too; the generated ``sandbox_user_<hex>`` ids get a made-up one.
+        # An id an e2e spec chose (``e2e_…``, or a phone number: POST /dev/sandbox/inbound
+        # from_id) is the username too, so the spec can find the contact; every other id gets a
+        # made-up one.
         chosen = (
-            not platform_user_id.startswith("sandbox_")
-            and platform_user_id.replace("_", "").replace(".", "").isalnum()
-        )
+            platform_user_id.startswith("e2e_") and platform_user_id.replace("_", "").isalnum()
+        ) or platform_user_id.isdigit()
         return ContactProfile(
             name=f"Sandbox customer {short}",
             username=platform_user_id if chosen else f"customer_{short}",
