@@ -413,3 +413,31 @@
     }
   }
 }
+
+/* The 404 illustration (components/not-found): the lost bubble bobs (4 s) and the dots twinkle
+   (3 s); both are still under reduced motion. Built from tokens only. */
+@utility nf-drift {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: nf-drift 4s ease-in-out infinite;
+  }
+}
+
+@utility nf-twinkle {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: nf-twinkle 3s ease-in-out infinite;
+  }
+}
+
+@utility nf-twinkle-late {
+  animation-delay: 1.4s;
+}
+
+@keyframes nf-drift {
+  0%, 100% { transform: translate(0, 0); }
+  50% { transform: translate(-6px, 8px); }
+}
+
+@keyframes nf-twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}

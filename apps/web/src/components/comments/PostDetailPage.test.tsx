@@ -232,7 +232,7 @@ describe("Post detail: the post, summary and topics (FR-CMT-04, UX-SCR-05)", () 
 
   it("an unknown post says it was not found", async () => {
     setup({ detail: problem(404, "not_found") });
-    expect(await screen.findByText("Post not found")).toBeInTheDocument();
+    expect(await screen.findByText("This post doesn't exist or was deleted")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Back to Comments" })).toHaveAttribute("href", "/w/maple/comments");
   });
 

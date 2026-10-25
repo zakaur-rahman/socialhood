@@ -5793,3 +5793,44 @@ It runs locally only (CI does not run e2e).
 build failed ("Could not find the Next.js package"); the spec, the new skeletons and the PageFrame change
 are written but unmeasured. Run `node scripts/e2e-stack.mjs -- --grep "layout shift"` once from a checked
 out tree with dependencies and fix any page above 0.1. Lint, tsc and vitest were not run either.
+
+## C-137 · Polish C: 404 handling and the 404 page (feature/polish-not-found)
+
+Web only; no API, model or migration change.
+
+**The 404 page**
+- `app/not-found.tsx` answers any address no route claims, with a real 404 status and `noindex`. It
+  wears the public site's frame (header, footer, always dark like the marketing pages) around
+  `NotFoundPage`. Visitors get "Go to the home page", "See pricing" and "Sign in"; once Clerk says
+  someone is signed in, "Open the app" replaces "Sign in".
+- `app/(app)/w/[slug]/not-found.tsx` is the in-app version, inside the workspace layout so the
+  sidebar stays: Go to Home, Open Inbox, Ask. A catch-all `[...rest]/page.tsx` under the workspace
+  calls `notFound()` so unknown sub-addresses reach it instead of the root page. *Deviation from
+  the brief:* no "search" link, because the app has no search page; Ask is the closest.
+- The illustration (`components/not-found/NotFoundIllustration.tsx`) is one inline SVG from
+  tokens only (`fill-*`, `stroke-*`): a short chat thread whose last message, drawn dashed with a
+  "?", has drifted off. It bobs and twinkles through `nf-drift` and `nf-twinkle` in `globals.css`,
+  and stays still under reduced motion. The requested path shows small under the text.
+- The product name comes from nothing hard-coded in the new files; the copy never says it.
+- *Known limit:* a `notFound()` thrown after a page has started streaming (the workspace pages
+  under a `loading.tsx`) can still answer with status 200; the page shows the same 404 and Next adds
+  `noindex` either way. The public 404 has the real status.
+
+**Missing resources inside the app**
+- `isNotFound(error)` (lib/api/errors.ts) is true for an API 404. `NotFoundState` shows "This
+  {post, conversation, automation, broadcast, sequence} doesn't exist or was deleted" with a link
+  back to the list. It replaces the earlier ad-hoc "Post not found" and "Automation not found"
+  states (wording changed, tests updated) and is added to the conversation, broadcast and sequence
+  pages, which showed the generic error. The contact drawer (`?contact=<id>`) shows the same text
+  with "Back to Contacts" (it closes the drawer).
+- A deleted resource and one in another workspace read the same, because the API answers 404 for
+  both. Any other error keeps the error state with Try again.
+- Orders, products and reports have no per-item pages, so nothing to map there.
+
+**Tests (not run: no node_modules in this worktree, and pnpm is off limits here)**
+- Vitest: `components/not-found/NotFound.test.tsx`, `components/states/NotFoundState.test.tsx`
+  (`isNotFound` mapping included); `PostDetailPage.test.tsx` and `PostComposer.test.tsx` expect the
+  new wording.
+- E2E: `apps/web/e2e/not-found.spec.ts` (public 404 with status, noindex and links; app 404 in the
+  shell; missing post and conversation with working back links; another workspace's contact and a
+  made-up one read the same). Screenshots: `not-found-site` and `not-found-app` in ui-shots.

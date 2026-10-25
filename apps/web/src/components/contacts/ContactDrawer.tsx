@@ -23,7 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, isNotFound } from "@/lib/api/errors";
 import {
   useContact,
   useContactFields,
@@ -89,7 +89,15 @@ export function ContactDrawer({ contactId, onClose }: { contactId: string | null
               <SheetDescription className="sr-only">Details, tags and history for this contact.</SheetDescription>
             </SheetHeader>
             <div className="p-4">
-              {contact.isError ? (
+              {contact.isError && isNotFound(contact.error) ? (
+                <div data-testid="contact-not-found" className="space-y-2 text-sm">
+                  <p className="font-semibold">This contact doesn&apos;t exist or was deleted</p>
+                  <p className="text-fg-secondary">Check the link, or go back to the list.</p>
+                  <Button variant="secondary" size="sm" onClick={onClose}>
+                    Back to Contacts
+                  </Button>
+                </div>
+              ) : contact.isError ? (
                 <p className="text-sm text-fg-secondary">
                   This contact did not load.{" "}
                   <Button variant="link" size="xs" className="px-0" onClick={() => void contact.refetch()}>
